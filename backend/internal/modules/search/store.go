@@ -24,12 +24,29 @@ import (
 type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
+	// carriedBy counts the records one tag is on, for THIS caller. It is the
+	// collections store's own counter, injected by compose because a module
+	// never imports a sibling. Calling that counter rather than writing a
+	// second one here is what keeps the figure beside a search hit derived
+	// from the same rule as the figures on the tag page — including the rule
+	// that a caller counts only the records they may see.
+	//
+	// Nil where nothing supplied it (a worker's store, a test that does not
+	// ask): a tag hit then carries no count, which reads as "not known" and
+	// never as zero.
+	carriedBy TagReachCounter
 }
 
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
 func NewStore(db *database.DB) *Store {
 	return &Store{db: db}
+}
+
+// WithTagReach binds the counter behind a tag hit's `carried_by`.
+func (s *Store) WithTagReach(count TagReachCounter) *Store {
+	s.carriedBy = count
+	return s
 }
 
 // bounded is this store with a time ceiling on every statement it runs.
@@ -39,13 +56,19 @@ func NewStore(db *database.DB) *Store {
 // one, and a ceiling armed at a single call site would leave the other lane as
 // unbounded as it was before anybody thought about it.
 func (s *Store) bounded(budget time.Duration) *Store {
-	return &Store{db: s.db.Bounded(budget)}
+	// Every field travels, not just the handle: this rebuilds the store, so a
+	// field left out here is one the bounded lane silently does without.
+	return &Store{db: s.db.Bounded(budget), carriedBy: s.carriedBy}
 }
 
 // forWorkspace is this store re-bound to one tenant of the fleet enumeration.
 // Only the index-maintenance passes that walk every workspace use it; a
 // request-path caller already holds the handle for the tenant it serves.
 func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
+	// carriedBy is deliberately NOT carried across: these passes rebuild the
+	// index and answer nobody, so there is no caller whose row scope a count
+	// would be taken under. A lane that starts serving hits from here owes
+	// itself the counter, and would otherwise report every tag as uncounted.
 	return &Store{db: s.db.ForWorkspace(ws)}
 }
 
@@ -58,6 +81,9 @@ type Hit struct {
 	Title   string
 	Snippet string
 	Score   float64
+	// CarriedBy is set on a `tag` hit alone: how many records the caller may
+	// see carry this word. Nil elsewhere, and nil when no counter is bound.
+	CarriedBy *int
 }
 
 type Page struct {
@@ -224,8 +250,11 @@ var searchBranches = []searchBranch{
 // keyset pagination orders (score DESC, type, id) so the cursor is
 // stable under concurrent writes.
 func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
-	query := strings.TrimSpace(in.Query)
-	if query == "" {
+	// normalizeQuery, not TrimSpace: a TRAILING separator is what says the
+	// reader finished a word, and trimming it turned every completed search
+	// into a prefix search.
+	query := normalizeQuery(in.Query)
+	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
 	}
 	limit := clampLimit(in.Limit)
@@ -254,9 +283,20 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		qPos := arg(query)
 
-		branches, err := admittedBranchSQL(ctx, types, qPos, arg)
+		// The query split at the last separator: the words the reader FINISHED,
+		// and the fragment they are still typing. The two are matched
+		// differently — finished words whole, the fragment as a prefix.
+		head, tail := splitTypedQuery(query)
+		headPos := arg(head)
+		// Bound only when there IS a fragment: a parameter no SQL references
+		// cannot have its type inferred, and Postgres fails the whole statement.
+		tailPos := 0
+		if tail != "" {
+			tailPos = arg(tail)
+		}
+
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, tail != "", arg)
 		if err != nil {
 			return err
 		}
@@ -282,8 +322,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return fmt.Errorf("search: query: %w", err)
 		}
 		defer rows.Close()
-		page, err = scanRankedPage(rows, limit)
-		return err
+		if page, err = scanRankedPage(rows, limit); err != nil {
+			return err
+		}
+		return s.countTagReach(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
@@ -295,7 +337,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 // entity type. A hit is a read twice over: object RBAC first (a role
 // without person.read gets no person hits — search must not out-see the
 // entity lists), then the row scope.
-func admittedBranchSQL(ctx context.Context, types []string, qPos int, arg func(any) int) ([]string, error) {
+func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool, arg func(any) int) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
 		if !slices.Contains(types, branch.entity) {
@@ -308,21 +350,11 @@ func admittedBranchSQL(ctx context.Context, types []string, qPos int, arg func(a
 		if !admitted {
 			continue
 		}
-		// Name entities parse the query 'simple' (unaccented — Muller
-		// finds Müller), OR-ed with the apostrophe-collapsed parse so
-		// "o'reilly" also reaches a row stored as "OReilly" (the index
-		// side carries the collapsed tokens, migration 0077); the
-		// activity branch additionally ORs the German/English stemmed
-		// parses so "Vertrag" reaches rows whose tsvector stemmed
-		// "Verträge" under their captured language.
-		tsquery := fmt.Sprintf(
-			`(websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d)))`,
-			qPos)
-		if branch.entity == "activity" {
-			tsquery = fmt.Sprintf(
-				`(websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d)) || websearch_to_tsquery('german', f_unaccent($%[1]d)) || websearch_to_tsquery('english', f_unaccent($%[1]d)))`,
-				qPos)
-		}
+		// What this branch matches, and why it is shaped that way, lives with
+		// the expression in typedquery.go — including the parse configurations
+		// each entity uses and the rule that only the fragment widens.
+		tsquery := matchExpression(branch.entity, headPos, tailPos, hasFragment)
+
 		snippet, err := branch.excerpt(ctx, arg)
 		if err != nil {
 			return nil, err

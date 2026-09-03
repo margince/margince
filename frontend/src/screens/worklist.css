@@ -19,13 +19,6 @@
   gap: var(--space-2);
 }
 
-/* Every figure above is a floor. Same quiet as the completeness line and for
-   the same reason: the surface reporting on its own limits, not a row of work. */
-.worklist-readings-floor {
-  color: var(--textSecondary);
-  margin: 0;
-}
-
 /* What the page is not showing. Quiet on purpose: this is the surface reporting
    on itself rather than a row of work, and it must not compete with the queue
    for the reader's eye. */
@@ -240,4 +233,33 @@
 .worklist-hidden-shown {
   color: var(--textSecondary);
   margin: 0;
+}
+
+/* A duplicate pair, decided on the row.
+   The two sides sit side by side so a reader compares them rather than
+   scrolling between them; below 720px they stack, because two records at
+   half a phone's width are two records nobody can read. */
+.worklist-pair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.worklist-pair-sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.worklist-pair-side {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+.worklist-pair-name {
+  font-weight: 600;
 }

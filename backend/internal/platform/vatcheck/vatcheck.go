@@ -92,6 +92,19 @@ var ErrNotConfigured = errors.New("vatcheck: no VAT verification service is conf
 // here without spending somebody else's service on it.
 var ErrMalformedNumber = errors.New("vatcheck: not a VAT identification number")
 
+// Configured answers whether an installation that read MARGINCE_VAT_CHECK_BASE_URL
+// into baseURL consults a register at all — the ONE predicate both processes
+// that read that variable must agree on (the worker to build a client, the api
+// to decide whether to queue a consultation for one). It differs from what
+// NewVIES itself does with baseURL: NewVIES treats "" as a request for the
+// public service, because a caller that already decided to build a client has
+// no unconfigured case left to express. This function is that earlier
+// decision, made once so it cannot read differently on either side of the
+// wire.
+func Configured(baseURL string) bool {
+	return baseURL != ""
+}
+
 // Checker consults a register.
 //
 // An INVALID number is not an error: the service did its job and the answer is

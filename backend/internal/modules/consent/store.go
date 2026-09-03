@@ -222,18 +222,17 @@ type RecordInput struct {
 	// (data-model §7: a public form or LinkedIn capture obtains consent
 	// from someone who is still a lead). The DB CHECK only rules out
 	// both-null; the XOR is enforced here.
-	PersonID         ids.PersonID
-	LeadID           ids.LeadID
-	PurposeID        ids.PurposeID
-	NewState         string // granted | withdrawn
-	LawfulBasis      *string
-	Source           *string
-	DoubleOptInToken *string
+	PersonID    ids.PersonID
+	LeadID      ids.LeadID
+	PurposeID   ids.PurposeID
+	NewState    string // granted | withdrawn
+	LawfulBasis *string
+	Source      *string
 	// MailboxProof names how the caller established that the subject controls
 	// the address, for a grant made on a surface the subject reached through a
-	// single-use link delivered to it. It satisfies a double-opt-in purpose in
-	// place of a DoubleOptInToken, and lands on the proof row's
-	// issuance_trigger so the chain stays demonstrable.
+	// single-use link delivered to it. It is the ONLY way a double-opt-in
+	// purpose confirms, and lands on the proof row's issuance_trigger so the
+	// chain stays demonstrable.
 	//
 	// No transport sets this: it is not on the wire, and every handler building
 	// a RecordInput from a request body leaves it zero. The one writer is the

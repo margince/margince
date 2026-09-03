@@ -114,10 +114,16 @@ func seedHeldDraft(t *testing.T, e *integration.Env, svc *approvals.Service) hel
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Staged under a HUMAN-less server principal, which is what makes it a
-	// server-proposed staging the approve-side executor may run at all: an
-	// agent-minted row deliberately reaches no executor.
-	approvalID, err := svc.Stage(e.Admin(), approvals.StageInput{
+	// Staged the way a firing stages: the system actor — which is what makes it
+	// a server proposal the approve-side executor may run at all, since an
+	// agent-minted row deliberately reaches no executor — acting on behalf of
+	// the automation's owner.
+	//
+	// The owner is Rep1, the same human decider() releases as, and that is not
+	// incidental. Releasing a held draft SENDS it from the approver's own
+	// mailbox, so only the person it goes out as may release it; a fixture
+	// staging under nobody would build a card no one could press.
+	approvalID, err := svc.Stage(e.AutomationCtx(e.Rep1), approvals.StageInput{
 		Kind:           automation.HeldDraftKind,
 		ProposedChange: raw,
 		DiffHash:       "held-" + ids.NewV7().String(),

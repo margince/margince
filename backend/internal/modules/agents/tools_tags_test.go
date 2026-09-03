@@ -21,6 +21,48 @@ type stubTags struct {
 	listedArchived   *bool
 	capped           bool
 	taggable         []string
+	// What the vocabulary verbs were asked, so a test can assert the tool
+	// passed the caller's words through rather than only that it answered.
+	// Pointers to slots the test owns: every other method on this stub takes a
+	// VALUE receiver, and one pointer method would stop the value satisfying
+	// the interface at all — which is a build failure a long way from here.
+	created *createTagArgs
+	edited  *editTagArgs
+}
+
+type createTagArgs struct {
+	name  string
+	color *string
+}
+
+type editTagArgs struct {
+	tagID ids.UUID
+	edit  TagEdit
+}
+
+func (s stubTags) CreateTag(_ context.Context, name string, color *string) (Tag, error) {
+	if s.created != nil {
+		*s.created = createTagArgs{name: name, color: color}
+	}
+	out := Tag{TagID: ids.NewV7(), Name: name}
+	if color != nil {
+		out.Color = *color
+	}
+	return out, nil
+}
+
+func (s stubTags) UpdateTag(_ context.Context, tagID ids.UUID, edit TagEdit) (Tag, error) {
+	if s.edited != nil {
+		*s.edited = editTagArgs{tagID: tagID, edit: edit}
+	}
+	out := Tag{TagID: tagID}
+	if edit.Name != nil {
+		out.Name = *edit.Name
+	}
+	if edit.Color != nil && *edit.Color != nil {
+		out.Color = **edit.Color
+	}
+	return out, nil
 }
 
 func (s stubTags) TaggableTypes() []string { return s.taggable }

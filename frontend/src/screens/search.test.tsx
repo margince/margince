@@ -9,6 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -191,5 +192,66 @@ describe("SearchScreen", () => {
     );
     render(<SearchScreen q="zzz" />);
     await waitFor(() => expect(screen.getByText(/No matches/)).toBeTruthy());
+  });
+  // Finding the WORD is the step before finding the records carrying it, so a
+  // tag hit has to be openable. It shipped as plain text — the group rendered,
+  // and the result was a dead end.
+  it("opens the tag page from a tag hit, and says what the word is on", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              carried_by: 7,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+
+    const hit = await screen.findByText("Key Account");
+    expect(hit.tagName).toBe("BUTTON");
+    expect(screen.getByText("On 7 records")).toBeTruthy();
+
+    await userEvent.setup().click(hit);
+    expect(window.location.hash).toBe(
+      "#/tags/01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+    );
+  });
+
+  // Absent is not zero. A server that sent no number has not said the word is
+  // unused, and printing "On 0 records" would be a claim nobody made.
+  it("prints no count when the answer carried none", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+
+    expect(await screen.findByText("Key Account")).toBeTruthy();
+    expect(screen.queryByText(/On \d+ records/)).toBeNull();
   });
 });

@@ -543,6 +543,31 @@ function RecordRef({
 }
 
 /**
+ * rosterOwnerName names a record's owner off ONE roster page — the read a
+ * record header already makes — rather than walking the whole roster for a
+ * single name. An owner the page does not carry gets the roster's own
+ * reading of why, never a bare id.
+ */
+export function rosterOwnerName(
+  ownerId: string | null | undefined,
+  roster: ReturnType<typeof useRoster>,
+  partial: boolean,
+  t: ReturnType<typeof useT>,
+  unowned: string,
+): string {
+  if (!ownerId) {
+    return unowned;
+  }
+  const found = (roster.data ?? []).find(
+    (entry) => "display_name" in entry && entry.id === ownerId,
+  );
+  if (found && "display_name" in found) {
+    return found.display_name;
+  }
+  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
+}
+
+/**
  * The owner of a record, by name, for a list column.
  *
  * Reads the shared roster cache (the same walked entry EntityRef and the Share

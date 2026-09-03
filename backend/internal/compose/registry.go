@@ -170,6 +170,11 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
 	agents.RegisterReportTool(registry, nativeOnlyReportRunner(sorMode, reportToolRunner(newReportEngine(pool))), reportToolCatalog())
+	// The forecast, read through the same assembler the HTTP surface uses, so
+	// the two transports cannot disagree about what a quarter contains.
+	agents.RegisterForecastTool(registry, forecastToolReader(pool))
+	agents.RegisterMovementTool(registry, movementToolReader(pool))
+	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
 	// The governed workspace query. It takes the provider as well as the runner
 	// because the two halves of an answer come from different places: the plan
 	// selects records through the search module, and each selected record is
@@ -316,18 +321,17 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 		var req reportRequest
 		if len(planArgs) > 0 {
 			// STRICT: a plan argument this engine does not serve is refused by
-			// name, not dropped. crm.yaml's runReport body declares `as_of_date`
-			// and this engine has no field for it, so a lenient decode answered
-			// an agent's request for a historical snapshot with current state and
-			// no warning — a silent wrong answer, which is worse than a refusal
-			// because nothing tells the caller to look again.
-			// An UNSERVED key is named, before the shape refusal. The strict
-			// decode alone answered "a plan argument is not the shape this tool
-			// takes" and then described the three arguments the caller had not
-			// sent — so a caller who sent `as_of_date` was told to re-check
-			// three shapes that were never wrong, and could loop on it. Which
-			// key is unserved is a question this package can answer exactly, so
-			// it does, rather than restating the decoder's prose.
+			// name, not dropped. A lenient decode would answer a request for
+			// something this engine cannot do — a historical snapshot, say —
+			// with current state and no warning, and a silent wrong answer is
+			// worse than a refusal because nothing tells the caller to look
+			// again.
+			// The unserved key is named BEFORE the shape refusal. The strict
+			// decode alone answers "a plan argument is not the shape this tool
+			// takes" and then describes the arguments the caller did not send,
+			// so a caller who sent one unserved key is told to re-check shapes
+			// that were never wrong, and can loop on it. Which key is unserved
+			// is a question this package answers exactly.
 			if unserved := unservedPlanArguments(planArgs); len(unserved) > 0 {
 				return nil, httperr.Validation("arguments", "malformed_json",
 					"this tool does not take "+strings.Join(unserved, ", ")+
@@ -364,6 +368,14 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 			"rows":         outcome.Rows,
 			"total_rows":   len(outcome.Rows),
 			"generated_at": outcome.GeneratedAt,
+			// The frame, same as the HTTP envelope carries. A number without
+			// the zone that cut its days and the month its year opens is not
+			// placeable, and a model reading it will place it wrongly rather
+			// than ask.
+			"as_of":                   outcome.GeneratedAt,
+			"timezone":                outcome.Timezone,
+			"base_currency":           outcome.BaseCurrency,
+			"fiscal_year_start_month": outcome.FiscalYearStartMonth,
 		}
 		// A field mask shrank this run's row set: say so, exactly like the
 		// HTTP envelope does — a reduced total with no signal is the

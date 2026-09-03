@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1688 | 7% | 15312 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14465 | 15 | 8 |
-| _whole served catalog, for scale_ | 61 | 19280 | 80% | — | — | — |
+| _whole served catalog, for scale_ | 66 | 20773 | 86% | — | — | — |
 
 ### `morning_brief`
 
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 315, across 61 served tools.
+Median 273 tokens, mean 314, across 66 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -143,12 +143,14 @@ a term in an addition.
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
 | `annotate_brief` | 456 | — |
+| `forecast_readings` | 441 | — |
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 431 | — |
 | `create_record` | 429 | 1 scenario |
 | `enrich` | 424 | — |
 | `review_commitments` | 409 | — |
 | `search_records` | 392 | 6 scenarios |
+| `forecast_movement` | 358 | — |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |
@@ -168,15 +170,18 @@ a term in an addition.
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
+| `forecast_input_checks` | 259 | — |
 | `apply_tag` | 258 | — |
 | `account_coverage` | 252 | 2 scenarios |
 | `relink_activities` | 237 | — |
 | `read_record` | 229 | 2 scenarios |
 | `relink_thread` | 228 | — |
+| `update_tag` | 228 | — |
 | `disqualify_lead` | 221 | — |
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
 | `read_brief` | 213 | — |
+| `create_tag` | 206 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
 | `remove_tag` | 198 | — |

@@ -8,6 +8,8 @@ package compose
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -33,9 +35,18 @@ func (s Server) SetThreadAudience(w http.ResponseWriter, r *http.Request, thread
 		httperr.Write(w, r, err)
 		return
 	}
+	// Every field, spelled once. A field-by-field copy is how activity_ids
+	// reached the wire as null on its first day: the setter filled it, this
+	// literal did not name it, and the client invalidated nothing while every
+	// test that stubbed the response passed.
+	activityIDs := make([]openapi_types.UUID, 0, len(outcome.ActivityIDs))
+	for _, id := range outcome.ActivityIDs {
+		activityIDs = append(activityIDs, openapi_types.UUID(id))
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ThreadAudienceOutcome{
 		Messages:     outcome.Messages,
 		Shared:       outcome.Shared,
 		HeldByOthers: outcome.HeldByOthers,
+		ActivityIds:  activityIDs,
 	})
 }

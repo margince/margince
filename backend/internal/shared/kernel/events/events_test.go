@@ -43,8 +43,12 @@ func TestStreamsMatchSpecList(t *testing.T) {
 	// missing from it is one a reset silently leaves behind.
 	// The aitask stream joins them for the same reason and only that reason:
 	// it is enumerable and resettable, while staying outside coreStreams() so
-	// no all-stream group subscribes to an internal projection feed.
-	want := append(append([]string{}, coreFamilyStreams...), "gw:events:crm:extension", "gw:events:crm:aitask")
+	// no all-stream group subscribes to an internal projection feed. The brief
+	// stream is the second of that kind — product telemetry, not a family — and
+	// belongs here for the resettability half: a reset that left a rep's
+	// reading history behind would outlive the data it describes.
+	want := append(append([]string{}, coreFamilyStreams...),
+		"gw:events:crm:extension", "gw:events:crm:aitask", "gw:events:crm:brief")
 	sort.Strings(want)
 	if got := Streams(); !reflect.DeepEqual(got, want) {
 		t.Errorf("Streams() = %v, want the events.md stream set plus the extension stream %v", got, want)
@@ -90,9 +94,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"comment_posted": true, "thread_resolved": true, "decision_recorded": true,
 		// The receiving mail system returned a sent message. Named like
 		// sla_breached — the noun carries which half of comms it happened to.
-		"delivery_bounced": true,
-		"state_changed":    true,
-		"profile_created":  true, "profile_updated": true, "profile_archived": true,
+		"delivery_bounced":   true,
+		"state_changed":      true,
+		"exception_resolved": true,
+		"assurance_created":  true,
+		"snapshot_created":   true,
+		"profile_created":    true, "profile_updated": true, "profile_archived": true,
 		"corpus_changed": true, "build_changed": true, "version_changed": true,
 		"draft_outcome_recorded": true,
 		// engagement.reply is the §5.11 spec-pinned type name (EVT-SEM-14):

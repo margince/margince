@@ -203,22 +203,39 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return decision, err
 	}
 	decision.subject = subject
+	private, err := threadIsPrivateTx(ctx, tx, rec)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	if private {
+		// A thread judged the owner's private life creates nobody — see
+		// threadIsPrivateTx. The message commits and keeps its audience.
+		return decision.traced(TraceCaptured, TraceReasonPrivateThread), nil
+	}
 	// T1 correspondence-positive: the workspace has provably written to this
-	// address, so it is a counterparty by demonstrated intent. Asked of EVERY
-	// sender, not only those a suppression rule matched — since T4 defers the
-	// ambiguous class, the answer now decides create-versus-defer for ordinary
-	// senders too, which is worth a query per captured message.
+	// address. Asked of EVERY sender, not only those a suppression rule matched,
+	// since T4 defers the ambiguous class and this answer decides
+	// create-versus-defer for ordinary senders too.
 	corresponded, err := correspondencePositiveTx(ctx, tx, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	// Correspondence is evidence of intent toward an address, not evidence that
-	// a person is behind it. A mailbox owner books flights, files expenses and
-	// answers their own robots, so "the workspace wrote here" admitted an
-	// itinerary service and an expense tool as contacts. recordWorthy asks the
-	// second question T1 always assumed: is this an address a person could be
-	// reached at?
-	decision.create = corresponded && s.recordWorthy(cp)
+	exchanged, err := s.exchangedWith(ctx, tx, cp.Email)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	// Three questions, and T1 used to ask only the first. Whether the workspace
+	// wrote here (corresponded); whether that amounts to an exchange rather than
+	// unreturned intent (exchangedWith); and whether a person is reachable at
+	// the address at all (recordWorthy) — a mailbox owner books flights and
+	// answers their own robots, so writing somewhere is not evidence a human is
+	// behind it. A single send is deferred rather than refused, so a real
+	// prospect written to once still becomes a contact, for a reason.
+	decision.create = corresponded && exchanged && s.recordWorthy(cp)
+	roleMailbox := refusesToNameAPerson(cp.Email, exchanged)
+	if roleMailbox {
+		decision.create = false
+	}
 
 	// T2 transactional / ESP infrastructure, which T1 outranks.
 	suppressed, suppressReason, err := s.registrySuppresses(ctx, tx, rec, cp, row, corresponded)
@@ -261,7 +278,19 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		// by this point.
 		return decision.traced(TraceCaptured, priorReason), nil
 	}
-	decision.create = decision.create || alreadyKnown
+	// A role mailbox stays refused: `alreadyKnown` is true for it the moment the
+	// verdict answers, and ORing that back on would mint the contact on the very
+	// next message the queue sends.
+	decision.create = (decision.create || alreadyKnown) && !roleMailbox
+	if roleMailbox && settled {
+		// The queue has been judged. Falling through would defer it again on
+		// every later message — the ledger's live-row index absorbs the write,
+		// so nothing looks wrong, and the verdict pass re-answers a settled
+		// question for as long as the mailbox keeps writing. The early return
+		// above cannot cover this: reaching it needs !corresponded, and a role
+		// mailbox the owner writes to is corresponded by definition.
+		return decision.traced(TraceCaptured, TraceReasonRoleMailbox), nil
+	}
 
 	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
 	// organization — so the org is suppressed either way. What it does NOT say
@@ -289,34 +318,6 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return counterpartyDecision{}, err
 	}
 	return decision, nil
-}
-
-// derivationStart settles whether a derivation is possible at all and builds the
-// two values the ladder works on. It reports ok=false when nothing can be
-// derived — no resolver wired, no counterparty address, or no granting human.
-//
-// The last of those is the one with teeth (RC-8): a capture connector always
-// acts for a human, and with no owner nothing can honestly own the created rows.
-// The ACTIVITY still stands — refusing the derivation is the honest answer,
-// where failing the capture would throw away a message we successfully read — so
-// the fault is recorded for the link_reconcile sweep and creation is skipped.
-func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, cp connector.Counterparty, activityID ids.UUID) (dispositionRow, counterpartyDecision, bool, error) {
-	if s.ensurer == nil || cp.Email == "" {
-		return dispositionRow{}, counterpartyDecision{}, false, nil
-	}
-	actor, owner := capturePrincipal(ctx)
-	if owner.IsZero() {
-		// A fault, and one that reaches no other fault path: this returns
-		// ok=false with no error, so decideCounterpartyGuarded's arm never sees
-		// it and the message would otherwise trace as an ordinary capture.
-		return dispositionRow{}, counterpartyDecision{}.traced(TraceFault, TraceReasonNoGrantingHuman), false,
-			s.logBreadcrumbTx(ctx, tx, "capture_ensure_fault", rec, "no granting human on the connector principal")
-	}
-	row := dispositionRow{
-		Email: cp.Email, Domain: cp.Domain, DisplayName: cp.DisplayName,
-		ActivityID: activityID, OwnerID: owner,
-	}
-	return row, counterpartyDecision{owner: owner, capturedBy: actor.ID}, true, nil
 }
 
 // alreadyDecided applies the tier for an address this workspace has ALREADY

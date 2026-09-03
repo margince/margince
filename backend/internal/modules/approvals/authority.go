@@ -384,6 +384,19 @@ var selfOnlyKinds = map[string]bool{
 	// agreed to be in this CRM, and a shared inbox would hand every
 	// person:create holder a readable copy of a colleague's contacts.
 	"vcard_create": true,
+	// A held draft is the fourth, and it is about WHOSE MAILBOX the message
+	// leaves from rather than who may read it. Releasing one sends it, and the
+	// send stamps its identity from the approving human: comms.stagingUser
+	// takes the sending credential from the authenticated principal, and the
+	// display name and signature come from that same actor. So a colleague who
+	// approved a rep's draft did not authorise the rep's message — they sent
+	// their own, into a customer thread they were never part of, signed by
+	// themselves.
+	//
+	// The narrowing puts the decision back with the person the message would go
+	// out as. It is also what kindHeldDraft's own doc has always claimed ("held
+	// for the rep it was written for") and what nothing enforced.
+	kindHeldDraft: true,
 }
 
 // decidable is the ONE visibility-and-authority predicate for the inbox

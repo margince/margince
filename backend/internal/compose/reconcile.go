@@ -217,11 +217,43 @@ func (s followUpStager) stageDraftedReply(
 	// they are answering, in the words the counterparty used.
 	replySummary := fmt.Sprintf("A reply to %q is drafted and waiting to be sent — "+
 		"the conversation left no next step planned", draft.Subject)
-	if err := stageFollowUpDraft(ctx, s.svc, replySummary,
+	// Staged as the SWEEP, recording the OWNER as the human it acts for.
+	//
+	// The two halves answer different questions and both are load-bearing. The
+	// acting principal stays the sweep's, which is what keeps the row a server
+	// proposal (a NULL passport) the release executor may run, and what keeps
+	// its provenance honest — no rep asked for this card. on_behalf_of names
+	// the person the card is FOR, and approvals narrows a held draft to them:
+	// releasing one sends it from the approver's own mailbox, so a colleague
+	// who released it would be answering a customer under their own name.
+	//
+	// Recorded under the sweep alone, as it was, the row named nobody — and a
+	// held draft naming nobody is decidable by nobody.
+	if err := stageFollowUpDraft(onBehalfOfOwner(ctx, ownerCtx), s.svc, replySummary,
 		dealID, proposal.EvidenceActivityID.UUID, draft); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// onBehalfOfOwner returns the sweep's own principal, recording the owner it
+// resolved as the human this staging acts for.
+//
+// The owner is taken from the context the draft was composed under rather than
+// re-read, so the card is filed for exactly the person whose authority wrote it.
+// A context carrying no human leaves the principal untouched: the staging then
+// records nobody, which is what an ownerless deal honestly is.
+func onBehalfOfOwner(sweepCtx, ownerCtx context.Context) context.Context {
+	owner, ok := principal.Actor(ownerCtx)
+	if !ok || owner.UserID.IsZero() {
+		return sweepCtx
+	}
+	sweep, ok := principal.Actor(sweepCtx)
+	if !ok {
+		return sweepCtx
+	}
+	sweep.OnBehalfOf = owner.UserID
+	return principal.WithActor(sweepCtx, sweep)
 }
 
 // NewFollowUpReconciler assembles the nightly follow-up reconciler for

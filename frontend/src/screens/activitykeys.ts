@@ -126,3 +126,9 @@ export function dealWinKeys(
   }
   return keys;
 }
+
+// The canonical email read's key belongs to the component that reads under it,
+// so this is a re-export rather than a second spelling. Two copies of a cache
+// key do not fail loudly: they fail as a drawer that quietly stops refreshing
+// after somebody changes who may read the message.
+export { emailDetailKey as emailPresentationKey } from "../design-system/emaildetail";

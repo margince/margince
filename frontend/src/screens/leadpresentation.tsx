@@ -10,9 +10,8 @@ import {
   type BoardRecord,
   PipelineBoard,
 } from "../design-system/composed";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -76,40 +75,6 @@ export function SlaBadge({ state }: Readonly<{ state: Lead["sla_state"] }>) {
     return <Badge tone="warn">{t("lead.sla.atRisk")}</Badge>;
   }
   return null;
-}
-
-export function FirstResponseLine({ lead }: Readonly<{ lead: Lead }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  if (lead.first_response_at) {
-    return (
-      <span className="t-caption">
-        {t("lead.sla.answeredAt", {
-          at: formatDateTime(lead.first_response_at, locale, zone),
-        })}
-      </span>
-    );
-  }
-  if (!lead.sla_deadline_at || !lead.sla_state) return null;
-  return (
-    <span
-      className="t-caption"
-      style={{
-        display: "inline-flex",
-        gap: "var(--space-2)",
-        alignItems: "baseline",
-      }}
-    >
-      <SlaBadge state={lead.sla_state} />
-      {t(
-        lead.sla_state === "breached"
-          ? "lead.sla.overdueSince"
-          : "lead.sla.dueBy",
-        { at: formatDateTime(lead.sla_deadline_at, locale, zone) },
-      )}
-    </span>
-  );
 }
 
 const LEAD_BOARD_STAGES = [

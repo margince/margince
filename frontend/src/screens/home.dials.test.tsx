@@ -2,9 +2,13 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatTimeOfDay } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
+import { readingsDay, waitingRow } from "./home.fixtures";
 import { jsonResponse, render, stubApi } from "./home.testkit";
+import type { Worklist } from "./worklist.queries";
 
 // The dials, on the rendered page.
 //
@@ -21,32 +25,17 @@ beforeEach(() => {
   globalThis.location.hash = "#/home";
 });
 
-function worklist(scopeOptions: string[]) {
-  return {
-    as_of: "2026-06-10T06:00:00Z",
-    scope: "mine",
-    scope_options: scopeOptions,
-    queue: [
-      {
-        id: "w1",
-        source: "waiting_customer",
-        category: "customer_waiting",
-        title: "Aster Handel",
-        because: [],
-        actions: ["open"],
-        dispositions: [],
-        overdue: false,
-      },
-    ],
-    counts: [],
-    reach: [],
-    sources_unavailable: [],
-    summary: { total: 1, urgent: 1 },
-  };
+// One waiting customer, under the scopes this case is about. Built on the shared
+// day so the whole answer stays in one spelling: the strip, the sentence and Do
+// next are all drawn from it, and a hand-built copy here would drift from theirs
+// one edited field at a time.
+function worklist(scopeOptions: Worklist["scope_options"]) {
+  const day = readingsDay({}, [waitingRow()]);
+  return { ...day, scope_options: scopeOptions };
 }
 
 /** Stub every read the Brief fans out to, for a reader with the given scopes. */
-function stubHome(scopeOptions: string[]) {
+function stubHome(scopeOptions: Worklist["scope_options"]) {
   return stubApi({
     "GET /worklist": () => jsonResponse(worklist(scopeOptions)),
     "GET /worklist/team": () =>
@@ -141,7 +130,17 @@ describe("the Brief's dials", () => {
   it("names the view in the eyebrow, and keeps the sentence to the morning", async () => {
     stubHome(["mine"]);
     render(<HomeScreen />);
-    expect(await screen.findByText(en["brief.eyebrow"])).toBeTruthy();
+    // The expected time is DERIVED, not written down: the runner's zone is not
+    // the fixture's, so a literal "07:00" here passes in Berlin and fails in CI.
+    expect(
+      await screen.findByText(
+        `${en["brief.eyebrow"]} · as of ${formatTimeOfDay(
+          readingsDay({}).as_of,
+          "en",
+          viewerZone(),
+        )}`,
+      ),
+    ).toBeTruthy();
     // findBy: the sentence is composed from the worklist read, so it appears
     // when that lands rather than on the first paint.
     expect(await screen.findByTestId("glance-sentence")).toBeTruthy();
@@ -153,8 +152,19 @@ describe("the Brief's dials", () => {
     render(<HomeScreen />);
 
     expect(await screen.findByText(en["brief.eyebrow.weekly"])).toBeTruthy();
-    expect(screen.queryByText(en["brief.eyebrow"])).toBeNull();
+    // Exact match: the morning's eyebrow now composes the scope with an as-of,
+    // so a substring read would call the weekly clean while the morning's own
+    // words were on the page.
+    expect(
+      screen.queryByText((text) => text === en["brief.eyebrow"]),
+    ).toBeNull();
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
+    // And the line that stands in for it belongs to the week too. The weekly
+    // NEVER composes a sentence, so the fallback is the only line under its
+    // heading — and the morning's "this is your day" read as the wrong week
+    // entirely beneath "YOUR WEEK".
+    expect(screen.getByText(en["home.glance.introWeekly"])).toBeTruthy();
+    expect(screen.queryByText(en["home.glance.intro"])).toBeNull();
   });
 
   // The morning shows what waits; the weekly shows the week. Neither shows the

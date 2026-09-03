@@ -1,0 +1,97 @@
+.tagresult {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tagresult-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.tagresult-note {
+  color: var(--textMeta);
+  margin: 0;
+}
+
+/* One column, not three side by side: this is a result list, and a reader
+   scanning for a record reads down it. Three columns made each group a third
+   of the width and put the answer to "which records" in three places at once. */
+.tagresult-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tagresult-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A whole-row target, the way a result row behaves everywhere else: the name
+   is what a reader aims at, and a link the width of the text alone makes them
+   hunt for it. */
+.tagresult-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tagresult-row:hover {
+  background: var(--bgHover);
+}
+
+.tagresult-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.tagresult-row svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--textMeta);
+  flex: none;
+}
+
+/* A long company name wraps rather than pushing the row sideways. */
+.tagresult-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The word AT page-title size, in the shell's own heading type — this screen
+   heads itself, so the h1 here has to look like the h1 every other page gets.
+   The pill inside carries the tag's colour, the way a tag is drawn everywhere
+   else; sizing it up would make one chip in the product unlike all the others. */
+.tagresult-title {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-h1);
+  line-height: 1.15;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+/* A retired word still has a page — the records carrying it did not lose it —
+   so the heading says so rather than looking like any other tag. */
+.tagresult-retired {
+  font-family: var(--f-body);
+  font-size: var(--fs-sm);
+  color: var(--textMeta);
+}

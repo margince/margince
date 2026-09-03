@@ -72,9 +72,13 @@
 /* The reference sections, side by side. Half the measure each, because a
    reader consults them rather than reads them through; one column as soon as
    two would not fit, since a list squeezed to nothing is worse than a fold. */
+/* Two consulted sections side by side wherever the column gives each 24rem: a
+   1440px window with the context panel open leaves the record column about
+   52rem, and the earlier 27rem floor stacked the pair on exactly the screen
+   the design pairs them on. Narrower than that they fold into one column. */
 .co-reading-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
   /* The page's own rhythm in both directions. Once these two fold into one
      column the gap between them is a gap between stacked cards like any other,
      and 8px there was the same card 8px from its neighbour on a page that puts
@@ -339,10 +343,9 @@
      everything Margince produced rather than learning two. */
   border-top-color: var(--aiMed);
   /* .panel-row already sets the padding and the hairline border (none on
-     the first row); this only lays the row's own content out. */
-}
-.co-move:hover {
-  background: var(--aiLight);
+     the first row); this only lays the row's own content out. No hover fill:
+     the row is not one press target, its verbs are, and a fill behind them
+     would claim a hit area the row does not have. */
 }
 
 /* Who wrote the row, over what it says. An eyebrow rather than a badge beside
@@ -404,6 +407,18 @@
 }
 .co-move-why:hover {
   color: var(--textPrimary);
+}
+
+/* The reason with nothing behind it: the same voice as the one that opens the
+   working, without the rule that promises it. A dotted rule over a reason that
+   opens nothing teaches the reader the working is never there. */
+.co-move-reason {
+  display: inline;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  max-width: 78ch;
+  color: var(--textMeta);
+  text-wrap: pretty;
 }
 
 /* The panel over that reason names itself: the reason is behind it by then,
@@ -565,35 +580,6 @@
 .co-fact-suspect {
   display: inline-block;
   margin-inline-start: 0.4rem;
-}
-
-/* The readings row's PLACE on the page. The tiles themselves are `StatCard`'s
-   — this sheet owns where the row sits and how its cards divide the width, and
-   nothing about how a card draws. */
-.co-readings {
-  margin-block-end: var(--space-4);
-}
-
-/* Four free-standing cards across, folding as the column narrows rather than
-   at a breakpoint: `auto-fit` lets the row decide how many fit, and the
-   `min(100%, …)` floor is what stops a single card overflowing a column
-   narrower than the floor itself. Cards, not a plate — these read one at a
-   time, each a door into the tab that holds its detail.
-
-   The floor is 10.5rem because four readings have to fit ACROSS the record
-   column with the context panel open, which is the width the page is read at.
-   At 13rem the fourth card wrapped to a row of its own and the rest of that
-   row was empty — which reads as a reading that failed to load rather than as
-   a row that ended. */
-.co-readings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
-  gap: var(--space-3);
-  /* Every card in a row is the height of the tallest. They differ in what they
-     carry — one states a basis, one a source, one only a number — and sized to
-     their own contents they came out ragged, which reads as four cards of
-     different importance rather than four readings of one account. */
-  align-items: stretch;
 }
 
 /* The strip itself withheld, rather than absent: one line where the readings
@@ -1374,6 +1360,16 @@
   letter-spacing: normal;
   color: var(--textMeta);
 }
+/* What the day's work could NOT be read from, under whatever rows there are.
+   Inset to the panel's own padding and set at meta size: it qualifies the
+   answer above it rather than being one more row of it. */
+.today-withheld {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--textMeta);
+}
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
    which held four moves in less height and cost the reader the thing that
@@ -1769,6 +1765,22 @@
 .co-todo-meta {
   font-size: var(--fs-meta);
   color: var(--textMeta);
+}
+
+/* When the to-do is owed, at the row's far end. Quiet unless it is late: a
+   list where every date is coloured has no colour left for the one that
+   matters, and the one that matters is the promise nobody kept. */
+.co-todo-due {
+  flex: none;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+.co-todo-due-warn {
+  color: var(--warn);
+}
+.co-todo-due-danger {
+  color: var(--danger);
 }
 
 /* Tinted, not filled. Three filled buttons down a column outshout the single

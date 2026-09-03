@@ -208,47 +208,69 @@ describe("ConsentSection", () => {
     ).toBeInTheDocument();
   });
 
-  // G-5: a DOI purpose needs the one-time token; the row must have a field
-  // for it. Without one, granting a DOI purpose can only 422.
-  it("offers a token field only on a purpose that requires double opt-in", async () => {
+  // A double opt-in is completed by the SUBJECT, from a link mailed to their
+  // own address. This surface offers no way to type one in, because a token an
+  // operator can type is a confirmation an operator can forge.
+  it("offers no token field on a purpose that requires double opt-in", async () => {
     stubRoutes();
     render(<ConsentSection personId="person-1" />);
     await screen.findByText("Marketing");
-    expect(screen.getByLabelText(/confirmation token/i)).toBeInTheDocument();
-    expect(screen.getAllByLabelText(/confirmation token/i)).toHaveLength(1);
+    expect(screen.queryByLabelText(/confirmation token/i)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /issue double opt-in/i }),
+    ).toBeNull();
   });
 
-  it("sends the redeemed token with the grant", async () => {
+  // A button that can only 422 is worse than no button: it tells a rep the
+  // action exists. Withdraw stays, because taking consent back is always the
+  // subject's right and never needs a round trip.
+  it("offers no Grant on a double-opt-in row nobody here can grant", async () => {
+    stubRoutes();
+    render(<ConsentSection personId="person-1" />);
+    await screen.findByText("Marketing");
+    // The fixture holds a granted non-DOI purpose and an unknown DOI one. The
+    // granted row keeps Withdraw; the DOI row offers nothing, so no Grant
+    // button survives anywhere on the section.
+    expect(screen.queryByRole("button", { name: /^grant$/i })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /^withdraw$/i })).toHaveLength(
+      1,
+    );
+  });
+
+  it("says who confirms a double-opt-in purpose, on that row only", async () => {
+    stubRoutes();
+    render(<ConsentSection personId="person-1" />);
+    await screen.findByText("Marketing");
+    // One row requires DOI in the fixture; the note belongs to it alone.
+    expect(
+      screen.getAllByText(/confirmed by the contact themselves/i),
+    ).toHaveLength(1);
+  });
+
+  // Asserted through the withdraw verb on the NON-DOI row, which is the live
+  // state-writing button this fixture offers. The point is the request body:
+  // no token key reaches the server from this screen any more.
+  it("never sends a token with a state write", async () => {
     const sent = stubRoutes({
       "POST /people/person-1/consent": () =>
         jsonResponse({
-          purpose_id: "p2",
-          purpose_key: "marketing_email",
-          state: "granted",
+          purpose_id: "p1",
+          purpose_key: "transactional",
+          state: "withdrawn",
         }),
     });
     render(<ConsentSection personId="person-1" />);
-    await userEvent.type(
-      await screen.findByLabelText(/confirmation token/i),
-      "doi-tok-123",
-    );
+    await screen.findByText("Marketing");
     await userEvent.click(
-      screen.getAllByRole("button", { name: /^grant$/i })[0],
+      screen.getAllByRole("button", { name: /^withdraw$/i })[0],
     );
     await waitFor(() =>
       expect(
         sent.filter((s) => s.key === "POST /people/person-1/consent"),
       ).toHaveLength(1),
     );
-    // The onSuccess invalidation refetches the consent GET, appending to the
-    // same `sent` array — filter for the POST specifically rather than
-    // trusting it stayed last.
     const posts = sent.filter((s) => s.key === "POST /people/person-1/consent");
-    expect(posts.at(-1)?.body).toEqual({
-      purpose_id: "p2",
-      new_state: "granted",
-      double_opt_in_token: "doi-tok-123",
-    });
+    expect(posts.at(-1)?.body).not.toHaveProperty("double_opt_in_token");
   });
 
   it("omits the token key entirely when none was typed", async () => {
@@ -382,51 +404,22 @@ describe("ConsentSection", () => {
     expect(await screen.findByText(/person 360/i)).toBeInTheDocument();
   });
 
-  it("asks the server not to deliver — this surface owns the token disclosure", async () => {
-    const sent = stubRoutes({
-      "POST /people/person-1/consent/double-opt-in": () =>
-        jsonResponse(
-          { token: "mgd_x", expires_at: "2026-08-01T00:00:00Z" },
-          201,
-        ),
-    });
+  // This surface used to mint a DOI token and print it on screen, next to a
+  // field for typing it back in. Both halves are gone: nothing here calls the
+  // issuance endpoint, so there is no capability for an operator to read.
+  it("never asks the server to issue a double-opt-in token", async () => {
+    const sent = stubRoutes();
     render(<ConsentSection personId="person-1" />);
+    await screen.findByText("Marketing");
     await userEvent.click(
-      await screen.findByRole("button", { name: /issue double opt-in/i }),
+      screen.getAllByRole("button", { name: /^withdraw$/i })[0],
     );
     await waitFor(() =>
-      expect(
-        sent.some(
-          (s) => s.key === "POST /people/person-1/consent/double-opt-in",
-        ),
-      ).toBe(true),
+      expect(sent.some((s) => s.key === "POST /people/person-1/consent")).toBe(
+        true,
+      ),
     );
-    expect(sent.at(-1)?.body).toEqual({ purpose_id: "p2", deliver: false });
-  });
-
-  // The DOI token is minted but never delivered (doi.go has no queue call),
-  // so this surface must disclose it or the round-trip dead-ends. The expiry
-  // goes through the same shared formatter (formatDateTime) every other
-  // timestamp on this branch does — a raw ISO string here would be the one
-  // exception, in the viewer's own zone rather than a hardcoded one.
-  it("discloses the one-time token and its expiry when issuing a double opt-in", async () => {
-    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
-      timeZone: "Europe/Berlin",
-    } as Intl.ResolvedDateTimeFormatOptions);
-    stubRoutes({
-      "POST /people/person-1/consent/double-opt-in": () =>
-        jsonResponse(
-          { token: "mgd_one_time_abc", expires_at: "2026-08-01T00:00:00Z" },
-          201,
-        ),
-    });
-    render(<ConsentSection personId="person-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /issue double opt-in/i }),
-    );
-    expect(await screen.findByText("mgd_one_time_abc")).toBeInTheDocument();
-    // Berlin is +02:00 in August: 00:00 UTC reads back as 02:00 local.
-    expect(screen.getByText(/01\/08\/2026, 02:00/)).toBeInTheDocument();
+    expect(sent.some((s) => s.key.includes("double-opt-in"))).toBe(false);
   });
 
   it("renders an honest empty state when the workspace tracks no purposes", async () => {
@@ -498,7 +491,7 @@ describe("asking a contact to confirm their details", () => {
             {
               delivered_to: "ada@example.test",
               expires_at: "2026-09-13T09:00:00Z",
-              delivered: true,
+              provider_accepted: true,
               sendable: true,
             },
             201,
@@ -528,7 +521,7 @@ describe("asking a contact to confirm their details", () => {
           {
             delivered_to: "ada@example.test",
             expires_at: "2026-09-13T09:00:00Z",
-            delivered: false,
+            provider_accepted: false,
             // The relay exists and refused this one message. Telling a rep
             // "this installation sends no mail" would send them to configure
             // something that is already configured, and pressing again is what
@@ -555,7 +548,7 @@ describe("asking a contact to confirm their details", () => {
           {
             delivered_to: "ada@example.test",
             expires_at: "2026-09-13T09:00:00Z",
-            delivered: false,
+            provider_accepted: false,
           },
           201,
         ),

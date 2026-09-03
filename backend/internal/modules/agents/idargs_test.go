@@ -235,6 +235,15 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	}, probeReportCatalog)
+	RegisterForecastTool(r, func(context.Context, ForecastRequest) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
+	RegisterMovementTool(r, func(context.Context, MovementRequest) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
+	RegisterAssuranceTool(r, func(context.Context) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
 	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
@@ -403,7 +412,15 @@ func TestAMalformedIDIsRefusedAsTheCallersMistakeOnEveryTool(t *testing.T) {
 			// The walk has to have REACHED validation. An authority refusal is
 			// not the internal fault, so it would otherwise count as a pass
 			// while the argument was never looked at.
-			if strings.Contains(answer, "scope") || strings.Contains(answer, "seat") {
+			//
+			// The property's OWN name is removed before looking for authority
+			// words, because a tool may legitimately take an argument called
+			// `scope_id` — and a correct refusal that names it would otherwise
+			// read as a refusal about authority. Matching the word anywhere in
+			// the answer made the check depend on what the arguments happen to
+			// be called.
+			authority := strings.ReplaceAll(answer, prop, "")
+			if strings.Contains(authority, "scope") || strings.Contains(authority, "seat") {
 				t.Errorf("%s refused a malformed %q on authority, not on the argument: %q\n"+
 					"This case proves nothing about validation — grant the scope in this walk's "+
 					"context so the call reaches the tool.", name, prop, answer)

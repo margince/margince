@@ -26,7 +26,7 @@ import { useState, useSyncExternalStore } from "react";
 // dispatch be an exhaustive Record. A `Screen` admitting `x-${string}` could
 // not be exhausted, and that exhaustiveness is the thing stopping a destination
 // existing in the router and being missing from the dispatch.
-const SCREENS = [
+export const SCREENS = [
   "home",
   "contacts",
   "companies",
@@ -35,7 +35,7 @@ const SCREENS = [
   "deals",
   "projects",
   "worklist",
-  "reports",
+  "analytics",
   "ai",
   "settings",
   "filters",
@@ -43,6 +43,9 @@ const SCREENS = [
   "offers",
   "search",
   "share",
+  // A tag has a page of its own: the records carrying one word, grouped by
+  // type. Every tag pill in the product links here.
+  "tags",
   "onboarding",
   "client",
   "book",
@@ -99,6 +102,12 @@ export function parseHash(hash: string): Route {
   // lost their page.
   if (screen === "today") {
     return { screen: "worklist" };
+  }
+  // Reports became Analytics, and the same argument applies: a bookmark and
+  // every link already sent outlive the rename. The segment rides along, so
+  // #/reports/forecast lands on the forecast section rather than the default.
+  if (screen === "reports") {
+    return { screen: "analytics", id, id2, id3 };
   }
   if (!isScreen(screen)) {
     // A hash comes out of the URL bar, so its first segment is text a human
@@ -167,9 +176,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // state and never touches the address, which is what makes lowering this look
   // free — the pane is not what the depth is protecting.
   worklist: WHOLE_ADDRESS,
-  // #/reports/<report> — the picker chooses a view of one screen, so switching
-  // reports re-renders the panel instead of throwing the screen away.
-  reports: 1,
+  // #/analytics/<section> — the picker chooses a view of one screen, so
+  // switching sections re-renders the panel instead of throwing the screen away.
+  analytics: 1,
   ai: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.
@@ -178,6 +187,10 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   scheduled: WHOLE_ADDRESS,
   offers: WHOLE_ADDRESS,
   search: WHOLE_ADDRESS,
+  // A different tag is a different page, not a tab of one: the whole address
+  // keys it, so opening a second word starts a fresh read rather than showing
+  // the first one's counts under the second one's name.
+  tags: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
   onboarding: WHOLE_ADDRESS,
   client: WHOLE_ADDRESS,

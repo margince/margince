@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -208,6 +209,9 @@ func (h importHandlers) stageRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
+	if err := h.contextTagIsApplicable(ctx, mapping.ContextTag); err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
 
 	runs := migration.NewRunStore(h.db)
 	run, err := runs.CreateStagedRun(ctx, migration.CreateStagedRunInput{
@@ -221,7 +225,7 @@ func (h importHandlers) stageRun(
 	}
 
 	source := migration.NewCSVSource(h.blobs, req.SourceRef, object, mapping.Fields, mapping.SourceKey)
-	writers := newCSVWriters(h.db, run.ID, object, mapping.OnDuplicate)
+	writers := newCSVWriters(h.db, run.ID, &mapping)
 	report, err := migration.NewEngine(runs, writers).DryRun(ctx, source)
 	if err != nil {
 		// The run row already exists. Left alone it would sit in `validating`
@@ -317,7 +321,7 @@ func (h importHandlers) commitRun(
 
 	object := run.Mapping.Object
 	source := migration.NewCSVSource(h.blobs, run.SourceRef, object, run.Mapping.Fields, run.Mapping.SourceKey)
-	writers := newCSVWriters(h.db, approved.ID, object, run.Mapping.OnDuplicate)
+	writers := newCSVWriters(h.db, approved.ID, run.Mapping)
 	// The commit outlives the request deliberately. Cancelling it when the
 	// browser goes away would leave the run `running` with rows already
 	// committed and nothing able to record the failure — a state neither
@@ -353,7 +357,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	}
 
 	runs := migration.NewRunStore(h.db)
-	writers := newCSVWriters(h.db, run.ID, run.Mapping.Object, run.Mapping.OnDuplicate)
+	writers := newCSVWriters(h.db, run.ID, run.Mapping)
 	// The reversal outlives the request deliberately, the same reason the
 	// commit does (ApproveImportRun): cancelling it when the browser goes
 	// away must not leave the run `undoing` with rows already reversed and
@@ -460,4 +464,31 @@ func failValidation(ctx context.Context, runs *migration.RunStore, id migration.
 	if err := runs.FailValidation(ctx, id, cause); err != nil {
 		slog.ErrorContext(ctx, "recording a failed import validation", "run", id, "err", err)
 	}
+}
+
+// contextTagIsApplicable refuses a run naming a word that cannot be applied.
+//
+// Asked HERE, where the answer reaches the caller, rather than at the apply.
+// The dry run writes no rows, so nothing else exercises the word before a human
+// approves the report — and the apply's own refusal would then fail a run
+// mid-way, on a report that never mentioned the tag. A word retired between
+// this check and the commit still fails there, which is the narrow race this
+// cannot close and the run's own failure record does report.
+func (h importHandlers) contextTagIsApplicable(ctx context.Context, raw string) error {
+	if raw == "" {
+		return nil
+	}
+	id, err := ids.Parse(raw)
+	if err != nil {
+		return httperr.Validation("context_tag_id", "invalid_uuid", "A context tag names an existing tag by id.")
+	}
+	live, err := collections.NewStore(h.db).TagIsLive(ctx, ids.TagID{UUID: id})
+	if err != nil {
+		return err
+	}
+	if !live {
+		return httperr.Validation("context_tag_id", "not_applicable",
+			"That tag does not exist or has been retired, so this import could not file its records under it.")
+	}
+	return nil
 }

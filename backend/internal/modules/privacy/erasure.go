@@ -131,14 +131,14 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		// What the floor shielded from the statement above is held instead
 		// (erasure_restrict.go): the same three id sets, selected BY the
 		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor)
+		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor, e.payloads)
 		if err != nil {
 			return err
 		}
 		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causePersonErasure); err != nil {
 			return err
 		}
-		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason); err != nil {
+		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason, e.payloads); err != nil {
 			return err
 		}
 		// The messages nobody has sent yet. They hold the subject's address and
@@ -163,7 +163,10 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err := redactApprovalsCitingActivities(ctx, tx, append(activitiesRedacted, activitiesHeld...), ErasedSourceWithdrawal); err != nil {
 			return err
 		}
-		if err := redactWorkflowRuns(ctx, tx, emails); err != nil {
+		// What the subject's name is left standing in inside somebody else's
+		// working record — an automation's run, and a colleague's plan for
+		// their week (erasure_commitments.go).
+		if err := redactWorkingRecords(ctx, tx, subject, emails); err != nil {
 			return err
 		}
 		// Purge the subject's attachment bytes and rows together, inside the
@@ -246,7 +249,7 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction
 // just emptied: their vectors, their own audit spines, the proposals read out of
 // them, and the transmitted copy in the send log.
-func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string) error {
+func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
 	// The vectors go with the text they were built from. purgeDerivedTraces
 	// reaches embeddings through activity_link, which by construction cannot
 	// see the unlinked mail redactSubjectTimeline now covers — and
@@ -271,7 +274,7 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 	// The transmitted copy of every activity just redacted. Without this
 	// the timeline row is a tombstone while the send log still holds the
 	// address, the subject line and the body of the same message.
-	return redactDeliveries(ctx, tx, activities, erasedName)
+	return redactDeliveries(ctx, tx, activities, erasedName, payloads)
 }
 
 // anonymizeSubjectRows wipes the subject's PII in place: the person row
@@ -439,52 +442,4 @@ func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string
 		}
 	}
 	return nil
-}
-
-// anonymizeLeadTwins wipes the subject's segregated lead rows and everything
-// keyed to them, answering with the twins it touched. One CTE on purpose:
-// the UPDATE runs first and feeds the touched ids to every DELETE, so the
-// email match still sees the pre-anonymize addresses; split into separate
-// statements, the second would match nothing.
-//
-// The dependents are not incidental. Field provenance says WHO captured
-// WHICH field from WHERE. The correction ledger holds human verdicts about
-// the twin. The score history embeds the ids of activities the subject took
-// part in, inside JSON no field-level scrub reaches. A manual scoring signal
-// carries a colleague's name and their written judgement about them. This is
-// an ANONYMIZE, so the lead row survives and nothing cascades — each has to
-// be named here or it outlives the erasure (ADR-0105).
-func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string) ([]ids.UUID, error) {
-	leadCustom, err := subjectCustomColumns(ctx, tx, "lead")
-	if err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		WITH wiped AS (
-		  UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
-		    company_name = NULL, candidate_org_key = NULL, raw = NULL,
-		    archived_at = coalesce(archived_at, now())%s
-		  WHERE promoted_person_id = $1
-		     OR id IN (SELECT converted_from_lead_id FROM person WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
-		     OR (email IS NOT NULL AND lower(email) = ANY($2))
-		  RETURNING id
-		), pruned AS (
-		  DELETE FROM field_provenance
-		  WHERE object_type = 'lead' AND object_id IN (SELECT id FROM wiped)
-		), verdicts AS (
-		  DELETE FROM ai_feedback
-		  WHERE subject_type = 'lead' AND subject_id IN (SELECT id FROM wiped)
-		), scores AS (
-		  DELETE FROM lead_score_history
-		  WHERE lead_id IN (SELECT id FROM wiped)
-		), manual AS (
-		  DELETE FROM lead_manual_signal
-		  WHERE lead_id IN (SELECT id FROM wiped)
-		)
-		SELECT id FROM wiped`, nullColumnAssignments(leadCustom)),
-		personID, lowercased(emails))
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -338,7 +339,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	if err != nil {
 		return 0, err
 	}
-	deals, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
+	openRows, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
 		var d openDealRow
 		err := row.Scan(&d.amountMinor, &d.currency, &d.winProbability)
 		return d, err
@@ -348,7 +349,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	}
 
 	var total int64
-	for _, d := range deals {
+	for _, d := range openRows {
 		if d.amountMinor == nil {
 			continue // an amountless deal contributes a real 0, never an error
 		}
@@ -358,7 +359,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		if err != nil {
 			return 0, err
 		}
-		weighted, err := weightedValue(baseMinor, d.winProbability)
+		weighted, err := values.WeightedValue(baseMinor, d.winProbability)
 		if err != nil {
 			return 0, err
 		}

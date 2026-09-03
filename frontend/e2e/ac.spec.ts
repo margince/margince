@@ -92,7 +92,7 @@ const CORE_SCREENS = [
   // second level of nesting indents it again.
   "filters",
   "worklist",
-  "reports",
+  "analytics",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
   // destination of its own. Sweeping `#/automations` after the route retired
@@ -266,7 +266,7 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
     "Arbeitsliste",
     "Pipeline",
     "Projekte",
-    "Berichte",
+    "Analytics",
     "Margince fragen",
   ]);
 });
@@ -280,10 +280,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
     "aria-label",
     "Pipeline",
   );
-  await page.locator('nav.rail a[aria-label="Berichte"]').click();
+  await page.locator('nav.rail a[aria-label="Analytics"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Berichte",
+    "Analytics",
   );
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
 });
@@ -1101,7 +1101,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     // what it actually promises today: the page renders, and no panel degrades
     // into an error box. That it cannot yet say "HubSpot does not carry this" —
     // a different fact from "you may not see this" — is issue #882.
-    await expect(page.getByTestId("person-strip")).toBeVisible();
+    await expect(page.getByTestId("person-readings")).toBeVisible();
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
     // Deal 360: timeline, coverage, offers, the context panel, and the buying
@@ -1360,7 +1360,8 @@ async function expectNoAaViolations(page: Page, screen: string) {
 const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
-  "reports/forecast",
+  "analytics/forecast",
+  "analytics/pipeline",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and

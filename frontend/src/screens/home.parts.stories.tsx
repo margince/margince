@@ -12,13 +12,14 @@ import {
   pipelineRows,
   quietRun,
   ranked,
+  readingsDay,
   report,
   singles,
 } from "./home.fixtures";
 import { HomeGlance } from "./home.glance";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
-import { TodaySection } from "./home.today";
+import { FocusSection } from "./home.today";
 import {
   installFetchStub,
   jsonResponse,
@@ -26,6 +27,9 @@ import {
   type RouteMap,
   StoryProviders,
 } from "./story-utils";
+
+// A story draws one section on its own, so nothing leads the page above it.
+const NOTHING_ABOVE: ReadonlySet<string> = new Set();
 
 // Home, one part at a time.
 //
@@ -84,13 +88,6 @@ type Story = StoryObj;
 
 // ── The briefing ────────────────────────────────────────────────────────────
 
-const GLANCE_GO = {
-  onGoToDecisions: () => undefined,
-  onGoToToday: () => undefined,
-  onGoToDuplicates: () => undefined,
-  onGoToWatch: () => undefined,
-};
-
 // A day with work in it, for the opening sentence. The sentence names the FIRST
 // row through the same helpers the queue prints it with, so a story that passed
 // no queue would show the block without the thing it exists to say.
@@ -126,9 +123,11 @@ const GLANCE_DAY = {
   summary: { total: 2, urgent: 1 },
 } as unknown as Parameters<typeof HomeGlance>[0]["day"];
 
-// The full briefing: six sentences, each led by the figure that is also the way
-// to what it counts. What to look at — the numerals share one column, so the
-// sentences start on a single x rather than wherever their own digits ended.
+// The header the Brief opens with: eyebrow, greeting, and ONE composed sentence
+// about the day — not a column of counts. Each fact the old briefing lines
+// stated has a better home on the page now: the decisions deck draws its own
+// cards, the readings strip carries the figures, and the rail's Overnight and
+// Watch panels list what the night found.
 export const Glance: Story = {
   render: part(
     <HomeGlance
@@ -136,117 +135,64 @@ export const Glance: Story = {
       day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
-      decisions={{ pending: 6, expiringToday: 2 }}
-      brief={{
-        ranked: 3,
-        topDeal: "Fleet retrofit",
-        topAmount: "€48,000.00",
-      }}
-      overnight={{ captured: 42, duplicates: 3 }}
-      stalled={{ seen: 2, more: false }}
-      {...GLANCE_GO}
     />,
   ),
 };
 
-// Every reading answered, and every one of them zero or clear. The waiting line
-// becomes prose rather than a chip pointing at nothing.
-export const GlanceCalm: Story = {
-  render: part(
-    <HomeGlance
-      view="morning"
-      day={GLANCE_DAY}
-      firstName="Lena"
-      now={NOW_DATE}
-      decisions={{ pending: 0, expiringToday: 0 }}
-      brief={{ ranked: 0, topDeal: null, topAmount: null }}
-      overnight={{ captured: 0, duplicates: 0 }}
-      stalled={{ seen: 0, more: false }}
-      {...GLANCE_GO}
-    />,
-  ),
-};
-
-// The quiet count came off one page with another behind it, so the numeral in
-// the briefing line is a floor and reads as one.
-export const GlanceCapped: Story = {
-  render: part(
-    <HomeGlance
-      view="morning"
-      day={GLANCE_DAY}
-      firstName="Lena"
-      now={NOW_DATE}
-      decisions={{ pending: 6, expiringToday: 2 }}
-      brief={{
-        ranked: 3,
-        topDeal: "Fleet retrofit",
-        topAmount: "\u20ac48,000.00",
-      }}
-      overnight={{ captured: 42, duplicates: 3 }}
-      stalled={{ seen: 100, more: true }}
-      {...GLANCE_GO}
-    />,
-  ),
-};
-
-// Two reads have not answered and the name has not arrived. A missing reading
-// contributes NO LINE — an invented zero cannot be told apart from a real one,
-// and the greeting is drawn anyway because the hour is known either way.
-export const GlanceUnread: Story = {
+// The name has not arrived yet. The greeting is drawn anyway, because the hour
+// is known either way and a header that waited for `/me` would move under the
+// reader a moment after they started reading it.
+export const GlanceUnnamed: Story = {
   render: part(
     <HomeGlance
       view="morning"
       day={GLANCE_DAY}
       firstName={null}
       now={NOW_DATE}
-      decisions={{ pending: 4, expiringToday: 0 }}
-      brief={null}
-      overnight={null}
-      stalled={{ seen: 2, more: false }}
-      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// The weekly says its own thing under its own heading: no composed sentence,
+// because that one is built from the ranked queue and describes THIS morning.
+export const GlanceWeekly: Story = {
+  render: part(
+    <HomeGlance
+      view="weekly"
+      day={GLANCE_DAY}
+      firstName="Lena"
+      now={NOW_DATE}
     />,
   ),
 };
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// Four counts and deliberately no money: the pipeline is worth three currencies
-// at once, and no honest single figure for it exists. The per-currency figures
-// are the rail's Position panel, below.
+// Five slots, always, and deliberately no money: the pipeline is worth three
+// currencies at once and no honest single figure for it exists. The per-currency
+// figures are the rail's Position panel, below.
 export const Readings: Story = {
-  render: part(
-    <HomeReadingsStrip
-      decisions={{ pending: 6, expiringToday: 2 }}
-      open={{ deals: { seen: 5, more: false }, currencies: 2 }}
-      ranked={{ count: 3, topPct: 74 }}
-      quiet={{ seen: 2, more: false }}
-    />,
-  ),
+  render: part(<HomeReadingsStrip day={readingsDay()} />),
 };
 
-// The page ended short of the list, so every reading taken from it is a FLOOR.
-// The figure carries the "+" rather than the caption, because a reader who takes
-// a bounded number for a total does it while looking at the number.
+// A source ended short of its list, so every figure is a floor. The caveat sits
+// under the whole strip rather than on one slot: a caveat on one figure invites
+// the reading where the other four are exact.
 export const ReadingsCapped: Story = {
   render: part(
     <HomeReadingsStrip
-      decisions={{ pending: 6, expiringToday: 2 }}
-      open={{ deals: { seen: 100, more: true }, currencies: 3 }}
-      ranked={{ count: 3, topPct: 74 }}
-      quiet={{ seen: 12, more: true }}
+      day={readingsDay({ buyer_replies: 100, more_available: true })}
     />,
   ),
 };
 
-// Two readings could not be taken. The strip draws three slots rather than five
-// with two zeroes in them — a slot that is absent cannot be misread as a nought.
-export const ReadingsPartlyUnread: Story = {
+// A quiet morning. The two untracked slots read the same as ever — the strip
+// does not get shorter on a day with less in it, because a reader comparing it
+// with yesterday's would take the missing slot for an answered question.
+export const ReadingsQuiet: Story = {
   render: part(
     <HomeReadingsStrip
-      decisions={{ pending: 6, expiringToday: 0 }}
-      open={null}
-      ranked={{ count: 0, topPct: null }}
-      quiet={null}
+      day={readingsDay({ buyer_replies: 0, prospecting: 0 }, [])}
     />,
   ),
 };
@@ -284,27 +230,45 @@ export const DecisionsRefused: Story = {
 // The ranked queue: the composite as the first row of the same axis its five
 // factors are drawn on, and the factors in a softer fill so the row that leads
 // reads first.
-export const Today: Story = {
+export const Focus: Story = {
   render: part(
-    <TodaySection brief={ranked} deals={deals} nowMs={NOW} state="ready" />,
+    <FocusSection
+      brief={ranked}
+      deals={deals}
+      nowMs={NOW}
+      state="ready"
+      drawnAbove={NOTHING_ABOVE}
+    />,
     { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(ranked) },
   ),
 };
 
 // A run that ranked nothing, with the candidate count under it. Honest quiet,
 // and no invented urgency.
-export const TodayQuietRun: Story = {
+export const FocusQuietRun: Story = {
   render: part(
-    <TodaySection brief={quietRun} deals={deals} nowMs={NOW} state="ready" />,
+    <FocusSection
+      brief={quietRun}
+      deals={deals}
+      nowMs={NOW}
+      state="ready"
+      drawnAbove={NOTHING_ABOVE}
+    />,
     { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(quietRun) },
   ),
 };
 
 // No run has ever been made. The panel offers to make one instead of drawing an
 // empty queue that looks like a failure.
-export const TodayNoRun: Story = {
+export const FocusNoRun: Story = {
   render: part(
-    <TodaySection brief={null} deals={deals} nowMs={NOW} state="ready" />,
+    <FocusSection
+      brief={null}
+      deals={deals}
+      nowMs={NOW}
+      state="ready"
+      drawnAbove={NOTHING_ABOVE}
+    />,
     {
       ...RAIL_ROUTES,
       "POST /brief": () => jsonResponse(ranked),
@@ -315,9 +279,15 @@ export const TodayNoRun: Story = {
 // The read behind the queue failed. The panel says so where the cards would be,
 // rather than drawing the empty plate a morning with no run would show — the two
 // are different facts and used to look identical.
-export const TodayRefused: Story = {
+export const FocusRefused: Story = {
   render: part(
-    <TodaySection brief={null} deals={deals} nowMs={NOW} state="failed" />,
+    <FocusSection
+      brief={null}
+      deals={deals}
+      nowMs={NOW}
+      state="failed"
+      drawnAbove={NOTHING_ABOVE}
+    />,
   ),
 };
 

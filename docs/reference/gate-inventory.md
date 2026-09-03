@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (61)
+## Parity (63)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -37,6 +37,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
+| `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
@@ -50,6 +51,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
+| `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one LIST ROW carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve exactly what it offered. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
@@ -81,7 +83,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (83)
+## Census (86)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -92,6 +94,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
+| `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
 | `audiencereaders_test.go` | H2 | A message's AUDIENCE says who may read its content. |
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a COMMITTED audience change. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed FROM. |
@@ -156,12 +159,14 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
+| `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search, exports, embeddings, agent grounding. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
+| `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has ONE reader, and it answers one question. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
@@ -262,7 +267,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (5)
+## Claim (6)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -270,6 +275,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. |
+| `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 
 ## Budget (4)

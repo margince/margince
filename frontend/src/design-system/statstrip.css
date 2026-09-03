@@ -166,3 +166,11 @@
   background-color: var(--bgCard);
   transition-duration: var(--dur-tap);
 }
+
+/* The caveat under the whole plate: a source was read to its limit, so every
+   figure above is a floor. Quiet on purpose — this is the surface reporting on
+   its own limits rather than a reading, and it must not compete with the row. */
+.stat-strip-floor {
+  color: var(--textSecondary);
+  margin: var(--space-2) 0 0;
+}

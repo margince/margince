@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The deal's four readings, in the band under the header.
+// The deal's four readings, in the cards every record page draws them in.
 //
 // A deal page is read two ways. Somebody working THIS deal reads down it;
 // somebody working thirty before a forecast call scans for the one that needs
 // them. The second read had nothing to land on — the page opened with a stage
 // bar, and every fact about the deal was a paragraph or a card further down.
 //
-// Each card answers one question a rep actually asks, and each is a fact the
-// server already sends. Two clauses that would have read well here are absent
-// on purpose: "awaiting reply N days" needs a send timestamp the Offer schema
-// does not carry, and "they replied twice, we replied once" needs deal-scoped
-// direction counts nothing computes. A card that reads well and cannot be
-// checked is the thing this page exists to stop.
+// Each card answers one question a rep actually asks, in the order they ask
+// them — how much, by when, who decides, whether it is still moving — and each
+// is a fact the server already sends, with the rows it was read from behind it.
+// Two clauses that would have read well here are absent on purpose: "awaiting
+// reply N days" needs a send timestamp the Offer schema does not carry, and
+// "they replied twice, we replied once" needs deal-scoped direction counts
+// nothing computes. A card that reads well and cannot be checked is the thing
+// this page exists to stop.
 
 import type { components } from "../../api/schema";
-import "./deal360.css";
 import { useRecordZone } from "../../app/recordzone";
 import { StatCard } from "../../design-system/atoms";
-import { StatStrip } from "../../design-system/statstrip";
+import { FactList } from "../../design-system/factlist";
+import { ReadingsGrid } from "../../design-system/readingsgrid";
 import {
   calendarDaysBetween,
+  formatDateAbbrev,
   formatDayMonth,
   formatMoneyOrAbsent,
   formatNumber,
@@ -29,6 +32,7 @@ import {
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { dealRoleLabel } from "../record360";
 
 type Deal = components["schemas"]["Deal"];
 type Offer = components["schemas"]["Offer"];
@@ -51,8 +55,8 @@ function forecastLabel(value: string, t: (key: MessageKey) => string): string {
 }
 
 /**
- * The four readings. Fixed at four for the reason the company strip is fixed
- * at five: a row that sometimes drew a fifth would fold at a different width
+ * The four readings. Fixed at four for the reason the company row is fixed
+ * at four: a row that sometimes drew a fifth would fold at a different width
  * from one click away.
  */
 export function DealStrip({
@@ -60,6 +64,7 @@ export function DealStrip({
   offers,
   coverage,
   coverageWithheld,
+  onOpenHistory,
 }: Readonly<{
   deal: Deal;
   // The deal's offers, newest revision first. Undefined while the read is in
@@ -70,24 +75,31 @@ export function DealStrip({
   // no seats at all, and a card drawn from that would report "nobody is on
   // this deal" over a check that never ran.
   coverageWithheld: boolean;
+  // Where the momentum reading sends a reader for the whole ledger. Optional,
+  // because a surface drawing these outside the page has no tab to open.
+  onOpenHistory?: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
   return (
-    <section className="d360-readings" aria-label={t("deal.strip.title")}>
-      <StatStrip testId="deal-strip">
-        <MoneyStat deal={deal} offers={offers} locale={locale} t={t} />
-        <CloseStat deal={deal} locale={locale} zone={zone} t={t} />
-        <PeopleStat
-          coverage={coverage}
-          withheld={coverageWithheld}
-          locale={locale}
-          t={t}
-        />
-        <MomentumStat deal={deal} locale={locale} t={t} />
-      </StatStrip>
-    </section>
+    <ReadingsGrid label={t("deal.strip.title")} testId="deal-strip">
+      <MoneyStat deal={deal} offers={offers} locale={locale} t={t} />
+      <CloseStat deal={deal} locale={locale} zone={zone} t={t} />
+      <PeopleStat
+        coverage={coverage}
+        withheld={coverageWithheld}
+        locale={locale}
+        t={t}
+      />
+      <MomentumStat
+        deal={deal}
+        locale={locale}
+        zone={zone}
+        onOpen={onOpenHistory}
+        t={t}
+      />
+    </ReadingsGrid>
   );
 }
 
@@ -118,12 +130,29 @@ function MoneyStat({
         status: t(`commercial.offer.${newest.status}` as MessageKey),
       })
     : t("deal.strip.money.noOffer");
+  // Every offer on the table, behind the figure: what each one asked for and
+  // where it stands, so the deal's amount can be checked against the paper it
+  // was written on.
+  const basis =
+    offers && offers.length > 0 ? (
+      <FactList
+        numeric
+        facts={offers.map((offer) => ({
+          key: offer.id,
+          term: String(offer.offer_number),
+          value: formatMoneyOrAbsent(offer.gross_minor, offer.currency, locale),
+          note: t(`commercial.offer.${offer.status}` as MessageKey),
+        }))}
+      />
+    ) : undefined;
   return (
     <StatCard
       label={t("deal.strip.money")}
       value={formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
       detail={detail}
       numeric
+      basisLabel={basis ? t("co.strip.basis.reading") : undefined}
+      basis={basis}
     />
   );
 }
@@ -192,7 +221,9 @@ function CloseStat({
   );
 }
 
-// How many of the people on this deal are actually talking to us.
+// How many of the people on this deal are actually talking to us, and — behind
+// the figure — who they are: the buying side, by seat, with whether each has
+// answered.
 function PeopleStat({
   coverage,
   withheld,
@@ -239,18 +270,37 @@ function PeopleStat({
       detail={detail}
       tone={engaged <= 1 || !champion ? "warn" : undefined}
       numeric
+      // Counted segments, because a committee is a thing a reader counts.
+      meter={{ filled: engaged, total: seats.length }}
+      basisLabel={t("co.strip.basis.reading")}
+      basis={
+        <FactList
+          facts={seats.map((seat) => ({
+            key: seat.person_id,
+            // Absent when the caller may not read that person: the seat still
+            // counts, and only the identity is withheld.
+            term: seat.person_name ?? t("coverage.seatWithheld"),
+            value: dealRoleLabel(seat.role, t),
+            note: seat.engaged ? t("coverage.engaged") : t("coverage.quiet"),
+          }))}
+        />
+      }
     />
   );
 }
 
-// Whether anything is happening.
+// Whether anything is happening, and the day the last thing did.
 function MomentumStat({
   deal,
   locale,
+  zone,
+  onOpen,
   t,
 }: Readonly<{
   deal: Deal;
   locale: Locale;
+  zone: string;
+  onOpen?: () => void;
   t: Translator;
 }>) {
   const parts: string[] = [t("deal.strip.momentum.detail")];
@@ -264,6 +314,24 @@ function MomentumStat({
       detail={parts.join(" · ")}
       tone={deal.stalled ? "danger" : undefined}
       dot={deal.stalled}
+      openLabel={t("deal.strip.openHistory")}
+      onOpen={onOpen}
+      basisLabel={
+        deal.last_activity_at ? t("co.strip.basis.reading") : undefined
+      }
+      basis={
+        deal.last_activity_at ? (
+          <FactList
+            facts={[
+              {
+                key: "last",
+                term: t("deal.strip.lastTouch"),
+                value: formatDateAbbrev(deal.last_activity_at, locale, zone),
+              },
+            ]}
+          />
+        ) : undefined
+      }
     />
   );
 }

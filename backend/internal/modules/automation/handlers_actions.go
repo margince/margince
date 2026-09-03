@@ -15,6 +15,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -99,6 +100,37 @@ func (e *MissingConsentPurposeError) FieldFault() (field, code, message string) 
 	return "consent_purpose", "missing_consent_purpose", e.Error()
 }
 
+// MissingDraftOwnerError refuses to compose a draft for an automation nobody
+// owns.
+//
+// Releasing a held draft SENDS it, and the send goes out from the approving
+// human's own mailbox under their name — so the card belongs to the person the
+// message would go out as, and approvals narrows it to them. An automation with
+// no owner names nobody, and there are only three things such a firing could do:
+// stage a card decidable by nobody, which rots in the inbox until its window
+// closes; stage one decidable by ANYONE, which is a colleague sending a customer
+// a reply under their own name from a thread they were never in; or refuse.
+//
+// Refusing is the only one of the three an operator can act on. It lands as a
+// visible failed run naming the automation, in the same shape a missing consent
+// purpose does — and for the same reason: the fault is the automation's
+// configuration, and it is cheaper to see it now than at the moment somebody
+// tries to release a draft nobody can.
+//
+// The seeded post_meeting_recap starter is exactly this case: catalog templates
+// are seeded with no owner_id, so until one is assigned it drafts nothing.
+type MissingDraftOwnerError struct{}
+
+func (e *MissingDraftOwnerError) Error() string {
+	return "this automation drafts an email but has no owner; a drafted message goes out under one " +
+		"person's name and is released by that person, so assign an owner before enabling it"
+}
+
+// FieldFault names what an operator has to set.
+func (e *MissingDraftOwnerError) FieldFault() (field, code, message string) {
+	return "owner_id", "missing_draft_owner", e.Error()
+}
+
 // HeldDraftProposal is the staged payload a human decides on, and the exact
 // input its release sends.
 //
@@ -165,6 +197,14 @@ func applyDraftEmail(ctx context.Context, comms Comms, action workflow.Action) (
 	}
 	if in.ConsentPurpose == "" {
 		return action, HeldDraftProposal{}, &MissingConsentPurposeError{}
+	}
+	// The owner is checked BEFORE the draft is composed, beside the purpose and
+	// for the same reason: a firing that cannot produce a releasable card should
+	// refuse where an operator sees it, not spend a model call and stage
+	// something nobody can decide. The engine binds the owner on the run context
+	// (withSendingOwner), so its absence here IS an automation with no owner.
+	if _, ok := principal.SendingHuman(ctx); !ok {
+		return action, HeldDraftProposal{}, &MissingDraftOwnerError{}
 	}
 	// The addressee is resolved BEFORE the draft is composed. Composing can
 	// cost a model call, and a thread with no counterparty on it cannot be

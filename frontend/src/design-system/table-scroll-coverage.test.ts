@@ -68,6 +68,26 @@ function ancestorElements(node: ts.Node): string[] {
   return names;
 }
 
+// A table drawn ONLY for a screen reader has no visible box to scroll: it is
+// clipped to a pixel and sits beside the drawing whose figures it carries. The
+// tab stop this gate exists to require would be a tab stop onto nothing.
+//
+// Derived from the element rather than kept as a list of filenames, because a
+// named exemption is a standing permission the next author inherits without
+// knowing why — and `sr-only` is a fact the source already states.
+function srOnly(
+  opening: ts.JsxOpeningElement | ts.JsxSelfClosingElement,
+): boolean {
+  return opening.attributes.properties.some(
+    (attribute) =>
+      ts.isJsxAttribute(attribute) &&
+      attribute.name.getText() === "className" &&
+      attribute.initializer !== undefined &&
+      ts.isStringLiteral(attribute.initializer) &&
+      attribute.initializer.text.split(/\s+/).includes("sr-only"),
+  );
+}
+
 /** `<file>:<line>` for every `<table>` in one file with no TableScroll above it. */
 function unwrappedIn(fileName: string, text: string): string[] {
   const source = ts.createSourceFile(
@@ -85,7 +105,7 @@ function unwrappedIn(fileName: string, text: string): string[] {
         ? node
         : undefined;
     if (opening !== undefined && opening.tagName.getText() === "table") {
-      if (!ancestorElements(node).includes("TableScroll")) {
+      if (!ancestorElements(node).includes("TableScroll") && !srOnly(opening)) {
         const { line } = source.getLineAndCharacterOfPosition(node.getStart());
         found.push(`${fileName}:${line + 1}`);
       }

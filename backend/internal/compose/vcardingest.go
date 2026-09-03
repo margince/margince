@@ -53,6 +53,17 @@ import (
 // past a limit of five.
 const vcardIngestMaxCards = 5
 
+// vcardIngestMaxAttempts bounds the retry. This kind is on-demand — nothing
+// re-enqueues a message the trigger already fired for — so the ladder has to
+// carry BOTH failure shapes alone: a blob-store read that is down for a
+// minute (worth the retries) and a malformed card or a code defect (worth
+// none, since River's own default would answer no differently on its 25th
+// identical attempt). Five, not three: unlike a lookup this job can retry
+// freely (geocodeMaxAttempts, vatCheckMaxAttempts), it is never re-swept, so
+// it needs the same headroom scheduledSendMaxAttempts and
+// embedReindexMaxAttempts carry for a dependency with no second chance.
+const vcardIngestMaxAttempts = 5
+
 // vcardIngestInsertOpts is the trigger's insert, spelled here beside the worker
 // whose queue and attempt cap it names.
 //
@@ -68,8 +79,9 @@ const vcardIngestMaxCards = 5
 // their own.
 func vcardIngestInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue:      aiCaptureQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		Queue:       aiCaptureQueue,
+		MaxAttempts: vcardIngestMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 }
 
@@ -116,9 +128,11 @@ func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngest
 			"activity", job.Args.Activity, "workspace", job.Args.Workspace)
 		return nil
 	default:
-		// River owns the attempt cap, from the contract's own max_attempts.
-		// A second ceiling counted here would be a copy of that number, and the
-		// two would drift the first time either moved.
+		// River retries this against vcardIngestMaxAttempts, declared beside
+		// vcardIngestInsertOpts — this kind is opts_owner: caller, so nothing
+		// reads a bound from api/jobs.yaml for it the way workspaceSweepOpts
+		// reads one for a fan_out kind; the cap has to live at the insert
+		// site instead.
 		return jobs.FaultContext(ctx, err)
 	}
 }

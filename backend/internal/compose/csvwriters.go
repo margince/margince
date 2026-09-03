@@ -13,11 +13,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -44,6 +44,15 @@ type csvWriters struct {
 	// honours whatever the dry run reported on.
 	onDuplicate string
 
+	// contextTag files every record this run CREATES under one word, so a batch
+	// stays findable as a batch. Zero when the run named none. Creates only: a
+	// row that UPDATES a record the estate already held leaves its tags alone,
+	// because the run did not put that record in the estate.
+	contextTag ids.TagID
+	// tags applies it, in the same transaction as the create — a crash between
+	// the two would leave a row in the estate that its own batch cannot find.
+	tags *collections.Store
+
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
@@ -59,15 +68,28 @@ type csvWriters struct {
 
 var _ migration.Writers = (*csvWriters)(nil)
 
-func newCSVWriters(db *database.DB, runID migration.RunID, object, onDuplicate string) *csvWriters {
+// newCSVWriters takes the run's mapping by pointer because a stored run may
+// carry none: the object and the duplicate policy then fall back to empty,
+// which is what every caller before this did by passing them separately.
+func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.RunMapping) *csvWriters {
+	settled := migration.RunMapping{}
+	if mapping != nil {
+		settled = *mapping
+	}
 	return &csvWriters{
 		pool:        db.Pool(),
 		people:      people.NewStore(db),
+		tags:        collections.NewStore(db),
 		identities:  migration.NewRunStore(db),
 		runID:       runID,
-		object:      object,
-		onDuplicate: onDuplicate,
-		nativeIDs:   map[string]ids.UUID{},
+		object:      settled.Object,
+		onDuplicate: settled.OnDuplicate,
+		// An unparseable id files nothing rather than failing the run. The wire
+		// refused the shapes a client can send, so what reaches here is a stored
+		// mapping — and a run that already passed its dry run must not die at
+		// commit over a word.
+		contextTag: parseContextTag(settled.ContextTag),
+		nativeIDs:  map[string]ids.UUID{},
 	}
 }
 
@@ -436,63 +458,13 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
-		return w.identities.RecordIdentityTx(ctx, tx, w.runID, csvSourceSystem(), w.object, externalID, id)
+		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, csvSourceSystem(), w.object, externalID, id); err != nil {
+			return err
+		}
+		return w.fileUnderContextTag(ctx, tx, id)
 	}); err != nil {
 		return err
 	}
 	w.nativeIDs[externalID] = id
 	return nil
-}
-
-var _ migration.UndoWriters = (*csvWriters)(nil)
-
-// Reverse archives the native row a csv import created (IEM-WIRE-9), through
-// each object's existing archive path — soft-delete only, per the contract's
-// own convention, never a hard delete. Idempotent: a resumed undo may replay
-// a row whose archive committed but whose checkpoint advance did not, and an
-// already-archived row is left exactly as it is rather than re-archived (or
-// erroring on a live-only read that no longer finds it).
-func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UUID) error {
-	switch object {
-	case migration.ObjectLead:
-		lead, err := w.people.GetLead(ctx, ids.From[ids.LeadKind](nativeID), storekit.IncludeArchived)
-		if err != nil {
-			return fmt.Errorf("import undo: reading lead %s: %w", nativeID, err)
-		}
-		if lead.ArchivedAt != nil {
-			return nil
-		}
-		if _, err := w.people.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), people.DisqualifyLeadInput{}); err != nil {
-			return fmt.Errorf("import undo: reversing lead %s: %w", nativeID, err)
-		}
-		return nil
-	case migration.ObjectOrganization:
-		org, err := w.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), storekit.IncludeArchived)
-		if err != nil {
-			return fmt.Errorf("import undo: reading organization %s: %w", nativeID, err)
-		}
-		if org.ArchivedAt != nil {
-			return nil
-		}
-		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil); err != nil {
-			return fmt.Errorf("import undo: reversing organization %s: %w", nativeID, err)
-		}
-		return nil
-	case migration.ObjectPerson:
-		person, err := w.people.GetPerson(ctx, ids.From[ids.PersonKind](nativeID), storekit.IncludeArchived)
-		if err != nil {
-			return fmt.Errorf("import undo: reading person %s: %w", nativeID, err)
-		}
-		if person.ArchivedAt != nil {
-			return nil
-		}
-		// The archive cascades to person_email, person_phone and the person's
-		// relationships, so the child rows this run created go with it.
-		if _, err := w.people.ArchivePerson(ctx, ids.From[ids.PersonKind](nativeID), nil); err != nil {
-			return fmt.Errorf("import undo: reversing person %s: %w", nativeID, err)
-		}
-		return nil
-	default:
-		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
-	}
 }

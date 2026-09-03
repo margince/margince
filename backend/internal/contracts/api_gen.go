@@ -1507,6 +1507,24 @@ func (e AttentionSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for AudienceMemberSubjectType.
+const (
+	AudienceMemberSubjectTypeTeam AudienceMemberSubjectType = "team"
+	AudienceMemberSubjectTypeUser AudienceMemberSubjectType = "user"
+)
+
+// Valid indicates whether the value is a known member of the AudienceMemberSubjectType enum.
+func (e AudienceMemberSubjectType) Valid() bool {
+	switch e {
+	case AudienceMemberSubjectTypeTeam:
+		return true
+	case AudienceMemberSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuditHistoryEntryActorType.
 const (
 	AuditHistoryEntryActorTypeAgent     AuditHistoryEntryActorType = "agent"
@@ -4873,6 +4891,144 @@ func (e DemoteLeadResponseUnwind) Valid() bool {
 	}
 }
 
+// Defines values for EmailAccessChangeMode.
+const (
+	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
+	EmailAccessChangeModeNone               EmailAccessChangeMode = "none"
+	EmailAccessChangeModeThreadContribution EmailAccessChangeMode = "thread_contribution"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessChangeMode enum.
+func (e EmailAccessChangeMode) Valid() bool {
+	switch e {
+	case EmailAccessChangeModeMessageAudience:
+		return true
+	case EmailAccessChangeModeNone:
+		return true
+	case EmailAccessChangeModeThreadContribution:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessChangeScope.
+const (
+	EmailAccessChangeScopeMessage EmailAccessChangeScope = "message"
+	EmailAccessChangeScopeNone    EmailAccessChangeScope = "none"
+	EmailAccessChangeScopeThread  EmailAccessChangeScope = "thread"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessChangeScope enum.
+func (e EmailAccessChangeScope) Valid() bool {
+	switch e {
+	case EmailAccessChangeScopeMessage:
+		return true
+	case EmailAccessChangeScopeNone:
+		return true
+	case EmailAccessChangeScopeThread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessContentState.
+const (
+	EmailAccessContentStateAvailable EmailAccessContentState = "available"
+	EmailAccessContentStateWithheld  EmailAccessContentState = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessContentState enum.
+func (e EmailAccessContentState) Valid() bool {
+	switch e {
+	case EmailAccessContentStateAvailable:
+		return true
+	case EmailAccessContentStateWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessStatus.
+const (
+	EmailAccessStatusParticipants EmailAccessStatus = "participants"
+	EmailAccessStatusSelected     EmailAccessStatus = "selected"
+	EmailAccessStatusTeam         EmailAccessStatus = "team"
+	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessStatus enum.
+func (e EmailAccessStatus) Valid() bool {
+	switch e {
+	case EmailAccessStatusParticipants:
+		return true
+	case EmailAccessStatusSelected:
+		return true
+	case EmailAccessStatusTeam:
+		return true
+	case EmailAccessStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailPresentationLifecycle.
+const (
+	EmailPresentationLifecycleDelivered EmailPresentationLifecycle = "delivered"
+)
+
+// Valid indicates whether the value is a known member of the EmailPresentationLifecycle enum.
+func (e EmailPresentationLifecycle) Valid() bool {
+	switch e {
+	case EmailPresentationLifecycleDelivered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSummaryDirection.
+const (
+	EmailSummaryDirectionInbound  EmailSummaryDirection = "inbound"
+	EmailSummaryDirectionOutbound EmailSummaryDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the EmailSummaryDirection enum.
+func (e EmailSummaryDirection) Valid() bool {
+	switch e {
+	case EmailSummaryDirectionInbound:
+		return true
+	case EmailSummaryDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSummaryMove.
+const (
+	EmailSummaryMoveNeedsReply     EmailSummaryMove = "needs_reply"
+	EmailSummaryMoveNone           EmailSummaryMove = "none"
+	EmailSummaryMoveWaitingForThem EmailSummaryMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the EmailSummaryMove enum.
+func (e EmailSummaryMove) Valid() bool {
+	switch e {
+	case EmailSummaryMoveNeedsReply:
+		return true
+	case EmailSummaryMoveNone:
+		return true
+	case EmailSummaryMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmbedReindexPreviewEstimateQuality.
 const (
 	EmbedReindexPreviewEstimateQualityHeuristic EmbedReindexPreviewEstimateQuality = "heuristic"
@@ -5308,6 +5464,216 @@ func (e FinanceSummaryState) Valid() bool {
 	case FinanceSummaryStateSyncing:
 		return true
 	case FinanceSummaryStateUnmapped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceReadiness.
+const (
+	ForecastAssuranceChecksIncomplete    ForecastAssuranceReadiness = "checks_incomplete"
+	ForecastAssuranceNeedsReview         ForecastAssuranceReadiness = "needs_review"
+	ForecastAssuranceReady               ForecastAssuranceReadiness = "ready"
+	ForecastAssuranceReadyWithExceptions ForecastAssuranceReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceReadiness enum.
+func (e ForecastAssuranceReadiness) Valid() bool {
+	switch e {
+	case ForecastAssuranceChecksIncomplete:
+		return true
+	case ForecastAssuranceNeedsReview:
+		return true
+	case ForecastAssuranceReady:
+		return true
+	case ForecastAssuranceReadyWithExceptions:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceStatus.
+const (
+	ForecastAssuranceStatusComplete   ForecastAssuranceStatus = "complete"
+	ForecastAssuranceStatusIncomplete ForecastAssuranceStatus = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceStatus enum.
+func (e ForecastAssuranceStatus) Valid() bool {
+	switch e {
+	case ForecastAssuranceStatusComplete:
+		return true
+	case ForecastAssuranceStatusIncomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceSourceSource.
+const (
+	ForecastAssuranceSourceSourceCalendar  ForecastAssuranceSourceSource = "calendar"
+	ForecastAssuranceSourceSourceContracts ForecastAssuranceSourceSource = "contracts"
+	ForecastAssuranceSourceSourceDocuments ForecastAssuranceSourceSource = "documents"
+	ForecastAssuranceSourceSourceIncumbent ForecastAssuranceSourceSource = "incumbent"
+	ForecastAssuranceSourceSourceMail      ForecastAssuranceSourceSource = "mail"
+	ForecastAssuranceSourceSourceOffers    ForecastAssuranceSourceSource = "offers"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceSourceSource enum.
+func (e ForecastAssuranceSourceSource) Valid() bool {
+	switch e {
+	case ForecastAssuranceSourceSourceCalendar:
+		return true
+	case ForecastAssuranceSourceSourceContracts:
+		return true
+	case ForecastAssuranceSourceSourceDocuments:
+		return true
+	case ForecastAssuranceSourceSourceIncumbent:
+		return true
+	case ForecastAssuranceSourceSourceMail:
+		return true
+	case ForecastAssuranceSourceSourceOffers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceSourceState.
+const (
+	ForecastAssuranceSourceStateChecked           ForecastAssuranceSourceState = "checked"
+	ForecastAssuranceSourceStatePermissionLimited ForecastAssuranceSourceState = "permission_limited"
+	ForecastAssuranceSourceStateStale             ForecastAssuranceSourceState = "stale"
+	ForecastAssuranceSourceStateUnavailable       ForecastAssuranceSourceState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceSourceState enum.
+func (e ForecastAssuranceSourceState) Valid() bool {
+	switch e {
+	case ForecastAssuranceSourceStateChecked:
+		return true
+	case ForecastAssuranceSourceStatePermissionLimited:
+		return true
+	case ForecastAssuranceSourceStateStale:
+		return true
+	case ForecastAssuranceSourceStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastCallScopeKind.
+const (
+	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
+	ForecastCallScopeKindTeam      ForecastCallScopeKind = "team"
+	ForecastCallScopeKindWorkspace ForecastCallScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastCallScopeKind enum.
+func (e ForecastCallScopeKind) Valid() bool {
+	switch e {
+	case ForecastCallScopeKindOwner:
+		return true
+	case ForecastCallScopeKindTeam:
+		return true
+	case ForecastCallScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementReading.
+const (
+	ForecastMovementReadingBestCase ForecastMovementReading = "best_case"
+	ForecastMovementReadingEvidence ForecastMovementReading = "evidence"
+	ForecastMovementReadingOpen     ForecastMovementReading = "open"
+	ForecastMovementReadingWeighted ForecastMovementReading = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementReading enum.
+func (e ForecastMovementReading) Valid() bool {
+	switch e {
+	case ForecastMovementReadingBestCase:
+		return true
+	case ForecastMovementReadingEvidence:
+		return true
+	case ForecastMovementReadingOpen:
+		return true
+	case ForecastMovementReadingWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementBucketName.
+const (
+	ForecastMovementBucketNameAmount             ForecastMovementBucketName = "amount"
+	ForecastMovementBucketNameCategory           ForecastMovementBucketName = "category"
+	ForecastMovementBucketNameDefinition         ForecastMovementBucketName = "definition"
+	ForecastMovementBucketNameFx                 ForecastMovementBucketName = "fx"
+	ForecastMovementBucketNameLost               ForecastMovementBucketName = "lost"
+	ForecastMovementBucketNameModel              ForecastMovementBucketName = "model"
+	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
+	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
+	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
+	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
+	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
+	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementBucketName enum.
+func (e ForecastMovementBucketName) Valid() bool {
+	switch e {
+	case ForecastMovementBucketNameAmount:
+		return true
+	case ForecastMovementBucketNameCategory:
+		return true
+	case ForecastMovementBucketNameDefinition:
+		return true
+	case ForecastMovementBucketNameFx:
+		return true
+	case ForecastMovementBucketNameLost:
+		return true
+	case ForecastMovementBucketNameModel:
+		return true
+	case ForecastMovementBucketNameNew:
+		return true
+	case ForecastMovementBucketNamePulledIn:
+		return true
+	case ForecastMovementBucketNamePushedOut:
+		return true
+	case ForecastMovementBucketNameReopenedOrArchived:
+		return true
+	case ForecastMovementBucketNameStageWeight:
+		return true
+	case ForecastMovementBucketNameWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastReadingsScopeKind.
+const (
+	ForecastReadingsScopeKindOwner     ForecastReadingsScopeKind = "owner"
+	ForecastReadingsScopeKindTeam      ForecastReadingsScopeKind = "team"
+	ForecastReadingsScopeKindWorkspace ForecastReadingsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastReadingsScopeKind enum.
+func (e ForecastReadingsScopeKind) Valid() bool {
+	switch e {
+	case ForecastReadingsScopeKindOwner:
+		return true
+	case ForecastReadingsScopeKindTeam:
+		return true
+	case ForecastReadingsScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -6340,6 +6706,45 @@ func (e MyAgentGrantState) Valid() bool {
 	}
 }
 
+// Defines values for NewForecastCallPeriod.
+const (
+	NewForecastCallPeriodMonth   NewForecastCallPeriod = "month"
+	NewForecastCallPeriodQuarter NewForecastCallPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastCallPeriod enum.
+func (e NewForecastCallPeriod) Valid() bool {
+	switch e {
+	case NewForecastCallPeriodMonth:
+		return true
+	case NewForecastCallPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastCallScopeKind.
+const (
+	NewForecastCallScopeKindOwner     NewForecastCallScopeKind = "owner"
+	NewForecastCallScopeKindTeam      NewForecastCallScopeKind = "team"
+	NewForecastCallScopeKindWorkspace NewForecastCallScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastCallScopeKind enum.
+func (e NewForecastCallScopeKind) Valid() bool {
+	switch e {
+	case NewForecastCallScopeKindOwner:
+		return true
+	case NewForecastCallScopeKindTeam:
+		return true
+	case NewForecastCallScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NoticeKind.
 const (
 	CoachDealNeedsNextStep NoticeKind = "coach_deal_needs_next_step"
@@ -7353,22 +7758,22 @@ func (e OrganizationFactSuspectReason) Valid() bool {
 
 // Defines values for OrganizationGraphGroupsOmitted.
 const (
-	OrganizationGraphGroupsOmittedContacts  OrganizationGraphGroupsOmitted = "contacts"
-	OrganizationGraphGroupsOmittedDeals     OrganizationGraphGroupsOmitted = "deals"
-	OrganizationGraphGroupsOmittedIntroPath OrganizationGraphGroupsOmitted = "intro_path"
-	OrganizationGraphGroupsOmittedOurSide   OrganizationGraphGroupsOmitted = "our_side"
+	Contacts  OrganizationGraphGroupsOmitted = "contacts"
+	Deals     OrganizationGraphGroupsOmitted = "deals"
+	IntroPath OrganizationGraphGroupsOmitted = "intro_path"
+	OurSide   OrganizationGraphGroupsOmitted = "our_side"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationGraphGroupsOmitted enum.
 func (e OrganizationGraphGroupsOmitted) Valid() bool {
 	switch e {
-	case OrganizationGraphGroupsOmittedContacts:
+	case Contacts:
 		return true
-	case OrganizationGraphGroupsOmittedDeals:
+	case Deals:
 		return true
-	case OrganizationGraphGroupsOmittedIntroPath:
+	case IntroPath:
 		return true
-	case OrganizationGraphGroupsOmittedOurSide:
+	case OurSide:
 		return true
 	default:
 		return false
@@ -8134,6 +8539,36 @@ func (e PersonGraphNodeType) Valid() bool {
 	case PersonGraphNodeTypeColleague:
 		return true
 	case PersonGraphNodeTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PersonGraphReceiptKind.
+const (
+	PersonGraphReceiptKindCall    PersonGraphReceiptKind = "call"
+	PersonGraphReceiptKindEmail   PersonGraphReceiptKind = "email"
+	PersonGraphReceiptKindMeeting PersonGraphReceiptKind = "meeting"
+	PersonGraphReceiptKindMessage PersonGraphReceiptKind = "message"
+	PersonGraphReceiptKindNote    PersonGraphReceiptKind = "note"
+	PersonGraphReceiptKindTask    PersonGraphReceiptKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphReceiptKind enum.
+func (e PersonGraphReceiptKind) Valid() bool {
+	switch e {
+	case PersonGraphReceiptKindCall:
+		return true
+	case PersonGraphReceiptKindEmail:
+		return true
+	case PersonGraphReceiptKindMeeting:
+		return true
+	case PersonGraphReceiptKindMessage:
+		return true
+	case PersonGraphReceiptKindNote:
+		return true
+	case PersonGraphReceiptKindTask:
 		return true
 	default:
 		return false
@@ -9472,6 +9907,36 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for ResolveInputCheckOutcome.
+const (
+	AddedEvidence ResolveInputCheckOutcome = "added_evidence"
+	FixedRecord   ResolveInputCheckOutcome = "fixed_record"
+	NotRelevant   ResolveInputCheckOutcome = "not_relevant"
+	Reassign      ResolveInputCheckOutcome = "reassign"
+	RemindLater   ResolveInputCheckOutcome = "remind_later"
+	ValueCorrect  ResolveInputCheckOutcome = "value_correct"
+)
+
+// Valid indicates whether the value is a known member of the ResolveInputCheckOutcome enum.
+func (e ResolveInputCheckOutcome) Valid() bool {
+	switch e {
+	case AddedEvidence:
+		return true
+	case FixedRecord:
+		return true
+	case NotRelevant:
+		return true
+	case Reassign:
+		return true
+	case RemindLater:
+		return true
+	case ValueCorrect:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RetentionAction.
 const (
 	Anonymize RetentionAction = "anonymize"
@@ -9552,12 +10017,11 @@ func (e RowTagColor) Valid() bool {
 
 // Defines values for RunReportRequestAggregatesFn.
 const (
-	RunReportRequestAggregatesFnAvg           RunReportRequestAggregatesFn = "avg"
-	RunReportRequestAggregatesFnCount         RunReportRequestAggregatesFn = "count"
-	RunReportRequestAggregatesFnCountDistinct RunReportRequestAggregatesFn = "count_distinct"
-	RunReportRequestAggregatesFnMax           RunReportRequestAggregatesFn = "max"
-	RunReportRequestAggregatesFnMin           RunReportRequestAggregatesFn = "min"
-	RunReportRequestAggregatesFnSum           RunReportRequestAggregatesFn = "sum"
+	RunReportRequestAggregatesFnAvg   RunReportRequestAggregatesFn = "avg"
+	RunReportRequestAggregatesFnCount RunReportRequestAggregatesFn = "count"
+	RunReportRequestAggregatesFnMax   RunReportRequestAggregatesFn = "max"
+	RunReportRequestAggregatesFnMin   RunReportRequestAggregatesFn = "min"
+	RunReportRequestAggregatesFnSum   RunReportRequestAggregatesFn = "sum"
 )
 
 // Valid indicates whether the value is a known member of the RunReportRequestAggregatesFn enum.
@@ -9566,8 +10030,6 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	case RunReportRequestAggregatesFnAvg:
 		return true
 	case RunReportRequestAggregatesFnCount:
-		return true
-	case RunReportRequestAggregatesFnCountDistinct:
 		return true
 	case RunReportRequestAggregatesFnMax:
 		return true
@@ -9808,24 +10270,6 @@ func (e SearchResultType) Valid() bool {
 	case SearchResultTypeProject:
 		return true
 	case SearchResultTypeTag:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SetActivityAudienceRequestMembersSubjectType.
-const (
-	SetActivityAudienceRequestMembersSubjectTypeTeam SetActivityAudienceRequestMembersSubjectType = "team"
-	SetActivityAudienceRequestMembersSubjectTypeUser SetActivityAudienceRequestMembersSubjectType = "user"
-)
-
-// Valid indicates whether the value is a known member of the SetActivityAudienceRequestMembersSubjectType enum.
-func (e SetActivityAudienceRequestMembersSubjectType) Valid() bool {
-	switch e {
-	case SetActivityAudienceRequestMembersSubjectTypeTeam:
-		return true
-	case SetActivityAudienceRequestMembersSubjectTypeUser:
 		return true
 	default:
 		return false
@@ -11796,22 +12240,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
-	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
-	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
-	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
+	Automatic  VoiceProfileVersionReason = "automatic"
+	Manual     VoiceProfileVersionReason = "manual"
+	Onboarding VoiceProfileVersionReason = "onboarding"
+	Rollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case VoiceProfileVersionReasonAutomatic:
+	case Automatic:
 		return true
-	case VoiceProfileVersionReasonManual:
+	case Manual:
 		return true
-	case VoiceProfileVersionReasonOnboarding:
+	case Onboarding:
 		return true
-	case VoiceProfileVersionReasonRollback:
+	case Rollback:
 		return true
 	default:
 		return false
@@ -12468,13 +12912,28 @@ func (e WorklistItemSource) Valid() bool {
 
 // Defines values for WorklistMoveAction.
 const (
-	DraftReply WorklistMoveAction = "draft_reply"
+	WorklistMoveActionCreateTask       WorklistMoveAction = "create_task"
+	WorklistMoveActionDraftEmail       WorklistMoveAction = "draft_email"
+	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
+	WorklistMoveActionNone             WorklistMoveAction = "none"
+	WorklistMoveActionOpenMeetingBrief WorklistMoveAction = "open_meeting_brief"
+	WorklistMoveActionReconnect        WorklistMoveAction = "reconnect"
 )
 
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
-	case DraftReply:
+	case WorklistMoveActionCreateTask:
+		return true
+	case WorklistMoveActionDraftEmail:
+		return true
+	case WorklistMoveActionDraftReply:
+		return true
+	case WorklistMoveActionNone:
+		return true
+	case WorklistMoveActionOpenMeetingBrief:
+		return true
+	case WorklistMoveActionReconnect:
 		return true
 	default:
 		return false
@@ -13092,25 +13551,25 @@ func (e StartOidcSignInParamsProvider) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
-	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
-	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
-	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
+	Blocked           ListAutomationRunsParamsOutcome = "blocked"
+	Failed            ListAutomationRunsParamsOutcome = "failed"
+	Fired             ListAutomationRunsParamsOutcome = "fired"
+	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	Skipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case ListAutomationRunsParamsOutcomeBlocked:
+	case Blocked:
 		return true
-	case ListAutomationRunsParamsOutcomeFailed:
+	case Failed:
 		return true
-	case ListAutomationRunsParamsOutcomeFired:
+	case Fired:
 		return true
-	case ListAutomationRunsParamsOutcomeQueuedForApproval:
+	case QueuedForApproval:
 		return true
-	case ListAutomationRunsParamsOutcomeSkipped:
+	case Skipped:
 		return true
 	default:
 		return false
@@ -13471,6 +13930,69 @@ func (e GetFilterVocabularyParamsResource) Valid() bool {
 	case GetFilterVocabularyParamsResourcePerson:
 		return true
 	case GetFilterVocabularyParamsResourceProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetForecastParamsPeriod.
+const (
+	GetForecastParamsPeriodMonth   GetForecastParamsPeriod = "month"
+	GetForecastParamsPeriodQuarter GetForecastParamsPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the GetForecastParamsPeriod enum.
+func (e GetForecastParamsPeriod) Valid() bool {
+	switch e {
+	case GetForecastParamsPeriodMonth:
+		return true
+	case GetForecastParamsPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetForecastParamsScopeKind.
+const (
+	GetForecastParamsScopeKindOwner     GetForecastParamsScopeKind = "owner"
+	GetForecastParamsScopeKindTeam      GetForecastParamsScopeKind = "team"
+	GetForecastParamsScopeKindWorkspace GetForecastParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetForecastParamsScopeKind enum.
+func (e GetForecastParamsScopeKind) Valid() bool {
+	switch e {
+	case GetForecastParamsScopeKindOwner:
+		return true
+	case GetForecastParamsScopeKindTeam:
+		return true
+	case GetForecastParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetForecastMovementParamsReading.
+const (
+	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
+	GetForecastMovementParamsReadingEvidence GetForecastMovementParamsReading = "evidence"
+	GetForecastMovementParamsReadingOpen     GetForecastMovementParamsReading = "open"
+	GetForecastMovementParamsReadingWeighted GetForecastMovementParamsReading = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
+func (e GetForecastMovementParamsReading) Valid() bool {
+	switch e {
+	case GetForecastMovementParamsReadingBestCase:
+		return true
+	case GetForecastMovementParamsReadingEvidence:
+		return true
+	case GetForecastMovementParamsReadingOpen:
+		return true
+	case GetForecastMovementParamsReadingWeighted:
 		return true
 	default:
 		return false
@@ -14597,6 +15119,9 @@ type Activity struct {
 
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
+
+	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
 	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
@@ -16121,6 +16646,17 @@ type AttentionSubject struct {
 // AttentionSubjectType defines model for AttentionSubject.Type.
 type AttentionSubjectType string
 
+// AudienceMember One user or team admitted to a message besides its participants. The same shape the
+// audience write takes and the presentation reads back, so an editor that renders the
+// current set submits it in the vocabulary it received.
+type AudienceMember struct {
+	SubjectId   openapi_types.UUID        `json:"subject_id"`
+	SubjectType AudienceMemberSubjectType `json:"subject_type"`
+}
+
+// AudienceMemberSubjectType defines model for AudienceMember.SubjectType.
+type AudienceMemberSubjectType string
+
 // AuditHistoryEntry One rendered history line for a record mutation. `before`/`after` are
 // masked to the viewer's readable fields — an absent key was hidden, not null.
 // `summary` is server-composed plain language; field-level detail lives in
@@ -16815,9 +17351,6 @@ type CaptureConnectionListResponse struct {
 // (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
 // wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
 type CaptureConsent struct {
-	// DoubleOptInToken Present when the surface delivered its own DOI confirmation (issueDoubleOptIn with deliver=false).
-	DoubleOptInToken *string `json:"double_opt_in_token,omitempty"`
-
 	// PolicyVersion Version id of the consent wording shown to the subject.
 	PolicyVersion string             `json:"policy_version"`
 	PurposeId     openapi_types.UUID `json:"purpose_id"`
@@ -17909,14 +18442,15 @@ type ConfirmFieldOrigin struct {
 // outcomes rather than two, because a reader's next move differs: it went, this
 // installation cannot send at all, or the send was tried and failed.
 type ConfirmRequestIssued struct {
-	// Delivered Whether the relay accepted the message. False while `sendable` is true means the send
-	// was attempted and failed, which is a different fact from an installation that cannot
-	// send at all.
-	Delivered bool `json:"delivered"`
-
 	// DeliveredTo The address the link was posted to — the person's own live primary email.
 	DeliveredTo string    `json:"delivered_to"`
 	ExpiresAt   time.Time `json:"expires_at"`
+
+	// ProviderAccepted Whether the relay accepted the message. False while `sendable` is true means the send
+	// was attempted and failed, which is a different fact from an installation that cannot
+	// send at all. It is deliberately not called `delivered`: a relay returns before any
+	// mailbox has seen the message, and a later bounce cannot travel back to change this.
+	ProviderAccepted bool `json:"provider_accepted"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.
@@ -18599,6 +19133,21 @@ type CreateDealRoomRequest struct {
 type CreateImportRunRequest struct {
 	// Connector The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
+
+	// ContextTagId A tag applied to every record this run CREATES, so a batch stays
+	// findable as a batch — "the K5 conference list", "the January
+	// partner file".
+	//
+	// By id, and the tag must already exist: an import that coined a word
+	// would hand the vocabulary's one governed door to anyone who can
+	// upload a file, and a misspelling in a spreadsheet header would
+	// become a permanent tag nobody chose.
+	//
+	// Creates only. A row that UPDATES a record the estate already held
+	// leaves that record's tags alone — the run did not put it in the
+	// estate, and tagging it would claim the batch contains records it
+	// only touched.
+	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
 
 	// Mapping `{source column → target field}`, as the human settled it. Validated against
 	// the object's live field catalog before the run is created.
@@ -19958,6 +20507,79 @@ type DisqualifyLeadRequest struct {
 	ReasonId *openapi_types.UUID `json:"reason_id,omitempty"`
 }
 
+// EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
+// `change_mode` are decided by the same authority that would execute the write, so a
+// control this block offers is a control the write will accept.
+type EmailAccess struct {
+	Audience  *ActivityAudience `json:"audience,omitempty"`
+	CanChange bool              `json:"can_change"`
+
+	// ChangeMode Which write this caller's Access control performs. `thread_contribution` changes
+	// only this owner's contribution to a captured thread; `message_audience` sets a
+	// hand-logged message's own audience. The browser never decides this by reading
+	// `captured_by` — the server knows which write it would accept.
+	ChangeMode EmailAccessChangeMode `json:"change_mode"`
+
+	// ChangeScope What the editor must say it is about to change, in the words the user reads.
+	ChangeScope  *EmailAccessChangeScope `json:"change_scope,omitempty"`
+	ContentState EmailAccessContentState `json:"content_state"`
+
+	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
+	// badge can print. `team` never means the whole workspace: the linked record's own scope
+	// still decides who may discover the row at all.
+	//
+	// `withheld` is the only value that says the content is not this caller's, and it never
+	// travels with a reason: why a message is private describes what it is about.
+	//
+	// The captured-mail states a mailbox owner sees — held until classified, private by you,
+	// shared but still held by another seat — are not here yet. They arrive with the thread
+	// contribution editor that can act on them; a value no server can emit is one a client
+	// would branch on and never reach.
+	DisplayStatus EmailAccessStatus `json:"display_status"`
+
+	// Explanation Why the message is limited, when the caller may know. Always null while the content
+	// is withheld: the reason describes the message.
+	Explanation *string `json:"explanation,omitempty"`
+
+	// SelectedMembers Who is named on a `selected` audience. Returned only to a caller who may both read
+	// the content and change it — a reader with no standing to edit the set has no
+	// standing to enumerate it either.
+	SelectedMembers *[]AudienceMember `json:"selected_members,omitempty"`
+}
+
+// EmailAccessChangeMode Which write this caller's Access control performs. `thread_contribution` changes
+// only this owner's contribution to a captured thread; `message_audience` sets a
+// hand-logged message's own audience. The browser never decides this by reading
+// `captured_by` — the server knows which write it would accept.
+type EmailAccessChangeMode string
+
+// EmailAccessChangeScope What the editor must say it is about to change, in the words the user reads.
+type EmailAccessChangeScope string
+
+// EmailAccessContentState defines model for EmailAccess.ContentState.
+type EmailAccessContentState string
+
+// EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
+// badge can print. `team` never means the whole workspace: the linked record's own scope
+// still decides who may discover the row at all.
+//
+// `withheld` is the only value that says the content is not this caller's, and it never
+// travels with a reason: why a message is private describes what it is about.
+//
+// The captured-mail states a mailbox owner sees — held until classified, private by you,
+// shared but still held by another seat — are not here yet. They arrive with the thread
+// contribution editor that can act on them; a value no server can emit is one a client
+// would branch on and never reach.
+type EmailAccessStatus string
+
+// EmailAttachmentSummary One file that came with the message. Metadata only; bytes are fetched separately.
+type EmailAttachmentSummary struct {
+	ByteSize    *int               `json:"byte_size,omitempty"`
+	ContentType *string            `json:"content_type,omitempty"`
+	Filename    string             `json:"filename"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
 // EmailDraft A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡).
 type EmailDraft struct {
 	// AiDisclosure The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
@@ -19977,6 +20599,83 @@ type EmailDraft struct {
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
 }
 
+// EmailParty One address on a message, resolved to a person or a seat when it is one.
+type EmailParty struct {
+	Address     string  `json:"address"`
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// PersonId Set when the address belongs to a contact this caller may see.
+	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
+
+	// UserId Set when the address belongs to a seat in this workspace.
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
+// EmailPresentation One email, composed for reading. The message and its parties come from the activity's
+// own store; the access block is assembled from the same authority that performs the
+// write, so what this says a caller may do is what the caller may do.
+//
+// A withheld presentation carries the markers and refuses the rest: no subject, no body,
+// no parties, no attachments, no thread, no reason, no member names.
+type EmailPresentation struct {
+	// Access Who reads this message, and what this caller may do about that. `can_change` and
+	// `change_mode` are decided by the same authority that would execute the write, so a
+	// control this block offers is a control the write will accept.
+	Access      EmailAccess              `json:"access"`
+	Attachments []EmailAttachmentSummary `json:"attachments"`
+
+	// Bcc Empty for every caller but the seat that sent or imported the message. Being
+	// allowed to read what was written does not disclose who was copied blind.
+	Bcc []EmailParty `json:"bcc"`
+
+	// BccWithheld True when the message has blind recipients this caller may not see. The viewer says
+	// that they exist rather than showing an empty list that reads as none.
+	BccWithheld bool `json:"bcc_withheld"`
+
+	// Body The message as plain text, normalised. Null when withheld. Provider payloads are
+	// never handed to a browser to parse.
+	Body      *string            `json:"body,omitempty"`
+	CanRelink bool               `json:"can_relink"`
+	CanReply  bool               `json:"can_reply"`
+	Cc        []EmailParty       `json:"cc"`
+	From      []EmailParty       `json:"from"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Lifecycle What kind of message this is. One value today: this read serves delivered
+	// correspondence. A scheduled send and a draft awaiting approval will borrow the
+	// frame when the reads that serve them land, and they are not listed until then.
+	Lifecycle EmailPresentationLifecycle `json:"lifecycle"`
+
+	// Links What the message is filed against, named for a reader.
+	Links      []ActivityLink `json:"links"`
+	OccurredAt time.Time      `json:"occurred_at"`
+
+	// Summary One retained email, reduced to what a row shows without opening it. Present on an
+	// activity only when `kind=email`; every other kind carries none, and a reader that
+	// branches on this field is asking the one question that decides the canonical row.
+	//
+	// The preview is normalised by the server with the same splitter the detail uses, so a
+	// row and the message it opens never disagree about where the sender's own words end.
+	// A withheld email carries a summary whose `subject` and `preview` are null and whose
+	// `display_status` says so — the row stays, the words do not.
+	Summary EmailSummary `json:"summary"`
+
+	// Thread The rest of the conversation, newest first, as summaries. Bounded and paged rather
+	// than whole: a thread has no ceiling, and a drawer that fetched every message would
+	// make opening the newest one cost the whole history.
+	Thread    *EmailThreadPage `json:"thread,omitempty"`
+	ThreadKey *string          `json:"thread_key,omitempty"`
+	To        []EmailParty     `json:"to"`
+
+	// Version The activity's version, for the If-Match its own actions send.
+	Version RowVersion `json:"version"`
+}
+
+// EmailPresentationLifecycle What kind of message this is. One value today: this read serves delivered
+// correspondence. A scheduled send and a draft awaiting approval will borrow the
+// frame when the reads that serve them land, and they are not listed until then.
+type EmailPresentationLifecycle string
+
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
@@ -19984,6 +20683,73 @@ type EmailSignature struct {
 	// written one.
 	Body      string     `json:"body"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// EmailSummary One retained email, reduced to what a row shows without opening it. Present on an
+// activity only when `kind=email`; every other kind carries none, and a reader that
+// branches on this field is asking the one question that decides the canonical row.
+//
+// The preview is normalised by the server with the same splitter the detail uses, so a
+// row and the message it opens never disagree about where the sender's own words end.
+// A withheld email carries a summary whose `subject` and `preview` are null and whose
+// `display_status` says so — the row stays, the words do not.
+type EmailSummary struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
+	AttachmentCount int `json:"attachment_count"`
+
+	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
+	// the exchange had more. Null when no participant resolves to a name this caller may
+	// see — the row then says the direction alone rather than inventing a stranger.
+	Counterparty *string                `json:"counterparty,omitempty"`
+	Direction    *EmailSummaryDirection `json:"direction,omitempty"`
+
+	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
+	// badge can print. `team` never means the whole workspace: the linked record's own scope
+	// still decides who may discover the row at all.
+	//
+	// `withheld` is the only value that says the content is not this caller's, and it never
+	// travels with a reason: why a message is private describes what it is about.
+	//
+	// The captured-mail states a mailbox owner sees — held until classified, private by you,
+	// shared but still held by another seat — are not here yet. They arrive with the thread
+	// contribution editor that can act on them; a value no server can emit is one a client
+	// would branch on and never reach.
+	DisplayStatus EmailAccessStatus `json:"display_status"`
+
+	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// the question cannot be answered honestly — an unanswerable move is not a claim.
+	Move       EmailSummaryMove `json:"move"`
+	OccurredAt time.Time        `json:"occurred_at"`
+
+	// Preview One line of the sender's own text, signature and quoted history already removed.
+	// Null when withheld, and when the message has no text of its own.
+	Preview *string `json:"preview,omitempty"`
+
+	// Subject Null when the message has none, and when the content is withheld.
+	Subject *string `json:"subject,omitempty"`
+
+	// Version The activity's version, carried so a row can open an editor that writes with
+	// If-Match. A row without it can only read.
+	Version RowVersion `json:"version"`
+}
+
+// EmailSummaryDirection defines model for EmailSummary.Direction.
+type EmailSummaryDirection string
+
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// the question cannot be answered honestly — an unanswerable move is not a claim.
+type EmailSummaryMove string
+
+// EmailThreadPage The rest of the conversation, newest first, as summaries. Bounded and paged rather
+// than whole: a thread has no ceiling, and a drawer that fetched every message would
+// make opening the newest one cost the whole history.
+type EmailThreadPage struct {
+	Members []EmailSummary `json:"members"`
+
+	// NextCursor Pass back as `thread_cursor` for the next page. Null when this is the last.
+	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
 // EmbedReindexPreview The scope before the spend (ADR-0020 preview-before-spend obligation): what running the reindex now would touch and roughly cost. MUST precede the confirm route — the estimate is what the operator consents to. An estimate, labeled as such — actual spend is metered per embed call.
@@ -20333,6 +21099,148 @@ type FinanceInvoiceStatus string
 // `error` — the last attempt failed. What is shown is the last good answer,
 // and the reader is told it is not current.
 type FinanceSummaryState string
+
+// ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
+type ForecastAssurance struct {
+	AsOf time.Time `json:"as_of"`
+
+	// EligibleDeals How many deals the run evaluated, counted one per deal.
+	EligibleDeals   int  `json:"eligible_deals"`
+	EligibleSignals *int `json:"eligible_signals,omitempty"`
+
+	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
+	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// Sources Every source the run tried, and how far it reached into each.
+	Sources []ForecastAssuranceSource `json:"sources"`
+
+	// Status `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+	Status ForecastAssuranceStatus `json:"status"`
+}
+
+// ForecastAssuranceReadiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+type ForecastAssuranceReadiness string
+
+// ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+type ForecastAssuranceStatus string
+
+// ForecastAssuranceSource defines model for ForecastAssuranceSource.
+type ForecastAssuranceSource struct {
+	// CheckedThrough How current the source was. Present only for a `checked` source: a date on an unread one would read as "checked up to then" when nothing was read at all.
+	CheckedThrough *time.Time                    `json:"checked_through,omitempty"`
+	Source         ForecastAssuranceSourceSource `json:"source"`
+	State          ForecastAssuranceSourceState  `json:"state"`
+}
+
+// ForecastAssuranceSourceSource defines model for ForecastAssuranceSource.Source.
+type ForecastAssuranceSourceSource string
+
+// ForecastAssuranceSourceState defines model for ForecastAssuranceSource.State.
+type ForecastAssuranceSourceState string
+
+// ForecastCall defines model for ForecastCall.
+type ForecastCall struct {
+	AmountMinor int64                 `json:"amount_minor"`
+	AuthorId    openapi_types.UUID    `json:"author_id"`
+	CreatedAt   time.Time             `json:"created_at"`
+	Currency    string                `json:"currency"`
+	Id          openapi_types.UUID    `json:"id"`
+	Note        *string               `json:"note,omitempty"`
+	PeriodEnd   openapi_types.Date    `json:"period_end"`
+	PeriodStart openapi_types.Date    `json:"period_start"`
+	ScopeId     *openapi_types.UUID   `json:"scope_id,omitempty"`
+	ScopeKind   ForecastCallScopeKind `json:"scope_kind"`
+
+	// SupersedesId The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
+	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
+}
+
+// ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
+type ForecastCallScopeKind string
+
+// ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
+type ForecastMovement struct {
+	// Buckets The named causes, in the order a waterfall draws them — what arrived, what crossed the period, what was repriced, and only then what the machinery did. A bucket that moved nothing is absent rather than zero.
+	Buckets      []ForecastMovementBucket `json:"buckets"`
+	ClosingMinor int64                    `json:"closing_minor"`
+
+	// Deals One row per deal that moved, each in exactly one bucket.
+	Deals        []ForecastMovementDeal  `json:"deals"`
+	OpeningMinor int64                   `json:"opening_minor"`
+	Reading      ForecastMovementReading `json:"reading"`
+}
+
+// ForecastMovementReading defines model for ForecastMovement.Reading.
+type ForecastMovementReading string
+
+// ForecastMovementBucket defines model for ForecastMovementBucket.
+type ForecastMovementBucket struct {
+	AmountMinor int64                      `json:"amount_minor"`
+	DealCount   int                        `json:"deal_count"`
+	Name        ForecastMovementBucketName `json:"name"`
+}
+
+// ForecastMovementBucketName defines model for ForecastMovementBucket.Name.
+type ForecastMovementBucketName string
+
+// ForecastMovementDeal defines model for ForecastMovementDeal.
+type ForecastMovementDeal struct {
+	AmountMinor int64               `json:"amount_minor"`
+	ApprovalId  *openapi_types.UUID `json:"approval_id,omitempty"`
+
+	// AuditId The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
+	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
+	Bucket  string              `json:"bucket"`
+	DealId  openapi_types.UUID  `json:"deal_id"`
+
+	// FromMinor Absent for a deal that was not in the opening snapshot at all.
+	FromMinor *int64 `json:"from_minor,omitempty"`
+	ToMinor   *int64 `json:"to_minor,omitempty"`
+}
+
+// ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
+type ForecastReadings struct {
+	AsOf               time.Time     `json:"as_of"`
+	BaseCurrency       string        `json:"base_currency"`
+	BestCaseMinor      int64         `json:"best_case_minor"`
+	ConfirmedDateCount int           `json:"confirmed_date_count"`
+	CurrentCall        *ForecastCall `json:"current_call,omitempty"`
+
+	// EligibleCount Deals considered, priced or not.
+	EligibleCount int `json:"eligible_count"`
+
+	// EvidenceMinor Committed pipeline whose close date somebody confirmed. A provisional date is a guess, so it is excluded here and included in open_minor.
+	EvidenceMinor int64 `json:"evidence_minor"`
+
+	// FxMissingCount Priced deals no rate could convert. Counted rather than silently totalled as zero, which would read as a smaller pipeline instead of an unconverted one.
+	FxMissingCount int   `json:"fx_missing_count"`
+	OpenMinor      int64 `json:"open_minor"`
+
+	// PeriodEnd The last day INSIDE the period, not an exclusive bound.
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
+	PricedCount int                       `json:"priced_count"`
+	ScopeId     *openapi_types.UUID       `json:"scope_id,omitempty"`
+	ScopeKind   ForecastReadingsScopeKind `json:"scope_kind"`
+
+	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
+	ScopeLimited *bool `json:"scope_limited,omitempty"`
+
+	// Timezone The zone the period's days were cut in, as an IANA name.
+	Timezone string `json:"timezone"`
+
+	// WeightedMinor Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
+	WeightedMinor int64 `json:"weighted_minor"`
+
+	// WonMinor Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// ForecastReadingsScopeKind defines model for ForecastReadings.ScopeKind.
+type ForecastReadingsScopeKind string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
@@ -22616,6 +23524,27 @@ type MyAgentGrants struct {
 	// Data One entry per scheduled agent, including the ones never answered.
 	Data []MyAgentGrant `json:"data"`
 }
+
+// NewForecastCall defines model for NewForecastCall.
+type NewForecastCall struct {
+	AmountMinor int64 `json:"amount_minor"`
+
+	// AsOf A day inside the period being called. Omitted means today's period.
+	AsOf     *openapi_types.Date `json:"as_of,omitempty"`
+	Currency string              `json:"currency"`
+
+	// Note Why the number is what it is. Not carried on the event — a subscriber acting on prose is acting on something the author may edit for a human reader.
+	Note      *string                   `json:"note,omitempty"`
+	Period    *NewForecastCallPeriod    `json:"period,omitempty"`
+	ScopeId   *openapi_types.UUID       `json:"scope_id,omitempty"`
+	ScopeKind *NewForecastCallScopeKind `json:"scope_kind,omitempty"`
+}
+
+// NewForecastCallPeriod defines model for NewForecastCall.Period.
+type NewForecastCallPeriod string
+
+// NewForecastCallScopeKind defines model for NewForecastCall.ScopeKind.
+type NewForecastCallScopeKind string
 
 // NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
 type NewWeeklyPlanCommitment struct {
@@ -25480,9 +26409,19 @@ type PersonGraphNodeType string
 // PersonGraphReceipt defines model for PersonGraphReceipt.
 type PersonGraphReceipt struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
-	OccurredAt time.Time          `json:"occurred_at"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// Kind What the receipt is evidence OF. The graph counts attendees and organizers as well
+	// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+	// that drew every one of them as an email would tell a reader a meeting was one.
+	Kind       PersonGraphReceiptKind `json:"kind"`
+	OccurredAt time.Time              `json:"occurred_at"`
+	Subject    *string                `json:"subject,omitempty"`
 }
+
+// PersonGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
+// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+// that drew every one of them as an email would tell a reader a meeting was one.
+type PersonGraphReceiptKind string
 
 // PersonGraphRoute The warmest way in, chosen deterministically rather than scored by a model: the
 // strongest direct relationship if one exists, otherwise the strongest relationship any
@@ -26951,12 +27890,10 @@ type RecordClaimRecordType string
 
 // RecordConsentRequest defines model for RecordConsentRequest.
 type RecordConsentRequest struct {
-	// DoubleOptInToken Required to make a grant effective when the purpose has requires_double_opt_in=true.
-	DoubleOptInToken *string                      `json:"double_opt_in_token,omitempty"`
-	LawfulBasis      *string                      `json:"lawful_basis,omitempty"`
-	NewState         RecordConsentRequestNewState `json:"new_state"`
-	PurposeId        openapi_types.UUID           `json:"purpose_id"`
-	Source           *string                      `json:"source,omitempty"`
+	LawfulBasis *string                      `json:"lawful_basis,omitempty"`
+	NewState    RecordConsentRequestNewState `json:"new_state"`
+	PurposeId   openapi_types.UUID           `json:"purpose_id"`
+	Source      *string                      `json:"source,omitempty"`
 }
 
 // RecordConsentRequestNewState defines model for RecordConsentRequest.NewState.
@@ -27326,13 +28263,21 @@ type ReportDerivation struct {
 
 // ReportResult defines model for ReportResult.
 type ReportResult struct {
-	Columns []string `json:"columns"`
+	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
+	AsOf time.Time `json:"as_of"`
+
+	// BaseCurrency The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve.
+	BaseCurrency string   `json:"base_currency"`
+	Columns      []string `json:"columns"`
 
 	// DerivationUrl Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell.
 	DerivationUrl *string `json:"derivation_url,omitempty"`
 
 	// ExcludedByPermission Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded.
-	ExcludedByPermission *int       `json:"excluded_by_permission,omitempty"`
+	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
+
+	// FiscalYearStartMonth The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January.
+	FiscalYearStartMonth int        `json:"fiscal_year_start_month"`
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated query plan that was executed (shown before/after run).
@@ -27340,8 +28285,11 @@ type ReportResult struct {
 	Report string                 `json:"report"`
 
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
-	Rows      []map[string]interface{} `json:"rows"`
-	TotalRows *int                     `json:"total_rows,omitempty"`
+	Rows []map[string]interface{} `json:"rows"`
+
+	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
+	Timezone  string `json:"timezone"`
+	TotalRows *int   `json:"total_rows,omitempty"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -27354,6 +28302,67 @@ type RequestAccessResponse struct {
 type RescheduleSendRequest struct {
 	ScheduledAt time.Time `json:"scheduled_at"`
 	ScheduledTz string    `json:"scheduled_tz"`
+}
+
+// ResolveInputCheck defines model for ResolveInputCheck.
+type ResolveInputCheck struct {
+	// EvidenceRef What was looked at, for an answer that rests on something.
+	EvidenceRef *string `json:"evidence_ref,omitempty"`
+
+	// ExpiresAt When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+	Outcome ResolveInputCheckOutcome `json:"outcome"`
+
+	// Reason Required for `value_correct` and `not_relevant`. Those hide the finding, and the next person to see the number is owed the reason it is not flagged.
+	Reason *string `json:"reason,omitempty"`
+
+	// RemindAt Required for `remind_later`, and must be in the future. A deferral with no date is a dismissal wearing a different word.
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+}
+
+// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+type ResolveInputCheckOutcome string
+
+// ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
+// fast it answered what it answered, and how much it put down instead.
+type ResponseMetrics struct {
+	// Answered How many inbound sales messages got a reply in the window. It is the
+	// denominator `median_minutes` is worth reading against: a fast median over three
+	// answered messages says less about the workspace than a slower one over three
+	// hundred.
+	Answered int `json:"answered"`
+
+	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
+	// judged not sales.
+	//
+	// Counted from the audit record rather than from what is set aside now. A snooze
+	// that lifted and a not_mine somebody withdrew leave no trace in the current
+	// state, so a figure read from there would FALL as readers tidied up — reporting
+	// less judgement the more of it happened.
+	Disposed int `json:"disposed"`
+
+	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
+	// is the one that costs everybody: the other two hide a row from one reader, this
+	// one hides the conversation from all of them and does not lift.
+	DisposedNotSales int `json:"disposed_not_sales"`
+
+	// From The start of the window, inclusive.
+	From time.Time `json:"from"`
+
+	// MedianMinutes How long the middle answered message waited, in minutes.
+	//
+	// The MEDIAN rather than the mean, for the reason the material bar takes one: a
+	// single message answered after three weeks drags an average past every figure a
+	// reader would recognise, and the question is what a customer TYPICALLY waits.
+	//
+	// Zero when nothing was answered, which `answered` tells apart from a genuine
+	// zero-minute median.
+	MedianMinutes int `json:"median_minutes"`
+
+	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
+	To time.Time `json:"to"`
 }
 
 // RestrictedRecord defines model for RestrictedRecord.
@@ -27506,18 +28515,14 @@ type RowVersion = int64
 // (the per-report allowed dimension/measure list in data-model.md §13 / contract README).
 // An out-of-vocabulary field returns `422 code: report_field_not_allowed`. `additionalProperties`
 // is open only to admit *values*, never to admit arbitrary SQL identifiers.
-// **`/reports/{report}` path param:** a value matching the UUID format resolves to a saved
-// report; any other value resolves against the prebuilt-report key catalog (README "Prebuilt
-// reports"). A prebuilt key is never a UUID, so there is no collision.
+// **`/reports/{report}` path param:** a prebuilt-report key (README "Prebuilt
+// reports"). Saved reports are not served; a UUID here is refused.
 type RunReportRequest struct {
 	Aggregates *[]struct {
 		As    *string                      `json:"as,omitempty"`
 		Field *string                      `json:"field,omitempty"`
 		Fn    RunReportRequestAggregatesFn `json:"fn"`
 	} `json:"aggregates,omitempty"`
-
-	// AsOfDate Snapshot / historical reporting via deal_stage_history.
-	AsOfDate *openapi_types.Date `json:"as_of_date,omitempty"`
 
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
 	Filters *map[string]interface{} `json:"filters,omitempty"`
@@ -27685,7 +28690,9 @@ type SearchResponse struct {
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	Id openapi_types.UUID `json:"id"`
+	// CarriedBy For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
+	CarriedBy *int               `json:"carried_by,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
 
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
@@ -27941,14 +28948,8 @@ type SetActivityAudienceRequest struct {
 	Audience ActivityAudience `json:"audience"`
 
 	// Members The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set.
-	Members *[]struct {
-		SubjectId   openapi_types.UUID                           `json:"subject_id"`
-		SubjectType SetActivityAudienceRequestMembersSubjectType `json:"subject_type"`
-	} `json:"members,omitempty"`
+	Members *[]AudienceMember `json:"members,omitempty"`
 }
-
-// SetActivityAudienceRequestMembersSubjectType defines model for SetActivityAudienceRequest.Members.SubjectType.
-type SetActivityAudienceRequestMembersSubjectType string
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
@@ -28696,6 +29697,15 @@ type TechnicalEnrichStatus struct {
 
 // ThreadAudienceOutcome What an owner's decision about a thread reached.
 type ThreadAudienceOutcome struct {
+	// ActivityIds Which of your own messages the decision reached, so a client can refresh exactly
+	// them. A thread decision changes several messages at once and they are filed against
+	// different records; a caller refreshing only the record it was looking at leaves the
+	// others showing the audience they had before the press.
+	//
+	// These are messages you imported, so naming them discloses nothing you could not
+	// already read.
+	ActivityIds []openapi_types.UUID `json:"activity_ids"`
+
 	// HeldByOthers How many other seats still ask for this thread to be held. A count and never a name:
 	// whose mail a person keeps private is itself private.
 	HeldByOthers int `json:"held_by_others"`
@@ -30072,6 +31082,11 @@ type Worklist struct {
 
 	// Summary The day in figures, for the one line above the queue. Each count is of items the
 	// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+	//
+	// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
+	// `due` is asked of every item whatever its level, so an overdue promise counts in
+	// both `urgent` and `due` — deliberately, because a reader wants both answers about
+	// it. Read them as four questions about one day rather than four slices of it.
 	Summary WorklistSummary `json:"summary"`
 }
 
@@ -30345,6 +31360,18 @@ type WorklistItem struct {
 	// It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
 	// the deal page's own next-step card does, and a row offering a move is not the
 	// product taking one.
+	//
+	// The verbs are `DealStatusCardMove`'s, because that is what decides a deal's next
+	// step from records. A queue row reasoning its way to a second answer is how two
+	// screens end up disagreeing about one deal.
+	//
+	// It differs from that vocabulary in two places, both deliberate. `draft_reply` is
+	// added because the card spells BOTH mail moves `draft_email` — its own surface
+	// draws neither as a button, so the difference never had to reach a label — while a
+	// row does draw them, and answering a waiting buyer outside their own thread is the
+	// failure this distinction exists to prevent. `reconnect` is added because a source
+	// that stopped answering is not a deal's problem at all, so the card has no word
+	// for it.
 	Move *WorklistMove `json:"move,omitempty"`
 
 	// OccurredAt When the thing being reported happened.
@@ -30352,6 +31379,16 @@ type WorklistItem struct {
 
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
+
+	// Pair The two records a `dedupe_candidate` proposes to merge, and the evidence that
+	// raised it — the same payload the lane feed carries, forwarded so the decision
+	// can be MADE where it is shown rather than sent somewhere to be made.
+	//
+	// Present only when the reader may see BOTH sides; the lane's own
+	// both-sides-visible rule decides that, and an item arriving without it offers
+	// no merge. A row that named neither record could only ask a reader to go and
+	// look, which is the hand-off this queue exists to remove.
+	Pair *AttentionPair `json:"pair,omitempty"`
 
 	// PrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
 	// reader arriving at a row should not have to weigh three equally-drawn
@@ -30429,27 +31466,71 @@ type WorklistItemSource string
 // It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
 // the deal page's own next-step card does, and a row offering a move is not the
 // product taking one.
+//
+// The verbs are `DealStatusCardMove`'s, because that is what decides a deal's next
+// step from records. A queue row reasoning its way to a second answer is how two
+// screens end up disagreeing about one deal.
+//
+// It differs from that vocabulary in two places, both deliberate. `draft_reply` is
+// added because the card spells BOTH mail moves `draft_email` — its own surface
+// draws neither as a button, so the difference never had to reach a label — while a
+// row does draw them, and answering a waiting buyer outside their own thread is the
+// failure this distinction exists to prevent. `reconnect` is added because a source
+// that stopped answering is not a deal's problem at all, so the card has no word
+// for it.
 type WorklistMove struct {
 	// Action `draft_reply` answers the message in `activity_id` — offered only where the
 	// reader may READ that message, because there is no replying to words they
-	// cannot see.
+	// cannot see. It survives beside `draft_email` because the two reach different
+	// composers: collapsing them would answer a waiting buyer with a fresh message
+	// and no thread behind it.
 	//
-	// One value, and the message is required with it: a move naming no message is
-	// not a move, and a contract that allowed one would let a client draw a control
-	// with nothing behind it. A row with no step to suggest sends no `move` at all.
+	// `draft_email` opens a new message, `create_task` agrees a next step,
+	// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+	// sends the reader to reauthorize a source that stopped answering.
+	//
+	// `none` is a producer's answer that there is nothing to do — a closed deal has
+	// no next step. It is a member of this enum so a producer that computes one has
+	// a word for it, but NO row carries it: a step of "nothing" and no step at all
+	// read the same to a reader, so the producers drop it and send no `move`. A
+	// client that meets one anyway draws nothing, which is the same outcome.
 	Action WorklistMoveAction `json:"action"`
 
-	// ActivityId The message a reply would answer, for `draft_reply`.
-	ActivityId openapi_types.UUID `json:"activity_id"`
+	// ActivityId The record the verb acts on, where the verb acts on one: the message for
+	// `draft_reply` and `draft_email`, the meeting for `open_meeting_brief`.
+	//
+	// OPTIONAL, because not every verb has an operand of this shape. `create_task`
+	// acts on a subject and its links rather than on an existing record, and
+	// `reconnect` acts on a source. A client draws a control only where the operand
+	// its verb needs is present — a `draft_reply` carrying no message names nothing
+	// to answer and is not drawable.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// Arguments What the verb's own endpoint needs, in that endpoint's spelling — the subject
+	// and links for `create_task`, the provider for `reconnect`.
+	//
+	// Free-form because the operand differs per verb, and this schema is not the
+	// place to restate five request bodies. The producer fills what the verb it
+	// chose requires; a client that does not recognize a verb draws nothing and so
+	// never reads these.
+	Arguments *map[string]interface{} `json:"arguments,omitempty"`
 }
 
 // WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the
 // reader may READ that message, because there is no replying to words they
-// cannot see.
+// cannot see. It survives beside `draft_email` because the two reach different
+// composers: collapsing them would answer a waiting buyer with a fresh message
+// and no thread behind it.
 //
-// One value, and the message is required with it: a move naming no message is
-// not a move, and a contract that allowed one would let a client draw a control
-// with nothing behind it. A row with no step to suggest sends no `move` at all.
+// `draft_email` opens a new message, `create_task` agrees a next step,
+// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+// sends the reader to reauthorize a source that stopped answering.
+//
+// `none` is a producer's answer that there is nothing to do — a closed deal has
+// no next step. It is a member of this enum so a producer that computes one has
+// a word for it, but NO row carries it: a step of "nothing" and no step at all
+// read the same to a reader, so the producers drop it and send no `move`. A
+// client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
 
 // WorklistReach What one source contributed, in numbers that say what they counted.
@@ -30580,12 +31661,25 @@ type WorklistSourceUnavailableReason string
 
 // WorklistSummary The day in figures, for the one line above the queue. Each count is of items the
 // queue actually CARRIES, so a number here and the rows below it cannot disagree.
+//
+// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
+// `due` is asked of every item whatever its level, so an overdue promise counts in
+// both `urgent` and `due` — deliberately, because a reader wants both answers about
+// it. Read them as four questions about one day rather than four slices of it.
 type WorklistSummary struct {
 	// BaseCurrency The currency every expected-revenue figure here is converted to.
 	BaseCurrency *string `json:"base_currency,omitempty"`
 
 	// Due Items carrying a date that has arrived or passed.
 	Due int `json:"due"`
+
+	// InPlay The middle of the day: revenue at risk, work already agreed, and decisions that
+	// block somebody. Neither an interruption nor hygiene.
+	//
+	// Sent because without it those items reached no figure at all — a queue holding
+	// nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
+	// of rows, which is the one thing this line promises cannot happen.
+	InPlay *int `json:"in_play,omitempty"`
 
 	// LowerPriority Routine work: decisions that block nothing, and data hygiene.
 	LowerPriority int `json:"lower_priority"`
@@ -30938,6 +32032,12 @@ type ClearActivityDispositionParamsScope string
 type DraftEmailJSONBody struct {
 	// Intent Optional steering, e.g. "polite follow-up referencing Friday".
 	Intent *string `json:"intent,omitempty"`
+}
+
+// GetEmailPresentationParams defines parameters for GetEmailPresentation.
+type GetEmailPresentationParams struct {
+	// ThreadCursor Continue the thread's member page from a previous response's `thread.next_cursor`.
+	ThreadCursor *string `form:"thread_cursor,omitempty" json:"thread_cursor,omitempty"`
 }
 
 // GetMeetingBriefParams defines parameters for GetMeetingBrief.
@@ -32194,6 +33294,40 @@ type GetFilterVocabularyParams struct {
 
 // GetFilterVocabularyParamsResource defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParamsResource string
+
+// GetForecastParams defines parameters for GetForecast.
+type GetForecastParams struct {
+	// Period The window length. Quarters follow the installation's financial year.
+	Period *GetForecastParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// AsOf Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock.
+	AsOf      *openapi_types.Date         `form:"as_of,omitempty" json:"as_of,omitempty"`
+	ScopeKind *GetForecastParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// GetForecastParamsPeriod defines parameters for GetForecast.
+type GetForecastParamsPeriod string
+
+// GetForecastParamsScopeKind defines parameters for GetForecast.
+type GetForecastParamsScopeKind string
+
+// GetForecastMovementParams defines parameters for GetForecastMovement.
+type GetForecastMovementParams struct {
+	// From The opening snapshot.
+	From openapi_types.UUID `form:"from" json:"from"`
+
+	// To The closing snapshot.
+	To openapi_types.UUID `form:"to" json:"to"`
+
+	// Reading Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+	Reading *GetForecastMovementParamsReading `form:"reading,omitempty" json:"reading,omitempty"`
+}
+
+// GetForecastMovementParamsReading defines parameters for GetForecastMovement.
+type GetForecastMovementParamsReading string
 
 // ListFxRatesParams defines parameters for ListFxRates.
 type ListFxRatesParams struct {
@@ -33705,8 +34839,6 @@ type RecordConsentParams struct {
 
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
-	// Deliver When true, queues the confirmation message; false mints only (for a capture surface that delivers its own — feedback/14 booking/forms).
-	Deliver   *bool              `json:"deliver,omitempty"`
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
@@ -34216,7 +35348,9 @@ type SubmitConfirmDetailsJSONBody struct {
 	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
 	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
 
-	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant.
+	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+	// grant. Bounded because it is stored on the proof row and read back through the subject
+	// access export — the same bound is enforced server-side, and the two are one rule.'
 	MarketingWording *string `json:"marketing_wording,omitempty"`
 
 	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.
@@ -35253,6 +36387,14 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// GetResponseMetricsParams defines parameters for GetResponseMetrics.
+type GetResponseMetricsParams struct {
+	// Days How many days back the window reaches. Capped at 90: past that the figure stops
+	// describing how the workspace works now and starts averaging over a change in
+	// how it works.
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
 
@@ -35510,6 +36652,12 @@ type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
+
+// ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
+type ResolveInputCheckJSONRequestBody = ResolveInputCheck
+
+// RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
+type RecordForecastCallJSONRequestBody = NewForecastCall
 
 // SetFxRateJSONRequestBody defines body for SetFxRate for application/json ContentType.
 type SetFxRateJSONRequestBody = SetFxRateRequest
@@ -43664,6 +44812,9 @@ type ServerInterface interface {
 	// Draft a reply/follow-up email for context (the `draft_email` MCP verb).
 	// (POST /activities/{id}/draft-email)
 	DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Everything one email needs to be read and acted on, in one read.
+	// (GET /activities/{id}/email-presentation)
+	GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams)
 	// The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
 	// (GET /activities/{id}/meeting-brief)
 	GetMeetingBrief(w http.ResponseWriter, r *http.Request, id Id, params GetMeetingBriefParams)
@@ -44267,6 +45418,21 @@ type ServerInterface interface {
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
+	// What a period is expected to close, and what the figure does not cover.
+	// (GET /forecast)
+	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
+	// What last night's input check found, and how much of the pipeline it reached.
+	// (GET /forecast/assurance)
+	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// Answer a finding from the nightly input check.
+	// (POST /forecast/assurance/exceptions/{id}/resolve)
+	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Record what somebody believes will close.
+	// (POST /forecast/calls)
+	RecordForecastCall(w http.ResponseWriter, r *http.Request)
+	// What moved the forecast between two snapshots, and which deals moved it.
+	// (GET /forecast/movement)
+	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -44768,7 +45934,7 @@ type ServerInterface interface {
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /people/{id}/consent/confirm-request)
 	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
-	// Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
+	// Double-opt-in issuance — not available until the confirmation mail is durable.
 	// (POST /people/{id}/consent/double-opt-in)
 	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
 	// May we write to this person right now — per purpose and channel, with the reason.
@@ -45290,6 +46456,9 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// How fast the workspace answers, and how much of the queue it puts down.
+	// (GET /worklist/response)
+	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request)
@@ -45368,6 +46537,12 @@ func (_ Unimplemented) SetActivityDisposition(w http.ResponseWriter, r *http.Req
 // Draft a reply/follow-up email for context (the `draft_email` MCP verb).
 // (POST /activities/{id}/draft-email)
 func (_ Unimplemented) DraftEmail(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Everything one email needs to be read and acted on, in one read.
+// (GET /activities/{id}/email-presentation)
+func (_ Unimplemented) GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46577,6 +47752,36 @@ func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What a period is expected to close, and what the figure does not cover.
+// (GET /forecast)
+func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What last night's input check found, and how much of the pipeline it reached.
+// (GET /forecast/assurance)
+func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a finding from the nightly input check.
+// (POST /forecast/assurance/exceptions/{id}/resolve)
+func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record what somebody believes will close.
+// (POST /forecast/calls)
+func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What moved the forecast between two snapshots, and which deals moved it.
+// (GET /forecast/movement)
+func (_ Unimplemented) GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List current FX rates (latest per currency), or one pair's history.
 // (GET /fx-rates)
 func (_ Unimplemented) ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams) {
@@ -47579,7 +48784,7 @@ func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
+// Double-opt-in issuance — not available until the confirmation mail is durable.
 // (POST /people/{id}/consent/double-opt-in)
 func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -48623,6 +49828,12 @@ func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// How fast the workspace answers, and how much of the queue it puts down.
+// (GET /worklist/response)
+func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // One row per teammate — who is carrying what, so a lead can see where to help.
 // (GET /worklist/team)
 func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
@@ -49370,6 +50581,56 @@ func (siw *ServerInterfaceWrapper) DraftEmail(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftEmail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEmailPresentation operation middleware
+func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetEmailPresentationParams
+
+	// ------------- Optional query parameter "thread_cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "thread_cursor", r.URL.Query(), &params.ThreadCursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "thread_cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "thread_cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEmailPresentation(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -57465,6 +58726,231 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetFilterVocabulary(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecast operation middleware
+func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastParams
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecast(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastAssurance operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastAssurance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveInputCheck operation middleware
+func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveInputCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordForecastCall operation middleware
+func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordForecastCall(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastMovement operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastMovementParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reading" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reading", r.URL.Query(), &params.Reading, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reading"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reading", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastMovement(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -72661,6 +74147,47 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetResponseMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetResponseMetricsParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetResponseMetrics(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
@@ -72831,6 +74358,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/draft-email", wrapper.DraftEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/email-presentation", wrapper.GetEmailPresentation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/meeting-brief", wrapper.GetMeetingBrief)
@@ -73434,6 +74964,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast", wrapper.GetForecast)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)
@@ -74457,6 +76002,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)

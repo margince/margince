@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 61 |
+| Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 173.7 KB |
+| Tool catalog | 186.7 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 45334 |
+| Approx. wire tokens | 48681 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 83.5 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 40.2 KB | 23% | Yes, every step |
-| Input schemas | 37.0 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.9 KB | 7% | Partly |
-| **Description + input schema** | **77.2 KB** | **44%** | **the recurring cost** |
+| Output schemas | 89.6 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 44.3 KB | 23% | Yes, every step |
+| Input schemas | 38.9 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
+| **Description + input schema** | **83.2 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (61)
+### Tools (66)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -74,6 +74,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.3 KB |
+| [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
@@ -82,6 +83,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
+| [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.4 KB |
+| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.0 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.5 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
@@ -119,6 +123,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
+| [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
@@ -2611,6 +2616,156 @@ Create a person, organization, deal, lead, project, activity or relationship tha
 
 </details>
 
+### create_tag
+
+**Create a tag**
+
+Coin a new word in the workspace vocabulary, so records can be grouped by it. list_tags FIRST: a workspace with "Key Account" does not want "key accounts" beside it, and the two then split the records that belong together. A name already taken is a conflict, matched case-insensitively — including a RETIRED word holding it, which a person restores in Settings; no tool does. Needs the tag.create grant, which an ordinary seat does not hold. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "color": {
+      "enum": [
+        "teal",
+        "amber",
+        "rose",
+        "slate"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "archived": {
+          "type": "boolean"
+        },
+        "color": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "tag_id"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### create_task
 
 **Create a task**
@@ -3906,6 +4061,578 @@ Learn about an organization by reading its public website, and propose what was 
 {
   "properties": {
     "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### forecast_input_checks
+
+**What the forecast's inputs were checked against**
+
+What last night's input check found, and how much of the pipeline it reached. A forecast is only as good as its inputs, and the failures are mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal nobody has heard from in ninety days. Read `readiness` before quoting any forecast figure. `checks_incomplete` is NOT a worse `needs_review` — one says the pipeline has problems, the other says we could not look, and reporting the first when the second is true tells somebody their pipeline is sound when nobody read the mailbox. `sources` says why: each carries the state the run reached, and only a `checked` source has a date. An absent or unread source means the run could not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how much there was to check — compared against an earlier run it shows a pass that covered less of the pipeline. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "eligible_deals": {
+          "type": "integer"
+        },
+        "eligible_signals": {
+          "type": "integer"
+        },
+        "readiness": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "properties": {
+              "checked_through": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "state"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "as_of",
+        "eligible_deals",
+        "run_id",
+        "sources",
+        "status"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### forecast_movement
+
+**What moved the forecast**
+
+The difference between two forecast snapshots, classified into named causes. Opening plus every bucket equals closing, exactly — so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent. `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket. `model` means a probability the product re-scored. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "from": {
+      "description": "The opening snapshot.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "reading": {
+      "description": "Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+      "enum": [
+        "open",
+        "weighted",
+        "evidence",
+        "best_case"
+      ],
+      "type": "string"
+    },
+    "to": {
+      "description": "The closing snapshot.",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "from",
+    "to"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "buckets": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "deal_count": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "deal_count",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "closing_minor": {
+          "type": "integer"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "approval_id": {
+                "type": "string"
+              },
+              "audit_id": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "from_minor": {
+                "type": "integer"
+              },
+              "to_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "bucket",
+              "deal_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "opening_minor": {
+          "type": "integer"
+        },
+        "reading": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buckets",
+        "closing_minor",
+        "deals",
+        "opening_minor",
+        "reading"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### forecast_readings
+
+**Read the forecast**
+
+What a period is expected to close, in four readings, plus what the figures do not cover. `won` counts deals by the day they ACTUALLY closed, never the day they were expected to — a deal expected in March and won in April is April's. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date is a guess, so it is excluded there and still counted in `open`. `weighted` applies each deal's stage probability, rounded per deal. Read `eligible_count` against `priced_count` before quoting a total: an unpriced deal is real pipeline contributing zero money, and the gap is what the money readings leave out. `fx_missing_count` is priced deals no rate could convert — also absent from the totals rather than counted as zero. `scope_limited` true means deals the caller cannot read were left out; there is deliberately no count of them. Every figure carries the frame it was cut in: `as_of`, the installation's timezone, and the base currency. Quote them with the number — a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "as_of": {
+      "description": "Which period to read, by naming a day inside it. Omit for the current one.",
+      "format": "date",
+      "type": "string"
+    },
+    "period": {
+      "description": "The window length. Quarters follow the installation's own financial year, which may not start in January.",
+      "enum": [
+        "quarter",
+        "month"
+      ],
+      "type": "string"
+    },
+    "scope_id": {
+      "description": "The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "scope_kind": {
+      "description": "Whose forecast. Defaults to the whole workspace.",
+      "enum": [
+        "workspace",
+        "team",
+        "owner"
+      ],
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "base_currency": {
+          "type": "string"
+        },
+        "best_case_minor": {
+          "type": "integer"
+        },
+        "confirmed_date_count": {
+          "type": "integer"
+        },
+        "current_call": {
+          "type": "object"
+        },
+        "eligible_count": {
+          "type": "integer"
+        },
+        "evidence_minor": {
+          "type": "integer"
+        },
+        "fx_missing_count": {
+          "type": "integer"
+        },
+        "open_minor": {
+          "type": "integer"
+        },
+        "period_end": {
+          "type": "string"
+        },
+        "period_start": {
+          "type": "string"
+        },
+        "priced_count": {
+          "type": "integer"
+        },
+        "scope_id": {
+          "type": "string"
+        },
+        "scope_kind": {
+          "type": "string"
+        },
+        "scope_limited": {
+          "type": "boolean"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "weighted_minor": {
+          "type": "integer"
+        },
+        "won_minor": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "as_of",
+        "base_currency",
+        "best_case_minor",
+        "confirmed_date_count",
+        "eligible_count",
+        "evidence_minor",
+        "fx_missing_count",
+        "open_minor",
+        "period_end",
+        "period_start",
+        "priced_count",
+        "scope_kind",
+        "timezone",
+        "weighted_minor",
+        "won_minor"
+      ],
       "type": "object"
     },
     "evidence": {
@@ -11952,6 +12679,164 @@ Change stored field values on a record that already exists — a corrected title
         "fields",
         "id",
         "record_type"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### update_tag
+
+**Rename or recolour a tag**
+
+Rename, recolour or describe a word that already exists. Fields left out are unchanged, so a recolour need not restate the name. The word keeps every record carrying it — this changes what it is CALLED, not what it is on. LAST WRITE WINS: this tool sends no version, so an edit made between your read and your write is overwritten without a conflict. Read with get_tag immediately before editing. A name another word already holds is a conflict. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "color": {
+      "enum": [
+        "teal",
+        "amber",
+        "rose",
+        "slate",
+        "none"
+      ],
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
+    },
+    "tag_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tag_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "archived": {
+          "type": "boolean"
+        },
+        "color": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "tag_id"
       ],
       "type": "object"
     },

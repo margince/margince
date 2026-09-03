@@ -155,6 +155,8 @@ type Server struct {
 	// The week ahead: the rep's own plan, and the one write their lead has on
 	// it. The week just gone is weeklyHandlers, which shares no table with it.
 	weeklyPlanHandlers
+	forecastHandlers
+	assuranceHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
@@ -437,6 +439,13 @@ func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 // GetWorklist forwards the ranked read to the same assembled surface.
 func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
 	s.attentionHandlers.GetWorklist(w, r, params)
+}
+
+// GetResponseMetrics forwards the reading of how fast the workspace replies.
+func (s Server) GetResponseMetrics(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetResponseMetricsParams,
+) {
+	s.attentionHandlers.GetResponseMetrics(w, r, params)
 }
 
 // GetHiddenBacklog forwards the guardrail over the queue's own hiding rules.

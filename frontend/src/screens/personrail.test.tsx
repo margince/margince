@@ -215,6 +215,23 @@ function mount(view: Person360) {
           page,
         });
       }
+      // The record's tags. The catch-all below would answer with no `withheld`
+      // key at all, which the panel reads as visible-and-empty — a state this
+      // suite would then be asserting by accident rather than by choice.
+      if (url.pathname.endsWith("/tags")) {
+        return json({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Champion",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-03-03T10:00:00Z",
+            },
+          ],
+          withheld: false,
+        });
+      }
       return json({ data: [], page });
     }),
   );
@@ -283,14 +300,14 @@ function readingClass(label: string): string {
 // so an exact match would find the section only while the capability probe was
 // still in flight.
 function section(heading: string): HTMLElement {
-  const summaries = document.querySelectorAll<HTMLElement>(
-    "details.pe-sect > summary",
+  const titles = document.querySelectorAll<HTMLElement>(
+    ".pe-rail > .panel > .panel-head h2",
   );
-  for (const summary of summaries) {
-    if ((summary.textContent ?? "").startsWith(heading)) {
-      const details = summary.closest<HTMLElement>("details.pe-sect");
-      if (details) {
-        return details;
+  for (const title of titles) {
+    if ((title.textContent ?? "").startsWith(heading)) {
+      const panel = title.closest<HTMLElement>(".panel");
+      if (panel) {
+        return panel;
       }
     }
   }
@@ -466,6 +483,43 @@ describe("recent activity", () => {
     expect(
       within(section("Recent activity")).getByText("Nothing captured yet."),
     ).toBeTruthy();
+  });
+
+  // A withheld email in the rail is CITED, and the citation says nothing. The
+  // rail draws its own rows rather than going through the timeline, so it owns
+  // this promise separately — and the section-level withholding test below
+  // covers a different case: the whole list refused, not one row in it.
+  it("cites a withheld email without naming it, and does not open it", () => {
+    mount({
+      ...emptyButGranted,
+      activities: {
+        data: [
+          {
+            id: "a-withheld",
+            kind: "email",
+            subject: "Angebot Q4",
+            occurred_at: "2026-08-30T09:12:00Z",
+            content_state: "withheld",
+            source: "capture",
+            captured_by: "connector:gmail:u1",
+            created_at: "2026-08-30T09:12:00Z",
+            updated_at: "2026-08-30T09:12:00Z",
+            is_done: false,
+          },
+        ],
+        page,
+      },
+    } as Person360);
+
+    const recent = section("Recent activity");
+    expect(within(recent).queryByText("Angebot Q4")).toBeNull();
+    expect(within(recent).getByText("Not shared with you")).toBeTruthy();
+    // Nothing to open ON THE CITATION: a control that leads to a message the
+    // reader may not read teaches them the product does not work. The panel's
+    // own "View all activity" is a different affordance and stays.
+    expect(
+      within(recent).queryByRole("button", { name: /Not shared with you/ }),
+    ).toBeNull();
   });
 
   it("says the timeline is withheld rather than empty", () => {
@@ -786,5 +840,15 @@ describe("which employer is the current one", () => {
     // The LOCAL date, formatted by hand. Reaching for toISOString() here would
     // send yesterday's date to anybody west of UTC for most of their working day.
     expect((body as Record<string, unknown>).ended_at).toBe("2026-08-18");
+  });
+});
+
+describe("how the contact is filed", () => {
+  // The tags panel is shared with the company and deal pages, and it draws in
+  // the rail's SECTION chrome here: the person rail is one card of headed
+  // sections, so a second card inside it would be a box in a box.
+  it("draws the contact's tags in the rail", async () => {
+    mount(granted);
+    expect(await screen.findByText("Champion")).toBeTruthy();
   });
 });

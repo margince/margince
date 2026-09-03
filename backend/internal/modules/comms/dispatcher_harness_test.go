@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -195,6 +196,17 @@ func (f fakeResolver) ResolveChannel(context.Context, ids.UserID, string) (conne
 type stubConsent struct {
 	err   error
 	asked []string
+	// ticket is what AuthorizeTransmit hands back. The zero value is a
+	// DELIBERATE default of "no decision recorded", so a test that forgets to
+	// arm it sees transmit refuse rather than silently sending — the harness
+	// arms a current ticket in armTicket below.
+	ticket commsauthz.TransmitTicket
+	// armed says the test set ticket deliberately, including to a zero-valued
+	// one. Without it a test pinning "no decision was recorded" is
+	// indistinguishable from a test that armed nothing.
+	armed     bool
+	authzErr  error
+	authzSeen int
 }
 
 func (s *stubConsent) RequireGrantedForRecipients(_ context.Context, recipients []connector.Recipient, _ string) error {
@@ -328,6 +340,42 @@ func dispatch(ctx context.Context, d *Dispatcher, id ids.UUID) (Outcome, error) 
 
 type consentFunc func(context.Context, []connector.Recipient, string) error
 
+// AuthorizeTransmit hands back a ticket covering exactly the attempt it was
+// asked about, so a test using this shorthand double is testing the gate it
+// named and not the ticket check beside it.
+func (f consentFunc) AuthorizeTransmit(_ context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error) {
+	return commsauthz.TransmitTicket{
+		DeliveryID:    req.DeliveryID,
+		Attempt:       req.Attempt,
+		DecisionSetID: ids.NewV7(),
+		Allowed:       true,
+	}, nil
+}
+
 func (f consentFunc) RequireGrantedForRecipients(ctx context.Context, r []connector.Recipient, p string) error {
 	return f(ctx, r, p)
+}
+
+// AuthorizeTransmit stands in for the engine. It returns whatever the test
+// armed, so a test can pin the two cases that matter here: a ticket for the
+// wrong attempt, and no ticket at all.
+func (s *stubConsent) AuthorizeTransmit(_ context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error) {
+	s.authzSeen++
+	if s.authzErr != nil {
+		return commsauthz.TransmitTicket{}, s.authzErr
+	}
+	if s.armed {
+		return s.ticket, nil
+	}
+	// Unarmed, the stub behaves as the engine does in observe mode: it records
+	// a decision and permits the send, leaving the legacy gate to rule. It must
+	// NOT mirror s.err — that field is the LEGACY gate's answer, and a stub
+	// that refused here too would make every legacy test pass for the engine's
+	// reason instead of its own.
+	return commsauthz.TransmitTicket{
+		DeliveryID:    req.DeliveryID,
+		Attempt:       req.Attempt,
+		DecisionSetID: ids.NewV7(),
+		Allowed:       true,
+	}, nil
 }

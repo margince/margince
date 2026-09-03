@@ -1,0 +1,44 @@
+name: a_department_display_name_is_not_somebodys_name
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  display_name: APAC Billing
+  email: billing_apac@vendorcorp.example
+  subject: "NOTICE OF CHANGE OF COMPANY NAME"
+  body: |
+    Dear Customer,
+
+    Please be informed that with effect from 1 October our company name will
+    change. Your existing contracts and invoices remain valid and no action is
+    required on your side.
+
+    Please update your records accordingly and address future remittances to
+    the new entity name shown on your invoices.
+
+    Regards,
+    Accounts Receivable
+expect:
+  outcome: accepted
+  answer: role_mailbox
+  rubric: >
+    A vendor's billing desk, whose display name is a region and a department.
+    The address carries a role word and would be refused deterministically; this
+    case exists so the model's answer AGREES with that refusal rather than
+    contradicting it — two doors disagreeing about one sender is the defect the
+    shared vocabulary was introduced to end.
+    "role_mailbox" scores highest: a function nobody owns, whose mail is real
+    and whose contact would be a department with a person's shape.
+    "organization_sender" is a near miss and scores nearly as high — the effect
+    is identical.
+    "transactional" is defensible and scores partially: this is close to a
+    notice a system emits, and hiding it costs little.
+    "person" scores zero above the floor. It files a contact called "APAC
+    Billing", which is precisely what was found in a real CRM, and it is worse
+    than the transactional answer because it creates a record rather than
+    merely hiding a message.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

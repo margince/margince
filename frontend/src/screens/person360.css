@@ -55,6 +55,9 @@
 /* A company is a record of its own, so its name in the header is a link and
    reads as one: no button chrome, the page's own link colour. */
 .pe-meta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 0;
   border: 0;
   background: none;
@@ -343,14 +346,45 @@
 /* A thread as one row. It is a `PanelRow`, so the hairline and the gutters come
    from there; the column template is the memory's own — date, channel, what it
    said, its standing, the time. */
+/* In the paired half the filter strip does not always fit beside the title.
+   It drops under the title as one row rather than breaking into two ragged
+   rows beside it, and the head grows to hold both. */
+.pe-memory .panel-head {
+  flex-wrap: wrap;
+  padding-block: var(--space-2);
+}
+
+/* Three lines, not six columns: the panel sits in a half-width pair, where
+   a date, a kind, a status, a time and a reply on one line left the subject
+   a word per line. The first line is the row's meta, the subject takes a line
+   of its own under it, and the reply, when there is one, a third. */
 .pe-memory-row {
   display: grid;
-  /* The last track is the reply, and it is sized `auto` so a row that offers
-     none collapses it to nothing rather than reserving a gutter across every
-     mail row for a button only channel rows have. */
-  grid-template-columns: 64px auto minmax(0, 1fr) auto auto auto;
-  gap: var(--space-3);
-  align-items: start;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.pe-memory-row > :nth-child(3) {
+  grid-row: 2;
+  grid-column: 1 / -1;
+}
+
+.pe-memory-action {
+  grid-column: 1 / -1;
+}
+
+.pe-memory-action {
+  justify-self: start;
+}
+
+/* On a phone the meta line is too long for one row: the date and the kind
+   keep the first line, and the status and the time take one under the
+   subject, so nothing has to overflow the panel to stay on its line. */
+@media (max-width: 600px) {
+  .pe-memory-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
 }
 
 .pe-memory-action:empty {
@@ -396,24 +430,6 @@
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .pe-memory-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .pe-memory-date,
-  .pe-memory-channel {
-    grid-column: 1 / -1;
-  }
-
-  /* The reply takes its own line rather than being squeezed beside the time:
-     at this width the two would each get half a column and the button would
-     wrap its own label. */
-  .pe-memory-action {
-    grid-column: 1 / -1;
-  }
-}
-
 /* ---------------------------------------------------------------------------
    The right rail (§5.11): one continuous panel, its six slices told apart by
    a hairline rather than by a gap between cards — the company record's rail
@@ -428,6 +444,14 @@
    that would spill in return. */
 .pe-rail > .panel {
   overflow: visible;
+}
+
+/* One question per panel, in the page's own rhythm: the gap is the account
+   rail's, so a rep who reads both records reads the same column. */
+.pe-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .pe-rail .pe-sect {
@@ -468,11 +492,15 @@
 }
 
 /* A rail row is one action or one reading: label left, value right. */
+/* The reading is a few words and holds one line; the label takes the rest and
+   wraps when it is long. The other way round — label on a floor, reading on
+   the rest — a long label ("Quarterly review with Demo GmbH") left the reading
+   a column one letter wide. */
 .pe-rail-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
-  align-items: center;
+  align-items: baseline;
   padding: var(--space-2) 0;
   font-size: 14px;
 }
@@ -489,15 +517,10 @@
   min-width: 0;
 }
 
-/* Set on one line, and min-width: 0 is what makes the ellipsis reachable: the
-   `auto` track's floor is the value's own min-content width, so without it the
-   longest reading sizes the rail's column instead of truncating inside it. */
 .pe-rail-value {
-  min-width: 0;
   color: var(--textPrimary);
+  text-align: right;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .pe-rail-value-good {

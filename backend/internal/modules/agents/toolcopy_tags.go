@@ -37,3 +37,24 @@ var removeTagCopy = toolCopy{
 	Purpose: "Take one tag off one record — by tag_id or tag_name — leaving the word itself.",
 	Limits:  "Removing one that is not there succeeds. archive_record on a tag retires it for all.",
 }
+
+// The vocabulary verbs. Every one of them is refused without the grant the
+// seeded roles give Admin and Ops alone, so the copy says what the tool does
+// rather than warning about an authority the store already enforces.
+var createTagCopy = toolCopy{
+	Purpose: "Coin a new word in the workspace vocabulary, so records can be grouped by it.",
+	Limits: "list_tags FIRST: a workspace with \"Key Account\" does not want \"key accounts\" " +
+		"beside it, and the two then split the records that belong together. A name already " +
+		"taken is a conflict, matched case-insensitively — including a RETIRED word holding " +
+		"it, which a person restores in Settings; no tool does. Needs the tag.create grant, " +
+		"which an ordinary seat does not hold.",
+}
+
+var updateTagCopy = toolCopy{
+	Purpose: "Rename, recolour or describe a word that already exists. Fields left out are " +
+		"unchanged, so a recolour need not restate the name.",
+	Limits: "The word keeps every record carrying it — this changes what it is CALLED, not what " +
+		"it is on. LAST WRITE WINS: this tool sends no version, so an edit made between your " +
+		"read and your write is overwritten without a conflict. Read with get_tag immediately " +
+		"before editing. A name another word already holds is a conflict.",
+}

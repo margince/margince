@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
@@ -404,6 +405,23 @@ function stubBackend(
         page: { next_cursor: null },
       });
     }
+    // The record's tags. Without this the catch-all answers a shape with no
+    // `withheld` key, which the panel reads as visible-and-empty — a state
+    // asserted by accident rather than chosen.
+    if (method === "GET" && url.includes("/tags")) {
+      return jsonResponse({
+        data: [
+          {
+            tag_id: "t-1",
+            name: "Renewal",
+            color: "teal",
+            archived: false,
+            assigned_at: "2026-03-03T10:00:00Z",
+          },
+        ],
+        withheld: false,
+      });
+    }
     if (url.includes("/agent-tools")) {
       return jsonResponse({
         data: opts.agentTools ?? [],
@@ -712,6 +730,23 @@ describe("mapDealCreate", () => {
 });
 
 describe("DealsScreen", () => {
+  // The board card draws the same chip strip a list row does, so a reader
+  // moving between the two reads one thing one way. The card takes a view
+  // model rather than the wire row, so the tags have to be copied across in
+  // toBoardDeal — a field left out there is silently absent on every card.
+  it("draws a deal's tags on its board card", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([
+        deal({
+          tags: [{ tag_id: "t-1", name: "Renewal", color: "teal" }],
+        }),
+      ]),
+    );
+    render(<DealsScreen />);
+    expect(await screen.findByText("Renewal")).toBeTruthy();
+  });
+
   it("board↔table swaps views over the same fetched set without a reload", async () => {
     const fetchMock = stubBackend([deal({})]);
     vi.stubGlobal("fetch", fetchMock);
@@ -1887,6 +1922,28 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 
   // A control that can only fail is worse than none: an archived deal is not
   // moved through the pipeline, it is restored first.
+  // The deal's tags ride in the CONTEXT rail, beside the seats, the deal room
+  // and the mail card — the same column a person and a company draw theirs in.
+  // They sat in the overview pane once, full-width between the readings and the
+  // stage stepper, on the belief that this page had no side column; it fills one
+  // through `PageAside`, which portals into the shell's rail.
+  it("draws the deal's tags in the context rail", async () => {
+    const d = deal({ id: "x" });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
+    // The provider and the region together, because `PageAside` is a PORTAL:
+    // without a mounted host it renders null, and a bare screen would report
+    // the card missing whichever column it was written into.
+    render(
+      <PageAsideProvider>
+        <DealScreen id="x" />
+        <PageAsideRegion />
+      </PageAsideProvider>,
+    );
+
+    const tag = await screen.findByText("Renewal");
+    expect(tag.closest("aside")).not.toBeNull();
+  });
+
   it("offers no move on an archived deal", async () => {
     const d = deal({ id: "x", archived_at: "2026-07-01T00:00:00Z" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
@@ -2117,6 +2174,8 @@ describe("DealScreen — overlay mode write affordances", () => {
     expect(await screen.findByTestId("edit-record")).toBeTruthy();
     await openHeaderMenu();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
+    // The mirror owns the deal's mail, so the header offers no Email verb.
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
   });
 
   it("Edit's real click path PATCHes and the 360 renders the updated value", async () => {
@@ -2378,5 +2437,16 @@ describe("the partner filter", () => {
     // A picker with nothing in it asks a question that has no answers.
     const menu = screen.getByRole("group", { name: "Filter" });
     expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
+  });
+});
+
+describe("DealScreen — the header's Email verb", () => {
+  it("carries the same Email verb every record header does", async () => {
+    const d = deal({ id: "x", version: 4 });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
+    render(<DealScreen id="x" />);
+    const verb = await screen.findByRole("button", { name: "Email" });
+    expect(verb.querySelector(".lucide-mail")).toBeTruthy();
+    expect(verb.hasAttribute("disabled")).toBe(false);
   });
 });

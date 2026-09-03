@@ -5,24 +5,25 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
+import { useCan, useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Avatar,
   Button,
   Checkbox,
-  Disclosure,
   Field,
   Modal,
   OverflowMenu,
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ContactLink } from "../design-system/contactlink";
+import { EmailReference } from "../design-system/emailreference";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
-import { Panel } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -44,24 +45,22 @@ import {
   useT,
 } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
-import {
-  ProblemError,
-  problemMessageOf,
-  throwProblem,
-  useSorMode,
-} from "./common";
+import { problemMessageOf, throwProblem, useSorMode } from "./common";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
-import { consentWord } from "./personstrip";
+import { daysSinceInbound, isQuiet } from "./personquiet";
+import { consentWord } from "./personreadings";
 import { personTabRoute } from "./persontab";
+import { TagsPanel } from "./tagspanel";
 
-// The right rail (concept §5.11): one continuous panel, its six slices told
-// apart by a hairline rather than by a gap between cards — the same anatomy
-// the company record's rail draws (companyrail.tsx), and for the same
-// reason: a hairline between two facts about the same person reads as one
-// story with headings, where a gap between cards reads as two stories that
-// happen to sit beside each other.
+// The right rail (concept §5.11): SEPARATE panels, each answering one question
+// about the person — their fields, their companies, how the relationship
+// stands, who knows them, what stands out, what they allow — in the order a
+// reader works down the column. The same anatomy the company record's rail
+// draws (companyrail.tsx), and for the same reason: a panel's own edge is
+// what tells a reader they have moved on to a different question, where a
+// hairline inside one long card read as one story that never ended.
 //
 // Every section here is still a GLANCE. The rail never becomes a second
 // body — a reader who has to read the margin has lost the column it sits
@@ -136,28 +135,33 @@ export function PersonRail({
   guard,
   firstName,
   onExplain,
+  onOpenEmail,
 }: Readonly<{
   view: Person360;
   guard: PersonConsentGuard | undefined;
   firstName: string;
   onExplain: () => void;
+  /** Opens one message in the record's drawer. The page owns the drawer, so
+   * the rail is handed the opener rather than mounting a second one. */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
-  const t = useT();
+  // A plain div: RecordView's own <aside> is the landmark around this, and a
+  // second labelled region inside it would give a reader two names for one
+  // column.
   return (
     <div className="pe-rail" data-testid="person-rail">
-      <Panel title={t("person.page.asideLabel")}>
-        <DetailsGrid view={view} />
-        <Employers view={view} />
-        <RelationshipPulse view={view} onExplain={onExplain} />
-        <WhoKnows view={view} firstName={firstName} />
-        <SignalsAndRisks view={view} />
-        <ConsentAndChannels view={view} guard={guard} />
-        {/* Beside consent, because it is the same subject from the seat's own
-            side: consent says what this contact allows us to send, the hold
-            says what the seat is willing for colleagues to read. */}
-        <PersonHoldSection view={view} />
-        <RecentActivity view={view} />
-      </Panel>
+      <DetailsGrid view={view} />
+      <Employers view={view} />
+      <RelationshipPulse view={view} onExplain={onExplain} />
+      <WhoKnows view={view} firstName={firstName} />
+      <SignalsAndRisks view={view} />
+      <ConsentAndChannels view={view} guard={guard} />
+      {/* Beside consent, because it is the same subject from the seat's own
+          side: consent says what this contact allows us to send, the hold
+          says what the seat is willing for colleagues to read. */}
+      <PersonHoldSection view={view} />
+      <PersonTagsSection view={view} />
+      <RecentActivity view={view} onOpenEmail={onOpenEmail} />
     </div>
   );
 }
@@ -174,10 +178,45 @@ function PersonHoldSection({ view }: Readonly<{ view: Person360 }>) {
     return null;
   }
   return (
-    <section className="pe-rail-section">
-      <h3 className="pe-rail-heading">{t("hold.sectionTitle")}</h3>
-      <CounterpartyHoldRow email={email} />
-    </section>
+    <Panel title={t("hold.sectionTitle")}>
+      <PanelBody>
+        <CounterpartyHoldRow email={email} />
+      </PanelBody>
+    </Panel>
+  );
+}
+
+// --- How this contact is filed -----------------------------------------
+
+/**
+ * The contact's tags, drawn by the SHARED panel.
+ *
+ * The three questions the server asks before it writes are asked here too: the
+ * object grant, this record's own editability, and — inside the panel — whether
+ * the vocabulary is visible at all.
+ *
+ * Exported for its own test: mounting the whole rail to ask whether the tag
+ * verb appears would fail for eight unrelated reasons, and a test that instead
+ * passed `canEdit` straight to the panel would prove only that the panel obeys
+ * its prop — never that this mount computes it.
+ */
+export function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
+  const person = view.person;
+  const readOnlyReason = usePersonReadOnlyReason(person);
+  // useCanWriteRecord, not useCan: applying a tag writes to the record, so the
+  // verb owes the seat ceiling and this row's own `writable` as well as the
+  // object grant. A rep holding `person.update` still may not tag a colleague's
+  // contact, and the read-only reason above does not answer that half.
+  const canUpdate = useCanWriteRecord("person", person);
+  if (!person.id) {
+    return null;
+  }
+  return (
+    <TagsPanel
+      entityType="person"
+      entityID={person.id}
+      canEdit={canUpdate && !readOnlyReason}
+    />
   );
 }
 
@@ -273,14 +312,6 @@ function linkedinOf(person: Person): string {
   const value = person.social?.linkedin;
   return typeof value === "string" ? value : "";
 }
-
-// Email and phone cannot be sent to `PATCH /people/{id}` (interfaces.md,
-// UpdatePersonRequest carries only full_name/first_name/last_name/title/
-// owner_id/social/address) — they are set once at capture and have no
-// update path on the wire, native or overlay. They still draw as ordinary
-// rows, so the section reads as one grid rather than four editable rows and
-// two that look like an omission.
-const CONTACT_METHOD_IMMUTABLE = "person.rail.contactMethodImmutable" as const;
 
 type DetailsRowProps = Readonly<{
   person: Person;
@@ -399,41 +430,34 @@ function CityRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   );
 }
 
-// Email and phone below are always drawn with `canEdit={false}`: see
-// CONTACT_METHOD_IMMUTABLE above for why there is no PATCH for either. The
-// `onSave` each carries can never run — InlineText only calls it from the
-// editable path, which `canEdit={false}` never opens — so it exists only to
-// satisfy the prop's type, not as a path this rail actually takes.
+// Email and phone have no update path on the wire (UpdatePersonRequest carries
+// neither), so they are not drawn as editors. They are drawn as what a reader
+// does with them: an address is written to and a number is dialled, and a
+// value a reader could only look at taught them the record was a printout.
 function EmailRow({ person }: Readonly<{ person: Person }>) {
   const t = useT();
-  const reason = t(CONTACT_METHOD_IMMUTABLE);
+  const email = person.emails?.[0]?.email;
   return (
     <FieldRow label={t("person.rail.email")}>
-      <InlineText
-        label={t("person.rail.email")}
-        value={person.emails?.[0]?.email ?? ""}
-        placeholder={t("field.unset")}
-        canEdit={false}
-        readOnlyReason={reason}
-        onSave={() => Promise.reject(new ProblemError({ detail: reason }))}
-      />
+      {email ? (
+        <ContactLink kind="email" value={email} className="pe-meta-link" />
+      ) : (
+        <span className="pe-rail-value-muted">{t("field.unset")}</span>
+      )}
     </FieldRow>
   );
 }
 
 function PhoneRow({ person }: Readonly<{ person: Person }>) {
   const t = useT();
-  const reason = t(CONTACT_METHOD_IMMUTABLE);
+  const phone = person.phones?.[0]?.phone;
   return (
     <FieldRow label={t("person.rail.phone")}>
-      <InlineText
-        label={t("person.rail.phone")}
-        value={person.phones?.[0]?.phone ?? ""}
-        placeholder={t("field.unset")}
-        canEdit={false}
-        readOnlyReason={reason}
-        onSave={() => Promise.reject(new ProblemError({ detail: reason }))}
-      />
+      {phone ? (
+        <ContactLink kind="phone" value={phone} className="pe-meta-link" />
+      ) : (
+        <span className="pe-rail-value-muted">{t("field.unset")}</span>
+      )}
     </FieldRow>
   );
 }
@@ -456,20 +480,18 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
     patch,
   };
   return (
-    <Disclosure
-      className="pe-sect"
-      open
-      summary={t("person.rail.detailsTitle")}
-    >
-      <FieldGrid>
-        <NameRow {...row} />
-        <TitleRow {...row} />
-        <EmailRow person={person} />
-        <PhoneRow person={person} />
-        <LinkedinRow {...row} />
-        <CityRow {...row} />
-      </FieldGrid>
-    </Disclosure>
+    <Panel title={t("person.rail.detailsTitle")}>
+      <PanelBody>
+        <FieldGrid>
+          <NameRow {...row} />
+          <TitleRow {...row} />
+          <EmailRow person={person} />
+          <PhoneRow person={person} />
+          <LinkedinRow {...row} />
+          <CityRow {...row} />
+        </FieldGrid>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -662,77 +684,77 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
     [connectedOrgKey],
   );
   return (
-    <Disclosure
-      className="pe-sect"
-      open
-      summary={t("person.rail.employmentTitle")}
-      action={
+    <Panel
+      title={t("person.rail.employmentTitle")}
+      titleAction={
         canEdit ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button small variant="ghost" onClick={() => setAdding(true)}>
             {t("person.rail.addEmployment")}
           </Button>
         ) : undefined
       }
     >
-      <SurfaceState
-        state={bodyState(
-          withheldSections(view).employments,
-          employments.length,
-        )}
-        emptyLabel={t("person.rail.noEmployment")}
-      >
-        {employments.map((employment) => (
-          <EmploymentRow
-            key={employment.relationship_id}
-            employment={employment}
-            canEdit={canEdit}
-            readOnlyReason={readOnlyReason}
-            actions={actions}
-            onRemove={() => setRemoving(employment)}
-          />
-        ))}
-      </SurfaceState>
-      <AddEmploymentModal
-        open={adding}
-        onClose={() => setAdding(false)}
-        personId={person.id}
-        create={actions.create}
-        excludedOrgIds={connectedOrgIds}
-        hasCurrentEmployment={employments.some(stillHeld)}
-      />
-      {/* Remove is the irreversible verb — the connection and its history are
+      <PanelBody>
+        <SurfaceState
+          state={bodyState(
+            withheldSections(view).employments,
+            employments.length,
+          )}
+          emptyLabel={t("person.rail.noEmployment")}
+        >
+          {employments.map((employment) => (
+            <EmploymentRow
+              key={employment.relationship_id}
+              employment={employment}
+              canEdit={canEdit}
+              readOnlyReason={readOnlyReason}
+              actions={actions}
+              onRemove={() => setRemoving(employment)}
+            />
+          ))}
+        </SurfaceState>
+        <AddEmploymentModal
+          open={adding}
+          onClose={() => setAdding(false)}
+          personId={person.id}
+          create={actions.create}
+          excludedOrgIds={connectedOrgIds}
+          hasCurrentEmployment={employments.some(stillHeld)}
+        />
+        {/* Remove is the irreversible verb — the connection and its history are
           gone, not merely dated — so it is the one that sits behind a
           confirm, unlike "mark as ended" which is an ordinary field edit. */}
-      <ConfirmModal
-        open={removing !== null}
-        onClose={() => {
-          setRemoving(null);
-          actions.remove.reset();
-        }}
-        title={t("person.rail.removeEmploymentTitle")}
-        confirmLabel={t("rel.remove")}
-        confirmVariant="danger"
-        onConfirm={() => {
-          if (removing) {
-            actions.remove.mutate(removing.relationship_id, {
-              onSuccess: () => setRemoving(null),
-            });
+        <ConfirmModal
+          open={removing !== null}
+          onClose={() => {
+            setRemoving(null);
+            actions.remove.reset();
+          }}
+          title={t("person.rail.removeEmploymentTitle")}
+          confirmLabel={t("rel.remove")}
+          confirmVariant="danger"
+          onConfirm={() => {
+            if (removing) {
+              actions.remove.mutate(removing.relationship_id, {
+                onSuccess: () => setRemoving(null),
+              });
+            }
+          }}
+          pending={actions.remove.isPending}
+          error={
+            actions.remove.isError
+              ? problemMessageOf(actions.remove.error, t)
+              : null
           }
-        }}
-        pending={actions.remove.isPending}
-        error={
-          actions.remove.isError
-            ? problemMessageOf(actions.remove.error, t)
-            : null
-        }
-      >
-        <p className="t-body">
-          {t("person.rail.removeEmploymentBody", {
-            org: removing?.organization_name ?? t("field.unset"),
-          })}
-        </p>
-      </ConfirmModal>
-    </Disclosure>
+        >
+          <p className="t-body">
+            {t("person.rail.removeEmploymentBody", {
+              org: removing?.organization_name ?? t("field.unset"),
+            })}
+          </p>
+        </ConfirmModal>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -1065,50 +1087,50 @@ function RelationshipPulse({
   const twoWay = Boolean(inbound && outbound);
   const colleagues = view.network?.colleagues?.length ?? 0;
   return (
-    <Disclosure
-      className="pe-sect"
-      open
-      summary={t("person.rail.pulseTitle")}
-      action={
-        <Button small onClick={onExplain}>
+    <Panel
+      title={t("person.rail.pulseTitle")}
+      titleAction={
+        <Button small variant="ghost" onClick={onExplain}>
           {t("person.rail.explain")}
         </Button>
       }
     >
-      {/* Four of these five readings are derived from the two directional
+      <PanelBody>
+        {/* Four of these five readings are derived from the two directional
           timestamps, which arrive together or not at all — one grant governs
           both — so one question answers all four. */}
-      <Row
-        label={t("person.rail.direction")}
-        value={reading(
-          twoWay ? t("person.rail.twoWay") : t("person.rail.oneSided"),
-          hidden.lastTouch,
-          t,
-        )}
-      />
-      <Row
-        label={t("person.rail.lastReply")}
-        value={reading(sinceWords(inbound, t, locale), hidden.lastTouch, t)}
-      />
-      <Row
-        label={t("person.rail.coverage")}
-        value={reading(colleagueWords(colleagues, locale), hidden.network, t)}
-      />
-      <Row
-        label={t("person.rail.trend")}
-        value={reading(trendWord(view, t), hidden.lastTouch, t)}
-      />
-      <div className="pe-pulse-overall">
-        {/* The overall reading is the only one drawn in the verdict colour, and
+        <Row
+          label={t("person.rail.direction")}
+          value={reading(
+            twoWay ? t("person.rail.twoWay") : t("person.rail.oneSided"),
+            hidden.lastTouch,
+            t,
+          )}
+        />
+        <Row
+          label={t("person.rail.lastReply")}
+          value={reading(sinceWords(inbound, t, locale), hidden.lastTouch, t)}
+        />
+        <Row
+          label={t("person.rail.coverage")}
+          value={reading(colleagueWords(colleagues, locale), hidden.network, t)}
+        />
+        <Row
+          label={t("person.rail.trend")}
+          value={reading(trendWord(view, t), hidden.lastTouch, t)}
+        />
+        <div className="pe-pulse-overall">
+          {/* The overall reading is the only one drawn in the verdict colour, and
             a withheld reading is not a verdict: colouring "Not shown" would
             state a healthy relationship in the one place a reader glances. */}
-        <Row
-          label={t("person.rail.overall")}
-          value={reading(overallWord(view, t), hidden.lastTouch, t)}
-          strong={!hidden.lastTouch}
-        />
-      </div>
-    </Disclosure>
+          <Row
+            label={t("person.rail.overall")}
+            value={reading(overallWord(view, t), hidden.lastTouch, t)}
+            strong={!hidden.lastTouch}
+          />
+        </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -1131,11 +1153,11 @@ function trendWord(view: Person360, t: ReturnType<typeof useT>): string {
 }
 
 function overallWord(view: Person360, t: ReturnType<typeof useT>): string {
-  const days = daysSince(view.last_inbound_at);
+  const days = daysSinceInbound(view);
   if (days == null) {
     return t("person.rail.thin");
   }
-  if (days > 14) {
+  if (isQuiet(days)) {
     return t("person.rail.atRisk");
   }
   return t("person.rail.strong");
@@ -1151,34 +1173,32 @@ function WhoKnows({
   const { locale } = useLocale();
   const colleagues = view.network?.colleagues ?? [];
   return (
-    <Disclosure
-      className="pe-sect"
-      open
-      summary={t("person.rail.whoKnows", { name: firstName })}
-    >
-      <SurfaceState
-        state={bodyState(withheldSections(view).network, colleagues.length)}
-        emptyLabel={t("person.rail.nobodyYet")}
-      >
-        {colleagues.slice(0, 3).map((colleague) => (
-          <div className="pe-colleague" key={colleague.user_id}>
-            <Avatar name={colleague.display_name} />
-            <span>
-              <span className="pe-colleague-name">
-                {colleague.display_name}
-              </span>
-              <span className="pe-colleague-proof">
-                {/* The PROOF, never a ranking nobody can check: six unanswered
+    <Panel title={t("person.rail.whoKnows", { name: firstName })}>
+      <PanelBody>
+        <SurfaceState
+          state={bodyState(withheldSections(view).network, colleagues.length)}
+          emptyLabel={t("person.rail.nobodyYet")}
+        >
+          {colleagues.slice(0, 3).map((colleague) => (
+            <div className="pe-colleague" key={colleague.user_id}>
+              <Avatar name={colleague.display_name} />
+              <span>
+                <span className="pe-colleague-name">
+                  {colleague.display_name}
+                </span>
+                <span className="pe-colleague-proof">
+                  {/* The PROOF, never a ranking nobody can check: six unanswered
                     sends must not read as stronger than two real exchanges. */}
-                {t("person.rail.exchanges", {
-                  count: formatNumber(colleague.interactions_90d, locale),
-                })}
+                  {t("person.rail.exchanges", {
+                    count: formatNumber(colleague.interactions_90d, locale),
+                  })}
+                </span>
               </span>
-            </span>
-          </div>
-        ))}
-      </SurfaceState>
-    </Disclosure>
+            </div>
+          ))}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -1194,19 +1214,21 @@ function SignalsAndRisks({ view }: Readonly<{ view: Person360 }>) {
     locale,
   );
   return (
-    <Disclosure className="pe-sect" open summary={t("person.rail.signals")}>
-      <SurfaceState
-        state={signalsState(signals.length, skipped)}
-        emptyLabel={t("person.rail.noSignals")}
-      >
-        {signals.map((signal) => (
-          <div className="pe-signal" key={signal.text}>
-            <span className={`pe-dot pe-dot-${signal.tone}`} />
-            <span>{signal.text}</span>
-          </div>
-        ))}
-      </SurfaceState>
-    </Disclosure>
+    <Panel title={t("person.rail.signals")}>
+      <PanelBody>
+        <SurfaceState
+          state={signalsState(signals.length, skipped)}
+          emptyLabel={t("person.rail.noSignals")}
+        >
+          {signals.map((signal) => (
+            <div className="pe-signal" key={signal.text}>
+              <span className={`pe-dot pe-dot-${signal.tone}`} />
+              <span>{signal.text}</span>
+            </div>
+          ))}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -1240,8 +1262,8 @@ function derivedSignals(
 ): Readonly<{ signals: ReadonlyArray<Signal>; skipped: boolean }> {
   const out: Signal[] = [];
   let skipped = hidden.lastTouch;
-  const quiet = hidden.lastTouch ? null : daysSince(view.last_inbound_at);
-  if (quiet != null && quiet > 14) {
+  const quiet = hidden.lastTouch ? null : daysSinceInbound(view);
+  if (quiet != null && isQuiet(quiet)) {
     out.push({
       text: t("person.rail.noReplyDays", {
         count: formatNumber(quiet, locale),
@@ -1304,46 +1326,44 @@ function ConsentAndChannels({
   const hasEmail = (view.person.emails?.length ?? 0) > 0;
   const channels = view.person.reachability ?? [];
   return (
-    <Disclosure
-      className="pe-sect"
-      open
-      summary={t("person.rail.consentTitle")}
-    >
-      <ConsentRow
-        icon={<Mail size={15} aria-hidden="true" />}
-        label={t("person.rail.email")}
-        reachable={hasEmail}
-        verdict={correspondence?.verdict}
-        unreachableWord={t("person.rail.noEmailAddress")}
-      />
-      <ConsentRow
-        icon={<Phone size={15} aria-hidden="true" />}
-        label={t("person.rail.phone")}
-        reachable={(view.person.phones?.length ?? 0) > 0}
-        verdict={phone?.verdict}
-        unreachableWord={t("person.rail.noPhoneNumber")}
-      />
-      {/* A blocked identity still gets its row, with `reachable: false`: the
+    <Panel title={t("person.rail.consentTitle")}>
+      <PanelBody>
+        <ConsentRow
+          icon={<Mail size={15} aria-hidden="true" />}
+          label={t("person.rail.email")}
+          reachable={hasEmail}
+          verdict={correspondence?.verdict}
+          unreachableWord={t("person.rail.noEmailAddress")}
+        />
+        <ConsentRow
+          icon={<Phone size={15} aria-hidden="true" />}
+          label={t("person.rail.phone")}
+          reachable={(view.person.phones?.length ?? 0) > 0}
+          verdict={phone?.verdict}
+          unreachableWord={t("person.rail.noPhoneNumber")}
+        />
+        {/* A blocked identity still gets its row, with `reachable: false`: the
           conversation happened, and hiding the transport it happened on would
           answer "can I write to them" by pretending they were never here. */}
-      {channels.map((channel) => (
-        <ConsentRow
-          key={channel.provider}
-          icon={interactionIcon("message", 15)}
-          label={providerLabel(channel.provider)}
-          reachable={channel.reachable}
-          verdict={correspondence?.verdict}
-          unreachableWord={t("person.rail.channelNotDeliverable")}
-        />
-      ))}
-      {/* The REASON, in the reader's words. A verdict a rep cannot explain to
+        {channels.map((channel) => (
+          <ConsentRow
+            key={channel.provider}
+            icon={interactionIcon("message", 15)}
+            label={providerLabel(channel.provider)}
+            reachable={channel.reachable}
+            verdict={correspondence?.verdict}
+            unreachableWord={t("person.rail.channelNotDeliverable")}
+          />
+        ))}
+        {/* The REASON, in the reader's words. A verdict a rep cannot explain to
           the person in front of them is not usable — and one explaining a
           verdict no row above shows explains nothing. */}
-      {(hasEmail || channels.some((channel) => channel.reachable)) &&
-        correspondence?.reason && (
-          <p className="pe-colleague-proof">{correspondence.reason}</p>
-        )}
-    </Disclosure>
+        {(hasEmail || channels.some((channel) => channel.reachable)) &&
+          correspondence?.reason && (
+            <p className="pe-colleague-proof">{correspondence.reason}</p>
+          )}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -1399,7 +1419,10 @@ function verdictClass(verdict: string | undefined): string {
 
 // Three condensed items. It never duplicates the raw timeline visible beside
 // it — this is the glance, the Activity tab is the ledger.
-function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
+function RecentActivity({
+  view,
+  onOpenEmail,
+}: Readonly<{ view: Person360; onOpenEmail?: (activityId: string) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   // The section's own emptiness is decided BEFORE the rows are defaulted: an
@@ -1409,36 +1432,49 @@ function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
   const withheld = withheldSections(view).activities;
   const rows = (view.activities?.data ?? []).slice(0, 3);
   return (
-    <Disclosure
-      className="pe-sect"
-      open
-      summary={t("person.rail.recentActivity")}
+    <Panel
+      title={t("person.rail.recentActivity")}
+      footer={
+        // The rail's own glance leaves the tab's ledger one click away.
+        <Button
+          small
+          variant="ghost"
+          onClick={() => navigate(personTabRoute(view.person.id, "timeline"))}
+        >
+          {t("person.rail.viewAllActivity")}{" "}
+          <ChevronRight size={13} aria-hidden="true" />
+        </Button>
+      }
     >
-      <SurfaceState
-        state={bodyState(withheld, rows.length)}
-        emptyLabel={t("person.rail.nothingCaptured")}
-      >
-        {rows.map((row) => (
-          <div className="pe-rail-row" key={row.id}>
-            <span className="pe-rail-label">{row.subject ?? row.kind}</span>
-            <span className="pe-rail-value-muted">
-              {sinceWords(row.occurred_at, t, locale)}
-            </span>
-          </div>
-        ))}
-      </SurfaceState>
-      {/* The rail's own glance leaves the tab's ledger one click away, the
-          same "see the rest elsewhere" verb the section's own body carries
-          now that there is no panel footer band to hold it. */}
-      <Button
-        small
-        className="pe-rail-more"
-        onClick={() => navigate(personTabRoute(view.person.id, "timeline"))}
-      >
-        {t("person.rail.viewAllActivity")}{" "}
-        <ChevronRight size={13} aria-hidden="true" />
-      </Button>
-    </Disclosure>
+      <PanelBody>
+        <SurfaceState
+          state={bodyState(withheld, rows.length)}
+          emptyLabel={t("person.rail.nothingCaptured")}
+        >
+          {rows.map((row) => (
+            <div className="pe-rail-row" key={row.id}>
+              {/* An email is CITED here rather than drawn: the rail is a
+                  glance at what happened lately, and a full row with its
+                  preview and access badge would make the aside compete with
+                  the timeline beside it. The citation opens the same drawer
+                  the timeline's row does, so both lead to one place. */}
+              {row.kind === "email" ? (
+                <EmailReference
+                  subject={row.subject}
+                  withheld={row.content_state === "withheld"}
+                  onOpen={onOpenEmail ? () => onOpenEmail(row.id) : undefined}
+                />
+              ) : (
+                <span className="pe-rail-label">{row.subject ?? row.kind}</span>
+              )}
+              <span className="pe-rail-value pe-rail-value-muted">
+                {sinceWords(row.occurred_at, t, locale)}
+              </span>
+            </div>
+          ))}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -1452,18 +1488,15 @@ function Row({
   return (
     <div className="pe-rail-row">
       <span className="pe-rail-label">{label}</span>
-      <span className={strong ? "pe-rail-value-good" : "pe-rail-value"}>
+      <span
+        className={
+          strong ? "pe-rail-value pe-rail-value-good" : "pe-rail-value"
+        }
+      >
         {value}
       </span>
     </div>
   );
-}
-
-function daysSince(at: string | null | undefined): number | null {
-  if (!at) {
-    return null;
-  }
-  return Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
 }
 
 // sinceWords is the shared spelling, kept as a local name because two dozen

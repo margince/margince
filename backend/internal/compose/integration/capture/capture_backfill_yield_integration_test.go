@@ -154,13 +154,18 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	registry.Register(&mailPageConnector{
 		raws: [][]byte{
-			// Three attested own-sends: each recipient is a counterparty by
-			// demonstrated intent, so each is one person. All three share ONE
-			// corporate domain, and a domain is asked about once — three people,
-			// one company question.
+			// Three recipients the workspace has EXCHANGED mail with: it wrote
+			// to each, and each wrote back on that thread. One send alone is
+			// intent and often unreturned, so it defers to the verdict; a reply
+			// is the exchange that makes a contact without asking. All three
+			// share ONE corporate domain, and a domain is asked about once —
+			// three people, one company question.
 			email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
+			email("alice@globex.example", "Alice", captureOwner, "y1r@globex.example", "y1@myco.example"),
 			email(captureOwner, "", "bob@globex.example", "y2@myco.example", ""),
+			email("bob@globex.example", "Bob", captureOwner, "y2r@globex.example", "y2@myco.example"),
 			email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
+			email("dave@globex.example", "Dave", captureOwner, "y3r@globex.example", "y3@myco.example"),
 			// A free-mail sender on the same page, contributing to NEITHER
 			// counter: it defers to the verdict rather than minting, and a
 			// consumer domain is never a company question. Without it both
@@ -231,7 +236,9 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 			// Two attested own-sends on ONE corporate domain: two people by
 			// demonstrated intent, and one company question between them.
 			email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
+			email("alice@globex.example", "Alice", captureOwner, "y1r@globex.example", "y1@myco.example"),
 			email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
+			email("dave@globex.example", "Dave", captureOwner, "y3r@globex.example", "y3@myco.example"),
 		},
 		sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true},
 	}
@@ -339,7 +346,9 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 			// Two attested own-sends on ONE corporate domain: two people by
 			// demonstrated intent, and one company question between them.
 			email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
+			email("alice@globex.example", "Alice", captureOwner, "y1r@globex.example", "y1@myco.example"),
 			email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
+			email("dave@globex.example", "Dave", captureOwner, "y3r@globex.example", "y3@myco.example"),
 		},
 		sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true},
 	}
@@ -357,10 +366,12 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 
-	// Fail the page after both messages have been captured and resolved, which
+	// Fail the page after both exchanges have been captured and resolved, which
 	// is the worst case: every counterparty exists, and none of them will be
-	// offered to the resolver again.
-	prov.failAfterMessages = 2
+	// offered to the resolver again. Four messages, because an exchange is a
+	// send and its reply — one send alone defers to the verdict and creates
+	// nobody.
+	prov.failAfterMessages = 4
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if _, _, retryAfter, err := registry.RunBackfillStep(wsCtx, run.ID); err == nil || retryAfter <= 0 {
 		t.Fatalf("the page must fail transiently and ask for a retry: retryAfter=%v err=%v", retryAfter, err)
@@ -394,7 +405,9 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 func yieldFixture() [][]byte {
 	return [][]byte{
 		email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
+		email("alice@globex.example", "Alice", captureOwner, "y1r@globex.example", "y1@myco.example"),
 		email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
+		email("dave@globex.example", "Dave", captureOwner, "y3r@globex.example", "y3@myco.example"),
 	}
 }
 
@@ -455,7 +468,7 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 		raws: yieldFixture(),
 		sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true},
 		// Fail after both counterparties exist, so a double credit is visible.
-		failAfterMessages: 2,
+		failAfterMessages: 4,
 	}
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{}).
 		WithProgressPacing(0)
@@ -537,7 +550,9 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 	registry.Register(&mailPageConnector{
 		raws: [][]byte{
 			email(captureOwner, "", "alice@globex.example", "l1@myco.example", ""),
+			email("alice@globex.example", "Alice", captureOwner, "l1r@globex.example", "l1@myco.example"),
 			email(captureOwner, "", "dave@globex.example", "l2@myco.example", ""),
+			email("dave@globex.example", "Dave", captureOwner, "l2r@globex.example", "l2@myco.example"),
 		},
 		sent: map[string]bool{"l1@myco.example": true, "l2@myco.example": true},
 	})
@@ -599,7 +614,9 @@ func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
 	conn := &mailPageConnector{
 		raws: [][]byte{
 			email(captureOwner, "", "erin@globex.example", "h1@myco.example", ""),
+			email("erin@globex.example", "Erin", captureOwner, "h1r@globex.example", "h1@myco.example"),
 			email(captureOwner, "", "frank@globex.example", "h2@myco.example", ""),
+			email("frank@globex.example", "Frank", captureOwner, "h2r@globex.example", "h2@myco.example"),
 		},
 		sent: map[string]bool{"h1@myco.example": true, "h2@myco.example": true},
 	}
@@ -716,15 +733,26 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	const counterparties = 8
 	raws := make([][]byte, 0, counterparties)
-	// Attested own-sends, because only a counterparty the ladder admits reaches
-	// the ledger at all: eight recipients on one corporate domain, so the race
-	// is eight person creations recomputing the same run's reach at once.
+	// Each racer's send and its reply, in that order. Only a counterparty the
+	// ladder ADMITS reaches the ledger, and one send is intent rather than an
+	// exchange — so the reply is what makes each of the eight creatable, and
+	// the race is eight person creations recomputing the same run's reach at
+	// once.
+	//
+	// The page is walked in parallel, so a reply may be read before the send it
+	// answers has committed. That is a real property of capturing out of order
+	// and not a fixture detail: the evidence for an exchange is two rows, and a
+	// reader that sees only one defers the sender to the verdict rather than
+	// creating. The count below is therefore of what the ledger actually
+	// recorded, which is the number the race is about.
 	sent := make(map[string]bool, counterparties)
 	for i := range counterparties {
 		msgID := fmt.Sprintf("race%d@myco.example", i)
+		addr := fmt.Sprintf("racer%d@globex.example", i)
 		sent[msgID] = true
-		raws = append(raws, email(
-			captureOwner, "", fmt.Sprintf("racer%d@globex.example", i), msgID, ""))
+		raws = append(raws,
+			email(captureOwner, "", addr, msgID, ""),
+			email(addr, "Racer", captureOwner, fmt.Sprintf("race%dr@globex.example", i), msgID))
 	}
 	registry.Register(&mailPageConnector{raws: raws, sent: sent, parallel: true})
 
@@ -744,9 +772,13 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 
 	people, _ := readBackfillYieldColumns(t, e, run.ID)
 	ledgered, _ := readCreationLedger(t, e, run.ID)
-	if ledgered != counterparties {
-		t.Fatalf("the page ledgered %d creations of %d, so there was no race to lose",
-			ledgered, counterparties)
+	// At least two concurrent creations, or there is no race to lose. Not all
+	// eight: a parallel walk may read a reply before its send commits, and the
+	// sender then defers rather than being created — which is the rule working,
+	// not the counter failing. What this test is about is whether EVERY
+	// creation that did happen was counted.
+	if ledgered < 2 {
+		t.Fatalf("the page ledgered %d creations, so there was no race to lose", ledgered)
 	}
 	if people != ledgered {
 		t.Errorf("the run reports %d people and its ledger holds %d — every creation counts, "+
@@ -769,19 +801,26 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 	conn := &mailPageConnector{
 		raws: [][]byte{
 			email(captureOwner, "", "gina@globex.example", "w1@myco.example", ""),
+			email("gina@globex.example", "Gina", captureOwner, "w1r@globex.example", "w1@myco.example"),
 			email(captureOwner, "", "hank@globex.example", "w2@myco.example", ""),
+			email("hank@globex.example", "Hank", captureOwner, "w2r@globex.example", "w2@myco.example"),
 		},
 		sent: map[string]bool{"w1@myco.example": true, "w2@myco.example": true},
 	}
 	// Three creations the old binary counted and the seed did not see, added
-	// after the first message so the second one is the recompute that would
+	// after the first EXCHANGE so the second one is the recompute that would
 	// have thrown them away.
+	//
+	// After the second message, not the first: an exchange is a send and its
+	// reply, and the send alone creates nobody — so a hook on message one would
+	// fire before any creation had happened and there would be nothing for the
+	// recompute to threaten.
 	const unledgered = 3
 	var run capture.BackfillRun
 	captured := 0
 	conn.afterMessage = func() {
 		captured++
-		if captured == 1 {
+		if captured == 2 {
 			keepUnledgeredCount(t, e, run.ID, unledgered)
 		}
 	}

@@ -71,6 +71,10 @@ func (stubs) DraftEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 	httperr.NotImplemented(w, r, "DraftEmail")
 }
 
+func (stubs) GetEmailPresentation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetEmailPresentationParams) {
+	httperr.NotImplemented(w, r, "GetEmailPresentation")
+}
+
 func (stubs) GetMeetingBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetMeetingBriefParams) {
 	httperr.NotImplemented(w, r, "GetMeetingBrief")
 }
@@ -873,6 +877,26 @@ func (stubs) PreviewFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
+}
+
+func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastParams) {
+	httperr.NotImplemented(w, r, "GetForecast")
+}
+
+func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastAssurance")
+}
+
+func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ResolveInputCheck")
+}
+
+func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RecordForecastCall")
+}
+
+func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastMovementParams) {
+	httperr.NotImplemented(w, r, "GetForecastMovement")
 }
 
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
@@ -2237,6 +2261,10 @@ func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 
 func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
+}
+
+func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetResponseMetricsParams) {
+	httperr.NotImplemented(w, r, "GetResponseMetrics")
 }
 
 func (stubs) GetTeamBoard(w nethttp.ResponseWriter, r *nethttp.Request) {

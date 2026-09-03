@@ -22,6 +22,7 @@ import {
 } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -101,7 +102,7 @@ import {
   hasWorkInFlight,
   sinceLastVisitFooter,
 } from "./companywork";
-import { ComposeModal, TimelineActions } from "./compose";
+import { ComposeModal } from "./compose";
 import {
   CreateAction,
   type CreateField,
@@ -119,10 +120,17 @@ import {
   listFetchLimit,
   useListQuery,
   useOwnerChips,
+  useTagChips,
 } from "./listquery";
 import { PersonMeetingBrief } from "./meetingbrief";
+import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
-import { OverlayFallback, RecordSpine } from "./record360";
+import {
+  OverlayFallback,
+  RecordReading,
+  RecordReadingPair,
+  RecordSpine,
+} from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -137,14 +145,17 @@ import {
   mineEmptyNote,
   ownerColumn,
   standardViews,
+  tagsColumn,
 } from "./recordlist";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { listQueryParams } from "./tagfilter";
 import {
   TaskDetailModal,
   TaskQuickActions,
   useTaskUpdate,
 } from "./taskactions";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -200,7 +211,7 @@ async function fetchOrganizationsPage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -564,6 +575,7 @@ export function CompaniesScreen() {
   // nothing — the same reason the deal list builds its owner chip this way.
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
+  const tagChips = useTagChips();
   const savedViews = useSavedViewTabs("organizations");
   // Beside the owner dial rather than in `chips`, and the reason is the option
   // labels. A `chips` entry runs every label through `t()`, so its options must
@@ -638,6 +650,7 @@ export function CompaniesScreen() {
             header: t("org.description"),
             cell: (org: Organization) => org.description ?? "",
           },
+          tagsColumn<Organization>(t),
           {
             key: "website",
             header: t("org.website"),
@@ -713,7 +726,7 @@ export function CompaniesScreen() {
         tools={<SaveViewAction resource="organizations" query={state.query} />}
         rowKey={(org) => org.id}
         rowRoute={(org) => ({ screen: "companies", id: org.id })}
-        dataChips={[...ownerChips, ...sizeChip]}
+        dataChips={[...ownerChips, ...sizeChip, ...tagChips]}
         chips={[
           {
             key: "lifecycle",
@@ -1520,6 +1533,13 @@ function useChronologySlots({
 }>): {
   slots: ChronologySlots;
   showChanges: () => void;
+  // The open message and its setter travel OUT of this hook rather than the
+  // drawer being mounted in a timeline slot. A record-level dialog belongs to
+  // the page, not to a tab — the same rule the audit modal below states — and
+  // a drawer that unmounts with the Timeline tab leaves its id behind, so
+  // coming back to that tab can put a second dialog over an open one.
+  openEmail: string | null;
+  setOpenEmail: (activityId: string | null) => void;
 } {
   const t = useT();
   const { locale } = useLocale();
@@ -1553,7 +1573,9 @@ function useChronologySlots({
     firstPage: view?.activities,
   });
 
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const history = useRecordChronology({
+    onOpenEmail: setOpenEmail,
     kind: "organization",
     recordId: org.id,
     filter,
@@ -1591,7 +1613,12 @@ function useChronologySlots({
   const showChanges = () => setFilter("changes");
 
   if (!active) {
-    return { slots: { timelineNotice: <span /> }, showChanges };
+    return {
+      slots: { timelineNotice: <span /> },
+      showChanges,
+      openEmail,
+      setOpenEmail,
+    };
   }
   // In overlay mode the refusal is stated once, in the body: repeating it over
   // the timeline would read as two separate things being unavailable rather
@@ -1600,10 +1627,14 @@ function useChronologySlots({
     return {
       slots: { timeline: history.entries, timelineNotice: <span /> },
       showChanges,
+      openEmail,
+      setOpenEmail,
     };
   }
   return {
     showChanges,
+    openEmail,
+    setOpenEmail,
     slots: {
       timeline: history.entries,
       // Conversations, not messages. The account's timeline is where the same
@@ -1835,7 +1866,12 @@ function CompanyPage({
       onTab={onTab}
     />
   );
-  const { slots, showChanges: filterToChanges } = useChronologySlots({
+  const {
+    slots,
+    showChanges: filterToChanges,
+    openEmail,
+    setOpenEmail,
+  } = useChronologySlots({
     org,
     view,
     overlay,
@@ -1966,6 +2002,15 @@ function CompanyPage({
         onOpenTask={setOpenTaskId}
         taskUpdate={taskUpdate}
         onOpenHistory={showChanges}
+      />
+      {/* The email drawer, on the same rule as the audit spine below: it
+          belongs to the RECORD. Mounted in the Timeline tab's own slot it
+          unmounted with that tab and left its id behind, so returning to
+          Timeline could put it over an already-open dialog. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={recordZone}
+        onClose={() => setOpenEmail(null)}
       />
       {/* The audit spine, opened from the header's overflow menu. It belongs
           to the RECORD, not to a tab, so it opens over whichever tab is up. */}
@@ -2522,7 +2567,7 @@ function CompanyOverviewStack({
           header and the interval, not by a box: cards inside a bordered
           container are cards inside a card. */}
       {!overlay && (
-        <div className="co-reading">
+        <RecordReading>
           <TodayOnThisAccount
             orgId={org.id}
             view={view}
@@ -2547,7 +2592,7 @@ function CompanyOverviewStack({
               />
             }
           />
-          <div className="co-reading-pair">
+          <RecordReadingPair>
             {/* What is moving, and for each piece the one reason it wants a
                 person.
                 Drawn on EVERY account, including one with nothing open. "No
@@ -2591,7 +2636,7 @@ function CompanyOverviewStack({
                 onOpenHistory={onOpenHistory}
               />
             </Panel>
-          </div>
+          </RecordReadingPair>
           {/* The commercial standing: what the account is signed for, and what
               it has won and lost over its life. FIGURES only, because the work
               section above already names every open deal and listing them
@@ -2605,7 +2650,7 @@ function CompanyOverviewStack({
               onAllDeals={onAllDeals}
             />
           </Panel>
-        </div>
+        </RecordReading>
       )}
       {/* Is this an account we should be selling to at all — the question an
           account with nothing in flight is actually asking, and the reason

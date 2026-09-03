@@ -45,9 +45,18 @@ var categoryGuidance = map[string]string{
 		"A product, platform or vendor made by SOMEONE ELSE that this company integrates, migrates, partners on or builds upon is technology, NEVER product or service, " +
 		"however deeply the page describes working with it. " +
 		"capability names a delivery or technical capability the company declares about ITSELF — what it can do for any client — never an implementation detail, " +
-		"configuration, or feature bullet of one project, page or engagement. One entry per item, repeating the field name.",
+		"configuration, or feature bullet of one project, page or engagement. One entry per item, repeating the field name. " +
+		"A case study, testimonial or customer story page's subject is the NAMED CUSTOMER, not this company: a product, service or capability the story credits to that " +
+		"customer's own business — what THEY sell, run or offer their own buyers — is a fact about the customer, never this company's offering, however the page frames the " +
+		"story or however much of the page it fills. Extract only what the page states THIS company sells, never what a featured customer sells — but the company's OWN " +
+		"product or service the story says the customer adopted, bought or uses is still this company's offering and belongs in the answer exactly as it would on any other page.",
 	"market": "served_industry, company_size, geography and language describe markets the company explicitly says it serves — one entry per grounded item, repeating the field name. " +
-		"company_size here is the size of the customers they sell TO (\"we work with mid-sized retailers\"), never their own headcount, which is employee_range under company.",
+		"company_size here is the size of the customers they sell TO (\"we work with mid-sized retailers\"), never their own headcount, which is employee_range under company. " +
+		"The subject decides it, not the wording: the passage must be in THIS company's own voice about ITS OWN buyers (\"we work with mid-sized retailers,\" \"our clients include\") " +
+		"— never a sentence that happens to use similar words while describing a NAMED CUSTOMER's own business. A case study, testimonial or customer story names a customer's own " +
+		"industry, headquarters, geography, size or language — where THAT company is based, how big it is, what industry it is in, who IT serves, what language ITS OWN site or " +
+		"materials are in — and that is a fact about the customer telling their own story, never a market this company serves, however closely the sentence reads like one. Omit " +
+		"any served_industry, geography, company_size or language stated about the customer inside their own case study rather than stated about this company's own customer base.",
 	"signal": "certification names a held certification or standard; partner a named business partner; " +
 		"named_customer a customer the site names; " +
 		"technology a named platform, product or stack the company states it USES, RUNS or BUILDS IN — its own " +

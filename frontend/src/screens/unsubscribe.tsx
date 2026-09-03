@@ -211,7 +211,7 @@ function UnsubscribeBody({
           >
             {t("prefs.unsub.confirm")}
           </Button>
-          <a className="link-button" href={"#/preferences/" + token}>
+          <a className="link-button" href={`#/preferences/${token}`}>
             {t("prefs.unsub.seeAll")}
           </a>
         </div>
@@ -236,7 +236,7 @@ function ManageLink({
 }: Readonly<{ token: string; label: string }>) {
   return (
     <p className="unsub-actions">
-      <a className="link-button" href={"#/preferences/" + token}>
+      <a className="link-button" href={`#/preferences/${token}`}>
         {label}
       </a>
     </p>

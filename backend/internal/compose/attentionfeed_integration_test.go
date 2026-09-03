@@ -376,3 +376,49 @@ func TestThePlannedBadgeCountsEveryTaskDueNotJustThePage(t *testing.T) {
 		t.Errorf("counts.planned = %d, want 13 — the badge is how many they have", day.Counts.Planned)
 	}
 }
+
+// logOpenTaskLoggedAt writes an open task with its due date and its logged
+// date under independent control — margince#3287 needs a promise that is far
+// more overdue than its neighbours while having been FILED before them, which
+// logTask cannot express since it always logs at the write instant.
+func logOpenTaskLoggedAt(t *testing.T, e *integration.Env, subject string, due, occurred time.Time) {
+	t.Helper()
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, OccurredAt: &occurred, Source: "manual",
+	}); err != nil {
+		t.Fatalf("logging task %q: %v", subject, err)
+	}
+}
+
+// The Planned lane's cap must keep the tasks nearest their deadline, not the
+// tasks most recently logged. Ordered by occurred_at DESC, a dozen tasks filed
+// after a stale promise fill the cap and the promise never reaches the page —
+// the exact failure a "what do I owe today" surface exists to prevent.
+func TestThePlannedLaneCapKeepsTheMostOverdueNotTheNewestLogged(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+
+	// Logged a month ago, due three weeks ago: the one thing on this page the
+	// cap must not be allowed to drop.
+	stale := "The promise that slipped three weeks ago"
+	logOpenTaskLoggedAt(t, e, stale, now.Add(-21*24*time.Hour), now.Add(-30*24*time.Hour))
+
+	// Twelve tasks logged an hour ago, due later today. Under occurred_at DESC
+	// these are individually "newer" than the stale promise and fill the whole
+	// cap on their own.
+	for i := range 12 {
+		logOpenTaskLoggedAt(t, e, fmt.Sprintf("Filed this morning %d", i), now.Add(time.Hour), now.Add(-time.Hour))
+	}
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	if len(day.Planned) != 12 {
+		t.Fatalf("the lane carries %d cards, want the cap of twelve", len(day.Planned))
+	}
+	got := titlesOn(day.Planned)
+	for _, title := range got {
+		if title == stale {
+			return
+		}
+	}
+	t.Fatalf("the lane dropped the most overdue promise behind twelve tasks filed after it: %v", got)
+}

@@ -170,7 +170,7 @@ export const ConfirmDetailsSent: Story = {
         {
           delivered_to: "ada@example.test",
           expires_at: "2026-09-13T09:00:00Z",
-          delivered: true,
+          provider_accepted: true,
         },
         201,
       ),
@@ -194,7 +194,7 @@ export const ConfirmDetailsUndelivered: Story = {
         {
           delivered_to: "ada@example.test",
           expires_at: "2026-09-13T09:00:00Z",
-          delivered: false,
+          provider_accepted: false,
         },
         201,
       ),

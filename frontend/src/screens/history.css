@@ -68,11 +68,23 @@
   gap: var(--space-1);
 }
 
-.entry-field {
+/* Named by its list, not by class alone: this row is an <li> inside the
+   timeline's own list, and the timeline lays every descendant <li> on its
+   date-rail-body grid. On its own class this row lost that contest and drew
+   its field name in the date gutter and its diff in the rail. */
+.entry-fields > .entry-field {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2);
+}
+
+/* The diff takes the row after the field's name. Its sides may break
+   anywhere, which makes their smallest width one letter — and a flex item
+   sized to that prints a value down the page a letter per line. */
+.entry-field > .field-diff {
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .entry-field-name {

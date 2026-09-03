@@ -55,7 +55,15 @@ func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID
 	actor := principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{object: {Read: true}},
+			// The record type under test, and the installation's own settings
+			// beside it: a report resolves the basis it reports money in, so
+			// this read is held by every seeded role and refusing it stops the
+			// caller before any row-scope rule is reached. Same pairing
+			// searchReadGrants makes, for the same reason.
+			Objects: map[string]principal.ObjectGrant{
+				object:             {Read: true},
+				objInstallSettings: {Read: true},
+			},
 			RowScope: scope,
 		},
 	}

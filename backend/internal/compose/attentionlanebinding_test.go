@@ -20,6 +20,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -47,6 +48,118 @@ func TestEveryLaneWithASeamIsWiredToIt(t *testing.T) {
 				"installation cannot fill it.", seam)
 		}
 	}
+}
+
+// TestEveryAttentionOptionIsCalled fails when the feed declares a With… option
+// that newAttentionService never calls.
+//
+// The test above derives its corpus from `attention<Name>` STRUCTS in this
+// package — the right corpus for a lane whose seam is a struct literal, and
+// blind to a dependency bound any other way. WithDealMoves takes a service built
+// by a function call, so it has no struct to be counted, and deleting that one
+// line would leave every test in the tree green while the deal rows on the queue
+// silently lost their next step again.
+//
+// This corpus is the OPTIONS instead: every exported With… method on
+// attention.Service. A new one joins by being written. The two overlap on most
+// lanes, which is not waste — they fail on different mistakes, and this one sees
+// exactly the shape the other cannot.
+func TestEveryAttentionOptionIsCalled(t *testing.T) {
+	options := attentionOptionNames(t)
+	if len(options) == 0 {
+		t.Fatal("found no With… options on attention.Service at all — the scan is looking in " +
+			"the wrong place, which would report PASS on a tree where every option was dropped")
+	}
+	called := calledOptionNames(t, composeSourceFiles(t))
+
+	for _, option := range options {
+		if !called[option] {
+			t.Errorf("attention.Service.%s is declared and newAttentionService never calls it. "+
+				"An unbound dependency renders its contribution ABSENT rather than failing, so "+
+				"whatever it would add is silently missing. Call it, or say in newAttentionService "+
+				"why this installation cannot fill it.", option)
+		}
+	}
+}
+
+// attentionOptionNames collects the exported With… methods declared on
+// attention.Service, read from that package's own source.
+func attentionOptionNames(t *testing.T) []string {
+	t.Helper()
+	entries, err := os.ReadDir("attention")
+	if err != nil {
+		t.Fatalf("reading the attention package directory: %v", err)
+	}
+	fset := token.NewFileSet()
+	var out []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		parsed, parseErr := parser.ParseFile(fset, filepath.Join("attention", name), nil, parser.SkipObjectResolution)
+		if parseErr != nil {
+			t.Fatalf("parsing %s: %v", name, parseErr)
+		}
+		for _, decl := range parsed.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || !strings.HasPrefix(fn.Name.Name, "With") {
+				continue
+			}
+			if !fn.Name.IsExported() || !receiverIsService(fn.Recv) {
+				continue
+			}
+			out = append(out, fn.Name.Name)
+		}
+	}
+	return out
+}
+
+// receiverIsService reports whether a method hangs off *Service.
+func receiverIsService(recv *ast.FieldList) bool {
+	if len(recv.List) != 1 {
+		return false
+	}
+	star, ok := recv.List[0].Type.(*ast.StarExpr)
+	if !ok {
+		return false
+	}
+	name, ok := star.X.(*ast.Ident)
+	return ok && name.Name == "Service"
+}
+
+// calledOptionNames collects the With… methods newAttentionService actually
+// calls, by NAME rather than by argument shape: what matters here is that the
+// option runs, not what it was handed.
+func calledOptionNames(t *testing.T, files map[string]*ast.File) map[string]bool {
+	t.Helper()
+	called := map[string]bool{}
+	found := false
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			fn, ok := n.(*ast.FuncDecl)
+			if !ok || fn.Name.Name != "newAttentionService" || fn.Body == nil {
+				return true
+			}
+			found = true
+			ast.Inspect(fn.Body, func(inner ast.Node) bool {
+				call, ok := inner.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok &&
+					strings.HasPrefix(sel.Sel.Name, "With") {
+					called[sel.Sel.Name] = true
+				}
+				return true
+			})
+			return false
+		})
+	}
+	if !found {
+		t.Fatal("newAttentionService was not found; the scan would report every option uncalled")
+	}
+	return called
 }
 
 // composeSourceFiles parses the Go files of this package, keyed by file name so

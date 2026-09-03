@@ -7,11 +7,13 @@ import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
+  Field,
   Modal,
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -32,6 +34,7 @@ import type {
   ImportRun,
 } from "./importtypes";
 import { identifyingFieldFor } from "./importtypes";
+import { useTagVocabulary } from "./tags.queries";
 import "./import.css";
 
 // Bringing a customer's file into the estate (S-E11.6): upload it, see what its
@@ -250,8 +253,15 @@ function ImportWizard({
           pending={validate.isPending}
           error={validate.error}
           onChange={flow.setTarget}
+          contextTagID={flow.contextTagID}
+          onContextTag={flow.chooseContextTag}
           onValidate={() =>
-            validate.mutate({ object: flow.object, profile, mapping })
+            validate.mutate({
+              object: flow.object,
+              profile,
+              mapping,
+              contextTagID: flow.contextTagID,
+            })
           }
         />
       ) : null}
@@ -270,6 +280,7 @@ function ImportWizard({
           commitBusy={commit.isPending}
           undoError={undo.error}
           undoBusy={undo.isPending}
+          contextTagID={flow.contextTagID}
         />
       ) : null}
 
@@ -298,6 +309,7 @@ function ImportOutcome({
   commitBusy,
   undoError,
   undoBusy,
+  contextTagID,
 }: Readonly<{
   report: ImportReport;
   run: ImportRun;
@@ -318,6 +330,8 @@ function ImportOutcome({
   commitBusy: boolean;
   undoError: unknown;
   undoBusy: boolean;
+  /** The word this run files its created records under, empty for none. */
+  contextTagID: string;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -340,6 +354,10 @@ function ImportOutcome({
       <h3 className="import__outcomeTitle">
         {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
       </h3>
+      {/* What the approver is about to apply. The mapping step is off screen by
+          now, so without this the word chosen there is invisible at exactly the
+          moment somebody decides whether to commit. */}
+      <ImportContextTagSummary tagID={contextTagID} />
       {/* A run the reader did not just cause, shown as though they had, reads as
           an import that ran by itself — so the card says when it happened. */}
       {resumed ? (
@@ -624,6 +642,8 @@ function ImportMappingStep({
   error,
   onChange,
   onValidate,
+  contextTagID,
+  onContextTag,
 }: Readonly<{
   profile: ImportProfile;
   mapping: Record<string, string>;
@@ -637,6 +657,9 @@ function ImportMappingStep({
   error: unknown;
   onChange: (column: string, target: string) => void;
   onValidate: () => void;
+  /** The word this run's created records are filed under, and how it changes. */
+  contextTagID: string;
+  onContextTag: (next: string) => void;
 }>) {
   const t = useT();
   const identifying = identifyingFieldFor(object);
@@ -662,6 +685,10 @@ function ImportMappingStep({
           {t("import.needsIdentifier", { field: identifying })}
         </Callout>
       )}
+      {/* Chosen BEFORE the dry run, because the commit honours what the dry
+          run reported on — a word picked afterwards would file records the
+          report never said would be filed. */}
+      <ImportContextTag value={contextTagID} onChange={onContextTag} />
       <Button
         small
         variant="primary"
@@ -678,6 +705,84 @@ function ImportMappingStep({
         </Callout>
       ) : null}
     </>
+  );
+}
+
+/**
+ * What the approver is committing to, named rather than implied.
+ *
+ * The picker lives on the mapping step, which is off screen once a report
+ * exists — so the run's word would otherwise be invisible at the one moment
+ * somebody decides whether to write it onto every created record.
+ */
+export function ImportContextTagSummary({
+  tagID,
+}: Readonly<{ tagID: string }>) {
+  const t = useT();
+  const vocabulary = useTagVocabulary();
+  if (tagID === "") {
+    return null;
+  }
+  const word = vocabulary.data?.tags.find((tag) => tag.id === tagID);
+  return (
+    <p className="import__hint">
+      {word
+        ? t("import.contextTagChosen", { name: word.name })
+        : // The vocabulary has not landed, or no longer holds the word. Saying
+          // "a tag" is honest; naming the wrong one, or none, is not.
+          t("import.contextTagChosenUnnamed")}
+    </p>
+  );
+}
+
+/**
+ * The word every record this run CREATES is filed under.
+ *
+ * Optional, and an existing word only: an import that coined one would hand the
+ * vocabulary's one governed door to anyone who can upload a file, and a
+ * misspelled column header would become a permanent tag nobody chose.
+ *
+ * Creates only, which the label says. A row that UPDATES a record the estate
+ * already held leaves its tags alone — the run did not put it there, and
+ * tagging it would claim the batch contains records it only touched.
+ */
+export function ImportContextTag({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (next: string) => void }>) {
+  const t = useT();
+  const vocabulary = useTagVocabulary();
+  const words = vocabulary.data?.tags ?? [];
+  if (words.length === 0) {
+    // No vocabulary, or none this caller may read. A dial whose only option is
+    // "none" asks a question with one answer.
+    return null;
+  }
+  return (
+    <Field
+      label={t("import.contextTag")}
+      hint={
+        // The catalog is capped and carries no cursor, so past the cap a word
+        // that exists cannot be picked — and an importer who cannot find the
+        // word they meant would file the batch under nothing, or ask an admin
+        // to coin a duplicate.
+        vocabulary.data?.truncated
+          ? `${t("import.contextTagHint")} ${t("tags.catalogTruncated")}`
+          : t("import.contextTagHint")
+      }
+    >
+      {(control) => (
+        <Select
+          {...control}
+          value={value}
+          onChange={onChange}
+          options={[
+            { value: "", label: t("import.contextTagNone") },
+            ...words.map((tag) => ({ value: tag.id, label: tag.name })),
+          ]}
+        />
+      )}
+    </Field>
   );
 }
 

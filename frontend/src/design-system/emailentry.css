@@ -1,0 +1,113 @@
+/* One retained email as a row.
+ *
+ * The row owns its padding, its typography, its truncation and its focus
+ * treatment, so it reads the same inside a timeline `<li>`, a `Panel` and a
+ * `Card`. Host containers supply position and nothing else — that is what
+ * makes it ONE row rather than one component drawn three ways.
+ *
+ * Four lines, always in this order: who and when, the subject, the sender's
+ * own line, and the marks. A reader scanning a column reads down the same
+ * place every time. */
+
+.emailentry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3);
+  font: inherit;
+  color: var(--textContent);
+  text-align: left;
+}
+
+.emailentry__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+}
+
+.emailentry__lead > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--textTertiary);
+}
+
+.emailentry__who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The timestamp holds its width: it is how a reader tells two messages on one
+ * subject apart, so it is the last thing that may be truncated away. */
+.emailentry__when {
+  flex: none;
+  margin-left: auto;
+}
+
+.emailentry__subject {
+  overflow: hidden;
+  color: var(--textPrimary);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One line of what the sender wrote, composed by the server with the same
+ * splitter the drawer folds with. Clamped rather than wrapped: a row that
+ * grows with its body is a row whose height depends on the mail, which is what
+ * made a timeline of them unreadable. */
+.emailentry__preview {
+  overflow: hidden;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emailentry__marks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.emailentry__move {
+  color: var(--textSecondary);
+  font-size: var(--fs-meta);
+}
+
+.emailentry__files {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--textSecondary);
+  font-size: var(--fs-meta);
+}
+
+.emailentry__files > svg {
+  width: 12px;
+  height: 12px;
+}
+
+.emailentry--open {
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: pointer;
+  transition: background var(--dur-state) var(--ease-out);
+}
+
+.emailentry--open:hover {
+  background: var(--bgHover);
+}
+
+.emailentry--open:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}

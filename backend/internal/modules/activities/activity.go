@@ -82,7 +82,21 @@ type LogActivityInput struct {
 	CounterpartyOutboundAttested bool
 	Links                        []ActivityLinkInput
 	Source                       string
+	// Origin says who caused this row to exist, and the recency clocks in the
+	// schema read it: OriginSystemRemediation is excluded from every
+	// last_activity_at, because the system asking about a silent deal is not
+	// the buyer breaking their silence. Empty means OriginHuman.
+	Origin string
 }
+
+// The origins an activity can have. OriginSystemRemediation marks work the
+// product files about a record — a forecast-assurance review task — and is the
+// one value the last_activity_of_* functions skip.
+const (
+	OriginHuman             = "human"
+	OriginAgent             = "agent"
+	OriginSystemRemediation = "system_remediation"
+)
 
 // LogActivity writes the activity + links; the last_activity_at clocks
 // (data-model §7) are maintained in the schema, not here. Idempotent on
@@ -187,17 +201,21 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	}
 
 	id := ids.New[ids.ActivityKind]()
+	origin := in.Origin
+	if origin == "" {
+		origin = OriginHuman
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, source_system, source_id, source, captured_by,
-		                       thread_key, counterparty_email, counterparty_outbound_attested)
+		                       thread_key, counterparty_email, counterparty_outbound_attested, origin)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''),
-		         NULLIF($18, ''), $19)`,
+		         NULLIF($18, ''), $19, $20)`,
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, in.HostUserID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested)
+		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested, origin)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict

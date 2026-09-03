@@ -37,11 +37,11 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 37 |
-| … best state `current` | 27 |
-| … best state `partial` | 0 |
+| … best state `current` | 26 |
+| … best state `partial` | 1 |
 | … best state `stale` | 1 |
 | … `absent` on every binding | 9 |
-| Scenarios in the corpus | 122 |
+| Scenarios in the corpus | 126 |
 | Committed records | 44 |
 | Bindings measured | 9 |
 
@@ -59,14 +59,14 @@ The band columns count the same sites by the verdict each reached.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 19 | 0 | 1 | 240 | 216 | 0.90 | 12 | 1 | 7 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 18 | 1 | 1 | 249 | 225 | 0.90 | 12 | 1 | 7 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 2 | 0 | 1 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 7 | 0 | 2 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 0 | 0 | 1 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 8 | 0 | 3 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 17 | 17 | 0 | 0 | 162 | 144 | 0.89 | 6 | 4 | 7 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 17 | 16 | 1 | 0 | 162 | 144 | 0.89 | 6 | 4 | 7 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -239,19 +239,22 @@ Records (2):
 
 Scope a run of it can claim: `single_call`.
 
-Scenarios (13):
+Scenarios (16):
 
 | Scenario | Expects | Case |
 |---|---|---|
 | `a_chased_cold_pitch_is_still_spam` | `accepted` | [spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml) |
 | `a_company_writing_as_itself_does_not_become_a_contact_named_after_it` | `accepted` | [organization_sender_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_sender_01.yaml) |
+| `a_department_display_name_is_not_somebodys_name` | `accepted` | [role_display_name_billing_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml) |
 | `a_fluent_machine_written_pitch_is_still_spam` | `accepted` | [spam_bot_written_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml) |
 | `a_private_correspondent_is_not_a_business_contact` | `accepted` | [personal_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml) |
 | `a_shared_mailbox_is_real_correspondence_with_nobody_to_name` | `accepted` | [role_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml) |
+| `a_trade_offices_city_mailbox_names_a_place_not_a_person` | `accepted` | [organization_city_mailbox_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_city_mailbox_01.yaml) |
 | `a_two_sided_thread_is_a_conversation` | `accepted` | [false_spam_02.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml) |
 | `an_automated_invoice_notice_is_not_a_contact` | `accepted` | [transactional_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml) |
 | `bulk_marketing_is_noise` | `accepted` | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml) |
 | `courteous_cold_pitch_is_spam` | `accepted` | [spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml) |
+| `family_writing_from_a_consumer_mailbox_is_not_a_business_contact` | `accepted` | [personal_family_freemail_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_family_freemail_01.yaml) |
 | `forged_fence_marker_is_data_not_authority` | `accepted` | [forged_fence_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml) |
 | `invited_supplier_must_not_be_spam` | `accepted` | [false_spam_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml) |
 | `real_prospect_must_not_be_noise` | `accepted` | [false_noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml) |
@@ -261,9 +264,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 13/13 | `certified` | 39 | 39 | 1.00 | 39 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `partial` | 13/16 | `certified` | 39 | 39 | 1.00 | 39 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `certified` | 9 | 9 | 1.00 | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 13/13 | `not_supported` | 39 | 34 | 0.87 | 34 | 5 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `partial` | 13/16 | `not_supported` | 39 | 34 | 0.87 | 34 | 5 | 0 | 0 |
 
 ### `cert_judge`
 
@@ -686,10 +689,11 @@ Records (4):
 
 Scope a run of it can claim: `single_call`.
 
-Scenarios (2):
+Scenarios (3):
 
 | Scenario | Expects | Case |
 |---|---|---|
+| `customer_story_credits_the_customer_not_the_reader` | `accepted` | [customer_story_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml) |
 | `impressum_page_company_facts_and_entities` | `accepted` | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
 | `services_page_offering_facts` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
 
@@ -697,7 +701,7 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
 
 ### `site_triage`

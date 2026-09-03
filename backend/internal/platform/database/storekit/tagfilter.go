@@ -130,14 +130,20 @@ type RowTag struct {
 	Color *string
 }
 
-// rowTagCap bounds how many tags one row carries back.
+// RowTagCap bounds how many tags one row carries back.
 //
 // A chip strip shows a few and says "+N", so the row does not need every word
 // to draw one — and a record somebody tagged forty times would otherwise make
 // one page of fifty rows into two thousand joined rows. The count a strip
 // needs beyond the cap comes from the record's own tags read, which is the
 // screen that has room for it.
-const rowTagCap = 5
+//
+// Exported because the browser has to know it too: a strip that counted the
+// rest off this capped array would tell a record with forty tags that it has
+// five. `frontend/src/design-system/rowtags.tsx` mirrors the number, and
+// `backend/gates/frontendrowtagcap_test.go` fails in both directions if the
+// two ever disagree.
+const RowTagCap = 5
 
 // AttachRowTags loads the live tags for one page of records, in ONE query, and
 // hands each row its own.
@@ -176,7 +182,7 @@ func AttachRowTags[T any](
 			  JOIN tag t ON t.id = g.tag_id
 			 WHERE g.entity_type = $1 AND g.entity_id = ANY($2) AND t.archived_at IS NULL
 		) ranked
-		 WHERE rank <= $3`, taggableType, recordIDs, rowTagCap)
+		 WHERE rank <= $3`, taggableType, recordIDs, RowTagCap)
 	if err != nil {
 		return fmt.Errorf("storekit: reading row tags for %s: %w", taggableType, err)
 	}

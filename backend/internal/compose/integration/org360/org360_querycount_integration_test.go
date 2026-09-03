@@ -200,7 +200,14 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// many there are — the same statement the next-steps section already ran,
 	// asked a second time at a different bound. Flat in the size of the
 	// account, like every section above.
-	const budget = 43
+	// 44 since the harness's admin gained the `tag` grant the real seed
+	// always gave it: one read of the account's tag chips. The section is
+	// not new — assemble.readTags has always run for a caller holding
+	// tag.read, which every production admin does — so this line records a
+	// cost the budget had been blind to rather than a cost just added. One
+	// statement for the account's own chips, flat in the size of the
+	// account like every section above.
+	const budget = 44
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

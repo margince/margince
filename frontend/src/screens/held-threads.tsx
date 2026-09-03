@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -10,6 +10,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // What this mailbox is holding back from the team, and the one press that
@@ -81,26 +82,19 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const queryClient = useQueryClient();
   const toast = useToast();
   // Which thread another owner still holds, so a release that changed nothing
   // says so instead of looking broken. Keyed by thread, because two rows can be
   // released before either answer arrives.
   const [heldByOthers, setHeldByOthers] = useState<Record<string, number>>({});
 
-  const release = useMutation({
-    // The thread key is a VARIABLE, so the press belongs to the render the
-    // reader saw (frontend/AGENTS.md, mutation-variable-coverage).
-    mutationFn: async (threadKey: string) => {
-      const { data, error } = await api.POST(
-        "/activities/threads/{thread_key}/audience",
-        { params: { path: { thread_key: threadKey } }, body: { share: true } },
-      );
-      if (error) throwProblem(error);
-      return { threadKey, outcome: data };
-    },
-    onSuccess: ({ threadKey, outcome }) => {
-      queryClient.invalidateQueries({ queryKey: ["held-threads"] });
+  // The same write the timeline's own control performs, through the same
+  // service. It was spelled twice before — here and in the action cluster,
+  // byte for byte — and what differs is only what a release refreshes and
+  // that this queue says so out loud.
+  const release = useThreadAudience({
+    invalidate: () => [["held-threads"]],
+    onSettled: ({ threadKey, outcome }) => {
       if (outcome && !outcome.shared) {
         // Somebody else imported this message too and has not released their
         // own contribution. Saying which is the difference between a control
@@ -179,9 +173,12 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
                   row.has_message ? undefined : t("heldThreads.nothingToShare")
                 }
                 pending={
-                  release.isPending && release.variables === row.thread_key
+                  release.isPending &&
+                  release.variables?.threadKey === row.thread_key
                 }
-                onClick={() => release.mutate(row.thread_key)}
+                onClick={() =>
+                  release.mutate({ threadKey: row.thread_key, share: true })
+                }
               >
                 {t("heldThreads.release")}
               </Button>

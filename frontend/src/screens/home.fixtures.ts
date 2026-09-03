@@ -244,3 +244,163 @@ export function report(rows: unknown[], excluded = 0): Response {
 }
 
 export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
+
+// ── The readings strip ──────────────────────────────────────────────────────
+
+export type Worklist = components["schemas"]["Worklist"];
+type Readings = components["schemas"]["WorklistReadings"];
+
+/** One meeting row, prepared or not, as the queue would carry it. */
+export function meetingRow(id: string, prepared: boolean): WorklistItem {
+  return {
+    id,
+    source: "meeting",
+    level: 3,
+    category: "meetings",
+    title: "Weber GmbH · quarterly review",
+    because: prepared ? [] : [{ kind: "meeting_unprepared" }],
+    consequence: prepared ? "none" : "meeting_unprepared",
+    actions: ["open"],
+  };
+}
+
+/**
+ * A lead owed a first answer, optionally naming when that answer is due.
+ *
+ * `due` undefined is the breached case: the moment has already passed, so the
+ * row carries `response_overdue` and names no future deadline.
+ */
+export function leadRow(id: string, due?: string): WorklistItem {
+  return {
+    id,
+    source: "lead_response",
+    level: due === undefined ? 1 : 2,
+    category: "leads",
+    title: "Weber GmbH · inbound enquiry",
+    because:
+      due === undefined
+        ? // A breached lead the way the lane really builds one: the overdue
+          // reason plus how long it has been waiting. The second reason CARRIES
+          // A VALUE, which is what makes this fixture able to tell a slot that
+          // filters on the reason kind from one that merely takes the first
+          // value it meets.
+          [
+            { kind: "response_overdue" },
+            { kind: "waiting_days", value: { kind: "days", days: 3 } },
+          ]
+        : [{ kind: "response_due_soon", value: { kind: "date", date: due } }],
+    consequence: "buyer_waits",
+    actions: ["open"],
+  };
+}
+
+/** A leads count the page carries whole — considered, shown and read to the end. */
+export function wholeLeads(n: number): WorklistCount {
+  return {
+    category: "leads",
+    considered: n,
+    shown: n,
+    more_available: false,
+  };
+}
+
+/** A leads count whose read stopped at its bound: more exist than the page shows. */
+export function boundedLeads(considered: number, shown: number): WorklistCount {
+  return {
+    category: "leads",
+    considered,
+    shown,
+    more_available: true,
+  };
+}
+
+type WorklistItem = components["schemas"]["WorklistItem"];
+
+/**
+ * The overnight run's suggestion as the WORKLIST carries it.
+ *
+ * Same id as the `MorningBrief` item it came from — `briefItem` in
+ * `attention/render.go` sends the entry's own id — which is what lets the Focus
+ * section leave out whatever Do next already drew.
+ */
+export function overnightRow(id: string, dealId: string): WorklistItem {
+  return {
+    id,
+    source: "brief_item",
+    level: 3,
+    category: "deals_at_risk",
+    because: [],
+    consequence: "deal_drifts",
+    actions: ["act", "set_aside", "dismiss"],
+    subject: { type: "deal", id: dealId },
+  };
+}
+
+/** One customer waiting on an answer — the row Do next leads with. */
+export function waitingRow(): WorklistItem {
+  return {
+    id: "w1",
+    source: "customer_waiting",
+    level: 1,
+    category: "customer_waiting",
+    title: "Aster Handel",
+    because: [],
+    consequence: "buyer_waits",
+    actions: ["open"],
+  };
+}
+
+type WorklistCount = components["schemas"]["WorklistCount"];
+
+/**
+ * A morning as the worklist answers it, for the readings strip.
+ *
+ * The meetings COUNT comes from `counts` — every meeting read and ranked, before
+ * the fold and the page cut — while readiness can only be counted off the rows
+ * the page carries. The default makes them agree, which is the ordinary day; a
+ * case that needs them to DISAGREE overrides `counts`, and the strip must then
+ * refuse to state a readiness figure rather than dividing one population by the
+ * other.
+ */
+export function readingsDay(
+  readings: Partial<Readings> = {},
+  queue: WorklistItem[] = [meetingRow("m1", false), meetingRow("m2", true)],
+  counts: WorklistCount[] = [wholeMeetings(queue.length)],
+): Worklist {
+  return {
+    as_of: "2026-08-31T06:42:00Z",
+    scope: "mine",
+    scope_options: ["mine"],
+    queue,
+    summary: { urgent: 0, due: 0, lower_priority: 0, total: queue.length },
+    sources_unavailable: [],
+    reach: [],
+    counts,
+    readings: {
+      revenue_at_risk_minor: null,
+      buyer_replies: 3,
+      prospecting: 2,
+      review: 8,
+      more_available: false,
+      ...readings,
+    },
+  };
+}
+
+/** A meetings count the page carries whole — considered, shown and read to the end. */
+export function wholeMeetings(n: number): WorklistCount {
+  return {
+    category: "meetings",
+    considered: n,
+    shown: n,
+    more_available: false,
+  };
+}
+
+/** A meetings count where more meetings were ranked than the page carries. */
+export function boundedMeetings(
+  considered: number,
+  shown: number,
+): WorklistCount {
+  return { category: "meetings", considered, shown, more_available: true };
+}

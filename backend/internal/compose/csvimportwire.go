@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // mappingFrom validates the requested mapping against the object's live field
@@ -113,8 +114,21 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		}
 		onDuplicate = string(*req.OnDuplicate)
 	}
+	contextTag := ""
+	if req.ContextTagId != nil {
+		// Carried as text on the mapping, and parsed back where it is applied.
+		// The zero UUID is not a tag: a body sending one names no word, and
+		// storing it would make every created record fail its apply at commit
+		// time — long after the request that could have said so.
+		if ids.UUID(*req.ContextTagId).IsZero() {
+			return migration.RunMapping{}, httperr.Validation("context_tag_id", "empty",
+				"A context tag names an existing tag by id. Leave it out to file this run under no word.")
+		}
+		contextTag = req.ContextTagId.String()
+	}
 	return migration.RunMapping{
 		Object: object, Fields: fields, SourceKey: sourceKey, OnDuplicate: onDuplicate,
+		ContextTag: contextTag,
 	}, nil
 }
 

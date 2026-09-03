@@ -98,7 +98,7 @@ const CANONICAL_ORDER = [
   "Worklist",
   "Pipeline",
   "Projects",
-  "Reports",
+  "Analytics",
   "Ask Margince",
 ];
 
@@ -263,7 +263,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // in the More sheet has nothing to carry the current-destination state. More
   // carries it instead, or the bar shows no active tab at all.
   it("marks More as the active tab for a destination the phone bar hides", () => {
-    const sheeted = render(<WorkspaceRail route={{ screen: "reports" }} />);
+    const sheeted = render(<WorkspaceRail route={{ screen: "analytics" }} />);
     const more = sheeted.container.querySelector(".railmore.active");
     expect(more).not.toBeNull();
     // Announced, not merely tinted: the hidden route's own link is out of the
@@ -287,7 +287,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     // itself holding there.
     stubPhoneViewport();
     const { container } = render(
-      <WorkspaceRail route={{ screen: "reports" }} />,
+      <WorkspaceRail route={{ screen: "analytics" }} />,
     );
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(
@@ -492,15 +492,15 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // which is the case below and would hide this one.
   it("walks out of the section to the route the reader came from", async () => {
     const user = userEvent.setup();
-    window.location.hash = "#/reports";
+    window.location.hash = "#/analytics";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
-    expect(screen.getByRole("link", { name: "Reports" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeTruthy();
 
     navigate({ screen: "settings", id: "account" });
     await user.click(
       await screen.findByRole("button", { name: "Back to Destinations" }),
     );
-    expect(window.location.hash).toBe("#/reports");
+    expect(window.location.hash).toBe("#/analytics");
     // The panel is derived from the address, so the destinations arrive with it —
     // and they take the focus the level's own rows gave up rather than leaving
     // the document on <body>.
@@ -518,7 +518,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // <body> with the sidebar lost. The re-render below is that gap, made
   // deterministic.
   it("keeps the arriving level's focus when the section re-renders mid-walk", async () => {
-    window.location.hash = "#/reports";
+    window.location.hash = "#/analytics";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     navigate({ screen: "settings", id: "account" });
     const back = await screen.findByRole("button", {

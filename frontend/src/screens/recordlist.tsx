@@ -1,11 +1,15 @@
 import type { ReactNode } from "react";
+import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
+import { RowTags } from "../design-system/rowtags";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { OwnerName } from "./entityref";
 import type { ListState, ViewSpec } from "./listquery";
+
+type RowTag = components["schemas"]["RowTag"];
 
 /**
  * The columns and views every owner-scoped record list shares (people,
@@ -25,8 +29,31 @@ export type OwnedRecord = {
   last_activity_at?: string | null;
 };
 
+/** A row that carries tags. The three record lists and the pipeline all do. */
+export type TaggedRecord = {
+  tags?: readonly RowTag[];
+};
+
 type Translate = ReturnType<typeof useT>;
 type Locale = ReturnType<typeof useLocale>["locale"];
+
+/**
+ * The Tags column: how this record is filed.
+ *
+ * Not sortable. Sorting a multi-value cell has to pick one of its values to
+ * sort by, and whichever it picks the order is a claim about the row that the
+ * row does not make — filtering by a tag is the question a reader actually
+ * has, and the filter answers it exactly.
+ */
+export function tagsColumn<Row extends TaggedRecord>(
+  t: Translate,
+): ListColumn<Row> {
+  return {
+    key: "tags",
+    header: t("tags.columnHeader"),
+    cell: (row) => <RowTags tags={row.tags} />,
+  };
+}
 
 /** The Owner column: whose record this is, sortable by owner_id. */
 export function ownerColumn<Row extends OwnedRecord>(
