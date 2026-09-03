@@ -157,6 +157,7 @@ export function useRecordChronology({
   activitiesHaveMore,
   loadMore,
   renderActions,
+  onOpenEmail,
   values,
 }: Readonly<{
   kind: EntityKind;
@@ -170,6 +171,15 @@ export function useRecordChronology({
   // It also stops the change feed from being READ, which is the honest
   // consequence: rows that cannot appear should not be fetched.
   narrowed?: boolean;
+  /**
+   * Opens one message in the record's drawer. Handed in rather than mounted
+   * here, because the drawer belongs to the page — one over the record, with
+   * the record still legible behind it — and this hook builds a list.
+   *
+   * Absent leaves the email rows readable and not openable, which is what a
+   * surface with nowhere to open them should draw.
+   */
+  onOpenEmail?: (activityId: string) => void;
   activities: Activity[];
   activitiesHaveMore: boolean;
   // The paged read behind `activities`, for the footer's Load more. Absent on
@@ -214,6 +224,12 @@ export function useRecordChronology({
           locale: values.locale,
         }
       : undefined,
+  ).map((entry) =>
+    // Only an email has a drawer to open, and only when the caller has one to
+    // open it in.
+    onOpenEmail && entry.emailSummary
+      ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
+      : entry,
   );
   const changeEntries = changeTimeline(
     changeRows,

@@ -1407,9 +1407,11 @@ export function TimelineRow({
             content is for participants only, and a row must not show the
             words it just refused. The server withholds bodies upstream; this
             is the row keeping its own promise whatever it is handed.
-            An email draws EmailEntry instead — see the branch above. */}
+            An email WITH its summary drew EmailEntry above and never reaches
+            here; one without still needs the splitter, because a reader whose
+            server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} email={false} />
+          <TimelineText text={entry.body} email={entry.kind === "email"} />
         )}
         {entry.detail}
         <span className="tl-meta">

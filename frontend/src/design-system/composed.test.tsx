@@ -326,6 +326,51 @@ describe("TimelineText on a mail row", () => {
     },
   ];
 
+  // The email branch replaced ONE kind's reading. These are the other five,
+  // and they are the regression this arc could most easily have shipped: this
+  // component collapsed a call into a note once already, and drawing a meeting
+  // or a change through an email's row would be the same mistake the other way.
+  it("leaves every kind that is not an email drawing its own body", () => {
+    for (const kind of ["note", "call", "meeting", "task", "message"] as const) {
+      const { unmount } = render(
+        <RecordView
+          name="Acme"
+          zone="UTC"
+          timeline={[
+            {
+              id: `a-${kind}`,
+              kind,
+              title: "Was besprochen wurde",
+              atIso: "2026-07-01T00:00:00Z",
+              provenance: { kind: "human" as const, self: true },
+              body: "Der ganze Text, den dieser Eintrag traegt.",
+            },
+          ]}
+        />,
+      );
+      expect(
+        screen.getByText("Der ganze Text, den dieser Eintrag traegt."),
+      ).toBeTruthy();
+      unmount();
+    }
+  });
+
+  // An email whose server has not caught up carries no summary. It keeps the
+  // splitter rather than losing the fold: a row that drops the signature
+  // boundary shows a reader the sign-off as though it were the message.
+  it("keeps the splitter on an email row with no summary", () => {
+    render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
+    expect(
+      screen.getByText(/Können wir Dienstag über das Angebot sprechen\?/),
+    ).toBeTruthy();
+    // The sign-off is folded behind the control, not printed beside the
+    // message.
+    expect(screen.queryByText(/Anna Berger/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show signature and quoted text" }),
+    ).toBeTruthy();
+  });
+
   it("shows the message and hides the signature until asked", async () => {
     const user = userEvent.setup();
     render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
