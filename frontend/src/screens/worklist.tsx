@@ -21,6 +21,7 @@ import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { NextUp, nextUpOf } from "./worklist.nextup";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
+  loadedQueue,
   UNASSIGNED,
   useWorklist,
   type Worklist,
@@ -134,7 +135,12 @@ function WorklistHeader({
         {t("worklist.summary", {
           urgent: formatNumber(day.summary.urgent, locale),
           due: formatNumber(day.summary.due, locale),
+          // Optional in the contract, so a server that predates it reads as
+          // zero here. That is the honest answer for such a server: it counted
+          // no middle band, and inventing one would be worse than a zero.
+          inPlay: formatNumber(day.summary.in_play ?? 0, locale),
           lower: formatNumber(day.summary.lower_priority, locale),
+          total: formatNumber(day.summary.total, locale),
         })}
       </p>
       {/* What the day is WORTH, above the controls that narrow it. The figures
@@ -185,8 +191,16 @@ function WorklistHeader({
 }
 
 // The day, drawn.
+//
+// TWO kinds of number reach this component and they must not be confused.
+// `day` is the first page: its summary, counts, reach and scope options
+// describe the whole assembled day and do not move as the reader pages.
+// `queue` is every row loaded so far, which grows. Reading rows off `day`
+// would draw only the first page; reading figures off the latest page would
+// describe a slice as though it were the day.
 function WorklistBody({
   day,
+  queue,
   scope,
   filter,
   owner,
@@ -195,8 +209,12 @@ function WorklistBody({
   onFilter,
   onOwner,
   onSelect,
+  hasMore,
+  loadingMore,
+  onMore,
 }: Readonly<{
   day: Worklist;
+  queue: readonly WorklistItem[];
   scope: WorklistScope;
   filter: WorklistFilter;
   owner: string;
@@ -205,18 +223,21 @@ function WorklistBody({
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
   onSelect: (next: string) => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onMore: () => void;
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  const focus = focusOf(day.queue);
+  const focus = focusOf(queue);
   // What follows it, bounded, in the server's own order. These rows may all be
   // one kind of work — worklist.nextup.tsx says why that is the ranking's to
   // fix rather than this page's.
-  const next = nextUpOf(day.queue, focus);
+  const next = nextUpOf(queue, focus);
   // The row the pane is about. Resolved from the identity rather than held as
   // the item itself: a refetch replaces every row object, and a held one would
   // go on describing a version of the day that is no longer on screen.
-  const selected = day.queue.find((item) => rowIdentity(item) === selectedId);
+  const selected = queue.find((item) => rowIdentity(item) === selectedId);
   return (
     <>
       <WorklistHeader
@@ -268,7 +289,7 @@ function WorklistBody({
           shape rather than a backlog. Drawn only under a focus card: without
           one there is no "next", only the queue. */}
       {focus && <NextUp items={next} />}
-      {day.queue.length === 0 ? (
+      {queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         <p className="t-body worklist-clear">
           {missing.length > 0
@@ -297,14 +318,14 @@ function WorklistBody({
           queue={
             <Panel title={t("worklist.queue")}>
               <ol className="worklist-list">
-                {day.queue.map((item, index) => (
+                {queue.map((item, index) => (
                   <li key={rowIdentity(item)}>
                     {/* The heading, drawn where the band CHANGES. The server sends
                     the queue already sorted so each band is one contiguous run,
                     so a change is a boundary and never a second visit — which
                     is what lets a heading be drawn from the row rather than by
                     grouping the list into buckets the order would then fight. */}
-                    {opensBand(day.queue, index) && (
+                    {opensBand(queue, index) && (
                       <Eyebrow as="h3" className="worklist-band">
                         {t(
                           `worklist.band.${item.band ?? "keep_momentum"}` as const,
@@ -336,6 +357,18 @@ function WorklistBody({
                   </li>
                 ))}
               </ol>
+              {/* The way to the rest of the backlog.
+                  Acceptance asks that the queue's counts be reachable, and
+                  before this the page stopped at its first read with no route
+                  to the rows behind it — the figures said work existed and
+                  offered no way to it. */}
+              {hasMore && (
+                <div className="worklist-more">
+                  <Button onClick={onMore} pending={loadingMore}>
+                    {t("worklist.more")}
+                  </Button>
+                </div>
+              )}
             </Panel>
           }
         />
@@ -412,6 +445,14 @@ export function WorklistScreen({
     };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
+  // The FIRST page carries the day's own figures — summary, counts, reach,
+  // scope options. Those describe the assembled day and do not change as the
+  // reader pages, so they are read from page one rather than from the latest
+  // page, whose numbers describe only its own slice.
+  const first = day.data?.pages[0];
+  // The rows, which DO grow. Deduped in the query, because a re-rank between
+  // reads can serve one row on two pages.
+  const queue = day.data ? loadedQueue(day.data.pages) : [];
   return (
     <div className="wrap worklist">
       {/* No label: the shell already heads this page, and a second "Worklist"
@@ -432,9 +473,10 @@ export function WorklistScreen({
         loadingLabel={t("worklist.loading")}
         detail={{ onRetry: () => void day.refetch() }}
       >
-        {day.data && (
+        {first && (
           <WorklistBody
-            day={day.data}
+            day={first}
+            queue={queue}
             scope={scope}
             filter={filter}
             owner={owner}
@@ -443,6 +485,9 @@ export function WorklistScreen({
             onFilter={answerWith(setFilter)}
             onOwner={answerWith(setOwner)}
             onSelect={setSelectedId}
+            hasMore={day.hasNextPage}
+            loadingMore={day.isFetchingNextPage}
+            onMore={() => void day.fetchNextPage()}
           />
         )}
       </SurfaceState>
