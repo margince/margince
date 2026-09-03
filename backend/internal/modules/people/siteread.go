@@ -68,7 +68,11 @@ type SiteRead struct {
 	// the terminal report is the authority once Status ends.
 	Phase           *string
 	PagesRead       int
-	CreatedAt       time.Time
+	// LogoObjectKey addresses the mark the read resolved from the company's
+	// own site, parked on the dossier until a confirmation binds it to the
+	// record (RecordSiteReadLogo). Nil while none was resolved.
+	LogoObjectKey *string
+	CreatedAt     time.Time
 	UpdatedAt       time.Time
 	StartedAt       *time.Time
 	FirstGroundedAt *time.Time
@@ -118,7 +122,7 @@ type SiteReadPerson struct {
 // scanSiteRead pairs with it positionally.
 const siteReadColumns = `id, organization_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
 	stopped_reason, fact_count, proposal_ids, requested_by, profile_fields, facts, people, legal_entities, warnings,
-	draft_version, proposal_hash, phase, pages_read, created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
+	draft_version, proposal_hash, phase, pages_read, logo_object_key, created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
 
 // siteReadOrgKey names the audit payload's org reference once (the goconst
 // pin): the same string in relationship.go is that file's column vocabulary —
@@ -405,7 +409,7 @@ func scanSiteRead(row pgx.Row) (SiteRead, error) {
 		&sr.StatusCode, &sr.StatusDetail, &sr.NextAttemptAt, &pagesRaw, &skippedRaw,
 		&sr.StoppedReason, &sr.FactCount, &sr.ProposalIDs, &sr.RequestedBy,
 		&profileRaw, &factsRaw, &peopleRaw, &entitiesRaw, &warningsRaw, &sr.DraftVersion, &sr.ProposalHash,
-		&sr.Phase, &sr.PagesRead, &sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FirstGroundedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
+		&sr.Phase, &sr.PagesRead, &sr.LogoObjectKey, &sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FirstGroundedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
 		return SiteRead{}, err
 	}
 	if err := json.Unmarshal(pagesRaw, &sr.Pages); err != nil {

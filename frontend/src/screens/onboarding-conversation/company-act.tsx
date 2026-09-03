@@ -915,9 +915,12 @@ export function CompanyAct({
       [],
     )[0];
   // The mark at the head of the record, for both of its faces: the site the
-  // read ran on. Undefined before a read exists, and the digest draws the
-  // monogram.
-  const identity = read === null ? undefined : { rootUrl: read.root_url };
+  // read ran on, and the logo it resolved from there when it found one.
+  // Undefined before a read exists, and the digest draws the monogram.
+  const identity =
+    read === null
+      ? undefined
+      : { rootUrl: read.root_url, logoUrl: read.logo_url };
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
       artifactMode === "dossier" ? (

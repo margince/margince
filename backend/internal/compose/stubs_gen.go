@@ -555,6 +555,10 @@ func (stubs) ConfirmCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "ConfirmCompanySiteRead")
 }
 
+func (stubs) GetCompanySiteReadLogo(w nethttp.ResponseWriter, r *nethttp.Request, readId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetCompanySiteReadLogo")
+}
+
 func (stubs) MessageCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, readId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "MessageCompanySiteRead")
 }

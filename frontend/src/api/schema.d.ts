@@ -5773,6 +5773,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/site-reads/{readId}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                readId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream the mark a website read resolved, before anything adopts it.
+         * @description The bytes behind `CompanySiteRead.logo_url`: the company mark the read resolved from
+         *     its own site, parked on the dossier until a confirmation binds it to the record.
+         *     Served here so the review can show the company it is about while the record does not
+         *     exist yet. Normalized like every stored mark, so the response is always `image/png`
+         *     and never third-party markup. 404 when the read resolved no mark or does not exist;
+         *     501 when the deployment has no object store configured.
+         */
+        get: operations["getCompanySiteReadLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/site-reads/{readId}/messages": {
         parameters: {
             query?: never;
@@ -24120,6 +24147,14 @@ export interface components {
             /** @enum {string|null} */
             phase?: "crawling" | "extracting" | null;
             pages_read?: number;
+            /**
+             * @description Where to fetch the mark the read resolved from the company's own site — the
+             *     `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+             *     same-origin. ABSENT when the read resolved none, which a client answers with the
+             *     deterministic monogram. A confirmation moves the same mark onto the record, where
+             *     `CompanyProfile.logo_url` carries it from then on.
+             */
+            readonly logo_url?: string;
             pages: components["schemas"]["CompanySiteReadPage"][];
             profile_fields: components["schemas"]["ColdStartField"][];
             facts: components["schemas"]["CompanySiteReadFact"][];
@@ -38292,6 +38327,40 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getCompanySiteReadLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                readId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The normalized logo bytes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     messageCompanySiteRead: {

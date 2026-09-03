@@ -8884,6 +8884,40 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /company/site-reads/{readId}/logo:
+    parameters:
+      - name: readId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Organizations, AI]
+      operationId: getCompanySiteReadLogo
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Stream the mark a website read resolved, before anything adopts it.
+      description: |
+        The bytes behind `CompanySiteRead.logo_url`: the company mark the read resolved from
+        its own site, parked on the dossier until a confirmation binds it to the record.
+        Served here so the review can show the company it is about while the record does not
+        exist yet. Normalized like every stored mark, so the response is always `image/png`
+        and never third-party markup. 404 when the read resolved no mark or does not exist;
+        501 when the deployment has no object store configured.
+      responses:
+        '200':
+          description: The normalized logo bytes.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /company/site-reads/{readId}/messages:
     parameters:
       - name: readId
@@ -33010,6 +33044,15 @@ components:
           description: 'Why the crawl ended early; null when it exhausted discovery. Same column and vocabulary as SiteReadReport — one deep-read engine serves onboarding and every organization.'
         phase: { type: [string, 'null'], enum: [crawling, extracting] }
         pages_read: { type: integer, minimum: 0 }
+        logo_url:
+          type: string
+          readOnly: true
+          description: |
+            Where to fetch the mark the read resolved from the company's own site — the
+            `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+            same-origin. ABSENT when the read resolved none, which a client answers with the
+            deterministic monogram. A confirmation moves the same mark onto the record, where
+            `CompanyProfile.logo_url` carries it from then on.
         pages:
           type: array
           items: { $ref: '#/components/schemas/CompanySiteReadPage' }

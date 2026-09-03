@@ -18254,18 +18254,25 @@ type CompanySiteRead struct {
 	Id           openapi_types.UUID          `json:"id"`
 
 	// LegalEntities Every legal entity the site's legal notice states, with the identity details printed alongside it. A group publishes several; the read does not guess which one the installation belongs to, so it offers them and the human chooses. Empty when the site names none.
-	LegalEntities  *[]CompanySiteReadLegalEntity `json:"legal_entities,omitempty"`
-	NextAttemptAt  *time.Time                    `json:"next_attempt_at"`
-	OrganizationId *openapi_types.UUID           `json:"organization_id,omitempty"`
-	Pages          []CompanySiteReadPage         `json:"pages"`
-	PagesRead      *int                          `json:"pages_read,omitempty"`
-	People         []CompanySiteReadPerson       `json:"people"`
-	Phase          *CompanySiteReadPhase         `json:"phase,omitempty"`
-	ProfileFields  []ColdStartField              `json:"profile_fields"`
-	ProposalHash   string                        `json:"proposal_hash"`
-	RootUrl        string                        `json:"root_url"`
-	Status         CompanySiteReadStatus         `json:"status"`
-	StatusCode     *CompanySiteReadStatusCode    `json:"status_code"`
+	LegalEntities *[]CompanySiteReadLegalEntity `json:"legal_entities,omitempty"`
+
+	// LogoUrl Where to fetch the mark the read resolved from the company's own site — the
+	// `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+	// same-origin. ABSENT when the read resolved none, which a client answers with the
+	// deterministic monogram. A confirmation moves the same mark onto the record, where
+	// `CompanyProfile.logo_url` carries it from then on.
+	LogoUrl        *string                    `json:"logo_url,omitempty"`
+	NextAttemptAt  *time.Time                 `json:"next_attempt_at"`
+	OrganizationId *openapi_types.UUID        `json:"organization_id,omitempty"`
+	Pages          []CompanySiteReadPage      `json:"pages"`
+	PagesRead      *int                       `json:"pages_read,omitempty"`
+	People         []CompanySiteReadPerson    `json:"people"`
+	Phase          *CompanySiteReadPhase      `json:"phase,omitempty"`
+	ProfileFields  []ColdStartField           `json:"profile_fields"`
+	ProposalHash   string                     `json:"proposal_hash"`
+	RootUrl        string                     `json:"root_url"`
+	Status         CompanySiteReadStatus      `json:"status"`
+	StatusCode     *CompanySiteReadStatusCode `json:"status_code"`
 
 	// StatusDetail Safe guidance only; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string `json:"status_detail"`
@@ -45286,6 +45293,9 @@ type ServerInterface interface {
 	// Confirm a selected onboarding draft into the anchor company atomically.
 	// (POST /company/site-reads/{readId}/confirm)
 	ConfirmCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID, params ConfirmCompanySiteReadParams)
+	// Stream the mark a website read resolved, before anything adopts it.
+	// (GET /company/site-reads/{readId}/logo)
+	GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID)
 	// Ask Margince about a website read and receive reviewable company-field suggestions.
 	// (POST /company/site-reads/{readId}/messages)
 	MessageCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID)
@@ -47374,6 +47384,12 @@ func (_ Unimplemented) GetCompanySiteRead(w http.ResponseWriter, r *http.Request
 // Confirm a selected onboarding draft into the anchor company atomically.
 // (POST /company/site-reads/{readId}/confirm)
 func (_ Unimplemented) ConfirmCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID, params ConfirmCompanySiteReadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream the mark a website read resolved, before anything adopts it.
+// (GET /company/site-reads/{readId}/logo)
+func (_ Unimplemented) GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -54853,6 +54869,38 @@ func (siw *ServerInterfaceWrapper) ConfirmCompanySiteRead(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmCompanySiteRead(w, r, readId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompanySiteReadLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "readId" -------------
+	var readId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "readId", chi.URLParam(r, "readId"), &readId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "readId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanySiteReadLogo(w, r, readId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74845,6 +74893,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads/{readId}/confirm", wrapper.ConfirmCompanySiteRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/company/site-reads/{readId}/logo", wrapper.GetCompanySiteReadLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads/{readId}/messages", wrapper.MessageCompanySiteRead)
