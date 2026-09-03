@@ -7,8 +7,8 @@ package compose
 // upload, re-encode it, store the bytes, point the record at them — and give
 // the field back when they ask for the mark to go.
 //
-// The bytes are never served as they arrived. Every stored mark is this
-// server's own square PNG re-encode, which is what lets the endpoint that
+// The bytes are never served as they arrived. Every stored logo is this
+// server's own aspect-preserving PNG re-encode, which is what lets the endpoint that
 // streams them declare one media type for all of them and serve no
 // third-party markup from this origin: an SVG a person uploads is rasterized
 // here, exactly as one resolved from a website is.
@@ -33,11 +33,10 @@ import (
 // disk instead of being held resident.
 const companyLogoSpillBytes = 1 << 20
 
-// The edge the stored mark is re-encoded to. It is the size the largest surface
-// draws a company at, doubled for a high-density screen, and no more: a mark is
-// shown at 32px in the rail and 46px on a record header, so anything beyond
-// this is bytes every one of those requests pays for and no reader ever sees.
-const companyLogoEdge = 256
+// The longest edge the stored logo is re-encoded to. The expanded rail draws a
+// wordmark at roughly 190px wide, so 512px keeps it crisp on a high-density
+// screen while avoiding bytes no display uses.
+const companyLogoEdge = 512
 
 // A filename is shown back to a person in the field's history, so it is bounded
 // here rather than trusted: browsers send what the file was called, and what a
@@ -168,7 +167,7 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 		httperr.Write(w, r, err)
 		return nil, "", false
 	}
-	png, err = imagenorm.SquarePNG(img, companyLogoEdge)
+	png, err = imagenorm.FitPNG(img, companyLogoEdge)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return nil, "", false

@@ -57,6 +57,8 @@ type Story = StoryObj<typeof Shell>;
 // in the strip are two readings of one queue, and a frame that fed one and left
 // the other at nothing would draw the same queue as 12 and as empty at once.
 const COUNTS = { inbox: 12, tasks: 4 };
+const COMPANY_WORDMARK =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 700 200'%3E%3Crect width='700' height='200' fill='white'/%3E%3Ctext x='350' y='125' text-anchor='middle' font-family='sans-serif' font-size='92' font-weight='700' fill='%23ff6500'%3EGRADION%3C/text%3E%3C/svg%3E";
 
 /**
  * The session every frame here mounts on, plus whatever routes the frame is about.
@@ -89,12 +91,16 @@ function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
 // No logo_url: Storybook serves no object store, and what a broken image would
 // draw here is the monogram anyway. The monogram IS the case worth framing —
 // the mark a company gets when its site declared no icon.
-function SeedInstallation({ children }: Readonly<{ children: ReactNode }>) {
+function SeedInstallation({
+  children,
+  logoUrl,
+}: Readonly<{ children: ReactNode; logoUrl?: string }>) {
   const client = useQueryClient();
   if (client.getQueryData(["company"]) === undefined) {
     client.setQueryData(["company"], {
       organization_id: "org-1",
       display_name: "Gradion GmbH",
+      logo_url: logoUrl,
     });
   }
   return <>{children}</>;
@@ -139,6 +145,26 @@ export const Default: Story = {
     return (
       <StoryProviders>
         <SeedInstallation>
+          <ShellExample>
+            <div className="wrap">
+              <Card as="div">Content</Card>
+            </div>
+          </ShellExample>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/** A company's wide logo owns the expanded head, with Margince credited on the
+ * line beneath it. This is deliberately not an Avatar story: squeezing this
+ * asset into the navigation rows' square is the failure this state catches. */
+export const CompanyWordmark: Story = {
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation logoUrl={COMPANY_WORDMARK}>
           <ShellExample>
             <div className="wrap">
               <Card as="div">Content</Card>

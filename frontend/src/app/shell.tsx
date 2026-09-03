@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { Avatar, Button, Modal } from "../design-system/atoms";
+import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { useCompany } from "../screens/onboarding";
@@ -126,6 +127,27 @@ function BrandBlock() {
       </a>
     );
   }
+  if (installation.logo_url) {
+    return (
+      <a
+        className="ws ws-logo"
+        href="#/home"
+        aria-label={t("shell.companyLogoAria", {
+          company: installation.display_name,
+        })}
+      >
+        <CompanyLogo
+          name={installation.display_name}
+          src={installation.logo_url}
+          fallback={<b>{installation.display_name}</b>}
+        />
+        <span className="ws-org ws-logo-powered">
+          <span>{t("shell.poweredByPrefix")}</span>
+          <span className="ws-logo-product">{t("shell.logoAria")}</span>
+        </span>
+      </a>
+    );
+  }
   return (
     <a
       className="ws"
@@ -144,7 +166,6 @@ function BrandBlock() {
         <Avatar
           identity={installation.organization_id}
           name={installation.display_name}
-          src={installation.logo_url}
           shape="organization"
         />
       </span>
