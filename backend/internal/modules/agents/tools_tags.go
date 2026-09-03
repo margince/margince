@@ -123,6 +123,22 @@ type Tags interface {
 	// is left alone, which is what lets a caller recolour without restating a
 	// name it never read.
 	UpdateTag(ctx context.Context, tagID ids.UUID, in TagEdit) (Tag, error)
+	// MergeTags folds the source word into the target: every record carrying
+	// the source ends up carrying the target, the source is archived, and its
+	// NAME IS RELEASED. The store takes `tag.update`, the same grant an update
+	// takes — the difference between the two verbs is that this one cannot be
+	// undone, which is why the tool confirms and update_tag does not.
+	MergeTags(ctx context.Context, source, target ids.UUID) (TagMergeResult, error)
+}
+
+// TagMergeResult is what a merge did, in the two numbers that differ. A record
+// that carried only the source is MOVED — the target gains it. One that
+// already carried both COLLAPSES — the duplicate tagging is dropped and the
+// target gains nothing. Reported apart because "12 moved, 3 collapsed" says
+// the target grew by 12, which a total of 15 would not.
+type TagMergeResult struct {
+	Moved     int `json:"moved"`
+	Collapsed int `json:"collapsed"`
 }
 
 // TagEdit is the partial an update carries. A nil field is left alone; a
@@ -147,6 +163,7 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(removeTag{tags: tags})
 	r.Register(createTag{tags: tags})
 	r.Register(updateTag{tags: tags})
+	r.Register(mergeTags{tags: tags})
 }
 
 // taggingSchema is apply's and remove's argument shape, spelled once: they name

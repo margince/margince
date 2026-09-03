@@ -19,7 +19,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { emailPresentationKey } from "./activitykeys";
+import { showsAMessage } from "./activitykeys";
 import { throwProblem } from "./common";
 
 type ThreadAudienceOutcome = components["schemas"]["ThreadAudienceOutcome"];
@@ -47,11 +47,13 @@ export type ThreadAudienceResult = {
  * held-threads queue refreshes the queue. The WRITE is the same either way,
  * which is why it is here and that is not.
  *
- * What every caller shares is the messages the decision actually reached — the
- * server names them — so those are refreshed here rather than left to each
- * caller to remember. A thread decision changes several messages filed against
- * several records, and refreshing only the one on screen leaves the rest
- * showing the audience they had before the press.
+ * What every caller shares is that a decision reaches messages filed against
+ * records this screen is not on — so every read that could be drawing one is
+ * refreshed here rather than left to each caller to remember. Refreshing only
+ * the record on screen left the same message on a colleague's contact page, or
+ * on the deal it also hangs off, still saying "Everyone in the organization"
+ * until a reload: the change did happen, and the second page was quietly wrong
+ * about it, which is the harder version to trust.
  */
 export function useThreadAudience(options: {
   invalidate: (result: ThreadAudienceResult) => QueryKey[];
@@ -77,11 +79,10 @@ export function useThreadAudience(options: {
       for (const queryKey of options.invalidate(result)) {
         queryClient.invalidateQueries({ queryKey });
       }
-      for (const activityId of result.outcome?.activity_ids ?? []) {
-        queryClient.invalidateQueries({
-          queryKey: emailPresentationKey(activityId),
-        });
-      }
+      // Every read that could be drawing one of the changed messages, not the
+      // ones the answer names: the outcome names ACTIVITIES and the client is
+      // never told which records they are filed against.
+      queryClient.invalidateQueries({ predicate: showsAMessage });
       options.onSettled?.(result);
     },
   });
@@ -123,16 +124,14 @@ export function useMessageAudience(options: {
       if (error) throwProblem(error);
       return data;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       for (const queryKey of options.invalidate()) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The message's own canonical read, wherever it is mounted. The caller
-      // names its screen's keys; this one is the same for every caller, so it
-      // is not theirs to remember.
-      queryClient.invalidateQueries({
-        queryKey: emailPresentationKey(variables.activityId),
-      });
+      // The message's own canonical read and every timeline it appears on. One
+      // message is filed against several records, so the caller's screen is
+      // never the whole answer — and it is not the caller's to remember either.
+      queryClient.invalidateQueries({ predicate: showsAMessage });
       options.onSettled?.();
     },
   });

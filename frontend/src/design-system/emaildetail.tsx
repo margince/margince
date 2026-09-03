@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
 import { useId } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { splitEmailBody } from "../format/emailtext";
-import { useT } from "../i18n";
+import { formatBytes, formatNumber } from "../format/format";
+import { translatePlural, useLocale, useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
@@ -26,6 +27,7 @@ import "./emaildetail.css";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailParty = components["schemas"]["EmailParty"];
+type EmailAttachmentSummary = components["schemas"]["EmailAttachmentSummary"];
 
 /**
  * The key a message's canonical read is cached under. Exported because the
@@ -177,9 +179,61 @@ function EmailBody({
           <p>{parts.trimmed}</p>
         </details>
       )}
+      <Attachments files={presentation.attachments} />
       <p className="emaildetail__when">
         {formatWhen(presentation.occurred_at)}
       </p>
+    </div>
+  );
+}
+
+/**
+ * What came with the message.
+ *
+ * Reached only from the body above, which returns early for a withheld
+ * message — so a reader outside the audience is never told that a contract
+ * arrived, which is a fact about the message like any other.
+ *
+ * The NAME is the download, the pattern the account and contact file lists
+ * already use: a separate action word at the far end of the row is a second
+ * thing to find for the only thing this row does. The href is the attachment
+ * endpoint that has always served these bytes; nothing new is fetched here.
+ */
+function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
+  const { locale } = useLocale();
+  if (files.length === 0) {
+    // No empty region: a heading over nothing says the message had files and
+    // they are missing, which is a different claim from having had none.
+    return null;
+  }
+  return (
+    <div className="emaildetail__files">
+      <p className="emaildetail__filesLabel">
+        {translatePlural(locale, "email.detail.attachments", files.length, {
+          count: formatNumber(files.length, locale),
+        })}
+      </p>
+      <ul className="emaildetail__fileList">
+        {files.map((file) => (
+          <li key={file.id} className="emaildetail__file">
+            <Paperclip aria-hidden="true" />
+            <a
+              className="link-button"
+              href={`/v1/attachments/${file.id}`}
+              download={file.filename}
+            >
+              {file.filename}
+            </a>
+            {/* Absent rather than zero when the server sent no size: a size it
+                could not record is not a file of no bytes. */}
+            {file.byte_size != null && (
+              <span className="emaildetail__fileSize">
+                {formatBytes(file.byte_size, locale)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

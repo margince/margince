@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 68 |
+| Tools | 69 |
 | Resources | 9 |
-| Tool catalog | 190.4 KB |
+| Tool catalog | 192.4 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 49626 |
+| Approx. wire tokens | 50141 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 92.0 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 44.8 KB | 23% | Yes, every step |
-| Input schemas | 39.3 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 14.3 KB | 7% | Partly |
-| **Description + input schema** | **84.1 KB** | **44%** | **the recurring cost** |
+| Output schemas | 92.8 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 45.3 KB | 23% | Yes, every step |
+| Input schemas | 39.8 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 14.5 KB | 7% | Partly |
+| **Description + input schema** | **85.1 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (68)
+### Tools (69)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -99,6 +99,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
+| [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
@@ -6801,6 +6802,151 @@ Collapse two records for the same real person or company into one, moving the so
         "merged",
         "record_type",
         "survivor_id"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### merge_tags
+
+**Fold one tag into another**
+
+Fold a duplicate word into the one the workspace keeps, moving every record that carries it. NOT UNDOABLE once approved: the source is retired, its name is released — links to it stop working and someone may coin it again — and no pointer home is kept, unlike a person or company merge. The TARGET is the word that survives; read both with get_tag first. Needs the tag.update grant. (Governance: a person approves every call before it runs; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "into_tag_id": {
+      "description": "The word that survives",
+      "format": "uuid",
+      "type": "string"
+    },
+    "tag_id": {
+      "description": "The word to retire",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tag_id",
+    "into_tag_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "collapsed": {
+          "type": "integer"
+        },
+        "moved": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "collapsed",
+        "moved"
       ],
       "type": "object"
     },

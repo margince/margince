@@ -23,6 +23,8 @@ package meetingbrief
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -113,12 +115,21 @@ func (s *Service) readExcerpts(
 // excerptTargets picks which activities are worth a body read: the first and
 // last of each ranked moment's threads, which between them carry how a
 // conversation opened and where it landed.
+//
+// NEWEST THREAD FIRST within a moment, because the budget is six threads and a
+// moment can hold more. Threads reach here oldest-first — threadsOf sorts by
+// First and clusterThreads keeps that order — so the cap used to spend itself
+// on the oldest conversations present: an account touched anywhere inside
+// arcGapDays collapses into ONE moment, and a note written minutes before the
+// meeting sat thirteenth in that walk with its body never read. The model was
+// handed four fortnight-old invitation threads and the new note's subject line
+// alone, which reads exactly like a brief that ignored it.
 func excerptTargets(moments []ArcMoment) []string {
 	var wanted []string
 	seen := map[string]bool{}
 	threadsTaken := 0
 	for _, moment := range moments {
-		for _, current := range moment.Threads {
+		for _, current := range threadsNewestFirst(moment.Threads) {
 			if len(current.IDs) == 0 {
 				continue
 			}
@@ -135,6 +146,18 @@ func excerptTargets(moments []ArcMoment) []string {
 		}
 	}
 	return wanted
+}
+
+// threadsNewestFirst orders a moment's threads by their last message, latest
+// first, on a COPY: the arc renders the same moments in their own order, and
+// sorting in place would reorder the story a reader is shown to suit this
+// budget.
+func threadsNewestFirst(threads []thread) []thread {
+	ordered := slices.Clone(threads)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return ordered[i].Last.After(ordered[j].Last)
+	})
+	return ordered
 }
 
 // pickRows takes the ends of a thread and, when there is room, the messages

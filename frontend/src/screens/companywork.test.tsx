@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import {
@@ -64,13 +64,15 @@ const project = {
   quiet: false,
 } as const;
 
-function draw(three60: Organization360) {
+function draw(three60: Organization360, onOpenRecord: OpenRecord = () => {}) {
   rtlRender(
     <LocaleProvider initial="en">
-      <CompanyWorkCard view={three60} onOpenRecord={() => {}} />
+      <CompanyWorkCard view={three60} onOpenRecord={onOpenRecord} />
     </LocaleProvider>,
   );
 }
+
+type OpenRecord = (entityType: string, entityId: string) => void;
 
 // What the header says BESIDE the card's own title: the count, and the
 // assertions below about what may not join it. Scoped past the title because
@@ -197,6 +199,43 @@ describe("the account's work in flight", () => {
         /Ida Keller said: ‘we'll confirm the depot slot once facilities sign off’/,
       ),
     ).toBeTruthy();
+  });
+
+  // The commitment's source is a MESSAGE, and pressing it must reach the
+  // handler as an activity. This button has existed since the row was written
+  // and did nothing: an activity had no detail route, so `useCitedReceipt`
+  // dropped it through both its branches. The email drawer is that route now,
+  // and this is the claim that says the button arrives.
+  it("routes a commitment's source to the message it came from", async () => {
+    const opened: Array<[string, string]> = [];
+    draw(
+      view({
+        deals: {
+          data: [
+            {
+              ...deal,
+              attention: {
+                kind: "commitment_theirs",
+                title: "we'll confirm the depot slot once facilities sign off",
+                who: "Ida Keller",
+                due_at: null,
+                source_activity_id: "a-1",
+              },
+            },
+          ],
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+      }),
+      (entityType, entityId) => opened.push([entityType, entityId]),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Ida Keller said/ }),
+    );
+
+    expect(opened).toEqual([["activity", "a-1"]]);
   });
 
   it("shows the stall only when there is no reason that explains it", () => {

@@ -144,3 +144,58 @@ func (t updateTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 // TestEveryToolEnumMatchesTheContractItMirrors holds the same enum against
 // UpdateTagRequest's own.
 const clearColor = "none"
+
+// --- merge_tags (🟡 confirm-first, gated on tag.update) ---
+
+// mergeTags is the one vocabulary verb that reaches a human first. Coining and
+// editing a word are auto-execute because the same seat can undo either from
+// the vocabulary screen; a merge rewrites every record carrying the source and
+// releases the source's name, and nothing records where those taggings went.
+type mergeTags struct{ tags Tags }
+
+func (t mergeTags) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "merge_tags", Title: "Fold one tag into another", Version: toolVersionV1,
+		Description:   mergeTagsCopy.render(),
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		OpenAPIOp: "mergeTags",
+		InputSchema: schema(`{"type":"object","required":["tag_id","into_tag_id"],"properties":{
+			"tag_id":{"type":"string","format":"uuid","description":"The word to retire"},
+			"into_tag_id":{"type":"string","format":"uuid","description":"The word that survives"},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"additionalProperties":false}`),
+		OutputSchema: schemaFor[TagMergeResult](),
+	}
+}
+
+type mergeTagsArgs struct {
+	TagID     ids.UUID `json:"tag_id"`
+	IntoTagID ids.UUID `json:"into_tag_id"`
+}
+
+// StageInfo decodes this door's arguments into the merge command and delegates:
+// the refusals and the staged subject live in the resolver
+// (commandtagvocab.go), where the REST door reaches the same ones for the same
+// operation.
+func (t mergeTags) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
+	var args mergeTagsArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return StageInfo{}, err
+	}
+	return StageSubject(ctx, NewMergeTagsCall(t.tags, MergeTagsCommand{
+		SourceID: args.TagID,
+		TargetID: args.IntoTagID,
+	}))
+}
+
+func (t mergeTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args mergeTagsArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	result, err := t.tags.MergeTags(ctx, args.TagID, args.IntoTagID)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(result)
+}
