@@ -269,6 +269,16 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"granting it here would widen the authority every other tool in the sweep runs under, " +
 		"and the answer shape it would prove is the one remove_tag already shares",
 	"remove_tag": "same missing tag.read as apply_tag above",
+	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
+		"carry — measured, not assumed: the bare call comes back permission denied. Granting it " +
+		"here would widen the authority every other tool in the sweep runs under",
+	"forecast_input_checks": "same missing forecast.read as forecast_readings above",
+	"forecast_movement": "same missing forecast.read as forecast_readings above, and it also " +
+		"requires a `from`/`to` window, so a bare call would not reach the handler either way",
+	"create_tag": "coining a tag needs the same tag seat apply_tag above lacks — it writes the " +
+		"vocabulary the tag.read tools then read, so it reaches the lane only when they do",
+	"update_tag": "same missing tag seat as create_tag above; it answers that tool's shape after " +
+		"a rename, so the two are unproven together rather than one covering the other",
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
