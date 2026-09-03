@@ -92,6 +92,12 @@ const CORE_SCREENS = [
   // second level of nesting indents it again.
   "filters",
   "worklist",
+  // Projects and Partners. Both are rail-or-off-rail list screens that now
+  // print the page's name inside their table header, and both were in neither
+  // sweep — so the two screens where that header is NOT measured were the two
+  // whose header this change rewrote. The sweep follows the surface.
+  "projects",
+  "partners",
   "analytics",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
