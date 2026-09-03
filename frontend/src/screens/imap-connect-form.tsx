@@ -10,6 +10,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import "./imap-connect-form.css";
 
 // The IMAP connect flavor (RC-8/Task 6): the credential providers' first-
 // connect and reconnect both happen through this one form — there is no OAuth
@@ -66,7 +67,6 @@ export function ImapMailboxForm({
   onDismiss,
   onConnected,
   onPendingChange,
-  actionsClassName,
   small = false,
 }: Readonly<{
   /** What backing out is called on this surface: Cancel in a dialog, Not
@@ -80,10 +80,6 @@ export function ImapMailboxForm({
   /** Reports the in-flight connect, so a surface that owns other controls
    * can hold them while the credentials are being proven. */
   onPendingChange?: (pending: boolean) => void;
-  /** The surface's own row for the two buttons: `actions` inside a dialog,
-   * the step's row on the first run. Styled by the surface, since the form
-   * does not know which one it is standing in. */
-  actionsClassName: string;
   /** The dialog's compact buttons; a step in a room keeps the room's size. */
   small?: boolean;
 }>) {
@@ -146,7 +142,7 @@ export function ImapMailboxForm({
 
   return (
     <form
-      className="form-stack"
+      className="imap-mailbox-form"
       onSubmit={(event) => {
         event.preventDefault();
         if (!ready) {
@@ -165,7 +161,9 @@ export function ImapMailboxForm({
       {/* Before the fields, not after: a person connecting a mailbox from
           Settings is told the same thing onboarding tells them, and reading
           it after typing a password is reading it too late. */}
-      <CaptureNotice />
+      <div className="imap-mailbox-span">
+        <CaptureNotice />
+      </div>
       <Field label={t("connectors.imapHost")} required>
         {(control) => (
           <TextInput
@@ -230,13 +228,17 @@ export function ImapMailboxForm({
           />
         )}
       </Field>
-      <p className="t-caption">{t("connectors.imapSecretHint")}</p>
+      <p className="t-caption imap-mailbox-span">
+        {t("connectors.imapSecretHint")}
+      </p>
       {errorMessage && (
-        <Callout tone="danger" live="alert">
-          {errorMessage}
-        </Callout>
+        <div className="imap-mailbox-span">
+          <Callout tone="danger" live="alert">
+            {errorMessage}
+          </Callout>
+        </div>
       )}
-      <div className={actionsClassName}>
+      <div className="actions imap-mailbox-span">
         <Button
           small={small}
           type="button"
@@ -284,7 +286,6 @@ export function ImapConnectForm({
       {open && (
         <ImapMailboxForm
           small
-          actionsClassName="actions"
           dismissLabel={t("create.cancel")}
           onDismiss={onClose}
           onConnected={onConnected}

@@ -737,7 +737,6 @@ function PlatformStep({
                   screen. There is no installation-wide IMAP app to store, so a
                   confirmed mailbox and "not now" both answer the question. */}
               <ImapMailboxForm
-                actionsClassName="ob-fr-actions"
                 dismissLabel={t("firstRun.platform.skip")}
                 onDismiss={onDecline}
                 onConnected={onDecline}
