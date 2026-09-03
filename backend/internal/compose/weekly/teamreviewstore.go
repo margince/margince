@@ -25,7 +25,7 @@ import (
 // same week comes to render two different ways.
 const teamReviewSelect = `
 	SELECT id, team_id, team_name, local_week_start, generated_at, as_of,
-	       reps_counted, deals_won, deals_lost,
+	       reps_counted, deals_won, deals_lost, deals_moved,
 	       leads_routed, leads_answered_in_target, leads_breached,
 	       meetings_held, meetings_with_next_step,
 	       commitments_due, commitments_kept,
@@ -45,13 +45,13 @@ func memberWeek(
 	var created, won, lost *int64
 	var currency *string
 	err := tx.QueryRow(ctx, `
-		SELECT deals_won, deals_lost,
+		SELECT deals_won, deals_lost, deals_moved,
 		       leads_routed, leads_answered_in_target, leads_breached,
 		       meetings_held, meetings_with_next_step,
 		       commitments_due, commitments_kept,
 		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency
 		  FROM weekly_review WHERE user_id = $1 AND local_week_start = $2`, userID, week).
-		Scan(&c.DealsWon, &c.DealsLost,
+		Scan(&c.DealsWon, &c.DealsLost, &c.DealsMoved,
 			&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 			&c.MeetingsHeld, &c.MeetingsWithNextStep,
 			&c.CommitmentsDue, &c.CommitmentsKept,
@@ -100,6 +100,7 @@ func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UU
 	add("reps_unread", review.RepsUnread)
 	add("deals_won", c.DealsWon)
 	add("deals_lost", c.DealsLost)
+	add("deals_moved", c.DealsMoved)
 	add("leads_routed", c.LeadsRouted)
 	add("leads_answered_in_target", c.LeadsAnsweredInTarget)
 	add("leads_breached", c.LeadsBreached)
@@ -261,7 +262,7 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 	var currency *string
 	switch err := row.Scan(&review.ID, &review.TeamID, &review.TeamName,
 		&review.LocalWeekStart, &review.GeneratedAt, &review.AsOf,
-		&c.RepsCounted, &c.DealsWon, &c.DealsLost,
+		&c.RepsCounted, &c.DealsWon, &c.DealsLost, &c.DealsMoved,
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&c.CommitmentsDue, &c.CommitmentsKept,

@@ -30492,9 +30492,19 @@ type TeamListResponse struct {
 
 // TeamWeeklyCounts defines model for TeamWeeklyCounts.
 type TeamWeeklyCounts struct {
-	CommitmentsDue        int `json:"commitments_due"`
-	CommitmentsKept       int `json:"commitments_kept"`
-	DealsLost             int `json:"deals_lost"`
+	CommitmentsDue  int `json:"commitments_due"`
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsLost       int `json:"deals_lost"`
+
+	// DealsMoved Deals that changed stage in the week without closing — what the team ADVANCED.
+	//
+	// A count and never an amount. Advancing is a stage fact: a deal moving from
+	// Proposal to Negotiation did not change price, so a "value advanced" figure would
+	// count the deal's whole worth a second time beside the pipeline it already sits in.
+	//
+	// Snapshots written before this figure existed carry zero. A count of zero is a
+	// count, unlike a money sum of zero over deals nobody could price.
+	DealsMoved            int `json:"deals_moved"`
 	DealsWon              int `json:"deals_won"`
 	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
 	LeadsBreached         int `json:"leads_breached"`

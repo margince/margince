@@ -2466,6 +2466,7 @@ export const vi = {
   "teamweekly.movement.title": "Tuần đã làm được gì",
   "teamweekly.movement.won": "Thắng",
   "teamweekly.movement.lost": "Thua",
+  "teamweekly.movement.moved": "Đã tiến triển",
   "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
   "teamweekly.movement.leads": "Lead được phân",
   "teamweekly.coach.title": "Đồng hành tuần này",

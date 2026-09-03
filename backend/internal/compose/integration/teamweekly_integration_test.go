@@ -89,6 +89,47 @@ func teamScoped(e *integration.Env, user ids.UUID, teams []ids.UUID) context.Con
 	return e.As(user, teams, perms)
 }
 
+// THE TEAM'S WEEK COUNTS WHAT ADVANCED. Every member's weekly_review has
+// carried deals_moved since the review shipped, and the team total dropped it —
+// so a team that moved deals and closed none read as a team where nothing
+// happened, which is the week most teams have.
+//
+// Seeded through the REAL writer: a deal advanced with deals.Store, then the
+// member week assembled, then the team week summed. A hand-inserted count would
+// prove the column round-trips and nothing about whether anything fills it.
+func TestTheTeamWeekCountsWhatAdvanced(t *testing.T) {
+	e := setupTeamWeekly(t)
+
+	// Two reps, one advancing deal each, so the team figure is a SUM rather
+	// than one member's number passed through — which a single rep cannot tell
+	// apart.
+	for _, rep := range []ids.UUID{e.Rep1, e.Rep2} {
+		advanceOneDeal(t, e, rep)
+		writeRepWeek(t, e, rep)
+	}
+
+	written, _, err := e.engine.AssembleTeamFor(
+		e.leadCtx, e.Team1, "Team One", members(e), teamClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if written.Counts.DealsMoved != 2 {
+		t.Fatalf("the team advanced %d deals, wanted 2 — one per rep, summed",
+			written.Counts.DealsMoved)
+	}
+
+	// And it SURVIVES the round trip: the figure a lead reads comes off the
+	// stored row, not the struct the writer happened to return.
+	read, err := e.engine.LatestTeamReview(e.leadCtx, e.Team1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.Counts.DealsMoved != 2 {
+		t.Errorf("the stored week reads %d advanced, wanted 2", read.Counts.DealsMoved)
+	}
+}
+
 // A LEAD OF ONE TEAM MUST NOT READ ANOTHER'S WEEK. The team id arrives from the
 // query string and nothing on the row narrows it to the reader, so without a
 // membership gate one changed parameter hands over every member of another
@@ -332,6 +373,53 @@ func TestAMemberWithNoWeekIsCountedAsUnread(t *testing.T) {
 }
 
 // writeRepWeek gives one rep a review for the week that closed.
+// advanceOneDeal gives one rep a deal that changed stage inside the week under
+// review, without closing — which is exactly what deals_moved counts.
+//
+// The DEAL comes from the real writer. Only the stage change's timestamp is set
+// by hand, and it has to be: no writer lets a caller name a past instant, and
+// the figure is defined by a change falling inside a week that has closed. That
+// is the same seam weekly_integration_test.go takes for the same reason.
+func advanceOneDeal(t *testing.T, e *teamEnv, rep ids.UUID) {
+	t.Helper()
+	// The default pipeline through the store's own seeder, not a fixture of
+	// this suite's: the stage semantics are what decide whether a move counts,
+	// and a hand-built pipeline could disagree with the one production seeds.
+	//
+	// Seeded once for the whole test even when two reps each get a deal — a
+	// second SeedDefaults over the same workspace conflicts, which is the
+	// store saying the pipeline is already there.
+	if err := e.Deals.SeedDefaults(e.Admin()); err != nil &&
+		!errors.Is(err, apperrors.ErrConflict) {
+		t.Fatal(err)
+	}
+	p, err := e.Deals.DefaultPipeline(e.Admin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var open ids.StageID
+	for _, st := range *p.Stages {
+		if st.Semantic == "open" {
+			open = ids.From[ids.StageKind](ids.UUID(st.Id))
+			break
+		}
+	}
+	pipeline := ids.From[ids.PipelineKind](ids.UUID(p.Id))
+	deal := e.SeedDeal(t, "Advanced for "+rep.String(), pipeline, open, &rep)
+
+	// The stage moved TO is chosen in the statement: a second stage of the same
+	// pipeline. Reusing `open` would write a row whose from and to are one
+	// stage, which is not a move and would count all the same.
+	inWeek := teamClock.AddDate(0, 0, -4)
+	e.WsExec(t, `INSERT INTO deal_stage_history
+	                 (deal_id, from_stage_id, to_stage_id, changed_by, changed_at)
+	             SELECT $1, $2, s.id, 'human:x', $4
+	               FROM stage s
+	              WHERE s.pipeline_id = $3 AND s.id <> $2
+	              ORDER BY s.position LIMIT 1`,
+		deal, open, pipeline, inWeek)
+}
+
 func writeRepWeek(t *testing.T, e *teamEnv, user ids.UUID) {
 	t.Helper()
 	repCtx := e.As(user, []ids.UUID{e.Team1}, integration.AdminPerms)
