@@ -77,6 +77,11 @@ func SetupSearch(t *testing.T) *SearchEnv {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
 		t.Fatal(err)
 	}
+	// This harness builds its installation by raw SQL, so bootstrap never wrote
+	// the settings rows — the case seedInstallationIdentity exists for. A report
+	// resolves the basis it reports money in, and the zone it buckets dates by,
+	// so a suite without them is refused before any rule under test is reached.
+	seedInstallationIdentity(ctx, t, owner)
 	for i, u := range []ids.UUID{e.Rep1, e.Rep3} {
 		if _, err := owner.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, u, fmt.Sprintf("rep%d@search.test", i)); err != nil {
 			t.Fatal(err)
@@ -135,7 +140,15 @@ func (e *SearchEnv) SeedID(t *testing.T, sql string, args ...any) ids.UUID {
 // principal without it sees no employer-derived account at all, which is a
 // different suite's question (TestASubjectTypeTheCallerMayNotReadIsNeverNamed
 // asks it deliberately, by naming its own grants).
-var searchObjects = []string{objPerson, objOrg, objDeal, "lead", objActivity, objRelationship}
+// installation_settings joins the record types, and it is not a record type:
+// a report resolves the basis it reports money in, so every seeded role holds
+// this read and every other report suite's fixture already grants it
+// (report_fieldmask, report_forecast, report_projectgrant). Without it a
+// principal here is refused before any row-scope rule is reached, which is a
+// fixture that cannot ask the question its suite exists to ask.
+var searchObjects = []string{
+	objPerson, objOrg, objDeal, "lead", objActivity, objRelationship, objInstallSettings,
+}
 
 // searchReadGrants is read on every record type this fixture's principals can
 // reach. Read-only on purpose: the suites riding it assert what a caller may SEE,
