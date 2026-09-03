@@ -12,10 +12,18 @@
 // Its own renderer rather than a mode of the timeline: the two disagree about
 // what a row IS, not about how one looks, and a `compact` flag threaded
 // through the timeline would be that disagreement spelled as a boolean.
+//
+// A retained EMAIL is the exception, and it is not one of layout. The message
+// is the same message the timeline shows, so it draws the same EmailEntry —
+// this list keeps the avatar, the deal link and the date column that place the
+// exchange in the account's reading, and hands the message itself to the one
+// component that draws one. The disagreement above is about a row's SHAPE and
+// still stands for every other kind.
 
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Avatar, Badge } from "../design-system/atoms";
+import { EmailEntry } from "../design-system/emailentry";
 import { PanelBody } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -140,6 +148,7 @@ function RecentRow({
   // call logged with no subject is still an event, and a blank line where the
   // headline goes reads as a row that failed to load.
   const title = activity.subject?.trim() || kind;
+  const email = activity.email_summary;
   const deal = activity.links?.find((link) => link.entity_type === "deal");
   const dealName = deal && nameOf?.("deal", deal.entity_id);
   const dealLabel = dealName
@@ -149,15 +158,40 @@ function RecentRow({
     <li className="co-recent-row">
       <Avatar name={title} identity={activity.id} size="xs" />
       <span className="co-recent-body">
-        <span className="co-recent-head">
-          {/* No tone: the chip says what KIND of exchange this was, and every
-              row here is the account's own correspondence. The AI indigo is a
-              provenance claim — "an agent did this" — and painting it on a
-              human's email tells the reader something false. */}
-          <Badge>{kind}</Badge>
-          {direction && <span className="co-recent-dir">{t(direction)}</span>}
-        </span>
-        <span className="co-recent-title">{title}</span>
+        {/* A retained email is the canonical row here as everywhere: it already
+            says which way it went, who was at the other end and who may read
+            it, so the kind chip and direction line above would print the same
+            facts a second time in this row's own words.
+
+            Every other kind keeps them. A call, a note or a task has no
+            summary and no access state, and the chip is the only thing telling
+            one from another. */}
+        {email ? (
+          <EmailEntry
+            summary={email}
+            timestamp={when}
+            onOpen={
+              onOpenRecord
+                ? () => onOpenRecord("activity", activity.id)
+                : undefined
+            }
+          />
+        ) : (
+          <>
+            <span className="co-recent-head">
+              {/* No tone: the chip says what KIND of exchange this was, and
+                  every row here is the account's own correspondence. The AI
+                  indigo is a provenance claim — "an agent did this" — and
+                  painting it on a human's email tells the reader something
+                  false. */}
+              <Badge>{kind}</Badge>
+              {direction && (
+                <span className="co-recent-dir">{t(direction)}</span>
+              )}
+            </span>
+            <span className="co-recent-title">{title}</span>
+          </>
+        )}
         <span className="co-recent-meta">
           {duration && <span>{duration}</span>}
           {deal &&
