@@ -422,6 +422,10 @@
    read as two panels rather than two answers. */
 .ob-scene.ob-invite-scene {
   max-width: 44rem;
+  /* On the board's own left edge, under the question, not centred as a
+     column of its own: a narrower block that floats to the middle stops
+     lining up with the title it answers. */
+  margin-inline-start: 0;
 }
 
 /* The team act: the settings invite form on a plate of its own, held to a
