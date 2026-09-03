@@ -74,7 +74,7 @@ var subjectParticipantsDelete = `
 	notTransitivelyHeld("ap.activity_id")
 
 var subjectParticipantsBlank = `
-		UPDATE activity_participant ap SET person_id = NULL, address = NULL
+		UPDATE activity_participant ap SET person_id = NULL, address = NULL, display_name = NULL
 		 WHERE ap.user_id IS NOT NULL
 		   AND (ap.person_id = $1 OR (ap.address IS NOT NULL AND ap.address = ANY($2)))` +
 	notTransitivelyHeld("ap.activity_id")

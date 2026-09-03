@@ -273,7 +273,7 @@ scrolls inside itself.
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **Sidebar**: 224px expanded, 52px collapsed, and collapsed is the default.
+- **Sidebar**: 224px expanded, 64px collapsed, and collapsed is the default.
   Glass over the emerald glow, a hairline on its right. Workspace name and the
   fold at the top, then the product's own ten rows in its own order: Brief;
   Records — Contacts, Companies, Leads, Filters & views; Work — Worklist,
@@ -281,7 +281,8 @@ scrolls inside itself.
   queues that used to badge (approvals, tasks) are lanes of the Worklist, which
   reports its counts on the page. Settings is not a row; it opens from the
   account menu and publishes its own second level (You / Admin settings) as a
-  210px column beside the rail. The agent's orb stays at the foot.
+  210px column on the same glass, which the sidebar becomes while a settings
+  route is open. The agent's orb stays at the foot.
 - **Top bar**: 48px, glass, a hairline under it. The breadcrumb on the left,
   the command field in the middle (`⌘K`), the reader's monogram on the right.
   It is the application's one bar and every screen has it. Nothing that
@@ -608,7 +609,7 @@ place under the identity.
 
 ### The shell around every record
 
-The sidebar collapses to a 52px icon rail and that is the default. Labels
+The sidebar collapses to a 64px icon rail and that is the default. Labels
 return on hover as tooltips, the agent's orb stays at the foot. The details
 panel on the right of the reading opens from the Details control at the end
 of the tab row, and starts closed.

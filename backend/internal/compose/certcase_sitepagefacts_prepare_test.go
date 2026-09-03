@@ -145,7 +145,10 @@ func TestSitePageFactsCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)
 		}
-		if !strings.Contains(err.Error(), "field to value") {
+		// "not a mapping" rather than "field to value": with two spellings to
+		// read, the first thing an expectation has to be is a mapping at all —
+		// the same refusal site_extract/profile gives for the same input.
+		if !strings.Contains(err.Error(), "not a mapping") {
 			t.Errorf("the refusal does not say what an expectation must be: %v", err)
 		}
 	}

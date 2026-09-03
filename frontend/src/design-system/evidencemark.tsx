@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { Button } from "./atoms";
+import { useHoverIntent } from "./hoverintent";
 import type { ConfidenceLevel, Provenance } from "./trust";
 import { ProvenanceTag } from "./trust";
 import "./evidencemark.css";
@@ -53,6 +54,14 @@ export function EvidenceMark({
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  // The receipt opens under a pointer that has SETTLED on the value, and
+  // closes once the pointer has left both the value and the receipt: a claim
+  // is checked by resting on it, not by clicking through to it. The click
+  // still toggles, for a touch screen and for a reader who wants it to stay.
+  const hover = useHoverIntent(
+    () => setOpen(true),
+    () => setOpen(false),
+  );
 
   // Registered while this mark is the open one, and cleared on close or
   // unmount so a removed mark never leaves a closer pointing at a component
@@ -111,7 +120,7 @@ export function EvidenceMark({
   }
 
   return (
-    <span className="evmark">
+    <span className="evmark" {...hover}>
       <button
         ref={triggerRef}
         type="button"

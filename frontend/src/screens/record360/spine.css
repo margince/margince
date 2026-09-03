@@ -79,12 +79,14 @@
   display: block;
   block-size: 13px;
   margin-block-start: var(--space-2);
+  /* The rule's own colour, not the tint: the axis is the evidence for the
+     sentence over it and reads at full strength, the dot on it the same. */
   /* Behind today the axis is SOLID and carries the accent: this is time the
      record accounts for, and the tone is the one the product gives to work
      people did. Ahead of today it goes dotted and grey — those stops have not
      happened, and a solid rule to a date nobody has reached draws the future
      as firmly as the past. */
-  border-block-start: 2px solid var(--accentMed);
+  border-block-start: 2px solid var(--accent);
 }
 .co-spine-dot {
   position: absolute;
@@ -126,8 +128,13 @@
    Amber, not indigo. The waiting is a warning about the account, not a thing
    Margince authored, and indigo means authorship everywhere else here. */
 .co-spine-gap .co-spine-when {
-  font-size: var(--fs-h1);
+  /* The one count outside the mono face: it is read as a word ("12 days")
+     and compared with nothing, so it takes the display face at the size the
+     reading's own figures use. */
+  font-family: var(--f-display);
+  font-size: 26px;
   font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
   color: var(--warn);
 }
 .co-spine-gap .co-spine-rail {

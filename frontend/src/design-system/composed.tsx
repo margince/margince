@@ -545,8 +545,16 @@ const TIMELINE_KIND_LABEL = {
  * past the field edits between them without reading either — which is the
  * whole reason the two kinds share one column instead of two tabs.
  */
+// Solid for something SAID, hollow for something that merely changed, and
+// indigo for a change the agent made: the rail says who wrote before a reader
+// reads a word of it.
 function dotClass(entry: TimelineEntry): string {
-  return entry.kind === "change" ? "tl-dot tl-dot-quiet" : "tl-dot";
+  if (entry.kind !== "change") {
+    return "tl-dot";
+  }
+  return entry.provenance.kind === "agent"
+    ? "tl-dot tl-dot-agent"
+    : "tl-dot tl-dot-quiet";
 }
 
 const TIMELINE_ICON = {

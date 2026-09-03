@@ -251,7 +251,7 @@ export function WorkspaceRail({
   // Which of the route's levels the panel is showing, and the two ways the
   // reader moves between them (app/navlevel.tsx). A section's entries take the
   // panel OVER rather than hanging off the destinations: 64px cannot carry two
-  // levels, and 252px carrying both reads as a list of twenty places to go.
+  // levels, and 224px carrying both reads as a list of twenty places to go.
   //
   // At phone width the panel is a bottom bar of four destinations, and it KEEPS
   // them on a section route — a bar that hands its four tabs over to a section
