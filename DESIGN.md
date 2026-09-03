@@ -98,7 +98,7 @@ checked against it. The sources are listed at the end of the section.
    keycap is drawn as a small physical key (a one-step gradient, a 4px
    radius). **Rule:** `⌘K` on the command field, `/` on the ask field, and the
    shortcut on every menu row.
-10. **Motion: transform and opacity only, three durations, one easing
+10. **Motion: transform and opacity only, four durations, one easing
     family; success states and figures move.** Stripe animates a number into
     its new value and marks success quietly; every guide holds hover at
     150–200ms and larger moves at ~300ms and forbids animating layout.
@@ -124,7 +124,7 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 1. **A lit ground, and one pane per zone.** The page is a pale green paper lit
    from two corners, an emerald glow behind the sidebar and an indigo one
    behind the far edge. Each zone of a record is one white pane on it, with a
-   hairline edge and a 14px corner, and inside a pane there is only ever a
+   hairline edge and an 18px corner, and inside a pane there is only ever a
    title, a rule and rows. Dark is the same room with the lights down.
 2. **Everything is a list.** A record's attributes are a list of label and
    value in a panel on the left that folds. What happened is a list. What
@@ -155,7 +155,7 @@ ground, which is lit, and the surface, which is one translucent pane per zone.
 | Token | Value | Role |
 |---|---|---|
 | `--bg` | `#f1f5f2` | The paper the page is read on. |
-| `--glowA` / `--glowB` | `rgba(24,190,120,.16)` / `rgba(91,97,214,.12)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the bottom-right. Radials of 900×620, the only decoration on the page. |
+| `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the bottom-right. Radials of 900×620, the only decoration on the page. |
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
@@ -167,7 +167,7 @@ ground, which is lit, and the surface, which is one translucent pane per zone.
 ### Dark
 
 The same room with the lights down: `--bg #0a100e`, the glows brighter
-(`.22` / `.24`) because they are the only light, panes at
+(`.10` / `.20`) because they are the only light, panes at
 `rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
 lifted to `#b3b7f5`. The three-state theme pattern (`:root`,
@@ -194,12 +194,14 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 | Role | Family | Where |
 |---|---|---|
 | Display | **Bricolage Grotesque** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
-| Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 13.5px, 72ch. |
+| Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
 | Figures | **Geist Mono** 500, tabular | A reading's figure at 22px (`-0.03em`), and every amount, count, date and identifier in a row or a cell. |
 
 - **Weight 600 is for the display face.** Everything that must stand out in a
   row does it at 500 in the body face.
-- **No uppercase anywhere.** Labels are sentence case in a lighter ink.
+- **Uppercase is one thing: the eyebrow** (`.t-eyebrow`, 10.5px, `.08em`,
+  in a lighter ink) — a reading's label, a timeline entry's kind, the TODAY
+  marker. Every other label is sentence case.
 
 ## 5. Space, shape, depth
 
@@ -213,8 +215,9 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
-- **Radii by role**: 16px for a pane and the details panel, 12px for a board
-  card and the agent's row, 6px for a control and a pill, full for a monogram.
+- **Radii by role**: 18px for a pane, the details panel and a reading card;
+  14px for a board card and the agent's row; 10px for a control; full for a
+  pill and a monogram.
 - **Depth is light, not shadow.** A pane is translucent over the lit ground
   with a hairline edge; that is its whole elevation. Nothing at rest casts a
   shadow, glows or has a gradient. A popover, menu or drawer takes the one
@@ -323,7 +326,7 @@ should lead):
 1. **Every fact has one home.** If a deal appears in the readings, it does not
    also appear in the rail. If people are in the context column, they are not
    also a section in the work column.
-2. **Zones, numbered, in reading order.** A record page is six zones with a
+2. **Zones, numbered, in reading order.** A record page is five zones with a
    heading each. The number is not decoration: it is the order a rep reads an
    account in, and it lets a colleague say "look at 3".
 3. **One list of what needs you.** The agent's read of the record is the lead
@@ -381,8 +384,8 @@ one present, none at full depth:
   no free-text field until the answers earn one), About (the lead sentence,
   one paragraph, its sources, "Profile" for the rest), People as chips with
   a "+N".
-- **The details panel is hidden until asked**, and the Details control in
-  the top bar opens it on the right at 300px with the fields, the people and
+- **The details panel is hidden until asked**, and the Details control at
+  the end of the tab row opens it on the right at 300px with the fields, the people and
   the tags. It is the only thing on the glance that starts closed.
 - No zone numbers. Commercial and the rest of About are the deep overview,
   one click away, with the same panes.
@@ -470,7 +473,7 @@ the rest; nothing below is lost, it is one click further in.
 
 1. **Who.** Mark, name, lifecycle and relationship badges, one line of facts
    (site · industry · size · owner · way in), one quiet line (last contact ·
-   created · captured by), and the verbs: Write email (filled), Log activity,
+   created · captured by), and the verbs: Write email, Log activity,
    Add task, more.
 2. **Where this account stands.** Four readings. Health carries the call: the
    standing word, whose move it is, and the three rated dimensions as dots.
@@ -503,7 +506,8 @@ once.
 
 1. **Who.** Round monogram, name, the buying-role badge, title and employer,
    the glyph line (email, phone, city, LinkedIn, owner), and the verbs: Write
-   email (the transport, filled), Call, Add task, more.
+   email (named for the transport when there is exactly one), Call, Add task,
+   more — all outlined.
 2. **Where you stand with her.** One strip of seven: Overall (the pulse
    verdict, in its colour only when not withheld), Last inbound, Last
    outbound, In · out as counts, Colleagues, Next meeting, Consent.
@@ -637,7 +641,8 @@ rows on one baseline: the date at 11.5px in `--ink3`, then the **rail** — a
 right of a dot is the span that stop covers — then the title at 13px, then
 the detail. The gap stop takes 1.5× the width, because on this axis the
 width is the waiting: its date row is the day count at 26px 600 in amber in
-the display face, its rule is dashed amber, and it has no dot, because
+the display face — the one count outside the mono face, because it is read
+as a word ("12 days") and compared with nothing — its rule is dashed amber, and it has no dot, because
 nothing happened. **Today is a marker, not a stop**: a 2px × 15px black bar
 on the rail with TODAY in 10.5px uppercase and the date under it, in a column
 that is only as wide as its label. Right of it the rule turns dotted grey and
@@ -750,11 +755,12 @@ inventory. The structure above holds; these are the facts it now carries.
   call with the thread under it, then what needs a person, then the pairs.
   That is the order here, with the thread as its own zone between the
   readings and the needs, because the 360 opens on what happened last.
-- **The contact's strip is four readings**: Whose move (Yours / Theirs /
+- **The contact's strip on main is four readings**: Whose move (Yours / Theirs /
   Gone quiet / Never spoken, with "last from them"), Open promises (a count,
   late in red), Deals they decide (with "Open deals"), Next meeting (with
   "Open meetings"). Consent left the strip and lives in the panel's channel
-  rows. The call is always drawn, "Not shown" when withheld. Up to three open
+  rows. The target strip (the contact record above) is seven and brings
+  Consent back; the four on main are what it grows from. The call is always drawn, "Not shown" when withheld. Up to three open
   tasks join the needs list with the assignee as the mark.
 - **The deal's readings moved onto the overview**, and Momentum opens "See the
   ledger". The stage stepper follows them. Tags are on the deal. The briefing
@@ -800,18 +806,18 @@ looks now.
 
 | Primitive | Treatment |
 |---|---|
-| `Button` primary | `--accent` fill, white text, 6px radius, 30px, weight 500. One per view. |
-| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only at 30×30 for the overflow. |
+| `Button` primary | `--accent` fill, white text, 10px radius, 36px, weight 500. One per view. |
+| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only at 36×36 for the overflow. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | Outlined in `--bad`; fills only inside a `ConfirmModal`. |
-| `TextInput` / `Select` | White, `--line2` outline, 30px, 6px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
+| `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
 | `Badge` | `quiet` by default: a 6px dot and a word. The pill (`--bg3`, 20px, 11.5px 500) is for the one status that must not be missed and for the record's standing badges beside its name. |
 | `Chip` | The same pill. There is one pill. |
-| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 14px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | A **cell** inside the standing pane: label at 11.5px, figure at 22px mono, basis at 12px; cells separated by a vertical hairline, not by boxes. |
+| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and an 18px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
+| `StatCard` | The **reading card**: `--pane` with the hairline and an 18px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
-| `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 38px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
-| `RecordTabs` | Text tabs on a rule; the open one in `--ink` with a 2px ink underline; counts at 11px in `--ink4`. |
+| `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
+| `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |
 | `SegmentedControl` | `--bg3` track, white pressed segment with a faint shadow, 12px. |
 | `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
