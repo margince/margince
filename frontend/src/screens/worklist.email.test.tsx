@@ -180,6 +180,24 @@ describe("a waiting row on the queue", () => {
     expect(rowEl.textContent).toContain("Customer waiting");
   });
 
+  // Suppressing the title line when a summary is present is only safe because
+  // EmailEntry always draws SOMETHING in its place. A summary with no subject
+  // of its own is the case that would otherwise leave a row with no name at
+  // all — the reader would see a date, a badge and a blank line where the
+  // message should be.
+  it("still names a row whose email carries no subject", async () => {
+    const noSubject = row({
+      ...waitingEmail,
+      email_summary: { ...waitingEmail.email_summary, subject: null },
+    } as Partial<WorklistItem>);
+    stub(day({ queue: [noSubject] }));
+    renderWorklist();
+
+    await waitFor(() =>
+      expect(screen.getAllByText("No subject").length).toBeGreaterThan(0),
+    );
+  });
+
   it("leaves a waiting chat on the plain title it had", async () => {
     stub(day({ queue: [waitingChat] }));
     renderWorklist();
