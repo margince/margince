@@ -12,25 +12,37 @@ package gates
 // decision is what makes a refusal answerable, and this is what stops a new
 // send path from quietly not taking one.
 //
-// Derived rather than listed: the corpus is every caller of a Stage*Tx method
-// on the comms store, so a send path added tomorrow is judged the day it is
-// written. A hand-kept list would go stale exactly when a new door appeared,
-// which is the failure this gate exists to prevent.
+// Derived rather than listed, on both axes. The method names come from the
+// comms store's own declarations, so a fourth staging method is judged the day
+// it is declared; and the corpus walks every package under the compose tier,
+// because a stager wired through WithDelivery may live in a subpackage. A
+// hand-kept list on either axis would go stale exactly when a new door
+// appeared, which is the failure this gate exists to prevent.
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
+	"io/fs"
+	"path/filepath"
+	"strings"
 	"testing"
 )
+
+// commsStoreDir holds the delivery store whose staging methods this gate
+// derives its subject from.
+const commsStoreDir = "internal/modules/comms"
 
 func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 	t.Parallel()
 
 	fset := token.NewFileSet()
+	stagers := stagingMethodNames(t, fset)
+
 	staging := map[string]bool{}     // functions that stage a delivery
 	authorizing := map[string]bool{} // functions that record a decision
 
-	for _, file := range parsePackageDir(t, fset, composeTier) {
+	for _, file := range parseTreeUnder(t, fset, composeTier) {
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
 			if !ok {
@@ -48,14 +60,10 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 				if !ok {
 					return true
 				}
-				switch sel.Sel.Name {
-				// The comms store's two delivery-staging entry points, named
-				// exactly. A prefix match also catches unrelated staging —
-				// StageOrJoinPendingInTx on the site-read transport — which
-				// queues no message and owes no decision.
-				case "StageTx", "StageChannelTx":
+				switch {
+				case stagers[sel.Sel.Name]:
 					staging[name] = true
-				case "AuthorizeStagingTx":
+				case sel.Sel.Name == "AuthorizeStagingTx":
 					authorizing[name] = true
 				}
 				return true
@@ -74,6 +82,62 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 				"a message queued with nothing on record about why is one nobody can answer for", fn)
 		}
 	}
+}
+
+// stagingMethodNames reads the comms store's own declarations for the methods
+// that queue a message. Deriving them is what makes a fourth door — a
+// StageBroadcastTx, say — a subject of this gate on the day it is written
+// rather than on the day somebody remembers to add it here.
+//
+// StageOrJoinPendingInTx on the site-read transport is deliberately not
+// matched: it declares no delivery and queues no message, so it owes no
+// decision. That is why this reads the comms store alone rather than every
+// Stage* method in the tree.
+func stagingMethodNames(t *testing.T, fset *token.FileSet) map[string]bool {
+	t.Helper()
+	names := map[string]bool{}
+	for _, file := range parsePackageDir(t, fset, commsStoreDir) {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || !fn.Name.IsExported() {
+				continue
+			}
+			if strings.HasPrefix(fn.Name.Name, "Stage") && strings.HasSuffix(fn.Name.Name, "Tx") {
+				names[fn.Name.Name] = true
+			}
+		}
+	}
+	if len(names) == 0 {
+		t.Fatalf("found no Stage…Tx methods in %s — the scan is looking in the wrong place", commsStoreDir)
+	}
+	return names
+}
+
+// parseTreeUnder parses every hand-written Go file under a directory, walking
+// into subpackages. A gate that names identifiers needs one package's scope,
+// but this one counts call sites, and a call site in a subpackage stages just
+// as real a message as one beside the wiring.
+func parseTreeUnder(t *testing.T, fset *token.FileSet, root string) []*ast.File {
+	t.Helper()
+	var files []*ast.File
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		files = append(files, file)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking %s: %v", root, err)
+	}
+	return files
 }
 
 // receiverQualified names a function the way this gate must count it: the
