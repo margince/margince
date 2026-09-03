@@ -42,6 +42,19 @@ type ThreadAudienceOutcome struct {
 	// keeps private is itself private, and "your colleague is holding this"
 	// already says more than a held message should.
 	HeldByOthers int `json:"held_by_others"`
+	// ActivityIDs names the caller's own messages the decision reached, so a
+	// client can refresh exactly them.
+	//
+	// A thread decision changes several messages at once, and they are filed
+	// against whatever records each one touches — a message on this deal, a
+	// second on that contact. A caller refreshing only the record it happened
+	// to be looking at leaves the others reading the audience they had before
+	// the press, which is the shape of a control that appeared to do nothing.
+	//
+	// These are ids the caller imported, so naming them discloses nothing they
+	// could not already read: the same capture_import row that put a message in
+	// this list is an arm of the audience gate.
+	ActivityIDs []ids.UUID `json:"activity_ids"`
 }
 
 // ThreadAudienceSetter applies an owner's decision to their own view of a
@@ -103,6 +116,7 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 			}
 		}
 		outcome.Messages = len(messages)
+		outcome.ActivityIDs = messages
 		held, err := othersHoldingTx(ctx, tx, messages, actor.UserID)
 		if err != nil {
 			return err

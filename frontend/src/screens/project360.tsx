@@ -22,7 +22,7 @@ import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
-import { TimelineActions } from "./compose";
+import { TimelineActions } from "./timelineactions";
 import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
 import { ProjectCompanies } from "./projectcompanies";

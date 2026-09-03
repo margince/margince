@@ -101,7 +101,8 @@ import {
   hasWorkInFlight,
   sinceLastVisitFooter,
 } from "./companywork";
-import { ComposeModal, TimelineActions } from "./compose";
+import { ComposeModal } from "./compose";
+import { TimelineActions } from "./timelineactions";
 import {
   CreateAction,
   type CreateField,

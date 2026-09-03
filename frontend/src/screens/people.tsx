@@ -28,7 +28,7 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { TimelineActions } from "./compose";
+import { TimelineActions } from "./timelineactions";
 import { ConsentSection } from "./consent";
 import { RecordContextPanel } from "./context";
 import { CreateAction, type CreateField, type FormRows } from "./create";

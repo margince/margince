@@ -86,7 +86,7 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { TimelineActions } from "./compose";
+import { TimelineActions } from "./timelineactions";
 import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
