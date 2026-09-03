@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // installationSettingsObject is the RBAC object gating the installation
@@ -142,6 +143,35 @@ var BaseLanguage = settings.Define[string](
 	},
 ).AsInstallationIdentity()
 
+// Country is where this installation is established, as a lower-case ISO
+// 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
+// rather than a permissive one: with no country to resolve, the outbound
+// authorization engine falls back to the floor every jurisdiction shares —
+// consent, with no exception — instead of picking a lenient default nobody
+// chose.
+//
+// It is the input to jurisdiction resolution, not a display field. Which
+// messaging rules bind an outbound message follows from where the CONTROLLER
+// is established as well as where the recipient is, and this names the first
+// half. A wrong value here is a compliance fact, not a cosmetic one, which is
+// why it validates as a code rather than accepting free text.
+//
+// Lower-case because that is the spelling jurisdiction.Code carries and a pack
+// declares; accepting either case here would make "DE" and "de" two
+// installations as far as rule lookup is concerned.
+var Country = settings.Define[string](
+	"installation.country",
+	installationSettingsObject,
+	"update",
+	"",
+	func(v string) error {
+		if v == "" {
+			return nil
+		}
+		return jurisdiction.Code(v).Validate()
+	},
+).AsInstallationIdentity()
+
 // FiscalYearStartMonth is the month the installation's business year begins,
 // 1..12. January is the default, which is what every installation reported by
 // before this existed — so an installation that never touches it sees no
@@ -252,6 +282,7 @@ func Definitions() []settings.Definition {
 		Timezone,
 		BaseCurrency,
 		BaseLanguage,
+		Country,
 		FiscalYearStartMonth,
 		EnabledOidcProviders,
 		SMTPPasswordRef,
@@ -392,4 +423,24 @@ func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (str
 		return err
 	})
 	return name, err
+}
+
+// CountryOf resolves where the installation is established inside a
+// transaction the caller already holds — the code that selects which
+// jurisdiction's messaging rules an outbound decision is taken under.
+//
+// ApplyTx rather than RequireTx, unlike its three siblings above. Those three
+// are seeded at bootstrap and an unset row means a broken installation; this
+// one is not, because it arrived after installations already existed. An
+// upgraded installation has no row until somebody sets one, and refusing there
+// would stop every outbound message on a tree that sent mail perfectly well the
+// day before. So an absent row reads as the registered default — the empty
+// string — which resolves to no jurisdiction and therefore adds no
+// jurisdiction-specific permission to anybody's mail.
+func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
+	code, err := settings.ApplyTx(ctx, tx, Country)
+	if err != nil {
+		return "", err
+	}
+	return jurisdiction.Code(code), nil
 }

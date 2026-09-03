@@ -30,6 +30,11 @@ const (
 	// Distinct from an objection because they are different legal facts, and a
 	// proof row that called one the other would misstate what somebody did.
 	ReasonConsentWithdrawn = "consent_withdrawn"
+	// ReasonFrequencyCapReached is a jurisdiction's ceiling on how many
+	// advertising messages one address may receive in a window. A fact about
+	// VOLUME rather than about the person: nothing they did refuses this
+	// message, and the same message is lawful again once the window rolls.
+	ReasonFrequencyCapReached = "frequency_cap_reached"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 )

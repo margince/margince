@@ -177,7 +177,14 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 // this is composition naming a dependency, every caller assigns it into the
 // seam itself, and widening here would only hide which gate was built.
 func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
-	return consent.NewGate(consent.NewStore(InstallationDB(pool)))
+	return consent.NewGate(consent.NewStore(InstallationDB(pool))).
+		// Where the installation is established, which selects the messaging
+		// rules a decision is taken under. Injected rather than read directly
+		// because the setting belongs to identity and consent may not import a
+		// sibling — and injected HERE, in the one construction every send path
+		// goes through, so no surface can end up with a gate that resolves no
+		// jurisdiction and quietly skips a statutory ceiling.
+		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))
 }
 
 // lateApprovalEffect is one kind's approve-side pair: the executor that runs

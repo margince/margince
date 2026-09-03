@@ -114,8 +114,17 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		legacy = commsauthz.VerdictAllow
 	}
 	set := commsauthz.DecisionSet{}
+	now := g.store.now().UTC()
 	for _, r := range req.Recipients {
 		d, err := g.decideOne(ctx, tx, r, req.PurposeKey)
+		if err != nil {
+			return commsauthz.DecisionSet{}, err
+		}
+		// The ceiling is applied HERE and not at staging, because it counts
+		// what has already been delivered and that number moves while a message
+		// waits in the queue. A cap checked at staging would be answering about
+		// a moment that has passed by the time the message goes.
+		d, err = g.applyFrequencyCap(ctx, tx, d, now)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
