@@ -50,6 +50,12 @@ var projectFilterScope = map[string]string{fieldProjectID: tableProject}
 
 // prebuiltReports is the report catalog (data-model §13 shape): keys
 // are never UUIDs, so saved-report ids cannot collide.
+// fieldDaysInStage is the stage-age measure, named because it is spelled in
+// the measure map and in both default aggregates — and a name written three
+// times can come to be written three ways, which makes an aggregate reference
+// a measure that does not exist.
+const fieldDaysInStage = "days_in_stage"
+
 var prebuiltReports = map[string]reportSpec{
 	"open-deals-per-company": {
 		entity:    datasource.EntityDeal,
@@ -82,6 +88,59 @@ var prebuiltReports = map[string]reportSpec{
 		defaultBy:       []string{fieldOrganizationID},
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "open_deals"},
+		},
+	},
+	// How long deals have sat where they are.
+	//
+	// Measured from the last time a deal ENTERED its current stage, not from
+	// when it was created: a deal that moved forward last week is not an old
+	// deal, and reading creation age as stage age would flag every long sale
+	// the moment it started.
+	//
+	// The measure is days, so a percentile over it answers "what does typical
+	// look like here" — which is the whole reason median and p75 exist on this
+	// engine. Below the sample floor those answer NULL, and a stage with three
+	// deals in it says so rather than reporting one deal's age as the norm.
+	"stage-age": {
+		entity: datasource.EntityDeal,
+		table:  tableDeal,
+		joins: []string{
+			joinStageForWinProbability,
+			// The most recent entry into the CURRENT stage. A deal that moved
+			// out and back counts from its return, because that is when the
+			// clock a reader cares about started again.
+			`LEFT JOIN LATERAL (
+				SELECT max(h.changed_at) AS entered_at
+				FROM deal_stage_history h
+				WHERE h.deal_id = t.id AND h.to_stage_id = t.stage_id
+			) entry ON true`,
+		},
+		baseWhere: whereArchivedNull + " AND t.status = 'open'",
+		basePlain: "live (unarchived) open deals, aged from the last time each entered its current stage",
+		dimensions: map[string]string{
+			fieldStageID:    colStageID,
+			fieldPipelineID: colPipelineID,
+			fieldOwnerID:    colOwnerID,
+		},
+		measures: map[string]string{
+			// Days, as a whole number. A deal with no stage history at all —
+			// one whose stage was set at creation before any move — falls back
+			// to its creation date rather than reporting NULL: the age is real
+			// even where the history is silent about it.
+			fieldDaysInStage: "EXTRACT(DAY FROM (now() - COALESCE(entry.entered_at, t.created_at)))",
+		},
+		filters: map[string]string{
+			fieldPipelineID: colPipelineID,
+			fieldOwnerID:    colOwnerID,
+		},
+		defaultBy: []string{fieldStageID},
+		defaultAggs: []reportAggregate{
+			{Fn: aggFnCount, As: aliasDeals},
+			// Median and p75 together, because one without the other invites
+			// the reading that the middle deal is the whole story. The gap
+			// between them is what says whether a stage has a long tail.
+			{Fn: aggFnMedian, Field: fieldDaysInStage, As: "median_days"},
+			{Fn: aggFnP75, Field: fieldDaysInStage, As: "p75_days"},
 		},
 	},
 	"deals-by-stage": {

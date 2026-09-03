@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 68,
-    "tokens": 20937,
+    "tokens": 20998,
     "median_tool_tokens": 271,
-    "mean_tool_tokens": 307
+    "mean_tool_tokens": 308
   },
   "agents": [
     {
@@ -71,7 +71,7 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1213
+      "tokens": 1274
     },
     {
       "name": "preview_import",
