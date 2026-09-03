@@ -116,7 +116,14 @@ type askedClaim struct {
 }
 
 type askedAnswer struct {
-	Claims []askedClaim `json:"claims"`
+	// A POINTER so an absent key is distinguishable from an empty list. They
+	// mean opposite things here: `{"claims":[]}` is the answer this site asks
+	// for when the passages do not cover the question, while `{}` — or any
+	// reply carrying none of this site's keys, which decodes to exactly the
+	// same zero value — is a reply in a shape this site does not take. Reading
+	// the second as the first would report "not covered", a confident statement
+	// about the corpus, on a reply that never answered the question.
+	Claims *[]askedClaim `json:"claims"`
 }
 
 // CorpusAskRequest builds the ONE model call this site makes.
@@ -312,12 +319,16 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) ([]crmco
 	if err := json.Unmarshal([]byte(ai.Unfence(replyText)), &parsed); err != nil {
 		return nil, fmt.Errorf("the corpus ask reply is not the shape this site takes: %w", err)
 	}
+	if parsed.Claims == nil {
+		return nil, errors.New(`the corpus ask reply carries no "claims" key: an answer that cites nothing ` +
+			`is written as {"claims": []}`)
+	}
 	byID := make(map[string]knowledge.Passage, len(passages))
 	for _, p := range passages {
 		byID[p.ChunkID.String()] = p
 	}
 	var kept []crmcontracts.KnowledgeClaim
-	for _, c := range parsed.Claims {
+	for _, c := range *parsed.Claims {
 		p, ok := byID[c.ID]
 		if !ok {
 			// The schema's enum should make this unreachable; it is checked

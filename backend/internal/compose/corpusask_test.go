@@ -41,9 +41,14 @@ func askPassages() []knowledge.Passage {
 	}}
 }
 
-// corpusReply renders a model answer over the given passage ids.
+// corpusReply renders a model answer over the given passage ids. A call with no
+// claims renders `{"claims": []}` rather than a null, which is the difference
+// between the empty answer this site asks for and a reply it cannot read.
 func corpusReply(claims ...askedClaim) string {
-	out, err := json.Marshal(askedAnswer{Claims: claims})
+	if claims == nil {
+		claims = []askedClaim{}
+	}
+	out, err := json.Marshal(askedAnswer{Claims: &claims})
 	if err != nil {
 		panic(err)
 	}
@@ -454,5 +459,58 @@ func TestAnAnswerWithNoClaimsIsNotReAsked(t *testing.T) {
 	}
 	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeNotCovered {
 		t.Fatalf("outcome = %q, want not_covered", answer.Outcome)
+	}
+}
+
+// A reply carrying none of this site's keys decodes to the same zero value an
+// empty answer would, and the two mean opposite things: one says the passages
+// do not cover the question, the other never answered it. Reading the second as
+// the first would report not_covered — a confident statement about the corpus —
+// on a reply nobody could read.
+func TestAReplyWithoutAClaimsKeyIsRefusedRatherThanReadAsEmpty(t *testing.T) {
+	passages := askPassages()
+	for _, reply := range []string{
+		`{}`,
+		`{"claims":null}`,
+		`{"answer":"I could not find that in the documents."}`,
+	} {
+		if _, err := GroundCorpusAnswer(reply, passages); err == nil {
+			t.Errorf("%s was read as an empty answer rather than refused", reply)
+		}
+	}
+}
+
+// And the empty answer itself still is not refused, which is the whole reason
+// the two shapes had to be told apart rather than both rejected.
+func TestAnExplicitlyEmptyClaimsListIsNotRefused(t *testing.T) {
+	kept, err := GroundCorpusAnswer(`{"claims":[]}`, askPassages())
+	if err != nil {
+		t.Fatalf(`{"claims":[]} was refused: %v`, err)
+	}
+	if len(kept) != 0 {
+		t.Fatalf("an empty answer kept %d claim(s)", len(kept))
+	}
+}
+
+// The refusal reaches the model: a reply the site cannot read buys the same
+// re-ask a malformed one does, rather than settling for not_covered.
+func TestAReplyWithoutAClaimsKeyIsReAsked(t *testing.T) {
+	passages := askPassages()
+	lane := &reAskingLane{
+		fixedLane: fixedLane{text: `{}`},
+		second: corpusReply(askedClaim{
+			Text:  "Messages are kept for 400 days.",
+			ID:    passages[0].ChunkID.String(),
+			Quote: "kept for 400 days",
+		}),
+	}
+	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
+		passages, string(textlang.English), corpusQuietLog())
+
+	if lane.refused == nil {
+		t.Fatal("a reply with no claims key was accepted, so nothing was re-asked")
+	}
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		t.Fatalf("outcome = %q, want answered from the second reply", answer.Outcome)
 	}
 }
