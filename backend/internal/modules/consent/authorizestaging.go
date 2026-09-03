@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -49,6 +50,14 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 			"consent: a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
 	}
 
+	// The posture, read on the caller's transaction — the same one the
+	// decision rows commit on, so a row's stamped mode is the one that was
+	// live when it was taken.
+	modes, err := settings.ApplyTx(ctx, tx, AuthorizationModes)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+
 	setID := ids.NewV7()
 	set := commsauthz.DecisionSet{}
 	for _, r := range req.Recipients {
@@ -57,7 +66,9 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 			return commsauthz.DecisionSet{}, err
 		}
 		d.Phase = commsauthz.PhaseStaging
-		d.Mode = commsauthz.ModeObserve
+		// From the RESOLVED category, so the authority stamped on the row is
+		// the one belonging to what the engine decided the message is.
+		d.Mode = ModeFor(modes, d.Resolved)
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
 	}
