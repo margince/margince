@@ -226,6 +226,32 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   title, a rule and rows. The only enclosed shapes inside a pane are the
   agent's tinted row and a staged row's dashed edge.
 
+### More, and less
+
+One layout holds a record with nothing on file and a record with forty
+deals. A pane exists only when it has something to say: an empty zone is one
+line in its place with its verb ("No deals yet · New deal"), a withheld zone
+is its sentence, and the order of zones never changes with content. A thin
+company leads with the deep-read card where the 360 would be; a thin contact
+shows its readings as "Not shown" without a tone and says nothing has been
+captured. A rich record is capped, not stretched: three rows and "N more"
+into the tab, five readings and no sixth, three claims in the 360 sentence,
+six stops on the spine, five in the folded thread, the lead row plus three in
+What needs you, and "at least N" on a truncated page.
+
+### Responsiveness
+
+One ladder for every screen, on the product's existing breakpoints: at
+1400px the figures drop a size and five readings stay across; under 1200px
+the readings wrap, the two columns stack, the details panel becomes a drawer
+over the page and the tab strip scrolls in its own box; under 720px the head
+stacks (mark and name, facts, then primary + more), readings go two per row,
+and the spine and the map scroll sideways in their own boxes; at 390px the
+phone bar and the no-sideways-scroll rule hold. Fixed widths exist only for
+the details panel and the map; everything else is `fr`, `minmax(0, …)` and
+`min-width: 0`. A page never scrolls horizontally; the thing that is too wide
+scrolls inside itself.
+
 ## 6. The shell
 
 ```
@@ -777,28 +803,14 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
 
 ## 11. Adopting it
 
-The tokens above land in `frontend/src/design-system/tokens.css`, and
-`tokens.test.ts` pins values, so a repaint is a change to both in one commit —
-the test is what proves the canon moved rather than one screen. The order of
-work that gets the most visible change for the least churn:
-
-1. **The shell.** The two glows on the ground, the sidebar as glass with the
-   fold, the top strip to a 44px row with the breadcrumb and the command field
-   toggle. One file
-   each (`shell.css`, `topbar.css`), and the whole product stops looking like a
-   template.
-2. **Type.** The three families and the scale in §4. `check-font-lock.sh`
-   holds the count at three.
-3. **Zones.** Restyle `Panel` to one translucent pane per zone with a
-   display-face title, a hairline and rows. Every record page and settings
-   page changes with it.
-4. **Figures.** The mono face, tabular, on every figure through `StatCard`
-   cells, `ListTable` cells and `FieldGrid` values.
-5. **Grounds.** Move the paper and surface values; re-check every `color-mix()`
-   derivation in both themes with Storybook's theme control.
-
-Each step is one PR and a Storybook pass in both themes. Verify contrast on
-the new grounds with the existing axe suite before the values are pinned.
+The step-by-step plan, PR by PR, with the gates each step must keep green,
+the five record pages zone by zone with every state they carry, and the
+features a restyle must not lose, is
+[docs/how-to/adopt-the-design.md](docs/how-to/adopt-the-design.md). In one
+line: tokens and type first, then atoms, then the record primitives and the
+shell, then company as the reference page with its e2e rewritten, then
+contact, deal, lead and project, then the sub pages and the maps, then the
+rest one screen at a time.
 
 ## 12. Checklist for a new screen
 
