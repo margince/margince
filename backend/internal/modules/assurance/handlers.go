@@ -5,20 +5,27 @@ package assurance
 
 import (
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Handlers is the assurance surface.
 type Handlers struct {
 	store *Store
+	// now is injected so the suppression ceiling is a function of the request's
+	// own clock rather than of whenever the process happened to start.
+	now func() time.Time
 }
 
 // NewHandlers binds the routes to the store.
-func NewHandlers(store *Store) Handlers { return Handlers{store: store} }
+func NewHandlers(store *Store, now func() time.Time) Handlers {
+	return Handlers{store: store, now: now}
+}
 
 // GetForecastAssurance answers the most recent completed run.
 func (h Handlers) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
@@ -67,4 +74,33 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		out.Sources = append(out.Sources, source)
 	}
 	return out
+}
+
+// ResolveInputCheck records somebody's answer to a finding.
+func (h Handlers) ResolveInputCheck(
+	w http.ResponseWriter, r *http.Request, id openapi_types.UUID,
+) {
+	var body crmcontracts.ResolveInputCheck
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	in := Resolution{
+		Outcome:     string(body.Outcome),
+		Reason:      derefString(body.Reason),
+		EvidenceRef: derefString(body.EvidenceRef),
+		RemindAt:    body.RemindAt,
+		ExpiresAt:   body.ExpiresAt,
+	}
+	if err := h.store.Resolve(r.Context(), ids.UUID(id), in, h.now()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

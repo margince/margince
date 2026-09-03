@@ -448,6 +448,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/embeddings/reindex":                                        {Op: "EmbedReindexStart", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/exports":                                                   {Op: "createFilteredExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/filters/preview":                                           {Op: "previewFilter", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/forecast/assurance/exceptions/{id}/resolve":                {Op: "resolveInputCheck", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/forecast/calls":                                            {Op: "recordForecastCall", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/fx-rates":                                                  {Op: "setFxRate", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/fx-rates/propose-refresh":                                  {Op: "proposeFxRateRefresh", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
