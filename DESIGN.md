@@ -230,12 +230,12 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 ```
 ┌────────┬───────────────────────────────────────────────────────────────┐
-│ sidebar│ crumb        [ Search or run a command  ⌘K ]      Details · me │
+│ sidebar│ crumb        [ Search or run a command  ⌘K ]                me │
 │ (glass ├───────────────────────────────────────────────────────────────┤
 │  over  │ mark  NAME (display)  badges                  verbs, right     │
 │  the   │       facts line                                               │
-│  glow) │ tabs ───────────────────────────────────────────────────────── │
-│ Home   │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
+│  glow) │ tabs ──────────────────────────────────────────── [Details] │
+│ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
 │ RECORDS│ │ ● Margince read this record · {name} ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
 │ WORK   │ │ readings ┊ readings ┊ readings        ││ │ People / Seats    ││
@@ -248,18 +248,24 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 - **Sidebar**: 224px expanded, 52px collapsed, and collapsed is the default.
   Glass over the emerald glow, a hairline on its right. Workspace name and the
-  fold at the top, the navigation in groups under sentence-case labels, the
-  agent's orb at the foot. Collapsed, labels become tooltips and only the
-  task and approval counts stay, as small badges.
+  fold at the top, then the product's own ten rows in its own order: Brief;
+  Records — Contacts, Companies, Leads, Filters & views; Work — Worklist,
+  Pipeline, Projects; Intelligence — Reports, Ask Margince. No badges: the
+  queues that used to badge (approvals, tasks) are lanes of the Worklist, which
+  reports its counts on the page. Settings is not a row; it opens from the
+  account menu and publishes its own second level (You / Admin settings) as a
+  210px column beside the rail. The agent's orb stays at the foot.
 - **Top bar**: 48px, glass, a hairline under it. The breadcrumb on the left,
-  the command field in the middle (`⌘K`), the Details toggle and the reader's
-  monogram on the right. It is the application's one bar and every screen
-  has it.
+  the command field in the middle (`⌘K`), the reader's monogram on the right.
+  It is the application's one bar and every screen has it. Nothing that
+  belongs to a record sits in it: the Details toggle is in the page.
 - **Record head**: a 40px mark, the name in the display face with its badges
-  on the same line, one line of facts under it, the verbs on the right. All
-  verbs outlined; the filled verb is inside the needs list.
-- **Details panel**: 288px on the right of the reading, one pane, folds to
-  nothing from the Details toggle. It holds Ask, the attributes as label and
+  on the same line, one line of facts under it, the verbs on the right — the
+  outlined verbs, the one filled verb the call names, then the **more** button
+  (an outlined 40px square with the ellipsis) for everything else. The
+  **Details** control sits at the right end of the tab row, in the page.
+- **Details panel**: 300px on the right of the reading, one pane, closed
+  until the Details control at the end of the tab row opens it. It holds Ask, the attributes as label and
   value rows (with the evidence underline on a machine-read value and a
   lighter "Add …" on an empty one), and the short lists that describe the
   record (people, seats, tags, the Deal Room, documents). It is where the
@@ -391,14 +397,16 @@ The details panel is the same on every record: Ask at the top, then the
 panes that answer "who and what is this".
 
 **Sub pages.** Every tab in the strip opens a real page, in the same panes:
-History (the filter strip, the chronology grouped by day, load more), People
-(the coverage band, the roster as a table with list, board and map cuts),
+History (the filter strip, then the **rail timeline** below), People (the
+coverage band, **the committee map**, the roster as a table with list, board
+and map cuts),
 Deals (the commercial band, the deals table with won and lost), Tasks (tick,
 snooze, open), Finance (the readings, the invoice table, the provider), Documents
 (contracts, then files with category and origin), Profile (the details form,
 what they do, the facts Margince read with confirm and correct, linked records,
 data and tools), Partner (the programme and its deals); on a contact History,
-Network (the best route, the ways in, what changed), Deals (the seats she
+Network (the best route, the ways in, **the relationship map**, what changed),
+Deals (the seats she
 holds), Meetings (next, with brief and room; past), Data & tools (the provider
 snapshot and what Margince read), Documents; on a deal Documents and History;
 on a lead History.
@@ -548,9 +556,91 @@ place under the identity.
 ### The shell around every record
 
 The sidebar collapses to a 52px icon rail and that is the default. Labels
-return on hover as tooltips, the counts that matter (tasks, approvals) stay as
-small badges, the agent's orb stays at the foot. The details panel on the left
-of the reading folds to nothing from the Details control in the top row.
+return on hover as tooltips, the agent's orb stays at the foot. The details
+panel on the right of the reading opens from the Details control at the end
+of the tab row, and starts closed.
+
+### The timeline, as the tool draws it
+
+History is a **rail**, not a list of rows. Each entry is a grid of four: the
+date in the mono face, right-aligned in a 76px column with the time under it
+in `--ink4`; a 20px rail column carrying a 1px `--line2` line that runs the
+full height so consecutive entries join, with a mark on it; the body; the
+verb slot. The mark says what kind of thing happened: a solid 8px dot for an
+exchange, a hollow one for a field change, an indigo one for a change the
+agent made, a dashed indigo ring for a staged change, and a 24px circled
+glyph for a thread. The body opens with the kind in 10.5px uppercase, the
+direction words ("they wrote", "we sent", "both sides") and the people; then
+the title at 13.5px 600; then **the text of the message itself**, clamped to
+three lines, because a timeline of subject lines is a list of things you
+cannot read; then a meta line (the summary's author, the attachment, Restore).
+A thread is one entry: its mark on the rail, a card on the body side with the
+count and the people, and the messages inside it newest first, each with its
+avatar, direction and two lines of text. A hairline under each entry is the
+only divider; there are no day headings, the date column is the axis. The
+same rail, without the message text, is the 360's folded thread.
+
+### The spine, as the tool draws it
+
+The spine keeps the product's own geometry. Each stop is a column of four
+rows on one baseline: the date at 11.5px in `--ink3`, then the **rail** — a
+2px `--accent` rule with a 9px filled dot at its start, so the rule to the
+right of a dot is the span that stop covers — then the title at 13px, then
+the detail. The gap stop takes 1.5× the width, because on this axis the
+width is the waiting: its date row is the day count at 26px 600 in amber in
+the display face, its rule is dashed amber, and it has no dot, because
+nothing happened. **Today is a marker, not a stop**: a 2px × 15px black bar
+on the rail with TODAY in 10.5px uppercase and the date under it, in a column
+that is only as wide as its label. Right of it the rule turns dotted grey and
+the dots hollow with an accent ring: those stops have not happened, and a
+solid rule to a date nobody has reached draws the future as firmly as the
+past. An event dated today (the 14:00 call) is an ahead stop after the
+marker, not the marker itself.
+
+### The relationship map
+
+One drawing primitive, the product's `RelationshipMap`, on three pages, with
+its own geometry: three columns of 184 / 200 / 184px with 72px gutters and
+16px padding (744px, scrolling sideways rather than shrinking), node heights
+by kind (a colleague 40, a person 60, an organization 48, a deal 44, a gap
+60), 8px between nodes, 20px between lanes, a lane heading in 10.5px
+uppercase. Nodes are rounded boxes on `--pane` with the name at 13px 600 and
+a sublabel; a colleague on `--bg`, an organization with a 2px `--ink3` edge,
+a deal with an accent edge, and **a gap as a dashed amber box** naming the
+missing role with "Assign" under it — the only drawing of an absence a
+reader can count. Edges are cubic curves: a route is a way in and carries a
+band (strong: 2.5px accent; developing: dashed accent; cold: dotted grey),
+a membership is a 1px hairline (works there, on this deal); an unmeasured
+relationship is omitted, never drawn as cold. Selecting a node lights its
+strongest route in ink and fades everything unrelated to 35%; a 280px panel
+on the right names the selection, the best route with its evidence, the
+alternatives, and the one write the picture offers (record an acquaintance
+the graph saw). On the contact's Network tab the lanes are our team, the
+target, their company; on the company's People tab they are our side, the
+account with its deals, and their people **by buying role** in the product's
+order (champion, economic buyer, influencer, blocker, user), with a gap node
+where a critical role is unheld. The deal keeps its small decorative
+committee picture beside the seat rows: our circle, their seats, 2px accent
+threads only to the engaged, hollow for the quiet, a dashed ghost per
+coverage gap.
+
+### The pages that are not records
+
+Every other page is the same shell — the top bar, a display-face title, one
+facts line, verbs with the more button, five readings where the page has
+figures, panes below — with its own content: the **Worklist** (one ranked
+list with a kind column, what happened / why now / at stake / the verb, scope
+and filter pills, the side pane showing what the selected row is about, the
+team board), **Reports** (three reports, "Explain this number" opening the
+plan and the rows on an indigo dashed pane), **Ask Margince** (the ask field,
+an answer as a 360-style pane with its citations, the two-tier contract, the
+passport instructions), the **Project 360**, **Filters & views** (the predicate
+tree beside the results, saved views as chips), **Settings** (its second
+level beside the rail), the **Deal Room** (the document board with a thread
+per document), the **⌘K palette** (records, actions, screens, "Ask Margince:
+…" always last, over a scrim that covers the whole frame), and the **compose
+drawer** (the agent's draft with its disclosure, edit then confirm, send
+later, relink).
 
 ### What main changed, and how this structure absorbs it
 
@@ -629,7 +719,9 @@ looks now.
 | `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
 | `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 8px radius, the "Margince read this record" label at 11.5px 500 in `--aiText`, the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
-| `Spine` | Six stops on a `--line2` axis inside the 360: a date at 11px, a 9px dot, a 12.5px 500 title, a 11.5px detail; the gap stop at 1.5× width with an amber dashed segment; today filled emerald; the future stop dashed. |
+| `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
+| `RecordTimeline` | The rail: a 76px mono date column, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |
+| `RelationshipMap` | Three lanes at 184/200/184 with 72px gutters; rounded nodes by kind, a dashed amber gap node; route edges banded strong / developing / cold, membership as hairline; selection lights the route and fades the rest; a 280px panel with the best route and the one write. |
 | `EvidenceMark` / `Citations` | A **source chip**: `--bg3`, 11.5px, a note glyph and a short label ("email · 1 Sep"). On hover or focus it opens a popover with the quote it rests on, in a left-ruled indigo block, and the origin line under it. Every claim the agent makes carries them; they are how a reader checks the 360 without leaving it. |
 | `Stepper` | Steps as 24px pills on one line with a `›` between: done on `--accentBg`, the current one filled `--accent`, the rest outlined; the rule ("A terminal stage asks first") at the right in `--ink4`. |
 
