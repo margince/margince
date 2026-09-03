@@ -1998,6 +1998,8 @@ export const de = {
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
+  "lead.callNotInOverlay":
+    "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardTerminalOnly":
     "Das Board zeigt nur offene Leads. Diese Leads sind übernommen oder disqualifiziert.",
   "person.fromLead": "Aus Lead übernommen",
@@ -3024,6 +3026,7 @@ export const de = {
   "log.kindNote": "Notiz",
   "log.kindTask": "Aufgabe",
   "log.kindMeeting": "Meeting",
+  "log.kindCall": "Anruf",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Aus Ihrem Meeting-Tool einfügen (Teams, Zoom, Meet …) — Sprecherkennzeichnungen bleiben, sofern vorhanden, erhalten.",

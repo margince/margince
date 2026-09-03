@@ -2045,6 +2045,8 @@ export const en = {
   "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
+  "lead.callNotInOverlay":
+    "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardTerminalOnly":
     "The board shows open leads only. These leads are promoted or disqualified.",
   "person.fromLead": "From lead",
@@ -3068,6 +3070,7 @@ export const en = {
   "log.kindNote": "Note",
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
+  "log.kindCall": "Call",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",

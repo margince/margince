@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LogActivity } from "./logactivity";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The log-a-note/task form embedded in every 360 (person/company/deal/lead).
+// The log-an-activity form embedded in every 360 (person/company/deal/lead).
 // It reads GET /me only to gate itself on overlay mode (hidden there — its
 // POST /activities writes a mirrored record, unsupported_by_sor); the form
 // itself never fetches.
@@ -52,6 +52,21 @@ export const HiddenInOverlay: Story = {
     return (
       <StoryProviders>
         <LogActivity entityType="person" entityId="p1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// Opened on the kind the caller named. A rep sent here to log a call attempt
+// arrives on the call form rather than on a note they have to change — the
+// date field is the day it happened, the same field a note gets, because a
+// call is not owed.
+export const OpenedOnACall: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": admin() });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="lead" entityId="l1" initialKind="call" />
       </StoryProviders>
     );
   },

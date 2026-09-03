@@ -16,6 +16,7 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   LeadScreen,
   LeadsScreen,
@@ -1380,6 +1381,74 @@ describe("LeadScreen — disqualify (P-3)", () => {
     await waitFor(() => expect(deleteBody).toBeTruthy());
     expect(deleteBody).toEqual({ reason_id: "r-2", note: "Call back in Q4" });
     expect(window.location.hash).toBe("#/leads/l-1");
+  });
+});
+
+// The address may name the verb the reader arrived to perform. A rep sent here
+// to log a call attempt lands on the composer already set to one; a rep who
+// simply opened the lead gets the ordinary note.
+describe("LeadScreen — arriving to log a call", () => {
+  it("opens the composer on a call when the address asks for one", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1?action=call";
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Call"),
+    );
+  });
+
+  it("opens on a note for a reader who only opened the lead", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
+    );
+  });
+
+  // The composer is absent in overlay for every reader, because every write it
+  // makes answers unsupported_by_sor. For a reader who followed a link TO it
+  // that absence reads as a broken page, so the address is answered instead.
+  it("says why in overlay, rather than dropping the reader on a page with nothing", async () => {
+    stubFetch(async (url) => {
+      if (url.includes("/me")) {
+        return jsonResponse({
+          user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
+          roles: ["admin"],
+          teams: [],
+          system_of_record: { mode: "overlay" },
+        });
+      }
+      return jsonResponse(lead);
+    });
+    window.location.hash = "#/leads/l-1?action=call";
+    render(<LeadScreen id="l-1" />);
+
+    expect(await screen.findByText(en["lead.callNotInOverlay"])).toBeTruthy();
+    expect(screen.queryByLabelText("Type")).toBeNull();
+  });
+
+  // And it stays quiet for a reader who did not ask: a mirrored lead is not
+  // broken, and a refusal on every overlay lead is noise.
+  it("says nothing about a verb nobody asked for", async () => {
+    stubFetch(async (url) => {
+      if (url.includes("/me")) {
+        return jsonResponse({
+          user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
+          roles: ["admin"],
+          teams: [],
+          system_of_record: { mode: "overlay" },
+        });
+      }
+      return jsonResponse(lead);
+    });
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
+    expect(screen.queryByText(en["lead.callNotInOverlay"])).toBeNull();
   });
 });
 

@@ -1985,6 +1985,8 @@ export const vi = {
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
+  "lead.callNotInOverlay":
+    "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
   "lead.boardTerminalOnly":
     "Bảng chỉ hiện khách hàng tiềm năng đang mở. Những mục này đã chuyển hoặc bị loại.",
   "person.fromLead": "Từ khách hàng tiềm năng",
@@ -2993,6 +2995,7 @@ export const vi = {
   "log.kindNote": "Ghi chú",
   "log.kindTask": "Công việc",
   "log.kindMeeting": "Cuộc họp",
+  "log.kindCall": "Cuộc gọi",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán từ công cụ họp của bạn (Teams, Zoom, Meet…) — nhãn người nói, nếu có, sẽ được giữ nguyên.",

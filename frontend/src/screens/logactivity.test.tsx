@@ -251,6 +251,55 @@ describe("log activity from a 360", () => {
     );
   });
 
+  // The API has always accepted `kind: "call"`; no frontend surface could send
+  // one, because the draft's type, the picker and the clamp each stopped at
+  // note/task/meeting. A rep logging a call attempt is ordinary work.
+  it("posts a call, so the kind the API accepts is one a rep can write", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /people/p1": () => jsonResponse(person),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" />);
+
+    await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Call");
+    await userEvent.type(screen.getByLabelText("Subject *"), "No answer");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "call",
+      subject: "No answer",
+      links: [{ entity_type: "lead", entity_id: "l1" }],
+      source: "manual",
+    });
+    // `meeting_status: held` belongs to a meeting. A call carrying it would
+    // tell the lead ladder a meeting took place.
+    expect(post?.body).not.toHaveProperty("meeting_status");
+    // And it carries no due date: a call happened, it is not owed.
+    expect(post?.body).not.toHaveProperty("due_at");
+  });
+
+  // A caller that already knows which verb the reader came to perform hands it
+  // over, rather than opening on a note they have to change.
+  it("opens on the kind the caller named", async () => {
+    stubApi({ "GET /people/p1": () => jsonResponse(person) });
+    render(<LogActivity entityType="lead" entityId="l1" initialKind="call" />);
+
+    expect(screen.getByLabelText("Type").textContent).toContain("Call");
+    // A call's date is the day it happened, not a deadline — the same field
+    // a note gets, under the same label.
+    expect(screen.getByLabelText("Date")).toBeTruthy();
+  });
+
   it("renders the server's 422 detail verbatim", async () => {
     stubApi({
       "POST /activities": () =>
