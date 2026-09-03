@@ -281,6 +281,12 @@ func namedKinds(group []Scenario) (map[string]bool, error) {
 	return named, nil
 }
 
+// notGroundedExpectationKey is the expectation key whose values name FIELDS a
+// reply must not fill. Spelled again here rather than imported: `compose`
+// declares it beside the reader that parses it, and this package cannot import
+// compose — compose imports IT.
+const notGroundedExpectationKey = "not_grounded"
+
 // walkExpectation is the ONE place this gate reads a decoded expectation, which
 // is why the `any` is here and nowhere else.
 //
@@ -293,7 +299,17 @@ func walkExpectation(node any, named map[string]bool) {
 		// Map KEYS are deliberately not read. A key names a FIELD, never an answer,
 		// and reading them would let a field called `personal` count as covering the
 		// kind `personal`.
-		for _, value := range typed {
+		//
+		// `not_grounded`'s VALUES are field names for the same reason, spelled as a
+		// list because a negative claim has no value to pair a field with. Reading
+		// them would enrol a site's field vocabulary as an answer vocabulary and
+		// then demand a scenario for every member of it — which is what happened
+		// the first time an ACCEPTED scenario carried one (an abstaining one is
+		// skipped above, so profile's negative scenarios never reached here).
+		for key, value := range typed {
+			if key == notGroundedExpectationKey {
+				continue
+			}
 			walkExpectation(value, named)
 		}
 	case []any:

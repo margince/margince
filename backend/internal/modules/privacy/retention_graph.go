@@ -43,7 +43,7 @@ func scrubPersonGraphTraces(ctx context.Context, tx pgx.Tx, id ids.UUID, subject
 		id, subjectEmails)
 	if err == nil {
 		_, err = tx.Exec(ctx, `
-			UPDATE activity_participant SET person_id = NULL, address = NULL
+			UPDATE activity_participant SET person_id = NULL, address = NULL, display_name = NULL
 			 WHERE user_id IS NOT NULL
 			   AND (person_id = $1 OR (address IS NOT NULL AND address = ANY($2)))`,
 			id, subjectEmails)

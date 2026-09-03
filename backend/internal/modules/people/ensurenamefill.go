@@ -42,8 +42,28 @@ const (
 // Unconfident parses write nothing: `schluepmann` is not evidence of a surname
 // with no given name, it is evidence that the local part did not say.
 func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, parsed ParsedName, res *EnsureCounterpartyResult) error {
+	filled, err := completePersonName(ctx, tx, personID, parsed)
+	if err != nil {
+		return err
+	}
+	if filled {
+		res.NameFilled = true
+	}
+	return nil
+}
+
+// completePersonName is the fill itself, for the callers that are not the mail
+// ladder. It answers whether it wrote, so each caller records that in its own
+// terms.
+//
+// A calendar invitation is the second caller and the reason this is split out.
+// It names an attendee in full — "Chris Erler" where the mail ladder only ever
+// saw `chris@…` — and it arrives through the participant rows rather than
+// through a counterparty ensure. Every guard documented above is what makes
+// feeding it safe, so they are shared rather than restated at that call site.
+func completePersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, parsed ParsedName) (bool, error) {
 	if !parsed.Confident {
-		return nil
+		return false, nil
 	}
 	// BOTH columns must be empty, and both are written together. A parse is
 	// confident about the PAIR "Bob Jones" — grafting its surname onto a first
@@ -69,10 +89,10 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	// No row means the person is gone — erasure deletes it — so there is no
 	// name left to complete.
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return fmt.Errorf("people: reading the name person %s carries: %w", personID, err)
+		return false, fmt.Errorf("people: reading the name person %s carries: %w", personID, err)
 	}
 	var fullName string
 	err = tx.QueryRow(ctx, `
@@ -88,10 +108,10 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	// No row is the guard doing its job, not a failure: the row already
 	// carried a name, and it is not this call's to replace.
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return fmt.Errorf("people: filling the missing name of person %s: %w", personID, err)
+		return false, fmt.Errorf("people: filling the missing name of person %s: %w", personID, err)
 	}
 	// A mutation that changes a person's stored name is auditable like any other,
 	// and every audited mutation ships its event in the same transaction —
@@ -114,12 +134,11 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	)
 	auditID, err := storekit.Audit(ctx, tx, "update", entityPerson, personID.UUID, before, after)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, personID.UUID,
 		crmcontracts.PublicEventPersonUpdated{ChangedFields: changed}); err != nil {
-		return err
+		return false, err
 	}
-	res.NameFilled = true
-	return nil
+	return true, nil
 }

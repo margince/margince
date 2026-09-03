@@ -11051,6 +11051,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What questions this caller may ask, and in what words.
+         * @description The vocabulary a generic analytics question is written in: the populations, the
+         *     fields each can be grouped by, and the fields each can measure.
+         *
+         *     DERIVED from the report catalog and narrowed by the caller's own grants. A field
+         *     somebody may not read is ABSENT here rather than listed and refused later — a
+         *     refusal that says "you may not read that" tells them the column exists.
+         *
+         *     `version` changes when the vocabulary does, including when one seat's grants change.
+         *     A query planned against an older version is refused rather than run, because a plan
+         *     naming a field that has since moved would render SQL against a column that is gone.
+         */
+        get: operations["getAnalyticsSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a question nobody wrote a report for.
+         * @description A typed query over the vocabulary `/analytics/schema` returns. The caller names a
+         *     population, what to group by, what to measure and how to narrow — never SQL, and
+         *     never a field that is not in their own schema.
+         *
+         *     THE ANSWER IS COMPUTED BY THE DATABASE. Nothing here asks a model to add up a
+         *     column: a model's total is plausible and wrong in a way nobody can see, and the
+         *     value of a figure on a revenue screen is that it traces to rows.
+         *
+         *     A group covering fewer records than the installation's floor is WITHHELD, and so is
+         *     enough of the remainder that the withheld group cannot be recovered by subtracting
+         *     the rest from the total. `total_safe` says whether a total may be shown at all;
+         *     `withheld` says something was kept back and never how much.
+         *
+         *     Refusals are typed and each carries the smallest thing that would have worked:
+         *     the fields that exist, the measure that applies, the grouping that clears the floor.
+         */
+        post: operations["runAnalyticsQuery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/current": {
         parameters: {
             query?: never;
@@ -22908,6 +22971,64 @@ export interface components {
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
         };
+        /** @description The populations and fields one caller may ask about. */
+        AnalyticsSchema: {
+            /** @description Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run. */
+            version: string;
+            entities: components["schemas"]["AnalyticsEntity"][];
+        };
+        AnalyticsEntity: {
+            /** @description The population, by name. */
+            name: string;
+            /** @description The fields this population can be grouped by. */
+            group_by: string[];
+            /** @description The fields this population can be aggregated over. */
+            measures: string[];
+        };
+        /** @description One question, in the vocabulary the schema returned. */
+        AnalyticsQuery: {
+            /** @description The population, by name. */
+            entity: string;
+            /** @description The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one. */
+            group_by?: string[];
+            /** @description What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question. */
+            measures: components["schemas"]["AnalyticsMeasure"][];
+            filters?: components["schemas"]["AnalyticsFilter"][];
+            /** @description How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record. */
+            limit?: number;
+        };
+        AnalyticsMeasure: {
+            /**
+             * @description The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+             * @enum {string}
+             */
+            fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+            /** @description What to aggregate. Required for every fn but `count`. */
+            field?: string;
+            /** @description The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL. */
+            as?: string;
+        };
+        AnalyticsFilter: {
+            field: string;
+            /** @enum {string} */
+            op: "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "is_null" | "is_not_null";
+            /** @description The value to compare against, bound as a parameter. Omitted exactly for `is_null` and `is_not_null`; given to either, the query is refused rather than having it silently dropped. */
+            value?: unknown;
+        };
+        AnalyticsAnswer: {
+            /** @description What each value in a row means, in order. */
+            columns: string[];
+            /** @description One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own. */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** @description Whether anything was kept back. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
+            withheld: boolean;
+            /** @description Whether a total over these rows may be shown. False once anything is withheld, because the total minus the shown groups is the withheld remainder. */
+            total_safe: boolean;
+            /** @description The vocabulary this was asked in. */
+            schema_version: string;
+        };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
          *     WeeklyReview beside it.
@@ -27964,8 +28085,11 @@ export interface components {
             more_available: boolean;
         };
         /**
-         * @description The day in figures, for the one line above the queue. Each count is of items the
-         *     queue actually CARRIES, so a number here and the rows below it cannot disagree.
+         * @description The day in figures, for the one line above the queue. Every count is over the
+         *     candidates this read WEIGHED — the whole assembled day, before the page cut and
+         *     before any category narrowing — so the sentence is one scope and does not move as
+         *     the reader pages. A page-scoped band beside a day-scoped `total` read as a
+         *     breakdown of that total and was not one.
          *
          *     These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
          *     `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -27988,7 +28112,7 @@ export interface components {
             in_play?: number;
             /** @description Routine work: decisions that block nothing, and data hygiene. */
             lower_priority: number;
-            /** @description How many items the queue carries. */
+            /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
             total: number;
             /**
              * Format: int64
@@ -46531,6 +46655,55 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAnalyticsSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsSchema"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    runAnalyticsQuery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyticsQuery"];
+            };
+        };
+        responses: {
+            /** @description The answer, as this caller may read it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsAnswer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCurrentWeeklyPlan: {

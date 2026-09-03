@@ -16250,6 +16250,87 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /analytics/schema:
+    get:
+      tags: [Reports]
+      operationId: getAnalyticsSchema
+      summary: What questions this caller may ask, and in what words.
+      description: |
+        The vocabulary a generic analytics question is written in: the populations, the
+        fields each can be grouped by, and the fields each can measure.
+
+        DERIVED from the report catalog and narrowed by the caller's own grants. A field
+        somebody may not read is ABSENT here rather than listed and refused later — a
+        refusal that says "you may not read that" tells them the column exists.
+
+        `version` changes when the vocabulary does, including when one seat's grants change.
+        A query planned against an older version is refused rather than run, because a plan
+        naming a field that has since moved would render SQL against a column that is gone.
+      # NOT an agent tool, and the reason is measured rather than a preference.
+      # The served catalog already renders ~87% of the certification lane's
+      # prompt window; a second analytics tool pushes it over, and what that
+      # gate protects is every corpus scenario silently reasoning over a prompt
+      # larger than this build claims to send.
+      #
+      # An agent gets this vocabulary through run_analytics_query's own
+      # refusals instead: naming a field that is absent is answered with the
+      # fields that exist, which is the same information at the moment it is
+      # needed. The route stays for the app, which pays no token budget.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsSchema' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/query:
+    post:
+      tags: [Reports]
+      operationId: runAnalyticsQuery
+      summary: Answer a question nobody wrote a report for.
+      description: |
+        A typed query over the vocabulary `/analytics/schema` returns. The caller names a
+        population, what to group by, what to measure and how to narrow — never SQL, and
+        never a field that is not in their own schema.
+
+        THE ANSWER IS COMPUTED BY THE DATABASE. Nothing here asks a model to add up a
+        column: a model's total is plausible and wrong in a way nobody can see, and the
+        value of a figure on a revenue screen is that it traces to rows.
+
+        A group covering fewer records than the installation's floor is WITHHELD, and so is
+        enough of the remainder that the withheld group cannot be recovered by subtracting
+        the rest from the total. `total_safe` says whether a total may be shown at all;
+        `withheld` says something was kept back and never how much.
+
+        Refusals are typed and each carries the smallest thing that would have worked:
+        the fields that exist, the measure that applies, the grouping that clears the floor.
+      # NOT an agent tool yet, and the reason is a measured constraint. The
+      # served catalog already renders ~87% of the certification lane's prompt
+      # window; this tool's description, trimmed to just its safety rules,
+      # still puts it over. Cutting further would drop the instructions that
+      # make an agent-reachable analytics surface safe — that the database
+      # computes the numbers, and that a withheld group is never speculated
+      # about — which is the wrong thing to spend for room.
+      #
+      # The HTTP route ships and the app uses it. Making room in the catalog is
+      # a decision about the whole tool surface rather than about this feature.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsQuery' }
+      responses:
+        '200':
+          description: The answer, as this caller may read it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/current:
     get:
       tags: [Brief]
@@ -31316,6 +31397,143 @@ components:
             Whether anything was kept back from this reader. A boolean and never a count:
             a count of what somebody may not see states how much of it there is.
       additionalProperties: false
+    AnalyticsSchema:
+      type: object
+      description: The populations and fields one caller may ask about.
+      required: [version, entities]
+      properties:
+        version:
+          type: string
+          description: >-
+            Changes when this caller's vocabulary changes. A query planned against an
+            older version is refused rather than run.
+        entities:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsEntity' }
+      additionalProperties: false
+    AnalyticsEntity:
+      type: object
+      required: [name, group_by, measures]
+      properties:
+        name: { type: string, description: "The population, by name." }
+        group_by:
+          type: array
+          items: { type: string }
+          description: The fields this population can be grouped by.
+        measures:
+          type: array
+          items: { type: string }
+          description: The fields this population can be aggregated over.
+      additionalProperties: false
+    AnalyticsQuery:
+      type: object
+      description: One question, in the vocabulary the schema returned.
+      required: [entity, measures]
+      properties:
+        entity: { type: string, description: "The population, by name." }
+        group_by:
+          type: array
+          items: { type: string }
+          description: >-
+            The dimensions. Omitted is a single-row answer over the whole population,
+            which is a real question rather than a missing one.
+        measures:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AnalyticsMeasure' }
+          description: >-
+            What to compute. At least one — a query with none asks for group keys and
+            nothing beside them, which is a list rather than an analytic question.
+        filters:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsFilter' }
+        limit:
+          type: integer
+          description: >-
+            How many groups at most. Omitted takes the default; a grouping by a
+            high-cardinality field would otherwise return a row per record.
+      additionalProperties: false
+    AnalyticsMeasure:
+      type: object
+      required: [fn]
+      properties:
+        fn:
+          type: string
+          enum: [count, count_distinct, sum, avg, min, max]
+          x-enum-varnames:
+            - AnalyticsCount
+            - AnalyticsCountDistinct
+            - AnalyticsSum
+            - AnalyticsAvg
+            - AnalyticsMin
+            - AnalyticsMax
+          description: >-
+            The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts
+            values and skips nulls. The two differ on an unpriced deal, so naming the wrong
+            one reports a column's coverage as its population.
+        field:
+          type: string
+          description: What to aggregate. Required for every fn but `count`.
+        as:
+          type: string
+          description: >-
+            The caller's name for the result column. It never reaches the statement —
+            results map by position — so it cannot carry anything into SQL.
+      additionalProperties: false
+    AnalyticsFilter:
+      type: object
+      required: [field, op]
+      properties:
+        field: { type: string }
+        op:
+          type: string
+          enum: [eq, ne, lt, lte, gt, gte, is_null, is_not_null]
+          x-enum-varnames:
+            - AnalyticsOpEq
+            - AnalyticsOpNe
+            - AnalyticsOpLt
+            - AnalyticsOpLte
+            - AnalyticsOpGt
+            - AnalyticsOpGte
+            - AnalyticsOpIsNull
+            - AnalyticsOpIsNotNull
+        value:
+          description: >-
+            The value to compare against, bound as a parameter. Omitted exactly for
+            `is_null` and `is_not_null`; given to either, the query is refused rather
+            than having it silently dropped.
+      additionalProperties: false
+    AnalyticsAnswer:
+      type: object
+      required: [columns, rows, withheld, total_safe, schema_version]
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+          description: What each value in a row means, in order.
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            One object per group. A row the floor withheld keeps its group keys, carries
+            null for every measure, and is marked `_withheld` — dropping it entirely would
+            make the answer's row count a signal of its own.
+        withheld:
+          type: boolean
+          description: >-
+            Whether anything was kept back. A boolean and never a count: a count of what
+            somebody may not see states how much of it there is.
+        total_safe:
+          type: boolean
+          description: >-
+            Whether a total over these rows may be shown. False once anything is withheld,
+            because the total minus the shown groups is the withheld remainder.
+        schema_version:
+          type: string
+          description: The vocabulary this was asked in.
+      additionalProperties: false
     WeeklyPlan:
       type: object
       additionalProperties: false
@@ -37040,8 +37258,11 @@ components:
     WorklistSummary:
       type: object
       description: |
-        The day in figures, for the one line above the queue. Each count is of items the
-        queue actually CARRIES, so a number here and the rows below it cannot disagree.
+        The day in figures, for the one line above the queue. Every count is over the
+        candidates this read WEIGHED — the whole assembled day, before the page cut and
+        before any category narrowing — so the sentence is one scope and does not move as
+        the reader pages. A page-scoped band beside a day-scoped `total` read as a
+        breakdown of that total and was not one.
 
         These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
         `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -37062,7 +37283,7 @@ components:
             nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
             of rows, which is the one thing this line promises cannot happen.
         lower_priority: { type: integer, minimum: 0, description: 'Routine work: decisions that block nothing, and data hygiene.' }
-        total: { type: integer, minimum: 0, description: 'How many items the queue carries.' }
+        total: { type: integer, minimum: 0, description: 'How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.' }
         material_threshold_minor:
           type: [integer, 'null']
           format: int64

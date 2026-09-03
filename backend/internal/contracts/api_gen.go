@@ -832,6 +832,72 @@ func (e AiUsageBudgetBand) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsFilterOp.
+const (
+	AnalyticsOpEq        AnalyticsFilterOp = "eq"
+	AnalyticsOpGt        AnalyticsFilterOp = "gt"
+	AnalyticsOpGte       AnalyticsFilterOp = "gte"
+	AnalyticsOpIsNotNull AnalyticsFilterOp = "is_not_null"
+	AnalyticsOpIsNull    AnalyticsFilterOp = "is_null"
+	AnalyticsOpLt        AnalyticsFilterOp = "lt"
+	AnalyticsOpLte       AnalyticsFilterOp = "lte"
+	AnalyticsOpNe        AnalyticsFilterOp = "ne"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsFilterOp enum.
+func (e AnalyticsFilterOp) Valid() bool {
+	switch e {
+	case AnalyticsOpEq:
+		return true
+	case AnalyticsOpGt:
+		return true
+	case AnalyticsOpGte:
+		return true
+	case AnalyticsOpIsNotNull:
+		return true
+	case AnalyticsOpIsNull:
+		return true
+	case AnalyticsOpLt:
+		return true
+	case AnalyticsOpLte:
+		return true
+	case AnalyticsOpNe:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsMeasureFn.
+const (
+	AnalyticsAvg           AnalyticsMeasureFn = "avg"
+	AnalyticsCount         AnalyticsMeasureFn = "count"
+	AnalyticsCountDistinct AnalyticsMeasureFn = "count_distinct"
+	AnalyticsMax           AnalyticsMeasureFn = "max"
+	AnalyticsMin           AnalyticsMeasureFn = "min"
+	AnalyticsSum           AnalyticsMeasureFn = "sum"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsMeasureFn enum.
+func (e AnalyticsMeasureFn) Valid() bool {
+	switch e {
+	case AnalyticsAvg:
+		return true
+	case AnalyticsCount:
+		return true
+	case AnalyticsCountDistinct:
+		return true
+	case AnalyticsMax:
+		return true
+	case AnalyticsMin:
+		return true
+	case AnalyticsSum:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyTagRequestEntityType.
 const (
 	ApplyTagRequestEntityTypeDeal         ApplyTagRequestEntityType = "deal"
@@ -15955,6 +16021,87 @@ type AiUsage struct {
 
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
+
+// AnalyticsAnswer defines model for AnalyticsAnswer.
+type AnalyticsAnswer struct {
+	// Columns What each value in a row means, in order.
+	Columns []string `json:"columns"`
+
+	// Rows One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// SchemaVersion The vocabulary this was asked in.
+	SchemaVersion string `json:"schema_version"`
+
+	// TotalSafe Whether a total over these rows may be shown. False once anything is withheld, because the total minus the shown groups is the withheld remainder.
+	TotalSafe bool `json:"total_safe"`
+
+	// Withheld Whether anything was kept back. A boolean and never a count: a count of what somebody may not see states how much of it there is.
+	Withheld bool `json:"withheld"`
+}
+
+// AnalyticsEntity defines model for AnalyticsEntity.
+type AnalyticsEntity struct {
+	// GroupBy The fields this population can be grouped by.
+	GroupBy []string `json:"group_by"`
+
+	// Measures The fields this population can be aggregated over.
+	Measures []string `json:"measures"`
+
+	// Name The population, by name.
+	Name string `json:"name"`
+}
+
+// AnalyticsFilter defines model for AnalyticsFilter.
+type AnalyticsFilter struct {
+	Field string            `json:"field"`
+	Op    AnalyticsFilterOp `json:"op"`
+
+	// Value The value to compare against, bound as a parameter. Omitted exactly for `is_null` and `is_not_null`; given to either, the query is refused rather than having it silently dropped.
+	Value interface{} `json:"value,omitempty"`
+}
+
+// AnalyticsFilterOp defines model for AnalyticsFilter.Op.
+type AnalyticsFilterOp string
+
+// AnalyticsMeasure defines model for AnalyticsMeasure.
+type AnalyticsMeasure struct {
+	// As The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL.
+	As *string `json:"as,omitempty"`
+
+	// Field What to aggregate. Required for every fn but `count`.
+	Field *string `json:"field,omitempty"`
+
+	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+	Fn AnalyticsMeasureFn `json:"fn"`
+}
+
+// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+type AnalyticsMeasureFn string
+
+// AnalyticsQuery One question, in the vocabulary the schema returned.
+type AnalyticsQuery struct {
+	// Entity The population, by name.
+	Entity  string             `json:"entity"`
+	Filters *[]AnalyticsFilter `json:"filters,omitempty"`
+
+	// GroupBy The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one.
+	GroupBy *[]string `json:"group_by,omitempty"`
+
+	// Limit How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record.
+	Limit *int `json:"limit,omitempty"`
+
+	// Measures What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question.
+	Measures []AnalyticsMeasure `json:"measures"`
+}
+
+// AnalyticsSchema The populations and fields one caller may ask about.
+type AnalyticsSchema struct {
+	Entities []AnalyticsEntity `json:"entities"`
+
+	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
+	Version string `json:"version"`
+}
 
 // AnnotateBriefItem One finding about one queued deal.
 type AnnotateBriefItem struct {
@@ -31467,8 +31614,11 @@ type Worklist struct {
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
 
-	// Summary The day in figures, for the one line above the queue. Each count is of items the
-	// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+	// Summary The day in figures, for the one line above the queue. Every count is over the
+	// candidates this read WEIGHED — the whole assembled day, before the page cut and
+	// before any category narrowing — so the sentence is one scope and does not move as
+	// the reader pages. A page-scoped band beside a day-scoped `total` read as a
+	// breakdown of that total and was not one.
 	//
 	// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
 	// `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -32087,8 +32237,11 @@ type WorklistSourceUnavailable struct {
 // WorklistSourceUnavailableReason defines model for WorklistSourceUnavailable.Reason.
 type WorklistSourceUnavailableReason string
 
-// WorklistSummary The day in figures, for the one line above the queue. Each count is of items the
-// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+// WorklistSummary The day in figures, for the one line above the queue. Every count is over the
+// candidates this read WEIGHED — the whole assembled day, before the page cut and
+// before any category narrowing — so the sentence is one scope and does not move as
+// the reader pages. A page-scoped band beside a day-scoped `total` read as a
+// breakdown of that total and was not one.
 //
 // These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
 // `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -32118,7 +32271,7 @@ type WorklistSummary struct {
 	// no open deals to take a median of.
 	MaterialThresholdMinor *int64 `json:"material_threshold_minor,omitempty"`
 
-	// Total How many items the queue carries.
+	// Total How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.
 	Total int `json:"total"`
 
 	// Urgent Items at the top two levels: somebody is waiting, or a promise is breaking.
@@ -36870,6 +37023,9 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
+
+// RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
+type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
 
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
@@ -45333,6 +45489,12 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// Answer a question nobody wrote a report for.
+	// (POST /analytics/query)
+	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// What questions this caller may ask, and in what words.
+	// (GET /analytics/schema)
+	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -47166,6 +47328,18 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
 func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a question nobody wrote a report for.
+// (POST /analytics/query)
+func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What questions this caller may ask, and in what words.
+// (GET /analytics/schema)
+func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52141,6 +52315,50 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RunAnalyticsQuery operation middleware
+func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RunAnalyticsQuery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAnalyticsSchema operation middleware
+func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnalyticsSchema(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75144,6 +75362,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)

@@ -2483,6 +2483,8 @@ export const vi = {
   "plan.new.save": "Thêm",
   "plan.new.cancel": "Huỷ",
 
+  "home.weekly.frozen": "Đã chốt",
+  "home.weekly.written": "ghi lúc {at}",
   "home.weekly.pickWeek": "Mở tuần khác",
   "home.weekly.none":
     "Chưa có bản đánh giá tuần — bản đầu tiên được viết vào thứ Hai sau tuần đầy đủ đầu tiên của bạn.",

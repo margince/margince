@@ -137,8 +137,13 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 3. **Top bar.** 50px stays; glass, hairline under; breadcrumb left, the ⌘K
    field centred, the SoR-mode chip and the account menu right. **Nothing
    that belongs to a record sits in it.**
-4. **Settings second level.** `SettingsRail`/`navlevel.tsx` render as a
-   210px column beside the rail on the same glass.
+4. **Settings second level.** On a settings route the sidebar itself becomes
+   the 210px column that carries the level (`SettingsRail`/`navlevel.tsx`),
+   on the same glass. It still shows one level at a time — the ten
+   destinations step aside for the section's entries, with Back above them —
+   because `rail.test.tsx` and `ac.spec.ts` hold exactly one level in the
+   sidebar; the mock's two columns side by side would be a navigation change,
+   not a restyle.
 5. **Agent chrome.** `agentrail` and `agent-edge` take the tokens; the orb
    stays where it is.
 

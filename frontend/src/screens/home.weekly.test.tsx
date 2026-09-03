@@ -1,6 +1,8 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
+import { formatDateTime } from "../format/format";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { fleetDeal, jsonResponse, render, run, stubApi } from "./home.testkit";
@@ -126,6 +128,57 @@ describe("HomeScreen — the weekly retrospective", () => {
     const strip = document.querySelector('[data-testid="weekly-strip"]');
     expect(strip).not.toBeNull();
     expect(strip?.textContent ?? "").not.toMatch(/€|EUR/);
+  });
+
+  // The panel says its numbers can no longer move.
+  //
+  // That claim is what separates the weekly from every other panel on Home. A
+  // rep who reads it on Tuesday, acts, and re-reads on Thursday is looking at a
+  // record rather than a stale figure — and without the mark they have no way
+  // to tell those apart. The TEAM weekly has said so since it shipped; the
+  // rep's, which is the one a rep actually opens, did not.
+  it("marks the week frozen, and says when it was written", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    // A zone the TEST chooses, and not the product's fallback.
+    //
+    // The fallback is importable by its own reader alone (held by
+    // format/zone-by-purpose.test.ts), and rightly: a test asserting against it
+    // would be checking the component against the same constant the component
+    // reads, which passes however wrong the zone decision is. Naming one here
+    // means the assertion fails if the panel ever renders in the viewer's zone
+    // instead of the installation's.
+    const installationZone = "Asia/Ho_Chi_Minh";
+    render(
+      <RecordZoneProvider zone={installationZone}>
+        <HomeScreen />
+      </RecordZoneProvider>,
+    );
+
+    expect(await screen.findByText(en["home.weekly.frozen"])).toBeTruthy();
+    const written = en["home.weekly.written"].replace(
+      "{at}",
+      formatDateTime(review.generated_at, "en", installationZone),
+    );
+    expect(screen.getByText(written)).toBeTruthy();
+  });
+
+  // And nothing is certified when there is no review to certify. A badge over
+  // an absent week claims a record nobody wrote.
+  it("marks nothing frozen when there is no review", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText(en["home.weekly.none"]);
+    expect(screen.queryByText(en["home.weekly.frozen"])).toBeNull();
   });
 
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
