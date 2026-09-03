@@ -50,6 +50,44 @@ function statusTone(status: EmailAccessStatus): "warn" | undefined {
   return status === "withheld" ? "warn" : undefined;
 }
 
+// What the row draws, decided in one place.
+//
+// Every field the withheld status governs is settled here TOGETHER, from the
+// row's own reading of the status rather than from trusting the payload to
+// have been stripped. The server does strip it; this is the second lock, and
+// it exists because a response assembled by a path that forgot would otherwise
+// print a counterparty's name beside a message the reader may not open.
+function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
+  const withheld = summary.display_status === "withheld";
+  // Direction is nullable, and an unknown one is not an outbound one: saying
+  // "Sent to" about a message nobody recorded a direction for is a claim the
+  // row does not have.
+  const direction =
+    summary.direction === "inbound"
+      ? t("email.receivedFrom")
+      : summary.direction === "outbound"
+        ? t("email.sentTo")
+        : null;
+  const counterparty = withheld ? null : summary.counterparty;
+  return {
+    withheld,
+    // A withheld row keeps its shape and loses its words. Drawing it as absent
+    // would leave a reader unable to tell a limited conversation from one that
+    // never happened; drawing it as empty would say there was nothing to read,
+    // which is a claim about the message rather than about them.
+    subject: withheld
+      ? t("email.withheldSubject")
+      : summary.subject?.trim() || t("email.noSubject"),
+    who:
+      counterparty && direction
+        ? `${direction} ${counterparty}`
+        : (direction ?? t("email.aMessage")),
+    preview: withheld ? null : summary.preview,
+    move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
+    attachments: withheld ? 0 : summary.attachment_count,
+  };
+}
+
 export function EmailEntry({
   summary,
   timestamp,
@@ -68,60 +106,31 @@ export function EmailEntry({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const withheld = summary.display_status === "withheld";
-  // A withheld row keeps its shape and loses its words. Drawing it as absent
-  // would leave a reader unable to tell a limited conversation from one that
-  // never happened; drawing it as empty would say there was nothing to read,
-  // which is a claim about the message rather than about them.
-  const subject = withheld
-    ? t("email.withheldSubject")
-    : summary.subject?.trim() || t("email.noSubject");
-  // Direction is nullable, and an unknown one is not an outbound one. Saying
-  // "Sent to" about a message nobody recorded a direction for is a claim the
-  // row does not have.
-  const direction =
-    summary.direction === "inbound"
-      ? t("email.receivedFrom")
-      : summary.direction === "outbound"
-        ? t("email.sentTo")
-        : null;
-  // Everything below is withheld TOGETHER, from the row's own reading of the
-  // status rather than from trusting the payload to have been stripped. The
-  // server does strip it; this is the second lock, and it exists because a
-  // response assembled by a path that forgot would otherwise print a
-  // counterparty's name beside a message the reader may not open.
-  const counterparty = withheld ? null : summary.counterparty;
-  const move =
-    withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move];
-  const attachments = withheld ? 0 : summary.attachment_count;
+  const row = rowFields(summary, t);
 
   const content = (
     <>
       <span className="emailentry__lead">
         <Mail aria-hidden="true" />
-        <span className="emailentry__who">
-          {counterparty && direction
-            ? `${direction} ${counterparty}`
-            : (direction ?? t("email.aMessage"))}
-        </span>
+        <span className="emailentry__who">{row.who}</span>
         <span className="emailentry__when">{timestamp}</span>
       </span>
-      <span className="emailentry__subject">{subject}</span>
+      <span className="emailentry__subject">{row.subject}</span>
       {/* No preview on a withheld row, and none invented when the message has
           no text of its own: the server composes this line, so an empty one
           means the sender wrote nothing rather than that the row is loading. */}
-      {!withheld && summary.preview && (
-        <span className="emailentry__preview">{summary.preview}</span>
+      {row.preview && (
+        <span className="emailentry__preview">{row.preview}</span>
       )}
       <span className="emailentry__marks">
-        <Badge tone={statusTone(summary.display_status)} quiet={!withheld}>
+        <Badge tone={statusTone(summary.display_status)} quiet={!row.withheld}>
           {t(STATUS_LABEL[summary.display_status])}
         </Badge>
-        {move && <span className="emailentry__move">{t(move)}</span>}
-        {attachments > 0 && (
+        {row.move && <span className="emailentry__move">{t(row.move)}</span>}
+        {row.attachments > 0 && (
           <span className="emailentry__files">
             <Paperclip aria-hidden="true" />
-            {formatNumber(attachments, locale)}
+            {formatNumber(row.attachments, locale)}
           </span>
         )}
       </span>
