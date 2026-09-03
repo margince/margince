@@ -150,3 +150,50 @@ func (a tagAdapter) ApplyTag(ctx context.Context, tagID ids.UUID, entityType str
 func (a tagAdapter) RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
 	return a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
 }
+
+// --- the vocabulary verbs ---
+//
+// Each hands straight to the store method the HTTP handler and the admin card
+// already call, so an agent coining or renaming a word takes exactly the gates
+// a person does — `tag.create` and `tag.update`, which the seeded roles give
+// Admin and Ops alone. Re-deriving any of that here would be a second write
+// gate to keep in step with the first.
+
+// tagOf renders a written row as the WORD it now is. Not TagDetail: that type
+// carries usage counts, and a write has not counted anything — filling them
+// with zeroes would report a word on fifty records as carried by none.
+//
+// It takes the row's fields rather than the row, because the store's row type
+// is unexported: compose may hold one of those values but cannot name it, and
+// exporting a type so one helper can spell it would widen the store's surface
+// for this file's convenience.
+func tagOf(id ids.TagID, name string, color *string, archived bool) agents.Tag {
+	out := agents.Tag{TagID: id.UUID, Name: name, Archived: archived}
+	if color != nil {
+		out.Color = *color
+	}
+	return out
+}
+
+func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (agents.Tag, error) {
+	row, err := a.store.CreateTag(ctx, name, color)
+	if err != nil {
+		return agents.Tag{}, err
+	}
+	return tagOf(row.ID, row.Name, row.Color, row.ArchivedAt != nil), nil
+}
+
+func (a tagAdapter) UpdateTag(ctx context.Context, tagID ids.UUID, in agents.TagEdit) (agents.Tag, error) {
+	// expectedVersion 0: the tool takes no If-Match, and zero is the store's
+	// own spelling for "the caller sent none and accepts last-write-wins" —
+	// the same answer the HTTP door gives a request without the header.
+	row, err := a.store.UpdateTag(ctx, ids.From[ids.TagKind](tagID), collections.TagUpdate{
+		Name:        in.Name,
+		Color:       in.Color,
+		Description: in.Description,
+	}, 0)
+	if err != nil {
+		return agents.Tag{}, err
+	}
+	return tagOf(row.ID, row.Name, row.Color, row.ArchivedAt != nil), nil
+}

@@ -109,6 +109,29 @@ type Tags interface {
 	// own vocabulary, so the apply/remove schemas advertise exactly what the
 	// `taggable` table admits rather than a copy of that list kept here.
 	TaggableTypes() []string
+
+	// --- the vocabulary itself, which only a seat holding the grant reaches ---
+
+	// CreateTag coins a word. The store takes `tag.create`, which the seeded
+	// roles give Admin and Ops alone, so a rep's passport is refused here by
+	// the same rule that refuses them in the UI.
+	// It answers the WORD, not TagDetail: usage counts are a second read, and a
+	// write that reported them would either pay for a count nobody asked for or
+	// — as this first shipped — report zero for a word on fifty records.
+	CreateTag(ctx context.Context, name string, color *string) (Tag, error)
+	// UpdateTag renames, recolours or describes an existing word. A nil field
+	// is left alone, which is what lets a caller recolour without restating a
+	// name it never read.
+	UpdateTag(ctx context.Context, tagID ids.UUID, in TagEdit) (Tag, error)
+}
+
+// TagEdit is the partial an update carries. A nil field is left alone; a
+// non-nil one holding a nil pointer clears the column, which is how a caller
+// removes a description rather than blanking it to an empty string.
+type TagEdit struct {
+	Name        *string
+	Color       **string
+	Description **string
 }
 
 // RegisterTagTools joins the tag verbs to the surface; a nil seam registers
@@ -122,6 +145,8 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(getRecordTags{tags: tags, types: tags.RecordTagTypes()})
 	r.Register(applyTag{tags: tags})
 	r.Register(removeTag{tags: tags})
+	r.Register(createTag{tags: tags})
+	r.Register(updateTag{tags: tags})
 }
 
 // taggingSchema is apply's and remove's argument shape, spelled once: they name
