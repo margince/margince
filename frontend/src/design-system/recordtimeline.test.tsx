@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider } from "../i18n";
 import { LoadMoreButton } from "../screens/common";
+import { withEmailOpener } from "../screens/openemail";
 import { groupChronology } from "../screens/timelinegroups";
 import { activityTimeline } from "./activitytimeline";
 import { GroupedTimelineList } from "./composed";
@@ -106,6 +107,33 @@ function Harness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
       />
       <LoadMoreButton query={timeline} />
     </>
+  );
+}
+
+/**
+ * LeadHarness is the LEAD page's own wiring: the same hook, the same mapper,
+ * the same grouped list, on entityType "lead" — plus withEmailOpener, which is
+ * what makes a row openable.
+ *
+ * A separate harness rather than a parameter on the one above, because what it
+ * proves is that nothing on the path is person-shaped. The hook takes the
+ * entity kind, the mapper reads the server's own summary, and the row is the
+ * design system's — so a lead reaches the canonical row for the same reason a
+ * contact does, and this fails if any of the three grows a person branch.
+ */
+function LeadHarness({
+  onOpen,
+}: Readonly<{ onOpen?: (activityId: string) => void }>) {
+  const timeline = useRecordTimeline("lead", "l-1", {});
+  const entries = withEmailOpener(
+    activityTimeline(timeline.activities, "human:u-1"),
+    onOpen ?? (() => {}),
+  );
+  return (
+    <GroupedTimelineList
+      groups={groupChronology(entries, timeline.hasNextPage)}
+      zone={INSTALLATION_ZONE}
+    />
   );
 }
 
@@ -338,6 +366,68 @@ describe("a record timeline you can work in", () => {
 
     await user.click(screen.getByRole("button", { name: "Open" }));
     expect(screen.getAllByText(/Cutover plan/)).toHaveLength(4);
+  });
+
+  // The LEAD page's own path. Every surface it uses is the shared one, so a
+  // lead's mail reads exactly as a contact's does — and a person branch
+  // appearing anywhere on that path fails here.
+  it("draws a lead's email with the canonical row, openable", async () => {
+    const opened: string[] = [];
+    const feed = activityFeed({
+      first: {
+        data: [
+          activity({
+            id: "a-1",
+            subject: "Pricing for 40 seats",
+            occurred_at: "2026-08-12T09:00:00Z",
+            body: "Long body the server already trimmed for the preview",
+            email_summary: {
+              activity_id: "a-1",
+              occurred_at: "2026-08-12T09:00:00Z",
+              version: 1,
+              subject: "Pricing for 40 seats",
+              preview: "What would this cost for 40 seats?",
+              counterparty: "Dung Ly",
+              direction: "inbound",
+              display_status: "team",
+              move: "needs_reply",
+              attachment_count: 0,
+            },
+          }),
+        ],
+        page: { has_more: false },
+      },
+    });
+    vi.stubGlobal("fetch", feed.fetcher);
+    render(
+      <QueryClientProvider client={newQueryClient()}>
+        <LocaleProvider initial="en">
+          <RecordZoneProvider zone={INSTALLATION_ZONE}>
+            <LeadHarness onOpen={(id) => opened.push(id)} />
+          </RecordZoneProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    // The read went to the LEAD's timeline, not a person's.
+    await waitFor(() =>
+      expect(feed.last().searchParams.get("entity_type")).toBe("lead"),
+    );
+    // The canonical row, with the server's preview rather than the raw body.
+    const row = await screen.findByText("What would this cost for 40 seats?");
+    expect(row).toBeTruthy();
+    expect(
+      screen.queryByText(/Long body the server already trimmed/),
+    ).toBeNull();
+
+    // And openable: a row that looks pressable and opens nothing teaches a
+    // reader the product does not work.
+    const openable = document.querySelector("button.emailentry--open");
+    expect(openable).not.toBeNull();
+    if (openable) {
+      await userEvent.click(openable);
+    }
+    expect(opened).toEqual(["a-1"]);
   });
 
   it("draws a collapsed conversation of emails with the canonical row", async () => {
