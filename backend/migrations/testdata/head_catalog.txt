@@ -2090,6 +2090,95 @@ public.finance_payment_account_ix CREATE INDEX finance_payment_account_ix ON pub
 public.finance_payment_connection_id_external_id_key CREATE UNIQUE INDEX finance_payment_connection_id_external_id_key ON public.finance_payment USING btree (connection_id, external_id)
 public.finance_payment_invoice_ix CREATE INDEX finance_payment_invoice_ix ON public.finance_payment USING btree (invoice_id) WHERE (invoice_id IS NOT NULL)
 public.finance_payment_pkey CREATE UNIQUE INDEX finance_payment_pkey ON public.finance_payment USING btree (id)
+public.forecast_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.forecast_call.amount_minor bigint NOT NULL gen=- def=-
+public.forecast_call.author_id uuid NOT NULL gen=- def=-
+public.forecast_call.captured_by text NOT NULL gen=- def=-
+public.forecast_call.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_call.currency text NOT NULL gen=- def=-
+public.forecast_call.forecast_call_amount_not_negative CHECK ((amount_minor >= 0))
+public.forecast_call.forecast_call_author_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.forecast_call.forecast_call_period_ordered CHECK ((period_end >= period_start))
+public.forecast_call.forecast_call_pkey PRIMARY KEY (id)
+public.forecast_call.forecast_call_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
+public.forecast_call.forecast_call_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
+public.forecast_call.forecast_call_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES forecast_call(id) ON DELETE RESTRICT
+public.forecast_call.id uuid NOT NULL gen=- def=uuidv7()
+public.forecast_call.note text gen=- def=-
+public.forecast_call.period_end date NOT NULL gen=- def=-
+public.forecast_call.period_start date NOT NULL gen=- def=-
+public.forecast_call.scope_id uuid gen=- def=-
+public.forecast_call.scope_kind text NOT NULL gen=- def=-
+public.forecast_call.supersedes_id uuid gen=- def=-
+public.forecast_call.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_call.version bigint NOT NULL gen=- def=1
+public.forecast_call_pkey CREATE UNIQUE INDEX forecast_call_pkey ON public.forecast_call USING btree (id)
+public.forecast_contribution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.forecast_contribution.amount_minor bigint gen=- def=-
+public.forecast_contribution.base_minor bigint gen=- def=-
+public.forecast_contribution.captured_by text NOT NULL gen=- def=-
+public.forecast_contribution.category text gen=- def=-
+public.forecast_contribution.close_provisional boolean NOT NULL gen=- def=false
+public.forecast_contribution.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_contribution.currency text gen=- def=-
+public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
+public.forecast_contribution.effective_close_date date gen=- def=-
+public.forecast_contribution.exclusion_reason text gen=- def=-
+public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
+public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
+public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
+public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
+public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
+public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
+public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
+public.forecast_contribution.fx_date date gen=- def=-
+public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
+public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
+public.forecast_contribution.in_best_case boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_evidence boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
+public.forecast_contribution.owner_id uuid gen=- def=-
+public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
+public.forecast_contribution.stage_probability integer gen=- def=-
+public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
+public.forecast_contribution.version bigint NOT NULL gen=- def=1
+public.forecast_contribution_pkey CREATE UNIQUE INDEX forecast_contribution_pkey ON public.forecast_contribution USING btree (id)
+public.forecast_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.forecast_snapshot.base_currency text NOT NULL gen=- def=-
+public.forecast_snapshot.best_case_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.call_id uuid gen=- def=-
+public.forecast_snapshot.captured_by text NOT NULL gen=- def=-
+public.forecast_snapshot.confirmed_date_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
+public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
+public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
+public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
+public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
+public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
+public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
+public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
+public.forecast_snapshot.forecast_snapshot_trigger_check CHECK ((trigger = ANY (ARRAY['daily'::text, 'call'::text, 'period_close'::text, 'recheck'::text])))
+public.forecast_snapshot.fx_missing_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
+public.forecast_snapshot.local_day date NOT NULL gen=- def=-
+public.forecast_snapshot.open_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.period_end date NOT NULL gen=- def=-
+public.forecast_snapshot.period_start date NOT NULL gen=- def=-
+public.forecast_snapshot.priced_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.scope_id uuid gen=- def=-
+public.forecast_snapshot.scope_kind text NOT NULL gen=- def=-
+public.forecast_snapshot.taken_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_snapshot.trigger text NOT NULL gen=- def=-
+public.forecast_snapshot.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.forecast_snapshot.version bigint NOT NULL gen=- def=1
+public.forecast_snapshot.weighted_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.won_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot_pkey CREATE UNIQUE INDEX forecast_snapshot_pkey ON public.forecast_snapshot USING btree (id)
 public.fx_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.fx_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.fx_rate.from_currency character(3) NOT NULL gen=- def=-
@@ -2243,6 +2332,10 @@ public.idx_dsh_ws_time CREATE INDEX idx_dsh_ws_time ON public.deal_stage_history
 public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USING btree (due_at) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]))
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
+public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
+public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
+public.idx_forecast_contribution_snapshot CREATE INDEX idx_forecast_contribution_snapshot ON public.forecast_contribution USING btree (snapshot_id)
+public.idx_forecast_snapshot_period CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)
 public.idx_fx_rate_lookup CREATE INDEX idx_fx_rate_lookup ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
 public.idx_graph_contact_edge_b CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (person_b)
 public.idx_graph_edge_person CREATE INDEX idx_graph_edge_person ON public.graph_interaction_edge USING btree (person_id, last_at DESC)
@@ -4655,6 +4748,9 @@ public.uq_deal_room_participant_in_room CREATE UNIQUE INDEX uq_deal_room_partici
 public.uq_deal_room_preview_per_rep CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview)
 public.uq_deal_room_session_token CREATE UNIQUE INDEX uq_deal_room_session_token ON public.deal_room_session USING btree (token_hash)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_person_id, left_org_id, left_lead_id), COALESCE(right_person_id, right_org_id, right_lead_id))
+public.uq_forecast_contribution_deal CREATE UNIQUE INDEX uq_forecast_contribution_deal ON public.forecast_contribution USING btree (snapshot_id, deal_id)
+public.uq_forecast_snapshot_daily CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'daily'::text)
+public.uq_forecast_snapshot_daily_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_daily_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'daily'::text) AND (scope_id IS NULL))
 public.uq_import_run CREATE UNIQUE INDEX uq_import_run ON public.import_run USING btree (id)
 public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
