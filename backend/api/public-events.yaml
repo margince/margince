@@ -92,6 +92,7 @@ components:
         - comms.delivery_bounced
         - notice.created
         - user_delivery.changed
+        - forecast.called
         - weekly_plan.updated
         - weekly_plan.help_requested
         - activity.disposition_recorded
@@ -1794,6 +1795,56 @@ components:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
       additionalProperties: false
 
+    PublicEventForecastCalled:
+      type: object
+      x-event-type: forecast.called
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for forecast.called — somebody accountable for a number said
+        what they believe will close. The entity is the AUTHOR rather than a
+        deal or a team, because a call is an assertion by a person and that
+        person is who it is attributable to.
+
+        A call supersedes rather than overwrites, so `supersedes_id` names the
+        one it replaces and is absent for the first call of a period. The
+        amount rides along because a consumer reacting to a forecast change
+        needs the figure that changed; the note does not, since a subscriber
+        acting on prose is acting on something the author may edit for a human
+        reader.
+      required:
+        - call_id
+        - author_user_id
+        - period_start
+        - period_end
+        - amount_minor
+        - currency
+      properties:
+        call_id:
+          type: string
+          format: uuid
+        author_user_id:
+          type: string
+          format: uuid
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        amount_minor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        supersedes_id:
+          type: string
+          format: uuid
+          description: >-
+            The call this one replaces. Absent on the first call of a period —
+            which is a different fact from replacing nothing, and a consumer
+            tracking revisions needs to tell them apart.
+      additionalProperties: false
     PublicEventWeeklyPlanUpdated:
       type: object
       x-event-type: weekly_plan.updated

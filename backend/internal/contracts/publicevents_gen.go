@@ -249,6 +249,7 @@ const (
 	DealUpdated                           SubscribableEventType = "deal.updated"
 	EmailSignatureChanged                 SubscribableEventType = "email_signature.changed"
 	EngagementReply                       SubscribableEventType = "engagement.reply"
+	ForecastCalled                        SubscribableEventType = "forecast.called"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
 	IntroRequestClosed                    SubscribableEventType = "intro_request.closed"
@@ -404,6 +405,8 @@ func (e SubscribableEventType) Valid() bool {
 	case EmailSignatureChanged:
 		return true
 	case EngagementReply:
+		return true
+	case ForecastCalled:
 		return true
 	case IncumbentConnected:
 		return true
@@ -1097,6 +1100,20 @@ type PublicEventEnvelope struct {
 
 	// Version Schema version of the payload in data.
 	Version int `json:"version"`
+}
+
+// PublicEventForecastCalled Payload for forecast.called — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a person and that person is who it is attributable to.
+// A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
+type PublicEventForecastCalled struct {
+	AmountMinor  int64              `json:"amount_minor"`
+	AuthorUserId openapi_types.UUID `json:"author_user_id"`
+	CallId       openapi_types.UUID `json:"call_id"`
+	Currency     string             `json:"currency"`
+	PeriodEnd    openapi_types.Date `json:"period_end"`
+	PeriodStart  openapi_types.Date `json:"period_start"`
+
+	// SupersedesId The call this one replaces. Absent on the first call of a period — which is a different fact from replacing nothing, and a consumer tracking revisions needs to tell them apart.
+	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
 
 // PublicEventIncumbentConnected Payload for incumbent.connected — the installation completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection) and flipped to overlay_mode.sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent.
@@ -2141,6 +2158,10 @@ func (PublicEventEngagementReply) EventType() string { return "engagement.reply"
 
 func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
+func (PublicEventForecastCalled) EventType() string { return "forecast.called" }
+
+func (PublicEventForecastCalled) EntityType() string { return "user" }
+
 func (PublicEventIncumbentConnected) EventType() string { return "incumbent.connected" }
 
 func (PublicEventIncumbentConnected) EntityType() string { return "incumbent_connection" }
@@ -2471,6 +2492,7 @@ var PublicEventVersions = map[string]int{
 	"deal_room.updated":                         1,
 	"email_signature.changed":                   1,
 	"engagement.reply":                          1,
+	"forecast.called":                           1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,
 	"intro_request.closed":                      1,
