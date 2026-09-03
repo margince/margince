@@ -196,6 +196,12 @@ func sameDay(a, b *time.Time) bool {
 	return a.Format(time.DateOnly) == b.Format(time.DateOnly)
 }
 
+// Both are storekit.dateOnly's siblings: the column-value contract Patch.Set
+// takes is "the value, or a JSON null", and it has to be an untyped nil rather
+// than a typed nil pointer — the audit image is compared as JSON and a *string
+// holding nil is not `== nil` once it is an any.
+//
+//craft:ignore naked-any a nullable column is either its value or a JSON null, and the audit image and the bind value both have to carry that pair — the same column-value contract as Patch.Set
 func stringOrNil(value string) any {
 	if value == "" {
 		return nil
@@ -203,6 +209,7 @@ func stringOrNil(value string) any {
 	return value
 }
 
+//craft:ignore naked-any the same column-value contract as stringOrNil above
 func uuidOrNil(id ids.UUID) any {
 	if id == ids.Nil {
 		return nil
