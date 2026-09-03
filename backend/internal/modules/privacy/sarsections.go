@@ -270,6 +270,18 @@ func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []id
 // captured what from where.
 func sarProvenanceSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
+		// Why the installation holds this person at all: what they did, or
+		// what was done to obtain them. Art. 15(1)(g) asks for the source of
+		// the data, and this is the record that answers it in the subject's
+		// own terms rather than as an internal surface name.
+		//
+		// source_entity_id is withheld for the reason the qualifying events
+		// withhold theirs: it points at rows whose own audience gating lives
+		// in the record sections, and a bare id would route around it.
+		{&pkg.AcquisitionEvidence, `SELECT kind, source_entity_type, purpose_claimed,
+		          occurred_at, captured_at
+		   FROM person_acquisition_evidence
+		   WHERE person_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's
 		// purgeDerivedTraces): by email, ILIKE against the stored address, and
 		// by channel identity, a typed JSONB path equality rather than a

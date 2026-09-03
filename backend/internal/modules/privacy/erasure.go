@@ -330,6 +330,12 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	if err := deleteConsentCapabilities(ctx, tx, personID); err != nil {
 		return nil, err
 	}
+	// Why this contact existed. It names one person, records what they did or
+	// what was done to obtain them, and has no meaning after them — deleted
+	// rather than tombstoned, like the addresses beside it.
+	if _, err := tx.Exec(ctx, `DELETE FROM person_acquisition_evidence WHERE person_id = $1`, personID); err != nil {
+		return nil, fmt.Errorf("privacy: destroying the subject's acquisition evidence: %w", err)
+	}
 	wiped, err := anonymizeLeadTwins(ctx, tx, personID, emails)
 	if err != nil {
 		return nil, err

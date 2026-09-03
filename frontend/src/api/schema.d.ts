@@ -10753,6 +10753,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/assurance/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open findings this caller can see.
+         * @description What the nightly check found, ordered the way a manager with ten minutes before a
+         *     call needs it: high severity first, then by the money at stake.
+         *
+         *     The list is SCOPED to what the caller can open. The scan itself reads the whole
+         *     pipeline — a duplicate-detection rule seeing one rep's deals would report no
+         *     duplicates — and that decision is paid for here: a finding about a deal the caller
+         *     cannot see is a finding they never meet. There is deliberately no count of what was
+         *     withheld, because a count of what somebody may not read is itself a statement about
+         *     how much of it there is.
+         *
+         *     `claim` and `observed` hold structured values whose keys depend on the exception
+         *     type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
+         *     body: a frozen copy of a protected sentence outlives the protection on its source.
+         */
+        get: operations["listInputChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/assurance/exceptions/{id}/resolve": {
         parameters: {
             query?: never;
@@ -22414,6 +22446,44 @@ export interface components {
             current_call?: components["schemas"]["ForecastCall"];
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
+        };
+        /** @description One finding from the nightly input check. */
+        InputCheck: {
+            /** Format: uuid */
+            id: string;
+            /** @description Which question noticed it. The key set in `claim` and `observed` depends on this. */
+            type: string;
+            /** @enum {string} */
+            subject_kind: "deal" | "signal" | "offer" | "contract";
+            /** Format: uuid */
+            subject_id: string;
+            /** @enum {string} */
+            severity: "low" | "medium" | "high";
+            /**
+             * Format: int64
+             * @description How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+             */
+            affected_minor?: number;
+            currency?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** @enum {string} */
+            status: "open" | "resolved" | "expired";
+            /** @description What the record says, as structured values only. */
+            claim?: {
+                [key: string]: unknown;
+            };
+            /** @description What the check found, as structured values only. */
+            observed?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            first_seen_at: string;
+            /**
+             * Format: date-time
+             * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+             */
+            last_seen_at: string;
         };
         ResolveInputCheck: {
             /**
@@ -45806,6 +45876,30 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    listInputChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open findings, most material first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InputCheck"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     resolveInputCheck: {

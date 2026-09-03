@@ -58,10 +58,20 @@ func refusesToNameAPerson(email string, exchanged bool) bool {
 // what makes this safe to put in front of a create: an address it refuses is
 // deferred to the verdict rather than dismissed, and the verdict reads the
 // message.
-func (s *Sink) exchangedWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	replied, err := wroteBackTx(ctx, tx, email)
+// exchangedHow answers the same question and also says WHICH half of it was
+// satisfied, because the two are different facts about the person.
+//
+// A reply is the person writing to us. Two outbound threads with no reply is US
+// writing to them twice — enough to be worth a record, and emphatically not
+// them initiating anything. Collapsing the two was harmless while the answer
+// only decided whether to create a row; it stopped being harmless when the row
+// started recording WHY the contact exists, because the stronger reading would
+// assert that a cold-emailed prospect had contacted us first.
+func (s *Sink) exchangedHow(ctx context.Context, tx pgx.Tx, email string) (exchanged, replied bool, err error) {
+	replied, err = wroteBackTx(ctx, tx, email)
 	if err != nil || replied {
-		return replied, err
+		return replied, replied, err
 	}
-	return wroteOnTwoThreadsTx(ctx, tx, email)
+	exchanged, err = wroteOnTwoThreadsTx(ctx, tx, email)
+	return exchanged, false, err
 }

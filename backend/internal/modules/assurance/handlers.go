@@ -4,9 +4,12 @@
 package assurance
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -14,17 +17,93 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ExceptionsFunc reads the open findings this caller may see.
+//
+// Injected rather than imported: the scope clause is over `deal`, which this
+// module does not own and may not import. Applying it in the composition layer
+// is also where the caller's authority already sits.
+type ExceptionsFunc func(ctx context.Context, tx pgx.Tx) ([]Exception, error)
+
 // Handlers is the assurance surface.
 type Handlers struct {
-	store *Store
+	store      *Store
+	exceptions ExceptionsFunc
 	// now is injected so the suppression ceiling is a function of the request's
 	// own clock rather than of whenever the process happened to start.
 	now func() time.Time
 }
 
-// NewHandlers binds the routes to the store.
-func NewHandlers(store *Store, now func() time.Time) Handlers {
-	return Handlers{store: store, now: now}
+// NewHandlers binds the routes to the store and its scoped read.
+func NewHandlers(store *Store, exceptions ExceptionsFunc, now func() time.Time) Handlers {
+	return Handlers{store: store, exceptions: exceptions, now: now}
+}
+
+// ListInputChecks answers the open findings this caller can see.
+func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+	var found []Exception
+	err := h.store.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		found, err = h.exceptions(ctx, tx)
+		return err
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, struct {
+		Data []crmcontracts.InputCheck `json:"data"`
+	}{Data: exceptionsToWire(found)})
+}
+
+func exceptionsToWire(in []Exception) []crmcontracts.InputCheck {
+	// Empty, never nil. "Nothing to check" is a real answer and arrives shaped
+	// like the array it is; null reads as "unknown", which on this surface
+	// would be the difference between a clean pipeline and an unread one.
+	out := make([]crmcontracts.InputCheck, 0, len(in))
+	for _, e := range in {
+		wire := crmcontracts.InputCheck{
+			Id:            openapi_types.UUID(e.ID),
+			Type:          e.Type,
+			SubjectKind:   crmcontracts.InputCheckSubjectKind(e.SubjectKind),
+			SubjectId:     openapi_types.UUID(e.SubjectID),
+			Severity:      crmcontracts.InputCheckSeverity(e.Severity),
+			Status:        crmcontracts.InputCheckStatus(e.Status),
+			AffectedMinor: e.AffectedMinor,
+			FirstSeenAt:   e.FirstSeenAt,
+			LastSeenAt:    e.LastSeenAt,
+		}
+		if e.Currency != "" {
+			currency := e.Currency
+			wire.Currency = &currency
+		}
+		if e.OwnerID != nil {
+			owner := openapi_types.UUID(*e.OwnerID)
+			wire.OwnerId = &owner
+		}
+		// The structured values travel as they were stored. Decoding and
+		// re-encoding them here would make this the second place that knows
+		// what each exception type's keys are.
+		wire.Claim = decodeSlots(e.Claim)
+		wire.Observed = decodeSlots(e.Observed)
+		out = append(out, wire)
+	}
+	return out
+}
+
+// decodeSlots renders a stored jsonb object for the wire.
+//
+// A value that will not decode renders as EMPTY rather than as an error: one
+// malformed row must not take down the list a manager is reading before a call,
+// and the row still says which deal and which check it is about.
+func decodeSlots(raw []byte) *map[string]any {
+	out := map[string]any{}
+	if len(raw) == 0 {
+		return &out
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return &map[string]any{}
+	}
+	return &out
 }
 
 // GetForecastAssurance answers the most recent completed run.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Font-lock gate: the three-family type
 # rule (design §2) — every font-family declaration under frontend/src or an
-# extension unit's frontend names only Outfit (display), DM Sans (body), or
-# JetBrains Mono (mono).
+# extension unit's frontend names only Bricolage Grotesque (display), Geist
+# (body), or Geist Mono (mono).
 #
 # Allowed besides the three families: the generic stack fallbacks the §2
 # token definitions name (system-ui, sans-serif, ui-monospace, monospace) and
@@ -57,9 +57,9 @@ while IFS= read -r hit; do
   stripped=$(echo "$value" \
     | sed -E 's/font-family\s*://g' \
     | sed -E 's/var\(--[A-Za-z0-9-]+\)//g' \
-    | sed -E 's/JetBrains Mono//g' \
-    | sed -E 's/DM Sans//g' \
-    | sed -E 's/Outfit//g' \
+    | sed -E 's/Geist Mono//g' \
+    | sed -E 's/Bricolage Grotesque//g' \
+    | sed -E 's/Geist//g' \
     | sed -E 's/system-ui//g' \
     | sed -E 's/sans-serif//g' \
     | sed -E 's/ui-monospace//g' \
@@ -76,10 +76,10 @@ done < <(
 )
 
 if [[ "$EXIT" == "0" ]]; then
-  echo "PASS — only Outfit / DM Sans / JetBrains Mono (+ generic fallbacks)"
+  echo "PASS — only Bricolage Grotesque / Geist / Geist Mono (+ generic fallbacks)"
 else
   echo ""
-  echo "Allowed: Outfit, DM Sans, JetBrains Mono; generics system-ui,"
+  echo "Allowed: Bricolage Grotesque, Geist, Geist Mono; generics system-ui,"
   echo "sans-serif, ui-monospace, monospace; var(--f-*) token references."
 fi
 
