@@ -272,11 +272,33 @@ func AnswerCorpus(
 func askCorpusLane(
 	ctx context.Context, lane corpusAskLane, question string, passages []knowledge.Passage, lang string,
 ) ([]crmcontracts.KnowledgeClaim, error) {
-	resp, err := lane.Complete(ctx, CorpusAskRequest(question, passages, lang))
+	req := CorpusAskRequest(question, passages, lang)
+	var resp model.Response
+	var err error
+	if structured, ok := lane.(validatedBrain); ok {
+		resp, err = structured.CompleteValidated(ctx, req, corpusReplyValid(passages))
+	} else {
+		resp, err = lane.Complete(ctx, req)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("the corpus ask lane: %w", err)
 	}
 	return GroundCorpusAnswer(resp.Text, passages)
+}
+
+// corpusReplyValid is the retry predicate, and it is the site's OWN read of the
+// reply rather than a looser shape check: the model is shown the refusal the
+// answer path would have raised, which is the only message that names the fault.
+//
+// It refuses exactly what GroundCorpusAnswer refuses, and no more. A reply whose
+// claims all fail the quote check is NOT refused: the prompt asks for no claims
+// when the passages do not cover the question, so a re-ask there would push a
+// model that answered correctly to answer again.
+func corpusReplyValid(passages []knowledge.Passage) ai.Validator {
+	return func(text string) error {
+		_, err := GroundCorpusAnswer(text, passages)
+		return err
+	}
 }
 
 // GroundCorpusAnswer parses a reply and keeps only the claims whose quote is
