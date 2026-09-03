@@ -2666,6 +2666,7 @@ export const en = {
   "home.readings.label": "Your morning, in five readings",
   "home.readings.truncated":
     "A source was read to its limit, so every figure above is a floor.",
+  "home.readings.openLane": "Open these",
   "home.readings.waiting": "Customer waiting",
   "home.readings.waitingBasis": "waiting on an answer",
   "home.readings.meetings": "Meetings ahead",
@@ -7978,6 +7979,7 @@ export const en = {
   "worklist.readings.revenue": "Revenue at risk",
   "worklist.readings.revenue.detail": "Across the deals drifting today",
   "worklist.readings.revenue.unpriced": "No deal at risk could be priced",
+  "worklist.readings.openLane": "Open this lane",
   "worklist.readings.replies": "Buyer replies",
   "worklist.readings.replies.detail": "Customers waiting on an answer",
   "worklist.readings.prospecting": "Prospecting",

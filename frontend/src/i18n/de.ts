@@ -2617,6 +2617,7 @@ export const de = {
   "home.readings.label": "Dein Morgen in fünf Kennzahlen",
   "home.readings.truncated":
     "Eine Quelle wurde bis zur Grenze gelesen, jede Zahl oben ist also ein Mindestwert.",
+  "home.readings.openLane": "Diese öffnen",
   "home.readings.waiting": "Kunden warten",
   "home.readings.waitingBasis": "warten auf eine Antwort",
   "home.readings.meetings": "Termine heute",
@@ -7896,6 +7897,7 @@ export const de = {
   "worklist.readings.revenue": "Umsatz in Gefahr",
   "worklist.readings.revenue.detail": "Über die heute treibenden Deals",
   "worklist.readings.revenue.unpriced": "Kein gefährdeter Deal war bewertbar",
+  "worklist.readings.openLane": "Diese Spur öffnen",
   "worklist.readings.replies": "Kundenantworten",
   "worklist.readings.replies.detail": "Kunden warten auf eine Antwort",
   "worklist.readings.prospecting": "Neugeschäft",

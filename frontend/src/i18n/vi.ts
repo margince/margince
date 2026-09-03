@@ -2593,6 +2593,7 @@ export const vi = {
   "home.readings.label": "Buổi sáng của bạn qua năm chỉ số",
   "home.readings.truncated":
     "Một nguồn đã được đọc đến giới hạn, nên mọi con số ở trên là mức tối thiểu.",
+  "home.readings.openLane": "Mở những mục này",
   "home.readings.waiting": "Khách đang chờ",
   "home.readings.waitingBasis": "đang chờ trả lời",
   "home.readings.meetings": "Cuộc họp hôm nay",
@@ -7806,6 +7807,7 @@ export const vi = {
   "worklist.readings.revenue.detail": "Trên các thương vụ đang trôi hôm nay",
   "worklist.readings.revenue.unpriced":
     "Không thương vụ rủi ro nào định giá được",
+  "worklist.readings.openLane": "Mở luồng này",
   "worklist.readings.replies": "Khách phản hồi",
   "worklist.readings.replies.detail": "Khách đang chờ một câu trả lời",
   "worklist.readings.prospecting": "Tìm kiếm khách hàng",
