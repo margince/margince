@@ -16076,6 +16076,29 @@ type AnalyticsEntity struct {
 	Name string `json:"name"`
 }
 
+// AnalyticsExplainRequest One cell of an answer, named by the question and its group keys.
+type AnalyticsExplainRequest struct {
+	// Group The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
+
+	// Query One question, in the vocabulary the schema returned.
+	Query AnalyticsQuery `json:"query"`
+}
+
+// AnalyticsExplanation defines model for AnalyticsExplanation.
+type AnalyticsExplanation struct {
+	Columns []string `json:"columns"`
+
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.
+	Truncated bool `json:"truncated"`
+
+	// Withheld The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all.
+	Withheld bool `json:"withheld"`
+}
+
 // AnalyticsFilter defines model for AnalyticsFilter.
 type AnalyticsFilter struct {
 	Field string            `json:"field"`
@@ -37097,6 +37120,9 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
 
+// ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
+type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
+
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
 
@@ -45562,6 +45588,9 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// The records one cell of an analytics answer was computed from.
+	// (POST /analytics/explain)
+	ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
@@ -47401,6 +47430,12 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
 func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records one cell of an analytics answer was computed from.
+// (POST /analytics/explain)
+func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52388,6 +52423,28 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainAnalyticsCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainAnalyticsCell(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75435,6 +75492,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/explain", wrapper.ExplainAnalyticsCell)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)

@@ -297,3 +297,125 @@ func TestAWithheldGroupKeepsNoKeysEither(t *testing.T) {
 		}
 	}
 }
+
+// explainCell opens one cell of an answer.
+func (e *forecastEnv) explainCell(
+	ctx context.Context, t *testing.T, in analyticsquery.Explain,
+) (AnalyticsExplanation, error) {
+	t.Helper()
+	var out AnalyticsExplanation
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			out, err = ExplainAnalyticsCell(ctx, tx, in, analyticsquery.DefaultFloor)
+			return err
+		})
+	return out, err
+}
+
+func TestACellOpensToTheRecordsItWasComputedFrom(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.reportReaderCtx()
+	q := analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		GroupBy:  []string{"owner_id"},
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
+	}
+
+	answer, err := e.askAnalytics(ctx, t, q)
+	if err != nil {
+		t.Fatalf("the question was refused: %v", err)
+	}
+	if answer.Withheld {
+		t.Fatal("six deals in one group were withheld from a floor of five")
+	}
+
+	explanation, err := e.explainCell(ctx, t, analyticsquery.Explain{
+		Query: q, Group: []any{e.Rep1.String()},
+	})
+	if err != nil {
+		t.Fatalf("opening the cell was refused: %v", err)
+	}
+	if explanation.Withheld {
+		t.Fatal("a served cell explained to nothing")
+	}
+	// The explanation reads the SAME rows the number counted. A drill-through
+	// that showed more would be showing rows excluded from the total above it.
+	if len(explanation.Rows) != 6 {
+		t.Errorf("the cell counted six deals and opened to %d records", len(explanation.Rows))
+	}
+	if explanation.Truncated {
+		t.Error("six records were reported as a truncated page")
+	}
+}
+
+func TestAWithheldCellExplainsToWithheldRatherThanToNothing(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	// Two deals for one rep. Under the floor, so the answer withholds the
+	// group — and opening it record by record would be that same disclosure at
+	// a slower pace.
+	for i := 0; i < 2; i++ {
+		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
+	}
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.reportReaderCtx()
+	q := analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		GroupBy:  []string{"owner_id"},
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
+	}
+	if _, err := e.askAnalytics(ctx, t, q); err != nil {
+		t.Fatalf("the question was refused: %v", err)
+	}
+
+	explanation, err := e.explainCell(ctx, t, analyticsquery.Explain{
+		Query: q, Group: []any{e.Rep3.String()},
+	})
+	if err != nil {
+		t.Fatalf("opening a withheld cell errored rather than answering withheld: %v", err)
+	}
+	if !explanation.Withheld {
+		t.Fatal("a withheld cell opened to its records")
+	}
+	if len(explanation.Rows) != 0 {
+		t.Errorf("a withheld cell returned %d records", len(explanation.Rows))
+	}
+}
+
+func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+	}
+	q := analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
+	}
+
+	// A fully masked reader counts nothing, because every row leaves the money
+	// through the mask exclusion. Their explanation must be empty too — an
+	// explanation showing rows the aggregate excluded is the drill-through
+	// disclosing what the total was narrowed to hide.
+	masked := e.forecastReader(e.maskedDealReader(principal.MaskAlways))
+	answer, err := e.askAnalytics(masked, t, q)
+	if err != nil {
+		t.Fatalf("the masked reader's question was refused: %v", err)
+	}
+	explanation, err := e.explainCell(masked, t, analyticsquery.Explain{Query: q})
+	if err != nil {
+		t.Fatalf("the masked reader's explanation was refused: %v", err)
+	}
+	if len(explanation.Rows) != 0 {
+		t.Errorf("a masked reader whose answer counted %v opened it to %d records",
+			answer.Rows, len(explanation.Rows))
+	}
+}
