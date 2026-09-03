@@ -53,7 +53,8 @@ func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref 
 		}
 
 		var connectedAt time.Time
-		if scanErr := tx.QueryRow(ctx, `
+		if scanErr := tx.QueryRow(
+			ctx, `
 			UPDATE incumbent_connection SET
 			  incumbent = $2, region = $3, credential_ref = $4, scopes = $5,
 			  incumbent_account_id = NULLIF($6, ''),

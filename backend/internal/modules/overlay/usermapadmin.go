@@ -133,10 +133,12 @@ type UserMapEntry struct {
 // with an empty owner rather than be filtered out. Keyset-ordered by id so
 // the cursor is stable across pages.
 //
-// Agent and archived users are excluded: a passport identity has no incumbent
-// counterpart to map, and offering an archived user a mapping affordance
-// invites an admin to grant visibility to a seat that no longer logs in.
-const listUserMapSQL = `
+// The seats it offers are the mappable ones (mappableSeatSQL): a passport
+// identity has no incumbent counterpart to map, and a seat that no longer logs
+// in — archived OR deactivated — must not be handed a mapping affordance. The
+// predicate is spelled there rather than here, because it is one invariant this
+// file shares with two other sites.
+var listUserMapSQL = `
 SELECT u.id, u.email, u.display_name,
        coalesce(m.incumbent_user_id, ''), coalesce(m.match_source, ''),
        b.app_user_id IS NOT NULL
@@ -146,8 +148,7 @@ LEFT JOIN mirror_user_map m
 LEFT JOIN mirror_user_automap_block b
        ON b.app_user_id = u.id AND b.incumbent = $1
 WHERE u.id > $2
-  AND NOT u.is_agent
-  AND u.archived_at IS NULL
+  AND ` + mappableSeatSQL("u") + `
 ORDER BY u.id
 LIMIT $3`
 
@@ -203,24 +204,28 @@ func (s *MirrorStore) ListUserMap(ctx context.Context, incumbent, cursor string,
 // its target: that it exists at all, and whether it is a seat an admin may
 // GRANT a mapping to.
 //
-// The eligibility half is ONE invariant with two siblings that must move with
-// it: listUserMapSQL (what the admin surface offers) and usersMatchingEmail
-// (usermapseed.go — what the automated sweep will seed). All three exclude an
-// agent seat and an archived seat; a change here belongs in all three.
+// The eligibility half is ONE invariant with two siblings — listUserMapSQL
+// (what the admin surface offers) and usersMatchingEmail (usermapseed.go — what
+// the automated sweep seeds) — and all three now READ it from mappableSeatSQL
+// rather than each spelling it. They used to spell it three times, held
+// together by comments naming each other, and they diverged from their own
+// stated reason: every one excluded an archived seat and none excluded a
+// deactivated one (#2592).
 //
 // It resolves by id alone. A workspace predicate stood here until ADR-0091 §8
 // phase D took the tenant column off app_user; what it bought — turning an id
 // this installation does not have into no rows, and so into ErrNotFound — the
 // id itself now buys, because an installation serves one organization
 // (ADR-0061) and an unknown id matches nothing.
-const selectUserMapTargetSQL = `
-SELECT NOT u.is_agent AND u.archived_at IS NULL
+var selectUserMapTargetSQL = `
+SELECT ` + mappableSeatSQL("u") + `
 FROM app_user u
 WHERE u.id = $1`
 
 // resolveUserMapTarget resolves appUser inside tx, reporting whether the seat
 // is grantable — a live human. An agent seat is a passport identity with no
-// incumbent counterpart, and an archived seat no longer logs in.
+// incumbent counterpart, and a seat that no longer logs in — archived or
+// deactivated — is not somebody to grant mirror visibility to.
 //
 // An id naming no user — a stale one in an admin's open tab is the routine
 // case — answers apperrors.ErrNotFound: a row-scope miss is existence-hiding,

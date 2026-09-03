@@ -198,6 +198,69 @@ func TestSeedUserMapMatchesOwnersToUsersByEmail(t *testing.T) {
 // manually mapped to owner-X, whose email ALSO matches owner-Y in the
 // directory, must keep owner-X — seeding must not remap them to owner-Y
 // (which would revoke owner-X's records the escape hatch exists to grant).
+// The automated sweep is the third mappability site, and it skips a seat that
+// can no longer log in for the same reason the admin surface refuses to offer
+// one: the mapping would grant mirror visibility to an account nobody is using.
+//
+// A DEACTIVATED seat is the case that used to slip through all three, and it is
+// worse here than on the admin surface: nobody chose it. The sweep runs on
+// connect and on its own schedule, so a suspended colleague whose address
+// matched an incumbent owner was silently re-granted the mapping every pass,
+// with an admin's revocation undone by automation the next time it ran (#2592).
+func TestSeedUserMapSkipsASeatThatCanNoLongerLogIn(t *testing.T) {
+	ctx, pool, ws := testWorkspaceCtx(t)
+	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), stubOwnerEmails{
+		"owner-live":      "live@example.com",
+		"owner-suspended": "suspended@example.com",
+		"owner-archived":  "archived@example.com",
+	})
+	_, liveRaw := testWorkspaceCtxAsUser(t, ws, "live@example.com")
+	live := ids.From[ids.UserKind](liveRaw)
+	suspended := seedDeactivatedUser(t, "suspended@example.com")
+	archived := seedArchivedUser(t, ws, "archived@example.com")
+
+	owners := []OwnerRef{
+		{ExternalID: "owner-live", Email: "live@example.com"},
+		{ExternalID: "owner-suspended", Email: "suspended@example.com"},
+		{ExternalID: "owner-archived", Email: "archived@example.com"},
+	}
+	if err := store.SeedUserMap(ctx, "hubspot", owners); err != nil {
+		t.Fatalf("SeedUserMap: %v", err)
+	}
+
+	mapped := map[ids.UserID]bool{}
+	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT app_user_id FROM mirror_user_map WHERE incumbent = 'hubspot'`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.UserID
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			mapped[id] = true
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatalf("reading the seeded mappings: %v", err)
+	}
+
+	// The live seat, so a failing sweep is told apart from a sweep that seeded
+	// nothing at all.
+	if !mapped[live] {
+		t.Fatal("the live seat was not seeded, so this test proves nothing about the two below")
+	}
+	if mapped[suspended] {
+		t.Error("the sweep seeded a DEACTIVATED seat — an account that can no longer log in, " +
+			"re-granted on every pass and undoing an admin's revocation each time")
+	}
+	if mapped[archived] {
+		t.Error("the sweep seeded an ARCHIVED seat")
+	}
+}
+
 func TestSeedUserMapNeverOverwritesAManualMapping(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), stubOwnerEmails{
