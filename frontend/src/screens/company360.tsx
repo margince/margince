@@ -212,14 +212,15 @@ export function DealsCard({
               {formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
             </span>
             {/* The lost count names a set of this company's deals, so it is
-                the way into them. Narrowed by company and not by a lost STAGE:
-                there is no single closed-lost stage id across pipelines and no
-                `status` dial on the wire, so a company's deals is the honest
-                door — the one that answers a question rather than one that
-                looks like it does. */}
+                the way into them — and it opens exactly that set. Narrowed by
+                `status` and not by a lost STAGE, because no single closed-lost
+                stage id exists across pipelines while `status` is a dial the
+                deals endpoint reads. */}
             <a
               className="link-button"
-              href={dealsFilteredBy("organization_id", view.organization.id)}
+              href={dealsFilteredBy("organization_id", view.organization.id, {
+                status: "lost",
+              })}
             >
               {t("co.deals.lostCount", {
                 count: formatNumber(deals.lost_count, locale),
@@ -352,15 +353,17 @@ export function CommercialPanel({
           locale,
         )}
       />
-      {/* The same figure as the deals card's, and the same door — narrowed by
-          company, because no `status` dial and no cross-pipeline lost stage
-          exists to narrow it further. */}
+      {/* The same figure as the deals card's, and the same door: one company,
+          status lost. Two spellings of one address is how the two figures come
+          to open different lists. */}
       <CommercialFigure
         label={t("co.commercial.lostFigure")}
         value={
           <a
             className="link-button"
-            href={dealsFilteredBy("organization_id", view.organization.id)}
+            href={dealsFilteredBy("organization_id", view.organization.id, {
+              status: "lost",
+            })}
           >
             {formatNumber(deals.lost_count, locale)}
           </a>

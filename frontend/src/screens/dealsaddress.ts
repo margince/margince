@@ -16,12 +16,23 @@ import { routeHash } from "../app/router";
  * lost-deal figures. A second spelling is how one of them comes to point
  * somewhere that answers a different question.
  *
- * The dials this can name are the ones the deals endpoint actually reads. There
- * is no `status`, no `forecast_category` and no confirmed-close-date parameter,
- * so a figure counting those cannot be given a door — see the issue tracking
- * that gap rather than inventing one here, because a link that narrows nothing
- * is worse than a figure that admits it is a dead end.
+ * The dials this can name are the ones the deals endpoint actually reads:
+ * `stage_id`, `organization_id` and `status` are query parameters on `/deals`,
+ * while `currency`, `forecast_category` and a confirmed-close-date bound are
+ * not. A figure grouped by something the endpoint cannot filter on has no
+ * address, and the caller draws the number plainly rather than being handed one
+ * that opens a wider set — a link that narrows less than the figure promised is
+ * worse than a figure that admits it is a dead end.
+ *
+ * `extra` rather than a single record of dials, so that widening this never
+ * moves an existing caller: a signature every call site has to follow is one
+ * that breaks in the merge when a branch adds the fourth.
  */
-export function dealsFilteredBy(param: string, value: string): string {
-  return `${routeHash({ screen: "deals" })}?${param}=${encodeURIComponent(value)}`;
+export function dealsFilteredBy(
+  param: string,
+  value: string,
+  extra: Readonly<Record<string, string>> = {},
+): string {
+  const dials = new URLSearchParams({ [param]: value, ...extra });
+  return `${routeHash({ screen: "deals" })}?${dials.toString()}`;
 }

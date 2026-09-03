@@ -379,11 +379,47 @@ function ForecastStrip({
   );
 }
 
+/**
+ * The group keys the report answered with exactly ONE currency row.
+ *
+ * Every money report groups by currency as well as by its own dimension, so a
+ * company trading in two currencies is two rows with two counts. `/deals` reads
+ * no `currency` dial — the parameter does not exist on the endpoint — so a link
+ * beside such a row can narrow to the company but not to the row, and it opens
+ * the union of both. The figure promises one set and the door opens a larger
+ * one, which is the defect a figure-as-door has to avoid to be worth drawing.
+ *
+ * So the door survives exactly where it is exact. A key with a single currency
+ * row has no sibling row to be confused with, and `organization_id` alone
+ * addresses precisely the deals that row counted. A key with two or more gets
+ * the plain number — the same answer this table already gives a row whose
+ * company is "none".
+ *
+ * Sound because a report result is complete: `ReportResult` carries no cursor
+ * and no truncation flag, so the rows in hand are all the rows there are. Were
+ * it ever paged, a key whose second currency row fell off the page would look
+ * single-currency here and get a door that lies.
+ */
+function singleCurrencyKeys(keys: readonly string[]): ReadonlySet<string> {
+  const rowsPerKey = new Map<string, number>();
+  for (const key of keys) {
+    rowsPerKey.set(key, (rowsPerKey.get(key) ?? 0) + 1);
+  }
+  return new Set(
+    [...rowsPerKey].filter(([, rows]) => rows === 1).map(([key]) => key),
+  );
+}
+
 function CompanyTable({
   rows,
   locale,
 }: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
   const t = useT();
+  const addressable = singleCurrencyKeys(
+    rows
+      .map((row) => row.organization_id)
+      .filter((id): id is string => typeof id === "string"),
+  );
   return (
     <DataTable
       label={t("analytics.reportOpenByCompany")}
@@ -419,10 +455,15 @@ function CompanyTable({
           key: "count",
           header: t("analytics.openDeals"),
           render: (row: ReportRow) =>
-            typeof row.organization_id === "string" ? (
+            typeof row.organization_id === "string" &&
+            addressable.has(row.organization_id) ? (
+              // `status`, because this report counts OPEN deals and the list
+              // otherwise answers with every status the company ever had.
               <CountLink
                 count={rowCount(row, "deal_count")}
-                href={dealsFilteredBy("organization_id", row.organization_id)}
+                href={dealsFilteredBy("organization_id", row.organization_id, {
+                  status: "open",
+                })}
                 title={t("analytics.openCompanyDeals")}
               />
             ) : (
@@ -505,6 +546,9 @@ function StageTable({
 }>) {
   const t = useT();
   const aggregates = buildStageAggregates(rows, stages);
+  const addressable = singleCurrencyKeys(
+    aggregates.map((aggregate) => aggregate.stageId),
+  );
   return (
     <DataTable
       label={t("analytics.reportDeals")}
@@ -524,13 +568,20 @@ function StageTable({
         {
           key: "count",
           header: t("analytics.count"),
-          render: (row: StageAgg) => (
-            <CountLink
-              count={row.count}
-              href={dealsFilteredBy("stage_id", row.stageId)}
-              title={t("analytics.openStageDeals", { stage: row.stageName })}
-            />
-          ),
+          // No `status` dial here, unlike the company table: a won or lost
+          // deal keeps the stage_id it closed in, so this report's stage rows
+          // are not open deals by construction and narrowing to `open` would
+          // hand back a shorter list than the figure counted.
+          render: (row: StageAgg) =>
+            addressable.has(row.stageId) ? (
+              <CountLink
+                count={row.count}
+                href={dealsFilteredBy("stage_id", row.stageId)}
+                title={t("analytics.openStageDeals", { stage: row.stageName })}
+              />
+            ) : (
+              formatNumber(row.count, locale)
+            ),
         },
         {
           key: "raw",
