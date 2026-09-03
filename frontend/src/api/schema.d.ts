@@ -10716,6 +10716,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/assurance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What last night's input check found, and how much of the pipeline it reached.
+         * @description A forecast is only as good as its inputs, and the failures are mundane: a close
+         *     date that went by, an amount that disagrees with the offer that was sent, a deal
+         *     nobody has heard from in ninety days. None is a bug in the arithmetic; every one
+         *     makes the total wrong.
+         *
+         *     `readiness` is the verdict, and `checks_incomplete` is NOT a worse `needs_review`.
+         *     One says the pipeline has problems; the other says we could not look. A reader
+         *     told the first when the second is true has been told the pipeline is sound when
+         *     nobody read the mailbox — and that cannot be acted on.
+         *
+         *     `sources` is why. Every source the run tried carries the state it reached:
+         *     `checked` with the instant it read through, or `stale`, `unavailable` or
+         *     `permission_limited` with no date at all — a date on an unread source would claim
+         *     coverage that did not happen.
+         *
+         *     `eligible_deals` is how much there was to check, counted once per deal actually
+         *     evaluated. Compared against the previous run it shows a pass that covered less of
+         *     the pipeline.
+         */
+        get: operations["getForecastAssurance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/movement": {
         parameters: {
             query?: never;
@@ -22328,6 +22365,39 @@ export interface components {
             current_call?: components["schemas"]["ForecastCall"];
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
+        };
+        /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
+        ForecastAssurance: {
+            /** Format: uuid */
+            run_id: string;
+            /** Format: date-time */
+            as_of: string;
+            /**
+             * @description `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+             * @enum {string}
+             */
+            status: "complete" | "incomplete";
+            /**
+             * @description What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+             * @enum {string}
+             */
+            readiness?: "ready" | "ready_with_exceptions" | "needs_review" | "checks_incomplete";
+            /** @description How many deals the run evaluated, counted one per deal. */
+            eligible_deals: number;
+            eligible_signals?: number;
+            /** @description Every source the run tried, and how far it reached into each. */
+            sources: components["schemas"]["ForecastAssuranceSource"][];
+        };
+        ForecastAssuranceSource: {
+            /** @enum {string} */
+            source: "mail" | "calendar" | "documents" | "contracts" | "offers" | "incumbent";
+            /** @enum {string} */
+            state: "checked" | "stale" | "unavailable" | "permission_limited";
+            /**
+             * Format: date-time
+             * @description How current the source was. Present only for a `checked` source: a date on an unread one would read as "checked up to then" when nothing was read at all.
+             */
+            checked_through?: string;
         };
         /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
         ForecastMovement: {
@@ -45633,6 +45703,35 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastAssurance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The most recent completed run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastAssurance"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No run has completed yet. A fresh installation has not been checked. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     getForecastMovement: {

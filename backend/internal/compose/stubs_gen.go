@@ -883,6 +883,10 @@ func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 	httperr.NotImplemented(w, r, "GetForecast")
 }
 
+func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastAssurance")
+}
+
 func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RecordForecastCall")
 }

@@ -96,6 +96,48 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventForecastAssuranceCreatedReadiness.
+const (
+	AssuranceChecksIncomplete    PublicEventForecastAssuranceCreatedReadiness = "checks_incomplete"
+	AssuranceNeedsReview         PublicEventForecastAssuranceCreatedReadiness = "needs_review"
+	AssuranceReady               PublicEventForecastAssuranceCreatedReadiness = "ready"
+	AssuranceReadyWithExceptions PublicEventForecastAssuranceCreatedReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastAssuranceCreatedReadiness enum.
+func (e PublicEventForecastAssuranceCreatedReadiness) Valid() bool {
+	switch e {
+	case AssuranceChecksIncomplete:
+		return true
+	case AssuranceNeedsReview:
+		return true
+	case AssuranceReady:
+		return true
+	case AssuranceReadyWithExceptions:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventForecastAssuranceCreatedStatus.
+const (
+	Complete   PublicEventForecastAssuranceCreatedStatus = "complete"
+	Incomplete PublicEventForecastAssuranceCreatedStatus = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastAssuranceCreatedStatus enum.
+func (e PublicEventForecastAssuranceCreatedStatus) Valid() bool {
+	switch e {
+	case Complete:
+		return true
+	case Incomplete:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventForecastSnapshotCreatedTrigger.
 const (
 	Call        PublicEventForecastSnapshotCreatedTrigger = "call"
@@ -273,6 +315,7 @@ const (
 	DealUpdated                           SubscribableEventType = "deal.updated"
 	EmailSignatureChanged                 SubscribableEventType = "email_signature.changed"
 	EngagementReply                       SubscribableEventType = "engagement.reply"
+	ForecastAssuranceCreated              SubscribableEventType = "forecast.assurance_created"
 	ForecastCreated                       SubscribableEventType = "forecast.created"
 	ForecastSnapshotCreated               SubscribableEventType = "forecast.snapshot_created"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
@@ -430,6 +473,8 @@ func (e SubscribableEventType) Valid() bool {
 	case EmailSignatureChanged:
 		return true
 	case EngagementReply:
+		return true
+	case ForecastAssuranceCreated:
 		return true
 	case ForecastCreated:
 		return true
@@ -1128,6 +1173,26 @@ type PublicEventEnvelope struct {
 	// Version Schema version of the payload in data.
 	Version int `json:"version"`
 }
+
+// PublicEventForecastAssuranceCreated Payload for forecast.assurance_created — a nightly input check finished, and the forecast's inputs have been examined. The Morning Brief waits on this: a brief assembled before the night's check has nothing to say about whether the numbers in it were verified.
+// `readiness` is the verdict, and `checks_incomplete` is NOT a worse `needs_review`. One says the pipeline has problems; the other says we could not look, and a consumer that treats them alike will tell somebody their pipeline is sound when nobody read the mailbox.
+// The counts ride along because they say how much of the pipeline the run covered. The findings do not: they are a read away, and a subscriber acting on a list that arrived on a bus is acting on a list somebody may already have resolved.
+type PublicEventForecastAssuranceCreated struct {
+	// EligibleDeals How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline.
+	EligibleDeals   int                                           `json:"eligible_deals"`
+	EligibleSignals *int                                          `json:"eligible_signals,omitempty"`
+	Readiness       *PublicEventForecastAssuranceCreatedReadiness `json:"readiness,omitempty"`
+	RunId           openapi_types.UUID                            `json:"run_id"`
+
+	// Status `incomplete` means an upstream was unavailable. The run still happened and still recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+	Status PublicEventForecastAssuranceCreatedStatus `json:"status"`
+}
+
+// PublicEventForecastAssuranceCreatedReadiness defines model for PublicEventForecastAssuranceCreated.Readiness.
+type PublicEventForecastAssuranceCreatedReadiness string
+
+// PublicEventForecastAssuranceCreatedStatus `incomplete` means an upstream was unavailable. The run still happened and still recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+type PublicEventForecastAssuranceCreatedStatus string
 
 // PublicEventForecastCreated Payload for forecast.created — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a person and that person is who it is attributable to.
 // A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
@@ -2201,6 +2266,10 @@ func (PublicEventEngagementReply) EventType() string { return "engagement.reply"
 
 func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
+func (PublicEventForecastAssuranceCreated) EventType() string { return "forecast.assurance_created" }
+
+func (PublicEventForecastAssuranceCreated) EntityType() string { return "user" }
+
 func (PublicEventForecastCreated) EventType() string { return "forecast.created" }
 
 func (PublicEventForecastCreated) EntityType() string { return "user" }
@@ -2539,6 +2608,7 @@ var PublicEventVersions = map[string]int{
 	"deal_room.updated":                         1,
 	"email_signature.changed":                   1,
 	"engagement.reply":                          1,
+	"forecast.assurance_created":                1,
 	"forecast.created":                          1,
 	"forecast.snapshot_created":                 1,
 	"incumbent.connected":                       1,
