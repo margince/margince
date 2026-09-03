@@ -420,6 +420,14 @@ func purgeSubjectPurchases(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // row by design, so deleting the objection here would let a returning subject
 // be marketed to having never withdrawn it.
 func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addresses []string) error {
+	// Why this contact existed, cleared alongside the rest. It names one
+	// person and has no meaning after them, and both acts must clear the same
+	// tables — one that cleared it and one that did not would leave the
+	// subject's acquisition record standing after an operator was told the
+	// person had been anonymized.
+	if _, err := tx.Exec(ctx, `DELETE FROM person_acquisition_evidence WHERE person_id = $1`, id); err != nil {
+		return err
+	}
 	// Per row, not one constant. A single delivery can carry two decisions for
 	// the same subject — one message To and Cc'ing two of their addresses — and
 	// collapsing both to one tombstone collides on

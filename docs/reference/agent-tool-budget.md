@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1688 | 7% | 15312 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14465 | 15 | 8 |
-| _whole served catalog, for scale_ | 65 | 20514 | 85% | — | — | — |
+| _whole served catalog, for scale_ | 67 | 20926 | 87% | — | — | — |
 
 ### `morning_brief`
 
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 315, across 65 served tools.
+Median 273 tokens, mean 311, across 67 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -170,6 +170,7 @@ a term in an addition.
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
+| `forecast_input_checks` | 259 | — |
 | `apply_tag` | 258 | — |
 | `account_coverage` | 252 | 2 scenarios |
 | `relink_activities` | 237 | — |
@@ -189,6 +190,7 @@ a term in an addition.
 | `check_location_support` | 163 | — |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
+| `list_input_checks` | 153 | — |
 | `commit_import` | 149 | — |
 | `get_record_tags` | 149 | — |
 | `list_colleagues` | 148 | — |

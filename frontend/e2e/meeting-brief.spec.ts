@@ -30,22 +30,44 @@ function copy(key: MessageKey): string {
 // also excuse a drawer still sliding in.
 const AMBIENT = ["core-rim", "core-glass"];
 
+// A CSS transition of one of these properties cannot move a box either: the
+// button the reader just pressed is still fading its hover colour off when the
+// drawer is already standing, and a measurement taken through that fade is in
+// the right place. A transition of anything else — transform, width, inset —
+// is exactly what this check exists to catch, so the list is closed.
+const PAINT_ONLY = [
+  "background-color",
+  "border-color",
+  "box-shadow",
+  "color",
+  "filter",
+  "opacity",
+  "outline-color",
+];
+
 async function settleAnimations(page: Page) {
-  const running = await page.evaluate((ambient) => {
-    const named = (element: Element) =>
-      `${element.tagName.toLowerCase()}.${element.className}`;
-    return document
-      .getAnimations()
-      .filter((animation) => animation.playState === "running")
-      .map((animation) => {
-        const effect = animation.effect;
-        return effect instanceof KeyframeEffect &&
-          effect.target instanceof Element
-          ? named(effect.target)
-          : "an element the effect does not name";
-      })
-      .filter((name) => !ambient.some((mark) => name.includes(mark)));
-  }, AMBIENT);
+  const running = await page.evaluate(
+    ({ ambient, paintOnly }) => {
+      const named = (element: Element) =>
+        `${element.tagName.toLowerCase()}.${element.className}`;
+      const paintsOnly = (animation: Animation) =>
+        animation instanceof CSSTransition &&
+        paintOnly.includes(animation.transitionProperty);
+      return document
+        .getAnimations()
+        .filter((animation) => animation.playState === "running")
+        .filter((animation) => !paintsOnly(animation))
+        .map((animation) => {
+          const effect = animation.effect;
+          return effect instanceof KeyframeEffect &&
+            effect.target instanceof Element
+            ? named(effect.target)
+            : "an element the effect does not name";
+        })
+        .filter((name) => !ambient.some((mark) => name.includes(mark)));
+    },
+    { ambient: AMBIENT, paintOnly: PAINT_ONLY },
+  );
   expect(
     running,
     "an animation was still running when a box was measured, so the box is where the element passed through rather than where it rests",

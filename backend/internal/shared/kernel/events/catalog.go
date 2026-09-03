@@ -331,8 +331,10 @@ var catalog = map[string]struct {
 	// forecast is about a pipeline, but a CALL is an assertion by a person and
 	// is attributable to them — a consumer asking "who said this number" is
 	// asking about a user, not about a deal.
-	"forecast.created":          {identityStreamEntity, 1},
-	"forecast.snapshot_created": {identityStreamEntity, 1},
+	"forecast.created":            {identityStreamEntity, 1},
+	"forecast.exception_resolved": {identityStreamEntity, 1},
+	"forecast.assurance_created":  {identityStreamEntity, 1},
+	"forecast.snapshot_created":   {identityStreamEntity, 1},
 
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a
@@ -405,33 +407,6 @@ var catalog = map[string]struct {
 	// Product telemetry: the morning Brief was read. Internal only — nothing
 	// subscribes to it, and api/internal-events.yaml says why that file exists.
 	"brief.opened": {briefStreamEntity, 1},
-}
-
-// pipelineEventTypes are the events that may ride the bus WITHOUT a subject
-// entity ref, because the thing they report names no record.
-//
-// Two families qualify, for the same reason. A capture pipeline step can be
-// subject-less by nature — capture.skipped names NOTHING (an excluded personal
-// message creates no row), yet the spec still requires it on the bus as the
-// machine-checkable "personal mail is never ingested" proof (capture.md AC1.3,
-// EVT-SEM-10). An AI task's state change names no record either: the occurrence
-// it reports is operational state, and the row that will hold it does not exist
-// until the projection this event feeds writes it — so there is nothing for a
-// consumer to read back under its own scope, which is what an entity ref is
-// for. These events carry no entity handle, but they DO keep the ledger trace
-// link (audit_log OR system_log) so the outcome stays attributable — Validate
-// enforces the trace, only the entity is relaxed.
-var pipelineEventTypes = map[string]struct{}{
-	"capture.received":      {},
-	"capture.normalized":    {},
-	"capture.failed":        {},
-	"capture.skipped":       {},
-	"ai_task.state_changed": {},
-	// A Brief open names no record it could hand a consumer: the subject is the
-	// READING, not the run, and the run is the reader's own queue. Entity-less
-	// is also what keeps it off the subscribable set — see its schema in
-	// api/internal-events.yaml.
-	"brief.opened": {},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

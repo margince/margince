@@ -246,6 +246,11 @@ func marshalList(values []string) ([]byte, error) {
 func (s *Store) Load(ctx context.Context, id ids.UUID) (Delivery, error) {
 	var d Delivery
 	var recipients, cc, bcc, refs, files []byte
+	// Both nullable since the installation became a sender: a controller row
+	// names no user and borrows no consent purpose. Scanned through pointers so
+	// a NULL reads as the zero id rather than failing the load.
+	var userID *ids.UserID
+	var linkID *ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			UPDATE comms_outbound
@@ -255,20 +260,29 @@ func (s *Store) Load(ctx context.Context, id ids.UUID) (Delivery, error) {
 			          coalesce(recipients, '[]'::jsonb), coalesce(cc, '[]'::jsonb),
 			          coalesce(bcc, '[]'::jsonb),
 			          coalesce(subject, ''), body, coalesce(html_body, ''), coalesce(from_name, ''),
-			          channel_user_id, consent_purpose,
+			          channel_user_id, coalesce(consent_purpose, ''),
 			          coalesce(in_reply_to, ''), coalesce(references_chain, '[]'::jsonb),
 			          coalesce(list_unsubscribe, ''), inflight_at, status, attempts, created_at,
-			          attachments`,
-			id).Scan(&d.ID, &d.ActivityID, &d.UserID, &d.Provider, &d.MessageID,
+			          attachments, sender_kind, coalesce(template_key, ''),
+			          coalesce(template_version, 0), coalesce(payload_ref, ''),
+			          payload_expires_at, link_id`,
+			id).Scan(&d.ID, &d.ActivityID, &userID, &d.Provider, &d.MessageID,
 			&recipients, &cc, &bcc, &d.Subject, &d.Body, &d.HTMLBody, &d.FromName, &d.ChannelUserID, &d.ConsentPurpose,
 			&d.InReplyTo, &refs, &d.ListUnsubscribe, &d.InFlightAt, &d.Status, &d.Attempts, &d.CreatedAt,
-			&files)
+			&files, &d.SenderKind, &d.TemplateKey, &d.TemplateVersion, &d.PayloadRef,
+			&d.PayloadExpiresAt, &linkID)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Delivery{}, ErrTerminal
 	}
 	if err != nil {
 		return Delivery{}, fmt.Errorf("comms: loading delivery: %w", err)
+	}
+	if userID != nil {
+		d.UserID = *userID
+	}
+	if linkID != nil {
+		d.LinkID = *linkID
 	}
 	if err := json.Unmarshal(recipients, &d.Recipients); err != nil {
 		return Delivery{}, fmt.Errorf("comms: decoding recipients: %w", err)

@@ -883,6 +883,18 @@ func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 	httperr.NotImplemented(w, r, "GetForecast")
 }
 
+func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastAssurance")
+}
+
+func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListInputChecks")
+}
+
+func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ResolveInputCheck")
+}
+
 func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RecordForecastCall")
 }

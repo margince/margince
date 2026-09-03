@@ -9,6 +9,7 @@ import { MoneyInput } from "../design-system/moneyinput";
 import { StatStrip } from "../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
 
 type Readings = components["schemas"]["ForecastReadings"];
@@ -43,6 +44,10 @@ export function ForecastView() {
         <>
           <ForecastAnswer readings={data} locale={locale} />
           <ForecastCallEditor readings={data} />
+          {/* What to check comes BEFORE the receipt: a manager with ten
+              minutes reads what needs doing first, and the receipt is what
+              they consult when a number looks wrong. */}
+          <ForecastReview />
           <EvidenceReceipt
             title={t("forecast.receipt")}
             counts={[

@@ -131,14 +131,14 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		// What the floor shielded from the statement above is held instead
 		// (erasure_restrict.go): the same three id sets, selected BY the
 		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor)
+		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor, e.payloads)
 		if err != nil {
 			return err
 		}
 		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causePersonErasure); err != nil {
 			return err
 		}
-		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason); err != nil {
+		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason, e.payloads); err != nil {
 			return err
 		}
 		// The messages nobody has sent yet. They hold the subject's address and
@@ -249,7 +249,7 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction
 // just emptied: their vectors, their own audit spines, the proposals read out of
 // them, and the transmitted copy in the send log.
-func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string) error {
+func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
 	// The vectors go with the text they were built from. purgeDerivedTraces
 	// reaches embeddings through activity_link, which by construction cannot
 	// see the unlinked mail redactSubjectTimeline now covers — and
@@ -274,7 +274,7 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 	// The transmitted copy of every activity just redacted. Without this
 	// the timeline row is a tombstone while the send log still holds the
 	// address, the subject line and the body of the same message.
-	return redactDeliveries(ctx, tx, activities, erasedName)
+	return redactDeliveries(ctx, tx, activities, erasedName, payloads)
 }
 
 // anonymizeSubjectRows wipes the subject's PII in place: the person row
@@ -329,6 +329,12 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	}
 	if err := deleteConsentCapabilities(ctx, tx, personID); err != nil {
 		return nil, err
+	}
+	// Why this contact existed. It names one person, records what they did or
+	// what was done to obtain them, and has no meaning after them — deleted
+	// rather than tombstoned, like the addresses beside it.
+	if _, err := tx.Exec(ctx, `DELETE FROM person_acquisition_evidence WHERE person_id = $1`, personID); err != nil {
+		return nil, fmt.Errorf("privacy: destroying the subject's acquisition evidence: %w", err)
 	}
 	wiped, err := anonymizeLeadTwins(ctx, tx, personID, emails)
 	if err != nil {

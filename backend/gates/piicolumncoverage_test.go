@@ -110,6 +110,15 @@ var erasureColumnBaseline = map[string][]string{
 		"target_entity_type",
 	},
 	"comms_outbound": {
+		// The controller lane's vocabulary: which kind of sender, and which
+		// registered wording. Both are this repository's own words rather than
+		// anything a subject wrote or anything written about them, so the
+		// Art. 17 scrub leaves them standing.
+		//
+		// payload_ref is deliberately NOT here: erasure_payloads.go clears it,
+		// after destroying the vault material the reference names.
+		"sender_kind",
+		"template_key",
 		"bounce_kind",
 		"bounce_reason",
 		"consent_purpose",

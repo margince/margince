@@ -8,9 +8,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MONEY_ABSENT } from "../format/format";
+import { formatTimeOfDay, MONEY_ABSENT } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { BriefView } from "./brief.view";
 import { HomeScreen } from "./home";
 import { overnightRow, readingsDay } from "./home.fixtures";
 import { HomeGlance } from "./home.glance";
@@ -28,6 +30,7 @@ import {
   writeRoutes,
   writes,
 } from "./home.testkit";
+import type { Worklist } from "./worklist.queries";
 
 afterEach(() => {
   cleanup();
@@ -373,6 +376,48 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
     // panels — so an unread queue leaves the header saying only the greeting.
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+});
+
+// ── The eyebrow dates the morning's reading, and only the morning's ──
+
+describe("HomeGlance — the eyebrow says when the queue was read", () => {
+  function eyebrowOf(view: BriefView, day: Worklist | undefined): string {
+    const rendered = rtlRender(
+      <LocaleProvider initial="en">
+        <HomeGlance
+          view={view}
+          firstName="Ada"
+          now={new Date(2026, 6, 5, 9, 0, 0)}
+          day={day}
+        />
+      </LocaleProvider>,
+    );
+    const text =
+      screen.getByTestId("home-glance").firstChild?.textContent ?? "";
+    rendered.unmount();
+    return text;
+  }
+
+  // Derived from the fixture and the runner's own zone. A literal time here
+  // would pin the test to whichever machine wrote it.
+  it("names the moment the morning's queue was read", () => {
+    const day = readingsDay({});
+    expect(eyebrowOf("morning", day)).toBe(
+      `Your morning · as of ${formatTimeOfDay(day.as_of, "en", viewerZone())}`,
+    );
+  });
+
+  // The weekly's numbers were frozen when the week closed. A time of day
+  // against them dates the reading rather than the week.
+  it("gives the weekly no as-of at all", () => {
+    expect(eyebrowOf("weekly", readingsDay({}))).toBe("Your week");
+  });
+
+  // A queue still in flight has no moment to name, and inventing one would
+  // date a reading that has not happened.
+  it("says the scope alone while the morning's queue is unread", () => {
+    expect(eyebrowOf("morning", undefined)).toBe("Your morning");
   });
 });
 
@@ -855,5 +900,35 @@ describe("HomeScreen — the brief is generated, never re-ranked", () => {
 
     const generate = await screen.findByTestId("brief-refresh");
     expect(generate.textContent).toContain(en["home.generate"]);
+  });
+
+  // And what it says WHILE it works names the same act. The button assembles a
+  // first run; a pending label reading "Ranking…" describes re-ordering one
+  // that already exists, which is the confusion the button's own wording was
+  // changed to avoid. Nothing asserted this label, so the two drifted.
+  it("names assembling, not ranking, while the run is being built", async () => {
+    let releasePost: (() => void) | undefined;
+    const posted = new Promise<void>((resolve) => {
+      releasePost = resolve;
+    });
+    stubApi({
+      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "POST /brief": async () => {
+        await posted;
+        return jsonResponse(run, 201);
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    // Deliberately NOT awaited: the click's promise settles only once the write
+    // does, and the pending label is what the button says in between.
+    void user.click(await screen.findByTestId("brief-refresh"));
+    expect(
+      (await screen.findByText(en["home.generating"])).textContent,
+    ).toContain(en["home.generating"]);
+
+    releasePost?.();
   });
 });
