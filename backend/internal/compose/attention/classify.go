@@ -115,11 +115,17 @@ func base(
 		CauseRef:    item.CauseRef,
 		Subject:     item.Subject,
 		Deal:        dealFactsOf(item),
-		DueAt:       item.DueAt,
-		Overdue:     item.Overdue,
-		OccurredAt:  item.OccurredAt,
-		Actions:     carriedActions(item.Actions),
-		Because:     []crmcontracts.WorklistReason{},
+		// Forwarded, never re-derived here. The lane already applied the
+		// both-sides-visible rule and set `merge` only where it held, so
+		// carrying the payload keeps the verb and the records it acts on
+		// travelling together: a row offering merge with no pair beneath it
+		// would be a button over records the client cannot name.
+		Pair:       item.Pair,
+		DueAt:      item.DueAt,
+		Overdue:    item.Overdue,
+		OccurredAt: item.OccurredAt,
+		Actions:    carriedActions(item.Actions),
+		Because:    []crmcontracts.WorklistReason{},
 	}
 }
 

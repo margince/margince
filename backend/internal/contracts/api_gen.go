@@ -30782,6 +30782,16 @@ type WorklistItem struct {
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
+	// Pair The two records a `dedupe_candidate` proposes to merge, and the evidence that
+	// raised it — the same payload the lane feed carries, forwarded so the decision
+	// can be MADE where it is shown rather than sent somewhere to be made.
+	//
+	// Present only when the reader may see BOTH sides; the lane's own
+	// both-sides-visible rule decides that, and an item arriving without it offers
+	// no merge. A row that named neither record could only ask a reader to go and
+	// look, which is the hand-off this queue exists to remove.
+	Pair *AttentionPair `json:"pair,omitempty"`
+
 	// PrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
 	// reader arriving at a row should not have to weigh three equally-drawn
 	// controls to find the step the ranking already implies.
