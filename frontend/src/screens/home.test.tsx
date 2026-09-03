@@ -901,4 +901,34 @@ describe("HomeScreen — the brief is generated, never re-ranked", () => {
     const generate = await screen.findByTestId("brief-refresh");
     expect(generate.textContent).toContain(en["home.generate"]);
   });
+
+  // And what it says WHILE it works names the same act. The button assembles a
+  // first run; a pending label reading "Ranking…" describes re-ordering one
+  // that already exists, which is the confusion the button's own wording was
+  // changed to avoid. Nothing asserted this label, so the two drifted.
+  it("names assembling, not ranking, while the run is being built", async () => {
+    let releasePost: (() => void) | undefined;
+    const posted = new Promise<void>((resolve) => {
+      releasePost = resolve;
+    });
+    stubApi({
+      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "POST /brief": async () => {
+        await posted;
+        return jsonResponse(run, 201);
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    // Deliberately NOT awaited: the click's promise settles only once the write
+    // does, and the pending label is what the button says in between.
+    void user.click(await screen.findByTestId("brief-refresh"));
+    expect(
+      (await screen.findByText(en["home.generating"])).textContent,
+    ).toContain(en["home.generating"]);
+
+    releasePost?.();
+  });
 });

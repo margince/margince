@@ -183,6 +183,10 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
+func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetDataCoverage")
+}
+
 func (stubs) ApproveApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, bundleId crmcontracts.BundleId) {
 	httperr.NotImplemented(w, r, "ApproveApprovalBundle")
 }
@@ -885,6 +889,10 @@ func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 
 func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
+}
+
+func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {

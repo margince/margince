@@ -82,7 +82,7 @@ export function FocusSection({
             <Button
               small
               pending={refresh.isPending}
-              busyLabel={t("home.refreshing")}
+              busyLabel={t("home.generating")}
               onClick={() => refresh.mutate()}
               data-testid="brief-refresh"
             >

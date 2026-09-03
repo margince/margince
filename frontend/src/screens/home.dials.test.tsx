@@ -97,6 +97,38 @@ describe("the Brief's dials", () => {
     );
   });
 
+  // And it REPLACES the entry rather than pushing one.
+  //
+  // Back is the key a reader presses to get out of where they are. A reader
+  // turns several dials to reach one view, so pushing per turn would bury the
+  // screen they arrived from under a stack of near-identical entries and Back
+  // would walk them through it one dial at a time instead of out.
+  //
+  // app/addressstate.test.ts holds this for replaceParams itself. That proves
+  // the mechanism, not that the Brief's dials go through it — a screen writing
+  // location.hash directly would satisfy every other assertion in this file
+  // while quietly pushing an entry per press.
+  it("turns a dial without adding a history entry to press Back through", async () => {
+    stubHome(["mine", "team"]);
+    render(<HomeScreen />);
+
+    const before = globalThis.history.length;
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.view.weekly"] }),
+    );
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("view=weekly"),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: en["brief.scope.team"] }),
+    );
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("scope=team"),
+    );
+
+    expect(globalThis.history.length).toBe(before);
+  });
+
   // DECISION 5, ON THE PAGE. Every combination the dials offer must draw
   // something. An empty work column under a selectable dial is the defect the
   // rule exists to prevent, and it is invisible to a test that only checks the
