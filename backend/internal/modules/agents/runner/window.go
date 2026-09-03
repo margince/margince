@@ -64,7 +64,26 @@ const outputValidatorSource = "output_validator"
 // gives way to it — the tool listing is in the system prompt and is never
 // elided — so it is exported for the composition that knows how large the real
 // catalog is to hold that listing against it.
-const PromptTokenCeiling = 24_000
+//
+// The number is DERIVED from the tightest provider this runner speaks to, not
+// chosen. Ollama's num_ctx bounds prompt and completion together, and the
+// adapter will not ask for more than ollamaMaxContext (32,768) because an
+// uncapped window lets whoever wrote a crawled page pick the host's KV-cache
+// allocation. One completion may take perCallOutputCeiling (4,096). What is
+// left for the prompt is 28,672 — which is also a whole number of the 4,096
+// buckets that adapter rounds to, so a prompt at the ceiling asks for the cap
+// exactly rather than a bucket past it.
+//
+// It was 24,000, a round number with no such derivation, and it stopped being
+// only a runner concern: the catalog floor below is a fraction of this, and at
+// 24,000 that floor had 63 tokens of headroom for a catalog of 67 tools — so
+// the next verb anyone added failed a gate that was never meant to ration
+// features (margince/margince#3882). Raising it restores the room; keeping it
+// tied to ollamaMaxContext is what stops it drifting into a round number again.
+//
+// A cloud provider's window dwarfs this and is not the binding constraint. If
+// the local cap moves, this moves with it.
+const PromptTokenCeiling = 28_672
 
 // roleUser is the wire role every window message carries: the goal, each
 // observation, and the elision notice are all things the runner SAYS to the
