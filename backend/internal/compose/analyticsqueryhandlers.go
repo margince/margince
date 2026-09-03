@@ -105,3 +105,30 @@ func queryFromWire(in crmcontracts.AnalyticsQuery) analyticsquery.Query {
 	}
 	return out
 }
+
+// ExplainAnalyticsCell implements POST /analytics/explain.
+func (h analyticsQueryHandlers) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+	var body crmcontracts.AnalyticsExplainRequest
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	in := analyticsquery.Explain{Query: queryFromWire(body.Query)}
+	if body.Group != nil {
+		in.Group = *body.Group
+	}
+
+	ctx := r.Context()
+	var out AnalyticsExplanation
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = ExplainAnalyticsCell(ctx, tx, in, h.floor)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
+		Columns: out.Columns, Rows: out.Rows,
+		Withheld: out.Withheld, Truncated: out.Truncated,
+	})
+}

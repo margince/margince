@@ -16331,6 +16331,40 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/explain:
+    post:
+      tags: [Reports]
+      operationId: explainAnalyticsCell
+      summary: The records one cell of an analytics answer was computed from.
+      description: |
+        A number is worth having only if somebody can open it, and opening it means the
+        ROWS rather than a restatement of the formula.
+
+        The request carries the QUESTION unchanged plus the cell's own group keys. The
+        question rather than a handle, because an explanation of a different query than the
+        one that produced the number is not an explanation and nothing downstream could
+        tell.
+
+        The explanation reads the identical row set the answer read: same population, same
+        filters, same authority narrowings. It never out-sees the number it explains.
+
+        A cell the privacy floor withheld answers `withheld` with no rows. Handing over
+        those records one at a time is the same disclosure at a slower pace.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsExplainRequest' }
+      responses:
+        '200':
+          description: The records behind the cell, as this caller may read them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/current:
     get:
       tags: [Brief]
@@ -31533,6 +31567,47 @@ components:
         schema_version:
           type: string
           description: The vocabulary this was asked in.
+      additionalProperties: false
+    AnalyticsExplainRequest:
+      type: object
+      description: One cell of an answer, named by the question and its group keys.
+      required: [query]
+      properties:
+        query: { $ref: '#/components/schemas/AnalyticsQuery' }
+        group:
+          type: array
+          items: {}
+          description: >-
+            The cell's group key values, one per grouping in the question and in the same
+            order. Omitted for an ungrouped answer, which has one cell. A null entry means
+            the group whose value is unset, which resolves to the records that have nothing
+            there rather than to none.
+      additionalProperties: false
+    AnalyticsExplanation:
+      type: object
+      required: [columns, rows, withheld, truncated]
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            The records, each carrying its id, the dimensions that put it in this group,
+            and the fields the measures were computed over.
+        withheld:
+          type: boolean
+          description: >-
+            The cell itself was withheld, so there is nothing to open. Different from an
+            empty list, which would mean the group had no records at all.
+        truncated:
+          type: boolean
+          description: >-
+            The cell covers more records than were returned. A reader who adds up the rows
+            and finds less than the cell needs to know why.
       additionalProperties: false
     WeeklyPlan:
       type: object

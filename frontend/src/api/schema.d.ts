@@ -11114,6 +11114,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records one cell of an analytics answer was computed from.
+         * @description A number is worth having only if somebody can open it, and opening it means the
+         *     ROWS rather than a restatement of the formula.
+         *
+         *     The request carries the QUESTION unchanged plus the cell's own group keys. The
+         *     question rather than a handle, because an explanation of a different query than the
+         *     one that produced the number is not an explanation and nothing downstream could
+         *     tell.
+         *
+         *     The explanation reads the identical row set the answer read: same population, same
+         *     filters, same authority narrowings. It never out-sees the number it explains.
+         *
+         *     A cell the privacy floor withheld answers `withheld` with no rows. Handing over
+         *     those records one at a time is the same disclosure at a slower pace.
+         */
+        post: operations["explainAnalyticsCell"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/current": {
         parameters: {
             query?: never;
@@ -23028,6 +23060,23 @@ export interface components {
             total_safe: boolean;
             /** @description The vocabulary this was asked in. */
             schema_version: string;
+        };
+        /** @description One cell of an answer, named by the question and its group keys. */
+        AnalyticsExplainRequest: {
+            query: components["schemas"]["AnalyticsQuery"];
+            /** @description The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none. */
+            group?: unknown[];
+        };
+        AnalyticsExplanation: {
+            columns: string[];
+            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** @description The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all. */
+            withheld: boolean;
+            /** @description The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why. */
+            truncated: boolean;
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -46738,6 +46787,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsAnswer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainAnalyticsCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyticsExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this caller may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
             401: components["responses"]["Unauthorized"];
