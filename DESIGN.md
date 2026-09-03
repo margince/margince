@@ -296,6 +296,30 @@ cards stacked above a third list of things to do:
    happening".** Ask at the top, then the people, the fields, the tags. State
    and work stay in the work column, where the reading order is.
 
+### Glance, then depth
+
+The overview that breathes is the one that shows less. The first Aurora
+sketch had air because a rep saw five readings, one verdict, three short
+lists and one suggestion, and nothing else until they went looking. The
+full six-zone overview shows everything at once and reads as a wall. So the
+overview has two depths, and the shallow one is the default:
+
+- **The glance.** Five readings as roomy cards with one figure and one line
+  each. Then two columns. Left: the 360 reduced to the verdict word, one
+  sentence, the three dimensions, the spine and its sources, with "Read the
+  thread · N new" as the way down; then Deals, People and Next steps, each
+  capped at three with "All". Right: the one suggestion as a card, the ask
+  field, Recent capped at three, About as one paragraph and the tags. The
+  details panel starts folded.
+- **The depth.** The thread, the full needs list, Commercial, About and the
+  rest are one click away: the "All" and "Read the thread" links, and the
+  tabs. Nothing is lost; it is behind the first screen instead of on it.
+
+The test for the glance: a rep who has been away a week should read it in
+ten seconds and know where the account stands, what happened last, what
+they owe and what the agent proposes. Anything the ten seconds do not need
+goes to the depth.
+
 ### The order of the zones
 
 1. **Who.** Identity, the standing badges, one line of facts, the verbs.
