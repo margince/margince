@@ -21467,6 +21467,15 @@ type HealthDimensionRating string
 
 // HeldThread One thread your mailbox is withholding, and what is known about why.
 type HeldThread struct {
+	// ActivityId The message that opened this thread, where this caller may read it — what a
+	// client opens to show the correspondence rather than only naming it.
+	//
+	// Null when the message was erased while the hold stood (the ledger deliberately
+	// outlives it) AND null when the content is not this caller's: it is read from the
+	// joined activity row, which carries the content gate, rather than from the
+	// ledger's own column. `has_message` says which of the two it is.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
 	// Attempts How many times a verdict has been asked for. This is the outage signal: a pending row
 	// whose attempts stop climbing is a model that stopped answering.
 	Attempts int `json:"attempts"`
