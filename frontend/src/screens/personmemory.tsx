@@ -3,7 +3,6 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { emailSummaryText } from "../format/emailtext";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
@@ -214,6 +213,7 @@ function foldActivities(
     .filter((row) => !isFuture(row))
     .map((row) => {
       const status = statusOf(row, view);
+      const withheldRow = row.content_state === "withheld";
       return {
         key: row.id,
         date: formatDayMonth(row.occurred_at, locale, recordZone),
@@ -223,10 +223,24 @@ function foldActivities(
         channelProvider: row.channel_provider ?? null,
         channel: channelKeyOf(row.kind, row.channel_provider),
         channelLabel: interactionLabel(row.kind, row.channel_provider),
-        title: row.subject ?? interactionLabel(row.kind, row.channel_provider),
-        summary:
-          row.kind === "email"
-            ? emailSummaryText(row.body ?? "")
+        // Withheld is read from the row's own state rather than trusted to
+        // have been stripped. The server does strip it — both readers of the
+        // activity table null the subject and the body together — but this
+        // card would otherwise fall through to row.subject, and a fallback
+        // chain that only holds because of what the server sends is one
+        // response away from printing a subject it should not.
+        title: withheldRow
+          ? t("email.withheldSubject")
+          : (row.email_summary?.subject ??
+            row.subject ??
+            interactionLabel(row.kind, row.channel_provider)),
+        // The server's own preview for an email, composed with the same
+        // splitter the drawer folds with — so this card and the message it
+        // opens cannot disagree about where the sender's words end.
+        summary: withheldRow
+          ? ""
+          : row.email_summary
+            ? (row.email_summary.preview ?? "")
             : (row.body ?? ""),
         status,
         statusLabel: statusLabel(status, t),

@@ -138,6 +138,39 @@ func (e PublicEventForecastAssuranceCreatedStatus) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventForecastExceptionResolvedOutcome.
+const (
+	ResolvedAddedEvidence    PublicEventForecastExceptionResolvedOutcome = "added_evidence"
+	ResolvedConditionCleared PublicEventForecastExceptionResolvedOutcome = "condition_cleared"
+	ResolvedFixedRecord      PublicEventForecastExceptionResolvedOutcome = "fixed_record"
+	ResolvedNotRelevant      PublicEventForecastExceptionResolvedOutcome = "not_relevant"
+	ResolvedReassign         PublicEventForecastExceptionResolvedOutcome = "reassign"
+	ResolvedRemindLater      PublicEventForecastExceptionResolvedOutcome = "remind_later"
+	ResolvedValueCorrect     PublicEventForecastExceptionResolvedOutcome = "value_correct"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastExceptionResolvedOutcome enum.
+func (e PublicEventForecastExceptionResolvedOutcome) Valid() bool {
+	switch e {
+	case ResolvedAddedEvidence:
+		return true
+	case ResolvedConditionCleared:
+		return true
+	case ResolvedFixedRecord:
+		return true
+	case ResolvedNotRelevant:
+		return true
+	case ResolvedReassign:
+		return true
+	case ResolvedRemindLater:
+		return true
+	case ResolvedValueCorrect:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventForecastSnapshotCreatedTrigger.
 const (
 	Call        PublicEventForecastSnapshotCreatedTrigger = "call"
@@ -317,6 +350,7 @@ const (
 	EngagementReply                       SubscribableEventType = "engagement.reply"
 	ForecastAssuranceCreated              SubscribableEventType = "forecast.assurance_created"
 	ForecastCreated                       SubscribableEventType = "forecast.created"
+	ForecastExceptionResolved             SubscribableEventType = "forecast.exception_resolved"
 	ForecastSnapshotCreated               SubscribableEventType = "forecast.snapshot_created"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
@@ -477,6 +511,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ForecastAssuranceCreated:
 		return true
 	case ForecastCreated:
+		return true
+	case ForecastExceptionResolved:
 		return true
 	case ForecastSnapshotCreated:
 		return true
@@ -1207,6 +1243,21 @@ type PublicEventForecastCreated struct {
 	// SupersedesId The call this one replaces. Absent on the first call of a period — which is a different fact from replacing nothing, and a consumer tracking revisions needs to tell them apart.
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
+
+// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved — somebody answered a finding from the nightly input check. The entity is the AUTHOR, because an answer is attributable to whoever gave it.
+// `outcome` says what KIND of answer it was, and consumers must not treat the six alike. `value_correct` and `not_relevant` HIDE the finding from the screens a revenue commitment is made from, so a surface counting open findings has to drop them; `remind_later` leaves the finding open and it comes back.
+// The reason does not ride along. It is prose a person wrote for another person, and a subscriber acting on it is acting on something the author may edit.
+type PublicEventForecastExceptionResolved struct {
+	ActorUserId openapi_types.UUID `json:"actor_user_id"`
+	ExceptionId openapi_types.UUID `json:"exception_id"`
+
+	// ExpiresAt When a suppressing answer stops holding. Present only for the two outcomes that hide a finding — a consumer that re-surfaces findings needs the date.
+	ExpiresAt *time.Time                                  `json:"expires_at,omitempty"`
+	Outcome   PublicEventForecastExceptionResolvedOutcome `json:"outcome"`
+}
+
+// PublicEventForecastExceptionResolvedOutcome defines model for PublicEventForecastExceptionResolved.Outcome.
+type PublicEventForecastExceptionResolvedOutcome string
 
 // PublicEventForecastSnapshotCreated Payload for forecast.snapshot_created — a set of readings was frozen, with the per-deal rows behind them. A subscriber watching for movement waits on this: the difference between two snapshots is only answerable once the second exists.
 // The COUNTS ride along and the money does not. How many deals a run considered says whether it ran completely, which is what a consumer needs to decide whether to trust the state; the totals are a read away and putting them on a bus makes two places to correct when a definition changes.
@@ -2274,6 +2325,10 @@ func (PublicEventForecastCreated) EventType() string { return "forecast.created"
 
 func (PublicEventForecastCreated) EntityType() string { return "user" }
 
+func (PublicEventForecastExceptionResolved) EventType() string { return "forecast.exception_resolved" }
+
+func (PublicEventForecastExceptionResolved) EntityType() string { return "user" }
+
 func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.snapshot_created" }
 
 func (PublicEventForecastSnapshotCreated) EntityType() string { return "user" }
@@ -2610,6 +2665,7 @@ var PublicEventVersions = map[string]int{
 	"engagement.reply":                          1,
 	"forecast.assurance_created":                1,
 	"forecast.created":                          1,
+	"forecast.exception_resolved":               1,
 	"forecast.snapshot_created":                 1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,

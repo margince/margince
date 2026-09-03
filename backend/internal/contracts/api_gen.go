@@ -8545,6 +8545,36 @@ func (e PersonGraphNodeType) Valid() bool {
 	}
 }
 
+// Defines values for PersonGraphReceiptKind.
+const (
+	PersonGraphReceiptKindCall    PersonGraphReceiptKind = "call"
+	PersonGraphReceiptKindEmail   PersonGraphReceiptKind = "email"
+	PersonGraphReceiptKindMeeting PersonGraphReceiptKind = "meeting"
+	PersonGraphReceiptKindMessage PersonGraphReceiptKind = "message"
+	PersonGraphReceiptKindNote    PersonGraphReceiptKind = "note"
+	PersonGraphReceiptKindTask    PersonGraphReceiptKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphReceiptKind enum.
+func (e PersonGraphReceiptKind) Valid() bool {
+	switch e {
+	case PersonGraphReceiptKindCall:
+		return true
+	case PersonGraphReceiptKindEmail:
+		return true
+	case PersonGraphReceiptKindMeeting:
+		return true
+	case PersonGraphReceiptKindMessage:
+		return true
+	case PersonGraphReceiptKindNote:
+		return true
+	case PersonGraphReceiptKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PersonGraphRouteAvailability.
 const (
 	PersonGraphRouteAvailabilityAlreadyRequested PersonGraphRouteAvailability = "already_requested"
@@ -9871,6 +9901,36 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	case RenewContractRequestValueBasisAnnualized12m:
 		return true
 	case RenewContractRequestValueBasisTotal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResolveInputCheckOutcome.
+const (
+	AddedEvidence ResolveInputCheckOutcome = "added_evidence"
+	FixedRecord   ResolveInputCheckOutcome = "fixed_record"
+	NotRelevant   ResolveInputCheckOutcome = "not_relevant"
+	Reassign      ResolveInputCheckOutcome = "reassign"
+	RemindLater   ResolveInputCheckOutcome = "remind_later"
+	ValueCorrect  ResolveInputCheckOutcome = "value_correct"
+)
+
+// Valid indicates whether the value is a known member of the ResolveInputCheckOutcome enum.
+func (e ResolveInputCheckOutcome) Valid() bool {
+	switch e {
+	case AddedEvidence:
+		return true
+	case FixedRecord:
+		return true
+	case NotRelevant:
+		return true
+	case Reassign:
+		return true
+	case RemindLater:
+		return true
+	case ValueCorrect:
 		return true
 	default:
 		return false
@@ -12180,22 +12240,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
-	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
-	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
-	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
+	Automatic  VoiceProfileVersionReason = "automatic"
+	Manual     VoiceProfileVersionReason = "manual"
+	Onboarding VoiceProfileVersionReason = "onboarding"
+	Rollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case VoiceProfileVersionReasonAutomatic:
+	case Automatic:
 		return true
-	case VoiceProfileVersionReasonManual:
+	case Manual:
 		return true
-	case VoiceProfileVersionReasonOnboarding:
+	case Onboarding:
 		return true
-	case VoiceProfileVersionReasonRollback:
+	case Rollback:
 		return true
 	default:
 		return false
@@ -26349,9 +26409,19 @@ type PersonGraphNodeType string
 // PersonGraphReceipt defines model for PersonGraphReceipt.
 type PersonGraphReceipt struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
-	OccurredAt time.Time          `json:"occurred_at"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// Kind What the receipt is evidence OF. The graph counts attendees and organizers as well
+	// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+	// that drew every one of them as an email would tell a reader a meeting was one.
+	Kind       PersonGraphReceiptKind `json:"kind"`
+	OccurredAt time.Time              `json:"occurred_at"`
+	Subject    *string                `json:"subject,omitempty"`
 }
+
+// PersonGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
+// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+// that drew every one of them as an email would tell a reader a meeting was one.
+type PersonGraphReceiptKind string
 
 // PersonGraphRoute The warmest way in, chosen deterministically rather than scored by a model: the
 // strongest direct relationship if one exists, otherwise the strongest relationship any
@@ -28233,6 +28303,27 @@ type RescheduleSendRequest struct {
 	ScheduledAt time.Time `json:"scheduled_at"`
 	ScheduledTz string    `json:"scheduled_tz"`
 }
+
+// ResolveInputCheck defines model for ResolveInputCheck.
+type ResolveInputCheck struct {
+	// EvidenceRef What was looked at, for an answer that rests on something.
+	EvidenceRef *string `json:"evidence_ref,omitempty"`
+
+	// ExpiresAt When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+	Outcome ResolveInputCheckOutcome `json:"outcome"`
+
+	// Reason Required for `value_correct` and `not_relevant`. Those hide the finding, and the next person to see the number is owed the reason it is not flagged.
+	Reason *string `json:"reason,omitempty"`
+
+	// RemindAt Required for `remind_later`, and must be in the future. A deferral with no date is a dismissal wearing a different word.
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+}
+
+// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+type ResolveInputCheckOutcome string
 
 // ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
 // fast it answered what it answered, and how much it put down instead.
@@ -35257,7 +35348,9 @@ type SubmitConfirmDetailsJSONBody struct {
 	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
 	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
 
-	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant.
+	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+	// grant. Bounded because it is stored on the proof row and read back through the subject
+	// access export — the same bound is enforced server-side, and the two are one rule.'
 	MarketingWording *string `json:"marketing_wording,omitempty"`
 
 	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.
@@ -36559,6 +36652,9 @@ type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
+
+// ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
+type ResolveInputCheckJSONRequestBody = ResolveInputCheck
 
 // RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
 type RecordForecastCallJSONRequestBody = NewForecastCall
@@ -45328,6 +45424,9 @@ type ServerInterface interface {
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
 	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// Answer a finding from the nightly input check.
+	// (POST /forecast/assurance/exceptions/{id}/resolve)
+	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
@@ -47662,6 +47761,12 @@ func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, param
 // What last night's input check found, and how much of the pipeline it reached.
 // (GET /forecast/assurance)
 func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a finding from the nightly input check.
+// (POST /forecast/assurance/exceptions/{id}/resolve)
+func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58723,6 +58828,40 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecastAssurance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveInputCheck operation middleware
+func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveInputCheck(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74831,6 +74970,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)

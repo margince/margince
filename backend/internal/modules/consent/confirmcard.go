@@ -15,10 +15,12 @@ package consent
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -144,4 +146,45 @@ func fieldOriginsFor(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]F
 		var o FieldOrigin
 		return o, row.Scan(&o.Field, &o.Source, &o.RecordedAt)
 	})
+}
+
+// SubscriptionCard is what a consent link's page shows: the one subscription it
+// asks about, and the answer currently on file.
+//
+// Deliberately not the record card. The link was mailed asking a single
+// question, and everything the record card carries — name, employer, address,
+// phone, the provenance trail — is data the mail never offered to show.
+type SubscriptionCard struct {
+	PurposeKey   string `json:"purpose_key"`
+	PurposeLabel string `json:"purpose_label"`
+	State        string `json:"state"`
+}
+
+// consentCardFor reads the purpose the link was minted for and the subject's
+// current answer to it.
+//
+// The purpose comes off the REF, which came off the token. A page that resolved
+// its own purpose would show — and then let somebody answer — a question the
+// link was never minted to ask.
+func (s *Store) consentCardFor(ctx context.Context, ref ConfirmRef) (SubscriptionCard, error) {
+	var card SubscriptionCard
+	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT cp.key, cp.label,
+			       coalesce((SELECT pc.state FROM person_consent pc
+			                  WHERE pc.person_id = $1 AND pc.purpose_id = cp.id), 'unknown')
+			  FROM consent_purpose cp
+			 WHERE cp.id = $2 AND cp.archived_at IS NULL`,
+			ref.PersonID, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.State)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The purpose was archived after the link went out. The link is live
+		// and the question is gone, which is a not-found for this page rather
+		// than a blank card offering to grant nothing.
+		return SubscriptionCard{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return SubscriptionCard{}, fmt.Errorf("consent: reading the linked purpose: %w", err)
+	}
+	return card, nil
 }
