@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -187,5 +188,55 @@ func TestACapturedMeetingWithNoKnownAttendeeStaysHeld(t *testing.T) {
 	}
 	if persons != 0 {
 		t.Errorf("the capture created %d records for an unknown attendee, want 0 — an invitation is not correspondence", persons)
+	}
+}
+
+// systemRepairCtx is the context a scheduled repair runs under: the workspace,
+// a correlation id (storekit refuses to publish without one), and the system
+// principal that has no human behind it.
+func systemRepairCtx(e *integration.SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:test-repair",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+}
+
+// The other half of the hold: once the meeting IS filed, the reason it was held
+// has stopped being true.
+//
+// This is the ordering Chris's meeting was in — captured while nobody had a
+// record for the attendee, filed under them by the cohort repair a day later,
+// and held to its participants ever since. The invitation EMAILS beside it on
+// the same page were workspace-readable the whole time, so the meeting was the
+// one row a colleague could not see.
+func TestAMeetingFiledLaterStopsBeingHeld(t *testing.T) {
+	e := integration.SetupSearch(t)
+
+	activity := syncOneGcalMeeting(t, e)
+	if _, _, audience, reason := meetingFiling(t, e, activity); audience != "participants" ||
+		reason == nil || *reason != "no_record" {
+		t.Fatalf("the meeting was not born held: audience=%q reason=%v", audience, reason)
+	}
+
+	// The contact arrives, and the repair files the meeting under them. Through
+	// the real store, so the seam compose wires is the one under test.
+	store := people.NewStore(e.DB()).WithAudienceRecompute(activities.RecomputeAudienceTx)
+	buyer, err := store.EnsurePersonByEmail(personCreator(e), "Buyer Example", "buyer@acme.com", "manual")
+	if err != nil {
+		t.Fatalf("seeding the attendee: %v", err)
+	}
+	if _, err := store.RepairPersonCohort(systemRepairCtx(e), ids.From[ids.PersonKind](buyer)); err != nil {
+		t.Fatalf("repairing the cohort: %v", err)
+	}
+
+	linked, _, audience, reason := meetingFiling(t, e, activity)
+	if len(linked) != 1 || linked[0] != buyer {
+		t.Fatalf("the repair filed the meeting under %v, want the attendee %s", linked, buyer)
+	}
+	if audience != "workspace" || reason != nil {
+		t.Errorf("meeting audience=%q reason=%v, want workspace/nil — it is filed under a record now, "+
+			"so the hold that said it was filed under none is no longer true", audience, reason)
 	}
 }

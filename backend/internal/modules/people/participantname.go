@@ -150,3 +150,23 @@ func fillPersonNameFromAttendance(ctx context.Context, tx pgx.Tx, personID ids.P
 	_, err = completePersonName(ctx, tx, personID, ParsePersonName(displayName, address))
 	return err
 }
+
+// rederiveAudiences re-runs the audience derivation over the activities this
+// store has just filed under a record.
+//
+// Nil recompute writes nothing, which is a real composition and not a broken
+// one: a deployment assembling people without the timeline still repairs its
+// cohorts, and every fixture is nil until it says otherwise. The ids are the
+// ones the caller actually linked — never a scan — so a pass that filed nothing
+// costs nothing.
+func (s *Store) rederiveAudiences(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	if s.recomputeAudience == nil {
+		return nil
+	}
+	for _, id := range activityIDs {
+		if err := s.recomputeAudience(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
+			return fmt.Errorf("people: re-deriving the audience of %s after filing it: %w", id, err)
+		}
+	}
+	return nil
+}

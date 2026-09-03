@@ -27,10 +27,13 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -129,7 +132,76 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 			"workspace", job.Args.Workspace.String(),
 			"people", len(owed), "linked", linked, "promoted", promoted)
 	}
+	lifted, err := w.liftFiledMeetingHolds(sweepCtx)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if lifted > 0 {
+		w.log.InfoContext(ctx, "link reconcile: filed meetings are no longer held to their attendees",
+			"workspace", job.Args.Workspace.String(), "meetings", lifted)
+	}
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, job.Args.Workspace)))
+}
+
+// liftFiledMeetingHoldsPerTick bounds the drain. The population is finite and
+// shrinks as it is worked, so a small bound costs one probe a tick once it is
+// empty and never delays the repair above it.
+const liftFiledMeetingHoldsPerTick = 200
+
+// liftFiledMeetingHolds re-derives the audience of meetings that are filed under
+// a record and still carry the capture limiter's no-record hold.
+//
+// These are the rows this change would otherwise leave behind. A meeting
+// captured before its attendee was a contact was held to its participants, the
+// cohort repair filed it under them a day later, and nothing re-asked the
+// question — so the meeting on a colleague's page stayed invisible to everyone
+// but the people on the invitation, while the invitation EMAILS beside it were
+// workspace-readable.
+//
+// It drains permanently: the recompute rewrites the reason on every row it
+// selects, so a row worked once cannot match again, and afterwards the same
+// predicate guards the invariant for the price of one probe.
+func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (int, error) {
+	var held []ids.ActivityID
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT a.id
+			  FROM activity a
+			 WHERE a.kind = 'meeting'
+			   AND a.audience = 'participants'
+			   AND a.audience_reason = $1
+			   AND a.restricted_at IS NULL
+			   AND a.archived_at IS NULL
+			   AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
+			 ORDER BY a.occurred_at DESC, a.id
+			 LIMIT $2`, activities.ReasonNoRecord, liftFiledMeetingHoldsPerTick)
+		if err != nil {
+			return fmt.Errorf("selecting the filed meetings still held: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.ActivityID
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("reading a filed meeting still held: %w", err)
+			}
+			held = append(held, id)
+		}
+		return rows.Err()
+	}); err != nil {
+		return 0, err
+	}
+	lifted := 0
+	for _, id := range held {
+		// One transaction per meeting, like the repair above: a row another
+		// writer holds a lock on costs that row and not the whole drain.
+		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+			return activities.RecomputeAudienceTx(ctx, tx, id)
+		}); err != nil {
+			return lifted, fmt.Errorf("re-deriving the audience of %s: %w", id, err)
+		}
+		lifted++
+	}
+	return lifted, nil
 }
 
 // attachDomainBacklogs gives the people on a company's domain their employer.
