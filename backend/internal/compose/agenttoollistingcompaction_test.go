@@ -94,41 +94,60 @@ const (
 // withoutTheDeclaredOmissions removes, from a parsed schema tree, exactly what
 // the listing is allowed to omit — and nothing else.
 //
-// Deliberately a generic walk over `any` rather than a mirror of the
-// implementation's structure: it descends EVERY object and array it finds, so it
-// does not share the implementation's idea of which keywords nest a schema. If
-// the compaction ever stops walking a keyword this walk still reaches, or starts
-// removing something this walk keeps, the trees differ.
+// WHAT IS INDEPENDENT HERE IS THE REMOVAL RULE, not the traversal. The rule is
+// written out from the frame's two sentences rather than by calling the
+// implementation, which is what stops this gate being f(x) == f(x).
+//
+// The TRAVERSAL deliberately follows JSON Schema's own structure — `properties`,
+// `items`, `additionalProperties` — because that is a fact about the FORMAT, not
+// an implementation detail to be independent of. A walk that descended every
+// object it found would reach `default`, `const` and `examples`, which hold
+// arbitrary INSTANCE data: a tool whose `default` happens to contain
+// `{"additionalProperties": false}` would have it stripped here and kept by the
+// renderer, and this gate would reject a correct listing. Being independent in
+// the wrong dimension turns a gate into a false alarm.
 //
 //craft:ignore naked-any a decoded JSON document HAS no concrete Go type, and this walk's independence from the implementation's own structure is exactly what makes this side of the gate worth having
 func withoutTheDeclaredOmissions(node any, root bool) any {
-	switch typed := node.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(typed))
-		for key, value := range typed {
-			if key == "additionalProperties" {
-				if closed, isBool := value.(bool); isBool && !closed {
-					continue
-				}
-			}
-			if root && key == "properties" {
-				if properties, isObject := value.(map[string]any); isObject {
-					out[key] = withoutRootRetryKeyDescription(properties)
-					continue
-				}
-			}
-			out[key] = withoutTheDeclaredOmissions(value, belowRoot)
-		}
-		return out
-	case []any:
-		out := make([]any, 0, len(typed))
-		for _, value := range typed {
-			out = append(out, withoutTheDeclaredOmissions(value, belowRoot))
-		}
-		return out
-	default:
+	shape, isObject := node.(map[string]any)
+	if !isObject {
 		return node
 	}
+	out := make(map[string]any, len(shape))
+	for key, value := range shape {
+		switch key {
+		case "additionalProperties":
+			// The closed form goes; a SCHEMA here is descended into, because it
+			// is an object schema like any other.
+			if closed, isBool := value.(bool); isBool && !closed {
+				continue
+			}
+			out[key] = withoutTheDeclaredOmissions(value, belowRoot)
+		case "properties":
+			properties, ok := value.(map[string]any)
+			if !ok {
+				out[key] = value
+				continue
+			}
+			if root {
+				out[key] = withoutRootRetryKeyDescription(properties)
+				continue
+			}
+			rewritten := make(map[string]any, len(properties))
+			for name, member := range properties {
+				rewritten[name] = withoutTheDeclaredOmissions(member, belowRoot)
+			}
+			out[key] = rewritten
+		case "items":
+			out[key] = withoutTheDeclaredOmissions(value, belowRoot)
+		default:
+			// Everything else is carried through UNTOUCHED, including `default`,
+			// `const` and `examples`, whose contents are instance data and not
+			// schemas.
+			out[key] = value
+		}
+	}
+	return out
 }
 
 // withoutRootRetryKeyDescription drops the description of the ONE member the
@@ -147,7 +166,7 @@ func withoutRootRetryKeyDescription(properties map[string]any) map[string]any {
 			if key == "description" {
 				continue
 			}
-			stripped[key] = withoutTheDeclaredOmissions(inner, belowRoot)
+			stripped[key] = inner
 		}
 		out[name] = stripped
 	}

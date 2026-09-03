@@ -127,6 +127,15 @@ func assertNoSchemaComposition(tool, field string, shape map[string]json.RawMess
 				"behind it", tool, field, keyword)
 		}
 	}
+	// A DRAFT-2020-12 TUPLE, spelled `prefixItems`, is refused for the reason
+	// the array form of `items` is: each element is a schema, neither walk
+	// descends into an array of them, so a `$ref` or a closed object in a
+	// prefix slot would be invisible to both. Nothing on this surface uses it.
+	if _, tuple := shape["prefixItems"]; tuple {
+		return fmt.Errorf("%s's %s uses `prefixItems`, which this surface cannot reason about: each "+
+			"element is a schema and neither the composition refusal nor the runner's listing "+
+			"renderer descends into an array of them", tool, field)
+	}
 	// The same keys the renderer walks, so the refusal covers exactly what the
 	// renderer can reach and nothing it cannot. `additionalProperties` belongs
 	// here as much as the other two: it can be a full object schema, and

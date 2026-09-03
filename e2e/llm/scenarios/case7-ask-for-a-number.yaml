@@ -43,6 +43,17 @@ prompt: |
 
 must_call:
   - run_report
+
+# The tool name alone is not the assertion. `must_call` would pass on a call to
+# some OTHER report followed by invented inbound and outbound counts, and
+# must_mention only reads the closing prose — so the report itself is pinned.
+#
+# `group_by` is deliberately NOT pinned. More than one plan answers this
+# honestly: grouping by `direction`, or filtering to each direction in turn. What
+# would be wrong is answering from a different report, and that is what this
+# catches.
+must_call_with:
+  - run_report.report=activities-by-kind
 may_call:
   # The door, when a name is wanted rather than guessed. Optional on purpose:
   # a run that guesses `direction` correctly and never opens it has done the

@@ -114,7 +114,7 @@ def read_transcript(path):
     prose as `text` blocks; the terminal `result` event carries the final answer
     and is included so a scenario checking the closing sentence sees it.
     """
-    called, said = [], []
+    called, said, calls = [], [], []
     for line in _open_checked(path):
         line = line.strip()
         if not line:
@@ -136,9 +136,14 @@ def read_transcript(path):
                 continue
             if block.get("type") == "tool_use":
                 called.append(block.get("name", ""))
+                # The ARGUMENTS too, for must_call_with. A scenario that checks
+                # only the tool name passes on a call to the right tool with the
+                # wrong plan, and must_mention only sees the closing prose — so
+                # an unrelated call plus an invented number would score green.
+                calls.append((block.get("name", ""), block.get("input") or {}))
             elif block.get("type") == "text":
                 said.append(block.get("text", ""))
-    return called, "\n".join(said)
+    return called, "\n".join(said), calls
 
 
 # The failures that mean the model was never reached, rather than that it
@@ -223,7 +228,7 @@ def tool_matches(called, want):
 
 
 def check(scenario, transcript_path):
-    called, said = read_transcript(transcript_path)
+    called, said, calls = read_transcript(transcript_path)
     problems = []
 
     for want in scenario.get("must_call", []):
@@ -231,6 +236,32 @@ def check(scenario, transcript_path):
             problems.append(
                 f"never called {want} — the answer was not drawn from Margince "
                 f"(called: {', '.join(sorted(set(called))) or 'nothing'})"
+            )
+
+    # must_call_with entries are `tool.argument=value`, flat rather than nested
+    # because parse_scenario reads a deliberately small YAML subset. The value is
+    # compared against the argument rendered as JSON without quotes for a plain
+    # string, so both `report=activities-by-kind` and `group_by=["direction"]`
+    # are expressible.
+    for spec in scenario.get("must_call_with", []):
+        target, _, expected = spec.partition("=")
+        tool, _, argument = target.partition(".")
+        if not tool or not argument:
+            problems.append(f"must_call_with entry {spec!r} is not tool.argument=value")
+            continue
+        seen = []
+        for name, arguments in calls:
+            if not tool_matches([name], tool):
+                continue
+            actual = arguments.get(argument)
+            rendered = actual if isinstance(actual, str) else json.dumps(actual, separators=(",", ":"))
+            seen.append(rendered)
+            if rendered == expected:
+                break
+        else:
+            problems.append(
+                f"never called {tool} with {argument}={expected} — "
+                f"saw {', '.join(repr(s) for s in seen) or 'no such call'}"
             )
 
     for pattern in scenario.get("must_mention", []):

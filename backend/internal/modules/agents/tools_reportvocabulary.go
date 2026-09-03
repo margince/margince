@@ -28,7 +28,6 @@ package agents
 // same catalog, so the tool and the resource cannot drift.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 
@@ -99,11 +98,8 @@ func (t describeReportVocabulary) Handle(ctx context.Context, in json.RawMessage
 	//
 	// An ABSENT payload skips it, because for THIS tool that is the normal
 	// call: it takes no arguments, so a client sending none is correct.
-	if len(bytes.TrimSpace(in)) > 0 {
-		var args struct{}
-		if err := decodeArgs(in, &args); err != nil {
-			return nil, err
-		}
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
 	}
 	// The resource's own composition, not a second rendering of the catalog.
 	body, err := t.read.ReportVocabularyDocument(ctx)

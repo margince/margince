@@ -275,6 +275,11 @@ func TestAComposedBranchIsRefusedAtEveryDepthAndOnReadOnlyTools(t *testing.T) {
 		// invisible to both the refusal and the listing renderer.
 		{"tuple-form items", `{"type":"object","properties":{"pair":{"type":"array",` +
 			`"items":[{"type":"string"},{"type":"object","additionalProperties":false}]}}}`},
+		// `prefixItems` is draft 2020-12's spelling of the same tuple, refused
+		// for the same reason: each element is a schema, and neither walk
+		// descends into an array of them.
+		{"prefixItems", `{"type":"object","properties":{"pair":{"type":"array",` +
+			`"prefixItems":[{"type":"string"},{"$ref":"#/x"}]}}}`},
 		{"deep under additionalProperties", `{"type":"object","properties":{"filled":{"type":"object",` +
 			`"additionalProperties":{"type":"object","properties":{"v":{"$ref":"#/x"}}}}}}`},
 	} {

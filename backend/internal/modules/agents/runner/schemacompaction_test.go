@@ -249,6 +249,37 @@ func TestAPropertyNamedLikeAKeywordIsStillAProperty(t *testing.T) {
 	}
 }
 
+// `default`, `const` and `examples` hold INSTANCE data, not schemas, so the
+// compaction leaves them alone even when their contents look like schema
+// keywords.
+//
+// A tool whose `default` contains `{"additionalProperties": false}` is declaring
+// a default VALUE with a member of that name — not closing an object. Stripping
+// it would corrupt the default the tool publishes, and the composition's
+// equivalence gate narrows its own walk to the same positions for the same
+// reason: being independent in the wrong dimension turns a gate into a false
+// alarm.
+func TestInstanceDataThatLooksLikeSchemaKeywordsIsUntouched(t *testing.T) {
+	schema := json.RawMessage(`{"type":"object","properties":{` +
+		`"cfg":{"type":"object","default":{"additionalProperties":false,"description":"kept"},` +
+		`"examples":[{"additionalProperties":false}]}},` +
+		`"additionalProperties":false}`)
+	compacted := CompactSchema(mutating(schema))
+	for _, kept := range []string{
+		`"default":{"additionalProperties":false,"description":"kept"}`,
+		`"examples":[{"additionalProperties":false}]`,
+	} {
+		if !strings.Contains(compacted, kept) {
+			t.Errorf("the compaction reached into instance data and removed %s:\n%s", kept, compacted)
+		}
+	}
+	// The real closed form — a sibling of `properties` — still goes, so this is
+	// not passing by the compaction having stopped working altogether.
+	if got := strings.Count(compacted, `"additionalProperties":false`); got != 2 {
+		t.Errorf("want exactly the 2 instance-data occurrences surviving, got %d:\n%s", got, compacted)
+	}
+}
+
 // The shared rule has to survive being pasted into a JSON string literal.
 //
 // registration.go builds the member's `description` by concatenating this
