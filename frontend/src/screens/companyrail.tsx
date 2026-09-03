@@ -327,7 +327,7 @@ function DealsEmptyVerb({
     );
   }
   return (
-    <div className="co-card-actions">
+    <div className="card-actions">
       <NewDealAction
         orgId={organization.id}
         orgName={organization.display_name}
@@ -470,7 +470,7 @@ function PeopleSection({
               there are rows, so an empty roster never offers the same
               tab twice under two names. */}
           {state === "empty" && (
-            <div className="co-card-actions">
+            <div className="card-actions">
               <Button small variant="ghost" onClick={() => onTab("people")}>
                 {t("co.rail.people.add")}
               </Button>

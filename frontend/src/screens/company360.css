@@ -550,15 +550,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Verbs under the section they change: spaced off the content above so they
-   read as an action strip rather than another row of the list. */
-.co-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
 /* The brief's two footers: what moved since the reader was last here (or that
    there is no "away" to compare against, plus the withheld-sections caveat),
    and who wrote the card and when. Both are runs of separate spans, so they

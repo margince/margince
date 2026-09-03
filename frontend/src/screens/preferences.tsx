@@ -379,7 +379,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             })}
           </p>
           <p className="t-caption">{t("prefs.saveProof")}</p>
-          <div className="pref-save-actions">
+          <div className="card-actions">
             <Button
               disabled={writePending}
               onClick={() => {

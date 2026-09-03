@@ -111,12 +111,6 @@
   color: var(--textPrimary);
 }
 
-.pref-save-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
 .pref-partial-banner {
   margin-top: 16px;
   color: var(--warn);

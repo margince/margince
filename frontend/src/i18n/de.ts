@@ -6907,6 +6907,7 @@ export const de = {
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
+  "person.graph.sideColumn": "Vorstellungen und Momente",
   "person.graph.recordWorksWith": "Festhalten: arbeitet mit {name} zusammen",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",

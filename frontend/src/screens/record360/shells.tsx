@@ -18,7 +18,7 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-// SectionCard renders `.co-card` and `.co-card-actions`, which are defined in
+// SectionCard renders `.co-card`, which is defined in
 // company360.css. Imported HERE rather than left to the caller: it worked
 // only because both callers happened to be on the company page, and a third
 // one anywhere else would have rendered unstyled. The classes keep their `co-`
@@ -65,7 +65,7 @@ export function SectionCard({
         {children}
       </SurfaceState>
       {present && footer}
-      {present && actions && <div className="co-card-actions">{actions}</div>}
+      {present && actions && <div className="card-actions">{actions}</div>}
     </Card>
   );
 }

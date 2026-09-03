@@ -6957,6 +6957,9 @@ export const en = {
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
+  // Names the column beside the graph, for a reader who lands in it from the
+  // landmark list rather than by scrolling to it.
+  "person.graph.sideColumn": "Introductions and moments",
   "person.graph.recordWorksWith": "Record: works with {name}",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",

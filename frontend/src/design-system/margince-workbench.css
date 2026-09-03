@@ -332,7 +332,7 @@
 .mw-aistat-btn:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px var(--aiLight);
+  box-shadow: var(--focus-glow-ai);
 }
 /* The caret is the only thing that says this opens. It turns with the popover, so
    the control's state is legible without reading the panel it controls. */

@@ -2042,7 +2042,11 @@ function CompanyPage({
             }}
           />
         )}
-        <div className="form-actions">
+        {/* card-actions, not form-actions: what stands above this row is a
+            history timeline, which sets its own top margin to 0 and carries no
+            bottom one — so the form's row, which brings no top margin because a
+            field above it normally does, put Close against the last entry. */}
+        <div className="card-actions">
           <Button onClick={() => setAuditOpen(false)}>
             {t("common.close")}
           </Button>

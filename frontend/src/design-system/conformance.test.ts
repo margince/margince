@@ -967,6 +967,35 @@ describe("focus", () => {
       "src/screens/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
     ]);
   });
+
+  // The other half of the same promise, and the half that was unwatched. The
+  // rule above matches `outline:` only — and a FIELD's ring is drawn as a
+  // box-shadow, which is what --focus-glow is. So six rules across the
+  // onboarding sheets hand-spelled `0 0 0 3px var(--aiMed)` and walked past a
+  // gate whose message says one promise must not become ten rules.
+  //
+  // Only shadows on a FOCUS selector: a card's resting elevation is a
+  // box-shadow too and is nobody's ring.
+  it("draws every focus glow from the one token", () => {
+    const spelled = cssFiles.flatMap((file) => {
+      if (file.endsWith("tokens.css")) {
+        return [];
+      }
+      const text = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      return [...text.matchAll(/:focus[^{]*\{([^}]*)\}/g)].flatMap((rule) =>
+        [...rule[1].matchAll(/box-shadow:\s*([^;]+);/g)]
+          .map((match) => match[1].trim())
+          .filter((value) => !/^(none|0)$/.test(value))
+          .filter((value) => !/var\(--focus-glow(-danger|-ai)?\)/.test(value))
+          .map((value) => `${relative(frontendRoot, file)}: box-shadow: ${value}`),
+      );
+    });
+    expect(
+      spelled,
+      "a focus glow reads `box-shadow: var(--focus-glow)`, or its " +
+        "`-danger` / `-ai` variant; these spell their own width and colour",
+    ).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------

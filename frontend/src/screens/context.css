@@ -7,8 +7,11 @@
   gap: var(--space-3);
   margin-top: 8px;
 }
+/* --space-2, the same rung `.fgroup-head` and `.search-group h2` take: this is
+   the same relationship on three screens — a group's label directly above the
+   rows it names — and it read at two different heights. */
 .context-section h3 {
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
 }
 .context-items {
   list-style: none;

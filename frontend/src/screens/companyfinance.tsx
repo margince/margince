@@ -574,7 +574,7 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
 function ConnectFinance() {
   const t = useT();
   return (
-    <div className="co-card-actions">
+    <div className="card-actions">
       <Button small>{t("finance.connect")}</Button>
     </div>
   );

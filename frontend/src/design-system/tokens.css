@@ -450,6 +450,13 @@
      still focus, and the reader should not have to notice which ring they got in
      order to know where they are. */
   --focus-glow-danger: 0 0 0 3px var(--dangerBg);
+  /* The same glow in the AI family, for a field on a surface a machine authored
+   * — the onboarding conversation, the composer. An accent ring there would be
+   * the one colour in the product that says "a person decided this" drawn on a
+   * card that says the opposite, so this is a variant for the same reason
+   * --focus-glow-danger is one, not a second spelling. Six rules hand-spelled
+   * it before it existed. */
+  --focus-glow-ai: 0 0 0 3px var(--aiMed);
 
   /*
    * Motion. Three durations and three curves, and the reason there are so few is

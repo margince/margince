@@ -941,7 +941,7 @@
 }
 .arplay:focus-visible {
   outline: var(--focus-ring-forced);
-  box-shadow: 0 0 0 3px var(--accentLight);
+  box-shadow: var(--focus-glow);
 }
 
 .archips {
@@ -967,7 +967,7 @@
 }
 .archip:focus-visible {
   outline: var(--focus-ring-forced);
-  box-shadow: 0 0 0 3px var(--accentLight);
+  box-shadow: var(--focus-glow);
 }
 
 /* ── Running now ─────────────────────────────────────────────────────────────

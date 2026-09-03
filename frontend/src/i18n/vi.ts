@@ -6833,6 +6833,7 @@ export const vi = {
   "person.graph.noRoute":
     "Chưa ai bên mình trao đổi với họ hay với ai ở công ty họ.",
   "person.graph.noDirect": "Chưa ai bên mình trao đổi với họ.",
+  "person.graph.sideColumn": "Giới thiệu và khoảnh khắc",
   "person.graph.recordWorksWith": "Ghi nhận: làm việc cùng {name}",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",

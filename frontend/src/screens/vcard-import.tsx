@@ -137,7 +137,11 @@ export function VCardImport() {
         )}
         {importer.isSuccess && <ImportReport report={importer.data} />}
 
-        <div className="form-actions">
+        {/* card-actions for the reason the org history drawer takes it: the
+            import report above sets `margin: var(--space-4) 0 0` — a top margin
+            only — so a row bringing none of its own left Done touching the last
+            imported row. */}
+        <div className="card-actions">
           <Button variant="ghost" onClick={close}>
             {t("vcardImport.done")}
           </Button>

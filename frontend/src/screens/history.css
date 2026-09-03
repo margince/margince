@@ -19,10 +19,10 @@
  * letter-spaced treatment reads as a column name however the word is spelled,
  * which is the thing this heading stopped being. */
 .fgroup-head {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--textMeta);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .fgroup ul {
@@ -51,7 +51,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -88,7 +88,7 @@
 }
 
 .entry-field-name {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--textMeta);
 }
@@ -106,7 +106,7 @@
 }
 
 .entry-undo-refusal {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -114,7 +114,7 @@
  * the ordinary timeline indented under the pair, so the two rows inside read as
  * the audit rows they are rather than as a summary of them. */
 .reversal-net {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -132,7 +132,7 @@
  * cannot say it. Meta weight: it qualifies the line rather than competing with
  * it. */
 .entry-note {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 

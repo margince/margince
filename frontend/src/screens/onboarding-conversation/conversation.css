@@ -478,7 +478,7 @@
 .ob-conv-confirm-missing-row input:focus,
 .ob-conv-confirm-missing-row textarea:focus {
   border-color: var(--aiText);
-  box-shadow: 0 0 0 3px var(--aiMed);
+  box-shadow: var(--focus-glow-ai);
 }
 
 /* The work surface itself. The pane it fills already has its own gutter, but
@@ -954,7 +954,7 @@
    whatever the platform draws rather than a replacement for it. */
 .ob-voice-paste-area:focus-visible {
   border-color: var(--aiText);
-  box-shadow: 0 0 0 3px var(--aiMed);
+  box-shadow: var(--focus-glow-ai);
 }
 
 /* The floor meter: a real progress element plus the numbers behind it, so
