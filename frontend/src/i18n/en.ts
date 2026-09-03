@@ -7941,6 +7941,13 @@ export const en = {
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
+  // A band holding nothing, said rather than left out. Each says what is
+  // absent, because "nothing here" four times over tells a reader less than
+  // one line naming what they are clear of.
+  "worklist.bandClear.now": "Nothing needs you today.",
+  "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
+  "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
+  "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Later",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",

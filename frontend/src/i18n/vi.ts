@@ -7764,6 +7764,12 @@ export const vi = {
   "worklist.band.build_pipeline": "Xây dựng pipeline",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Rà soát",
+  "worklist.bandClear.now": "Hôm nay không có gì cần bạn.",
+  "worklist.bandClear.build_pipeline":
+    "Không có việc xây dựng pipeline nào đang chờ.",
+  "worklist.bandClear.keep_momentum":
+    "Không có việc đã thống nhất nào bị đình trệ.",
+  "worklist.bandClear.review": "Không có gì để rà soát.",
   "worklist.disposition.verb.snooze": "Để sau",
   "worklist.disposition.snoozeFor": "Trong bao lâu",
   "worklist.disposition.snoozeDays_one": "{value} ngày",

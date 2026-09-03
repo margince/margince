@@ -13,6 +13,11 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useOpenEmail } from "./openemail";
+import {
+  bandSections,
+  canReportEmptyBands,
+  unbandedRows,
+} from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
 import {
   completenessText,
@@ -97,31 +102,6 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
 // One function now, read by both, so they cannot drift apart again.
 function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
-}
-
-// Whether this row opens its band — the first banded row, or the first after a
-// row of a DIFFERENT band.
-//
-// A row with no band opens nothing: an older server that does not send one
-// leaves the page ungrouped rather than drawing a heading it cannot name.
-//
-// The comparison skips BACK over unbanded rows rather than looking only at the
-// row immediately above. `band` is optional in the contract, so a queue may mix
-// banded and unbanded rows — and comparing against an unbanded neighbour would
-// read every banded row after one as opening its band again, drawing "Now"
-// twice over one contiguous run.
-function opensBand(queue: readonly WorklistItem[], index: number): boolean {
-  const band = queue[index]?.band;
-  if (!band) {
-    return false;
-  }
-  for (let before = index - 1; before >= 0; before--) {
-    const earlier = queue[before]?.band;
-    if (earlier) {
-      return earlier !== band;
-    }
-  }
-  return true;
 }
 
 // One row.
@@ -225,6 +205,64 @@ function WorklistHeader({
   );
 }
 
+// Everything a row needs that is the same for every row on the page.
+//
+// One object rather than eight props threaded through each section, so the
+// banded sections and the unbanded tail cannot drift into two spellings of the
+// same wiring.
+type RowContext = Readonly<{
+  queue: readonly WorklistItem[];
+  owner: string;
+  selectedId: string;
+  onSelect: (next: string) => void;
+  onOpenEmail: (activityId: string) => void;
+  onFilter: (next: WorklistFilter) => void;
+}>;
+
+// A run of rows under one heading, or the unbanded tail.
+//
+// `position` is the row's place in the WHOLE queue, not in this run: the rank
+// number is the page's promise about the order, and restarting it at each
+// heading would print two number ones.
+function QueueRows({
+  items,
+  queue,
+  owner,
+  selectedId,
+  onSelect,
+  onOpenEmail,
+  onFilter,
+}: RowContext & Readonly<{ items: readonly WorklistItem[] }>) {
+  return (
+    <ol className="worklist-list">
+      {items.map((item) => (
+        <li key={rowIdentity(item)}>
+          <WorklistRow
+            item={item}
+            position={queue.indexOf(item) + 1}
+            owner={owner}
+            selected={selectedId === rowIdentity(item)}
+            // Only where pressing it OPENS something. WorklistRow draws a plain
+            // number without this, which is what the Brief already relies on: a
+            // rank that toggles a pressed state and opens nothing teaches the
+            // reader that the page lies about what is pressable.
+            onSelect={
+              hasPane(item)
+                ? () =>
+                    onSelect(
+                      selectedId === rowIdentity(item) ? "" : rowIdentity(item),
+                    )
+                : undefined
+            }
+            onOpenEmail={onOpenEmail}
+            onReview={() => onFilter(reviewFilter(item))}
+          />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 // The day, drawn.
 //
 // TWO kinds of number reach this component and they must not be confused.
@@ -278,6 +316,14 @@ function WorklistBody({
   // the item itself: a refetch replaces every row object, and a held one would
   // go on describing a version of the day that is no longer on screen.
   const selected = queue.find((item) => rowIdentity(item) === selectedId);
+  const rowProps: RowContext = {
+    queue,
+    owner,
+    selectedId,
+    onSelect,
+    onOpenEmail,
+    onFilter,
+  };
   return (
     <>
       <WorklistHeader
@@ -378,47 +424,39 @@ function WorklistBody({
           label={t("worklist.pane.title")}
           queue={
             <Panel title={t("worklist.queue")}>
-              <ol className="worklist-list">
-                {queue.map((item, index) => (
-                  <li key={rowIdentity(item)}>
-                    {/* The heading, drawn where the band CHANGES. The server sends
-                    the queue already sorted so each band is one contiguous run,
-                    so a change is a boundary and never a second visit — which
-                    is what lets a heading be drawn from the row rather than by
-                    grouping the list into buckets the order would then fight. */}
-                    {opensBand(queue, index) && (
+              {/* The headings come from the SERVER's band list, in its draw
+                  order, rather than from the rows — which is the only way a
+                  band holding nothing can say so. Ranks are still counted over
+                  the whole queue, so a row's number is its place on the page
+                  and not its place within its heading. */}
+              {bandSections(day, queue).map((section) =>
+                section.items.length === 0 ? (
+                  canReportEmptyBands(hasMore) && (
+                    <div key={section.band} className="worklist-queue-band">
                       <Eyebrow as="h3" className="worklist-band">
-                        {t(
-                          `worklist.band.${item.band ?? "keep_momentum"}` as const,
-                        )}
+                        {t(`worklist.band.${section.band}` as const)}
                       </Eyebrow>
-                    )}
-                    <WorklistRow
-                      item={item}
-                      position={index + 1}
-                      owner={owner}
-                      selected={selectedId === rowIdentity(item)}
-                      // Only where pressing it OPENS something. WorklistRow
-                      // draws a plain number without this, which is what the
-                      // Brief already relies on: a rank that toggles a pressed
-                      // state and opens nothing teaches the reader that the
-                      // page lies about what is pressable.
-                      onSelect={
-                        hasPane(item)
-                          ? () =>
-                              onSelect(
-                                selectedId === rowIdentity(item)
-                                  ? ""
-                                  : rowIdentity(item),
-                              )
-                          : undefined
-                      }
-                      onOpenEmail={onOpenEmail}
-                      onReview={() => onFilter(reviewFilter(item))}
-                    />
-                  </li>
-                ))}
-              </ol>
+                      {/* Said, not left blank. A heading with nothing under it
+                          reads as a page that failed to draw. */}
+                      <p className="t-body worklist-band-clear">
+                        {t(`worklist.bandClear.${section.band}` as const)}
+                      </p>
+                    </div>
+                  )
+                ) : (
+                  <div key={section.band} className="worklist-queue-band">
+                    <Eyebrow as="h3" className="worklist-band">
+                      {t(`worklist.band.${section.band}` as const)}
+                    </Eyebrow>
+                    <QueueRows items={section.items} {...rowProps} />
+                  </div>
+                ),
+              )}
+              {/* Rows an older server sent with no band. Real work, drawn under
+                  no heading rather than dropped to keep the sections tidy. */}
+              {unbandedRows(queue).length > 0 && (
+                <QueueRows items={unbandedRows(queue)} {...rowProps} />
+              )}
               {/* The way to the rest of the backlog.
                   Acceptance asks that the queue's counts be reachable, and
                   before this the page stopped at its first read with no route
