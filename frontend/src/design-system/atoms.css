@@ -1631,6 +1631,17 @@
   color: var(--accent);
   white-space: nowrap;
   cursor: pointer;
+  /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
+     worklist's rank button takes. A text-only control on a 13px line boxes to
+     about 21px, and axe found this one at 20.9px on the project rollups: under
+     the floor, and with the receipt trigger close enough beside it that the
+     spacing exception does not rescue it either.
+     Centred in an inline-flex rather than padded, so the words stay on the
+     baseline the label opposite them sits on — padding would push the text off
+     that line to buy the same height. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-6);
 }
 .stat-card-open:hover {
   text-decoration: underline;
