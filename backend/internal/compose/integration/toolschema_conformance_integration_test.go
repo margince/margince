@@ -225,6 +225,20 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// Renaming the word coined above. Both tag-vocabulary writes are reachable
 		// here: AdminPerms carries tag create/read/update/delete.
 		{"update_tag", `{"tag_id":"` + tag.String() + `","name":"conformance-renamed","color":"amber"}`},
+		// The rest of the tag family, reachable for the same reason: the
+		// fixture carries tag read as well as the writes. apply_tag leads and
+		// remove_tag follows, so the middle two read a record that is actually
+		// carrying the word rather than an empty answer that would keep its
+		// shape whatever the read did.
+		{"list_tags", `{}`},
+		{"get_tag", `{"tag_id":"` + tag.String() + `"}`},
+		{"apply_tag", `{"tag_id":"` + tag.String() + `","record_type":"person","record_id":"` + person.String() + `"}`},
+		{"get_record_tags", `{"record_type":"person","record_id":"` + person.String() + `"}`},
+		{"remove_tag", `{"tag_id":"` + tag.String() + `","record_type":"person","record_id":"` + person.String() + `"}`},
+		// The forecast reads, reachable now that the fixture holds the forecast
+		// grant its real seed gives. Both take no arguments.
+		{"forecast_readings", `{}`},
+		{"list_input_checks", `{}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
@@ -270,31 +284,18 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"authority every other tool in the sweep runs under",
 	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
-	"apply_tag": "needs a seat holding tag.read, which this lane's seat does not carry — " +
-		"granting it here would widen the authority every other tool in the sweep runs under, " +
-		"and the answer shape it would prove is the one remove_tag already shares",
-	"remove_tag": "same missing tag.read as apply_tag above",
-	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
-		"carry — measured, not assumed: the bare call comes back permission denied. Granting it " +
-		"here would widen the authority every other tool in the sweep runs under",
-	"forecast_input_checks": "same missing forecast.read as forecast_readings above",
-	"data_coverage": "needs a seat holding data_coverage.read, which this lane's seat does not " +
-		"carry — measured, not assumed: the bare call comes back permission denied. Its own object, " +
-		"not the forecast's, so it clears the lane on a grant of its own rather than with the three above",
-	"list_input_checks": "same missing forecast.read as forecast_readings above — it reads the " +
-		"exceptions behind that tool's summary off the same forecast surface, so it clears the " +
-		"lane exactly when the others do",
-	"forecast_movement": "same missing forecast.read as forecast_readings above, and it also " +
-		"requires a `from`/`to` window, so a bare call would not reach the handler either way",
-	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
-		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
-		"than proven elsewhere",
-	"get_tag": "same missing tag.read as apply_tag above. It answers ONE row of the shape list_tags " +
-		"answers many of, so the two are unproven together rather than one covering the other — " +
-		"whichever seat eventually carries tag.read reaches both",
-	"get_record_tags": "same missing tag.read as apply_tag above. Its answer shape IS held, " +
-		"against a real database, by the record-tags integration suite — including the withheld " +
-		"case, which is the one a schema alone could not prove",
+	// The two that still cannot answer, and neither reason is a grant. Both read
+	// last night's input-check RUN before anything else, and this lane stands up
+	// no scheduler, so the store answers not-found — which is a different shape
+	// from the empty-findings case list_input_checks proves above.
+	"forecast_input_checks": "needs a completed input-check run to read; the nightly pass is the " +
+		"producer, and this lane composes no scheduler",
+	"data_coverage": "same missing input-check run as forecast_input_checks above — source health " +
+		"is a projection of that run, so it cannot answer before one exists",
+	"forecast_movement": "needs a pair of stored snapshots to difference: its two required ids name " +
+		"snapshot rows, so a call without a snapshot producer would exercise the not-found path " +
+		"rather than the waterfall this schema describes. Its siblings are called above, so the " +
+		"grant is not what stops this one",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
 	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",

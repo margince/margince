@@ -208,6 +208,15 @@ var (
 			// narrower than AccountRepPerms, which already carries both.
 			"tag":  {Create: true, Read: true, Update: true, Delete: true},
 			"list": {Create: true, Read: true, Update: true, Delete: true},
+			// forecast is create+read for admin in the real seed and
+			// data_coverage is read (identity/internal/policy/defaults.go's
+			// admin row). The same drift the tag and list entries above record,
+			// and no more inert: every forecast tool on the agent surface came
+			// back `permission denied` in the conformance lane, which reads as
+			// "this lane cannot reach them" rather than as "this fixture is
+			// short a grant production gives".
+			"forecast":      {Create: true, Read: true},
+			"data_coverage": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
