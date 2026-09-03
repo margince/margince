@@ -25625,11 +25625,18 @@ components:
 
     PersonGraphReceipt:
       type: object
-      required: [activity_id, occurred_at]
+      required: [activity_id, occurred_at, kind]
       properties:
         activity_id: { type: string, format: uuid }
         subject: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
+        kind:
+          type: string
+          enum: [email, call, meeting, note, task, message]
+          description: |
+            What the receipt is evidence OF. The graph counts attendees and organizers as well
+            as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+            that drew every one of them as an email would tell a reader a meeting was one.
 
     PersonGraphRoute:
       type: object

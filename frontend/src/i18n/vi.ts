@@ -6732,6 +6732,7 @@ export const vi = {
   "person.graph.withContact": "với contact này",
   "person.graph.counts":
     "{total} lượt tương tác trong 90 ngày · {inbound} đến, {outbound} đi",
+  "person.graph.untitledMessage": "Không có tiêu đề",
   "person.graph.countsOnly":
     "Chỉ là số đếm — nội dung tin nhắn vẫn nằm trên timeline.",
   "person.intro.routesTitle": "Các lối vào",

@@ -6856,6 +6856,7 @@ export const en = {
   "person.graph.withContact": "with this contact",
   "person.graph.counts":
     "{total} interactions in 90 days · {inbound} in, {outbound} out",
+  "person.graph.untitledMessage": "Untitled",
   "person.graph.countsOnly":
     "Counts only — the messages themselves stay on the timeline.",
   "person.intro.routesTitle": "Ways in",

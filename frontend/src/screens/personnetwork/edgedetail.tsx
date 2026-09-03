@@ -82,15 +82,32 @@ export function EdgeDetail({
               <ul className="pn-receipts">
                 {receipts.map((r) => (
                   <li key={r.activity_id}>
-                    {/* The canonical citation. A receipt NAMES the message it
-                        is evidence of — it is not a place to read mail, which
-                        is why this is EmailReference and not EmailEntry — and
-                        it carries the record's zone, so every reader names the
-                        same day. */}
-                    <EmailReference
-                      subject={r.subject}
-                      occurredAt={formatDate(r.occurred_at, locale, recordZone)}
-                    />
+                    {/* The canonical citation for a MAIL. A receipt names the
+                        message it is evidence of — it is not a place to read
+                        one, which is why this is EmailReference and not
+                        EmailEntry — and it carries the record's zone, so every
+                        reader names the same day.
+
+                        The graph counts attendees and organizers as well as
+                        correspondents, so a receipt can be a meeting or a
+                        call. Those keep the plain line: an email's icon and an
+                        email's "No subject" on a meeting would tell a reader
+                        it was a mail. */}
+                    {r.kind === "email" ? (
+                      <EmailReference
+                        subject={r.subject}
+                        occurredAt={formatDate(
+                          r.occurred_at,
+                          locale,
+                          recordZone,
+                        )}
+                      />
+                    ) : (
+                      <>
+                        {r.subject ?? t("person.graph.untitledMessage")} ·{" "}
+                        {formatDate(r.occurred_at, locale, recordZone)}
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>

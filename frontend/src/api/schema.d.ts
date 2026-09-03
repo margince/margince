@@ -17865,6 +17865,13 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /**
+             * @description What the receipt is evidence OF. The graph counts attendees and organizers as well
+             *     as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+             *     that drew every one of them as an email would tell a reader a meeting was one.
+             * @enum {string}
+             */
+            kind: "email" | "call" | "meeting" | "note" | "task" | "message";
         };
         /**
          * @description The warmest way in, chosen deterministically rather than scored by a model: the
