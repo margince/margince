@@ -173,7 +173,6 @@ backend/internal/modules/search/queryjoins_test.go core 0195
 backend/internal/modules/search/querysql_test.go core 0007
 backend/internal/modules/search/querysql_test.go core 0131
 backend/internal/modules/search/querystorage.go migration 0051
-backend/internal/modules/search/store.go migration 0077
 backend/internal/modules/signals/audiencerescope.go migration 0208
 backend/internal/platform/auth/auditgrant_test.go migration 0133
 backend/internal/platform/auth/auditgrant_test.go migration 0287
