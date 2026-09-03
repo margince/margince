@@ -82,7 +82,7 @@ const channelRowOf = `a.source_system || ':' || split_part(coalesce(a.thread_key
 // readings, proposals) and write the tombstone and the event per record. The
 // placeholders are erasuretimeline.go's: $1 person, $2 addresses, $3/$4 the
 // floor interval and anchor, $5 the class, $6 the channel keys.
-func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]restrictedRecord, error) {
+func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]restrictedRecord, error) {
 	args := []any{personID, emails, floorInterval, floorAnchor, retentionClassCorrespondence, channelKeys}
 	if err := stampLegacyHandelsbriefe(ctx, tx, args); err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.Perso
 	if len(held) == 0 {
 		return nil, nil
 	}
-	if err := redactDeliveryAddressing(ctx, tx, recordIDs(held)); err != nil {
+	if err := redactDeliveryAddressing(ctx, tx, recordIDs(held), payloads); err != nil {
 		return nil, err
 	}
 	return held, nil
@@ -191,7 +191,13 @@ func stampLegacyHandelsbriefe(ctx context.Context, tx pgx.Tx, args []any) error 
 // routinely quotes the address it refused. A delivery still pending is parked:
 // the subject who just exercised Art. 17 must not receive the message the
 // erasure held.
-func redactDeliveryAddressing(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+func redactDeliveryAddressing(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, payloads PayloadPurger) error {
+	// Same reason as the sibling scrub in deliveries.go: a held activity's
+	// delivery can carry link material too, and a floor that shields the
+	// message does not shield a live credential in the vault.
+	if err := erasePayloads(ctx, tx, activityIDs, payloads); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE comms_outbound
 		   SET recipients = '[]'::jsonb, cc = '[]'::jsonb, bcc = '[]'::jsonb,
@@ -267,8 +273,8 @@ func tombstoneRestrictions(ctx context.Context, tx pgx.Tx, held []restrictedReco
 // similarity probe or a proposal), and write the tombstone and the event per
 // record. It answers with what it held so the caller can withdraw the
 // proposals citing those rows and count them on the person's tombstone.
-func holdShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]ids.UUID, error) {
-	held, err := restrictShieldedTimeline(ctx, tx, personID, emails, channelKeys, floorInterval, floorAnchor)
+func holdShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]ids.UUID, error) {
+	held, err := restrictShieldedTimeline(ctx, tx, personID, emails, channelKeys, floorInterval, floorAnchor, payloads)
 	if err != nil || len(held) == 0 {
 		return nil, err
 	}
