@@ -29,7 +29,11 @@ import { useOpenEmail } from "./openemail";
 import { ProjectCompanies } from "./projectcompanies";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
-import { RollupsStrip } from "./projectreadings";
+import {
+  PROJECT_COMMITMENTS_ANCHOR,
+  PROJECT_DEALS_ANCHOR,
+  RollupsStrip,
+} from "./projectreadings";
 import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
 import {
   mapProjectUpdate,
@@ -190,27 +194,31 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       {...chronology}
     >
       <div className="project-main">
-        <ProjectDealsCard
-          view={view}
-          actions={
-            // New Deal from HERE binds the deal to this project, and binding is
-            // held to project WRITE authority rather than deal permission
-            // alone: winning the deal later advances the project's phase
-            // without re-checking, so `EnsureAttachable` proves the authority
-            // at the moment of attaching. A caller who may read this project
-            // but not write it can still work deals — just not born into it.
-            !overlay &&
-            !readOnly &&
-            project.organization_id && (
-              <NewDealAction
-                orgId={project.organization_id}
-                orgName={project.name}
-                projectId={project.id}
-              />
-            )
-          }
-        />
-        <CommitmentsCard view={view} />
+        <div id={PROJECT_DEALS_ANCHOR}>
+          <ProjectDealsCard
+            view={view}
+            actions={
+              // New Deal from HERE binds the deal to this project, and binding is
+              // held to project WRITE authority rather than deal permission
+              // alone: winning the deal later advances the project's phase
+              // without re-checking, so `EnsureAttachable` proves the authority
+              // at the moment of attaching. A caller who may read this project
+              // but not write it can still work deals — just not born into it.
+              !overlay &&
+              !readOnly &&
+              project.organization_id && (
+                <NewDealAction
+                  orgId={project.organization_id}
+                  orgName={project.name}
+                  projectId={project.id}
+                />
+              )
+            }
+          />
+        </div>
+        <div id={PROJECT_COMMITMENTS_ANCHOR}>
+          <CommitmentsCard view={view} />
+        </div>
       </div>
       <AdvanceProjectModal
         projectId={project.id}

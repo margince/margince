@@ -399,49 +399,6 @@
 .rail.collapsed .railhead {
   justify-content: center;
 }
-/* TEMPORARY — the release marker.
- *
- * The whole thing goes when the product leaves alpha: this rule, the span in
- * app/shell.tsx, the `shell.alpha` key and the case in rail.test.tsx that holds
- * it through the collapse, in one change.
- *
- * A corner ribbon across the head's top-left, which is the one place a marker
- * can go without competing with anything: the head holds the mark and the
- * wordmark and nothing else, and this crosses the corner both of them leave
- * empty.
- *
- * ABSOLUTE, so it takes no space: the head's height is the strip's to the pixel
- * and every row below it is aligned to that, so a marker in the flow would move
- * the whole column. And it hangs off the HEAD's own corner, which is at the same
- * place in both rail states — the head narrows around the mark rather than
- * moving it — so one placement is on screen at 224px, at 64px, and in the phone
- * sheet's head. */
-.rail .alphamark {
-  position: absolute;
-  left: 2px; /* ds:ignore the ribbon's own corner anchor */
-  top: 10px; /* ds:ignore the ribbon's own corner anchor */
-  translate: -50% 0;
-  rotate: -45deg;
-  transform-origin: 50% 0;
-  width: 75px; /* ds:ignore the ribbon's own span across the corner */
-  padding: 1px 0; /* ds:ignore a cap-height band, not spaced content */
-  border-radius: 4px; /* ds:ignore the ribbon's own corner */
-  /* The status amber, and a fixed dark ink on it. `--bgRail` is the one near
-     black this palette holds STILL across both themes (tokens.css says so where
-     it is declared) — every other dark ink here lightens with the theme, and
-     this ribbon's ground does not, so it would go unreadable in one of them. */
-  background: var(--away);
-  color: var(--bgRail);
-  font-family: var(--f-mono);
-  font-size: 8px; /* ds:ignore below the type scale on purpose — it must not compete with the mark */
-  font-weight: var(--fw-bold);
-  line-height: 1.4;
-  text-align: center;
-  text-transform: uppercase;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
 /* brand block */
 .rail .ws {
   display: flex;
@@ -522,12 +479,17 @@
   color: var(--textPrimary);
   line-height: 1.25;
 }
-.rail .ws-org {
-  font-family: var(--f-mono);
+/* The line under the installation's name, and the build marker at the panel's
+   foot. Both are the same voice as the rest of the panel at a smaller size —
+   the mono uppercase kicker this used to draw in was a third type family
+   standing in the corner of every screen, saying nothing the name above it does
+   not. The ellipsis stays: an installation name is user data of unbounded
+   length in a narrow column. */
+.rail .ws-org,
+.rail .railversion {
   font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--textMeta);
+}
+.rail .ws-org {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -562,6 +524,10 @@
   color: var(--textMeta);
   margin: 0 0 var(--space-1);
   padding: 0 14px; /* ds:ignore the nav rows' own inset, which this label stands on */
+  /* It is a label, not a place to go. Sitting in a column of links it inherited
+     the text cursor, which offers a selection nobody wants over a word that
+     answers no press. */
+  cursor: default;
 }
 /* Collapsed: the heading keeps its exact box (same font metrics, same margins)
    so the rows below never re-space; the text goes transparent and a hairline is
@@ -591,6 +557,10 @@
    here, the gap has ONE spelling and the sheet cannot fall out of step with it. */
 .rail.collapsed:not(.sheetopen) .ws {
   gap: 0;
+  /* The words have no width here, so nothing else centres the chip: `flex: 1`
+     makes this box the head's full width and the mark would sit at its left
+     edge, off the axis every glyph below it stands on. */
+  justify-content: center;
 }
 
 /* Not clipped: the collapsed tooltip sits outside
@@ -902,6 +872,22 @@
      the air around it read as rail nobody uses. */
   margin: var(--space-1) calc(-1 * var(--space-2)) 0;
   padding: 0 var(--space-2);
+}
+/* WHICH BUILD THIS IS, at the foot of the column.
+   Centred in both rail states, because it names the whole panel rather than
+   standing on the rows' text column — and at 64px there is no text column to
+   stand on. It reads in the brand block's own small face: the one other line in
+   this panel that is a label about the installation rather than a place to go,
+   which is why the two share a declaration rather than each spelling 9px.
+   `flex: none` for the reason the head and the agent band carry it: on a window
+   shorter than the panel this is the box a flex column would take the overflow
+   out of, and a version that shrank to nothing is a version nobody can read
+   back to us. */
+.rail .railversion {
+  flex: none;
+  margin: var(--space-3) 0 0;
+  text-align: center;
+  color: var(--textMeta);
 }
 /* The More control belongs to the phone-width bottom bar only. */
 .rail .railmore {

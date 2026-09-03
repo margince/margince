@@ -88,7 +88,8 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		return datasource.EntityRef{}, fmt.Errorf(
 			"this workspace's system of record archives a %s without a version precondition, so an "+
 				"archive approved against version %d cannot be carried out as approved: %w",
-			in.Ref.Type, *in.IfVersion, apperrors.ErrUnsupportedBySoR)
+			in.Ref.Type, *in.IfVersion, apperrors.ErrUnsupportedBySoR,
+		)
 	}
 	return p.archiveThroughIncumbent(ctx, in.Ref)
 }

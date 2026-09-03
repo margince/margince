@@ -160,7 +160,10 @@ export function PersonNetworkTab({
           ) : null}
         </div>
 
-        <aside className="pn-side-column">
+        <aside
+          className="pn-side-column"
+          aria-label={t("person.graph.sideColumn")}
+        >
           <RelayPanel ask={read.open} />
           <IntroAsksCard personId={personId} personName={read.targetName} />
           {view && <MomentsCard view={view} />}

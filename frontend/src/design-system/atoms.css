@@ -32,7 +32,10 @@
 .badge-success {
   background:
     linear-gradient(var(--successBg), var(--successBg)), var(--bgElevated);
-  color: var(--success);
+  /* --successText for the reason FieldDiff's new value takes it: --success on
+     --successBg is 4.48:1 at this size. The warn and danger tones keep their
+     own ink, which clears AA on their own tints. */
+  color: var(--successText);
 }
 .badge-warn {
   background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
@@ -41,7 +44,9 @@
 .badge-danger {
   background:
     linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
-  color: var(--danger);
+  /* --dangerText, the ink role, not --danger, which is also a fill: over this
+     tint the dark theme's --danger is 3.88:1 on the darker card grounds. */
+  color: var(--dangerText);
 }
 .badge-ai {
   background: var(--aiLight);
@@ -321,12 +326,17 @@
 }
 
 /* Left-aligned in its pane: an empty zone is one sentence and one verb in the
-   place the content will be, not an announcement centred in a void. */
+   place the content will be, not an announcement centred in a void.
+
+   It draws at the same size and in the same ink as the sentence `SurfaceState`
+   shows for the same absence: the two stand in the same place for the same
+   reason, and a reader who met one at 13px and the other at 14px read two
+   kinds of statement where there is one. */
 .empty {
   text-align: start;
   padding: var(--space-5) 0;
-  color: var(--textMeta);
-  font-size: 13px;
+  color: var(--textSecondary);
+  font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -376,7 +386,7 @@
 }
 .empty-body {
   max-width: 52ch;
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 .empty-body p {
@@ -778,7 +788,12 @@
   color: var(--textSecondary);
 }
 .section-header h2 {
-  font-size: 15px;
+  /* --fs-lead IS 15px: the same value the raw number held, now named. The
+     app's section titles and the token ramp's --fs-h2 (20px) disagree, and
+     that disagreement is a decision about the house scale rather than
+     something to settle inside one rule — so this names the size it draws
+     and does not change it. */
+  font-size: var(--fs-lead);
   font-weight: 600;
   color: var(--textPrimary);
 }
@@ -805,7 +820,7 @@
 /* A measure, not a width: a description that runs the whole width of a wide
    card is a line the eye loses its place in. */
 .section-header .sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   line-height: var(--lh-snug);
   max-width: 78ch;
@@ -1530,7 +1545,7 @@
 }
 .overflow-menu-items .btn-danger:hover:not(:disabled) {
   background: var(--dangerBg);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 /* A row that is SET — an item holding a region open, a toggle that is on. It
    arrives as `aria-expanded`, as `aria-pressed`, or as the primary variant a
@@ -1659,6 +1674,17 @@
   color: var(--accent);
   white-space: nowrap;
   cursor: pointer;
+  /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
+     worklist's rank button takes. A text-only control on a 13px line boxes to
+     about 21px, and axe found this one at 20.9px on the project rollups: under
+     the floor, and with the receipt trigger close enough beside it that the
+     spacing exception does not rescue it either.
+     Centred in an inline-flex rather than padded, so the words stay on the
+     baseline the label opposite them sits on — padding would push the text off
+     that line to buy the same height. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-6);
 }
 .stat-card-open:hover {
   text-decoration: underline;

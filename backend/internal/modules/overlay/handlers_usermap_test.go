@@ -135,7 +135,8 @@ func TestUnmappedReasonIsDerivedFromTheLiveDirectory(t *testing.T) {
 func TestABlockedUserReportsTheBlockEvenWhenAnOwnerMatchesTheirEmail(t *testing.T) {
 	views := userMapViews(
 		[]UserMapEntry{entry("solo@acme.test", "", "", true)},
-		[]OwnerRef{{ExternalID: "owner-1", Email: "solo@acme.test"}}, true)
+		[]OwnerRef{{ExternalID: "owner-1", Email: "solo@acme.test"}}, true,
+	)
 
 	if views[0].UnmappedReason != reasonBlocked {
 		t.Errorf("reason = %q, want %q — the admin's block outranks the email match", views[0].UnmappedReason, reasonBlocked)
@@ -203,7 +204,8 @@ func TestAStaleOwnerReferenceIsFlaggedOnlyWhenTheDirectoryWasRead(t *testing.T) 
 func TestAMappedUserCarriesTheOwnersIdentityFromTheDirectory(t *testing.T) {
 	views := userMapViews(
 		[]UserMapEntry{entry("rep@acme.test", "owner-1", "manual", false)},
-		[]OwnerRef{{ExternalID: "owner-1", Email: "ada@acme.test", Name: "Ada Lovelace"}}, true)
+		[]OwnerRef{{ExternalID: "owner-1", Email: "ada@acme.test", Name: "Ada Lovelace"}}, true,
+	)
 
 	if views[0].OwnerName != "Ada Lovelace" || views[0].OwnerEmail != "ada@acme.test" {
 		t.Errorf("owner identity = %q/%q, want Ada Lovelace/ada@acme.test", views[0].OwnerName, views[0].OwnerEmail)

@@ -284,7 +284,10 @@ export const BoardInSurface: StoryObj = {
         },
       ]}
     >
-      <PipelineBoard columns={boardColumns} />
+      <PipelineBoard
+        columns={boardColumns}
+        cardHref={(d) => `#/deals/${d.id}`}
+      />
     </ListSurface>
   ),
 };
@@ -346,7 +349,12 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithAbsentMoney: StoryObj = {
-  render: () => <PipelineBoard columns={absentMoneyColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={absentMoneyColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };
 
 // A company has three readings on a card, and the whole point of the middle one
@@ -375,5 +383,50 @@ const withheldCompanyColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithWithheldCompany: StoryObj = {
-  render: () => <PipelineBoard columns={withheldCompanyColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={withheldCompanyColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
+};
+
+// A STAGE NAME LONGER THAN ITS COLUMN, which is the case the head is built for:
+// the name is workspace data of unbounded length, and the count beside it is
+// the figure a reader compares across the board. The name truncates; the count
+// never does. Written as one composed string in the truncating span — which is
+// how this shipped first — a name like the one below ellipsised the figure
+// away, so the rearrangement that moved the count up here to keep it on screen
+// quietly gave it back. Read the heads across: every count is legible.
+const longStageColumns: BoardMoneyColumn[] = [
+  {
+    stage: "negotiation",
+    label: "Contract negotiation & legal review",
+    probabilityPct: 75,
+    rawMinor: 412_000,
+    weightedMinor: 309_000,
+    currency: "EUR",
+    deals: [
+      boardDeal("l1", "Halbach Werke retrofit", 212_000, 4),
+      boardDeal("l2", "Ostmann line upgrade", 200_000, 6),
+    ],
+  },
+  {
+    stage: "won",
+    label: "Won",
+    probabilityPct: 100,
+    rawMinor: 96_000,
+    weightedMinor: 96_000,
+    currency: "EUR",
+    deals: [boardDeal("l3", "Riverty rollout", 96_000, 2)],
+  },
+];
+
+export const BoardWithALongStageName: StoryObj = {
+  render: () => (
+    <PipelineBoard
+      columns={longStageColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };

@@ -23,6 +23,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { dealRoleLabel, RailPanel } from "../record360";
 import "../network.css";
+import { SeatPerson } from "./seatperson";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
@@ -94,10 +95,7 @@ export function DealSeats({
           {seats.map((seat) => (
             <li key={seat.person_id}>
               <span className="net-seat-name">
-                {/* Absent when the caller may not read that person: the seat
-                    still counts toward coverage, so it is shown, and only the
-                    identity is withheld. */}
-                {seat.person_name ?? t("coverage.seatWithheld")}
+                <SeatPerson seat={seat} />
               </span>
               <Badge tone={seat.engaged ? "success" : undefined}>
                 {seat.engaged ? t("coverage.engaged") : t("coverage.quiet")}

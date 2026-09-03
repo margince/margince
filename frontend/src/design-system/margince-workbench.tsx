@@ -207,7 +207,12 @@ export function MarginceWorkbench({
             </div>
           )}
         </section>
-        {artifact && <aside className="mw-artifact">{artifact}</aside>}
+        {/* A div and not an aside: this is a layout column whose content brings
+            its own headings, and as a complementary landmark it was anonymous —
+            while a record's details pane (`RecordView`'s aside slot) renders
+            a NAMED one that can be open at the same time. Two complementary regions, one of them nameless, is worse
+            for a reader than one named column and a div. */}
+        {artifact && <div className="mw-artifact">{artifact}</div>}
       </div>
     </div>
   );

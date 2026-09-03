@@ -46,8 +46,34 @@ function sheets(dir: string): string[] {
  * It is the pair that restates what the class owns, which is also why the check
  * cannot be a grep for one line.
  */
-const eyebrowSize = "--fs-eyebrow";
 const eyebrowCase = "text-transform: uppercase";
+
+/**
+ * The eyebrow's own size token, and the raw sizes that ARE it spelled by hand.
+ *
+ * Reading only `--fs-eyebrow` is how this gate could fail short: it saw the
+ * copies that borrowed the token and was blind to the ones that typed the
+ * number, which are the older and more numerous kind — `.t-eyebrow` is 11px,
+ * and the eight rules inside the design system alone that draw uppercase
+ * micro-type spell it `11px`, `11.5px` or `12px`. A gate that reports PASS on
+ * the shape it cannot see has no failing assertion to notice.
+ *
+ * The ceiling is 12px because that is the top of micro-type: `--fs-eyebrow` is
+ * 11px and `--fs-meta` 12px, and uppercase at `--fs-sm` (13px) or above is a
+ * heading or a button rather than a label. Half-pixel sizes are matched too —
+ * `11.5px` is in this tree — since a rule is not exempt for being written to a
+ * half.
+ */
+const eyebrowSizeToken = "--fs-eyebrow";
+const EYEBROW_RAW_SIZE = /font-size:\s*(\d+(?:\.\d+)?)px/;
+
+function setsEyebrowSize(declarations: string): boolean {
+  if (declarations.includes(eyebrowSizeToken)) {
+    return true;
+  }
+  const raw = EYEBROW_RAW_SIZE.exec(declarations);
+  return raw !== null && Number.parseFloat(raw[1]) <= 12;
+}
 
 /** One CSS rule: its selector and the declarations inside its braces. */
 type Rule = { selector: string; body: string; line: number };
@@ -109,15 +135,28 @@ function rulesIn(source: string): Rule[] {
  * anything above it is edited, and a baseline that churns on unrelated changes
  * is one people learn to regenerate without reading.
  *
- * Why a ratchet and not a clean sweep. Twenty-eight of these are onboarding
- * screens, and converting them is markup work with a visual answer per site —
- * worth doing, and not something to hide inside a gate landing. What matters
- * now is that the number can only go down: the two copies that appeared INSIDE
- * the design system did so because nothing failed when they did.
+ * Why a ratchet and not a clean sweep. Most of these are onboarding screens,
+ * and converting them is markup work with a visual answer per site — worth
+ * doing, and not something to hide inside a gate landing. What matters now is
+ * that the number can only go down: the copies that appeared INSIDE the design
+ * system did so because nothing failed when they did.
+ *
+ * The counts rose once without a single new copy being written, when the
+ * detector learned to read a hand-typed size as well as the token. Nine sheets
+ * arrived at that moment and had been restating the eyebrow all along. That is
+ * the reason `setsEyebrowSize` carries the argument for its own ceiling: the
+ * expensive failure of a gate like this is not a false positive, it is the
+ * quiet PASS over the shape it was never taught to see.
  */
 const restated: Record<string, number> = {
-  "src/design-system/composed.css": 1,
+  "src/app/agentrail.css": 2,
+  "src/app/shell.css": 1,
+  "src/design-system/atoms.css": 1,
+  "src/design-system/composed.css": 4,
+  "src/design-system/listtable.css": 2,
   "src/design-system/margince-workbench.css": 3,
+  "src/mcp-apps/view.css": 1,
+  "src/screens/auth.css": 2,
   "src/screens/backfill.css": 1,
   "src/screens/company360.css": 1,
   "src/screens/onboarding-backread.css": 1,
@@ -127,6 +166,8 @@ const restated: Record<string, number> = {
   "src/screens/onboarding-live-panel.css": 2,
   "src/screens/onboarding-payoff.css": 1,
   "src/screens/onboarding.css": 5,
+  "src/screens/person360.css": 1,
+  "src/screens/preferences.css": 1,
   "src/screens/record360/spine.css": 1,
 };
 
@@ -142,7 +183,7 @@ function restatements(): Record<string, string[]> {
       // A NESTED rule's body contains its children's, so a parent would be
       // reported for a child's declarations. Only the rule's own text counts.
       const own = rule.body.replaceAll(/\{[^{}]*\}/g, "");
-      if (own.includes(eyebrowSize) && own.includes(eyebrowCase)) {
+      if (setsEyebrowSize(own) && own.includes(eyebrowCase)) {
         found[where] ??= [];
         found[where].push(`${rule.selector} (line ${rule.line})`);
       }
@@ -200,7 +241,23 @@ describe("the eyebrow has one spelling", () => {
     const css = readFileSync(join(frontendRoot, owner), "utf8");
     const eyebrow = rulesIn(css).find((rule) => rule.selector === ".t-eyebrow");
     expect(eyebrow, ".t-eyebrow is gone from base.css").toBeDefined();
-    expect(eyebrow?.body).toContain(eyebrowSize);
+    expect(eyebrow?.body).toContain(eyebrowSizeToken);
     expect(eyebrow?.body).toContain(eyebrowCase);
+  });
+
+  // The OTHER offence shape, which this gate was blind to until the sweep that
+  // widened it: the size typed as a number rather than taken from the token.
+  // Planted here rather than trusted, because a reader cannot tell a detector
+  // that finds nothing from one that looks for the wrong thing.
+  it("reads a hand-typed eyebrow size as the same offence", () => {
+    expect(setsEyebrowSize("font-size: 11px; text-transform: uppercase;")).toBe(
+      true,
+    );
+    expect(setsEyebrowSize("font-size: 11.5px;")).toBe(true);
+    expect(setsEyebrowSize("font-size: 12px;")).toBe(true);
+    // Above micro-type: a heading or a button, not a label drawn by hand.
+    expect(setsEyebrowSize("font-size: 13px;")).toBe(false);
+    expect(setsEyebrowSize("font-size: var(--fs-sm);")).toBe(false);
+    expect(setsEyebrowSize("letter-spacing: 0.03em;")).toBe(false);
   });
 });

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StatCard } from "./atoms";
 import { FactList } from "./factlist";
+import { ReadingsFloor } from "./readingsfloor";
 import { ReadingsGrid } from "./readingsgrid";
 
 // Four readings of one record as cards, each a door into the tab that holds
@@ -84,5 +85,34 @@ export const InANarrowColumn: Story = {
         <StatCard label="Next meeting" value="None" />
       </ReadingsGrid>
     </div>
+  ),
+};
+
+/** A source read to its limit, so every figure above is a floor rather than a
+ *  count. The caveat belongs to the ROW — read across, one caveat on one slot
+ *  would invite the reading where the others are exact — and `StatStrip` draws
+ *  the same sentence through the same `ReadingsFloor`. */
+export const WithAFloor: Story = {
+  render: () => (
+    <ReadingsGrid
+      label="What today is worth"
+      floor="Read to the page limit, so these are floors, not totals."
+    >
+      <StatCard label="Revenue at risk" value="€384.5k" numeric tone="warn" />
+      <StatCard label="Buyer replies" value="14" numeric />
+      <StatCard label="Prospecting" value="3" numeric />
+      <StatCard label="Review" value="27" numeric />
+    </ReadingsGrid>
+  ),
+};
+
+/** The caveat on its own, which is what both row shapes render. It is a
+ *  sentence about the READ rather than about any figure, so it draws quieter
+ *  than the readings it sits under and never competes with them. */
+export const TheFloorAlone: Story = {
+  render: () => (
+    <ReadingsFloor>
+      Read to the page limit, so these are floors, not totals.
+    </ReadingsFloor>
   ),
 };

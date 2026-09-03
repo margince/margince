@@ -60,35 +60,3 @@
 .agentedge-still {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbMid) 80%, transparent);
 }
-
-/* ===== Waiting: the contour closes =====
- *
- * Complete, and completely still. No light and no waves: a drawn line rather than
- * a lit one, which is what tells it apart from the working edge at a glance. This
- * is the state where nothing happens until a person acts.
- *
- * It dissolves when the queue does, which is what makes it bearable on every
- * screen: a contour that stayed after the last approval was answered would be an
- * alarm with no switch.
- */
-.agentedge-wait {
-  position: absolute;
-  inset: 0;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
-  opacity: 0;
-  transition: opacity 0.5s ease-out;
-}
-.agentedge[data-waiting] .agentedge-wait {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* The contour appears and goes rather than fading. Half a second of opacity is
-     a small animation, but a reader who asked for less movement asked for less of
-     exactly this, and nothing here needs the fade to be understood: the mark is
-     the statement, and its arrival is not part of the meaning. The shader's own
-     travel is held still separately, in the loop. */
-  .agentedge-wait {
-    transition: none;
-  }
-}

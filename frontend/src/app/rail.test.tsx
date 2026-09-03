@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { displayVersion } from "./release";
 import { navigate, type Route } from "./router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
@@ -296,25 +297,20 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
-  // TEMPORARY, with the marker it covers: delete this case in the change that
-  // takes the product out of alpha.
-  //
-  // What it holds is the half that is easy to break — the marker has to survive
-  // the collapse. At 64px the rail drops every label it has, so a release marker
-  // that rode the wordmark would be gone exactly where the product is hardest to
-  // identify. It hangs off the head instead, which is present in both states.
-  it("keeps the release marker in the head at both rail widths", () => {
+  // The half that is easy to break: the version has to survive the collapse. At
+  // 56px the rail drops every label it has, so a build marker that rode the
+  // wordmark would be gone exactly where the product is hardest to identify —
+  // and this is the one line here a reader may need to read back to us.
+  it("names the build at both rail widths", () => {
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(
-      expanded.container.querySelectorAll(".railhead .alphamark"),
-    ).toHaveLength(1);
+    expect(expanded.container.querySelectorAll(".railversion")).toHaveLength(1);
     cleanup();
 
     const collapsed = render(
       <WorkspaceRail route={{ screen: "home" }} collapsed />,
     );
-    const marker = collapsed.container.querySelector(".railhead .alphamark");
-    expect(marker?.textContent).toBe("Alpha");
+    const marker = collapsed.container.querySelector(".railversion");
+    expect(marker?.textContent).toBe(displayVersion());
   });
 
   // The bar is five cells and only three of them are destinations. The agent is

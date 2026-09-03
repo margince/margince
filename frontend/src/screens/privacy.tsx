@@ -1067,11 +1067,7 @@ export function PrivacyInboxCard() {
     // an answer — while /me is in flight nobody holds any role yet.
     body = (
       <QueryGate query={me}>
-        {() => (
-          <EmptyState>
-            <p className="t-small">{t("privacy.inboxAdminOnly")}</p>
-          </EmptyState>
-        )}
+        {() => <EmptyState>{t("privacy.inboxAdminOnly")}</EmptyState>}
       </QueryGate>
     );
   } else {

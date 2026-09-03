@@ -2087,6 +2087,11 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
       "How it stands",
+      // The status reading's own door: it opens the LEADS LIST narrowed to this
+      // status. Another screen, a read, and nothing on this record — the same
+      // species as "View tasks" above. A terminal lead is read-only rather than
+      // unreadable, and this is one of the reads.
+      "Open leads in this status →",
     ]);
     // The pane's own controls are skipped structurally rather than by label:
     // what folds a disclosure in it is a view control, and "Hide" is too

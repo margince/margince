@@ -152,7 +152,7 @@ export function TeamBoard({
                 that is really 3-or-more will not go looking, which is the one
                 direction this surface must not get wrong. */}
             {board.data.truncated && (
-              <p className="t-meta">{t("worklist.board.truncated")}</p>
+              <p className="t-caption">{t("worklist.board.truncated")}</p>
             )}
           </>
         )}

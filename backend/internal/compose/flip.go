@@ -42,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,14 +62,18 @@ type flipRunner struct {
 	pool *pgxpool.Pool
 	svc  *overlay.Service
 	ms   *overlay.MirrorStore
-	runs *migration.RunStore
 	log  *slog.Logger
 }
 
 var _ overlay.FlipRunner = (*flipRunner)(nil)
 
 func newFlipRunner(pool *pgxpool.Pool, svc *overlay.Service, ms *overlay.MirrorStore, log *slog.Logger) *flipRunner {
-	return &flipRunner{pool: pool, svc: svc, ms: ms, runs: migration.NewRunStore(InstallationDB(pool)), log: log}
+	// No run store on the runner, deliberately. Every lane that needs one
+	// builds it from the handle IT resolved, which is the whole of #2561's fix:
+	// a field here is a second answer available to a caller that had already
+	// resolved a handle, and two of the three lanes took the field while the
+	// import took the acting binding.
+	return &flipRunner{pool: pool, svc: svc, ms: ms, log: log}
 }
 
 // Preflight is OVA-WIRE-7: {ready, blocking[], unresolved_conflicts[]}
@@ -174,7 +179,10 @@ func (f *flipRunner) parityPreview(ctx context.Context, incumbent string) ([]crm
 		return nil, err
 	}
 	writers := newFlipWriters(db, f.ms, incumbent)
-	rep, err := migration.NewEngine(f.runs, writers).DryRun(ctx, mirrorFlipSource{ms: f.ms})
+	// The dry-run's run store rides the handle it already resolved, for the
+	// reason Execute resolves one: a lane that asks twice is a lane that can
+	// get two answers.
+	rep, err := migration.NewEngine(migration.NewRunStore(db), writers).DryRun(ctx, mirrorFlipSource{ms: f.ms})
 	if err != nil {
 		return nil, fmt.Errorf("flip preflight: parity dry-run: %w", err)
 	}
@@ -236,23 +244,51 @@ func (f *flipRunner) Execute(ctx context.Context, req crmcontracts.OverlayFlipRe
 		return crmcontracts.OverlayFlipAccepted{}, err
 	}
 
+	// ONE handle for the whole flip, resolved once here.
+	//
+	// The import and the reconstruction have always run on the ACTING
+	// workspace's binding — a rebuild writes an exported estate into the
+	// workspace whose operator ordered it, which on a clean instance is a
+	// workspace the server never resolved (dbhandle.go says why). The mode
+	// flip ran on f.svc, built over the installation's singleton. Two handles
+	// for one operation: if they ever named different workspaces, the flip
+	// imported an estate into one and flipped the other out of overlay mode
+	// (margince/margince#2561).
+	//
+	// Not reachable today — every caller is HTTP-driven and identity's
+	// middleware binds the request context from the same resolver the
+	// installation handle uses — so this closes the possibility rather than a
+	// symptom. Resolving it HERE rather than per step is the point: three
+	// callers each asking separately is what let two of them differ.
+	db, err := actingWorkspaceDB(ctx, f.pool)
+	if err != nil {
+		return crmcontracts.OverlayFlipAccepted{}, err
+	}
+	// The run store rides the same handle, and it is the third one the lane
+	// held. The run store used to be built over the installation's singleton at
+	// construction time, so the run RECORDS of a flip could be written into a
+	// different workspace from the estate the flip imported — the same
+	// divergence one level down, and the record is what a resumed attempt reads
+	// to know where it got to.
+	svc, runs := f.svc.On(db), migration.NewRunStore(db)
+
 	// Freeze (idempotent — a green preflight already sealed).
-	snap, err := f.svc.SealFlipSnapshot(ctx)
+	snap, err := svc.SealFlipSnapshot(ctx)
 	if err != nil {
 		return crmcontracts.OverlayFlipAccepted{}, err
 	}
 
-	run, err := f.resumeOrCreateRun(ctx, snap, string(mode))
+	run, err := f.resumeOrCreateRun(ctx, runs, snap, string(mode))
 	if err != nil {
 		return crmcontracts.OverlayFlipAccepted{}, err
 	}
 
-	rep, err := f.importMirrorEstate(ctx, run, mode, v.checks.Incumbent)
+	rep, err := f.importMirrorEstate(ctx, db, runs, run, mode, v.checks.Incumbent)
 	if err != nil {
 		return crmcontracts.OverlayFlipAccepted{}, err
 	}
 
-	if err := f.svc.CompleteFlip(ctx, run.ID, string(mode)); err != nil {
+	if err := svc.CompleteFlip(ctx, run.ID, string(mode)); err != nil {
 		return crmcontracts.OverlayFlipAccepted{}, err
 	}
 	f.log.Info("overlay flip completed", "run_id", run.ID.String(), "mode", string(mode), "imported", rep.Imported)
@@ -273,12 +309,10 @@ func (f *flipRunner) Execute(ctx context.Context, req crmcontracts.OverlayFlipRe
 // this run: the writers attribute every imported record to the run and to the
 // human who ordered the cutover, and the association map is loaded before the
 // first object so a record's links land with it rather than a pass later.
-func (f *flipRunner) importMirrorEstate(ctx context.Context, run migration.Run, mode crmcontracts.OverlayFlipRequestMode, incumbent string) (migration.Report, error) {
+// The handle is PASSED IN rather than resolved here, so the import cannot
+// differ from the mode flip that follows it — see Execute.
+func (f *flipRunner) importMirrorEstate(ctx context.Context, db *database.DB, runs *migration.RunStore, run migration.Run, mode crmcontracts.OverlayFlipRequestMode, incumbent string) (migration.Report, error) {
 	operator, err := flipOperator(ctx)
-	if err != nil {
-		return migration.Report{}, err
-	}
-	db, err := actingWorkspaceDB(ctx, f.pool)
 	if err != nil {
 		return migration.Report{}, err
 	}
@@ -290,7 +324,7 @@ func (f *flipRunner) importMirrorEstate(ctx context.Context, run migration.Run, 
 	}
 	writers.SetAssociations(assocs)
 
-	rep, err := migration.NewEngine(f.runs, writers).Run(ctx, run.ID, source)
+	rep, err := migration.NewEngine(runs, writers).Run(ctx, run.ID, source)
 	if err != nil {
 		// The run record holds the failure + checkpoint: executing again
 		// resumes it. The mirror stays frozen — the estate must not
@@ -361,21 +395,21 @@ func (f *flipRunner) admitMode(ctx context.Context, mode crmcontracts.OverlayFli
 // resumeOrCreateRun continues an interrupted flip run for the SAME
 // sealed snapshot (checkpoint intact — never from zero, never past it),
 // or records a fresh one.
-func (f *flipRunner) resumeOrCreateRun(ctx context.Context, snap overlay.FlipSnapshot, mode string) (migration.Run, error) {
-	latest, err := f.runs.Latest(ctx, migration.ConnectorMirror)
+func (f *flipRunner) resumeOrCreateRun(ctx context.Context, runs *migration.RunStore, snap overlay.FlipSnapshot, mode string) (migration.Run, error) {
+	latest, err := runs.Latest(ctx, migration.ConnectorMirror)
 	switch {
 	case err == nil && latest.SourceRef == snap.ID && latest.Status == migration.StatusFailed:
-		if err := f.runs.Resume(ctx, latest.ID); err != nil {
+		if err := runs.Resume(ctx, latest.ID); err != nil {
 			return migration.Run{}, err
 		}
-		return f.runs.Get(ctx, latest.ID)
+		return runs.Get(ctx, latest.ID)
 	case err == nil && latest.SourceRef == snap.ID && latest.Status == migration.StatusRunning:
 		// A crashed request left the run marked running; re-enter it.
 		return latest, nil
 	case err != nil && !errors.Is(err, apperrors.ErrNotFound):
 		return migration.Run{}, err
 	}
-	return f.runs.Create(ctx, migration.CreateRunInput{
+	return runs.Create(ctx, migration.CreateRunInput{
 		Connector: migration.ConnectorMirror,
 		SourceRef: snap.ID,
 		Source:    "overlay:flip:" + mode,

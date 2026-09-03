@@ -11,14 +11,6 @@
   margin: 0;
 }
 
-/* The four outcome readings and the caveat under them. The strip owns its own
-   plate, so this only stacks the caveat beneath it. */
-.worklist-readings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 /* What the page is not showing. Quiet on purpose: this is the surface reporting
    on itself rather than a row of work, and it must not compete with the queue
    for the reader's eye. */
@@ -42,6 +34,18 @@
   border: 0;
   cursor: pointer;
   padding: 0;
+  /* The geometry belongs to whatever the ROW's flex item is, and once the rank
+     is pressable that is this button rather than the digit inside it — so
+     `.worklist-rank`'s own floor stops protecting the column. Without these
+     the button took its content's shrink-to-fit width and measured 4px across:
+     the promise stated on `.worklist-rank` below (a two-digit number must not
+     shift the titles beside it) was broken, and the press target was one no
+     pointer could reasonably hit.
+     --space-6 is 24px, which is the AA target floor; `.worklist-rank` takes the
+     same rung so a row offering no press keeps its title at the same x. */
+  flex: 0 0 auto;
+  min-height: var(--space-6);
+  min-width: var(--space-6);
 }
 
 .worklist-rank-select:focus-visible {
@@ -134,11 +138,15 @@
 
 /* The rank reads as a marker beside the row rather than as part of the
    sentence, so it is set in the muted tone at a fixed width: a two-digit
-   number must not shift the titles beside it. */
+   number must not shift the titles beside it.
+   The width is the same rung `.worklist-rank-select` takes, because the two
+   stand in the same column — a pressable rank and a bare one at different
+   widths would put the titles beside them at two different x. */
 .worklist-rank {
   color: var(--textSecondary);
+  display: inline-block;
   flex: 0 0 auto;
-  min-width: var(--space-5);
+  min-width: var(--space-6);
   text-align: right;
 }
 

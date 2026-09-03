@@ -37,6 +37,12 @@ const EXTRACTED: ProfileField = {
   source: "site_read",
   captured_by: "agent:deepread",
   updated_at: "2026-08-01T09:00:00Z",
+  // The VERSION the row was read at, and it is not decoration: both verbs pin
+  // it through `requireVersion`, which refuses a row that arrived without one.
+  // Absent, every write here rejected before it left the browser — so the
+  // stories about the WAIT never reached a wait and showed the refusal
+  // instead of the state they were written to document.
+  version: 3,
 };
 
 const CONFIRM = `POST /organizations/${ORG}/profile-fields/${EXTRACTED.field}/confirm`;

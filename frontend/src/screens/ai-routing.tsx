@@ -131,9 +131,7 @@ export function AiRoutingCard({
     return (
       <Panel title={t("aiRouting.title")} sub={t("aiRouting.sub")}>
         <PanelBody>
-          <EmptyState>
-            <p className="t-small">{t("aiRouting.withheld")}</p>
-          </EmptyState>
+          <EmptyState>{t("aiRouting.withheld")}</EmptyState>
         </PanelBody>
       </Panel>
     );

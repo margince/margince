@@ -955,13 +955,17 @@ describe("AgentRail", () => {
         jsonResponse({ data: [APPROVAL("a-1")], page: emptyPage }),
     });
     const view = render(ROUTE);
+    // The unanswered queue reaches a reader through this panel's own line, with
+    // its count. It is not published to the margins: a contour standing for as
+    // long as the queue does is a ring around the window on any installation
+    // with work in it.
     await settlesOnLine(view.container, `1 ${LABELS.waiting}`);
-    expect(currentAgentEdge().waiting).toBe(true);
+    expect(currentAgentEdge()).toEqual({ reading: false });
 
     // Sign out mid-read and the login screen would otherwise inherit a lit
     // margin belonging to a session that has ended.
     view.unmount();
-    expect(currentAgentEdge()).toEqual({ reading: false, waiting: false });
+    expect(currentAgentEdge()).toEqual({ reading: false });
   });
 
   // The Core's own tone rule is the only place a state's colour is declared

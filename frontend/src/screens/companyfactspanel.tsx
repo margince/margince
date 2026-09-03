@@ -23,6 +23,7 @@ import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";
 import { type FactGroup, factFieldLabelKey, listFacts } from "./factview";
 import "./company360.css";
+import { SurfaceState } from "../design-system/surfacestate";
 
 type OrganizationFact = components["schemas"]["OrganizationFact"];
 type FactCategory = OrganizationFact["category"];
@@ -164,7 +165,9 @@ export function CompanyFactsPanel({
         )}
         <QueryStates query={factsQuery}>
           {facts.length === 0 ? (
-            <p className="t-caption">{t("co.facts.empty")}</p>
+            <SurfaceState state="empty" emptyLabel={t("co.facts.empty")}>
+              {null}
+            </SurfaceState>
           ) : (
             listFacts(facts, t, locale).map((group) => (
               <FactCategoryBlock
@@ -245,7 +248,7 @@ function FactRow({
   return (
     <div className="co-field">
       <span className="t-label">{t(factFieldLabelKey(fact.field))}</span>
-      <div>
+      <div className="co-fact-line">
         <EvidenceMark
           value={fact.value}
           source={derivedSource(fact, locale, recordZone)}

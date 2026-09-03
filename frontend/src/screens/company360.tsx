@@ -43,6 +43,7 @@ import {
   useViewerId,
 } from "./common";
 import type { CompanyTab } from "./companytab";
+import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { FactList } from "../design-system/factlist";
@@ -210,11 +211,21 @@ export function DealsCard({
               {t("co.deals.wonLifetime")}{" "}
               {formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
             </span>
-            <span>
+            {/* The lost count names a set of this company's deals, so it is
+                the way into them — and it opens exactly that set. Narrowed by
+                `status` and not by a lost STAGE, because no single closed-lost
+                stage id exists across pipelines while `status` is a dial the
+                deals endpoint reads. */}
+            <a
+              className="link-button"
+              href={dealsFilteredBy("organization_id", view.organization.id, {
+                status: "lost",
+              })}
+            >
               {t("co.deals.lostCount", {
                 count: formatNumber(deals.lost_count, locale),
               })}
-            </span>
+            </a>
           </p>
         )
       }
@@ -342,9 +353,21 @@ export function CommercialPanel({
           locale,
         )}
       />
+      {/* The same figure as the deals card's, and the same door: one company,
+          status lost. Two spellings of one address is how the two figures come
+          to open different lists. */}
       <CommercialFigure
         label={t("co.commercial.lostFigure")}
-        value={formatNumber(deals.lost_count, locale)}
+        value={
+          <a
+            className="link-button"
+            href={dealsFilteredBy("organization_id", view.organization.id, {
+              status: "lost",
+            })}
+          >
+            {formatNumber(deals.lost_count, locale)}
+          </a>
+        }
       />
     </PanelBody>
   );
@@ -449,7 +472,7 @@ export function CommercialPanel({
 function CommercialFigure({
   label,
   value,
-}: Readonly<{ label: string; value: string }>) {
+}: Readonly<{ label: string; value: ReactNode }>) {
   return (
     <div className="co-figure">
       <Eyebrow>{label}</Eyebrow>

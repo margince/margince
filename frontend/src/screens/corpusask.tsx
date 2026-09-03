@@ -261,12 +261,8 @@ function Refusal({ answer }: Readonly<{ answer: Answer }>) {
   // set is for — and they are reading it at their least patient moment.
   return (
     <EmptyState title={t("corpusAsk.notCovered.title")}>
-      <p className="t-small">
-        {t("corpusAsk.notCovered.body", { name: answer.corpus.name })}
-      </p>
-      <blockquote className="t-small">
-        {answer.corpus.topic_statement}
-      </blockquote>
+      <p>{t("corpusAsk.notCovered.body", { name: answer.corpus.name })}</p>
+      <blockquote>{answer.corpus.topic_statement}</blockquote>
     </EmptyState>
   );
 }

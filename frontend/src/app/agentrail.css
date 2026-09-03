@@ -202,6 +202,15 @@
   }
 }
 
+/* One face on this rail, and it is the body face.
+   The rail shipped in mono throughout — the figures, the state word, the chip
+   labels and the meta strip — which is the typewriter voice used as decoration
+   rather than for the one thing mono is for. The record page settled this
+   already (company360.css): mono was doing two jobs, aligning columns and
+   shouting, and only the first is wanted, so `tabular-nums` on the body face
+   delivers the alignment without the voice. Figures here take that pair; a
+   button label or a word takes the body face alone. */
+
 /* The money, and the scope it was spent in, on one line: the figure leads
    because it is the thing being watched. */
 .arspend {
@@ -211,7 +220,8 @@
   gap: var(--space-1);
   width: 100%;
   min-width: 0;
-  font-family: var(--f-mono);
+  font-family: var(--f-body);
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   color: var(--textMeta);
   white-space: nowrap;
@@ -591,7 +601,7 @@
   display: flex;
   align-items: center;
   gap: 5px; /* ds:ignore pip-to-word optics inside one label */
-  font-family: var(--f-mono);
+  font-family: var(--f-body);
   font-size: 9.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -620,7 +630,8 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-family: var(--f-mono);
+  font-family: var(--f-body);
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   white-space: nowrap;
 }
@@ -812,7 +823,13 @@
 .armuted {
   margin-left: auto;
   padding-left: var(--space-2);
-  font-family: var(--f-mono);
+  /* The body face with tabular figures, not mono. This is the record page's
+     rule applied here: the mono face was doing two jobs, aligning columns and
+     shouting, and only the first is wanted. `tabular-nums` delivers the
+     alignment without the typewriter voice — and the body face is narrower, so
+     the strip fits more of the sentence in the same rail. */
+  font-family: var(--f-body);
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
   color: var(--textMeta);
   white-space: nowrap;
@@ -823,7 +840,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-3);
-  font-family: var(--f-mono);
+  /* Prose, not a payload: this strip is label-and-value pairs with `<b>` and
+     `<i>` inside it. Same reason as `.armuted` above. */
+  font-family: var(--f-body);
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
   color: var(--textMeta);
 }
@@ -872,7 +892,10 @@
   border-radius: var(--r-full);
   background: color-mix(in srgb, var(--arTone) 10%, transparent);
   color: var(--accentText);
-  font-family: var(--f-mono);
+  /* A button's label is a word the reader presses, so it is set in the face
+     the rest of the product's buttons use. Nothing here is a figure or a
+     payload, which is the only thing mono is for. */
+  font-family: var(--f-body);
   font-size: 12px;
   cursor: pointer;
 }
@@ -885,7 +908,7 @@
 }
 .arplay:focus-visible {
   outline: var(--focus-ring-forced);
-  box-shadow: 0 0 0 3px var(--accentLight);
+  box-shadow: var(--focus-glow);
 }
 
 .archips {
@@ -895,12 +918,12 @@
   gap: var(--space-2);
 }
 .archip {
-  padding: 7px 13px; /* ds:ignore pill optics on a 12px mono label */
+  padding: 7px 13px; /* ds:ignore pill optics on a 12px label */
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   background: transparent;
   color: var(--textMeta);
-  font-family: var(--f-mono);
+  font-family: var(--f-body);
   font-size: 12px;
   cursor: pointer;
 }
@@ -911,7 +934,7 @@
 }
 .archip:focus-visible {
   outline: var(--focus-ring-forced);
-  box-shadow: 0 0 0 3px var(--accentLight);
+  box-shadow: var(--focus-glow);
 }
 
 /* ── Running now ─────────────────────────────────────────────────────────────

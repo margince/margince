@@ -155,7 +155,7 @@ describe("HomeScreen — the context rail", () => {
     render(<HomeScreen />);
 
     const card = await screen.findByText("Ostwind refit");
-    const panel = card.closest("button");
+    const panel = card.closest("a");
     expect(panel).toBeTruthy();
     // Awaited, not read: the company name comes from a second read that the
     // card does not wait for, so it can still be in flight when the deal's own

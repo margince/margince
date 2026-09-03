@@ -36,12 +36,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 37 |
+| Shipped invocation sites | 38 |
 | … best state `current` | 35 |
 | … best state `partial` | 0 |
-| … best state `stale` | 2 |
+| … best state `stale` | 3 |
 | … `absent` on every binding | 0 |
-| Scenarios in the corpus | 126 |
+| Scenarios in the corpus | 129 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -74,7 +74,7 @@ tables below.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 30 | 28 | 0 | 2 | 324 | 260 | 0.80 | 9128ms | 14 | 6 | 10 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 28 | 0 | 3 | 333 | 268 | 0.80 | 68516ms | 12 | 7 | 12 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -105,6 +105,7 @@ model, real network).
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario intro_note_is_written_to_the_customer_not_about_the_request — or the prompt this build now builds from it — has changed since the record scored it |
 | `draft_reply/person` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/person` | `gemini · gemini-3.5-flash · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -535,7 +536,7 @@ sites repeats the same pair on each of their rows.
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1565ms | 3014ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 20957ms | 44515ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 8077ms | 20319ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1436ms | 2784ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 18392ms | 68516ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/first`
 
@@ -557,7 +558,7 @@ sites repeats the same pair on each of their rows.
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1565ms | 3014ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1436ms | 2784ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 18392ms | 68516ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/intro`
 
@@ -580,7 +581,30 @@ sites repeats the same pair on each of their rows.
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 1565ms | 3014ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1436ms | 2784ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 18392ms | 68516ms | 6 | 0 | 0 | 0 |
+
+#### `draft_reply/intro_note`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (3):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `an_instruction_inside_the_stated_reason_is_data_not_a_command` | `accepted` | [intro_note_injected_reason_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml) |
+| `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
+| `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
+
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 2/3 | `supported_degraded` | 9 | 8 | 0.89 | 18392ms | 68516ms | 8 | 0 | 1 | 0 |
 
 #### `draft_reply/person`
 
@@ -604,7 +628,7 @@ sites repeats the same pair on each of their rows.
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1565ms | 3014ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 20957ms | 44515ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 8077ms | 20319ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1436ms | 2784ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 18392ms | 68516ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/reply`
 
@@ -632,7 +656,7 @@ sites repeats the same pair on each of their rows.
 | `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `not_supported` | 12 | 12 | 1.00 | 20957ms | 44515ms | 12 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `not_supported` | 12 | 12 | 1.00 | 8077ms | 20319ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2508ms | 2685ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 1436ms | 2784ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 18392ms | 68516ms | 12 | 0 | 0 | 0 |
 
 ### `enrich`
 

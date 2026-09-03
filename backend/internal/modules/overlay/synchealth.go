@@ -240,7 +240,8 @@ func (s *Service) objectConcerns(ctx context.Context) ([]SyncConcern, error) {
 func (s *Service) backfillStillOwed(ctx context.Context) (bool, error) {
 	var unconverged, total int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`SELECT count(*) FILTER (WHERE NOT done OR truncated), count(*) FROM overlay_backfill_cursor`,
 		).Scan(&unconverged, &total)
 	})
@@ -260,7 +261,8 @@ func (s *Service) sweepFailureConcern(ctx context.Context) (concern SyncConcern,
 		nextSweepAt *time.Time
 	)
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`SELECT consecutive_failures, last_error_class, next_sweep_at FROM overlay_sync_state`,
 		).Scan(&failures, &errorClass, &nextSweepAt)
 	})

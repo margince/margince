@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
+import { routeHash } from "../app/router";
 import { Badge, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -286,8 +287,13 @@ function WeeklyBody({
   if (review === null) {
     // A rep whose first Monday has not come round yet. Saying so is the honest
     // answer; a page of zeroes would claim a week that was measured and empty.
+    // Drawn through the same arm the branch above uses for the same sentence —
+    // hand-rolled here, it was the one line on the card set as a caption while
+    // every other absence on the page read as prose.
     return (
-      <p className="home-weekly-none t-caption">{t("home.weekly.none")}</p>
+      <SurfaceState state="empty" emptyLabel={t("home.weekly.none")}>
+        {null}
+      </SurfaceState>
     );
   }
 
@@ -381,8 +387,17 @@ function WeeklyBody({
             <li key={`${deal.deal_id}-${deal.occurred_at}`}>
               {/* The LABEL, not a lookup. It was frozen when the review was
                   written, so a deal renamed or deleted since still reads as it
-                  did that week. */}
-              <span className="home-weekly-deal-name">{deal.label}</span>
+                  did that week — which is why this is a plain anchor and not
+                  `EntityRef`: resolving the name would undo the freeze. The
+                  ADDRESS is safe to build from the frozen id either way; a deal
+                  that has since gone answers 404, which is the honest outcome
+                  for a week that is over. */}
+              <a
+                className="home-weekly-deal-name link-button"
+                href={routeHash({ screen: "deals", id: deal.deal_id })}
+              >
+                {deal.label}
+              </a>
               <span className="home-weekly-deal-outcome t-caption">
                 {outcomeWord(t, deal.outcome)}
                 {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}

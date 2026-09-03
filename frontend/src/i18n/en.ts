@@ -186,7 +186,6 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
-  "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
@@ -276,6 +275,7 @@ export const en = {
   "deal.archived": "archived",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
+  "record.chronologyLoading": "Reading the change history…",
   // The same word the tab strip uses (`tab.timeline`): the heading over the
   // slot and the tab that opens it name one thing, and two words for it read
   // as two things.
@@ -565,11 +565,11 @@ export const en = {
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
 
+  "list.headActions": "More actions",
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
   "list.viewAll": "All",
-  "list.viewAZ": "A–Z",
   "list.viewHot": "Hot",
   "list.overlayReadOnly":
     "Sorting and filters read through HubSpot — open it there",
@@ -589,6 +589,7 @@ export const en = {
   "table.shownColumns": "Shown columns",
   "table.compact": "Compact",
   "table.sort": "Sort",
+  "table.sortNamed": "Sort: {column}",
   "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",
@@ -1121,6 +1122,7 @@ export const en = {
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
+  "finance.loading": "Reading the invoices…",
   "finance.syncing":
     "Syncing with your accounting source. Figures appear once the first sweep lands.",
   "finance.noConnection":
@@ -2245,6 +2247,7 @@ export const en = {
   "deals.winReasonOther": "Something else",
   "deals.winReasonDetail": "What was it?",
   "deals.confirm": "Confirm",
+  "deals.loading": "Reading the deals…",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
@@ -2268,7 +2271,6 @@ export const en = {
   "deal.committee.empty": "No stakeholder is recorded on this deal",
   "deal.committee.engaged": "Talking",
   "deal.committee.quiet": "No reply",
-  "deal.committee.unnamedSeat": "A stakeholder you cannot see",
   "deal.committee.legendEngaged": "Talking with us",
   "deal.committee.legendQuiet": "On the deal, not talking",
   "deal.committee.legendGap": "Missing cover",
@@ -2422,6 +2424,7 @@ export const en = {
   "decision.expired": "Expired",
   "decision.expiresIn": "expires in {countdown}",
   "decision.detail": "Approval detail",
+  "decision.detailLoading": "Reading this approval…",
   "decision.detailTechnical": "Technical details",
   "decision.detailAsked": "Asked",
   "decision.detailDecided": "Decided",
@@ -2448,7 +2451,7 @@ export const en = {
   "home.honestShort":
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":
-    "{shown} of {count} qualifying deals — the honest-short top slice.",
+    "Showing the {shown} highest-ranked of {count} qualifying deals.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
@@ -2664,6 +2667,7 @@ export const en = {
   "home.readings.label": "Your morning, in five readings",
   "home.readings.truncated":
     "A source was read to its limit, so every figure above is a floor.",
+  "home.readings.openLane": "Open these",
   "home.readings.waiting": "Customer waiting",
   "home.readings.waitingBasis": "waiting on an answer",
   "home.readings.meetings": "Meetings ahead",
@@ -2688,7 +2692,7 @@ export const en = {
   "home.deck.viewDeck": "Deck",
   "home.deck.viewList": "List",
   "home.deck.keys":
-    "→ accept · ← reject · ↑ edit · ↓ later · U undo · Enter send",
+    "Arrows stage a decision: → accept · ← reject · ↑ edit · ↓ later · U undo · Enter sends the staged ones",
   "home.deck.behind_one": "1 more behind",
   "home.deck.behind_other": "{count} more behind",
   "home.deck.staged_one": "1 decision staged",
@@ -3217,6 +3221,7 @@ export const en = {
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
   "tasks.detail": "Task",
+  "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
@@ -3322,6 +3327,9 @@ export const en = {
   "analytics.forecastBanner":
     "Each tile shows the raw total and, beneath it, the probability-weighted total — rounded per deal, so it always reconciles to Explain This Number.",
   "analytics.company": "Company",
+  "analytics.openStageDeals": "Open the deals in {stage}",
+  "analytics.openCompanyDeals": "Open this company's deals",
+  "analytics.noCompany": "No company",
   "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
 
@@ -3358,7 +3366,7 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
-  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.summary": "Which sources had more",
   "brief.coverage.bounded": "{shown} shown of at least {considered} read",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
@@ -6954,6 +6962,9 @@ export const en = {
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
+  // Names the column beside the graph, for a reader who lands in it from the
+  // landmark list rather than by scrolling to it.
+  "person.graph.sideColumn": "Introductions and moments",
   "person.graph.recordWorksWith": "Record: works with {name}",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
@@ -7781,6 +7792,10 @@ export const en = {
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
   "project.assignOwnerNoneSelected": "Pick a colleague first",
+  // The dialog's own confirm verb. The trigger and the title both read "Assign
+  // to a colleague"; the button says what pressing it does, and a button
+  // repeating the heading it sits under reads as chrome rather than a verb.
+  "project.assignOwnerConfirm": "Assign",
   "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
@@ -7808,6 +7823,8 @@ export const en = {
   "project.rollups.empty": "No figures for this project yet.",
   "project.rollups.openValue": "Open deal value",
   "project.rollups.wonValue": "Won deal value",
+  "project.rollups.openDeals": "Open the deals",
+  "project.rollups.openCommitmentsList": "Open what is owed",
   "project.rollups.openCommitments": "Open commitments",
   "project.rollups.lastActivity": "Last activity",
   "project.rollups.never": "nothing yet",
@@ -7826,6 +7843,7 @@ export const en = {
   "project.stakeholders.empty":
     "Nobody is seated on this project yet. A stakeholder is a person with a role here — a sponsor, a project lead, a champion.",
   "project.stakeholders.add": "Add stakeholder",
+  "project.stakeholders.addConfirm": "Add",
   "project.stakeholders.addHint":
     "One seat per person. Naming somebody already on this project moves them to the role you pick here.",
   "project.stakeholders.searchLabel": "Search people by name",
@@ -7968,6 +7986,7 @@ export const en = {
   "worklist.readings.revenue": "Revenue at risk",
   "worklist.readings.revenue.detail": "Across the deals drifting today",
   "worklist.readings.revenue.unpriced": "No deal at risk could be priced",
+  "worklist.readings.openLane": "Open this lane",
   "worklist.readings.replies": "Buyer replies",
   "worklist.readings.replies.detail": "Customers waiting on an answer",
   "worklist.readings.prospecting": "Prospecting",
@@ -8107,8 +8126,15 @@ export const en = {
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
-  "worklist.source.failed": "{source} could not be read",
-  "worklist.source.withheld": "{source} is hidden from your account",
+  // The frame states the fact and the source follows it, rather than the
+  // source standing as the subject. `sourceName` returns a row TITLE — "A
+  // mailbox connection needs attention", "Two records look like the same one"
+  // — and fourteen of the twenty-one are already whole clauses, so used as a
+  // subject they ran two sentences together: "A mailbox connection needs
+  // attention could not be read". Naming the fact first works for every entry
+  // and needs no second vocabulary of source nouns.
+  "worklist.source.failed": "A source could not be read: {source}",
+  "worklist.source.withheld": "A source is hidden from your account: {source}",
   "worklist.untitled.generic": "Something needs you",
   "worklist.batch.likely_automated": "{count} likely automated senders",
   "worklist.batch.company_match": "{count} addresses at companies you know",
@@ -8166,6 +8192,7 @@ export const en = {
   "lead.standing.rests.captured": "Captured {at}.",
   "lead.standing.rests.noResponse": "No first response recorded.",
   "lead.standing.rests.engaged": "Engagement captured {at}.",
+  "lead.readings.openStatus": "Open leads in this status",
   "lead.readings.title": "Where this lead stands",
   "lead.readings.firstResponse": "First response",
   "lead.readings.noClock": "no response target set",

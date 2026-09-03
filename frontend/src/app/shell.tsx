@@ -47,6 +47,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
+import { displayVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -355,14 +356,6 @@ export function WorkspaceRail({
       >
         <div className="railhead">
           <BrandBlock />
-          {/* TEMPORARY, and the whole element goes when the product leaves
-              alpha: this span, its rule in shell.css, the `shell.alpha` key and
-              the case in rail.test.tsx, together. A ribbon across the head's
-              top-left corner, absolutely positioned so it takes no space and
-              moves nothing — the head is the same box with it and without it —
-              and anchored to the corner rather than to the wordmark, which is
-              what keeps it on screen at 64px where every label is gone. */}
-          <span className="alphamark">{t("shell.alpha")}</span>
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the SAME depth are the same level with
@@ -425,6 +418,17 @@ export function WorkspaceRail({
             <AgentRail route={route} />
           </div>
         )}
+        {/* WHAT BUILD THIS IS, under everything else. It is the alpha marker
+            now: a corner ribbon across the brand said the product is
+            unfinished and nothing else, where a version says that AND which
+            build a reader is looking at — which is the thing worth having in
+            front of somebody the first time they see the product.
+            It stays at 64px, where every label in the panel is gone: the
+            sentence is four characters wide and it is the one line here that a
+            reader may need to read back to us. It goes on a drilled-in level
+            too, because it is a fact about the BUILD rather than about the
+            level, and at phone width there is no column to have a foot. */}
+        {!phone && <p className="railversion">{displayVersion()}</p>}
       </nav>
     </>
   );

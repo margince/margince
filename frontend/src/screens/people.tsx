@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -394,6 +395,7 @@ function PersonAside({
 
 export function ContactsScreen() {
   const t = useT();
+  const pageName = usePageName("contacts");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   // Offered only once /me has answered: a chip whose value is still "" reads
@@ -415,6 +417,7 @@ export function ContactsScreen() {
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={state}
         unit="unit.contacts"
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
@@ -492,10 +495,7 @@ export function ContactsScreen() {
         rowRoute={(person) => ({ screen: "contacts", id: person.id })}
         dataChips={[...ownerChips, ...tagChips]}
         dataViews={savedViews}
-        views={[
-          ...standardViews(viewerId),
-          { label: "list.viewAZ", sort: "full_name" },
-        ]}
+        views={[...standardViews(viewerId)]}
       />
     </div>
   );

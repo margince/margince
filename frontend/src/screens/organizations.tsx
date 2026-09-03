@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
 import {
@@ -549,6 +550,7 @@ async function createCompany(
 
 export function CompaniesScreen() {
   const t = useT();
+  const pageName = usePageName("companies");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("organization");
@@ -583,6 +585,7 @@ export function CompaniesScreen() {
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={state}
         unit="unit.companies"
         emptyNote={mineEmptyNote({
@@ -747,7 +750,6 @@ export function CompaniesScreen() {
             sort: "display_name",
             filters: { lifecycle: "prospect" },
           },
-          { label: "list.viewAZ", sort: "display_name" },
         ]}
       />
     </div>
@@ -2035,7 +2037,11 @@ function CompanyPage({
             }}
           />
         )}
-        <div className="form-actions">
+        {/* card-actions, not form-actions: what stands above this row is a
+            history timeline, which sets its own top margin to 0 and carries no
+            bottom one — so the form's row, which brings no top margin because a
+            field above it normally does, put Close against the last entry. */}
+        <div className="card-actions">
           <Button onClick={() => setAuditOpen(false)}>
             {t("common.close")}
           </Button>

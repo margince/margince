@@ -12,8 +12,8 @@ import {
 
 /**
  * The agent's margins, which are the hardest thing on this surface to review from
- * a screenshot: three of the four states are motion, and the fourth is the absence
- * of it. These stories exist so the difference can be seen side by side.
+ * a screenshot: one state is motion and the other is the absence of it. These
+ * stories exist so the difference can be seen side by side.
  *
  * Full-screen layout, always. The marks are `fixed` to the viewport, so in a
  * padded canvas they would hug the frame of the story rather than the frame of the
@@ -35,11 +35,11 @@ type Story = StoryObj<typeof AgentEdge>;
  * (agent-edge-signal.ts). So a story has to say what the agent is doing the same
  * way the rail does, and clear it on the way out or the next story inherits it.
  */
-function Edge({ reading, waiting }: AgentEdgeReading) {
+function Edge({ reading }: AgentEdgeReading) {
   useEffect(() => {
-    publishAgentEdge({ reading, waiting });
+    publishAgentEdge({ reading });
     return clearAgentEdge;
-  }, [reading, waiting]);
+  }, [reading]);
   return (
     <>
       <AgentEdge />
@@ -58,31 +58,14 @@ function Edge({ reading, waiting }: AgentEdgeReading) {
 
 /** Nothing at all, which is the resting state and most of the working day. */
 export const Still: Story = {
-  render: () => <Edge reading={false} waiting={false} />,
+  render: () => <Edge reading={false} />,
 };
 
 /**
  * Work in flight. The whole rim is lit, the light billows in place, and one soft
- * arc laps the perimeter. This is the only state that moves.
+ * arc laps the perimeter. This is the only state that moves, which is what makes
+ * movement here mean something.
  */
 export const Reading: Story = {
-  render: () => <Edge reading={true} waiting={false} />,
-};
-
-/**
- * An approval is outstanding. A complete contour, motionless, and no glow: a
- * drawn line rather than a lit one. Stillness is the signal, because a thing that
- * cannot proceed without a person should not look busy.
- */
-export const Waiting: Story = {
-  render: () => <Edge reading={false} waiting={true} />,
-};
-
-/**
- * Both at once, which is an ordinary Tuesday rather than an edge case: the agent
- * reading now while an approval from ten minutes ago still waits. The two marks
- * are drawn on different bands so neither hides the other.
- */
-export const ReadingWhileWaiting: Story = {
-  render: () => <Edge reading={true} waiting={true} />,
+  render: () => <Edge reading={true} />,
 };

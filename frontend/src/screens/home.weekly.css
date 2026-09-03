@@ -1,10 +1,5 @@
 /* The week just gone. The stat strip carries its own spacing; these rules are
    for the deal lines under it. */
-.home-weekly-none {
-  margin: 0;
-  color: var(--textMeta);
-}
-
 .home-weekly-deals {
   list-style: none;
   margin: var(--space-4) 0 0;
