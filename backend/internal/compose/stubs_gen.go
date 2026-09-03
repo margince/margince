@@ -887,6 +887,10 @@ func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RecordForecastCall")
 }
 
+func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastMovementParams) {
+	httperr.NotImplemented(w, r, "GetForecastMovement")
+}
+
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
 	httperr.NotImplemented(w, r, "ListFxRates")
 }

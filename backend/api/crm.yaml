@@ -15863,6 +15863,60 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/movement:
+    get:
+      tags: [Reports]
+      operationId: getForecastMovement
+      summary: What moved the forecast between two snapshots, and which deals moved it.
+      description: |
+        The difference between two frozen states, classified into named causes.
+
+        Opening plus every bucket equals closing, exactly. Both sides are sums of the
+        per-deal integers each snapshot stored, so this is an identity rather than an
+        approximation — a waterfall whose bars do not reach the closing bar is a picture
+        that has to be explained away, and there is no such picture here.
+
+        A deal appears in exactly ONE bucket. One that both slipped and was repriced has
+        moved for one reason as far as a reader is concerned: it left. Counting it twice
+        would double its money and break the identity.
+
+        `definition` is the escape hatch that keeps the rest honest. When the two snapshots
+        were computed under different metric definitions, the WHOLE difference belongs to
+        that bucket: a number that moved because the rules changed must never be reported
+        as the business moving. `model` is its smaller sibling — a probability the product
+        re-scored, kept apart from sales movement for the same reason.
+
+        A deal absent from the closing snapshot — archived, or moved out of the caller's
+        scope — leaves through `reopened_or_archived` with its whole prior contribution.
+        Without that its money would simply vanish, with no row saying where it went.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: The opening snapshot.
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: The closing snapshot.
+        - name: reading
+          in: query
+          schema: { type: string, enum: [open, weighted, evidence, best_case], default: open }
+          description: >-
+            Which of the four money answers this movement explains. A waterfall is drawn
+            for ONE of them; mixing two adds figures that do not belong in one total.
+      x-mcp-tool: { verb: forecast_movement, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The classified difference.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastMovement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/calls:
     post:
       tags: [Reports]
@@ -30591,6 +30645,61 @@ components:
             count: a count of what somebody may not read is itself a statement about how
             much of it there is, so the reader is told the figure is partial and not by
             how much.
+      additionalProperties: false
+    ForecastMovement:
+      type: object
+      description: >-
+        The classified difference between two snapshots. opening_minor plus every bucket
+        equals closing_minor, exactly.
+      required: [reading, opening_minor, closing_minor, buckets, deals]
+      properties:
+        reading: { type: string, enum: [open, weighted, evidence, best_case] }
+        opening_minor: { type: integer, format: int64 }
+        closing_minor: { type: integer, format: int64 }
+        buckets:
+          type: array
+          description: >-
+            The named causes, in the order a waterfall draws them — what arrived, what
+            crossed the period, what was repriced, and only then what the machinery did.
+            A bucket that moved nothing is absent rather than zero.
+          items: { $ref: '#/components/schemas/ForecastMovementBucket' }
+        deals:
+          type: array
+          description: One row per deal that moved, each in exactly one bucket.
+          items: { $ref: '#/components/schemas/ForecastMovementDeal' }
+      additionalProperties: false
+    ForecastMovementBucket:
+      type: object
+      required: [name, amount_minor, deal_count]
+      properties:
+        name:
+          type: string
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost,
+                 reopened_or_archived, fx, definition, model]
+        amount_minor: { type: integer, format: int64 }
+        deal_count: { type: integer }
+      additionalProperties: false
+    ForecastMovementDeal:
+      type: object
+      required: [deal_id, bucket, amount_minor]
+      properties:
+        deal_id: { type: string, format: uuid }
+        bucket: { type: string }
+        amount_minor: { type: integer, format: int64 }
+        from_minor:
+          type: integer
+          format: int64
+          description: Absent for a deal that was not in the opening snapshot at all.
+        to_minor: { type: integer, format: int64 }
+        audit_id:
+          type: string
+          format: uuid
+          description: >-
+            The audit row for the change, stored when the closing snapshot was taken
+            rather than reconstructed from timestamps — which is wrong exactly when two
+            changes land in the same second. Absent where the reference has aged out of
+            retention, which reads as "no longer recorded" rather than as no change.
+        approval_id: { type: string, format: uuid }
       additionalProperties: false
     NewForecastCall:
       type: object

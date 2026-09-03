@@ -127,3 +127,90 @@ type ForecastReadingsResult struct {
 	// one. Absent means nobody has, which is a real answer.
 	CurrentCall json.RawMessage `json:"current_call,omitempty"`
 }
+
+// MovementRequest is one movement's arguments, validated by this surface's own
+// decoder — so a malformed snapshot id is refused by name rather than becoming
+// a lookup that finds nothing.
+type MovementRequest struct {
+	From    ids.UUID `json:"from"`
+	To      ids.UUID `json:"to"`
+	Reading string   `json:"reading"`
+}
+
+// MovementReader answers the classified difference between two snapshots.
+type MovementReader func(ctx context.Context, req MovementRequest) (json.RawMessage, error)
+
+// RegisterMovementTool joins forecast_movement to the surface.
+func RegisterMovementTool(r *Registry, read MovementReader) {
+	r.Register(forecastMovement{read: read})
+}
+
+type forecastMovement struct {
+	read MovementReader
+}
+
+func (t forecastMovement) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
+		Description: "The difference between two forecast snapshots, classified into named " +
+			"causes. Opening plus every bucket equals closing, exactly — so the buckets " +
+			"are a complete account of the change and not a selection from it. " +
+			"A deal appears in exactly ONE bucket: one that both slipped and was repriced " +
+			"has moved for one reason as far as a reader is concerned, which is that it " +
+			"left. " +
+			"Two buckets are about the machinery rather than the business, and quoting " +
+			"them as sales movement is the mistake this classification exists to prevent. " +
+			"`definition` means the two snapshots were computed under different rules, and " +
+			"then the WHOLE difference is in that bucket. `model` means a probability the " +
+			"product re-scored. " +
+			"`reopened_or_archived` carries a deal that left the population entirely — " +
+			"archived, or no longer visible to this caller — with its whole prior " +
+			"contribution, so no money disappears without a row that says where it went.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "getForecastMovement",
+		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
+			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
+			"to":{"type":"string","format":"uuid","description":"The closing snapshot."},
+			"reading":{"type":"string","enum":["open","weighted","evidence","best_case"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total."}},
+			"additionalProperties":false}`),
+		OutputSchema: schemaFor[ForecastMovementResult](),
+	}
+}
+
+func (t forecastMovement) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var req MovementRequest
+	if err := decodeArgs(in, &req); err != nil {
+		return nil, err
+	}
+	noteDerivedContent(ctx)
+	return t.read(ctx, req)
+}
+
+// ForecastMovementResult is what forecast_movement answers with.
+type ForecastMovementResult struct {
+	Reading      string `json:"reading"`
+	OpeningMinor int64  `json:"opening_minor"`
+	ClosingMinor int64  `json:"closing_minor"`
+	// Buckets is a COMPLETE account: opening plus every entry equals closing.
+	Buckets []ForecastMovementBucketResult `json:"buckets"`
+	Deals   []ForecastMovementDealResult   `json:"deals"`
+}
+
+// ForecastMovementBucketResult is one named cause and what it moved.
+type ForecastMovementBucketResult struct {
+	Name        string `json:"name"`
+	AmountMinor int64  `json:"amount_minor"`
+	DealCount   int    `json:"deal_count"`
+}
+
+// ForecastMovementDealResult is one deal's part in the change, in exactly one
+// bucket.
+type ForecastMovementDealResult struct {
+	DealID      string  `json:"deal_id"`
+	Bucket      string  `json:"bucket"`
+	AmountMinor int64   `json:"amount_minor"`
+	FromMinor   *int64  `json:"from_minor,omitempty"`
+	ToMinor     *int64  `json:"to_minor,omitempty"`
+	AuditID     *string `json:"audit_id,omitempty"`
+	ApprovalID  *string `json:"approval_id,omitempty"`
+}

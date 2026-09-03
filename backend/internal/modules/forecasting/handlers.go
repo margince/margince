@@ -240,3 +240,61 @@ func derefString(s *string) string {
 	}
 	return *s
 }
+
+// GetForecastMovement answers what moved between two snapshots.
+func (h Handlers) GetForecastMovement(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetForecastMovementParams,
+) {
+	reading := ReadingOpen
+	if params.Reading != nil {
+		reading = Reading(*params.Reading)
+	}
+	out, err := h.store.Movement(r.Context(), reading,
+		ids.UUID(params.From), ids.UUID(params.To))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, movementToWire(reading, out))
+}
+
+func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement {
+	out := crmcontracts.ForecastMovement{
+		Reading:      crmcontracts.ForecastMovementReading(reading),
+		OpeningMinor: in.OpeningMinor,
+		ClosingMinor: in.ClosingMinor,
+		// Empty, never nil. "Nothing moved" is a real answer and arrives shaped
+		// like the array it is; nil marshals to null, which a reader takes for
+		// "unknown".
+		Buckets: []crmcontracts.ForecastMovementBucket{},
+		Deals:   []crmcontracts.ForecastMovementDeal{},
+	}
+	for _, b := range in.Buckets {
+		out.Buckets = append(out.Buckets, crmcontracts.ForecastMovementBucket{
+			Name:        crmcontracts.ForecastMovementBucketName(b.Name),
+			AmountMinor: b.AmountMinor,
+			DealCount:   b.DealCount,
+		})
+	}
+	for _, d := range in.Deals {
+		wire := crmcontracts.ForecastMovementDeal{
+			Bucket:      d.Bucket,
+			AmountMinor: d.AmountMinor,
+			FromMinor:   d.FromMinor,
+			ToMinor:     d.ToMinor,
+		}
+		if parsed, err := ids.Parse(d.DealID); err == nil {
+			wire.DealId = openapi_types.UUID(parsed)
+		}
+		if d.AuditID != nil {
+			id := openapi_types.UUID(*d.AuditID)
+			wire.AuditId = &id
+		}
+		if d.ApprovalID != nil {
+			id := openapi_types.UUID(*d.ApprovalID)
+			wire.ApprovalId = &id
+		}
+		out.Deals = append(out.Deals, wire)
+	}
+	return out
+}

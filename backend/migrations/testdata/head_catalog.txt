@@ -2115,6 +2115,8 @@ public.forecast_call.version bigint NOT NULL gen=- def=1
 public.forecast_call_pkey CREATE UNIQUE INDEX forecast_call_pkey ON public.forecast_call USING btree (id)
 public.forecast_contribution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_contribution.amount_minor bigint gen=- def=-
+public.forecast_contribution.approval_id uuid gen=- def=-
+public.forecast_contribution.audit_id uuid gen=- def=-
 public.forecast_contribution.base_minor bigint gen=- def=-
 public.forecast_contribution.captured_by text NOT NULL gen=- def=-
 public.forecast_contribution.category text gen=- def=-
@@ -2335,6 +2337,7 @@ public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USI
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
 public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
+public.idx_forecast_contribution_audit CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL)
 public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
 public.idx_forecast_contribution_snapshot CREATE INDEX idx_forecast_contribution_snapshot ON public.forecast_contribution USING btree (snapshot_id)
 public.idx_forecast_snapshot_period CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)
