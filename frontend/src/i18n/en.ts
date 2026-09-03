@@ -188,7 +188,6 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
-  "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
@@ -568,11 +567,11 @@ export const en = {
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
 
+  "list.headActions": "More actions",
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
   "list.viewAll": "All",
-  "list.viewAZ": "A–Z",
   "list.viewHot": "Hot",
   "list.overlayReadOnly":
     "Sorting and filters read through HubSpot — open it there",
@@ -592,6 +591,7 @@ export const en = {
   "table.shownColumns": "Shown columns",
   "table.compact": "Compact",
   "table.sort": "Sort",
+  "table.sortNamed": "Sort: {column}",
   "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",

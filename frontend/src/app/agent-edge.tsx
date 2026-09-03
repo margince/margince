@@ -19,24 +19,26 @@ import "./agent-edge.css";
  *
  * Here the product's own name is the design. Margince works in the margins: it
  * reads what is already on the screen, and it may not act without permission. So
- * the periphery of the whole window is where it shows, and it shows two separate
- * things:
- *
- * - **Reading.** Waves travel the window's rim while work is in flight, with the
- *   colour drifting inside them. It is the only thing here that moves, and it
- *   stops when the work does, so movement always means something is happening.
- * - **Waiting.** Something is staged and needs a person. The margin closes into a
- *   complete contour and holds perfectly still. Stillness is the signal: a thing
- *   that cannot proceed should not look busy. It dissolves when the queue does.
+ * the periphery of the whole window is where it shows, and it shows ONE thing:
+ * work in flight. Waves travel the window's rim while the agent is reading or
+ * acting, with the colour drifting inside them, and they stop when the work
+ * does — so movement here always means something is happening.
  *
  * At rest it draws nothing at all.
+ *
+ * A STAGED DECISION IS NOT DRAWN HERE. It used to close the margin into a
+ * complete, still contour, and on any installation with an unanswered queue that
+ * is a green ring around the whole window for as long as the queue stands —
+ * which is a signal becoming wallpaper, the exact failure this surface replaced.
+ * The rail says it in words instead ("2 waiting for you"), where it can carry
+ * the COUNT, which a contour never could.
  *
  * Decorative throughout: every reading it carries is also written in words in the
  * rail, so this is `aria-hidden` and takes no pointer. A reader who cannot see it
  * loses nothing.
  */
 export function AgentEdge() {
-  const { reading, waiting } = useAgentEdge();
+  const { reading } = useAgentEdge();
   // The edge outlives the reading that lit it, by exactly as long as it takes to
   // go out. Unmounting on `reading` alone cut the light dead the instant the work
   // finished, and a light that vanishes reads as something breaking; the shader
@@ -49,17 +51,10 @@ export function AgentEdge() {
     }
   }, [reading]);
   return (
-    <div
-      className="agentedge"
-      // Present or absent rather than "true"/"false": a CSS attribute selector
-      // matches on presence, and `data-waiting="false"` would draw the contour.
-      data-waiting={waiting ? "" : undefined}
-      aria-hidden="true"
-    >
+    <div className="agentedge" aria-hidden="true">
       {(reading || lingering) && (
         <LitEdge lit={reading} onDark={() => setLingering(false)} />
       )}
-      <span className="agentedge-wait" />
     </div>
   );
 }

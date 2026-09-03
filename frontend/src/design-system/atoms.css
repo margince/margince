@@ -326,12 +326,17 @@
 }
 
 /* Left-aligned in its pane: an empty zone is one sentence and one verb in the
-   place the content will be, not an announcement centred in a void. */
+   place the content will be, not an announcement centred in a void.
+
+   It draws at the same size and in the same ink as the sentence `SurfaceState`
+   shows for the same absence: the two stand in the same place for the same
+   reason, and a reader who met one at 13px and the other at 14px read two
+   kinds of statement where there is one. */
 .empty {
   text-align: start;
   padding: var(--space-5) 0;
-  color: var(--textMeta);
-  font-size: 13px;
+  color: var(--textSecondary);
+  font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -350,7 +355,7 @@
 }
 .empty-body {
   max-width: 52ch;
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 .empty-body p {

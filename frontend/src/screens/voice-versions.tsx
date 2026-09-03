@@ -10,6 +10,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import "./voice-dna.css";
+import { SurfaceState } from "../design-system/surfacestate";
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 type VoiceProfileDelta = components["schemas"]["VoiceProfileDelta"];
@@ -287,7 +288,9 @@ export function VoiceHistory({
       <QueryGate query={versions}>
         {(page) =>
           allVersions.length === 0 ? (
-            <p className="t-small">{t("voice.history.empty")}</p>
+            <SurfaceState state="empty" emptyLabel={t("voice.history.empty")}>
+              {null}
+            </SurfaceState>
           ) : (
             <div>
               <ul className="vdna-list">

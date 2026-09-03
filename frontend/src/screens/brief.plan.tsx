@@ -237,7 +237,7 @@ export function PlanSection() {
               {canStart && (
                 <Button
                   onClick={() => start.mutate()}
-                  disabled={start.isPending}
+                  pending={start.isPending}
                 >
                   {t("plan.start")}
                 </Button>
@@ -317,8 +317,11 @@ function PlanFoot({
           })}
         </Callout>
       )}
+      {/* `pending`, not `disabled`: a write in flight is not a precondition the
+          reader can meet, and `disabled` is native — it drops focus from the
+          control they just pressed. */}
       {editable && staged > 0 && (
-        <Button onClick={onSave} disabled={saving}>
+        <Button onClick={onSave} pending={saving}>
           {plural("plan.save", staged, { count: formatNumber(staged, locale) })}
         </Button>
       )}
@@ -421,7 +424,7 @@ function HelpExchange({
               { onSuccess: () => setEditing(false) },
             );
           }}
-          disabled={ask.isPending}
+          pending={ask.isPending}
         >
           {t("plan.help.send")}
         </Button>
@@ -489,28 +492,39 @@ function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
           />
         )}
       </Field>
-      <Button
-        onClick={() => {
-          add.mutate(
-            // An empty date is no date, not an empty string: the contract types
-            // due_on as nullable, and "" is neither a date nor an absence.
-            { label, due_on: dueOn === "" ? null : dueOn },
-            {
-              onSuccess: () => {
-                setLabel("");
-                setDueOn("");
-                onDone();
+      {/* The submit row, not two buttons loose in the body: `.panel-body` is
+          padding and nothing else, so bare siblings sat against each other on
+          the line under the last field with no gap and no alignment of their
+          own. */}
+      <div className="form-actions">
+        <Button variant="ghost" onClick={onDone}>
+          {t("plan.new.cancel")}
+        </Button>
+        <Button
+          onClick={() => {
+            add.mutate(
+              // An empty date is no date, not an empty string: the contract
+              // types due_on as nullable, and "" is neither a date nor an
+              // absence.
+              { label, due_on: dueOn === "" ? null : dueOn },
+              {
+                onSuccess: () => {
+                  setLabel("");
+                  setDueOn("");
+                  onDone();
+                },
               },
-            },
-          );
-        }}
-        disabled={label.trim() === "" || add.isPending}
-      >
-        {t("plan.new.save")}
-      </Button>
-      <Button variant="ghost" onClick={onDone}>
-        {t("plan.new.cancel")}
-      </Button>
+            );
+          }}
+          // An empty label is a precondition the reader can meet; a write in
+          // flight is a wait of seconds. Spelling the second as `disabled`
+          // takes focus off the control they just pressed.
+          disabled={label.trim() === ""}
+          pending={add.isPending}
+        >
+          {t("plan.new.save")}
+        </Button>
+      </div>
     </PanelBody>
   );
 }

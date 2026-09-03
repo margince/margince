@@ -92,6 +92,12 @@ const CORE_SCREENS = [
   // second level of nesting indents it again.
   "filters",
   "worklist",
+  // Projects and Partners. Both are rail-or-off-rail list screens that now
+  // print the page's name inside their table header, and both were in neither
+  // sweep — so the two screens where that header is NOT measured were the two
+  // whose header this change rewrote. The sweep follows the surface.
+  "projects",
+  "partners",
   "analytics",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
@@ -990,7 +996,12 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(
       page.getByText("Sortierung und Filter laufen über HubSpot"),
     ).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Sortieren" })).toHaveCount(
+    // A PREFIX, because the dial has two names: it reads "Sortieren" with no
+    // order in force and "Sortierung: <Spalte>" with one. An assertion that no
+    // dial is offered has to be unable to miss either, or it passes by failing
+    // to look — which is what an equality test on the bare verb started doing
+    // the day the dial began naming the order it holds.
+    await expect(page.getByRole("combobox", { name: /^Sortier/ })).toHaveCount(
       0,
     );
     await expect(page.getByRole("searchbox")).toBeVisible();
@@ -1428,6 +1439,56 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await expectNoAaViolations(page, screen);
     });
   }
+
+  // A list header FOLDS its verbs into one overflow menu below 1100px
+  // (design-system/listsurface.tsx), which is a different arrangement rather
+  // than the same one narrower: the buttons are inside a disclosure, so the
+  // trigger owes a name and the panel owes a relationship to it. The wide sweep
+  // above cannot see any of that.
+  test("no AA violations on a list header folded into its menu", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/#/contacts");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await settleAnimations(page);
+    // Opened, because a closed disclosure hides the controls this exists to
+    // check — `OverflowMenu` keeps them mounted and `hidden`, and axe skips a
+    // hidden subtree exactly as a reader does.
+    //
+    // German, like every other name this suite reaches for: the app under test
+    // runs in it.
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    await expect(
+      page.getByRole("button", { name: "Neuer Kontakt" }),
+    ).toBeVisible();
+    await expectNoAaViolations(page, "contacts (folded header)");
+  });
+
+  // An address whose whole meaning is "the create form is open", at the width
+  // where the verb that opens it has folded into a menu.
+  //
+  // Not an axe case — a FUNCTIONAL one, and it sits here because this is the
+  // only block that drives the folded arrangement. `CreateAction` reads its
+  // opening state once, at mount, and the menu used to defer its children to
+  // the first press: so this route opened nothing at all below 1100px, and
+  // pressing the menu then opened a form nobody had asked for. Invisible in a
+  // screenshot and green in every other lane.
+  test("#/deals/new opens the create form with the verbs folded", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/#/deals/new");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    // The dialog, without anything being pressed. The heading rather than the
+    // button: the button is what the ROUTE stands in for, and asserting on it
+    // would pass over a form that never opened.
+    await expect(
+      page.getByRole("dialog").getByRole("heading", { name: "Neuer Deal" }),
+    ).toBeVisible();
+  });
 
   for (const view of ADDRESSED_VIEWS) {
     test(`no AA violations on #/${view}`, async ({ page }) => {

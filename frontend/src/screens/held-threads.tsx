@@ -139,7 +139,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.has_message ? (
                 <ThreadSubject row={row} onOpen={setOpenEmail} />
               ) : (
-                <span className="t-meta">{t("heldThreads.noSubject")}</span>
+                <span className="t-caption">{t("heldThreads.noSubject")}</span>
               ),
           },
           {
@@ -154,7 +154,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.occurred_at ? (
                 formatDateTime(row.occurred_at, locale, zone)
               ) : (
-                <span className="t-meta">—</span>
+                <span className="t-caption">—</span>
               ),
           },
           {
@@ -263,7 +263,7 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
     return (
       <span className="cell-stack">
         <Badge tone="warn">{t("heldThreads.pending")}</Badge>
-        <span className="t-meta">
+        <span className="t-caption">
           {t("heldThreads.attempts", {
             count: formatNumber(row.attempts, locale),
           })}

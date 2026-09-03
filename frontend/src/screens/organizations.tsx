@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
 import {
@@ -550,6 +551,7 @@ async function createCompany(
 
 export function CompaniesScreen() {
   const t = useT();
+  const pageName = usePageName("companies");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("organization");
@@ -584,6 +586,7 @@ export function CompaniesScreen() {
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={state}
         unit="unit.companies"
         emptyNote={mineEmptyNote({
@@ -748,7 +751,6 @@ export function CompaniesScreen() {
             sort: "display_name",
             filters: { lifecycle: "prospect" },
           },
-          { label: "list.viewAZ", sort: "display_name" },
         ]}
       />
     </div>

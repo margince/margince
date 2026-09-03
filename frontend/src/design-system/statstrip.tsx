@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Children, type CSSProperties, type ReactNode } from "react";
+import { ReadingsFloor } from "./readingsfloor";
 import "./statstrip.css";
 
 // The strip's style carries the slot-count custom properties alongside the
@@ -74,7 +75,7 @@ export function StatStrip({
   return (
     <div className="stat-strip-wrap">
       {row}
-      <p className="t-meta stat-strip-floor">{floor}</p>
+      <ReadingsFloor>{floor}</ReadingsFloor>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { ReadingsFloor } from "./readingsfloor";
 import "./readingsgrid.css";
 
 // A record's readings as free-standing CARDS in a row, not as one plate.
@@ -23,12 +24,18 @@ import "./readingsgrid.css";
 export function ReadingsGrid({
   label,
   testId,
+  floor,
   children,
 }: Readonly<{
   // What the row IS, for a reader navigating by landmark — "where this deal
   // stands". The copy is the caller's, translated.
   label: string;
   testId?: string;
+  // What qualifies the WHOLE row — a source read to its limit, making every
+  // figure above it a floor. Same slot and same component `StatStrip` carries,
+  // because the two are shapes of one row and a caveat about the read applies
+  // whichever shape drew it.
+  floor?: ReactNode;
   children: ReactNode;
 }>) {
   return (
@@ -36,6 +43,7 @@ export function ReadingsGrid({
       <div className="readings-grid" data-testid={testId}>
         {children}
       </div>
+      {floor && <ReadingsFloor>{floor}</ReadingsFloor>}
     </section>
   );
 }

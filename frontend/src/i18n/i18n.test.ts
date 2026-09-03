@@ -84,7 +84,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // TEMPORARY, with the release marker it labels (app/shell.tsx): "Alpha" is
   // the release stage's own name and Vietnamese keeps it, the same way it keeps
   // "Email" and "pipeline". Delete this entry with the marker.
-  "shell.alpha",
   // A placeholder and a percent sign. Vietnamese writes a percentage the way
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
@@ -151,10 +150,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.brief.cite.person",
   "deals.unit",
   "history.actorAgent",
-
-  // The alphabetical sort view: the Vietnamese alphabet also runs A to Z, so
-  // the label names the same range in either catalog.
-  "list.viewAZ",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",

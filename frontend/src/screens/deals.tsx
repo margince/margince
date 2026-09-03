@@ -23,6 +23,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
@@ -1752,24 +1753,41 @@ function DealViewTools({
       {/* Both views read one pipeline: the table binds the same query the
           board does, and its stage chip offers that pipeline's stages. So the
           picker stands in both — hidden on the table it locked the reader to a
-          pipeline they could neither see nor change. */}
-      <Select
-        className="input"
-        aria-label={t("deals.pipeline")}
-        placeholder={t("deals.pipeline")}
-        value={pipelineId}
-        onChange={(next) => {
-          // A stage belongs to one pipeline; switching pipeline strands any
-          // stage_id filter (the chip blanks out but useDeals would still
-          // forward the old id and filter a foreign stage → 0 rows).
-          setPipelineId(next);
-          setOrClearFilter(setQuery, "stage_id", "");
-        }}
-        options={pipelines.map((pipeline) => ({
-          value: pipeline.id,
-          label: pipeline.name,
-        }))}
-      />
+          pipeline they could neither see nor change.
+          A CHOICE OF ONE IS NOT A CHOICE. An installation with a single
+          pipeline was offered a menu whose only entry was the pipeline already
+          showing, which is a dial that refuses every press. The NAME still
+          stands, as text: the reader keeps the fact and loses only the control,
+          which is what they lost nothing by. */}
+      {pipelines.length > 1 ? (
+        <Select
+          className="input"
+          aria-label={t("deals.pipeline")}
+          placeholder={t("deals.pipeline")}
+          value={pipelineId}
+          onChange={(next) => {
+            // A stage belongs to one pipeline; switching pipeline strands any
+            // stage_id filter (the chip blanks out but useDeals would still
+            // forward the old id and filter a foreign stage → 0 rows).
+            setPipelineId(next);
+            setOrClearFilter(setQuery, "stage_id", "");
+          }}
+          options={pipelines.map((pipeline) => ({
+            value: pipeline.id,
+            label: pipeline.name,
+          }))}
+        />
+      ) : (
+        pipelines.length === 1 && (
+          <span className="lt-scope">
+            {/* The reader SEES a name where the dial was and infers what it
+                names from the place; a screen reader gets no place, so the
+                field says its own name to it. */}
+            <span className="sr-only">{`${t("deals.pipeline")}: `}</span>
+            {pipelines[0].name}
+          </span>
+        )
+      )}
     </>
   );
 }
@@ -1804,8 +1822,6 @@ function DealBoardBody({
     typeof PipelineBoard
   >["columnDropHandlers"];
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useOrgMarks), so no card is left
   // standing over a company the board simply failed to look up.
@@ -1816,13 +1832,6 @@ function DealBoardBody({
   const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
   return (
     <>
-      {dealsQuery.data && (
-        <p className="t-caption">
-          {t("board.count", {
-            count: formatNumber(loadedDeals.length, locale),
-          })}
-        </p>
-      )}
       <QueryGate query={pipelinesQuery}>
         {() =>
           effectivePipeline ? (
@@ -2387,6 +2396,7 @@ export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
+  const pageName = usePageName("deals");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("deal");
@@ -2515,10 +2525,12 @@ export function DealsScreen({
   // leaving the reader looking at a narrowed pipeline with nothing on screen
   // saying what narrowed it, or how to widen it again.
   //
-  // It carries its own count and its own continuation control, because
-  // `bodyOwnsPaging` withholds the surface's: those two belong to the paged grid
-  // this body does not draw, and the board holds every card loaded so far at
-  // once rather than a page of them.
+  // It carries its own continuation control, because `bodyOwnsPaging` withholds
+  // the surface's: that belongs to the paged grid this body does not draw, and
+  // the board holds every card loaded so far at once rather than a page of
+  // them. Its COUNT goes to the surface's head all the same (`bodyCount`) — a
+  // reader looks for how much is here beside the page's name, and under the
+  // toolbar it read as a caption about the dials above it.
   const boardBody =
     view === "board" ? (
       <DealBoardBody
@@ -2549,6 +2561,7 @@ export function DealsScreen({
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={dealsListState}
         unit="deals.unit"
         columns={dealColumns(t, locale, recordZone, stageName)}
@@ -2559,6 +2572,16 @@ export function DealsScreen({
         tools={tools}
         body={overlayBody ?? boardBody}
         bodyOwnsPaging={overlay || view === "board"}
+        bodyCount={
+          view === "board" &&
+          dealsQuery.data && (
+            <>
+              {t("board.count", {
+                count: formatNumber(loadedDeals.length, locale),
+              })}
+            </>
+          )
+        }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
