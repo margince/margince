@@ -3,7 +3,6 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { emailSummaryText } from "../format/emailtext";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
@@ -223,11 +222,17 @@ function foldActivities(
         channelProvider: row.channel_provider ?? null,
         channel: channelKeyOf(row.kind, row.channel_provider),
         channelLabel: interactionLabel(row.kind, row.channel_provider),
-        title: row.subject ?? interactionLabel(row.kind, row.channel_provider),
-        summary:
-          row.kind === "email"
-            ? emailSummaryText(row.body ?? "")
-            : (row.body ?? ""),
+        title:
+          row.email_summary?.subject ??
+          row.subject ??
+          interactionLabel(row.kind, row.channel_provider),
+        // The server's own preview for an email, composed with the same
+        // splitter the drawer folds with — so this card and the message it
+        // opens cannot disagree about where the sender's words end. A
+        // withheld row carries no preview and gets none here.
+        summary: row.email_summary
+          ? (row.email_summary.preview ?? "")
+          : (row.body ?? ""),
         status,
         statusLabel: statusLabel(status, t),
         tone: toneFor(status),

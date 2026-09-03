@@ -6858,7 +6858,6 @@ export const en = {
     "{total} interactions in 90 days · {inbound} in, {outbound} out",
   "person.graph.countsOnly":
     "Counts only — the messages themselves stay on the timeline.",
-  "person.graph.untitledMessage": "Message with no subject",
   "person.intro.routesTitle": "Ways in",
   "person.graph.droppedNote": "{count} more not shown.",
   "person.graph.withheldDirect": "Some colleagues are not shown.",

@@ -15,6 +15,7 @@ import type { components } from "../../api/schema";
 import { useCanWrite } from "../../app/capability";
 import { useRecordZone } from "../../app/recordzone";
 import { Badge, Button, Card } from "../../design-system/atoms";
+import { EmailReference } from "../../design-system/emailreference";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../common";
@@ -81,10 +82,15 @@ export function EdgeDetail({
               <ul className="pn-receipts">
                 {receipts.map((r) => (
                   <li key={r.activity_id}>
-                    {r.subject ?? t("person.graph.untitledMessage")} ·{" "}
-                    {/* The record's zone: a receipt is evidence of when a
-                        message happened, so every reader names the same day. */}
-                    {formatDate(r.occurred_at, locale, recordZone)}
+                    {/* The canonical citation. A receipt NAMES the message it
+                        is evidence of — it is not a place to read mail, which
+                        is why this is EmailReference and not EmailEntry — and
+                        it carries the record's zone, so every reader names the
+                        same day. */}
+                    <EmailReference
+                      subject={r.subject}
+                      occurredAt={formatDate(r.occurred_at, locale, recordZone)}
+                    />
                   </li>
                 ))}
               </ul>
