@@ -2587,6 +2587,7 @@ export const de = {
   "home.readings.promisesBasis": "Zusagen werden noch nicht erfasst",
   "home.readings.leads": "Erstkontakt",
   "home.readings.leadsBasis": "warten auf die erste Antwort",
+  "home.readings.leadsDue": "nächste fällig {value}",
   "home.readings.quota": "Ziel-Tempo",
   "home.readings.quotaBasis": "kein Ziel hinterlegt",
   "home.rail": "Kontext",

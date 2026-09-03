@@ -2634,6 +2634,7 @@ export const en = {
   "home.readings.promisesBasis": "promises are not tracked yet",
   "home.readings.leads": "Lead response",
   "home.readings.leadsBasis": "owed a first answer",
+  "home.readings.leadsDue": "next due {value}",
   "home.readings.quota": "Quota pace",
   "home.readings.quotaBasis": "no target is set",
   "home.rail": "Context",

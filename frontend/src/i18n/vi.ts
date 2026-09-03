@@ -2564,6 +2564,7 @@ export const vi = {
   "home.readings.promisesBasis": "cam kết chưa được theo dõi",
   "home.readings.leads": "Phản hồi khách mới",
   "home.readings.leadsBasis": "đang chờ câu trả lời đầu tiên",
+  "home.readings.leadsDue": "tiếp theo đến hạn {value}",
   "home.readings.quota": "Nhịp chỉ tiêu",
   "home.readings.quotaBasis": "chưa đặt chỉ tiêu",
   "home.rail": "Ngữ cảnh",
