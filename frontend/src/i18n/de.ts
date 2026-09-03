@@ -1830,7 +1830,7 @@ export const de = {
   "tagResult.nothingCarries":
     "Noch kein Datensatz trägt dieses Tag. Vergeben Sie es auf einem Kontakt, einem Unternehmen oder einem Deal.",
   "tagResult.loadingRows": "{kind} werden geladen…",
-  "tagResult.rowsWithheld": "Sie können diese Datensätze nicht sehen",
+  "tagResult.noneLeft": "Trägt niemand mehr",
   "tagResult.unnamed": "Ohne Namen",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":

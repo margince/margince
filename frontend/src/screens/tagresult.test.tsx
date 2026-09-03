@@ -116,6 +116,106 @@ describe("the tag page names what carries the word", () => {
     ).toBeInTheDocument();
   });
 
+  // The tag read already said the type carries none, so asking for its rows is
+  // a round trip whose answer is known. Two of them, on a tag used on one type.
+  it("does not ask for the rows of a type carrying none", async () => {
+    let dealCalls = 0;
+    installFetchStub({
+      [`GET /tags/${TAG}`]: tagRead({ people: 1, companies: 0, deals: 0 }),
+      "GET /people": () =>
+        jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
+      "GET /deals": () => {
+        dealCalls += 1;
+        return jsonResponse({ data: [] });
+      },
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(await screen.findByText("Katrin Hofmann")).toBeInTheDocument();
+    expect(dealCalls).toBe(0);
+  });
+
+  // The tag's usage count admits a RETIRED tag; the list filter every record
+  // screen uses requires the tag to be live. Heading the group with the usage
+  // count therefore promised rows the list would not return.
+  it("counts the rows it shows, not the tag's usage", async () => {
+    installFetchStub({
+      [`GET /tags/${TAG}`]: tagRead({ people: 3, companies: 0, deals: 0 }),
+      "GET /people": () =>
+        jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(await screen.findByText("Katrin Hofmann")).toBeInTheDocument();
+    expect(screen.getByText("People (1)")).toBeInTheDocument();
+    expect(screen.queryByText("People (3)")).toBeNull();
+  });
+
+  // A request that FAILED is not a permission fact. Reporting one as the other
+  // tells a reader they may not see records that are simply unfetched.
+  it("does not report a failed read as records being withheld", async () => {
+    installFetchStub({
+      [`GET /tags/${TAG}`]: tagRead({ people: 2, companies: 0, deals: 0 }),
+      "GET /people": () =>
+        new Response("nope", {
+          status: 500,
+          headers: { "content-type": "text/plain" },
+        }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    // What the reader sees is the unavailable state, not "nothing carries it".
+    // Asserting only the ABSENCE of the empty line would also pass if the group
+    // rendered nothing at all, which is how this test first passed for the
+    // wrong reason.
+    expect(
+      await screen.findByText(en["state.unavailable"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["tagResult.noneLeft"])).toBeNull();
+  });
+
+  // Every record list requires the tag to be LIVE, so a retired word reaches
+  // none of them. The header total would be the last line on the page still
+  // promising rows the groups correctly do not show.
+  it("does not total the assignments of a retired word", async () => {
+    installFetchStub({
+      [`GET /tags/${TAG}`]: () =>
+        jsonResponse({
+          id: TAG,
+          name: "Automation World 2026",
+          color: "slate",
+          version: 2,
+          archived_at: "2026-09-01T00:00:00Z",
+          usage: { people: 2, companies: 2, deals: 2 },
+        }),
+      "GET /people": () => jsonResponse({ data: [] }),
+      "GET /organizations": () => jsonResponse({ data: [] }),
+      "GET /deals": () => jsonResponse({ data: [] }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(
+      await screen.findByText("Automation World 2026"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/6 visible assignments/)).toBeNull();
+  });
+
   it("says so when the word is on nothing at all", async () => {
     installFetchStub({
       [`GET /tags/${TAG}`]: tagRead({ people: 0, companies: 0, deals: 0 }),

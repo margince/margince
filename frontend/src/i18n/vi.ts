@@ -1816,7 +1816,7 @@ export const vi = {
   "tagResult.nothingCarries":
     "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty hoặc thương vụ.",
   "tagResult.loadingRows": "Đang tải {kind}…",
-  "tagResult.rowsWithheld": "Bạn không thể xem các bản ghi này",
+  "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
   "tagResult.unnamed": "Chưa có tên",
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
   "co.overlayFallback":

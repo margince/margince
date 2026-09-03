@@ -1878,7 +1878,7 @@ export const en = {
   "tagResult.nothingCarries":
     "Nothing carries this tag yet. Apply it from any contact, company or deal.",
   "tagResult.loadingRows": "Loading {kind}…",
-  "tagResult.rowsWithheld": "You cannot see these records",
+  "tagResult.noneLeft": "Nothing carries it any more",
   "tagResult.unnamed": "Unnamed",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":

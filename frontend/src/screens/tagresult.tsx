@@ -82,9 +82,17 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
             <span className="tagresult-retired">{t("tags.archived")}</span>
           )}
         </h1>
-        <span className="t-small">
-          {t("tagResult.totalVisible", { count: formatNumber(total, locale) })}
-        </span>
+        {/* Not drawn for a RETIRED word. The usage total counts assignments
+            that still exist, while every record list requires the tag to be
+            live — so on a retired tag the sentence is the one line on the page
+            still promising rows the groups below it correctly do not show. */}
+        {!tag.data.archived_at && (
+          <span className="t-small">
+            {t("tagResult.totalVisible", {
+              count: formatNumber(total, locale),
+            })}
+          </span>
+        )}
       </header>
       {tag.data.description && (
         <p className="tagresult-note">{tag.data.description}</p>
@@ -168,6 +176,10 @@ function ResultGroup({
   const group = GROUPS[kind];
   const rows = useQuery({
     queryKey: ["tag-records", kind, tagID],
+    // The tag read already said this type carries none, so asking for its rows
+    // is a round trip whose answer is known. The hook still RUNS — a group that
+    // called it conditionally would change the hook order as counts arrive.
+    enabled: count > 0,
     queryFn: async () => {
       const { data, error } = await api.GET(group.path, {
         params: { query: { tag_id: [tagID], limit: PREVIEW_ROWS } },
@@ -183,19 +195,34 @@ function ResultGroup({
     return null;
   }
 
-  const shown = formatNumber(count, locale);
   const listed = rows.data ?? [];
+  // The HEADER counts the rows, not the tag's usage. The two are answers to
+  // different questions and they disagree in a state a reader can reach: the
+  // usage count admits a retired tag, while the list filter every record screen
+  // uses requires the tag to be live. A retired word would head "People (2)"
+  // over an empty group. Once more rows exist than the preview shows, the total
+  // is the honest ceiling and the footer says so.
+  const shown = formatNumber(
+    listed.length < PREVIEW_ROWS ? listed.length : count,
+    locale,
+  );
   return (
-    <Panel title={`${title} (${shown})`}>
+    <Panel title={rows.isSuccess ? `${title} (${shown})` : title}>
       <PanelBody>
         <SurfaceState
           label={undefined}
           state={
-            rows.isPending ? "loading" : listed.length > 0 ? "ready" : "empty"
+            rows.isPending
+              ? "loading"
+              : rows.isError
+                ? "unavailable"
+                : listed.length > 0
+                  ? "ready"
+                  : "empty"
           }
           loadingLabel={t("tagResult.loadingRows", { kind: title })}
           loadingLines={Math.min(count, PREVIEW_ROWS)}
-          emptyLabel={t("tagResult.rowsWithheld")}
+          emptyLabel={t("tagResult.noneLeft")}
         >
           <ul className="tagresult-rows">
             {listed.map((row) => (
@@ -212,7 +239,10 @@ function ResultGroup({
             ))}
           </ul>
         </SurfaceState>
-        {count > listed.length && (
+        {/* Offered only when the preview is FULL: a group showing every row it
+            has needs no way to see more, and the tag's own count cannot be the
+            test here for the same reason it is not the header. */}
+        {listed.length >= PREVIEW_ROWS && (
           <Button
             small
             variant="ghost"
