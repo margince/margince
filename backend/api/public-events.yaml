@@ -92,7 +92,7 @@ components:
         - comms.delivery_bounced
         - notice.created
         - user_delivery.changed
-        - forecast.recorded
+        - forecast.created
         - weekly_plan.updated
         - weekly_plan.help_requested
         - activity.disposition_recorded
@@ -1795,13 +1795,13 @@ components:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
       additionalProperties: false
 
-    PublicEventForecastRecorded:
+    PublicEventForecastCreated:
       type: object
-      x-event-type: forecast.recorded
+      x-event-type: forecast.created
       x-entity-type: user
       x-version: 1
       description: >-
-        Payload for forecast.recorded — somebody accountable for a number said
+        Payload for forecast.created — somebody accountable for a number said
         what they believe will close. The entity is the AUTHOR rather than a
         deal or a team, because a call is an assertion by a person and that
         person is who it is attributable to.

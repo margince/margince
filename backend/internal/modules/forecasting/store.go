@@ -142,7 +142,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 		if err != nil {
 			return err
 		}
-		event := crmcontracts.PublicEventForecastRecorded{
+		event := crmcontracts.PublicEventForecastCreated{
 			CallId:       openapi_types.UUID(out.ID),
 			AuthorUserId: openapi_types.UUID(author),
 			PeriodStart:  openapi_types.Date{Time: out.PeriodStart},
