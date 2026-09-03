@@ -4,6 +4,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { viewerZone } from "../format/timezone";
 import { RecordView } from "./composed";
 
 afterEach(cleanup);
@@ -16,7 +17,9 @@ describe("the timeline's rail marks who wrote", () => {
     const { container } = render(
       <RecordView
         name="Anna Weber"
-        zone="Europe/Berlin"
+        // No date is asserted here: the rail's marks are what is under test,
+        // and the zone is only the shape the view requires.
+        zone={viewerZone()}
         timeline={[
           {
             id: "agent",
