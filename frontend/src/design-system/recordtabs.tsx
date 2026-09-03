@@ -105,7 +105,9 @@ export function RecordTabs<Option extends string>({
             );
           })}
         </fieldset>
-        {trailing && <div className="recordtabs-trailing">{trailing}</div>}
+        {trailing != null && (
+          <div className="recordtabs-trailing">{trailing}</div>
+        )}
       </div>
     </div>
   );
