@@ -273,7 +273,7 @@ scrolls inside itself.
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **Sidebar**: 224px expanded, 52px collapsed, and collapsed is the default.
+- **Sidebar**: 224px expanded, 64px collapsed, and collapsed is the default.
   Glass over the emerald glow, a hairline on its right. Workspace name and the
   fold at the top, then the product's own ten rows in its own order: Brief;
   Records — Contacts, Companies, Leads, Filters & views; Work — Worklist,
@@ -609,7 +609,7 @@ place under the identity.
 
 ### The shell around every record
 
-The sidebar collapses to a 52px icon rail and that is the default. Labels
+The sidebar collapses to a 64px icon rail and that is the default. Labels
 return on hover as tooltips, the agent's orb stays at the foot. The details
 panel on the right of the reading opens from the Details control at the end
 of the tab row, and starts closed.
