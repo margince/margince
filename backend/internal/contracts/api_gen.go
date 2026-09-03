@@ -16168,8 +16168,11 @@ type AnalyticsAnswer struct {
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
 
-	// Rows One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own.
+	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
+
+	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
+	RunId *openapi_types.UUID `json:"run_id,omitempty"`
 
 	// SchemaVersion The vocabulary this was asked in.
 	SchemaVersion string `json:"schema_version"`
@@ -16257,6 +16260,10 @@ type AnalyticsQuery struct {
 
 	// Measures What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question.
 	Measures []AnalyticsMeasure `json:"measures"`
+
+	// Save Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
+	// A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
+	Save *bool `json:"save,omitempty"`
 }
 
 // AnalyticsSchema The populations and fields one caller may ask about.
@@ -29035,6 +29042,22 @@ type ReportResult struct {
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
 	Timezone  string `json:"timezone"`
 	TotalRows *int   `json:"total_rows,omitempty"`
+}
+
+// ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
+type ReportRun struct {
+	// Answer The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them.
+	Answer AnalyticsAnswer `json:"answer"`
+
+	// AskedBy Whose answer the run originally was. A reader comparing their own numbers to a cited figure needs to know the citation was somebody else's view.
+	AskedBy openapi_types.UUID `json:"asked_by"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// Query The question as it was saved, unchanged.
+	Query AnalyticsQuery `json:"query"`
+
+	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.
+	StoredFloor int `json:"stored_floor"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -45918,6 +45941,9 @@ type ServerInterface interface {
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// The answer a report sentence points at.
+	// (GET /analytics/runs/{run_id})
+	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
@@ -47766,6 +47792,12 @@ func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Reque
 // Answer a question nobody wrote a report for.
 // (POST /analytics/query)
 func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The answer a report sentence points at.
+// (GET /analytics/runs/{run_id})
+func (_ Unimplemented) GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52791,6 +52823,40 @@ func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RunAnalyticsQuery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportRun operation middleware
+func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "run_id" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "run_id", chi.URLParam(r, "run_id"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "run_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportRun(w, r, runId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75822,6 +75888,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)

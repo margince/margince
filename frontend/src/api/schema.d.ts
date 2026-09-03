@@ -11118,6 +11118,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The answer a report sentence points at.
+         * @description A report block carries the id of a run and the coordinates of a cell inside it, not
+         *     a number. This is where that pointer is dereferenced.
+         *
+         *     THE STORED ROWS ARE NOT SERVED. They were narrowed and floored for whoever asked,
+         *     and a second reader's grants narrow a different population — so what comes back is
+         *     the stored QUESTION, re-asked under the caller's own authority through the same gate
+         *     a direct query goes through. Two readers dereferencing one cell can legitimately see
+         *     different numbers, and one of them can legitimately see a refusal.
+         *
+         *     That is what makes a citation stable without making it a permission. The saved run
+         *     fixes WHAT WAS ASKED; it grants nothing about who may see the answer.
+         *
+         *     `asked_by` names whose answer the run originally was, and `stored_floor` the group
+         *     floor that judged it — both so two answers to one citation can be compared rather
+         *     than silently differing.
+         */
+        get: operations["getReportRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/explain": {
         parameters: {
             query?: never;
@@ -23198,6 +23232,11 @@ export interface components {
             filters?: components["schemas"]["AnalyticsFilter"][];
             /** @description How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record. */
             limit?: number;
+            /**
+             * @description Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
+             *     A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
+             */
+            save?: boolean;
         };
         AnalyticsMeasure: {
             /**
@@ -23220,7 +23259,7 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own. */
+            /** @description One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -23230,6 +23269,27 @@ export interface components {
             total_safe: boolean;
             /** @description The vocabulary this was asked in. */
             schema_version: string;
+            /**
+             * Format: uuid
+             * @description Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
+             */
+            run_id?: string;
+        };
+        /** @description A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor. */
+        ReportRun: {
+            /** Format: uuid */
+            id: string;
+            /** @description The question as it was saved, unchanged. */
+            query: components["schemas"]["AnalyticsQuery"];
+            /** @description The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them. */
+            answer: components["schemas"]["AnalyticsAnswer"];
+            /**
+             * Format: uuid
+             * @description Whose answer the run originally was. A reader comparing their own numbers to a cited figure needs to know the citation was somebody else's view.
+             */
+            asked_by: string;
+            /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
+            stored_floor: number;
         };
         /** @description One cell of an answer, named by the question and its group keys. */
         AnalyticsExplainRequest: {
@@ -46972,6 +47032,32 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The question re-asked, as this caller may read it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

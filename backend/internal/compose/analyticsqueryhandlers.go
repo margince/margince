@@ -14,11 +14,13 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // analyticsQueryHandlers serves the schema and the query.
@@ -57,19 +59,70 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 	q := queryFromWire(body)
 
 	ctx := r.Context()
-	var answer AnalyticsAnswer
+	var (
+		answer AnalyticsAnswer
+		runID  *ids.UUID
+	)
 	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, h.floor)
+		if err != nil {
+			return err
+		}
+		if body.Save == nil || !*body.Save {
+			return nil
+		}
+		// Saved in the SAME transaction that produced it. Saved afterwards, a
+		// failure between the two would answer with a run_id naming a row that
+		// does not exist — a citation that resolves to nothing.
+		id, err := SaveReportRun(ctx, tx, q, answer, h.floor)
+		if err != nil {
+			return err
+		}
+		runID = &id
+		return nil
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.AnalyticsAnswer{
+		Columns: answer.Columns, Rows: answer.Rows,
+		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
+		SchemaVersion: answer.SchemaVersion,
+	}
+	if runID != nil {
+		saved := openapi_types.UUID(*runID)
+		out.RunId = &saved
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// GetReportRun implements GET /analytics/runs/{run_id}.
+func (h analyticsQueryHandlers) GetReportRun(
+	w http.ResponseWriter, r *http.Request, runID openapi_types.UUID,
+) {
+	ctx := r.Context()
+	var run ReportRun
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		// The caller's floor, not the stored one. A run saved under a laxer
+		// floor must not serve rows this installation would withhold today.
+		run, err = ReadReportRun(ctx, tx, ids.UUID(runID), h.floor)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows,
-		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion: answer.SchemaVersion,
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportRun{
+		Id:    openapi_types.UUID(run.ID),
+		Query: wireFromQuery(run.Query),
+		Answer: crmcontracts.AnalyticsAnswer{
+			Columns: run.Answer.Columns, Rows: run.Answer.Rows,
+			Withheld: run.Answer.Withheld, TotalSafe: run.Answer.TotalSafe,
+			SchemaVersion: run.Answer.SchemaVersion,
+		},
+		AskedBy:     openapi_types.UUID(run.AskedBy.UUID),
+		StoredFloor: int(run.Floor),
 	})
 }
 
@@ -103,6 +156,48 @@ func queryFromWire(in crmcontracts.AnalyticsQuery) analyticsquery.Query {
 			})
 		}
 	}
+	return out
+}
+
+// wireFromQuery converts a stored question back to the wire.
+//
+// The inverse of queryFromWire, and it exists because a saved run answers with
+// the question it saved: a reader who wants to re-ask it, or ask a neighbouring
+// one, needs it in the vocabulary they would have typed.
+func wireFromQuery(in analyticsquery.Query) crmcontracts.AnalyticsQuery {
+	out := crmcontracts.AnalyticsQuery{Entity: in.Entity}
+	if len(in.GroupBy) > 0 {
+		groupBy := in.GroupBy
+		out.GroupBy = &groupBy
+	}
+	if in.Limit != 0 {
+		limit := in.Limit
+		out.Limit = &limit
+	}
+	for _, m := range in.Measures {
+		measure := crmcontracts.AnalyticsMeasure{Fn: crmcontracts.AnalyticsMeasureFn(m.Fn)}
+		if m.Field != "" {
+			field := m.Field
+			measure.Field = &field
+		}
+		if m.As != "" {
+			as := m.As
+			measure.As = &as
+		}
+		out.Measures = append(out.Measures, measure)
+	}
+	if len(in.Filters) > 0 {
+		filters := make([]crmcontracts.AnalyticsFilter, 0, len(in.Filters))
+		for _, f := range in.Filters {
+			filters = append(filters, crmcontracts.AnalyticsFilter{
+				Field: f.Field, Op: crmcontracts.AnalyticsFilterOp(f.Op), Value: f.Value,
+			})
+		}
+		out.Filters = &filters
+	}
+	// Save is NOT carried back. It is an instruction about this call, not a
+	// property of the question — echoing it would describe a saved run as one
+	// that asks to be saved again.
 	return out
 }
 
