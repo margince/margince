@@ -8052,8 +8052,9 @@ export const de = {
   "worklist.verb.acknowledge": "Verstanden",
   "worklist.verb.acknowledgeFailed":
     "Das konnte nicht als gelesen markiert werden.",
-  "worklist.source.failed": "{source} konnte nicht gelesen werden",
-  "worklist.source.withheld": "{source} ist für dein Konto nicht sichtbar",
+  "worklist.source.failed": "Eine Quelle konnte nicht gelesen werden: {source}",
+  "worklist.source.withheld":
+    "Eine Quelle ist für dein Konto nicht sichtbar: {source}",
   "worklist.untitled.generic": "Etwas braucht dich",
   "worklist.batch.likely_automated": "{count} vermutlich automatische Absender",
   "worklist.batch.company_match": "{count} Adressen bei bekannten Firmen",

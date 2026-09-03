@@ -8129,8 +8129,16 @@ export const en = {
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
-  "worklist.source.failed": "{source} could not be read",
-  "worklist.source.withheld": "{source} is hidden from your account",
+  // The frame states the fact and the source follows it, rather than the
+  // source standing as the subject. `sourceName` returns a row TITLE — "A
+  // mailbox connection needs attention", "Two records look like the same one"
+  // — and fourteen of the twenty-one are already whole clauses, so used as a
+  // subject they ran two sentences together: "A mailbox connection needs
+  // attention could not be read". Naming the fact first works for every entry
+  // and needs no second vocabulary of source nouns.
+  "worklist.source.failed": "A source could not be read: {source}",
+  "worklist.source.withheld":
+    "A source is hidden from your account: {source}",
   "worklist.untitled.generic": "Something needs you",
   "worklist.batch.likely_automated": "{count} likely automated senders",
   "worklist.batch.company_match": "{count} addresses at companies you know",

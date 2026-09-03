@@ -7952,8 +7952,9 @@ export const vi = {
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
-  "worklist.source.failed": "Không đọc được {source}",
-  "worklist.source.withheld": "{source} bị ẩn với tài khoản của bạn",
+  "worklist.source.failed": "Không đọc được một nguồn: {source}",
+  "worklist.source.withheld":
+    "Một nguồn bị ẩn với tài khoản của bạn: {source}",
   "worklist.untitled.generic": "Có việc cần bạn",
   "worklist.batch.likely_automated": "{count} người gửi có thể tự động",
   "worklist.batch.company_match": "{count} địa chỉ ở công ty đã biết",
