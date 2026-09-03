@@ -301,28 +301,41 @@ cards stacked above a third list of things to do:
 The overview that breathes is the one that shows less. A record's overview
 has two depths, and the shallow one is the default.
 
-**The glance** is the whole first screen, and it is deliberately sparse:
+**The glance** is the whole first screen. It keeps the air of the sparse
+version and brings the product's own features back in reduced form — each
+one present, none at full depth:
 
 - The name at 44px in the display face, one line of facts with the live dot
-  ("In conversation · Hamburg · Freight forwarding · 240 employees · VAT"),
+  ("In conversation · Hamburg · Freight forwarding · 240 employees · Owner"),
   and three verbs. No badges beyond the standing, no second line.
-- **No tab row and no details panel.** History, People, Deals, Finance and
-  the profile are reached through the links in the panes ("All deals", "View
-  history", "Add") and the Details control in the top bar; the tab strip
-  belongs to the full overview.
+- **A quiet tab row** under the head — no pane, no rule, a 2px accent under
+  the current tab — so every sub page (History, People, Deals, Tasks,
+  Finance, Documents, Profile, Partner) is one click away. The links inside
+  the panes ("All deals", "Full history") open the same tabs.
 - **Five readings as roomy cards**, 160px tall, an uppercase label, one
   figure at 30px in the mono face, one line of basis at the foot, and empty
-  space between them. The space is the point: a figure a rep can read from
-  across the desk.
-- **Left column, three panes, each capped at three rows**: Deals (name,
-  stage, days, owner; amount and its close chip), People (as chips with a
-  "+N"), Next steps (with the due chip).
+  space between them. When the details panel is open they shrink to 21px
+  figures and never wrap.
+- **The 360 as the first pane**, full width, under its indigo-to-emerald
+  rule: the record's name and "· 360" as the pane title, the agent's word
+  at 40px, one sentence beside it whose claims are hoverable sources (the
+  chip sits inline on the agent's tint; hover opens what it rests on), the
+  three rated dimensions, then the spine. The thread is folded — "Read the
+  thread · 5" opens the five most recent exchanges inside the pane; "Full
+  history" is the History tab.
+- **Left column**: What needs you, led by the agent's move ("You owe them",
+  its sentence, its three sources, the filled verb that does it) and capped
+  at two more rows with a "2 more" foot; Deals, three rows; People as chips
+  with a "+N".
 - **Right column**: the one suggestion as the agent's card (its label, a
   headline in the display face, one paragraph, its sources, Accept / Edit /
-  Dismiss), the ask field, and Recent with three rows.
-- No zone numbers, no spine, no thread, no needs list. The 360 element, the
-  full needs list, Commercial and About are the full overview, one click
-  away, with the same panes.
+  Dismiss), the ask field, and About — the lead sentence, one paragraph, its
+  sources, "Profile" for the rest.
+- **The details panel is hidden until asked**, and the Details control in
+  the top bar opens it on the right at 300px with the fields, the people and
+  the tags. It is the only thing on the glance that starts closed.
+- No zone numbers. Commercial and the rest of About are the full overview,
+  one click away, with the same panes.
 
 The test: a rep back from a week away reads the glance in ten seconds and
 knows where the account stands, what happened last, what they owe, and what
