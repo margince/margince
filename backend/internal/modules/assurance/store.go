@@ -359,3 +359,27 @@ func (s *Store) CoverageFor(ctx context.Context, runID ids.UUID) ([]SourceCovera
 	}
 	return out, nil
 }
+
+// Exception is one finding as a reader meets it.
+//
+// Claim and Observed travel as raw JSON: they hold structured values whose
+// shape is the exception type's, and decoding them here would make this struct
+// the second place that knows what each type stores.
+type Exception struct {
+	ID          ids.UUID
+	Type        string
+	SubjectKind string
+	SubjectID   ids.UUID
+	Severity    string
+	// AffectedMinor is how much money the finding puts in question, where that
+	// can be said. Nil is different from zero: zero would claim nothing is at
+	// stake.
+	AffectedMinor *int64
+	Currency      string
+	OwnerID       *ids.UUID
+	Status        string
+	Claim         []byte
+	Observed      []byte
+	FirstSeenAt   time.Time
+	LastSeenAt    time.Time
+}

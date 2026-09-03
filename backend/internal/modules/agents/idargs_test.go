@@ -244,6 +244,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterAssuranceTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
+	RegisterInputChecksTool(r, func(context.Context) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
 	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,

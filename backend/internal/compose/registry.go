@@ -175,6 +175,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
 	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
+	agents.RegisterInputChecksTool(registry, inputChecksToolReader(pool))
 	// The governed workspace query. It takes the provider as well as the runner
 	// because the two halves of an answer come from different places: the plan
 	// selects records through the search module, and each selected record is

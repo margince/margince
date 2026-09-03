@@ -5950,6 +5950,72 @@ func (e IngestVoiceCorpusSourceRequestRegister) Valid() bool {
 	}
 }
 
+// Defines values for InputCheckSeverity.
+const (
+	InputCheckSeverityHigh   InputCheckSeverity = "high"
+	InputCheckSeverityLow    InputCheckSeverity = "low"
+	InputCheckSeverityMedium InputCheckSeverity = "medium"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckSeverity enum.
+func (e InputCheckSeverity) Valid() bool {
+	switch e {
+	case InputCheckSeverityHigh:
+		return true
+	case InputCheckSeverityLow:
+		return true
+	case InputCheckSeverityMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckStatus.
+const (
+	InputCheckStatusExpired  InputCheckStatus = "expired"
+	InputCheckStatusOpen     InputCheckStatus = "open"
+	InputCheckStatusResolved InputCheckStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckStatus enum.
+func (e InputCheckStatus) Valid() bool {
+	switch e {
+	case InputCheckStatusExpired:
+		return true
+	case InputCheckStatusOpen:
+		return true
+	case InputCheckStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckSubjectKind.
+const (
+	InputCheckSubjectKindContract InputCheckSubjectKind = "contract"
+	InputCheckSubjectKindDeal     InputCheckSubjectKind = "deal"
+	InputCheckSubjectKindOffer    InputCheckSubjectKind = "offer"
+	InputCheckSubjectKindSignal   InputCheckSubjectKind = "signal"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckSubjectKind enum.
+func (e InputCheckSubjectKind) Valid() bool {
+	switch e {
+	case InputCheckSubjectKindContract:
+		return true
+	case InputCheckSubjectKindDeal:
+		return true
+	case InputCheckSubjectKindOffer:
+		return true
+	case InputCheckSubjectKindSignal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstallationSettingsBaseLanguage.
 const (
 	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
@@ -9108,19 +9174,19 @@ func (e PersonRelationshipChangeToBucket) Valid() bool {
 
 // Defines values for PersonResearchClaimConfidence.
 const (
-	High     PersonResearchClaimConfidence = "high"
-	Medium   PersonResearchClaimConfidence = "medium"
-	Unstated PersonResearchClaimConfidence = "unstated"
+	PersonResearchClaimConfidenceHigh     PersonResearchClaimConfidence = "high"
+	PersonResearchClaimConfidenceMedium   PersonResearchClaimConfidence = "medium"
+	PersonResearchClaimConfidenceUnstated PersonResearchClaimConfidence = "unstated"
 )
 
 // Valid indicates whether the value is a known member of the PersonResearchClaimConfidence enum.
 func (e PersonResearchClaimConfidence) Valid() bool {
 	switch e {
-	case High:
+	case PersonResearchClaimConfidenceHigh:
 		return true
-	case Medium:
+	case PersonResearchClaimConfidenceMedium:
 		return true
-	case Unstated:
+	case PersonResearchClaimConfidenceUnstated:
 		return true
 	default:
 		return false
@@ -12777,19 +12843,19 @@ func (e WorklistItemConsequence) Valid() bool {
 
 // Defines values for WorklistItemDispositions.
 const (
-	WorklistItemDispositionsNotMine  WorklistItemDispositions = "not_mine"
-	WorklistItemDispositionsNotSales WorklistItemDispositions = "not_sales"
-	WorklistItemDispositionsSnooze   WorklistItemDispositions = "snooze"
+	WorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
+	WorklistDispositionNotSales WorklistItemDispositions = "not_sales"
+	WorklistDispositionSnooze   WorklistItemDispositions = "snooze"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
 func (e WorklistItemDispositions) Valid() bool {
 	switch e {
-	case WorklistItemDispositionsNotMine:
+	case WorklistDispositionNotMine:
 		return true
-	case WorklistItemDispositionsNotSales:
+	case WorklistDispositionNotSales:
 		return true
-	case WorklistItemDispositionsSnooze:
+	case WorklistDispositionSnooze:
 		return true
 	default:
 		return false
@@ -21848,6 +21914,41 @@ type IngestVoiceCorpusSourceRequestKind string
 
 // IngestVoiceCorpusSourceRequestRegister defines model for IngestVoiceCorpusSourceRequest.Register.
 type IngestVoiceCorpusSourceRequestRegister string
+
+// InputCheck One finding from the nightly input check.
+type InputCheck struct {
+	// AffectedMinor How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+	AffectedMinor *int64 `json:"affected_minor,omitempty"`
+
+	// Claim What the record says, as structured values only.
+	Claim       *map[string]interface{} `json:"claim,omitempty"`
+	Currency    *string                 `json:"currency,omitempty"`
+	FirstSeenAt time.Time               `json:"first_seen_at"`
+	Id          openapi_types.UUID      `json:"id"`
+
+	// LastSeenAt The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+	LastSeenAt time.Time `json:"last_seen_at"`
+
+	// Observed What the check found, as structured values only.
+	Observed    *map[string]interface{} `json:"observed,omitempty"`
+	OwnerId     *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Severity    InputCheckSeverity      `json:"severity"`
+	Status      InputCheckStatus        `json:"status"`
+	SubjectId   openapi_types.UUID      `json:"subject_id"`
+	SubjectKind InputCheckSubjectKind   `json:"subject_kind"`
+
+	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
+	Type string `json:"type"`
+}
+
+// InputCheckSeverity defines model for InputCheck.Severity.
+type InputCheckSeverity string
+
+// InputCheckStatus defines model for InputCheck.Status.
+type InputCheckStatus string
+
+// InputCheckSubjectKind defines model for InputCheck.SubjectKind.
+type InputCheckSubjectKind string
 
 // InstallationSettings The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
 // changed only by admin/ops.
@@ -45424,6 +45525,9 @@ type ServerInterface interface {
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
 	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// The open findings this caller can see.
+	// (GET /forecast/assurance/exceptions)
+	ListInputChecks(w http.ResponseWriter, r *http.Request)
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -47761,6 +47865,12 @@ func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, param
 // What last night's input check found, and how much of the pipeline it reached.
 // (GET /forecast/assurance)
 func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The open findings this caller can see.
+// (GET /forecast/assurance/exceptions)
+func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58828,6 +58938,28 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecastAssurance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListInputChecks operation middleware
+func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListInputChecks(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74970,6 +75102,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance/exceptions", wrapper.ListInputChecks)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
