@@ -51,21 +51,15 @@ type forecastReadings struct {
 func (t forecastReadings) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
-		Description: "What a period is expected to close, in four readings, plus what the " +
-			"figures do not cover. " +
-			"`won` counts deals by the day they ACTUALLY closed, never the day they were " +
-			"expected to — a deal expected in March and won in April is April's. `evidence` " +
-			"is committed pipeline whose close date somebody confirmed; a provisional date " +
-			"is a guess, so it is excluded there and still counted in `open`. `weighted` " +
-			"applies each deal's stage probability, rounded per deal. " +
+		Description: "What a period is expected to close, in four readings. " +
+			"`won` counts deals by the day they ACTUALLY closed, not the day they were " +
+			"expected to. `evidence` is committed pipeline whose close date somebody " +
+			"confirmed; a provisional date stays in `open` and out of `evidence`. " +
 			"Read `eligible_count` against `priced_count` before quoting a total: an " +
-			"unpriced deal is real pipeline contributing zero money, and the gap is what " +
-			"the money readings leave out. `fx_missing_count` is priced deals no rate " +
-			"could convert — also absent from the totals rather than counted as zero. " +
-			"`scope_limited` true means deals the caller cannot read were left out; there " +
-			"is deliberately no count of them. " +
-			"Every figure carries the frame it was cut in: `as_of`, the installation's " +
-			"timezone, and the base currency. Quote them with the number — a total placed " +
+			"unpriced deal is real pipeline contributing zero money. `fx_missing_count` " +
+			"is priced deals no rate could convert — also absent from the totals rather " +
+			"than counted as zero. " +
+			"Quote `as_of`, `timezone` and `base_currency` with the number: a total placed " +
 			"in the reader's own zone is a different total.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getForecast",
@@ -350,4 +344,46 @@ type InputCheckResult struct {
 	// LastSeenAt is the most recent run that still found it. Something seen for
 	// weeks is a different problem from something that appeared last night.
 	LastSeenAt string `json:"last_seen_at"`
+}
+
+// SourceCoverageReader answers how current the sources behind the numbers are.
+type SourceCoverageReader func(ctx context.Context) (json.RawMessage, error)
+
+// RegisterCoverageTool joins data_coverage to the surface.
+func RegisterCoverageTool(r *Registry, read SourceCoverageReader) {
+	r.Register(dataCoverage{read: read})
+}
+
+type dataCoverage struct {
+	read SourceCoverageReader
+}
+
+func (t dataCoverage) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
+		Description: "Which connectors the nightly check could read, and how far back each " +
+			"reaches. Needs the data_coverage grant, which operators hold and sellers do " +
+			"not — a refusal here is a seat boundary, not a missing run. " +
+			"Only a `checked` source carries a date. On any other state nothing was read, " +
+			"and a quiet week is indistinguishable from a broken connector until somebody " +
+			"looks.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "getDataCoverage",
+		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OutputSchema: schemaFor[DataCoverageResult](),
+	}
+}
+
+func (t dataCoverage) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+	noteDerivedContent(ctx)
+	return t.read(ctx)
+}
+
+// DataCoverageResult is what data_coverage answers with.
+type DataCoverageResult struct {
+	RunID string `json:"run_id"`
+	AsOf  string `json:"as_of"`
+	// Sources are the ones the run tried. One absent was not attempted, which
+	// is different from one attempted and unreadable — the state says which.
+	Sources []ForecastAssuranceSourceResult `json:"sources"`
 }

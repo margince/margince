@@ -15905,6 +15905,34 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No run has completed yet. A fresh installation has not been checked.
+  /analytics/coverage:
+    get:
+      tags: [Reports]
+      operationId: getDataCoverage
+      summary: How current the sources behind the numbers are.
+      description: |
+        Source health: which connectors the nightly check could read, how far back each
+        reaches, and what it could not open.
+
+        Gated on `data_coverage`, which admin and ops hold and nobody else does. That is a
+        decision rather than an oversight: a rep shown their installation's connector
+        health has been handed somebody else's job, and a screen reporting a problem they
+        cannot act on teaches them to ignore the screen.
+
+        Only a `checked` source carries `checked_through`. A date on a stale or unavailable
+        one would read as "checked up to then" when nothing was read at all — which is the
+        difference between a quiet week and a broken connector.
+      x-mcp-tool: { verb: data_coverage, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The most recent run's source health.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DataCoverage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No run has completed yet. A fresh installation has not been checked.
   /forecast/assurance/exceptions:
     get:
       tags: [Reports]
@@ -30858,6 +30886,21 @@ components:
             When a suppressing answer stops holding. Omitted, it is the 90-day ceiling;
             beyond the ceiling it is refused rather than shortened.
       additionalProperties: false
+    DataCoverage:
+      type: object
+      description: How current the sources behind the forecast's numbers are.
+      required: [run_id, as_of, sources]
+      properties:
+        run_id: { type: string, format: uuid }
+        as_of: { type: string, format: date-time }
+        sources:
+          type: array
+          description: >-
+            The sources the run tried, and how far it reached into each. A source absent
+            from this list is one the run did not attempt — different from one it
+            attempted and could not read, which the state field says.
+          items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
+      additionalProperties: false
     ForecastAssurance:
       type: object
       description: >-
@@ -31108,7 +31151,7 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast]
+         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage]
 
     RbacAction:
       type: string

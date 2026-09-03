@@ -67,6 +67,12 @@
         "read": true,
         "update": true
       },
+      "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -328,6 +334,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "deal": {
@@ -593,6 +605,12 @@
         "read": true,
         "update": false
       },
+      "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -855,6 +873,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "deal": {
         "create": true,
@@ -1119,6 +1143,12 @@
         "read": true,
         "update": false
       },
+      "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": false,
         "delete": false,
@@ -1380,6 +1410,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "deal": {

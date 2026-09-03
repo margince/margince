@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 67 |
+| Tools | 68 |
 | Resources | 9 |
-| Tool catalog | 188.9 KB |
+| Tool catalog | 190.2 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 49228 |
+| Approx. wire tokens | 49565 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 90.9 KB | 48% | **No** — a result's shape, never listed to a model |
+| Output schemas | 92.0 KB | 48% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 44.8 KB | 23% | Yes, every step |
-| Input schemas | 39.0 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 14.1 KB | 7% | Partly |
-| **Description + input schema** | **83.8 KB** | **44%** | **the recurring cost** |
+| Input schemas | 39.1 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 14.3 KB | 7% | Partly |
+| **Description + input schema** | **83.9 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (67)
+### Tools (68)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -76,6 +76,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`create_record`](#create_record) | Create a record |  |  | 3.3 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
+| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 1.7 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
@@ -85,7 +86,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.4 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.0 KB |
-| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.5 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.1 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
@@ -2950,6 +2951,148 @@ Put a to-do on someone's list: what is owed, by whom, on which records. Creates 
 
 </details>
 
+### data_coverage
+
+**How current the sources are**
+
+Which connectors the nightly check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source carries a date. On any other state nothing was read, and a quiet week is indistinguishable from a broken connector until somebody looks. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "properties": {
+              "checked_through": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "state"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "as_of",
+        "run_id",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### decide_approval
 
 **Approve or reject one staged action**
@@ -4513,7 +4656,7 @@ The difference between two forecast snapshots, classified into named causes. Ope
 
 **Read the forecast**
 
-What a period is expected to close, in four readings, plus what the figures do not cover. `won` counts deals by the day they ACTUALLY closed, never the day they were expected to — a deal expected in March and won in April is April's. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date is a guess, so it is excluded there and still counted in `open`. `weighted` applies each deal's stage probability, rounded per deal. Read `eligible_count` against `priced_count` before quoting a total: an unpriced deal is real pipeline contributing zero money, and the gap is what the money readings leave out. `fx_missing_count` is priced deals no rate could convert — also absent from the totals rather than counted as zero. `scope_limited` true means deals the caller cannot read were left out; there is deliberately no count of them. Every figure carries the frame it was cut in: `as_of`, the installation's timezone, and the base currency. Quote them with the number — a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
+What a period is expected to close, in four readings. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. Read `eligible_count` against `priced_count` before quoting a total: an unpriced deal is real pipeline contributing zero money. `fx_missing_count` is priced deals no rate could convert — also absent from the totals rather than counted as zero. Quote `as_of`, `timezone` and `base_currency` with the number: a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
