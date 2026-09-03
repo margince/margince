@@ -86,6 +86,10 @@ func captureInboundThroughRealSink(
 			Kind: "email", Subject: "Angebot", Body: "Anbei.", Direction: connector.DirectionInbound,
 		},
 		ThreadKey: threadKey,
+		// One of the SEAT's own addresses on the message, which is the evidence
+		// the import row is written on: without it the sink stores the activity
+		// but records no per-seat contribution, and nothing opens a question.
+		Addresses: []string{counterparty, "a@authz.test"},
 		Source:    "gmail:" + sourceID, CapturedBy: "connector:gmail",
 	})
 	if err != nil {
@@ -363,4 +367,140 @@ func domainAdmission(t *testing.T, e *integration.Env, domain string) string {
 		t.Fatalf("reading the admission of %s: %v", domain, err)
 	}
 	return admission
+}
+
+// TestAReopenedThreadKeepsSomethingToAskAbout covers the message that reopens a
+// settled thread from a mailbox whose posture opens nothing.
+//
+// The reopen clears first_activity_id so the classifier is not shown the text a
+// previous answer was about. Filling it again used to depend on the NEXT
+// message arriving under a `classified` posture — and a shared mailbox never
+// takes that branch, so the row sat pending with nothing to read: unclaimable
+// once the claim requires a readable message, and before that, claimed and
+// judged on a blank prompt.
+func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
+	e := integration.Setup(t)
+	const first = "kunde@partner.example"
+	const stranger = "anwalt@kanzlei.example"
+
+	seedClassifiedGmail(t, e, e.Rep1)
+	seedAttestedOutbound(t, e, "reopen-out-1", first, "reopen-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-1", first, "reopen-t1")
+
+	// The thread is settled as ordinary, recording the sender it read.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE thread_key = $1`, "reopen-t1", first)
+		return err
+	}); err != nil {
+		t.Fatalf("settling the thread: %v", err)
+	}
+
+	// A sender the verdict never read replies on the same thread. That reopens
+	// the question, and this message is what the question is now about.
+	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-2", stranger, "reopen-t1")
+
+	var status string
+	var pointer *ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT status, first_activity_id FROM capture_thread_verdict WHERE thread_key = $1`,
+			"reopen-t1").Scan(&status, &pointer)
+	}); err != nil {
+		t.Fatalf("reading the reopened thread: %v", err)
+	}
+	if status != capture.VerdictPending {
+		t.Fatalf("thread status = %q, want pending: an unseen sender must re-open the question", status)
+	}
+	if pointer == nil {
+		t.Fatal("the re-opened thread points at no message, so the classifier would be asked to " +
+			"judge an empty prompt — or, once the claim requires a readable message, never asked at all")
+	}
+	var pointedAt string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(counterparty_email, '') FROM activity WHERE id = $1`, *pointer).Scan(&pointedAt)
+	}); err != nil {
+		t.Fatalf("reading the message the re-opened question is about: %v", err)
+	}
+	if pointedAt != stranger {
+		t.Fatalf("the re-opened question is about mail from %q, want %q: the classifier must read the "+
+			"message that caused the re-open, not the one a previous answer already covered",
+			pointedAt, stranger)
+	}
+}
+
+// TestAHeldMailboxIsNotAskedToPublishItsMail is the refusal the posture owes.
+//
+// A `held` mailbox keeps its mail whatever a classifier concludes, so it must
+// never have a confidentiality question opened for it: an `ordinary` answer on
+// that question maps to a workspace audience, which is exactly the publication
+// the posture exists to refuse.
+func TestAHeldMailboxIsNotAskedToPublishItsMail(t *testing.T) {
+	e := integration.Setup(t)
+	const first = "kunde@partner.example"
+	const stranger = "anwalt@kanzlei.example"
+
+	seedClassifiedGmail(t, e, e.Rep1)
+	seedAttestedOutbound(t, e, "held-out-1", first, "held-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "held-in-1", first, "held-t1")
+
+	// The thread is settled, and THEN the seat asks for their mail to be kept.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE thread_key = $1`, "held-t1", first); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_connection SET mail_posture = 'held' WHERE user_id = $1`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("holding the mailbox: %v", err)
+	}
+
+	// A sender the verdict never read replies, which re-opens the question.
+	captureInboundThroughRealSink(t, e, e.Rep1, "held-in-2", stranger, "held-t1")
+
+	// The question, if one stands, must not be answerable: a claim is what
+	// spends an attempt and reaches a model, and a `cleared` answer to this
+	// thread would publish mail the seat asked to keep.
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming due threads: %v", err)
+	}
+	for _, c := range claimed {
+		if c.ThreadKey == "held-t1" {
+			t.Fatal("an `always held` mailbox's thread was claimed for classification, and an " +
+				"`ordinary` answer publishes mail the seat asked to keep whatever a classifier concludes")
+		}
+	}
+}
+
+// seedClassifiedGmail connects a mailbox under the posture that holds its mail
+// until a classifier judges the thread — the only one that opens a question.
+//
+// account_label is what puts the seat's own address in the identity set, which
+// is the evidence an import row is written on: without it the sink stores the
+// activity and records no per-seat contribution at all.
+func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_connection
+			       (user_id, provider, status, credential_ref, mail_posture, account_label)
+			VALUES ($1, 'gmail', 'connected', 'vault:test', 'classified', 'a@authz.test')
+			ON CONFLICT (user_id, provider)
+			DO UPDATE SET mail_posture = 'classified', archived_at = NULL,
+			              account_label = 'a@authz.test'`, user)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding a classified gmail connection: %v", err)
+	}
 }
