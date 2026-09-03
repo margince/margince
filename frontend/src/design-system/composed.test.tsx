@@ -331,7 +331,13 @@ describe("TimelineText on a mail row", () => {
   // component collapsed a call into a note once already, and drawing a meeting
   // or a change through an email's row would be the same mistake the other way.
   it("leaves every kind that is not an email drawing its own body", () => {
-    for (const kind of ["note", "call", "meeting", "task", "message"] as const) {
+    for (const kind of [
+      "note",
+      "call",
+      "meeting",
+      "task",
+      "message",
+    ] as const) {
       const { unmount } = render(
         <RecordView
           name="Acme"

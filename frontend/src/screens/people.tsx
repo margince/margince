@@ -6,9 +6,9 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { EmailDetail } from "../design-system/emaildetail";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { EmailDetail } from "../design-system/emaildetail";
 import {
   useRecordTimeline,
   useTimelineFilters,
@@ -16,8 +16,8 @@ import {
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
-import { normalizeProfileUrl } from "../format/profileurl";
 import { formatDateTime } from "../format/format";
+import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";

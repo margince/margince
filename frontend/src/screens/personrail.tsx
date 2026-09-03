@@ -19,10 +19,10 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
+import { EmailReference } from "../design-system/emailreference";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
-import { EmailReference } from "../design-system/emailreference";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,

@@ -11,7 +11,6 @@ import {
 import type { ReactNode } from "react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { splitEmailBody } from "../format/emailtext";
-import { EmailEntry } from "./emailentry";
 import {
   formatDate,
   formatDuration,
@@ -20,6 +19,7 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { EmailEntry } from "./emailentry";
 
 type RowTag = components["schemas"]["RowTag"];
 
