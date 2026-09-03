@@ -176,7 +176,7 @@ export function writeRoutes(calls: readonly Call[]): string[] {
 
 /** Home's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#home-decisions, #home-today")].map(
+  return [...document.querySelectorAll("#home-decisions, #home-focus")].map(
     (section) => section.id,
   );
 }
@@ -219,6 +219,20 @@ export const run: MorningBrief = {
       state: "new",
       state_at: null,
     },
+  ],
+};
+
+/**
+ * The same run with three suggestions, for the cases about which section owns
+ * which. One item cannot show a section SKIPPING one and keeping the rest.
+ */
+export const threeRanked: MorningBrief = {
+  ...run,
+  candidate_count: 3,
+  items: [
+    run.items[0],
+    { ...run.items[0], id: "bi-2", deal_id: "d-2", rank: 2, composite: 0.61 },
+    { ...run.items[0], id: "bi-3", deal_id: "d-3", rank: 3, composite: 0.44 },
   ],
 };
 

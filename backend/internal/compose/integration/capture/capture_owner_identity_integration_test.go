@@ -385,3 +385,69 @@ func TestAClaimSettlesNoColleaguesOpenQuestion(t *testing.T) {
 			"must not answer a colleague's pending decision")
 	}
 }
+
+// The address a seat SIGNS IN with is one of their own addresses, and nobody
+// should have to declare who they are to the product they are signed in to.
+//
+// It is a different address from the connected mailbox in the ordinary case: a
+// person signs in with their work address and connects a mailbox, and the two
+// often agree — but when they do not, the login address was unknown here. It
+// then stood in as a counterparty to itself, which is how a founder's own
+// address became a contact in his own workspace.
+func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+
+	// The seat's login address, which the harness sets and no fixture declares.
+	var login string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT email FROM app_user WHERE id = $1`, e.Rep1).Scan(&login)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if login == captureOwner {
+		t.Fatalf("the fixture's login address is the connected mailbox (%s) — the case under test needs them to differ", login)
+	}
+
+	// Mail from the seat's own login address into the connected mailbox.
+	env.sync(t, email(login, "Lars Himself", captureOwner, "login1@authz.test", ""))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = '`+login+`'`); n != 0 {
+		t.Errorf("%d person(s) for the seat's own login address, want 0", n)
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty WHERE email = '`+login+`'`); n != 0 {
+		t.Errorf("%d ledger question(s) about the seat's own login address, want 0 — "+
+			"a seat is not a first-time sender to themselves", n)
+	}
+}
+
+// The verdict is never asked about the owner's own address.
+//
+// The prompt carries no owner context — it is one sender, its subject and its
+// body — so a model asked "what kind of sender is this" about the person asking
+// has no way to answer "that is you". The defence is that the question is never
+// put: ladderSubjectTx replaces a counterparty the seat covers before any ledger
+// row is written, so the address the verdict engine reads is somebody else by
+// construction.
+//
+// Asserted here rather than left to the reader, because it is what makes the
+// prompt's silence safe. If the ladder ever stopped correcting, this fails and
+// the prompt would need the owner's identities in it.
+func TestTheVerdictIsNeverAskedAboutTheOwnersOwnAddress(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
+
+	// Mail from the owner's own alias into their connected mailbox.
+	env.sync(t, email(ownerAlias, "Lars Private", captureOwner, "askme1@private.example", ""))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty WHERE email = '`+ownerAlias+`'`); n != 0 {
+		t.Errorf("%d ledger questions about the seat's own alias, want 0 — "+
+			"the verdict must never be asked what kind of sender the owner is", n)
+	}
+}

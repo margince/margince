@@ -69,12 +69,13 @@ const canonical: Record<string, string> = {
   "--danger": "#b91c1c",
   "--dangerBg": "rgba(239,68,68,.1)",
   "--r-sm": "8px",
-  "--r-md": "12px",
-  "--r-lg": "20px",
+  "--r-control": "10px",
+  "--r-md": "14px",
+  "--r-lg": "18px",
   "--r-full": "9999px",
-  "--f-display": '"Outfit",system-ui,sans-serif',
-  "--f-body": '"DM Sans",system-ui,sans-serif',
-  "--f-mono": '"JetBrains Mono",ui-monospace,monospace',
+  "--f-display": '"Bricolage Grotesque",system-ui,sans-serif',
+  "--f-body": '"Geist",system-ui,sans-serif',
+  "--f-mono": '"Geist Mono",ui-monospace,monospace',
 };
 
 function normalize(value: string): string {

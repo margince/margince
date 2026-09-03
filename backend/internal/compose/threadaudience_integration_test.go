@@ -15,12 +15,17 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -194,5 +199,61 @@ func TestTheHoldCountReadsOnlyTheCallersOwnMessages(t *testing.T) {
 	// about it.
 	if got := activityAudience(t, e, theirs); got != "participants" {
 		t.Fatalf("the colleague's message is %q, want participants", got)
+	}
+}
+
+// The decision names the messages it reached, so a client can refresh exactly
+// them rather than guessing from the record it happened to be looking at.
+//
+// It names only the ones the CALLER may read. An import row satisfies one arm
+// of the audience gate and says nothing about discoverability, so a message
+// filed only against records outside this seat's row scope is counted by
+// Messages and left out of the list: the decision reached it, and saying which
+// id it was would say that record exists.
+func TestAThreadDecisionNamesTheMessagesTheCallerCanRead(t *testing.T) {
+	e := integration.Setup(t)
+	id := seedHeldThreadOn(t, e, "thread-ids", "kunde@example.test", e.Rep1)
+
+	outcome := decideThread(t, e, e.Rep1, "thread-ids", true)
+	if outcome.Messages != 1 {
+		t.Fatalf("messages=%d, want 1", outcome.Messages)
+	}
+	if len(outcome.ActivityIDs) != 1 || outcome.ActivityIDs[0] != id {
+		t.Fatalf("activity_ids=%v, want the one message the decision reached (%v)", outcome.ActivityIDs, id)
+	}
+}
+
+// The same decision through the real HTTP surface, because the handler builds
+// its response field by field and a field it does not name reaches the client
+// as null.
+//
+// That is exactly how activity_ids shipped broken for a day: the setter filled
+// it, the response literal did not copy it, and the frontend test stubbed a
+// correct body so nothing failed. A test that decodes what the handler
+// actually wrote is the only one that can see it.
+func TestTheThreadAudienceResponseCarriesEveryFieldItPromises(t *testing.T) {
+	e := integration.Setup(t)
+	id := seedHeldThreadOn(t, e, "thread-wire", "kunde@example.test", e.Rep1)
+
+	srv := Server{threadAudience: NewThreadAudienceSetter(e.Pool)}
+	req := httptest.NewRequest(http.MethodPost,
+		"/v1/activities/threads/thread-wire/audience",
+		strings.NewReader(`{"share":true}`)).WithContext(purgeCtx(e, e.Rep1))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.SetThreadAudience(rec, req, "thread-wire")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var got crmcontracts.ThreadAudienceOutcome
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.Messages != 1 || !got.Shared {
+		t.Errorf("messages=%d shared=%v, want 1 and true", got.Messages, got.Shared)
+	}
+	if len(got.ActivityIds) != 1 || ids.UUID(got.ActivityIds[0]) != id {
+		t.Errorf("activity_ids=%v on the wire, want the message the decision reached (%v)", got.ActivityIds, id)
 	}
 }

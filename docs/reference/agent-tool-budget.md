@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1688 | 7% | 15312 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14465 | 15 | 8 |
-| _whole served catalog, for scale_ | 61 | 19280 | 80% | — | — | — |
+| _whole served catalog, for scale_ | 68 | 20998 | 87% | — | — | — |
 
 ### `morning_brief`
 
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 315, across 61 served tools.
+Median 271 tokens, mean 308, across 68 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -132,7 +132,7 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1213 | 3 scenarios |
+| `run_report` | 1274 | 3 scenarios |
 | `preview_import` | 708 | — |
 | `log_activity` | 673 | 1 scenario |
 | `update_record` | 603 | 4 scenarios |
@@ -149,7 +149,9 @@ a term in an addition.
 | `enrich` | 424 | — |
 | `review_commitments` | 409 | — |
 | `search_records` | 392 | 6 scenarios |
+| `forecast_movement` | 358 | — |
 | `search_context` | 352 | — |
+| `forecast_readings` | 335 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |
 | `draft_email` | 317 | — |
@@ -168,15 +170,18 @@ a term in an addition.
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
+| `forecast_input_checks` | 259 | — |
 | `apply_tag` | 258 | — |
 | `account_coverage` | 252 | 2 scenarios |
 | `relink_activities` | 237 | — |
 | `read_record` | 229 | 2 scenarios |
 | `relink_thread` | 228 | — |
+| `update_tag` | 228 | — |
 | `disqualify_lead` | 221 | — |
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
 | `read_brief` | 213 | — |
+| `create_tag` | 206 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
 | `remove_tag` | 198 | — |
@@ -185,10 +190,12 @@ a term in an addition.
 | `check_location_support` | 163 | — |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
+| `list_input_checks` | 153 | — |
 | `commit_import` | 149 | — |
 | `get_record_tags` | 149 | — |
 | `list_colleagues` | 148 | — |
 | `whoami` | 136 | — |
+| `data_coverage` | 116 | — |
 | `list_tags` | 102 | — |
 | `get_tag` | 94 | — |
 | `read_import_report` | 80 | — |

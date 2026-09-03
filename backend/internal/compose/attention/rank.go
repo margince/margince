@@ -105,6 +105,13 @@ type ranked struct {
 	waitingRank int
 	strength    int
 	occurredAt  time.Time
+	// asOf is the one instant every row in the same page was classified
+	// against, carried onto the row rather than threaded through every step
+	// signature. The occurrence step reads it to turn occurredAt into how many
+	// days ago that was, which is the shape its comparator name (waiting_days)
+	// already promises, for every source that falls through to it rather than
+	// only the one lane that computes a day count for itself.
+	asOf time.Time
 	// owner is who this row answers to, for the sources that carry an owner but
 	// no deal on the wire.
 	//
@@ -132,6 +139,17 @@ type ranked struct {
 	// changes nothing else: the row is still what it is, and every count that
 	// reads its level still reads the truth.
 	crowded bool
+}
+
+// stampAsOf marks every row with the instant the page was read at, in one
+// place rather than by each classifier — so a row born from any lane or fold
+// carries the same reference the occurrence step needs to turn its occurredAt
+// into a day count.
+func stampAsOf(rows []ranked, asOf time.Time) []ranked {
+	for i := range rows {
+		rows[i].asOf = asOf
+	}
+	return rows
 }
 
 // rankAll orders the day and explains itself.
@@ -276,9 +294,22 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 	return value
 }
 
-func occurredValue(r ranked) *crmcontracts.WorklistValue {
-	at := r.occurredAt
-	return &crmcontracts.WorklistValue{Kind: "date", Date: &at}
+// daysSince is how many whole days ago `from` was, against `asOf` —
+// deadline.DaysPast read backwards, since "whole days past" and "whole days
+// ago" are the same arithmetic on two instants. Zero when `from` is not
+// before `asOf` — a row read before its own occurrence or deadline, under
+// clock skew between two reads of one page, is not aged from the future.
+func daysSince(from, asOf time.Time) int {
+	days, _ := deadline.DaysPast(&from, asOf)
+	return days
+}
+
+// deadlineValue is a moment a reader still has time to act on, for the reasons
+// that name one. The client formats it in its own locale and zone; nothing here
+// composes a date into words.
+func deadlineValue(at time.Time) *crmcontracts.WorklistValue {
+	when := at
+	return &crmcontracts.WorklistValue{Kind: "date", Date: &when}
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

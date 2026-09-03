@@ -2002,7 +2002,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       expect(container.querySelector(".co-rail")).toBeTruthy(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Write email" }));
+    await userEvent.click(screen.getByRole("button", { name: "Email" }));
     await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));

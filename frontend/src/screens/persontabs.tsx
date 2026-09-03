@@ -22,7 +22,6 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
-import { TimelineActions } from "./compose";
 import { RecordHistoryTab } from "./history";
 import { PersonCommercialCard, readableRole } from "./personcards";
 import {
@@ -35,6 +34,7 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./person360.css";
 import { invalidateRecord } from "./recordwritekeys";
@@ -67,8 +67,11 @@ export function PersonTimelineTab({
   view,
   loading = false,
   onBriefMeeting,
+  onOpenEmail,
 }: Readonly<{
   personId: string;
+  /** Opens one message in the record's drawer, which the page owns. */
+  onOpenEmail?: (activityId: string) => void;
   view?: Person360;
   loading?: boolean;
   // Opens the pre-meeting brief for one meeting row. The drawer lives on the
@@ -88,6 +91,7 @@ export function PersonTimelineTab({
     firstPage: view?.activities,
   });
   const chronology = useRecordChronology({
+    onOpenEmail,
     kind: "person",
     recordId: personId,
     filter,

@@ -366,14 +366,13 @@ const baseURLPublic = "public"
 //
 //nolint:ireturn // the PORT is the return type: nil means this deployment checks no VAT numbers, which a concrete type cannot express.
 func vatCheckerFor(baseURL, requester string) vatcheck.Checker {
-	switch baseURL {
-	case "":
+	if !vatcheck.Configured(baseURL) {
 		return nil
-	case baseURLPublic:
-		return vatcheck.NewVIES(vatcheck.PublicBaseURL, requester, nil)
-	default:
-		return vatcheck.NewVIES(baseURL, requester, nil)
 	}
+	if baseURL == baseURLPublic {
+		return vatcheck.NewVIES(vatcheck.PublicBaseURL, requester, nil)
+	}
+	return vatcheck.NewVIES(baseURL, requester, nil)
 }
 
 func geocoderFor(baseURL string) geocode.Client {

@@ -13,9 +13,7 @@ package mailmap
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -48,7 +46,12 @@ type Message struct {
 	// machineTouched is the BROADER question — did any machine have a hand in
 	// this? It never drops a message; it only refuses the outbound attestation,
 	// so a responder's reply cannot vouch for an address the owner never chose.
-	machineTouched  bool
+	machineTouched bool
+	// calendarNotice is groupware sending an invitation on a person's behalf.
+	// It implies machineTouched and says something narrower: this message names
+	// an EVENT, so its recipients are attendees rather than people the workspace
+	// corresponded with.
+	calendarNotice  bool
 	listUnsubscribe bool // an RFC 2369 List-Unsubscribe header — transactional-gate corroboration
 	sentByOwner     bool // the PROVIDER attested the owner sent this — set by AttestSentByOwner, never parsed
 	// participants are everyone on To, Cc and Bcc who is neither the mailbox
@@ -118,7 +121,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops := extractText(reader)
+	body, parts, drops, hasCalendarPart := extractText(reader)
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
 	direction := connector.DirectionInbound
@@ -133,6 +136,23 @@ func Parse(raw []byte, owner string) (Message, error) {
 	autoSubmitted, precedence := header.Values("Auto-Submitted"), header.Values("Precedence")
 	autoReply := isAutoReply(autoSubmitted, precedence)
 	machineTouched := isMachineTouched(autoSubmitted, precedence, hasMachineHandledHeader(header))
+	// Groupware speaking for a person is a machine having a hand in the message,
+	// and it is the one shape no RFC 3834 marker covers: an invitation carries
+	// no Auto-Submitted, no List-* pair and no bulk Precedence. Withholding the
+	// attestation here is a DIFFERENT effect from withholding the counterparty
+	// in recordCounterparty — see that function — and each refuses the contact
+	// on its own, so each carries its own test.
+	// Only an invitation the OWNER sent. An invitation the owner RECEIVES names
+	// its organizer in From, and that organizer is a person who wrote to them —
+	// suppressing them would delete a real counterparty from the record, which
+	// is the opposite of this rule's purpose. The wrong contacts came from the
+	// outbound direction: the owner invites, and every attendee reads as
+	// somebody the workspace writes to.
+	calendarNotice := direction == connector.DirectionOutbound &&
+		calendarNotification(header, hasCalendarPart)
+	if calendarNotice {
+		machineTouched = true
+	}
 
 	return Message{
 		messageID:        strings.TrimSpace(messageID),
@@ -147,8 +167,9 @@ func Parse(raw []byte, owner string) (Message, error) {
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
+		calendarNotice:   calendarNotice,
 		listUnsubscribe:  strings.TrimSpace(header.Get("List-Unsubscribe")) != "",
-		participants:     otherParties(toList, ccList, bccList, ownerLower, counterparty),
+		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		parts:            parts,
 		partDrops:        drops,
@@ -301,16 +322,10 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			OccurredAt: m.occurredAt,
 			Direction:  m.direction,
 		},
-		Source:     source,
-		CapturedBy: "connector:" + connectorName,
-		Raw:        raw,
-		Counterparty: connector.Counterparty{
-			Email:           strings.ToLower(strings.TrimSpace(m.counterparty)),
-			DisplayName:     m.counterpartyName,
-			Domain:          domainOf(m.counterparty),
-			Direction:       m.direction,
-			ListUnsubscribe: m.listUnsubscribe,
-		}.WithOwnerAttestation(m.sentByOwner),
+		Source:       source,
+		CapturedBy:   "connector:" + connectorName,
+		Raw:          raw,
+		Counterparty: m.recordCounterparty(),
 		ThreadKey:    m.threadKey,
 		Participants: m.participants,
 		Addresses:    m.addresses,
@@ -326,78 +341,6 @@ func domainOf(addr string) string {
 	addr = strings.ToLower(strings.TrimSpace(addr))
 	if idx := strings.LastIndex(addr, "@"); idx >= 0 {
 		return addr[idx+1:]
-	}
-	return ""
-}
-
-// extractText returns the message's plain-text body and the files it carried.
-//
-// It prefers a text/plain part, rendering text/html to text only when no plain
-// part exists, so an HTML-only newsletter still yields readable text. Attachment parts are collected on the SAME walk: a MIME reader
-// is single-pass, so a second walk would mean holding or re-parsing the whole
-// message to find files this one already stepped over.
-func extractText(reader *mail.Reader) (string, []Part, []PartDrop) {
-	var plain, html string
-	files := newCollector()
-	for {
-		if files.exhausted() {
-			// Past any real message. Everything beyond is unread and reported
-			// as such rather than walked, because walking it is the work an
-			// unauthenticated sender was trying to buy.
-			files.truncated()
-			break
-		}
-		part, err := reader.NextPart()
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				// A structural failure ends the walk, so any file after this
-				// point is lost. Recorded rather than passed over: a message
-				// whose files went missing must not read like one that carried
-				// none (DOC-AC-12).
-				files.truncated()
-			}
-			break
-		}
-		if attached, ok := part.Header.(*mail.AttachmentHeader); ok {
-			files.take(attached, part.Body)
-			continue
-		}
-		inline, ok := part.Header.(*mail.InlineHeader)
-		if !ok {
-			continue
-		}
-		contentType, _, err := inline.ContentType()
-		if err != nil {
-			continue
-		}
-		// An INLINE part with a filename is a file. Several mail clients send
-		// PDFs and images that way as a matter of course, and reading only
-		// Content-Disposition: attachment loses them with nothing recorded —
-		// the sender chose how to render it, not whether we keep it.
-		if name := inlineFilename(inline); name != "" {
-			files.takeInline(inline, name, part.Body)
-			continue
-		}
-		content, err := io.ReadAll(part.Body)
-		if err != nil {
-			continue
-		}
-		switch {
-		case strings.HasPrefix(contentType, "text/plain") && plain == "":
-			plain = string(content)
-		case strings.HasPrefix(contentType, "text/html") && html == "":
-			html = string(content)
-		}
-	}
-	return bodyText(plain, html), files.parts, files.drops()
-}
-
-func bodyText(plain, html string) string {
-	if strings.TrimSpace(plain) != "" {
-		return strings.TrimSpace(plain)
-	}
-	if html != "" {
-		return htmlToText(html)
 	}
 	return ""
 }

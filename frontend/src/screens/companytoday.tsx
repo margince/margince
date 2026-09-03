@@ -1,18 +1,9 @@
-import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import {
-  Avatar,
-  Badge,
-  Button,
-  EmptyState,
-  Skeleton,
-} from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Badge, Button } from "../design-system/atoms";
+import { PanelBody } from "../design-system/panel";
 import { stable } from "../format/collate";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -33,41 +24,27 @@ import {
   MOMENT_RULE_LABEL,
   standingTone,
 } from "./persontoday";
-import { BriefTitle, VerdictHead } from "./record360";
+import { CallCard, TodayPanel, TodoRow, WithheldNotice } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
 // the page that answers *what do I do now*. It replaces two earlier cards
 // ("Today on this account" and "Worth doing next") that used to say the same
 // things twice between them: this one merged reading, not two that agree.
 //
-// TWO PARTS. A CONTEXT block of dated readings — whose move it is, the way
-// in, what was last said, what is running, what is wrong — and, under it,
-// the MOVES: the advice rows and the two verbs (draft a follow-up, prepare a
-// meeting) that act on that context. The context states what IS; the moves
-// say what to DO about it, and the split between them is this component's
-// whole reason to exist.
+// TWO CARDS, both the record-360 kit's. THE CALL: the account's standing with
+// whose move it is under it, and the thread it was read from. THE DAY'S WORK:
+// the advice rows and the two verbs (draft a follow-up, prepare a meeting)
+// that act on that context. The call states what IS; the work says what to DO
+// about it, and the split between them is this component's whole reason to
+// exist.
 //
-// THE SPLIT IS DRAWN, not merely ordered. The context sits on its own tinted
-// plate, inset from the panel's edges; the moves run full-bleed on the panel's
-// own ground with their verbs at the row's end. A reader can tell which half
-// is which before reading a word of either, and nothing on the plate looks
-// pressable.
-//
-// WITHIN THE BLOCK, ONE READING LEADS. Whose move it is, with how long it has
-// stood that way, sits above a rule in its own weight; the readings that
-// support it are a label-and-answer list beneath. That is a claim about
-// importance and it is the only ranking on the panel — everything under the
-// rule is drawn alike, because a reader who cannot predict an order stops
-// trusting it.
+// The chrome is the kit's (`CallCard`, `TodayPanel`, `TodoRow`) so a contact
+// and a deal read the same way; what this file owns is the ACCOUNT's answers —
+// which standing, whose move, which rows.
 //
 // A reading that is BAD NEWS still says so, in colour: an account gone quiet,
-// a deal stalled, a move that has been ours for weeks. Nothing else in the
-// block is coloured, so the colour means one thing.
-//
-// The second rule is quieter and does more work: an item appears only when it
-// has something to say. Missing data is not a recommendation — "no meeting
-// scheduled" earns a line only when the system can name whom to contact and
-// why, which is the suggestion engine's job, not this component's.
+// a deal stalled, a move that has been ours for weeks. Nothing else is
+// coloured, so the colour means one thing.
 //
 // WHAT THIS DELIBERATELY DOES NOT CARRY, and the rule behind it: a second,
 // weaker rendering of a claim that already has a good one is the duplication
@@ -79,17 +56,11 @@ import { BriefTitle, VerdictHead } from "./record360";
 //     somewhere better;
 //   - a converted pipeline total or a KPI reading the strip already carries
 //     for the account's STANDING state — this band carries what is DATED.
-//
-// So this section earns its place by carrying what nothing else says: whose
-// move it is, who can reach them, what was last said, what is running, what
-// is wrong, and what to do about any of it.
 
 type Organization360 = components["schemas"]["Organization360"];
 
-// The lead reading: whose move it is, at the top of the context block and in
-// its own weight. It is the one thing on the panel a reader must know before
-// the moves under it mean anything, which is why it is not one row of the
-// list beneath it.
+// The lead reading: whose move it is, under the call and in its own weight. It
+// is the one thing a reader must know before the moves under it mean anything.
 type TodayLead = {
   headline: string;
   // How long it has stood that way, beside the state and quieter than it. A
@@ -139,10 +110,6 @@ export function TodayOnThisAccount({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  // Called unconditionally regardless of the loading/failed branches below,
-  // same as every other hook here — React requires it, and the hook itself
-  // already answers "nothing to show" by returning `ready: false`.
   // Called before the loading/failed branches below, like every other hook
   // here: React requires it, and it answers "nothing rated" on its own.
   const verdict = useAccountStanding(orgId, view?.health);
@@ -153,57 +120,18 @@ export function TodayOnThisAccount({
     onPerform,
   });
 
-  // The day's brief is one section of this card, so neither of its own
-  // failures may take the rest of the account's reading down with it: the
-  // sections below read from the same payload and are perfectly able to
-  // render while the brief says it could not be assembled.
-  //
-  // The subhead rides with all three, because a skeleton or an error under no
-  // name is a reader unable to tell WHICH of the four readings is missing.
-  // The way out of this section rides in the section's own head, opposite its
-  // label — the same place every other section of the card puts one. On the
-  // CARD's header it stood over four sections and named only one of them.
-  const subhead = (
-    <PanelBody className="co-360-head">
-      <Eyebrow as="h3">{t("today.title")}</Eyebrow>
-      {onOpenTasks && (
-        <Button small variant="ghost" onClick={onOpenTasks}>
-          {t("co.suggest.viewTasks")}
-        </Button>
-      )}
-    </PanelBody>
-  );
-  // Neither the pending read nor the failed one draws the call card above.
-  // That card exists to state a verdict, and a card holding a spinner where
-  // the verdict goes is the reading claiming to have reached one.
+  // Neither the pending read nor the failed one draws the call card. That
+  // card exists to state a verdict, and a card holding a spinner where the
+  // verdict goes is the reading claiming to have reached one. The day's work
+  // still says which of its states it is in, under its own name.
   if (loading) {
-    return (
-      <Panel className="co-reading-today">
-        {subhead}
-        <PanelBody>
-          <Skeleton width="100%" height={64} />
-        </PanelBody>
-      </Panel>
-    );
+    return <TodayPanel state="loading" onOpenTasks={onOpenTasks} />;
   }
   if (failed || !view) {
-    return (
-      <Panel className="co-reading-today">
-        {subhead}
-        <PanelBody>
-          <EmptyState>{t("today.failed")}</EmptyState>
-        </PanelBody>
-      </Panel>
-    );
+    return <TodayPanel state="failed" onOpenTasks={onOpenTasks} />;
   }
 
-  const ctx: TodayContext = {
-    view,
-    t,
-    when: (at: string) => formatDateTime(at, locale, recordZone),
-    locale,
-  };
-  const lead = whoseMove(ctx);
+  const lead = whoseMove({ view, t, locale });
   const manualMoves = manualMoveRows({ view, t, onPrepareMeeting, onDraftTo });
   const commitment = nextCommitmentLine(view, locale, t);
   // The same verdict the readings row's health card states, off the one hook
@@ -219,9 +147,6 @@ export function TodayOnThisAccount({
         tone: HEALTH_STANDING_TONE[verdict.overall],
       }
     : { label: t("co.strip.notAssessed"), tone: "unknown" as const };
-  const hasContext = lead !== null;
-  const hasMoves = suggestions.ready || manualMoves.length > 0;
-  const footer = briefFooter(commitment, suggestions.footer);
 
   return (
     <>
@@ -229,54 +154,33 @@ export function TodayOnThisAccount({
           account: one is a thing to do today and the other is context for it.
           The contact page opens the same way, and on the same card, because a
           promise is a promise whichever record you came in through. */}
-      {view?.moment && (
+      {view.moment && (
         <AccountMoment
           moment={view.moment}
           name={view.organization?.display_name}
           onOpenRecord={onOpenRecord}
         />
       )}
-      {/* THE CALL, and the thread it was read from. Its own card, because a
-          verdict and a to-do list are two different things to a reader who is
-          scanning: one is the account's state and the other is a queue, and
-          sharing a box they read as one continuous section where the state
-          happens to come first. */}
-      <Panel
-        tone="ai"
-        className="co-reading-call"
-        title={<BriefTitle name={view.organization?.display_name} />}
+      <CallCard
+        name={view.organization?.display_name}
+        standing={standing}
+        because={lead ? leadSentence(lead) : undefined}
+        restsOn={verdict.restsOn}
       >
-        {/* The call, then the thread it was read from. A reader who scans and
-            leaves has the verdict and the sentence behind it; a reader who
-            stays gets the account's shape under it. The other order made them
-            walk the whole thread to find out whether anything was wrong. */}
-        <VerdictHead
-          label={standing.label}
-          tone={standing.tone}
-          because={lead ? leadSentence(lead) : undefined}
-          restsOn={verdict.restsOn}
-        />
         {spine}
-      </Panel>
-      <Panel className="co-reading-today" footer={footer}>
-        {subhead}
-        {!hasContext && !hasMoves ? (
-          // Not "nothing to do": the brief read everything it can read and
-          // found nothing that needs a person today. That is a real answer
-          // and it is different from the account being empty.
-          <PanelBody>
-            <EmptyState>{t("today.quiet")}</EmptyState>
-          </PanelBody>
-        ) : (
-          <>
-            {suggestions.rows}
-            {manualMoves}
-          </>
-        )}
-        {(view.sections_omitted?.length ?? 0) > 0 && (
-          <TodayWithheld view={view} />
-        )}
-      </Panel>
+      </CallCard>
+      <TodayPanel
+        onOpenTasks={onOpenTasks}
+        footer={briefFooter(commitment, suggestions.footer)}
+        notice={
+          (view.sections_omitted?.length ?? 0) > 0 ? (
+            <TodayWithheld view={view} />
+          ) : undefined
+        }
+      >
+        {suggestions.rows}
+        {manualMoves}
+      </TodayPanel>
     </>
   );
 }
@@ -308,9 +212,7 @@ function briefFooter(
 }
 
 // The verdict head's one line: whose move it is, and how long it has been that
-// way. Both come from the same `whoseMove` reading the plate below used to
-// lead with — the sentence moved up to sit beside the call, it was not
-// rewritten.
+// way.
 //
 // Two spans rather than one joined string, because they are two facts: a state
 // with no duration is a status, and a rep cannot act on a status. Joined, the
@@ -331,7 +233,7 @@ function manualMoveRows({
   onDraftTo,
 }: Readonly<{
   view: Organization360;
-  t: TodayContext["t"];
+  t: ReturnType<typeof useT>;
   onPrepareMeeting?: (activityId: string) => void;
   onDraftTo?: (personId: string) => void;
 }>): ReactNode[] {
@@ -353,8 +255,11 @@ function manualMoveRows({
         // deciding whether to press has to say WHICH person that is, and two
         // Phans on one account is the ordinary case rather than the odd one.
         meta={recipient.full_name}
-        verb={t("today.draft.act")}
-        onAct={() => onDraftTo(recipient.person_id)}
+        verb={{
+          label: t("today.draft.act"),
+          onAct: () => onDraftTo(recipient.person_id),
+          byMargince: true,
+        }}
       />,
     );
   }
@@ -381,50 +286,15 @@ function manualMoveRows({
         who={meeting.participants[0]?.display_name ?? meeting.subject}
         title={meeting.subject}
         meta={who}
-        verb={t("today.meeting.prepare")}
-        onAct={() => onPrepareMeeting(meeting.activity_id)}
+        verb={{
+          label: t("today.meeting.prepare"),
+          onAct: () => onPrepareMeeting(meeting.activity_id),
+          byMargince: true,
+        }}
       />,
     );
   }
   return rows;
-}
-
-/**
- * One thing already on somebody's list: who it sits with, what it is, and the
- * one verb that advances it.
- *
- * The mark is the row's anchor. These rows are scanned rather than read, and a
- * column of initials is what lets a reader find their own before they have
- * read a word — which is also why the verb is an outlined chip rather than a
- * filled button: filled, three of them outshout the single move above that the
- * card is actually recommending.
- */
-function TodoRow({
-  who,
-  title,
-  meta,
-  verb,
-  onAct,
-}: Readonly<{
-  who: string;
-  title: string;
-  meta?: ReactNode;
-  verb: string;
-  onAct: () => void;
-}>) {
-  return (
-    <PanelRow className="co-todo">
-      <Avatar name={who} size="xs" />
-      <span className="co-todo-body">
-        <span className="co-todo-title">{title}</span>
-        {meta && <span className="co-todo-meta">{meta}</span>}
-      </span>
-      <Button small variant="ghost" className="co-todo-verb" onClick={onAct}>
-        <Sparkles aria-hidden="true" />
-        {verb}
-      </Button>
-    </PanelRow>
-  );
 }
 
 function firstName(fullName: string): string {
@@ -469,26 +339,22 @@ function TodayWithheld({ view }: Readonly<{ view: Organization360 }>) {
   const hidden = TODAY_SOURCES.filter((source) =>
     omitted(view, source.section),
   );
-  if (hidden.length === 0) {
-    return null;
-  }
-  // "Hidden from you", never "None". A brief assembled from some of its
-  // sources is not the same brief, and the reader is the only one who can
-  // judge whether the missing one mattered.
-  return (
-    <p className="today-withheld">
-      {t("today.withheld", {
-        sections: hidden.map((source) => t(source.label)).join(", "),
-      })}
-    </p>
-  );
+  return <WithheldNotice sections={hidden.map((source) => t(source.label))} />;
 }
 
 // Whose move it is, and how long it has been. Lifted from the state strip's
 // own engagement tile rather than re-derived: the strip no longer draws it
 // (it is a DATED reading, not the account's standing state), and the brief
 // reads the same `state_strip.engagement` field the strip used to.
-function whoseMove({ view, t, locale }: TodayContext): TodayLead | null {
+function whoseMove({
+  view,
+  t,
+  locale,
+}: Readonly<{
+  view: Organization360;
+  t: ReturnType<typeof useT>;
+  locale: Locale;
+}>): TodayLead | null {
   const engagement = view.state_strip?.engagement;
   if (!engagement) {
     return null;
@@ -512,7 +378,7 @@ function whoseMove({ view, t, locale }: TodayContext): TodayLead | null {
 function silenceNote(
   view: Organization360,
   locale: Locale,
-  t: TodayContext["t"],
+  t: ReturnType<typeof useT>,
 ): string | undefined {
   const engagement = view.state_strip?.engagement;
   const sent = engagement?.last_outbound_at;
@@ -541,24 +407,6 @@ function byStrengthThenId(
   return delta !== 0 ? delta : stable(a.person_id, b.person_id);
 }
 
-// The deal actually in play used to be a context tile here. It moved to the
-// Commercial panel (organizations.tsx, CommercialPanel) with the open deals
-// tile — that panel already lists every open deal with its stage and amount,
-// so a "largest deal" reading beside it was the weaker of the two renderings
-// this file's own rule forbids.
-
-type TodayContext = {
-  view: Organization360;
-  t: ReturnType<typeof useT>;
-  // Dates are formatted at the presentation edge, so a builder is handed the
-  // formatter rather than choosing one: `when` is the only place this page
-  // decides how a date looks. The locale beside it is for FIGURES only — a
-  // count reaches the catalog already written the reader's way, and there is
-  // no format left for a builder to pick.
-  when: (at: string) => string;
-  locale: Locale;
-};
-
 type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
@@ -571,10 +419,12 @@ type Organization360Contact = NonNullable<
 // extractor read out of a conversation. Two screens answering "what do we owe
 // them?" differently is what this closes.
 //
-// Its own panel rather than a row inside the reading below, for the reason the
+// Its own card rather than a row inside the reading below, for the reason the
 // reading and the moves are already two panels: a thing to do today and the
 // context for it are different to a reader who is scanning, and sharing a box
-// makes them read as one continuous section.
+// makes them read as one continuous section. The card is the kit's `CallCard`,
+// the same one the contact page draws the moment on, so the two pages cannot
+// drift apart in shape.
 function AccountMoment({
   moment,
   name,
@@ -590,42 +440,37 @@ function AccountMoment({
   // named somewhere to go. A card whose verb lands nowhere is worse than a
   // card with no verb: the reader clicks, nothing happens, and they stop
   // trusting the ones that work.
-  const canOpen =
+  const target =
     moment.recommended_action.state === "available" &&
-    destination?.entity_type !== undefined &&
-    destination.entity_id !== undefined;
+    destination?.entity_type != null &&
+    destination.entity_id != null
+      ? { type: destination.entity_type, id: destination.entity_id }
+      : undefined;
   return (
-    <Panel
-      tone="ai"
-      className="co-lead"
-      title={<BriefTitle name={name} />}
+    <CallCard
+      name={name}
+      standing={{
+        label: t(MOMENT_RULE_LABEL[moment.rule]),
+        tone: standingTone(moment.rule),
+      }}
+      because={moment.headline}
+      restsOn={moment.evidence.map((item) => ({
+        key: `${item.type}-${item.id ?? item.label}`,
+        quote: item.label,
+        from: t(MOMENT_EVIDENCE_LABEL[item.type]),
+      }))}
       footer={
-        canOpen ? (
+        target && onOpenRecord ? (
           <Button
             variant="ghost"
-            onClick={() =>
-              onOpenRecord?.(
-                destination.entity_type as string,
-                destination.entity_id as string,
-              )
-            }
+            onClick={() => onOpenRecord(target.type, target.id)}
           >
             {moment.recommended_action.label}
           </Button>
         ) : undefined
       }
     >
-      <VerdictHead
-        label={t(MOMENT_RULE_LABEL[moment.rule])}
-        tone={standingTone(moment.rule)}
-        because={moment.headline}
-        restsOn={moment.evidence.map((item) => ({
-          key: `${item.type}-${item.id ?? item.label}`,
-          quote: item.label,
-          from: t(MOMENT_EVIDENCE_LABEL[item.type]),
-        }))}
-      />
       <PanelBody>{moment.why_now}</PanelBody>
-    </Panel>
+    </CallCard>
   );
 }

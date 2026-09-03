@@ -68,6 +68,10 @@ var ErrCounterpartySuppressed = errors.New("people: counterparty address is on t
 
 // EnsureCounterpartyInput is one captured message's counterparty.
 type EnsureCounterpartyInput struct {
+	// Replied says this counterparty wrote to US, rather than merely having
+	// been written to. It decides which acquisition the created record
+	// carries, and the two are different facts about the person.
+	Replied     bool
 	Email       string // required; lowercased here
 	DisplayName string // header display name — untrusted text
 	Domain      string // lowercased mail domain
@@ -241,6 +245,12 @@ func (s *Store) ensurePerson(ctx context.Context, tx pgx.Tx, in EnsureCounterpar
 		Emails:      []PersonEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
+		// Only a REPLY is the person initiating contact. Capture also mints a
+		// record for somebody we wrote to twice who never answered, and
+		// recording that as subject_initiated would put the vocabulary's
+		// strongest claim on a cold prospect's file — the exact confusion this
+		// table exists to prevent, manufactured by the table itself.
+		Acquisition: Acquisition{Kind: acquiredFromCapture(in.Replied)},
 	})
 	if err != nil {
 		return err
@@ -465,4 +475,18 @@ func quarantineSuspect(displayName, domain string) bool {
 	}
 	embedded = strings.Trim(embedded, ".")
 	return embedded != "" && embedded != strings.ToLower(domain)
+}
+
+// acquiredFromCapture names what capture actually observed.
+//
+// A reply is the person writing to us, which is the strongest acquisition in
+// the vocabulary and the one a lawful reply is later argued from. Two outbound
+// threads with no answer is US writing to THEM: worth a record, and not
+// something the person did. Unknown rather than a weaker positive kind, because
+// capture cannot see how the address was obtained in the first place.
+func acquiredFromCapture(replied bool) string {
+	if replied {
+		return AcquiredSubjectInitiated
+	}
+	return AcquiredUnknownLegacy
 }

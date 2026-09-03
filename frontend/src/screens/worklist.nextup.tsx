@@ -30,7 +30,8 @@
 
 import { Panel } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
-import { itemTitle, rowHref } from "./worklist.copy";
+import { rowHref } from "./worklist.copy";
+import { nextUpLine } from "./worklist.emailtitle";
 import { worthActingOn } from "./worklist.focus";
 import type { WorklistItem } from "./worklist.queries";
 import "./worklist.css";
@@ -93,12 +94,17 @@ export function NextUp({
               key={`${item.source}-${item.id}`}
               className="worklist-nextup-row"
             >
+              {/* The SUBJECT for a waiting email, not the canonical row: this
+                  is a compact one-line list of what comes after the current
+                  focus, and a four-line row per entry would defeat the reason
+                  it is a list. The row itself is on the queue and on the focus
+                  card, both of which have the room for it. */}
               {href ? (
                 <a className="entity-link" href={href}>
-                  {itemTitle(item, t, locale)}
+                  {nextUpLine(item, t, locale)}
                 </a>
               ) : (
-                itemTitle(item, t, locale)
+                nextUpLine(item, t, locale)
               )}
             </li>
           );

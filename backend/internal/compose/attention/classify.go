@@ -113,13 +113,23 @@ func base(
 		Title:       item.Title,
 		Detail:      item.Detail,
 		CauseRef:    item.CauseRef,
-		Subject:     item.Subject,
-		Deal:        dealFactsOf(item),
-		DueAt:       item.DueAt,
-		Overdue:     item.Overdue,
-		OccurredAt:  item.OccurredAt,
-		Actions:     carriedActions(item.Actions),
-		Because:     []crmcontracts.WorklistReason{},
+		// The identity AND the words for it. The identity groups the row; the
+		// label is what the group says. Forwarding only the first is how the
+		// client came to interpolate an identity into a sentence.
+		CauseLabel: item.CauseLabel,
+		Subject:    item.Subject,
+		Deal:       dealFactsOf(item),
+		// Forwarded, never re-derived here. The lane already applied the
+		// both-sides-visible rule and set `merge` only where it held, so
+		// carrying the payload keeps the verb and the records it acts on
+		// travelling together: a row offering merge with no pair beneath it
+		// would be a button over records the client cannot name.
+		Pair:       item.Pair,
+		DueAt:      item.DueAt,
+		Overdue:    item.Overdue,
+		OccurredAt: item.OccurredAt,
+		Actions:    carriedActions(item.Actions),
+		Because:    []crmcontracts.WorklistReason{},
 	}
 }
 
@@ -237,10 +247,7 @@ const waitingDaysCeiling = 30
 // an empty composer would be worse than no button.
 func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	subject := waiting.Subject
-	days := int(asOf.Sub(waiting.Since).Hours() / 24)
-	if days < 0 {
-		days = 0
-	}
+	days := daysSince(waiting.Since, asOf)
 	// Stale and unfunded: the row belongs to review, not to today.
 	level := levelWaiting
 	stale := days > waitingStaleDays && !waiting.HasOpenDeal
@@ -269,6 +276,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if subject != "" {
 		row.Title = &subject
 	}
+	// Present exactly when this wait is an email the reader may read. A client
+	// branches on the field rather than on the kind word: the lane also carries
+	// channel messages, and each keeps the plain title it had.
+	row.EmailSummary = waiting.EmailSummary
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
 	switch {
@@ -288,9 +299,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// already carry. The product knew the buyer had written and knew nobody had
 	// answered; naming the step is the difference between a page that reports
 	// and a page a rep can work from.
+	answers := openapi_types.UUID(waiting.ActivityID)
 	row.Move = &crmcontracts.WorklistMove{
-		Action:     "draft_reply",
-		ActivityId: openapi_types.UUID(waiting.ActivityID),
+		Action:     crmcontracts.WorklistMoveActionDraftReply,
+		ActivityId: &answers,
 	}
 	// Both ages travel: the true one for everything a reader is shown, the
 	// bounded one for the order. A rep reading "waiting 180 days" is being told
@@ -358,16 +370,6 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 		kept = append(kept, row)
 	}
 	return kept
-}
-
-// classifyBriefItem: what the overnight run put at the top of the day. It is a
-// suggestion about where to start rather than something waiting on the reader,
-// so it sits with agreed work — but it belongs ON the queue, because a lane the
-// ranking never sees is a lane the reader was told to read separately, which is
-// the arrangement this endpoint exists to end.
-func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
@@ -473,19 +475,18 @@ func occurredOf(item crmcontracts.AttentionItem, asOf time.Time) time.Time {
 	return asOf
 }
 
-// quietDaysOf reads the idle count the risk and decay cards carry as their
-// detail. A detail that is not a number is a different kind of supporting line,
-// and reading it as zero is the honest answer rather than a guess.
+// quietDaysOf reads the idle count the risk and decay lanes measure.
+//
+// From the TYPED field, not parsed out of the supporting sentence. It used to
+// read `detail` a digit at a time and answer zero for anything else, which made
+// the ordering depend on a display string: a lane that made its sentence
+// friendlier — "quiet for 90 days" instead of "90" — would have dropped every
+// such row to the bottom of the queue, and nothing would have failed.
+//
+// A lane that measures no idle time sends none, and zero is what that means.
 func quietDaysOf(item crmcontracts.AttentionItem) int {
-	if item.Detail == nil {
+	if item.QuietDays == nil {
 		return 0
 	}
-	days := 0
-	for _, r := range *item.Detail {
-		if r < '0' || r > '9' {
-			return 0
-		}
-		days = days*10 + int(r-'0')
-	}
-	return days
+	return *item.QuietDays
 }

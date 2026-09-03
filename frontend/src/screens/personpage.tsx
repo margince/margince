@@ -20,8 +20,10 @@ import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { ContactLink } from "../design-system/contactlink";
 import { IconAction } from "../design-system/iconaction";
 import { OffsiteLink } from "../design-system/offsitelink";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
 import { linkedinUrl } from "../format/weburl";
@@ -30,11 +32,12 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem, useMe, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
+import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { PersonMeetingBrief } from "./meetingbrief";
+import { useOpenEmail } from "./openemail";
 import {
   hasCommercial,
-  hasCommitments,
   hasMatters,
   PersonBriefCard,
   PersonCommercialCard,
@@ -48,8 +51,8 @@ import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
 import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
 import { PersonRail } from "./personrail";
+import { PersonReadings } from "./personreadings";
 import { PersonResearchTab } from "./personresearch";
-import { PersonStrip } from "./personstrip";
 import { PERSON_TABS, type PersonTab, personTabRoute } from "./persontab";
 import {
   PersonDealsTab,
@@ -59,8 +62,10 @@ import {
 import { PersonToday } from "./persontoday";
 import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
-import { RecordEmailAside } from "./recordemail";
+import { RecordReading, RecordReadingPair } from "./record360";
+import { EmailVerb, RecordEmailAside } from "./recordemail";
 import "./person360.css";
+import { buyingRoleLabel } from "./companypeople/summary";
 
 // The person record page V2 (ADR-0096, concept person-record-page-v2).
 //
@@ -149,6 +154,7 @@ function ProfileLink({ href }: Readonly<{ href: string }>) {
  * owns one for the same reason — its ACTIVITIES half is the 360's own section.
  */
 function PersonTabPanel({
+  onOpenEmail,
   tab,
   personId,
   view,
@@ -158,11 +164,14 @@ function PersonTabPanel({
   personId: string;
   view: Person360;
   onBriefMeeting: (activityId: string) => void;
+  /** Opens one message in the record's drawer, which the page owns. */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   switch (tab) {
     case "timeline":
       return (
         <PersonTimelineTab
+          onOpenEmail={onOpenEmail}
           personId={personId}
           view={view}
           onBriefMeeting={onBriefMeeting}
@@ -252,6 +261,10 @@ export function PersonPageV2({
   id,
   tab,
 }: Readonly<{ id: string; tab: PersonTab }>) {
+  // Which message the drawer is showing. One drawer over the record, owned by
+  // the page: the timeline and the rail both open into it, so a citation in
+  // the aside and a row in the body lead to the same place.
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
   const recordZone = useRecordZone();
   const view = useQuery({
@@ -345,19 +358,6 @@ export function PersonPageV2({
   const emailAllowed = (guard.data?.entries ?? []).some(
     (entry) => entry.channel === "email" && entry.verdict === "allowed",
   );
-  // The strip's consent slot asks a narrower, louder question than the hero
-  // button above: not "may I write at all" but "what did the guard decide
-  // about email", and a refusal is the one verdict that must read as loud as
-  // a grant. Blocked only when every email entry says so; undefined when
-  // there is no email entry to judge, which is not the same as a refusal.
-  const emailEntries = (guard.data?.entries ?? []).filter(
-    (entry) => entry.channel === "email",
-  );
-  const consentVerdict = emailAllowed
-    ? "allowed"
-    : emailEntries.length > 0
-      ? "blocked"
-      : undefined;
 
   // The action loop. Every surface the contract can name routes to
   // `runPersonMomentAction`, a standalone function rather than a closure here
@@ -435,6 +435,7 @@ export function PersonPageV2({
             guard={guard.data}
             firstName={firstName}
             onExplain={() => navigate({ screen: "contacts", id })}
+            onOpenEmail={setOpenEmail}
           />
           <PersonEmailPanel
             personId={id}
@@ -450,29 +451,46 @@ export function PersonPageV2({
                 deals and the Documents tab a filing cabinet, and a row of
                 relationship readings over either is a header for a page it is
                 not describing. */}
-            <PersonStrip view={view.data} consentVerdict={consentVerdict} />
-            {view.data.moment && (
+            <PersonReadings
+              view={view.data}
+              onOpenTab={(next) => navigate(personTabRoute(id, next))}
+            />
+            {/* ONE READING, IN PARTS — the shape every record page reads in:
+                the call with the thread it was read from, the day's work, and
+                under them the two sections a reader consults rather than
+                reads. What was said lately and what is owed are the pair,
+                because the moment above is argued from exactly those two. */}
+            <RecordReading>
               <PersonToday
                 moment={view.data.moment}
-                firstName={firstName}
+                name={person.full_name}
+                view={view.data}
                 onAction={runAction}
+                onOpenTasks={() => navigate({ screen: "worklist" })}
               />
-            )}
+              <RecordReadingPair>
+                <PersonMemory view={view.data} />
+                <PersonCommitmentsCard view={view.data} firstName={firstName} />
+              </RecordReadingPair>
+            </RecordReading>
+            {/* The contact in prose, under the reading of it: the moment
+                answers what to DO, this answers who they ARE to us, in
+                sentences with their sources under them. */}
             <PersonBriefCard
               brief={brief.data}
               loading={brief.isLoading}
               view={view.data}
             />
-            {hasCommercial(view.data) && (
-              <PersonCommercialCard view={view.data} />
+            {(hasCommercial(view.data) || hasMatters(view.data)) && (
+              <RecordReadingPair>
+                {hasCommercial(view.data) && (
+                  <PersonCommercialCard view={view.data} />
+                )}
+                {hasMatters(view.data) && (
+                  <PersonMattersCard view={view.data} firstName={firstName} />
+                )}
+              </RecordReadingPair>
             )}
-            {hasCommitments(view.data) && (
-              <PersonCommitmentsCard view={view.data} firstName={firstName} />
-            )}
-            {hasMatters(view.data) && (
-              <PersonMattersCard view={view.data} firstName={firstName} />
-            )}
-            <PersonMemory view={view.data} />
             {/* What this person has agreed to, and the one way to ask them
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
@@ -488,6 +506,7 @@ export function PersonPageV2({
           personId={id}
           view={view.data}
           onBriefMeeting={openBrief}
+          onOpenEmail={setOpenEmail}
         />
         <PersonComposer
           personId={id}
@@ -496,6 +515,14 @@ export function PersonPageV2({
           open={composer.open}
           intent={composer.intent}
           onClose={composer.close}
+        />
+        {/* One drawer over the record. The timeline's rows and the rail's
+            citations both open into it, so a reader who finds a message in the
+            aside and one who finds it in the body land in the same place. */}
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={recordZone}
+          onClose={() => setOpenEmail(null)}
         />
         <PersonMailDrawer
           personId={id}
@@ -656,6 +683,9 @@ function PersonIdentityLine({
   view,
 }: Readonly<{ view: Person360 }>): ReactNode {
   const t = useT();
+  // The owner off the roster's first page, as the deal's facts read theirs.
+  const roster = useRoster("user", Boolean(view.person.owner_id));
+  const rosterPartial = useRosterPartial("user", Boolean(view.person.owner_id));
   const person = view.person;
   const email = person.emails?.[0]?.email;
   const phone = person.phones?.[0]?.phone;
@@ -663,17 +693,32 @@ function PersonIdentityLine({
   return (
     <div className="pe-identity-meta">
       <div className="pe-meta-line">
+        {/* The address and the number are LINKS: a reader who sees an address
+            expects to click it, and a header that showed one and did nothing
+            taught them the record was a printout. The link hands the value to
+            their own client; the Write verb above stays the way to write on
+            the product's behalf, behind its consent gate. */}
         {email && (
-          <span className="pe-meta-fact">
+          <ContactLink
+            kind="email"
+            value={email}
+            className="pe-meta-link"
+            textClassName="pe-meta-fact"
+          >
             <Mail size={13} aria-hidden="true" />
             {email}
-          </span>
+          </ContactLink>
         )}
         {phone && (
-          <span className="pe-meta-fact">
+          <ContactLink
+            kind="phone"
+            value={phone}
+            className="pe-meta-link"
+            textClassName="pe-meta-fact"
+          >
             <Phone size={13} aria-hidden="true" />
             {phone}
-          </span>
+          </ContactLink>
         )}
         {person.address?.city && (
           <span className="pe-meta-fact">
@@ -702,14 +747,18 @@ function PersonIdentityLine({
             buying role and the line simply omits it. */}
         {role && (
           <span className="pe-meta-fact pe-meta-quiet">
-            {t("person.page.buyingRole")}: {role.replace(/_/g, " ")}
+            {t("person.page.buyingRole")}: {buyingRoleLabel(role, t)}
           </span>
         )}
         <span className="pe-meta-fact pe-meta-quiet">
           {t("person.page.owner")}:{" "}
-          {view.person.owner_id
-            ? t("person.page.ownerAssigned")
-            : t("person.page.ownerUnassigned")}
+          {rosterOwnerName(
+            view.person.owner_id,
+            roster,
+            rosterPartial,
+            t,
+            t("person.page.ownerUnassigned"),
+          )}
         </span>
       </div>
     </div>
@@ -821,8 +870,9 @@ function PersonActivityDrawer({
   );
 }
 
-// The primary actions, in the concept's order (§5.2). Writing leads and is the
-// only green one: a page with two primary actions has none.
+// The header's verbs, in the order every record page carries them: writing
+// first, then the record's other doors. None of them is filled — the move
+// worth doing is the one the call names, and that one carries the colour.
 function PersonActions({
   view,
   consentAllows,
@@ -881,18 +931,16 @@ function PersonActions({
   const mailOnly = transports.length === 1 && transports[0].id === "email";
   return (
     <>
-      {/* The lead verb, and the only green one: a page with two primary
-          actions has none. It says which transport it will open when there is
-          exactly one, stays neutral when the composer will ask, and explains
+      {/* The shared Email verb, wearing the transport it will open when there
+          is exactly one, neutral when the composer will ask, and explaining
           itself rather than merely dimming when it may not be pressed. */}
-      <Button
-        variant="primary"
+      <EmailVerb
+        label={write.label}
+        icon={<WriteIcon size={15} aria-hidden="true" />}
         disabled={!consentKnown}
         reason={refusal}
         onClick={mailOnly ? onWriteMail : onWrite}
-      >
-        <WriteIcon size={15} aria-hidden="true" /> {write.label}
-      </Button>
+      />
       {/* Square, because a phone and a calendar are verbs a reader already
           knows from the glyph — and five labelled buttons in a row is a header
           that reads as a toolbar, with the one action the page is FOR no more
@@ -921,6 +969,17 @@ function PersonActions({
               {t("record.logActivityRefused")}
             </p>
           )}
+          {/* A CRM a rep cannot write a meeting into is a CRM that only
+              reads. This is the standing way in; the moment card offers the
+              same form when its rung decides logging is the thing to do
+              next. */}
+          <Button
+            disabled={logPending}
+            reasonId={logRefused}
+            onClick={onLogActivity}
+          >
+            <FileText size={15} aria-hidden="true" /> {t("log.title")}
+          </Button>
           {/* Keeps its words. A tick box is the glyph for COMPLETING a task,
               so squaring this one would name the opposite of what it does.
               Files the task against THIS record — the same form Log activity
@@ -933,17 +992,6 @@ function PersonActions({
           >
             <CheckSquare size={15} aria-hidden="true" />{" "}
             {t("person.action.addTask")}
-          </Button>
-          {/* A CRM a rep cannot write a meeting into is a CRM that only
-              reads. This is the standing way in; the moment card offers the
-              same form when its rung decides logging is the thing to do
-              next. */}
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={onLogActivity}
-          >
-            <FileText size={15} aria-hidden="true" /> {t("log.title")}
           </Button>
         </>
       )}

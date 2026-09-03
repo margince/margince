@@ -8,6 +8,7 @@ import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { EmailDetail } from "../design-system/emaildetail";
 import {
   useRecordTimeline,
   useTimelineFilters,
@@ -15,6 +16,7 @@ import {
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
+import { formatDateTime } from "../format/format";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -28,7 +30,6 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { TimelineActions } from "./compose";
 import { ConsentSection } from "./consent";
 import { RecordContextPanel } from "./context";
 import { CreateAction, type CreateField, type FormRows } from "./create";
@@ -47,6 +48,7 @@ import {
   listFetchLimit,
   useListQuery,
   useOwnerChips,
+  useTagChips,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import { MergeAction } from "./merge";
@@ -69,11 +71,14 @@ import {
   mineEmptyNote,
   ownerColumn,
   standardViews,
+  tagsColumn,
 } from "./recordlist";
 import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { listQueryParams } from "./tagfilter";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import { VCardImport } from "./vcard-import";
 
@@ -100,7 +105,7 @@ async function fetchPeoplePage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -395,6 +400,7 @@ export function ContactsScreen() {
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
+  const tagChips = useTagChips();
   const savedViews = useSavedViewTabs("people");
   const cf = useObjectCustomFields("person");
   // The form that never closes gives no other feedback: without this, six
@@ -476,6 +482,7 @@ export function ContactsScreen() {
               </span>
             ),
           },
+          tagsColumn<Person>(t),
           ownerColumn<Person>(t),
           lastActivityColumn<Person>(t, locale, recordZone),
           createdColumn<Person>(t, locale, recordZone),
@@ -483,7 +490,7 @@ export function ContactsScreen() {
         tools={<SaveViewAction resource="people" query={state.query} />}
         rowKey={(person) => person.id}
         rowRoute={(person) => ({ screen: "contacts", id: person.id })}
-        dataChips={ownerChips}
+        dataChips={[...ownerChips, ...tagChips]}
         dataViews={savedViews}
         views={[
           ...standardViews(viewerId),
@@ -738,6 +745,11 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const view = view360.data?.person ? view360.data : undefined;
   const overlay = useSorMode() === "overlay";
   const viewerId = useViewerId();
+  // Which message the drawer is showing. The page owns it rather than the row,
+  // because one drawer over the record is the point: a drawer per row would be
+  // a dialog stack, and the record behind it is what the reader is working on.
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const { locale } = useLocale();
   const timelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,
@@ -749,6 +761,10 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
         personId={id}
       />
     ),
+  ).map((entry) =>
+    entry.emailSummary
+      ? { ...entry, onOpenEmail: () => setOpenEmail(entry.id) }
+      : entry,
   );
 
   return (
@@ -819,6 +835,15 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
           </RecordView>
         )}
       </QueryGate>
+      {/* One drawer over the record, not one per row: the account stays behind
+          it because that is what the reader is working on. */}
+      {openEmail && (
+        <EmailDetail
+          activityId={openEmail}
+          onClose={() => setOpenEmail(null)}
+          formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
+        />
+      )}
     </div>
   );
 }

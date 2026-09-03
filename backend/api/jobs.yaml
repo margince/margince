@@ -745,9 +745,11 @@ kinds:
     timeout:
       value: 5m
       reason: >-
-        Parsing a handful of small text files and writing at most five people.
-        No model call and no network read is in it, so anything past this is a
-        stuck database handle rather than a large card.
+        Fetching a handful of small attachments from blob storage and writing
+        at most five people. No model call is in it, and the one dependency
+        read is scoped to this message's own attachments, so anything past
+        this is a stuck database handle or an unreachable store rather than
+        a large card.
     opts_owner: caller
     cadence: on_demand
     args:

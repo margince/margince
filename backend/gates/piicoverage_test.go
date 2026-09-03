@@ -294,6 +294,33 @@ var piiTables = map[string]piiHandling{
 	// an admin must not carry into an export file — the subject already holds
 	// their own copy, in the mail that delivered it. Declared so a future SAR
 	// section over this table fails the gate instead of shipping.
+	// Why each outbound message to this person was permitted, per recipient
+	// and per phase. It holds their address and the ids of the records the
+	// decision rested on, so erasure must reach it: the person row survives
+	// anonymize-in-place and the schema's cascade fires off the DELIVERY, not
+	// off the subject.
+	//
+	// sarREAD, and not a close call. Art. 15(1)(a)-(c) asks the controller to
+	// say what it did with somebody's data and why; this table IS that answer
+	// for every message sent to them. Withholding it would mean holding the
+	// clearest record of the processing and declining to disclose it.
+	// Why a contact exists: what the person did, or what was done to obtain
+	// them. Subject data, and the part of their file that answers "why do you
+	// have me at all" — which is Art. 15(1)(g), the source. Erased with them,
+	// and disclosed, because a subject told their consent state and not how
+	// they were acquired has been answered halfway.
+	"person_acquisition_evidence": {erasureWrite: true, sarRead: true},
+	"communication_decision":      {erasureWrite: true, sarRead: true},
+	// The non-consent basis a message stood on — the thing that happened, its
+	// scope and its window. Same reasoning: erased with the subject, and
+	// disclosed, because "we wrote to you because you wrote to us on 2 May" is
+	// exactly what a subject access request is asking for.
+	"communication_basis": {erasureWrite: true, sarRead: true},
+	// Objections, restrictions and dead addresses. Disclosed for the same
+	// reason: a person asking what is held about them is owed the record that
+	// they said stop, and when.
+	"communication_suppression": {erasureWrite: true, sarRead: true},
+
 	"preference_token": {erasureWrite: true, sarForbidden: true},
 
 	// The confirm-details link: a live bearer credential that opens the

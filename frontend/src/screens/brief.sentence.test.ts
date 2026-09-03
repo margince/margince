@@ -3,7 +3,14 @@ import { de } from "../i18n/de";
 import type { MessageKey } from "../i18n/en";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
-import { briefSentence, leadOf, waitingRows } from "./brief.sentence";
+import {
+  briefSentence,
+  leadOf,
+  leadRows,
+  ledAlready,
+  waitingRows,
+} from "./brief.sentence";
+import { overnightRow } from "./home.fixtures";
 import { itemTitle } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
@@ -143,5 +150,49 @@ describe("the opening sentence", () => {
   it("names no remainder when the lead is the only row", () => {
     const sentence = briefSentence(day([item()]), t, "en");
     expect(sentence?.key).toMatch(/^brief\.sentence\.one/);
+  });
+});
+
+// Which overnight suggestions the section BELOW must leave out.
+//
+// The Brief reads one brief run through two endpoints, so a suggestion that
+// ranks into the lead is on the page twice unless the lower section skips it —
+// once as a worklist row with its own controls, once as a card with its own.
+// That is the same duplication the decisions deck exclusion exists to stop, one
+// section further down.
+describe("what already leads the page", () => {
+  it("names the overnight rows Do next drew", () => {
+    const today = day([
+      overnightRow("bi-1", "d-1"),
+      overnightRow("bi-2", "d-2"),
+    ]);
+
+    expect([...ledAlready(today)]).toEqual(["bi-1", "bi-2"]);
+  });
+
+  // The lead is a prefix of ONE order, so a suggestion ranked below it is not
+  // on the page yet and the section below is the only place it appears.
+  it("leaves out an overnight row that ranked past the lead", () => {
+    const today = day([
+      item({ id: "w1" }),
+      item({ id: "w2" }),
+      item({ id: "w3" }),
+      overnightRow("bi-9", "d-9"),
+    ]);
+
+    expect(ledAlready(today).has("bi-9")).toBe(false);
+    expect(leadRows(today).map((row) => row.id)).toEqual(["w1", "w2", "w3"]);
+  });
+
+  // Only overnight rows can collide: a waiting customer has no card below to be
+  // drawn as, so naming it here would hide nothing and cost the reader a row.
+  it("names nothing for a lead made of ordinary waiting work", () => {
+    const today = day([item({ id: "w1" }), item({ id: "w2" })]);
+
+    expect(ledAlready(today).size).toBe(0);
+  });
+
+  it("names nothing when the day could not be read", () => {
+    expect(ledAlready(undefined).size).toBe(0);
   });
 });

@@ -36,6 +36,17 @@ const (
 	VerdictHeldByOwner   = "held_by_owner"
 )
 
+// ThreadKindPersonal is the confidentiality verdict for a thread that is the
+// mailbox owner's own life rather than the workspace's business — family,
+// friends, a doctor, a landlord.
+//
+// The vocabulary is the classifier's and lives in compose; this names the one
+// value capture itself has to act on, because a module may not import a sibling
+// and the column belongs to this module. Every other kind — legal, personnel,
+// an explicit confidentiality marking — is business the workspace conducts
+// privately, whose parties are genuine contacts.
+const ThreadKindPersonal = "personal"
+
 // inheritedVerdictTx answers the verdict status this message takes from its
 // thread, or "" when it takes none and the posture decides.
 //

@@ -98,10 +98,10 @@ func describeReportDefaults(spec reportSpec) string {
 // strictDecodeReportPlan decodes the tool's plan arguments, refusing a key the
 // engine does not serve rather than dropping it.
 //
-// Separate from the REST body decode on purpose: that path decodes the contract
-// type, which HAS `as_of_date`, and forwarding an unserved key there is the
-// transport's own question. This is the tool seam, whose caller cannot see a
-// response body it did not think to re-read.
+// Separate from the REST body decode on purpose: that path decodes the generated
+// contract type, which drops an unrecognized key by construction, and what the
+// transport forwards is the transport's own question. This is the tool seam,
+// whose caller cannot see a response body it did not think to re-read.
 func strictDecodeReportPlan(planArgs json.RawMessage, into *reportRequest) error {
 	dec := json.NewDecoder(bytes.NewReader(planArgs))
 	dec.DisallowUnknownFields()
@@ -142,10 +142,9 @@ var servedPlanArguments = map[string]bool{slotFilters: true, slotGroupBy: true, 
 
 // unservedPlanArguments names the plan keys this engine does not serve, sorted.
 //
-// crm.yaml's runReport body declares `as_of_date` and this engine has no field
-// for it, so the caller most likely to hit this is one reading the contract
-// correctly. They are owed the key's name, not a description of three arguments
-// they did not send.
+// A caller who sends a key this engine does not serve is owed that key's name,
+// not a description of the arguments they did not send — which is what a bare
+// shape refusal gives them, and what they can loop on.
 func unservedPlanArguments(planArgs json.RawMessage) []string {
 	var keys map[string]json.RawMessage
 	if err := json.Unmarshal(planArgs, &keys); err != nil {

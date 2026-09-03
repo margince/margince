@@ -57,6 +57,31 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// A decision's own vocabulary: what kind of message it was, what the engine
+	// and the old gate each answered, and which rollout mode was in force. Every
+	// value is drawn from a closed set this repository defines — none of it is
+	// anything the subject wrote or anything written about them, so the Art. 17
+	// redaction leaves it standing. What it DOES clear on this table is the
+	// recipient address and the subject link, which is the identifying half.
+	"communication_decision": {
+		"basis",
+		"legacy_verdict",
+		"mode",
+		"phase",
+		"reason_code",
+		"requested_category",
+		"resolved_category",
+		"suppression",
+		"verdict",
+		"actor",
+		// evidence holds RECORD IDS and nothing else — the activity, deal,
+		// invoice or consent-event a decision rested on. The records themselves
+		// are erased on their own terms by the statements that own them; a uuid
+		// pointing at a row that has been scrubbed reveals nothing, and clearing
+		// it here would destroy the controller's ability to say which evidence
+		// it relied on for a send it has already made.
+		"evidence",
+	},
 	"activity": {
 		"audience",
 		"audience_reason",
@@ -67,6 +92,10 @@ var erasureColumnBaseline = map[string][]string{
 		"kind",
 		"language",
 		"meeting_status",
+		// Who caused the row to exist — human, agent, or the product's own
+		// remediation work. A closed enum about the WRITER, never about the
+		// subject, so erasure has nothing to clear here.
+		"origin",
 		"source",
 		"source_system",
 	},
@@ -81,6 +110,15 @@ var erasureColumnBaseline = map[string][]string{
 		"target_entity_type",
 	},
 	"comms_outbound": {
+		// The controller lane's vocabulary: which kind of sender, and which
+		// registered wording. Both are this repository's own words rather than
+		// anything a subject wrote or anything written about them, so the
+		// Art. 17 scrub leaves them standing.
+		//
+		// payload_ref is deliberately NOT here: erasure_payloads.go clears it,
+		// after destroying the vault material the reference names.
+		"sender_kind",
+		"template_key",
 		"bounce_kind",
 		"bounce_reason",
 		"consent_purpose",

@@ -133,6 +133,8 @@ export type RecordTimeline = Readonly<{
   isPending: boolean;
   isSuccess: boolean;
   isError: boolean;
+  /** Asks for the thread again after a failed read. */
+  refetch: () => unknown;
 }>;
 
 /**
@@ -236,5 +238,6 @@ export function useRecordTimeline(
     isPending: seed ? false : query.isPending,
     isSuccess: seed ? true : query.isSuccess,
     isError: query.isError,
+    refetch: () => query.refetch(),
   };
 }

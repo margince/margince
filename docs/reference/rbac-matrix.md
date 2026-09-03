@@ -74,10 +74,12 @@ changes none.
 | `computed_field` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `custom_field` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `data_coverage` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `deal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `finance` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `forecast` | CR-- | CR-- | CR-- | -R-- | -R-- | CR-- |
 | `fx_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
 | `import_run` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `installation_settings` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |

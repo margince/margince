@@ -3,7 +3,8 @@
 
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { formatNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import {
   type Locale,
   type Translator,
@@ -11,6 +12,7 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { isUnprepared } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The day's readings, on one plate.
@@ -34,18 +36,14 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // invite the reading where the others are exact.
 
 const MEETINGS = "meetings";
-
-// The reason a meeting row carries when nothing has been prepared for it. The
-// SERVER decides readiness; the strip counts what the queue already says and
-// never re-derives it from a meeting's own fields, so the badge on a row and the
-// figure in this slot cannot disagree.
-const UNPREPARED = "meeting_unprepared";
+const LEADS = "leads";
 
 export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
   const readings = day.readings;
   const meetings = meetingsReading(day);
+  const soonest = soonestLeadDeadline(day);
   return (
     <section className="home-readings" aria-label={t("home.readings.label")}>
       <StatStrip
@@ -74,12 +72,11 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           label={t("home.readings.promises")}
           detail={t("home.readings.promisesBasis")}
         />
-        <StatCard
-          numeric
-          label={t("home.readings.leads")}
-          value={formatNumber(readings.prospecting, locale)}
-          tone={readings.prospecting > 0 ? "warn" : undefined}
-          detail={t("home.readings.leadsBasis")}
+        <LeadsStat
+          leads={readings.prospecting}
+          soonest={soonest}
+          locale={locale}
+          t={t}
         />
         <Untracked
           label={t("home.readings.quota")}
@@ -143,6 +140,92 @@ function meetingsDetail(
     : t("home.readings.prepared");
 }
 
+// How much new business is owed a first answer, and when the nearest one is due.
+//
+// The deadline is the fact that changes what a reader does before lunch, so it
+// takes the same shape readiness takes on the meetings slot beside it: a second
+// fact in the detail line, and NULL rather than a guess where the page cannot
+// honestly compute one.
+function LeadsStat({
+  leads,
+  soonest,
+  locale,
+  t,
+}: Readonly<{
+  leads: number;
+  // Null when no honest nearest deadline exists — either nothing on the page
+  // names one, or the leads read was cut short and an unshown lead could be
+  // sooner than every one the reader can see.
+  soonest: string | null;
+  locale: Locale;
+  t: Translator;
+}>) {
+  return (
+    <StatCard
+      numeric
+      label={t("home.readings.leads")}
+      value={formatNumber(leads, locale)}
+      tone={leads > 0 ? "warn" : undefined}
+      detail={
+        soonest === null
+          ? t("home.readings.leadsBasis")
+          : t("home.readings.leadsDue", {
+              value: formatDateTime(soonest, locale, viewerZone()),
+            })
+      }
+    />
+  );
+}
+
+// The nearest deadline among the lead rows the page is SHOWING, or none.
+//
+// None in two cases that are one rule: the page cannot see the whole lane, or no
+// row on it names a moment. A cut read is the interesting one — an unshown lead
+// could be due sooner than every one the reader can see, so naming the earliest
+// visible deadline would state a "next" that is not next. The slot falls back to
+// its plain basis line, which is what the meetings slot does with readiness for
+// the same reason.
+function soonestLeadDeadline(day: Worklist): string | null {
+  const entry = day.counts.find((count) => count.category === LEADS);
+  if (entry === undefined) {
+    // No lead was read at all: nothing to be nearest, and nothing missing.
+    return null;
+  }
+  if (entry.shown !== entry.considered || entry.more_available) {
+    return null;
+  }
+  let soonest: string | null = null;
+  for (const item of day.queue) {
+    const at = item.category === LEADS ? replyDueAt(item) : undefined;
+    if (at !== undefined && (soonest === null || at < soonest)) {
+      soonest = at;
+    }
+  }
+  return soonest;
+}
+
+// When this row says a reply is due, or nothing.
+//
+// The moment is read off the at-risk reason BY NAME rather than by taking
+// whatever date the row carries. An overdue lead has already missed its moment,
+// so it is not the next one due — and no test here can hold that distinction,
+// because a breached lead's other reason (`waiting_days`) carries a DAYS value,
+// which a filter reading "any date value" would skip anyway. The kind check is
+// what keeps this right when a lead row grows a second date-valued reason, a
+// first-contact date or a routing moment, that would otherwise read as a reply
+// deadline.
+function replyDueAt(item: WorklistItem): string | undefined {
+  for (const because of item.because) {
+    if (
+      because.kind === "response_due_soon" &&
+      because.value?.kind === "date"
+    ) {
+      return because.value.date;
+    }
+  }
+  return undefined;
+}
+
 // The count slots call `StatCard` straight rather than through a shared tile
 // helper. `worklist.readings.tsx` has a `CountStat` of its own, and lifting it
 // was considered: it takes a fixed detail string, while these need a detail that
@@ -193,8 +276,4 @@ function meetingsReading(day: Worklist): {
     meetings: entry.considered,
     unready: whole ? day.queue.filter(isUnprepared).length : null,
   };
-}
-
-function isUnprepared(item: WorklistItem): boolean {
-  return item.because.some((reason) => reason.kind === UNPREPARED);
 }

@@ -263,7 +263,8 @@ func resolvePersonal(t *testing.T, e *integration.Env, from string, activityID, 
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		won, err := store.ResolveAs(e.Admin(), tx, row,
-			capture.PendingStatusNoise, capture.KindPersonal, "test", byOwner)
+			capture.PendingStatusNoise, capture.KindPersonal, "test", byOwner,
+			capture.VerdictMeasurement{})
 		if err != nil {
 			return err
 		}

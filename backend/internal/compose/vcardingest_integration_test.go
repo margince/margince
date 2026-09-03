@@ -120,16 +120,22 @@ func TestAMailedCardQueuesItsImport(t *testing.T) {
 		t.Fatalf("handling the capture event: %v", err)
 	}
 
-	var queued int
+	var queued, maxAttempts int
 	if err := e.Pool.QueryRow(ctx, `
-		SELECT count(*) FROM river_job
+		SELECT count(*), coalesce(max(max_attempts), 0) FROM river_job
 		 WHERE kind = 'vcard_ingest' AND args->>'activity_id' = $1`,
-		activity.String()).Scan(&queued); err != nil {
+		activity.String()).Scan(&queued, &maxAttempts); err != nil {
 		t.Fatalf("counting the queued imports: %v", err)
 	}
 	if queued != 1 {
 		t.Fatalf("the trigger queued %d imports for a message carrying a card, want 1 — "+
 			"a card that reaches the mailbox and no job is the feature doing nothing", queued)
+	}
+	// The bound River actually persisted, not the InsertOpts value this
+	// package hands it — proof the cap survives insertion rather than being
+	// silently dropped for the default.
+	if maxAttempts != vcardIngestMaxAttempts {
+		t.Errorf("river_job.max_attempts = %d, want the declared ladder %d", maxAttempts, vcardIngestMaxAttempts)
 	}
 }
 

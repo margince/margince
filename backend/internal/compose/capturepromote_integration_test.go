@@ -40,14 +40,21 @@ import (
 // the message is known (TestOnlyTheMailMapperMintsTheOutboundAttestation holds
 // that). A test that minted it itself would be claiming an authority the
 // product deliberately gives no caller.
-func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterparty string) {
+// seedAttestedOutbound lands one message the workspace sent, on a named thread.
+//
+// The thread matters: an exchange is a reply to something we wrote, and the two
+// halves are joined by the thread key rather than by the address. A seeded
+// outbound with no thread cannot be answered.
+func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterparty, threadKey string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
-			                      source, captured_by, counterparty_email, counterparty_outbound_attested)
+			                      source, captured_by, thread_key, counterparty_email,
+			                      counterparty_outbound_attested)
 			VALUES ('email', 'Angebot', 'Anbei.', 'outbound', 'gmail', $1,
-			        'gmail:'||$1, 'connector:gmail', $2, true)`, sourceID, counterparty)
+			        'gmail:'||$1, 'connector:gmail', $3, $2, true)`,
+			sourceID, counterparty, threadKey)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the workspace's own mail to %s: %v", counterparty, err)
@@ -59,7 +66,7 @@ func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterpar
 // and can create a person. captureMail in the participant suite deliberately
 // uses a bare sink; this one is here because the ladder is the subject.
 func captureInboundThroughRealSink(
-	t *testing.T, e *integration.Env, owner ids.UUID, sourceID, counterparty string,
+	t *testing.T, e *integration.Env, owner ids.UUID, sourceID, counterparty, threadKey string,
 ) {
 	t.Helper()
 	// Domain is populated the way mailmap populates it — the address's own
@@ -78,7 +85,8 @@ func captureInboundThroughRealSink(
 		Fields: capture.ActivityFields{
 			Kind: "email", Subject: "Angebot", Body: "Anbei.", Direction: connector.DirectionInbound,
 		},
-		Source: "gmail:" + sourceID, CapturedBy: "connector:gmail",
+		ThreadKey: threadKey,
+		Source:    "gmail:" + sourceID, CapturedBy: "connector:gmail",
 	})
 	if err != nil {
 		t.Fatalf("capturing %s: %v", sourceID, err)
@@ -146,9 +154,9 @@ func TestACorrespondedSenderIsJudgedAndBecomesTheWorkspacesContact(t *testing.T)
 	const sender = "timo@partner.example"
 
 	// The workspace writes first: this is the T1 evidence.
-	seedAttestedOutbound(t, e, "promote-out-1", sender)
+	seedAttestedOutbound(t, e, "promote-out-1", sender, "promote-t1")
 	// Then they reply, and the ladder creates the person on sight.
-	captureInboundThroughRealSink(t, e, e.Rep1, "promote-in-1", sender)
+	captureInboundThroughRealSink(t, e, e.Rep1, "promote-in-1", sender, "promote-t1")
 
 	visibility, found := personVisibility(t, e, sender)
 	if !found {
@@ -181,8 +189,8 @@ func TestAnAdvisorVerdictLeavesACorrespondedContactTheOwnersOwn(t *testing.T) {
 	e := integration.Setup(t)
 	const sender = "kanzlei@privat.example"
 
-	seedAttestedOutbound(t, e, "advisor-out-1", sender)
-	captureInboundThroughRealSink(t, e, e.Rep1, "advisor-in-1", sender)
+	seedAttestedOutbound(t, e, "advisor-out-1", sender, "advisor-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "advisor-in-1", sender, "advisor-t1")
 
 	dispositionID, queued := openDisposition(t, e, sender)
 	if !queued {
@@ -205,8 +213,8 @@ func TestASettledSenderIsNotAskedAgain(t *testing.T) {
 	e := integration.Setup(t)
 	const sender = "known@partner.example"
 
-	seedAttestedOutbound(t, e, "settled-out-1", sender)
-	captureInboundThroughRealSink(t, e, e.Rep1, "settled-in-1", sender)
+	seedAttestedOutbound(t, e, "settled-out-1", sender, "settled-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "settled-in-1", sender, "settled-t1")
 
 	dispositionID, queued := openDisposition(t, e, sender)
 	if !queued {
@@ -216,7 +224,7 @@ func TestASettledSenderIsNotAskedAgain(t *testing.T) {
 	runVerdict(t, e, brain)
 
 	// They write again, long after the answer.
-	captureInboundThroughRealSink(t, e, e.Rep1, "settled-in-2", sender)
+	captureInboundThroughRealSink(t, e, e.Rep1, "settled-in-2", sender, "settled-t1")
 
 	if _, reopened := openDisposition(t, e, sender); reopened {
 		t.Error("a later message re-opened a settled sender's verdict — " +
@@ -233,8 +241,8 @@ func TestADomainTheWorkspaceCorrespondsWithIsNeverRefusedACompany(t *testing.T) 
 	e := integration.Setup(t)
 	const sender = "news@supplier.example"
 
-	seedAttestedOutbound(t, e, "supplier-out-1", sender)
-	captureInboundThroughRealSink(t, e, e.Rep1, "supplier-in-1", sender)
+	seedAttestedOutbound(t, e, "supplier-out-1", sender, "supplier-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "supplier-in-1", sender, "supplier-t1")
 
 	dispositionID, queued := openDisposition(t, e, sender)
 	if !queued {
@@ -268,12 +276,12 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 	// questions, so the create below finds no room to ask.
 	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
 		other := fmt.Sprintf("filler%d@partner.example", i)
-		seedAttestedOutbound(t, e, fmt.Sprintf("filler-out-%d", i), other)
-		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("filler-in-%d", i), other)
+		seedAttestedOutbound(t, e, fmt.Sprintf("filler-out-%d", i), other, fmt.Sprintf("filler-t%d", i))
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("filler-in-%d", i), other, fmt.Sprintf("filler-t%d", i))
 	}
 
-	seedAttestedOutbound(t, e, "capped-out-1", sender)
-	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-1", sender)
+	seedAttestedOutbound(t, e, "capped-out-1", sender, "capped-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-1", sender, "capped-t1")
 	if _, found := personVisibility(t, e, sender); !found {
 		t.Fatal("the T1 rung created no person for a corresponded sender")
 	}
@@ -282,7 +290,7 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 	runVerdict(t, e, &scriptedVerdictBrain{})
 
 	// They write again, and the question that was refused must now be asked.
-	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-2", sender)
+	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-2", sender, "capped-t1")
 	dispositionID, queued := openDisposition(t, e, sender)
 	if !queued {
 		t.Fatal("a contact whose verdict the ceiling refused was never asked about again — " +
@@ -307,7 +315,7 @@ func TestASingleDecliningReplyDoesNotSpareASpammersDomain(t *testing.T) {
 	const sender = "angebote@spam.example"
 
 	seedDecliningOutbound(t, e, "decline-out-1", sender)
-	captureInboundThroughRealSink(t, e, e.Rep1, "decline-in-1", sender)
+	captureInboundThroughRealSink(t, e, e.Rep1, "decline-in-1", sender, "decline-t1")
 
 	dispositionID, queued := openDisposition(t, e, sender)
 	if !queued {

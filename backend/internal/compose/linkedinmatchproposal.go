@@ -62,13 +62,18 @@ type linkedInMatchProposal struct {
 // withGhostOwnerAsSubject records the acting member as the subject the
 // proposals are staged for. A context with no human actor cannot stage: a
 // self-only proposal nobody is recorded for is one nobody can ever decide.
-func withGhostOwnerAsSubject(ctx context.Context) (context.Context, error) {
+//
+// Returns the stamped subject alongside the context so a caller that needs
+// it (to fold into an identity, say) reads back the exact id just recorded
+// rather than asking principal.Actor a second time for an answer this
+// function already computed and cannot itself have gotten wrong.
+func withGhostOwnerAsSubject(ctx context.Context) (context.Context, ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
-		return nil, apperrors.ErrPermissionDenied
+		return nil, ids.Nil, apperrors.ErrPermissionDenied
 	}
 	actor.OnBehalfOf = actor.UserID
-	return principal.WithActor(ctx, actor), nil
+	return principal.WithActor(ctx, actor), actor.OnBehalfOf, nil
 }
 
 // linkedInMatchStager is the seam people.Handlers calls after an import. It
@@ -123,7 +128,7 @@ func stagePendingLinkedInMatches(ctx context.Context, svc *approvals.Service, pe
 	// about. ADR-0078/A123 settles that deliberately: who-knows-whom is
 	// workspace-shared metadata, guarded by "you only see edges for a person
 	// you can see at all", which is exactly what that rule already applies.
-	ctx, err := withGhostOwnerAsSubject(ctx)
+	ctx, _, err := withGhostOwnerAsSubject(ctx)
 	if err != nil {
 		return 0, err
 	}

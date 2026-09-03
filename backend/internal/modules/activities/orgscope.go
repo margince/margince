@@ -349,7 +349,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		return "", nil, "", nil, err
 	}
 	if !in.IncludeArchived {
-		where = append(where, "a.archived_at IS NULL")
+		where = append(where, activityLive)
 	}
 	if in.Kind != nil {
 		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
@@ -406,6 +406,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		where = append(where, sprintf("a.occurred_at < $%d", arg(*in.OccurredBefore)))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
+		if in.OpenAndDueBy != nil {
+			return "", nil, "", nil, errOpenAndDueByWithCursor
+		}
 		c, decodeErr := storekit.DecodeCursor(*in.Cursor)
 		if decodeErr != nil {
 			return "", nil, "", nil, decodeErr

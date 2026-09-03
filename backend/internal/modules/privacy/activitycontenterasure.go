@@ -81,7 +81,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := e.eraseAttachments(ctx, tx, act.attachmentReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
 		return err
 	}
-	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject)
+	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)
 }
 
 // erasureAct is what one arm records on everything it destroys collaterally:

@@ -9,6 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -47,7 +48,145 @@ function hitRow(container: HTMLElement): HTMLElement {
   return row;
 }
 
+// One email hit, as the server sends it: the canonical row rides the hit and
+// the raw `snippet` is what the row REPLACES.
+const emailHit = {
+  type: "activity",
+  id: "a1",
+  title: "Rennsteig renewal terms",
+  snippet: "…a raw body slice the canonical row replaces…",
+  score: 0.88,
+  trust_tier: "authoritative",
+  email_summary: {
+    activity_id: "a1",
+    occurred_at: "2026-09-01T09:15:00Z",
+    version: 3,
+    subject: "Rennsteig renewal terms",
+    preview: "The quote holds until Friday.",
+    counterparty: "Dana Buyer",
+    direction: "inbound",
+    display_status: "team",
+    move: "needs_reply",
+    attachment_count: 1,
+  },
+};
+
+// The detail read, as the contract shapes it: the parties are flat on the
+// presentation and the access block is required. A fixture that omitted them
+// would model a response the server cannot send, and the drawer would throw on
+// a shape no user will ever meet.
+const emailPresentation = {
+  id: "a1",
+  lifecycle: "delivered",
+  occurred_at: "2026-09-01T09:15:00Z",
+  summary: emailHit.email_summary,
+  body: "The quote holds until Friday.",
+  thread_key: "t1",
+  from: [{ address: "dana@acme.test", display_name: "Dana Buyer" }],
+  to: [{ address: "rep@demo.test", display_name: "Lena Fischer" }],
+  cc: [],
+  bcc: [],
+  bcc_withheld: false,
+  attachments: [],
+  links: [],
+  thread: { members: [], next_cursor: null },
+  access: {
+    content_state: "available",
+    audience: "workspace",
+    selected_members: [],
+    display_status: "team",
+    can_change: false,
+    change_mode: "message",
+    held_by_others: false,
+  },
+  can_reply: true,
+  can_relink: false,
+  version: 3,
+};
+
 describe("SearchScreen", () => {
+  // An email hit is the canonical row, not a title and a raw body slice. The
+  // subject, the preview the server composed and the access badge all come
+  // from `email_summary`, and the row opens the same drawer every timeline
+  // opens.
+  it("renders an email hit as the canonical row and opens the drawer", async () => {
+    // The URL off the Request, not String(input): openapi-fetch hands fetch a
+    // Request object, whose String() is "[object Request]" and matches nothing.
+    const urlOf = (input: RequestInfo | URL) =>
+      input instanceof Request ? input.url : String(input);
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (urlOf(input).includes("email-presentation")) {
+        return jsonResponse(emailPresentation);
+      }
+      return jsonResponse({
+        data: [emailHit],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="renewal" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Rennsteig renewal terms")).toBeTruthy(),
+    );
+    // The server's preview, not the raw `snippet`: the snippet is a
+    // 200-character slice of the body and drawing both would put two readings
+    // of one message on one line.
+    expect(screen.getByText("The quote holds until Friday.")).toBeTruthy();
+    expect(screen.queryByText(/raw body slice/)).toBeNull();
+    // The access badge rides the row, which is how a reader tells a limited
+    // conversation from an open one without opening it.
+    expect(screen.getByText("Team")).toBeTruthy();
+
+    // Clicking the row opens the drawer over the results — which is search's
+    // half of this. That it asks for THIS message's presentation is the claim;
+    // what the drawer then draws is emaildetail's own contract.
+    const row = screen.getByRole("button", { name: /Rennsteig renewal terms/ });
+    expect(row.getAttribute("aria-haspopup")).toBe("dialog");
+    await userEvent.click(row);
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some((call) =>
+          urlOf(call[0]).includes("/activities/a1/email-presentation"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // A call, a note, a task and a meeting are activities too. The server sends
+  // no `email_summary` for them and the row keeps the generic treatment it has
+  // always had — the failure this catches is a screen branching on the KIND
+  // word rather than on the field.
+  it("leaves a non-email activity hit on its generic treatment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "activity",
+              id: "a2",
+              title: "Rennsteig kickoff call",
+              snippet: "…what we agreed on the call…",
+              score: 0.6,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="rennsteig" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Rennsteig kickoff call")).toBeTruthy(),
+    );
+    expect(screen.getByText(/what we agreed on the call/)).toBeTruthy();
+    // Nothing openable: a row that looks like it opens a message and does not
+    // teaches a reader the product is broken.
+    expect(screen.queryByRole("button", { name: /kickoff call/ })).toBeNull();
+  });
+
   it("groups hits by type and shows the snippet", async () => {
     vi.stubGlobal(
       "fetch",
@@ -191,5 +330,66 @@ describe("SearchScreen", () => {
     );
     render(<SearchScreen q="zzz" />);
     await waitFor(() => expect(screen.getByText(/No matches/)).toBeTruthy());
+  });
+  // Finding the WORD is the step before finding the records carrying it, so a
+  // tag hit has to be openable. It shipped as plain text — the group rendered,
+  // and the result was a dead end.
+  it("opens the tag page from a tag hit, and says what the word is on", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              carried_by: 7,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+
+    const hit = await screen.findByText("Key Account");
+    expect(hit.tagName).toBe("BUTTON");
+    expect(screen.getByText("On 7 records")).toBeTruthy();
+
+    await userEvent.setup().click(hit);
+    expect(window.location.hash).toBe(
+      "#/tags/01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+    );
+  });
+
+  // Absent is not zero. A server that sent no number has not said the word is
+  // unused, and printing "On 0 records" would be a claim nobody made.
+  it("prints no count when the answer carried none", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+
+    expect(await screen.findByText("Key Account")).toBeTruthy();
+    expect(screen.queryByText(/On \d+ records/)).toBeNull();
   });
 });

@@ -239,6 +239,41 @@ func TestOfferDraftOptionsRespectsResolvedPath(t *testing.T) {
 	}
 }
 
+// TestVatCheckEnqueueOptionsRespectsConfiguredBaseURL pins that the api role
+// must not queue a consultation no worker in the installation will ever
+// service: an unconfigured installation binds no enqueue at all, so
+// people.ErrNoVatRegisterConfigured is what a request meets instead.
+func TestVatCheckEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
+	if got := vatCheckEnqueueOptions(nil, ""); got != nil {
+		t.Fatalf("vatCheckEnqueueOptions(unconfigured) = %d options, want 0", len(got))
+	}
+	if got := vatCheckEnqueueOptions(nil, "https://ec.europa.eu/taxation_customs/vies"); len(got) != 1 {
+		t.Fatalf("vatCheckEnqueueOptions(configured) = %d options, want 1 (vat-check enqueue)", len(got))
+	}
+}
+
+// TestJobEnqueueOptionsGatesVatCheckOnConfiguredBaseURL exercises the actual
+// call site rather than the helper alone, so a regression that stops passing
+// vatCheckBaseURL through — or that has vatCheckEnqueueOptions fire the same
+// way regardless of it — shows up here even if that helper's own test above
+// still passes in isolation. A nil pool is safe — jobs.NewInserter builds an
+// insert-only River client without touching the database until Enqueue is
+// called.
+func TestJobEnqueueOptionsGatesVatCheckOnConfiguredBaseURL(t *testing.T) {
+	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, "")
+	if err != nil {
+		t.Fatalf("jobEnqueueOptions(unconfigured): %v", err)
+	}
+	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, "https://ec.europa.eu/taxation_customs/vies")
+	if err != nil {
+		t.Fatalf("jobEnqueueOptions(configured): %v", err)
+	}
+	if len(configured) != len(unconfigured)+1 {
+		t.Fatalf("configured yielded %d options, unconfigured %d — want exactly one more (the VAT-check enqueue)",
+			len(configured), len(unconfigured))
+	}
+}
+
 // fakeRouting parses a fully offline binding (every tier + embeddings on the
 // fake provider) so the bound arm can be exercised with no credential and no
 // network. Parsed from bytes rather than written to a file and read back: the

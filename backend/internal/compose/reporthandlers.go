@@ -58,6 +58,11 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 		ExcludedByPermission: outcome.ExcludedByPermission,
 		GeneratedAt:          &outcome.GeneratedAt,
 		DerivationUrl:        &resultURL,
+
+		AsOf:                 outcome.GeneratedAt,
+		Timezone:             outcome.Timezone,
+		BaseCurrency:         outcome.BaseCurrency,
+		FiscalYearStartMonth: outcome.FiscalYearStartMonth,
 	})
 }
 

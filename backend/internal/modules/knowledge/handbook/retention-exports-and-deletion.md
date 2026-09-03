@@ -246,9 +246,13 @@ a flag for whether it requires double opt-in.
 The catalogue is **append-only**. "A purpose cannot be renamed or removed once
 created. Choose the key carefully."
 
-Against a contact you can **Grant** or **Withdraw** consent for a purpose, or
-**Issue double opt-in** — which produces a one-time token shown once, with an
-expiry.
+Against a contact you can **Grant** or **Withdraw** consent for a purpose.
+
+A purpose that requires **double opt-in** cannot be granted from this screen at
+all. Only the contact can confirm one, by opening a single-use link mailed to
+their own recorded address — use **Ask them to confirm their details**. This is
+the point of double opt-in: a confirmation an employee can complete on the
+contact's behalf is not evidence that the contact agreed.
 
 The default is **deny**. A purpose with no record for a person is not consent.
 

@@ -6,11 +6,16 @@ import { type FormEvent, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY, ENTITY_KINDS, type EntityKind } from "../app/entity";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { EmailEntry } from "../design-system/emailentry";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { formatDateTime, formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
+import { useOpenEmail } from "./openemail";
 import "./search.css";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -46,6 +51,8 @@ const LINKABLE_KINDS = new Set<EntityKind>(ENTITY_KINDS);
 export function SearchScreen({ q }: Readonly<{ q: string }>) {
   const t = useT();
   const [draft, setDraft] = useState(q);
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const zone = useRecordZone();
   const query = useQuery({
     queryKey: ["search", q],
     enabled: q.trim().length > 0,
@@ -92,16 +99,30 @@ export function SearchScreen({ q }: Readonly<{ q: string }>) {
             data.data.length === 0 ? (
               <EmptyState>{t("search.empty", { q })}</EmptyState>
             ) : (
-              <SearchGroups results={data.data} />
+              <SearchGroups results={data.data} onOpenEmail={setOpenEmail} />
             )
           }
         </QueryGate>
       )}
+      {/* One drawer over the whole results page, at page level rather than
+          inside a group: two mounted dialogs would be two `aria-modal`
+          elements, and the results stay legible behind the one that is open. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={zone}
+        onClose={() => setOpenEmail(null)}
+      />
     </div>
   );
 }
 
-function SearchGroups({ results }: Readonly<{ results: SearchResult[] }>) {
+function SearchGroups({
+  results,
+  onOpenEmail,
+}: Readonly<{
+  results: SearchResult[];
+  onOpenEmail: (activityId: string) => void;
+}>) {
   const t = useT();
   return (
     <div className="search-groups arrive-stack">
@@ -113,7 +134,11 @@ function SearchGroups({ results }: Readonly<{ results: SearchResult[] }>) {
               {results
                 .filter((r) => r.type === type)
                 .map((hit) => (
-                  <SearchHit key={`${hit.type}:${hit.id}`} hit={hit} />
+                  <SearchHit
+                    key={`${hit.type}:${hit.id}`}
+                    hit={hit}
+                    onOpenEmail={onOpenEmail}
+                  />
                 ))}
             </ul>
           </Card>
@@ -123,13 +148,51 @@ function SearchGroups({ results }: Readonly<{ results: SearchResult[] }>) {
   );
 }
 
-function SearchHit({ hit }: Readonly<{ hit: SearchResult }>) {
+function SearchHit({
+  hit,
+  onOpenEmail,
+}: Readonly<{
+  hit: SearchResult;
+  onOpenEmail: (activityId: string) => void;
+}>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  // An email hit IS the canonical row — the same one the timeline draws, from
+  // the same server projection. It replaces the generic title-and-snippet
+  // rather than sitting beside it: the snippet was a raw 200-character slice
+  // of the body, and drawing both would put two readings of one message on one
+  // line. Every other hit type, activity or not, keeps what it had.
+  if (hit.email_summary) {
+    const summary = hit.email_summary;
+    return (
+      <li className="search-hit search-hit-email">
+        <EmailEntry
+          summary={summary}
+          timestamp={formatDateTime(summary.occurred_at, locale, zone)}
+          onOpen={() => onOpenEmail(summary.activity_id)}
+        />
+      </li>
+    );
+  }
+  // A tag is not an ENTITY kind — it has no 360 — but it does have a page, and
+  // it is the whole point of finding one: the word is the way to the records
+  // carrying it. Routed on its own rather than by widening ENTITY_KINDS, which
+  // drives record routing everywhere else and would claim a tag is a record.
+  const isTag = hit.type === "tag";
   const isLinkable = LINKABLE_KINDS.has(hit.type as EntityKind);
   return (
     <li className="search-hit">
       <div className="search-hit-title">
-        {isLinkable ? (
+        {isTag ? (
+          <button
+            type="button"
+            className="entity-link"
+            onClick={() => navigate({ screen: "tags", id: hit.id })}
+          >
+            {hit.title ?? hit.id}
+          </button>
+        ) : isLinkable ? (
           // The search API already returns the hit's display name as
           // `title` — routing through EntityRef here would re-fetch the
           // same record per hit (an N+1 GET per result) just to re-derive
@@ -171,6 +234,16 @@ function SearchHit({ hit }: Readonly<{ hit: SearchResult }>) {
           reached the page as "relevance 280%" — a percentage of nothing, which
           a reader can neither act on nor disbelieve. It still does its job in
           the ordering the results arrive in. */}
+      {/* What the word is on, so a reader can tell a live tag from one nobody
+          used without opening it. Absent rather than zero when the server sent
+          no number: a count it could not take is not a count of none. */}
+      {isTag && hit.carried_by != null && (
+        <p className="search-hit-snippet">
+          {t("search.tag.carriedBy", {
+            count: formatNumber(hit.carried_by, locale),
+          })}
+        </p>
+      )}
       {hit.snippet && <p className="search-hit-snippet">“{hit.snippet}”</p>}
     </li>
   );

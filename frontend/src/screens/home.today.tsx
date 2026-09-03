@@ -19,19 +19,33 @@ import {
   useBriefRefresh,
 } from "./home.queries";
 
-// The ranked half of Home: what the run thinks the day is for, and the three
-// verbs that move an entry off it.
+// The opportunity half of Home: what the overnight run thinks is worth pursuing
+// once the waiting work is answered, and the three verbs that move an entry off
+// it.
+//
+// It sits BELOW "Do next" and answers a different question. Do next is what is
+// already waiting on this rep; this is where to spend the hour that opens up
+// after — which is why the section is named for the time rather than for the
+// day, and why leading with it was leading with the wrong half.
+//
+// The two sections read ONE brief run through two endpoints, so this leaves out
+// whatever Do next already drew (`ledAlready`). Without that a suggestion
+// ranking into the lead appeared twice on one page — once as a worklist row and
+// once as a card, each with its own controls over the same record.
 
-/** The ranked queue: what the run thinks the day is for. */
-export function TodaySection({
+/** What the run thinks the day is for, minus what already leads the page. */
+export function FocusSection({
   brief,
   deals,
   nowMs,
   state,
+  drawnAbove,
 }: Readonly<{
   brief: MorningBrief | null;
   deals: readonly Deal[];
   nowMs: number;
+  /** The overnight suggestions "Do next" has already drawn, by id. */
+  drawnAbove: ReadonlySet<string>;
   /** What the read behind the queue says. Before it has answered the panel
    *  holds its shape, and a FAILED read says so — `ready` as a boolean could
    *  only tell the two apart by drawing a failure as an empty queue. */
@@ -43,9 +57,9 @@ export function TodaySection({
   const mark = useBriefItemMark();
 
   return (
-    <section id="home-today" aria-label={t("home.panel.today")}>
+    <section id="home-focus" aria-label={t("home.panel.focus")}>
       <Panel
-        title={t("home.panel.today")}
+        title={t("home.panel.focus")}
         sub={
           brief
             ? t("home.asOf", {
@@ -68,7 +82,7 @@ export function TodaySection({
             <Button
               small
               pending={refresh.isPending}
-              busyLabel={t("home.refreshing")}
+              busyLabel={t("home.generating")}
               onClick={() => refresh.mutate()}
               data-testid="brief-refresh"
             >
@@ -85,12 +99,13 @@ export function TodaySection({
         }
       >
         <PanelBody className="home-today-list">
-          <TodayBody
+          <FocusBody
             brief={brief}
             deals={deals}
             nowMs={nowMs}
             state={state}
             mark={mark}
+            drawnAbove={drawnAbove}
           />
         </PanelBody>
         {refresh.isError && (
@@ -106,18 +121,20 @@ export function TodaySection({
 }
 
 /** The queue's four readings: in flight, no run, a quiet run, or the items. */
-function TodayBody({
+function FocusBody({
   brief,
   deals,
   nowMs,
   state,
   mark,
+  drawnAbove,
 }: Readonly<{
   brief: MorningBrief | null;
   deals: readonly Deal[];
   nowMs: number;
   state: SectionState;
   mark: ReturnType<typeof useBriefItemMark>;
+  drawnAbove: ReadonlySet<string>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -129,7 +146,7 @@ function TodayBody({
       <SurfaceState
         state={state}
         emptyLabel={t("home.noneBody")}
-        loadingLabel={t("home.panel.today")}
+        loadingLabel={t("home.panel.focus")}
       >
         {null}
       </SurfaceState>
@@ -138,15 +155,25 @@ function TodayBody({
   if (brief === null) {
     return <EmptyState>{t("home.noneBody")}</EmptyState>;
   }
-  if (brief.items.length === 0) {
+  const items = brief.items.filter((item) => !drawnAbove.has(item.id));
+  if (items.length === 0) {
     // The narrative still belongs here. A run that ranked nothing is exactly
     // when the night's sentence carries the most — "nothing needs you today"
     // and "nobody looked" are different mornings, and the empty state alone
     // cannot tell them apart.
+    //
+    // Two ways to reach this and they read differently. A run that ranked
+    // nothing is a quiet morning; a run whose every suggestion already leads the
+    // page is a morning where the work is simply above, and saying "nothing
+    // cleared the bar" there would contradict the rows the reader can see.
     return (
       <>
         <TodayNarrative brief={brief} />
-        <EmptyState>{t("home.quietRun")}</EmptyState>
+        <EmptyState>
+          {brief.items.length > 0
+            ? t("home.focus.allAbove")
+            : t("home.quietRun")}
+        </EmptyState>
       </>
     );
   }
@@ -156,7 +183,7 @@ function TodayBody({
   return (
     <>
       <TodayNarrative brief={brief} />
-      {brief.items.map((item) => (
+      {items.map((item) => (
         <BriefQueueItem
           key={item.id}
           item={item}

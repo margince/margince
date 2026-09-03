@@ -72,9 +72,15 @@ binds a cloud one. The generated egress table
 ([ai-egress.md](../reference/ai-egress.md)) says which, and a gate fails when the two disagree.
 
 **Neither model can widen anything by being unavailable.** With no model configured, capture works
-normally: senders stay unjudged and their records stay owner-scoped, threads stay held, and nothing
-is purged. An outage and a careful classifier look the same from the outside — mail stays with the
-people who were on it — which is the direction an outage has to fail in.
+normally: records stay owner-scoped, threads stay held, and nothing is purged. An outage and a
+careful classifier look the same from the outside — mail stays with the people who were on it —
+which is the direction an outage has to fail in.
+
+A sender does not simply stay unjudged, though. The answers that come from the address and the
+ledger alone — the owner's own decision, a role mailbox — still land, and a sender that genuinely
+needs a model is put in front of a person instead. Leaving the row open looked safe and was not:
+nothing else advances it, so the question would stay open forever, and a pending row nobody will
+ever judge is indistinguishable from one whose turn has not come.
 
 ---
 
@@ -171,7 +177,7 @@ should be asked later. Channel records skip it — see the end of this section.
 | Tier | Question | Result |
 |---|---|---|
 | **T0** | Is the sender a colleague? | Judge the external person on the message instead. If everyone is internal, create nothing |
-| **T1** | Have we provably sent mail to this address before? | **Create the contact.** Beats every rule below |
+| **T1** | Have we and this address actually exchanged mail? | **Create the contact.** Beats every rule below |
 | **T2** | Is this mail infrastructure (DocuSign, SendGrid…)? | Keep the message, create no contact and no company |
 | **T2.5** | Did we already decide about this address? | Reuse that decision. No new question, no model call |
 | **T3** | Is it a personal mail domain (`gmail.com`…)? | Create the person, but no company |
@@ -182,9 +188,16 @@ Notes on the tricky ones:
 - **T0 switches target instead of skipping.** If a colleague emails a client and copies you, the
   message is about the client. The ladder judges the client, and the colleague is never recorded as
   the contact.
-- **T1 only trusts proof that *we* sent the mail**, not the `From` header, which can be forged. One
-  outbound message counts, unless its text is a refusal ("not interested", "unsubscribe", "kein
-  Interesse"). Two or more always count.
+- **T1 only trusts proof that *we* sent the mail**, not the `From` header, which can be forged. An
+  outbound message whose text is a refusal ("not interested", "unsubscribe", "kein Interesse") is
+  not evidence of intent at all.
+- **T1 needs an exchange, not a send.** Writing to somebody is intent, and intent is often
+  unreturned — a founder mails forty people about a conference and hears from six. So a contact is
+  created on sight only when they wrote back on a thread we wrote on, or we wrote to them on two
+  separate threads, which nobody does by accident. A single send is not refused: it falls to T4 and
+  the verdict engine reads the message and answers on its merits.
+- **Bulk mail is not writing back.** An address we wrote to once which then sends a newsletter has
+  added us to a list rather than answering us.
 - **T1 also beats an old negative verdict**, so replying to a sender we once marked as noise brings
   them back properly.
 - **T2.5 avoids paying twice.** Without it, every new message from a settled sender asks the model

@@ -151,6 +151,37 @@ func email(from, fromName, to, msgID, refs string) []byte {
 	return []byte(strings.Join(lines, "\r\n"))
 }
 
+// calendarInvite is the message Google Calendar sends when the mailbox owner
+// invites somebody: From is the ORGANIZER — the owner, a real human — with the
+// attendee in To and the machine named only in Sender. There is no
+// Auto-Submitted header and no bulk Precedence, which is why this shape read as
+// ordinary outbound mail the owner wrote.
+func calendarInvite(attendee, msgID string) []byte {
+	return []byte(strings.Join([]string{
+		"Sender: Google Calendar <calendar-notification@google.com>",
+		"From: " + captureOwner,
+		"To: " + attendee,
+		"Subject: Invitation: Weekly sync @ Fri 5 Jun 2026 11:15am",
+		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
+		"Message-ID: <" + msgID + ">",
+		"Content-Type: multipart/alternative; boundary=\"b1\"",
+		"",
+		"--b1",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		"You have been invited to Weekly sync.",
+		"",
+		"--b1",
+		"Content-Type: text/calendar; charset=UTF-8; method=REQUEST",
+		"",
+		"BEGIN:VCALENDAR",
+		"END:VCALENDAR",
+		"",
+		"--b1--",
+		"",
+	}, "\r\n"))
+}
+
 // emailSaying is email() with the body a scenario needs to be about, always
 // FROM the mailbox owner. The T1 gate reads what an OUTBOUND message says — a
 // reply that declines is not intent toward the sender — and an inbound body has

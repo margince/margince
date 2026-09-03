@@ -75,6 +75,10 @@ describe("what a reader may change before accepting", () => {
     expect(stage.options).toContain("customer");
   });
 
+  it("offers nothing on a vcard_create — the accept effect reads only the nested Entry, so an edited flattened field would silently do nothing", () => {
+    expect(EDITABLE_FIELDS.vcard_create).toEqual([]);
+  });
+
   it("never offers an identifier, on any kind that declares a policy", () => {
     for (const [kind, fields] of Object.entries(EDITABLE_FIELDS)) {
       for (const entry of fields) {

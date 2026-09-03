@@ -297,3 +297,113 @@ func transactionalInput(cp connector.Counterparty) TransactionalInput {
 func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	return correspondencePositiveTx(ctx, tx, email)
 }
+
+// wroteBackTx reports whether this address has written to the workspace on a
+// thread the workspace itself started.
+//
+// It is the other half of "a correspondence", and the stronger half. One
+// outbound message is intent, and intent is often unreturned: a founder mails
+// forty people about a conference and hears from six. Recording all forty as
+// contacts on the strength of the send alone is what filled a CRM with people
+// who never answered — and among them the test addresses, the one-off errands
+// and the introductions that went nowhere.
+//
+// A REPLY is different in kind. Somebody read the message and chose to answer,
+// which is the thing a contact record is actually about.
+//
+// Bulk mail does not count. An address the workspace wrote to once and which
+// then sent a newsletter has not written back; it has added the workspace to a
+// list, and reading that as a reply would admit exactly the senders the
+// transactional gates exist to refuse.
+//
+// The outbound leg has to be mail THIS WORKSPACE SENT TO THIS ADDRESS, before
+// the reply, on the same medium. Every one of those four is load-bearing, and
+// thread_key is why: it is the message's own References root, so a sender
+// chooses it verbatim (sinkreply.go says the same thing about the same column).
+//
+//   - the same address, or a stranger forging the root of a thread the owner
+//     wrote on to somebody else manufactures an exchange out of a colleague's
+//     correspondence;
+//   - the same medium, because thread_key is one flat namespace holding both a
+//     mail root and a channel's `<provider>:<bot>:<chat>` key, and a forged
+//     References naming a discoverable chat id would cross between them;
+//   - attested, which is the provider's own filing and not a header.
+//
+// It deliberately does NOT order the two in time. The intuition is that an
+// outbound sent AFTER a cold email should not turn that email into an answer —
+// but occurred_at is the sender's own Date header on the inbound side, so
+// ordering on it would let a sender post-date their mail past our reply and
+// defeat the very rule it was meant to add. What is actually being asked is
+// whether these two parties have a conversation on one thread, and a thread the
+// workspace wrote on to this address is that whichever leg landed first.
+//
+// Two neighbouring guards refuse the forged case as well today — the
+// correspondence rung has no attested send to that address, and the ledger has
+// already opened a question about them — so no test through the ladder can
+// isolate this clause. It stays because it is the only one of the three that is
+// ABOUT this question, and the other two are holding their own invariants.
+//
+// An inbound message on a thread nobody here wrote on is a stranger's first
+// approach, which is the ambiguous class the verdict engine owns — counting it
+// would restore create-on-sight for every cold email.
+func wroteBackTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	normalized := normalizeEmail(email)
+	if normalized == "" {
+		return false, nil
+	}
+	var replied bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1
+		    FROM activity inbound
+		   WHERE inbound.counterparty_email = $1
+		     AND inbound.direction = 'inbound'
+		     AND NOT inbound.bulk_mail_attested
+		     AND inbound.thread_key <> ''
+		     AND `+auth.ActivityAvailableClause("inbound")+`
+		     AND EXISTS (
+		           SELECT 1
+		             FROM activity ours
+		            WHERE ours.thread_key = inbound.thread_key
+		              AND ours.counterparty_email = $1
+		              AND ours.kind = inbound.kind
+		              AND ours.counterparty_outbound_attested
+		              AND `+auth.ActivityAvailableClause("ours")+`))`,
+		normalized).Scan(&replied); err != nil {
+		return false, fmt.Errorf("capture: reading whether the address wrote back: %w", err)
+	}
+	return replied, nil
+}
+
+// wroteOnTwoThreadsTx reports whether this workspace has written to the address
+// on two SEPARATE threads.
+//
+// Nobody starts a second conversation with somebody by accident, which is what
+// makes this evidence of a relationship without needing an answer. It counts
+// distinct threads rather than messages: two mails on one thread are one
+// conversation — a send and its own follow-up — and reading them as two would
+// admit exactly the unreturned intent this rule exists to refuse.
+//
+// A message with no thread key is not counted at all rather than counted as its
+// own thread. Mail always has one (its own Message-ID roots it when nothing
+// else does), so a blank key is a record from somewhere else, and guessing it
+// apart from its neighbours would invent a second conversation.
+func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	normalized := normalizeEmail(email)
+	if normalized == "" {
+		return false, nil
+	}
+	var threads int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM (
+		  SELECT DISTINCT thread_key
+		    FROM activity
+		   WHERE counterparty_email = $1
+		     AND counterparty_outbound_attested
+		     AND thread_key <> ''
+		     AND `+auth.ActivityAvailableClause("activity")+`
+		   LIMIT 2) AS distinct_threads`, normalized).Scan(&threads); err != nil {
+		return false, fmt.Errorf("capture: counting the threads this workspace wrote on: %w", err)
+	}
+	return threads >= 2, nil
+}

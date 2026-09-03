@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -153,10 +154,18 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 		return d.retry(ctx, del.ID, err)
 	}
 
+	// Which of the gates below apply at all. A controller message has no seat,
+	// no mailbox grant and no attachments, so those questions are not softened
+	// for it — they are not ITS questions. Authorization and the ladder bound
+	// are asked of every sender.
+	profile := profileFor(del)
+
 	// Gate: authority. It refuses first so that a caller with no rights at
 	// all learns nothing about the recipients' consent state.
-	if outcome, wait, err := d.gateSendAuthority(ctx, del, seam.granted); outcome != outcomeUndecided {
-		return outcome, wait, err
+	if profile.requiresSendScope {
+		if outcome, wait, err := d.gateSendAuthority(ctx, del, seam.granted); outcome != outcomeUndecided {
+			return outcome, wait, err
+		}
 	}
 
 	// Gate: the sender's seat, which is authority-class and therefore belongs
@@ -164,35 +173,44 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 	// PROVIDER's answer about a credential; this is THIS installation's answer
 	// about the human it was lent by, and deactivating them touches neither
 	// the connection nor the grant.
-	if outcome, wait, err := d.gateSeat(ctx, del); outcome != outcomeUndecided {
-		return outcome, wait, err
+	if profile.requiresLiveSeat {
+		if outcome, wait, err := d.gateSeat(ctx, del); outcome != outcomeUndecided {
+			return outcome, wait, err
+		}
 	}
 
 	// Gate: suppression and consent, which are one step — one-click
 	// unsubscribe writes a per-purpose consent withdrawal, so this gate IS
 	// the suppression mechanism.
-	if outcome, wait, err := d.gateConsent(ctx, del); outcome != outcomeUndecided {
+	ticket, outcome, wait, err := d.gateConsent(ctx, del)
+	if outcome != outcomeUndecided {
 		return outcome, wait, err
 	}
 
 	// Gate: attachment carriage. It runs with the other refusals rather than at
 	// the provider call, because the answer is known before any I/O and a
 	// message that cannot go out intact should never reach the wire at all.
-	if outcome, wait, err := d.gateAttachmentCarriage(ctx, del, seam); outcome != outcomeUndecided {
-		return outcome, wait, err
+	if profile.carriesFiles {
+		if outcome, wait, err := d.gateAttachmentCarriage(ctx, del, seam); outcome != outcomeUndecided {
+			return outcome, wait, err
+		}
 	}
 
 	// Gate: the files themselves, rechecked against now rather than against
 	// staging time. It runs after carriage because carriage needs no I/O and
 	// this needs a read, so the free refusal is asked first.
-	if outcome, wait, err := d.gateAttachmentIntegrity(ctx, del); outcome != outcomeUndecided {
-		return outcome, wait, err
+	if profile.carriesFiles {
+		if outcome, wait, err := d.gateAttachmentIntegrity(ctx, del); outcome != outcomeUndecided {
+			return outcome, wait, err
+		}
 	}
 
 	// Policies postpone; they never refuse. They run after both gates, so a
 	// delivery that may never go is refused rather than paced.
-	if outcome, wait, err := d.pace(ctx, del); outcome != outcomeUndecided {
-		return outcome, wait, err
+	if profile.paced {
+		if outcome, wait, err := d.pace(ctx, del); outcome != outcomeUndecided {
+			return outcome, wait, err
+		}
 	}
 
 	// Ladder exhaustion. Once the runner stops delivering this job nothing
@@ -204,7 +222,7 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 		return d.park(ctx, del.ID, fmt.Sprintf("the retry ladder is exhausted after %d attempts", del.Attempts))
 	}
 
-	return d.transmit(ctx, del, seam)
+	return d.transmit(ctx, del, seam, ticket)
 }
 
 // pace applies the policy chain. The chain is ordered and the first non-zero
@@ -234,7 +252,15 @@ func (d *Dispatcher) pace(ctx context.Context, del Delivery) (Outcome, time.Dura
 // transmit hands the message to the provider and records what came back. The
 // seam already carries the shape-specific half (sendseam.go), so what follows is
 // the same for a mail message and a channel one.
-func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam) (Outcome, time.Duration, error) {
+func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam, ticket commsauthz.TransmitTicket) (Outcome, time.Duration, error) {
+	// The last thing checked before the wire, and the reason the ticket is
+	// threaded down here rather than trusted from three frames up: a send that
+	// reaches a provider without a decision recorded for THIS delivery and THIS
+	// attempt is a send nobody can account for afterwards. A stale attempt is
+	// as bad as none — it belongs to a try whose world may already have moved.
+	if !ticket.Current(del.ID, del.Attempts) {
+		return d.park(ctx, del.ID, "no current authorization decision covers this attempt")
+	}
 	// The attachment BYTES, resolved before the marker below and not inside the
 	// provider call.
 	//
@@ -291,9 +317,17 @@ func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam) 
 	// Policies are told here rather than at Wait for the same reason in the
 	// other direction: a limiter counting checks instead of sends paces
 	// nothing.
-	for _, policy := range d.policies {
-		if recorder, meters := policy.(SendRecorder); meters {
-			recorder.Recorded(del)
+	//
+	// Metered only for a sender the policies actually pace. A controller row is
+	// not paced, and its user id is the zero value, so recording it would fill
+	// one bucket forever under a key naming nobody — harmless until somebody
+	// turns pacing on for this sender and finds it already throttled by years
+	// of accumulated slots.
+	if profileFor(del).paced {
+		for _, policy := range d.policies {
+			if recorder, meters := policy.(SendRecorder); meters {
+				recorder.Recorded(del)
+			}
 		}
 	}
 	return OutcomeSent, 0, nil

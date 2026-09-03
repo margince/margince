@@ -294,6 +294,9 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// just cleared from the person row.
 		_, err = tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, id)
 	}
+	if err == nil {
+		err = clearCommunicationRecord(ctx, tx, id, subjectEmails)
+	}
 	// Read BEFORE the delete below, for the reason the eraser gives at its own
 	// copy of this: the LinkedIn ghost sweep identifies rows by this address,
 	// and person_social is about to stop holding it.
@@ -320,6 +323,17 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	if err == nil {
 		err = purgeSubjectPurchases(ctx, tx, id)
+	}
+	if err == nil {
+		// What a colleague wrote down to DO about them, on their own weekly
+		// plan. The SAME statement the Art. 17 cascade runs, called rather than
+		// copied: the two acts differ only by the suppression list, and a
+		// second spelling here would be the drift personscrub_test.go exists to
+		// catch. Nothing cascades to it — the table holds no person FK and is
+		// keyed to the rep who wrote it — so an anonymize that skipped it would
+		// leave the subject's name in a commitment beside an "Erased Subject"
+		// record.
+		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.PersonKind](id))
 	}
 	if err == nil {
 		// The channel identity is a resolution key on the subject as
@@ -385,5 +399,69 @@ func purgeSubjectPurchases(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	_, err := tx.Exec(ctx,
 		`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE person_id = $1`, id)
+	return err
+}
+
+// clearCommunicationRecord gives the anonymizer the same treatment of the
+// outbound authorization record that the eraser applies, because both acts must
+// clear the same tables: one that cleared a table the other left would hold the
+// subject's data after an operator had been told the record was dealt with.
+//
+// The decision row is tombstoned rather than deleted — it is the controller's
+// own Art. 5(2) evidence that a send already made was lawful, and losing that
+// is not what anonymization is for. A basis IS deleted, because it names a
+// thread and a date and an anonymized subject who returns arrives as a NEW
+// record, so an old basis would authorize writing to them on the strength of a
+// conversation nobody can now identify.
+//
+// A live objection is neither: it is re-pinned to the address. The eraser can
+// delete one because it also hashes every address onto erasure_suppression, so
+// an erased subject cannot be re-captured at all. The anonymizer writes no such
+// row by design, so deleting the objection here would let a returning subject
+// be marketed to having never withdrawn it.
+func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addresses []string) error {
+	// Why this contact existed, cleared alongside the rest. It names one
+	// person and has no meaning after them, and both acts must clear the same
+	// tables — one that cleared it and one that did not would leave the
+	// subject's acquisition record standing after an operator was told the
+	// person had been anonymized.
+	if _, err := tx.Exec(ctx, `DELETE FROM person_acquisition_evidence WHERE person_id = $1`, id); err != nil {
+		return err
+	}
+	// Per row, not one constant. A single delivery can carry two decisions for
+	// the same subject — one message To and Cc'ing two of their addresses — and
+	// collapsing both to one tombstone collides on
+	// communication_decision_one_per_attempt, which aborts the whole
+	// transaction and leaves the subject unerasable on every retry.
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_decision
+		   SET recipient_address = 'erased+' || id || '@example.invalid',
+		       subject_id = NULL, subject_kind = NULL
+		 WHERE subject_id = $1`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE person_id = $1`, id); err != nil {
+		return err
+	}
+	// The objection SURVIVES an anonymization, re-pinned to the address.
+	//
+	// This is where the anonymizer parts company with the eraser. The eraser
+	// hashes every address onto erasure_suppression, so an erased subject
+	// cannot be re-captured at all and a per-person objection has nothing left
+	// to protect. The anonymizer deliberately writes no such row, because an
+	// anonymized subject may lawfully return — and if their objection were
+	// deleted here they would return unsuppressed, having never withdrawn it.
+	// So the person link is cut and the address kept, which is exactly what the
+	// address-only row shape exists for.
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_suppression
+		   SET person_id = NULL, address = coalesce(address, u.addr)
+		  FROM unnest($2::text[]) AS u(addr)
+		 WHERE person_id = $1 AND revoked_at IS NULL`, id, addresses); err != nil {
+		return err
+	}
+	// A revoked suppression protects nobody and names a person who is going, so
+	// it goes with them.
+	_, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE person_id = $1`, id)
 	return err
 }

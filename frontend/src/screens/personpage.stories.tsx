@@ -20,7 +20,7 @@ import {
   providerCompletedProfile,
 } from "./personprovider.fixtures";
 import { PersonRail } from "./personrail";
-import { PersonStrip } from "./personstrip";
+import { PersonReadings } from "./personreadings";
 import type { PersonTab } from "./persontab";
 import {
   PersonDealsTab,
@@ -788,13 +788,13 @@ export const PageConsentRefused: Story = {
   render: () => <Page guardEntries={guardRefusesMail} />,
 };
 
-// --- Readings: PersonStrip alone --------------------------------------------
+// --- Readings: PersonReadings alone -----------------------------------------
 
 export const Readings: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 900 }}>
-        <PersonStrip view={populated} consentVerdict="allowed" />
+        <PersonReadings view={populated} />
       </div>
     </StoryProviders>
   ),
@@ -804,20 +804,7 @@ export const ReadingsWithheld: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 900 }}>
-        <PersonStrip view={withheld} consentVerdict={undefined} />
-      </div>
-    </StoryProviders>
-  ),
-};
-
-// The danger tone: a consent verdict that refuses rather than merely being
-// unrecorded. Every other fixture in this file reads "allowed" or "unknown":
-// this is the only place the strip's red slot renders at all.
-export const ReadingsBlocked: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 900 }}>
-        <PersonStrip view={populated} consentVerdict="blocked" />
+        <PersonReadings view={withheld} />
       </div>
     </StoryProviders>
   ),
@@ -830,8 +817,9 @@ export const LeadMoment: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <PersonToday
+          name="Anna Weber"
+          view={populated}
           moment={meetingPrepMoment}
-          firstName="Dana"
           onAction={() => {}}
         />
       </div>
@@ -844,8 +832,9 @@ export const LeadMomentWarning: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <PersonToday
+          name="Anna Weber"
+          view={populated}
           moment={goneQuietMoment}
-          firstName="Dana"
           onAction={() => {}}
         />
       </div>
@@ -882,9 +871,10 @@ export const LeadMomentLadder: Story = {
       >
         {REMAINING_MOMENTS.map((moment) => (
           <PersonToday
+            name="Anna Weber"
+            view={populated}
             key={moment.claim_key}
             moment={moment}
-            firstName="Dana"
             onAction={() => {}}
           />
         ))}
@@ -991,8 +981,8 @@ export const RailEmployments: Story = {
 
 // The rail's consent slot when a purpose is refused rather than merely
 // unrecorded: verdictClass (personrail.tsx) reads this as the refused/warn
-// treatment, the same red-toned reason the strip's own consentTone renders
-// as its danger tone (see ReadingsBlocked above for that surface).
+// treatment. The readings above carry no consent slot — the header's Write
+// verb states the refusal — so this is the one surface that draws it.
 export const RailConsentBlocked: Story = {
   render: () => {
     installFetchStub({
@@ -1230,71 +1220,85 @@ const emptyBand: View = {
 };
 
 export const BriefStates: Story = {
-  render: () => (
-    <StoryProviders>
-      <div className="record-stack" style={{ maxWidth: 720 }}>
-        <PersonBriefCard
-          brief={{
-            person_id: "p-1",
-            generated_at: "2026-08-13T09:00:00Z",
-            generated_by: "deterministic",
-            sentences: [
-              {
-                text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
-                evidence: [{ entity_type: "person", entity_id: "p-1" }],
-              },
-            ],
-          }}
-          loading={false}
-          view={populated}
-        />
-        <PersonBriefCard
-          brief={{
-            person_id: "p-1",
-            generated_at: "2026-08-13T09:00:00Z",
-            generated_by: "deterministic",
-            sentences: [],
-          }}
-          loading={false}
-          view={emptyBand}
-        />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => {
+    // These render the cards directly rather than the page, so nothing else
+    // routes the session for them. A component that reads it gets the stub's
+    // list-shaped fallback otherwise, which reads as a malformed session and
+    // draws a branch the story is not named for.
+    installFetchStub({ "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <div className="record-stack" style={{ maxWidth: 720 }}>
+          <PersonBriefCard
+            brief={{
+              person_id: "p-1",
+              generated_at: "2026-08-13T09:00:00Z",
+              generated_by: "deterministic",
+              sentences: [
+                {
+                  text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
+                  evidence: [{ entity_type: "person", entity_id: "p-1" }],
+                },
+              ],
+            }}
+            loading={false}
+            view={populated}
+          />
+          <PersonBriefCard
+            brief={{
+              person_id: "p-1",
+              generated_at: "2026-08-13T09:00:00Z",
+              generated_by: "deterministic",
+              sentences: [],
+            }}
+            loading={false}
+            view={emptyBand}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
 };
 
 // --- Overview panels: the four cards plus PersonMemory, stacked -------------
 
 export const OverviewPanels: Story = {
-  render: () => (
-    <StoryProviders>
-      <div className="record-stack" style={{ maxWidth: 720 }}>
-        <PersonBriefCard
-          brief={{
-            person_id: "p-1",
-            generated_at: "2026-08-13T09:00:00Z",
-            generated_by: "deterministic",
-            sentences: [
-              {
-                text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
-                evidence: [{ entity_type: "person", entity_id: "p-1" }],
-              },
-              {
-                text: "She asked to push the retrofit review back a week and has not replied since.",
-                evidence: [{ entity_type: "activity", entity_id: "a-1" }],
-              },
-            ],
-          }}
-          loading={false}
-          view={populated}
-        />
-        <PersonCommercialCard view={populated} />
-        <PersonCommitmentsCard view={populated} firstName="Dana" />
-        <PersonMattersCard view={populated} firstName="Dana" />
-        <PersonMemory view={populated} />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => {
+    // These render the cards directly rather than the page, so nothing else
+    // routes the session for them. A component that reads it gets the stub's
+    // list-shaped fallback otherwise, which reads as a malformed session and
+    // draws a branch the story is not named for.
+    installFetchStub({ "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <div className="record-stack" style={{ maxWidth: 720 }}>
+          <PersonBriefCard
+            brief={{
+              person_id: "p-1",
+              generated_at: "2026-08-13T09:00:00Z",
+              generated_by: "deterministic",
+              sentences: [
+                {
+                  text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
+                  evidence: [{ entity_type: "person", entity_id: "p-1" }],
+                },
+                {
+                  text: "She asked to push the retrofit review back a week and has not replied since.",
+                  evidence: [{ entity_type: "activity", entity_id: "a-1" }],
+                },
+              ],
+            }}
+            loading={false}
+            view={populated}
+          />
+          <PersonCommercialCard view={populated} />
+          <PersonCommitmentsCard view={populated} firstName="Dana" />
+          <PersonMattersCard view={populated} firstName="Dana" />
+          <PersonMemory view={populated} />
+        </div>
+      </StoryProviders>
+    );
+  },
 };
 
 export const OverviewChannelConversation: Story = {
@@ -1466,19 +1470,26 @@ const emptyMemory: View = {
 // including a done row, the brief's loading and undefined-brief readings,
 // and the memory panel's full channel set plus its empty state.
 export const OverviewGaps: Story = {
-  render: () => (
-    <StoryProviders>
-      <div className="record-stack" style={{ maxWidth: 720 }}>
-        <PersonBriefCard brief={undefined} loading view={populated} />
-        <PersonBriefCard brief={undefined} loading={false} view={populated} />
-        <PersonCommercialCard view={withheld} />
-        <PersonCommercialCard view={dealWithCommittee} />
-        <PersonCommitmentsCard view={richLoops} firstName="Dana" />
-        <PersonMemory view={richMemory} />
-        <PersonMemory view={emptyMemory} />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => {
+    // These render the cards directly rather than the page, so nothing else
+    // routes the session for them. A component that reads it gets the stub's
+    // list-shaped fallback otherwise, which reads as a malformed session and
+    // draws a branch the story is not named for.
+    installFetchStub({ "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <div className="record-stack" style={{ maxWidth: 720 }}>
+          <PersonBriefCard brief={undefined} loading view={populated} />
+          <PersonBriefCard brief={undefined} loading={false} view={populated} />
+          <PersonCommercialCard view={withheld} />
+          <PersonCommercialCard view={dealWithCommittee} />
+          <PersonCommitmentsCard view={richLoops} firstName="Dana" />
+          <PersonMemory view={richMemory} />
+          <PersonMemory view={emptyMemory} />
+        </div>
+      </StoryProviders>
+    );
+  },
 };
 
 // --- Drawers: the three surfaces the page opens over itself -----------------

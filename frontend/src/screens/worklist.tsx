@@ -4,11 +4,14 @@ import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useOpenEmail } from "./openemail";
 import { TeamBoard } from "./worklist.board";
 import {
   completenessText,
@@ -21,6 +24,7 @@ import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { NextUp, nextUpOf } from "./worklist.nextup";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
+  loadedQueue,
   UNASSIGNED,
   useWorklist,
   type Worklist,
@@ -65,6 +69,28 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
   return item.category === "system" ? "system" : "decisions";
 }
 
+// What identifies one row on this page.
+//
+// The SOURCE and the id together, because `id` alone is not unique across the
+// queue: a task and a waiting message may carry the same underlying record's
+// id, and the lanes mint ids independently. The React key has always spelled
+// it this way; the selected-row state used the bare id, so two rows sharing one
+// could both light up pressed while the pane resolved to whichever came first.
+// One function now, read by both, so they cannot drift apart again.
+function rowIdentity(item: WorklistItem): string {
+  return `${item.source}-${item.id}`;
+}
+
+// How much work the day holds, as opposed to how much one response carried.
+//
+// `summary.total` counts the rows in ONE page — it is computed after the page
+// cut — so it is the wrong number to print beside a queue the reader can page
+// through: it would stay at 25 while the list grew past it. `counts[].
+// considered` is the figure taken before the cut, which is what "in all" means.
+function dayTotal(day: Worklist): number {
+  return day.counts.reduce((total, count) => total + count.considered, 0);
+}
+
 // Whether this row opens its band — the first banded row, or the first after a
 // row of a DIFFERENT band.
 //
@@ -97,6 +123,7 @@ function opensBand(queue: readonly WorklistItem[], index: number): boolean {
 // something to trust.
 function WorklistHeader({
   day,
+  loaded,
   scope,
   filter,
   onScope,
@@ -105,6 +132,8 @@ function WorklistHeader({
   onOwner,
 }: Readonly<{
   day: Worklist;
+  // How many rows are on screen, which grows as the reader pages.
+  loaded: number;
   scope: WorklistScope;
   filter: WorklistFilter;
   owner: string;
@@ -115,15 +144,29 @@ function WorklistHeader({
   const t = useT();
   const { locale } = useLocale();
   const scopes = day.scope_options;
-  const completeness = completenessText(day, filter, t, locale);
+  const completeness = completenessText(day, filter, t, locale, loaded);
   return (
     <div className="worklist-header">
       <p className="t-h2 worklist-lead">
-        {t("worklist.summary", {
-          urgent: formatNumber(day.summary.urgent, locale),
-          due: formatNumber(day.summary.due, locale),
-          lower: formatNumber(day.summary.lower_priority, locale),
-        })}
+        {t(
+          // `in_play` is optional, and a server that does not send it has not
+          // said there is none — it has said nothing. Printing 0 for silence
+          // is the under-reporting this line must never do, so the sentence
+          // without the figure is drawn instead.
+          day.summary.in_play === undefined
+            ? "worklist.summary.noMiddle"
+            : "worklist.summary",
+          {
+            urgent: formatNumber(day.summary.urgent, locale),
+            due: formatNumber(day.summary.due, locale),
+            inPlay: formatNumber(day.summary.in_play ?? 0, locale),
+            lower: formatNumber(day.summary.lower_priority, locale),
+            // The DAY's candidates, not this page's rows. `summary.total`
+            // counts what one response carried, so printing it beside a queue
+            // the reader has paged past would shrink as they read further in.
+            total: formatNumber(dayTotal(day), locale),
+          },
+        )}
       </p>
       {/* What the day is WORTH, above the controls that narrow it. The figures
           describe the whole day rather than the page or the filter, so they sit
@@ -173,8 +216,16 @@ function WorklistHeader({
 }
 
 // The day, drawn.
+//
+// TWO kinds of number reach this component and they must not be confused.
+// `day` is the first page: its summary, counts, reach and scope options
+// describe the whole assembled day and do not move as the reader pages.
+// `queue` is every row loaded so far, which grows. Reading rows off `day`
+// would draw only the first page; reading figures off the latest page would
+// describe a slice as though it were the day.
 function WorklistBody({
   day,
+  queue,
   scope,
   filter,
   owner,
@@ -183,8 +234,14 @@ function WorklistBody({
   onFilter,
   onOwner,
   onSelect,
+  onOpenEmail,
+  hasMore,
+  loadingMore,
+  moreFailed,
+  onMore,
 }: Readonly<{
   day: Worklist;
+  queue: readonly WorklistItem[];
   scope: WorklistScope;
   filter: WorklistFilter;
   owner: string;
@@ -193,22 +250,29 @@ function WorklistBody({
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
   onSelect: (next: string) => void;
+  // Opens a waiting email into the page's one drawer.
+  onOpenEmail: (activityId: string) => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  moreFailed: boolean;
+  onMore: () => void;
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  const focus = focusOf(day.queue);
+  const focus = focusOf(queue);
   // What follows it, bounded, in the server's own order. These rows may all be
   // one kind of work — worklist.nextup.tsx says why that is the ranking's to
   // fix rather than this page's.
-  const next = nextUpOf(day.queue, focus);
-  // The row the pane is about. Resolved from the id rather than held as the
-  // item itself: a refetch replaces every row object, and a held one would go
-  // on describing a version of the day that is no longer on screen.
-  const selected = day.queue.find((item) => item.id === selectedId);
+  const next = nextUpOf(queue, focus);
+  // The row the pane is about. Resolved from the identity rather than held as
+  // the item itself: a refetch replaces every row object, and a held one would
+  // go on describing a version of the day that is no longer on screen.
+  const selected = queue.find((item) => rowIdentity(item) === selectedId);
   return (
     <>
       <WorklistHeader
         day={day}
+        loaded={queue.length}
         scope={scope}
         filter={filter}
         owner={owner}
@@ -251,12 +315,12 @@ function WorklistBody({
       {/* The one thing to do next, said rather than implied. The row stays in
           the queue below: removing it would make the rank numbers lie and the
           counts disagree with the page. */}
-      {focus && <FocusCard item={focus} />}
+      {focus && <FocusCard item={focus} onOpenEmail={onOpenEmail} />}
       {/* And then? A finite list a reader can see the end of, so a morning has a
           shape rather than a backlog. Drawn only under a focus card: without
           one there is no "next", only the queue. */}
       {focus && <NextUp items={next} />}
-      {day.queue.length === 0 ? (
+      {queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         <p className="t-body worklist-clear">
           {missing.length > 0
@@ -285,14 +349,14 @@ function WorklistBody({
           queue={
             <Panel title={t("worklist.queue")}>
               <ol className="worklist-list">
-                {day.queue.map((item, index) => (
-                  <li key={`${item.source}-${item.id}`}>
+                {queue.map((item, index) => (
+                  <li key={rowIdentity(item)}>
                     {/* The heading, drawn where the band CHANGES. The server sends
                     the queue already sorted so each band is one contiguous run,
                     so a change is a boundary and never a second visit — which
                     is what lets a heading be drawn from the row rather than by
                     grouping the list into buckets the order would then fight. */}
-                    {opensBand(day.queue, index) && (
+                    {opensBand(queue, index) && (
                       <Eyebrow as="h3" className="worklist-band">
                         {t(
                           `worklist.band.${item.band ?? "keep_momentum"}` as const,
@@ -303,16 +367,48 @@ function WorklistBody({
                       item={item}
                       position={index + 1}
                       owner={owner}
-                      asOf={day.as_of}
-                      selected={selectedId === item.id}
-                      onSelect={() =>
-                        onSelect(selectedId === item.id ? "" : item.id)
+                      selected={selectedId === rowIdentity(item)}
+                      // Only where pressing it OPENS something. WorklistRow
+                      // draws a plain number without this, which is what the
+                      // Brief already relies on: a rank that toggles a pressed
+                      // state and opens nothing teaches the reader that the
+                      // page lies about what is pressable.
+                      onSelect={
+                        hasPane(item)
+                          ? () =>
+                              onSelect(
+                                selectedId === rowIdentity(item)
+                                  ? ""
+                                  : rowIdentity(item),
+                              )
+                          : undefined
                       }
+                      onOpenEmail={onOpenEmail}
                       onReview={() => onFilter(reviewFilter(item))}
                     />
                   </li>
                 ))}
               </ol>
+              {/* The way to the rest of the backlog.
+                  Acceptance asks that the queue's counts be reachable, and
+                  before this the page stopped at its first read with no route
+                  to the rows behind it — the figures said work existed and
+                  offered no way to it. */}
+              {hasMore && (
+                <div className="worklist-more">
+                  <Button onClick={onMore} pending={loadingMore}>
+                    {t("worklist.more")}
+                  </Button>
+                  {/* A refused page leaves the button looking exactly as an
+                      unpressed one does. Saying so is what tells the reader
+                      the backlog is still there and worth asking for again. */}
+                  {moreFailed && (
+                    <span className="co-part-error" role="alert">
+                      {t("worklist.more.failed")}
+                    </span>
+                  )}
+                </div>
+              )}
             </Panel>
           }
         />
@@ -377,6 +473,7 @@ export function WorklistScreen({
   // would make the address describe a fraction of what the reader is looking
   // at. Moving them all there is its own change.
   const [selectedId, setSelectedId] = useState("");
+  const [openEmail, setOpenEmail] = useOpenEmail();
   // Changing a dial drops the selection. A row chosen under one question is
   // not a row the reader chose under the next one, and keeping the id means a
   // row that comes back — a filter switched away and back, a snooze that lifts
@@ -388,7 +485,21 @@ export function WorklistScreen({
       set(next);
     };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
-  const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
+  // A failed SHOW MORE is not a failed page. `isError` covers both, and
+  // treating them alike would replace a screen of rows the reader is working
+  // through with an error panel because one extra page did not arrive. The
+  // rows already loaded are still true, so the surface stays ready and the
+  // control below says the request failed.
+  const lostTheDay = day.isError && day.data === undefined;
+  const state = day.isPending ? "loading" : lostTheDay ? "failed" : "ready";
+  // The FIRST page carries the day's own figures — summary, counts, reach,
+  // scope options. Those describe the assembled day and do not change as the
+  // reader pages, so they are read from page one rather than from the latest
+  // page, whose numbers describe only its own slice.
+  const first = day.data?.pages[0];
+  // The rows, which DO grow. Deduped in the query, because a re-rank between
+  // reads can serve one row on two pages.
+  const queue = day.data ? loadedQueue(day.data.pages) : [];
   return (
     <div className="wrap worklist">
       {/* No label: the shell already heads this page, and a second "Worklist"
@@ -409,9 +520,10 @@ export function WorklistScreen({
         loadingLabel={t("worklist.loading")}
         detail={{ onRetry: () => void day.refetch() }}
       >
-        {day.data && (
+        {first && (
           <WorklistBody
-            day={day.data}
+            day={first}
+            queue={queue}
             scope={scope}
             filter={filter}
             owner={owner}
@@ -420,9 +532,22 @@ export function WorklistScreen({
             onFilter={answerWith(setFilter)}
             onOwner={answerWith(setOwner)}
             onSelect={setSelectedId}
+            onOpenEmail={setOpenEmail}
+            hasMore={day.hasNextPage}
+            loadingMore={day.isFetchingNextPage}
+            moreFailed={day.isError && day.data !== undefined}
+            onMore={() => void day.fetchNextPage()}
           />
         )}
       </SurfaceState>
+      {/* One drawer over the whole queue, at page level rather than inside a
+          row: two mounted dialogs would be two `aria-modal` elements, and the
+          day stays legible behind the message being read. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
     </div>
   );
 }

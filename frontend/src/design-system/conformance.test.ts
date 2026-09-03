@@ -1,3 +1,8 @@
+// biome-ignore-all lint/suspicious/noTemplateCurlyInString: these strings are
+// FIXTURES of source code, and the ${...} in them is the subject under test —
+// a template literal the sweep has to recognize, not one this file meant to
+// interpolate.
+
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
 // new file is enrolled the moment it exists:
-//  - exactly three type families (Outfit / DM Sans / JetBrains Mono, §2) — any
+//  - exactly three type families (Bricolage Grotesque / Geist / Geist Mono, §2) — any
 //    other font-family fails the build;
 //  - every colour reads from a token — literal colours live only in tokens.css.
 
@@ -47,9 +52,9 @@ const files = sourceFiles(join(frontendRoot, "src"))
   .concat(extensionFrontends());
 
 const allowedFamilies = new Set([
-  "Outfit",
-  "DM Sans",
-  "JetBrains Mono",
+  "Bricolage Grotesque",
+  "Geist",
+  "Geist Mono",
   // stack fallbacks named in the §2 token definitions
   "system-ui",
   "sans-serif",

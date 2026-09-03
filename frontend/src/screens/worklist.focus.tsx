@@ -13,26 +13,37 @@
 // verb the server named. The row stays in the queue below it, because removing
 // it would make the rank numbers lie and the counts disagree with the page.
 
-import { Badge } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf } from "./common";
+import { useTaskUpdate } from "./taskactions";
 import {
   consequenceText,
   dealFactsText,
   itemTitle,
   moveHref,
+  moveLabel,
   reasonText,
   rowHref,
 } from "./worklist.copy";
-import type { WorklistItem } from "./worklist.queries";
+import { WaitingEmailLine } from "./worklist.emailtitle";
+import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // The focus card, or nothing.
 //
 // Drawn only on a page the reader can act on. A day whose top row is a
 // duplicate-merge suggestion is not a day with a recommended action, and
 // promoting one would tell a rep that hygiene is their most important work.
-export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
+export function FocusCard({
+  item,
+  onOpenEmail,
+}: Readonly<{
+  item: WorklistItem;
+  // Opens a waiting email. Absent where the surface has no drawer.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -53,8 +64,13 @@ export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <Panel title={t("worklist.focus.title")}>
       <div className="worklist-focus">
+        {/* The one thing to do now, and where it is an email that is the
+            message itself — the card has the room for the canonical row, and
+            the whole point of this card is that a rep can act without opening
+            anything else first. */}
+        <WaitingEmailLine item={item} onOpen={onOpenEmail} />
         <p className="t-h2 worklist-focus-what">
-          {href ? (
+          {item.email_summary ? null : href ? (
             <a className="entity-link" href={href}>
               {itemTitle(item, t, locale)}
             </a>
@@ -72,20 +88,81 @@ export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
             the list again in a bigger box. Everything else this row supports
             stays available on its own row below. */}
         <div className="worklist-focus-verb">
-          {move ? (
-            <a className="button button-primary" href={move}>
-              {t("worklist.verb.draft_reply")}
-            </a>
-          ) : (
-            href && (
-              <a className="button button-primary" href={href}>
-                {t(`worklist.focus.verb.${item.primary_action ?? "open"}`)}
-              </a>
-            )
-          )}
+          <FocusVerb item={item} href={href} move={move} />
         </div>
       </div>
     </Panel>
+  );
+}
+
+// The card's single verb.
+//
+// Three shapes, and which one is drawn is decided by what the verb can actually
+// DO — not by what reads best. A card whose strongest control promises more
+// than it performs is worse than one that promises less: the reader believes
+// the work is done and moves on.
+//
+// `complete` on a task is the case that made this a component. The label said
+// "Complete it" over a link to the task's record, so pressing it navigated and
+// completed nothing. The mutation exists and every other surface already uses
+// it, so the card completes the task rather than renaming the promise down.
+function FocusVerb({
+  item,
+  href,
+  move,
+}: Readonly<{
+  item: WorklistItem;
+  href: string | undefined;
+  move: string | undefined;
+}>) {
+  const t = useT();
+  const update = useTaskUpdate([worklistKey]);
+  if (item.source === "task" && item.primary_action === "complete") {
+    // The completion alone, not TaskQuickActions — that draws Snooze beside it
+    // for any dated task, and every task the queue carries is dated. Two
+    // controls here would be the list again in a bigger box, which is the one
+    // thing this card exists not to be. Snooze stays on the row below, where
+    // the server's own `actions` list already offers it.
+    return (
+      <>
+        <Button
+          small
+          variant="primary"
+          disabled={update.isPending}
+          onClick={() =>
+            update.mutate({ id: item.id, body: { is_done: true } })
+          }
+        >
+          {t("tasks.complete")}
+        </Button>
+        {/* A rejected PATCH otherwise leaves the card rendering exactly as a
+            click that did nothing would, and the reader has no reason to try
+            again — the same reason NoticeAcknowledge says so. */}
+        {update.isError && (
+          <span className="co-part-error" role="alert">
+            {problemMessageOf(update.error, t)}
+          </span>
+        )}
+      </>
+    );
+  }
+  if (move) {
+    return (
+      <a className="btn btn-primary" href={move}>
+        {/* The same spelling the row uses. The card once dropped the
+            composer-versus-record distinction, so one address was described two
+            ways on one screen; one function now answers for both. */}
+        {moveLabel(item, t)}
+      </a>
+    );
+  }
+  if (!href) {
+    return null;
+  }
+  return (
+    <a className="btn btn-primary" href={href}>
+      {t(`worklist.focus.verb.${item.primary_action ?? "open"}`)}
+    </a>
   );
 }
 
@@ -112,11 +189,17 @@ export function worthActingOn(item: WorklistItem): boolean {
   if (item.primary_action === "acknowledge") {
     return false;
   }
-  // And somewhere for the verb to GO. A row filed under no record — a task
-  // nobody linked to anything — has no address at all: rowHref falls through
-  // the subject and the source-queue map and finds none. The card would then
-  // be a headline with no way to act, occupying the one place a reader looks
-  // for their next step.
+  // A completable task needs no address: the verb acts on the row itself.
+  // The backend mints exactly this — a hand-written task linked to nothing,
+  // "readable, completable, and pointing nowhere" — and requiring an href
+  // would hide the one row a rep can finish without opening anything.
+  if (item.source === "task" && item.primary_action === "complete") {
+    return true;
+  }
+  // Otherwise the verb needs somewhere to GO. A row filed under no record has
+  // no address at all: rowHref falls through the subject and the source-queue
+  // map and finds none. The card would then be a headline with no way to act,
+  // occupying the one place a reader looks for their next step.
   return rowHref(item) !== undefined || moveHref(item) !== undefined;
 }
 

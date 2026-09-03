@@ -1,94 +1,26 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 /** @vitest-environment jsdom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../api/schema";
-import { type Locale, LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { WorklistScreen } from "./worklist";
+import {
+  day,
+  renderWorklist,
+  row,
+  stub,
+  type WorklistItem,
+} from "./worklist.testkit";
 
 // The ranked queue, and the ways it can mislead the person reading it.
 //
 // Every case here is one promise the page makes: that the order is readable,
 // that a figure describes the rows beneath it, that nothing is drawn to report
 // a zero, and that the database's own words never reach the screen.
-
-type Worklist = components["schemas"]["Worklist"];
-type WorklistItem = components["schemas"]["WorklistItem"];
-
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
-}
-
-// The queue, plus the one approval a decision row fetches whole. A row sends a
-// sentence; deciding needs the payload, the stager and the evidence, so the row
-// being decided reads the approval it is showing.
-function stub(day: Worklist, approval?: unknown) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/worklist")) {
-        return jsonResponse(day);
-      }
-      if (approval && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
-        return jsonResponse(approval);
-      }
-      return jsonResponse({ data: [] });
-    }),
-  );
-}
-
-function renderWorklist(locale: Locale = "en", opensOn?: string) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>
-        <WorklistScreen opensOn={opensOn} />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-function day(over: Partial<Worklist> = {}): Worklist {
-  return {
-    as_of: "2026-08-31T09:00:00Z",
-    scope: "mine",
-    scope_options: ["mine"],
-    queue: [],
-    summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
-    sources_unavailable: [],
-    reach: [],
-    counts: [],
-    readings: {
-      revenue_at_risk_minor: null,
-      buyer_replies: 0,
-      prospecting: 0,
-      review: 0,
-      more_available: false,
-    },
-    ...over,
-  };
-}
-
-function row(over: Partial<WorklistItem> = {}): WorklistItem {
-  return {
-    id: "row-1",
-    source: "task",
-    category: "tasks",
-    level: 4,
-    consequence: "task_slips",
-    because: [],
-    actions: [],
-    ...over,
-  };
-}
+//
+// What the pane opens (and refuses to open) lives in worklist.pane.test.tsx.
 
 afterEach(() => {
   cleanup();
@@ -631,6 +563,97 @@ describe("what the ranked queue tells a reader", () => {
   });
 });
 
+// The lead lane, on the screen.
+//
+// The lane, its dedupe and its bounds are proved in Go. What none of that can
+// see is the half of the same invariant that lives here: a source, a category
+// and three reason kinds each have to be REGISTERED in worklist.copy.ts before
+// a word of them reaches a reader. An unregistered one does not error — it
+// renders a fallback, or silently drops the figure it was carrying — so the
+// backend can be entirely correct while the row says nothing.
+describe("a lead still owed its first reply", () => {
+  function leadRow(over: Partial<WorklistItem> = {}): WorklistItem {
+    return row({
+      id: "lead-row",
+      source: "lead_response",
+      category: "leads",
+      level: 1,
+      title: "Weber GmbH",
+      subject: { type: "lead", id: "11111111-2222-4333-8444-555555555555" },
+      consequence: "buyer_waits",
+      ...over,
+    });
+  }
+
+  it("says why it is here, in the reader's own words", async () => {
+    stub(
+      day({
+        queue: [
+          leadRow({
+            because: [
+              { kind: "response_overdue" },
+              { kind: "waiting_days", value: { kind: "days", days: 2 } },
+            ],
+          }),
+        ],
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Weber GmbH");
+    // The category badge, and the reason — both from the catalog, so an
+    // unregistered kind renders its raw key here and fails visibly.
+    expect(screen.getByText(en["worklist.category.leads"])).toBeTruthy();
+    expect(
+      screen.getByText(new RegExp(en["worklist.because.response_overdue"])),
+    ).toBeTruthy();
+  });
+
+  // A lead with no name of its own still gets a sentence rather than a blank.
+  it("names the kind of thing it is when the lead has no name", async () => {
+    stub(day({ queue: [leadRow({ title: undefined })] }));
+    renderWorklist();
+
+    expect(
+      await screen.findByText(en["worklist.untitled.lead_response"]),
+    ).toBeTruthy();
+  });
+
+  // The row's way out is the LEAD's own record, through the shared entity
+  // registry — never a path spelled a second time in this file.
+  it("opens the lead record it is about", async () => {
+    stub(day({ queue: [leadRow()] }));
+    renderWorklist();
+
+    const link = await screen.findByRole("link", { name: "Weber GmbH" });
+    expect(link.getAttribute("href")).toBe(
+      "#/leads/11111111-2222-4333-8444-555555555555",
+    );
+  });
+
+  // And the queue can be narrowed to them, which is the strip card's
+  // destination as well as a pill of its own.
+  it("can be narrowed to on its own", async () => {
+    const user = userEvent.setup();
+    stub(day({ queue: [leadRow()] }));
+    renderWorklist();
+
+    await screen.findByText("Weber GmbH");
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.filter.leads"] }),
+    );
+
+    await waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const urls = calls.map((call) => {
+        const target = call[0];
+        return target instanceof Request ? target.url : String(target);
+      });
+      expect(urls.some((url) => url.includes("filter=leads"))).toBe(true);
+    });
+  });
+});
+
 // An introduction ask is the one row whose `decide` leads somewhere.
 //
 // It has no inline card — the four answers are the colleague's own, given on
@@ -699,7 +722,7 @@ describe("an introduction ask on the queue", () => {
     // Wait for the queue itself to render before asserting an absence: a
     // findBy on a link that must NOT exist would pass against a page that had
     // not drawn anything yet.
-    await screen.findByText("0 urgent · 0 due · 1 lower-priority");
+    await screen.findByText(/0 urgent/);
     // A "Decide" LINK beside an inline decision card would ask the reader to
     // choose between answering here and going somewhere to answer.
     expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
@@ -783,15 +806,21 @@ describe("the one thing to do next", () => {
   it("promotes no card when the row has nowhere for its verb to go", async () => {
     stub(
       day({
-        // A task filed under nothing: no subject, so rowHref falls through
-        // SOURCE_QUEUE and finds no address. The server named a verb, and the
-        // page has nowhere to send it.
+        // Filed under nothing, so rowHref falls through SOURCE_QUEUE and finds
+        // no address. The server named a verb and the page has nowhere to send
+        // it.
+        //
+        // Deliberately NOT a task: a task's `complete` acts on the row itself
+        // and needs no address, so this case would be asserting the opposite
+        // rule with a task fixture.
         queue: [
           row({
             id: "unfiled",
+            source: "sync_health",
+            category: "system",
             title: "Something to do",
             band: "keep_momentum",
-            primary_action: "complete",
+            primary_action: "open",
           }),
         ],
         summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
@@ -806,186 +835,6 @@ describe("the one thing to do next", () => {
   });
 });
 
-describe("what the selected row is about", () => {
-  it("draws no pane until the reader picks a row", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "one",
-            title: "A task",
-            subject: {
-              type: "person",
-              id: "01a05500-0000-7000-8000-0000000000aa",
-              label: "Kirsten Vogel",
-            },
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    // The full-width list a reader had before selection existed. An empty
-    // column standing ready reads as a pane that failed to load.
-    await screen.findByText("A task · Kirsten Vogel");
-    expect(screen.queryByText("They last wrote")).toBeNull();
-  });
-
-  it("opens the record beside the queue, and closes it on a second press", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "one",
-            title: "A task",
-            subject: {
-              type: "person",
-              id: "01a05500-0000-7000-8000-0000000000aa",
-              label: "Kirsten Vogel",
-            },
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    const open = await screen.findByRole("button", {
-      name: /^Show what/,
-    });
-    await userEvent.click(open);
-    // The pane names the record and answers the question the row cannot: how
-    // long the silence has run, in both directions.
-    await screen.findByText("They last wrote");
-    expect(screen.getByText("We last wrote")).toBeTruthy();
-
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
-    await waitFor(() => {
-      expect(screen.queryByText("They last wrote")).toBeNull();
-    });
-  });
-
-  it("draws no pane for a row about a deal, whose figures are already on it", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "one",
-            title: "Northstar renewal",
-            source: "deal_at_risk",
-            category: "deals_at_risk",
-            subject: {
-              type: "deal",
-              id: "01a05500-0000-7000-8000-0000000000bb",
-              label: "Northstar",
-            },
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    const open = await screen.findByRole("button", {
-      name: /^Show what/,
-    });
-    await userEvent.click(open);
-
-    // Selected, and deliberately nothing beside it: a deal row carries its own
-    // amount, close date and owner, so a pane would be a second spelling.
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /^Show what/ })).toBeTruthy();
-    });
-    expect(screen.queryByText("They last wrote")).toBeNull();
-  });
-
-  it("closes the pane when the selected row leaves the queue", async () => {
-    const withRow = day({
-      queue: [
-        row({
-          id: "one",
-          title: "A task",
-          subject: {
-            type: "person",
-            id: "01a05500-0000-7000-8000-0000000000aa",
-            label: "Kirsten Vogel",
-          },
-        }),
-      ],
-      summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-    });
-    // The same day with the row gone — a disposition, a filter, a refetch that
-    // found it answered. The pane must not go on describing a record whose row
-    // is no longer on the page.
-    let current: Worklist = withRow;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.includes("/worklist")) {
-          return jsonResponse(current);
-        }
-        return jsonResponse({ data: [] });
-      }),
-    );
-    renderWorklist();
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Show what/ }),
-    );
-    await screen.findByText("They last wrote");
-
-    current = day({
-      queue: [],
-      summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
-    });
-    // Re-render through the filter, which refetches: the row is gone, and the
-    // pane goes with it rather than outliving the row it describes.
-    await userEvent.click(screen.getByRole("button", { name: /Decisions/ }));
-    await waitFor(() => {
-      expect(screen.queryByText("They last wrote")).toBeNull();
-    });
-  });
-  it("draws no aside landmark for a row that has no pane", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "one",
-            title: "Northstar renewal",
-            source: "deal_at_risk",
-            category: "deals_at_risk",
-            subject: {
-              type: "deal",
-              id: "01a05500-0000-7000-8000-0000000000bb",
-              label: "Northstar",
-            },
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    const { container } = renderWorklist();
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Show what/ }),
-    );
-    // A deal row has no pane. An empty <aside> would still be announced as a
-    // landmark and still take its third of the grid, which reads as a pane
-    // that failed rather than as one that was never meant to be there.
-    await waitFor(() => {
-      expect(container.querySelectorAll("aside")).toHaveLength(0);
-    });
-  });
-});
-
-// What `#/worklist/<segment>` opens on.
-//
-// The address is the other half of the team board's row: a board that writes a
-// hash nothing reads is a row that goes nowhere. These assert the REQUEST, not
-// the rendering, because whose day the page is showing is a question about
-// which day it asked the server for.
 describe("the address opens a queue", () => {
   function requestedUrls(): string[] {
     const mock = globalThis.fetch as unknown as {

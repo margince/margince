@@ -29,3 +29,5 @@ a35057f55a688d0b19b9e0e295f54bafa5193517 5b2fdab6f36d98ba92f83b152962152b47cd611
 8d76c31f65ec76a683156160d689191425b20858 e0c11716048a939f1f1187d6992754335300ac41 ratified-v1-lists-leave-the-product-tags-are-the-one-grouping
 e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b4963 ratified-the-human-set-sales-quota-is-retired
 0110dee350c9277dc41e5147dbba9c0a127c3f8a f26fe6c3b9c6e8dc75128b7bea48799033ecdab3 ratified-v1-tag-colour-is-a-closed-palette-and-a-name-is-bounded
+44085e526e3c71af58230ac3359eb9679dbd6a59 08ef392fc995b0b79872e2544d5f3d210d5923a1 ratified-a-double-opt-in-link-is-mailed-never-shown-to-the-operator
+98f26a4484760912e7cede9f57715a7be587b6c5 49728224fbaa221da787bacd7a391776d6fc85a4 ratified-worklist-move-carries-the-deal-cards-verbs

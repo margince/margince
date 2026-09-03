@@ -8,10 +8,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MONEY_ABSENT } from "../format/format";
+import { formatTimeOfDay, MONEY_ABSENT } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { BriefView } from "./brief.view";
 import { HomeScreen } from "./home";
+import { overnightRow, readingsDay } from "./home.fixtures";
 import { HomeGlance } from "./home.glance";
 import {
   fleetDeal,
@@ -22,10 +25,12 @@ import {
   render,
   run,
   stubApi,
+  threeRanked,
   workOrder,
   writeRoutes,
   writes,
 } from "./home.testkit";
+import type { Worklist } from "./worklist.queries";
 
 afterEach(() => {
   cleanup();
@@ -295,7 +300,7 @@ describe("HomeScreen — the order of the page follows the day", () => {
     render(<HomeScreen />);
 
     await screen.findByText("Send the Weber follow-up");
-    expect(workOrder()).toEqual(["home-decisions", "home-today"]);
+    expect(workOrder()).toEqual(["home-decisions", "home-focus"]);
   });
 
   it("leads with the ranked queue once the deck is clear", async () => {
@@ -306,7 +311,7 @@ describe("HomeScreen — the order of the page follows the day", () => {
     render(<HomeScreen />);
 
     await screen.findByText("Fleet retrofit");
-    expect(workOrder()).toEqual(["home-today", "home-decisions"]);
+    expect(workOrder()).toEqual(["home-focus", "home-decisions"]);
   });
 });
 
@@ -326,14 +331,6 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
           // right value for them: the sentence is then absent, and the greeting
           // is what the assertion reads.
           day={undefined}
-          decisions={null}
-          brief={null}
-          overnight={null}
-          stalled={null}
-          onGoToDecisions={() => {}}
-          onGoToToday={() => {}}
-          onGoToDuplicates={() => {}}
-          onGoToWatch={() => {}}
         />
       </LocaleProvider>,
     );
@@ -369,24 +366,58 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
           day={undefined}
-          decisions={null}
-          brief={null}
-          overnight={null}
-          stalled={null}
-          onGoToDecisions={() => {}}
-          onGoToToday={() => {}}
-          onGoToDuplicates={() => {}}
-          onGoToWatch={() => {}}
         />
       </LocaleProvider>,
     );
     // Not one of them, and in particular not the "nothing is waiting" claim: an
     // unread queue is not an empty one.
-    expect(screen.queryByTestId("glance-decisions")).toBeNull();
-    expect(screen.queryByTestId("glance-ranked")).toBeNull();
-    expect(screen.queryByTestId("glance-captured")).toBeNull();
-    expect(screen.queryByTestId("glance-quiet")).toBeNull();
+    // The header never states a count. Every fact those lines carried is drawn
+    // by the section that owns it — the deck, the readings strip, the rail's
+    // panels — so an unread queue leaves the header saying only the greeting.
+    expect(screen.queryByTestId("glance-sentence")).toBeNull();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+});
+
+// ── The eyebrow dates the morning's reading, and only the morning's ──
+
+describe("HomeGlance — the eyebrow says when the queue was read", () => {
+  function eyebrowOf(view: BriefView, day: Worklist | undefined): string {
+    const rendered = rtlRender(
+      <LocaleProvider initial="en">
+        <HomeGlance
+          view={view}
+          firstName="Ada"
+          now={new Date(2026, 6, 5, 9, 0, 0)}
+          day={day}
+        />
+      </LocaleProvider>,
+    );
+    const text =
+      screen.getByTestId("home-glance").firstChild?.textContent ?? "";
+    rendered.unmount();
+    return text;
+  }
+
+  // Derived from the fixture and the runner's own zone. A literal time here
+  // would pin the test to whichever machine wrote it.
+  it("names the moment the morning's queue was read", () => {
+    const day = readingsDay({});
+    expect(eyebrowOf("morning", day)).toBe(
+      `Your morning · as of ${formatTimeOfDay(day.as_of, "en", viewerZone())}`,
+    );
+  });
+
+  // The weekly's numbers were frozen when the week closed. A time of day
+  // against them dates the reading rather than the week.
+  it("gives the weekly no as-of at all", () => {
+    expect(eyebrowOf("weekly", readingsDay({}))).toBe("Your week");
+  });
+
+  // A queue still in flight has no moment to name, and inventing one would
+  // date a reading that has not happened.
+  it("says the scope alone while the morning's queue is unread", () => {
+    expect(eyebrowOf("morning", undefined)).toBe("Your morning");
   });
 });
 
@@ -464,7 +495,6 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     // from the queue this case leaves in flight.
     await screen.findByTestId("home-readings");
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
-    expect(screen.queryByTestId("glance-decisions")).toBeNull();
     // The wait belongs to the deck alone. Five independent reads exist so that
     // one of them being slow cannot blank the other four.
     expect(deckSection().querySelector("[aria-busy='true']")).toBeTruthy();
@@ -480,7 +510,6 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     render(<HomeScreen />);
 
     await screen.findByTestId("home-readings");
-    expect(screen.queryByTestId("glance-decisions")).toBeNull();
     // Not "nothing is waiting": a queue that could not be read is not an empty
     // one, and the deck says which of the two this is.
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
@@ -535,18 +564,95 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     });
     render(<HomeScreen />);
 
-    // The glance is where the decision counts are said now: the readings strip
-    // is drawn from the worklist answer and knows nothing about approvals.
+    // The DECK is where decisions are said now, and it draws the proposal
+    // itself rather than a count of them — a stronger claim than the line that
+    // used to sit above it, which could be right about a queue the section
+    // failed to render.
+    //
+    // ONE card, because a deck shows one: the second proposal is behind it and
+    // reached by deciding this one. What this case can still hold is that the
+    // queue arrived and the deck is drawing from it.
     await waitFor(() =>
-      expect(screen.getByTestId("glance-decisions").textContent).toContain("2"),
+      expect(
+        within(deckSection()).getByText("Send the Weber follow-up"),
+      ).toBeTruthy(),
     );
-    expect(screen.getByTestId("glance-expiring").textContent).toContain("1");
+    // The expiry the card states is its own countdown, in the reader's zone.
+    // The "how many stop waiting today" FIGURE has no surface any more: it
+    // existed only for the removed briefing line, and its same-day arithmetic
+    // (home.tsx expiringToday) went with it. Whether the deck should say that
+    // across the whole queue is a product question, filed rather than guessed.
+    expect(within(deckSection()).getByText(/expires/i)).toBeTruthy();
   });
 });
 
 // ── The ranked queue ──
 
 describe("HomeScreen — the ranked queue", () => {
+  // ONE brief run reaches this page through TWO endpoints: `GET /worklist`
+  // ranks each suggestion into the one order as a `brief_item` row, and
+  // `GET /brief` serves the same records with the factors behind them, under the
+  // same ids. So a suggestion that ranks into "Do next" is on the page twice
+  // unless "Focus when time opens" leaves out what the lead already drew — once
+  // as a worklist row and once as a card, each offering its own controls over
+  // the same deal.
+  it("draws an overnight suggestion once, even when it also leads the page", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(threeRanked),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "GET /worklist": () =>
+        jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
+    });
+    render(<HomeScreen />);
+
+    // The suggestions that did not lead are drawn as cards, so the section is
+    // skipping ONE record rather than going quiet. Awaited first: it is the
+    // slowest of the reads this assertion depends on.
+    expect(await screen.findByTestId("brief-item-bi-2")).toBeTruthy();
+    expect(screen.getByTestId("brief-item-bi-3")).toBeTruthy();
+    // The one that leads is drawn ONCE — as a worklist row, not again as a card.
+    const lead = screen.getByRole("region", {
+      name: en["brief.donext.title"],
+    });
+    expect(within(lead).getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.queryByTestId("brief-item-bi-1")).toBeNull();
+  });
+
+  // The other half of the same rule. Nothing led the page, so the section below
+  // owns every suggestion — a filter that dropped one here would hide work.
+  it("draws every suggestion when none of them leads the page", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(threeRanked),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByTestId("brief-item-bi-1")).toBeTruthy();
+    expect(screen.getByTestId("brief-item-bi-2")).toBeTruthy();
+    expect(screen.getByTestId("brief-item-bi-3")).toBeTruthy();
+  });
+
+  // A morning whose every suggestion already leads. "Nothing cleared the bar"
+  // would contradict the rows the reader can see directly above.
+  it("says the work is above rather than that the night found nothing", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(threeRanked),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "GET /worklist": () =>
+        jsonResponse(
+          readingsDay({}, [
+            overnightRow("bi-1", "d-1"),
+            overnightRow("bi-2", "d-2"),
+            overnightRow("bi-3", "d-3"),
+          ]),
+        ),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText(en["home.focus.allAbove"])).toBeTruthy();
+    expect(screen.queryByText(en["home.quietRun"])).toBeNull();
+  });
+
   it("renders the run: the deal, its money, the decomposition, the evidence and the honest-short line", async () => {
     stubApi({
       "GET /brief": () => jsonResponse(run),
@@ -794,5 +900,35 @@ describe("HomeScreen — the brief is generated, never re-ranked", () => {
 
     const generate = await screen.findByTestId("brief-refresh");
     expect(generate.textContent).toContain(en["home.generate"]);
+  });
+
+  // And what it says WHILE it works names the same act. The button assembles a
+  // first run; a pending label reading "Ranking…" describes re-ordering one
+  // that already exists, which is the confusion the button's own wording was
+  // changed to avoid. Nothing asserted this label, so the two drifted.
+  it("names assembling, not ranking, while the run is being built", async () => {
+    let releasePost: (() => void) | undefined;
+    const posted = new Promise<void>((resolve) => {
+      releasePost = resolve;
+    });
+    stubApi({
+      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "POST /brief": async () => {
+        await posted;
+        return jsonResponse(run, 201);
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    // Deliberately NOT awaited: the click's promise settles only once the write
+    // does, and the pending label is what the button says in between.
+    void user.click(await screen.findByTestId("brief-refresh"));
+    expect(
+      (await screen.findByText(en["home.generating"])).textContent,
+    ).toContain(en["home.generating"]);
+
+    releasePost?.();
   });
 });

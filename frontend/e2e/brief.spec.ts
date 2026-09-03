@@ -1,4 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
+import type { MessageKey } from "../src/i18n/en";
 
 /**
  * The Brief — the page a rep and a lead open first.
@@ -37,6 +39,19 @@ const SHOTS = process.env.E2E_BRIEF_SHOT_DIR ?? "/tmp/e2e-brief";
 // The readings row, by the test id HomeReadingsStrip hands its StatStrip. Not
 // by class: the plate is the shared primitive's, so a class selector would
 // match every other StatStrip in the app.
+/**
+ * A string the app actually renders, read from the catalog the component reads.
+ *
+ * The app renders GERMAN. Writing the words here would put a second copy of
+ * them in the tree, and a translator improving one would fail a layout suite —
+ * which is why the rest of this file asserts structure. The two cases below
+ * name copy because they are about a reader FINDING the page, and a heading
+ * nobody can read is a defect no box measurement can see.
+ */
+function copy(key: MessageKey): string {
+  return de[key];
+}
+
 const STRIP = '[data-testid="home-readings"]';
 const GLANCE = '[data-testid="home-glance"]';
 
@@ -92,6 +107,14 @@ async function openBrief(page: Page) {
  * so waiting on it would time out on every call. Excluded by name rather than
  * by giving up on the check, which would also excuse a panel still sliding in.
  */
+/** Open the Brief on its weekly view, settled the same way the morning is. */
+async function openWeekly(page: Page) {
+  await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
+  await expect(page.locator(GLANCE)).toBeVisible();
+  await expect(page.locator("#home-weekly")).toBeVisible();
+  await settled(page);
+}
+
 async function settled(page: Page) {
   await page.waitForFunction(
     (ambient) =>
@@ -219,6 +242,79 @@ test.describe("the Brief — page shape", () => {
     );
   });
 
+  // The headline outranks what is under it, in the product's OWN scale.
+  //
+  // The concept pack asks for a 30px floor. The design system's `--fs-h1` is
+  // 24px and every h1 in the product is drawn at it (base.css `.t-display`),
+  // so a 30px floor here would either fail forever or force the Brief to a size
+  // no other page uses — a second type scale, to satisfy a number taken from a
+  // mockup rather than from this system. Whether the product's h1 should grow
+  // is a design-system decision, and it is not the Brief's to take alone.
+  //
+  // What IS this page's to hold is that the greeting still READS as a headline:
+  // a ratio against body text, so a change to the scale moves both ends and
+  // only a collapse fails.
+  //
+  // The sentence under the greeting is NOT compared here. It carries no size of
+  // its own (home.css `.glance-sentence` sets colour, margin and measure) and
+  // inherits one LARGER than a panel title — the lede treatment the concept
+  // asks for. An assertion that it ranks below a section heading would encode
+  // the opposite of what the page deliberately does.
+  test("draws the headline at headline scale, not body scale", async ({
+    page,
+  }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    const headline = await px(page.locator("main h1"), "font-size");
+    const body = await px(
+      page.locator('[data-testid="glance-sentence"]'),
+      "font-size",
+    );
+    // A RATIO, not "bigger than". Panel titles are 13px and body is 13.5, so a
+    // headline shrunk all the way to body size still measures larger than a
+    // section heading — a greater-than comparison passes on a page whose
+    // headline has stopped being one. 1.5x is comfortably under the shipped
+    // step (24 over 13.5) and comfortably over any collapse of it.
+    expect(headline / body).toBeGreaterThanOrEqual(1.5);
+  });
+
+  // Inside the glance, top to bottom: the eyebrow labels the page, the heading
+  // greets, the sentence says what the morning holds. The block-level assertion
+  // above places the glance against the strip and cannot see this order at all,
+  // so a sentence rendered above its own heading would pass every other test
+  // here.
+  test("orders the eyebrow above the heading above the sentence", async ({
+    page,
+  }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    const eyebrow = await topOf(page.locator(`${GLANCE} .glance-eyebrow`));
+    const heading = await topOf(page.locator("main h1"));
+    expect(eyebrow).toBeLessThan(heading);
+    expect(heading).toBeLessThan(
+      await topOf(page.locator('[data-testid="glance-sentence"]')),
+    );
+  });
+
+  // ONE paragraph, and all of it visible.
+  //
+  // The sentence the Brief opens with was a STACK of one-fact lines before
+  // #3801 — a list wearing a sentence's position. Two assertions, because they
+  // fail for different reasons: a second <p> is the stack coming back, and a
+  // clipped one is a sentence the reader cannot finish.
+  test("says the morning in one paragraph, unclipped", async ({ page }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    await expect(page.locator(`${GLANCE} p`)).toHaveCount(1);
+    const clipped = await page
+      .locator('[data-testid="glance-sentence"]')
+      .evaluate((el) => el.scrollHeight > el.clientHeight);
+    expect(clipped).toBe(false);
+  });
+
   // The strip is five slots on EVERY morning, including a quiet one. A row that
   // shrank when a reading had nothing in it would be compared against a fuller
   // one and read as fewer questions asked, which is why the two slots the
@@ -233,24 +329,64 @@ test.describe("the Brief — page shape", () => {
   // The retrospective is LAST, under the work. It is what a rep reads once on
   // Monday, after the work waiting on them today; above either of those it puts
   // last week ahead of this morning.
-  test("keeps last week below today's work", async ({ page }) => {
-    await openBrief(page);
-    await expectShellRendered(page);
-
-    expect(await topOf(page.locator("#home-today"))).toBeLessThan(
-      await topOf(page.locator("#home-weekly")),
-    );
-  });
-
+  // The week lives behind the Weekly dial, not at the foot of the morning. It
+  // moved there when the dials shipped, and these two assertions kept opening
+  // the morning and waiting for a section that is no longer on it.
+  //
   // Frozen past above, live future below: a rep decides what next week holds by
   // reading what this one did.
   test("puts the week's plan under the week's review", async ({ page }) => {
-    await openBrief(page);
+    await openWeekly(page);
     await expectShellRendered(page);
 
     expect(await topOf(page.locator("#home-weekly"))).toBeLessThan(
       await topOf(page.locator("#brief-plan")),
     );
+  });
+
+  // And the morning shows the morning's work — the weekly is a dial away, not
+  // a section further down the same page.
+  test("keeps the week off the morning", async ({ page }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    await expect(page.locator("#home-focus")).toBeVisible();
+    await expect(page.locator("#home-weekly")).toHaveCount(0);
+  });
+
+  // The page a German reader arrives at is in German, and says what it is.
+  //
+  // Every other assertion here is geometry, which a page rendering raw message
+  // KEYS would satisfy completely — five boxes in a row is five boxes whether
+  // they read "Als Nächstes" or "brief.donext.title". One catalog read is what
+  // separates a rendered page from a rendered skeleton.
+  test("greets a German reader in German", async ({ page }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    await expect(
+      page.getByRole("heading", { name: copy("brief.donext.title") }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: copy("brief.view.label") }),
+    ).toBeVisible();
+  });
+
+  // The dial PRESSED, not the address typed.
+  //
+  // openWeekly() navigates straight to ?view=weekly, which proves the address
+  // resolves and nothing about the control. A dial wired to the wrong writer —
+  // or to none — leaves every other test in this file green while the button a
+  // reader actually presses does nothing.
+  test("switches to the week when the dial is pressed", async ({ page }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    await page.getByRole("button", { name: copy("brief.view.weekly") }).click();
+
+    await expect(page.locator("#home-weekly")).toBeVisible();
+    await expect(page.locator("#home-focus")).toHaveCount(0);
+    expect(page.url()).toContain("view=weekly");
   });
 
   // At desktop the rail is BESIDE the work, not under it. This is the assertion

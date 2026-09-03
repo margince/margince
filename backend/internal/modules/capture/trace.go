@@ -98,6 +98,19 @@ const (
 	// sender, or a colleague-only thread whose external party left. Unexported:
 	// no call site outside this module has occasion to state it.
 	traceReasonNoCounterparty = "no_counterparty"
+	// TraceReasonRoleMailbox is mail from an address that names a FUNCTION an
+	// organization answers — `support@`, `billing@`, a helpdesk vendor's ticket
+	// address. The message commits and stays visible, so the naive trace is
+	// `captured`, and the record it did not create is the thing a member is
+	// looking for: "why is there no contact for this?" answered with "it was
+	// captured" is the confident wrong answer this reason set exists to prevent.
+	TraceReasonRoleMailbox = "role_mailbox"
+	// TraceReasonPrivateThread is mail on a thread the confidentiality
+	// classifier judged personal — the mailbox owner's own life rather than the
+	// workspace's business. The message commits and keeps its audience, so the
+	// naive trace is `captured`, and the record it did not create is what a
+	// member would be looking for.
+	TraceReasonPrivateThread = "private_thread"
 	// TraceReasonInvisibleIncumbent is a replayed message whose incumbent row
 	// lies outside the reader's row scope. It is refused as an error from inside
 	// the capture transaction, so its trace CANNOT be written there.

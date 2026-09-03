@@ -347,9 +347,9 @@ describe("Section switcher (the page title at phone width)", () => {
 
 describe("Shell", () => {
   it("stamps body[data-screen] from the route", () => {
-    window.location.hash = "#/reports";
+    window.location.hash = "#/analytics";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
-    expect(document.body.dataset.screen).toBe("reports");
+    expect(document.body.dataset.screen).toBe("analytics");
   });
 
   // ONE element claims the page, on every route — and where two elements could

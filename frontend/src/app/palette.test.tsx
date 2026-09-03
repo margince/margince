@@ -240,6 +240,28 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await userEvent.click(screen.getByText("ACME-CRM"));
     expect(window.location.hash).toBe("#/projects/pr-1");
   });
+
+  // Typing a word and being taken to what carries it is the whole point of a
+  // tag. The palette used to drop tag hits with the types that have no page —
+  // a tag has one, so a searcher was left with no autocomplete for the
+  // vocabulary at all.
+  it("offers a tag hit and opens its page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "tag", id: "t-1", title: "Key Account" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("textbox"), "key");
+    await waitFor(() => expect(screen.getByText("Key Account")).toBeTruthy());
+
+    await userEvent.click(screen.getByText("Key Account"));
+    expect(window.location.hash).toBe("#/tags/t-1");
+  });
 });
 
 // The builtin set is DERIVED from the rail's destinations, so a screen with a

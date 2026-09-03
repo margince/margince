@@ -60,6 +60,16 @@ func (s *Service) WithDealFacts(f DealFacts) *Service {
 	return s
 }
 
+// WithDealMoves binds the reader that puts a deal's already-decided next step
+// on its queue row. An option for the reason WithDealFacts is one.
+//
+// Unbound, a deal row names its problem and no step — what every deal row did
+// before this seam, and never a wrong step.
+func (s *Service) WithDealMoves(m DealMoves) *Service {
+	s.dealMoves = m
+	return s
+}
+
 // WithTeammates binds the membership question a team-scoped reader's named-owner
 // ask is decided by. An option for the reason WithWaiting is one.
 //

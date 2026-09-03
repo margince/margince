@@ -190,7 +190,6 @@ export function LeadManualSignals({
 
   return (
     <div className="form-stack">
-      <span className="t-caption">{t("lead.signalsTitle")}</span>
       {/* An absent factor list is not an empty one: while the explanation is
           loading, failed, or not yet retained (ADR-0105 §1), nothing here can
           say what is set, so nothing here claims "not entered". */}

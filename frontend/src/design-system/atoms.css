@@ -6,8 +6,11 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  font-weight: 600;
-  padding: 2px 9px;
+  /* Medium at 20px: the pill states one standing fact beside a name and must
+     not outweigh the name. Semibold at this size reads as a warning. */
+  font-weight: var(--fw-medium);
+  min-block-size: 20px;
+  padding: 0 8px;
   border-radius: var(--r-full);
   background: var(--bgCard);
   color: var(--textMeta);
@@ -310,9 +313,11 @@
   width: 75%;
 }
 
+/* Left-aligned in its pane: an empty zone is one sentence and one verb in the
+   place the content will be, not an announcement centred in a void. */
 .empty {
-  text-align: center;
-  padding: 36px 20px;
+  text-align: start;
+  padding: var(--space-5) 0;
   color: var(--textMeta);
   font-size: 13px;
 }
@@ -323,9 +328,9 @@
 .empty-instructional {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: 48px 20px;
+  padding: var(--space-6) 0;
 }
 .empty-title {
   color: var(--textPrimary);
@@ -380,7 +385,7 @@
   place-items: stretch end;
 }
 .modal-drawer {
-  width: clamp(320px, 24vw, 460px);
+  width: clamp(320px, 36vw, 560px);
   height: 100dvh;
   max-height: 100dvh;
   border-radius: 0;
@@ -939,8 +944,8 @@
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  padding: 9px 11px;
+  border-radius: var(--r-control);
+  padding: 8px 11px;
   min-block-size: var(--control-h);
   width: 100%;
   outline: none;
@@ -1528,21 +1533,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  /* Tight on purpose. A reading is four short lines — what it is, the figure,
-     what the figure is drawn from, and a bar — and generous padding around
-     that much text turns a row a reader takes in at a glance into four boxes
-     they have to travel down. */
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  /* The pane, not the card: a reading sits on translucent ground with a
+     hairline, the same surface every zone of a record uses, so a row of them
+     reads as five panes of one page rather than five boxes on it. */
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  background: var(--pane);
   min-width: 0;
   /* A floor under the shortest card, so a reading carrying only a number still
-     keeps the row's line. The row itself stretches every card to the tallest
-     (see .co-readings-grid), which is what makes them equal; this only stops
-     a lone card from collapsing to its text. */
-  min-block-size: 5rem;
+     keeps the row's line. The row itself stretches every card to the tallest,
+     which is what makes them equal; this only stops a lone card from
+     collapsing to its text. 138px is the label, the figure and one basis line
+     with the figure's own air around it. */
+  min-block-size: 138px;
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
@@ -1555,7 +1559,6 @@
 
 /* --textMeta, not --textMuted: this is 11-13px meta/caption text, and
  * --textMeta is the token tuned to hold AA contrast at that size. */
-.stat-card-label,
 .stat-card-detail {
   display: flex;
   flex-direction: column;
@@ -1565,29 +1568,40 @@
   text-wrap: pretty;
 }
 
-/* The label owns the row, and the source badge sits at its far end — beside
- * the name of the reading rather than under the figure, so it qualifies the
- * label without competing with the number. */
+/* The label is the reading's eyebrow (`.t-eyebrow` sets its type) and owns
+ * the row; the source badge sits at its far end — beside the name of the
+ * reading rather than under the figure, so it qualifies the label without
+ * competing with the number. */
 .stat-card-label {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
+  text-wrap: pretty;
 }
 .stat-card-source {
   flex-shrink: 0;
 }
 
-/* The figure, in the display face: it is the one thing on the card a reader
-   compares across the row, and comparing means finding it in the same place at
-   the same weight every time. */
+/* The figure: it is the one thing on the card a reader compares across the
+   row, and comparing means finding it in the same place at the same weight
+   every time. A word (a verdict) takes the display face; a figure takes the
+   mono face through `numeric`, where digits share one width. Both sit at the
+   same size so a row of mixed readings keeps one line. */
 .stat-card-value {
   font-family: var(--f-display);
-  font-size: var(--fs-h2);
+  /* 26px on a wide page, down to 20px where five readings share a narrow row:
+     a money figure with its cents is the widest reading, and a figure that
+     wraps mid-number is worse than one set a little smaller. */
+  font-size: clamp(20px, 1.8vw, 26px);
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-display);
-  line-height: 1.2;
+  line-height: 1.15;
   overflow-wrap: anywhere;
+}
+.stat-card-value.t-mono {
+  font-family: var(--f-mono);
+  letter-spacing: -0.02em;
 }
 
 /* The receipt under a reading. Not a fourth line of it — it is what the
@@ -1623,11 +1637,19 @@
    floating wherever its own content ended. */
 .stat-card-foot {
   display: flex;
+  /* Two whole items that may go onto two lines, never two items broken
+     mid-phrase: in a four-across row the receipt and the door do not always
+     share a line, and a receipt shrunk to one word per line reads as damage. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
   margin-top: auto;
   padding-top: var(--space-2);
+}
+
+.stat-card-foot > * {
+  white-space: nowrap;
 }
 /* Only the door: with no receipt beside it, it still sits at the card's end
    rather than under the figure. */
