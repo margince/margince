@@ -154,12 +154,18 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 		t.Errorf("EnsureTaggable on an unowned record → %v, want ErrPermissionDenied", err)
 	}
 
+	// Give the bounded seat's RemoveTag refusal something to remove: an
+	// unbounded actor applies the tag first.
+	if _, err := tags.ApplyTag(e.Admin(), tagID, "person", unowned); err != nil {
+		t.Fatalf("an unbounded actor applying a tag to an unowned record: %v, want success", err)
+	}
+	if err := tags.RemoveTag(rep, tagID, "person", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a bounded seat removing a tag from an unowned record → %v, want ErrPermissionDenied", err)
+	}
+
 	// The allow arm: an unbounded actor (RowScopeAll) still may, so this is a
 	// row-scope narrowing and not the table having quietly become untaggable
 	// for everyone.
-	if _, err := tags.ApplyTag(e.Admin(), tagID, "person", unowned); err != nil {
-		t.Errorf("an unbounded actor applying a tag to an unowned record: %v, want success", err)
-	}
 	if err := tags.RemoveTag(e.Admin(), tagID, "person", unowned); err != nil {
 		t.Errorf("an unbounded actor removing a tag from an unowned record: %v, want success", err)
 	}
