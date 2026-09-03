@@ -290,7 +290,7 @@ const (
 
 // classifySeed runs the one classification call over the landing page.
 func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (siteTriageVerdict, error) {
-	if strings.TrimSpace(seed.Text) == "" {
+	if strings.TrimSpace(seed.Text) == "" && len(seed.HeadText) == 0 {
 		if seed.UnresolvedForward {
 			// This page named the site's real address and the crawl could not
 			// reach it. The emptiness is a gap in the read, not the site
@@ -300,6 +300,18 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 			return siteTriageVerdict{
 				Kind:   siteKindUnclear,
 				Reason: "the landing page forwards to an address that could not be read",
+			}, nil
+		}
+		if seed.isJSShell() {
+			// A client-rendered shell that declared nothing about itself. The
+			// words exist — a browser would assemble them — so this reader
+			// having none is a gap in the read, exactly as an unfollowable
+			// forward is. Settling `parked` with confidence 1 would put a real
+			// company on file as an empty address, with no model call made and
+			// nothing later to reopen it.
+			return siteTriageVerdict{
+				Kind:   siteKindUnclear,
+				Reason: "the landing page is a JavaScript application shell this reader cannot render",
 			}, nil
 		}
 		// A page with no readable text identifies nobody. That IS the parked

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // teammates is the membership seam, over the REAL identity service.
@@ -316,4 +317,186 @@ func countRows(t *testing.T, conn *pgx.Conn, ctx context.Context, query string, 
 		t.Fatal(err)
 	}
 	return n
+}
+
+// A typo is correctable, and correcting it keeps what the correction was not
+// about.
+//
+// Before this existed the only way out was to drop the row and write a new one,
+// which discards the manager's answer and any help already asked for — the two
+// fields on a commitment that were never the rep's to throw away. So the
+// assertion is not only that the label moved: it is that the answer survived.
+func TestCorrectingACommitmentKeepsWhatItWasNotAbout(t *testing.T) {
+	e := setupPlan(t)
+	id := planCommitment(t, e, e.rep1Ctx, "Call the Aster buyer on Monday")
+
+	if err := e.store.AskForHelp(e.rep1Ctx, id, "need the Q3 discount sheet"); err != nil {
+		t.Fatalf("asking for help: %v", err)
+	}
+	if err := e.store.Respond(e.rep2Ctx, id, "sent it over"); err != nil {
+		t.Fatalf("the lead answering: %v", err)
+	}
+
+	label := "Call the Aster buyer on Tuesday"
+	if err := e.store.EditCommitment(e.rep1Ctx, id,
+		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
+		t.Fatalf("correcting the label: %v", err)
+	}
+
+	plan, err := e.store.Current(e.rep1Ctx, planClock)
+	if err != nil {
+		t.Fatalf("reading the plan back: %v", err)
+	}
+	got := commitmentByID(t, plan, id)
+	if got.Label != label {
+		t.Errorf("the label reads %q, wanted %q", got.Label, label)
+	}
+	if got.HelpRequested != "need the Q3 discount sheet" {
+		t.Errorf("correcting a typo lost the help request: %q", got.HelpRequested)
+	}
+	if got.ManagerResponse != "sent it over" {
+		t.Errorf("correcting a typo lost the lead's answer: %q", got.ManagerResponse)
+	}
+}
+
+// Only what is PRESENT changes. A rep fixing a label must not lose the date
+// they never mentioned.
+func TestCorrectingOneFieldLeavesTheOthersAlone(t *testing.T) {
+	e := setupPlan(t)
+	due := planClock.AddDate(0, 0, 2)
+	written, err := e.store.AddCommitment(e.rep1Ctx, planClock,
+		weeklyplan.NewCommitment{Label: "Send the Weber quote", DueOn: &due})
+	if err != nil {
+		t.Fatalf("writing the commitment: %v", err)
+	}
+
+	label := "Send the Weber quote today"
+	if err := e.store.EditCommitment(e.rep1Ctx, written.ID,
+		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
+		t.Fatalf("correcting the label: %v", err)
+	}
+
+	plan, err := e.store.Current(e.rep1Ctx, planClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := commitmentByID(t, plan, written.ID)
+	if got.DueOn == nil {
+		t.Fatal("editing the label cleared the due date the request never named")
+	}
+	if !got.DueOn.Equal(due.Truncate(24*time.Hour)) && got.DueOn.Format(time.DateOnly) != due.Format(time.DateOnly) {
+		t.Errorf("the due date moved to %v, wanted %v", got.DueOn, due)
+	}
+}
+
+// And a date can be CLEARED, which is a different request from not mentioning
+// it. Something to do this week, rather than by a day.
+func TestADueDateCanBeCleared(t *testing.T) {
+	e := setupPlan(t)
+	due := planClock.AddDate(0, 0, 2)
+	written, err := e.store.AddCommitment(e.rep1Ctx, planClock,
+		weeklyplan.NewCommitment{Label: "Draft the Q3 plan", DueOn: &due})
+	if err != nil {
+		t.Fatalf("writing the commitment: %v", err)
+	}
+
+	var cleared *time.Time
+	if err := e.store.EditCommitment(e.rep1Ctx, written.ID,
+		weeklyplan.CommitmentEdit{DueOn: &cleared}); err != nil {
+		t.Fatalf("clearing the date: %v", err)
+	}
+
+	plan, err := e.store.Current(e.rep1Ctx, planClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := commitmentByID(t, plan, written.ID); got.DueOn != nil {
+		t.Errorf("the due date is still %v after being cleared", got.DueOn)
+	}
+}
+
+// Somebody else's commitment is NOT FOUND, not refused: whether a colleague
+// wrote a particular thing on their week is itself something a stranger may not
+// learn.
+func TestCorrectingSomebodyElsesCommitmentIsNotFound(t *testing.T) {
+	e := setupPlan(t)
+	id := planCommitment(t, e, e.rep1Ctx, "rep1's own")
+
+	label := "rewritten by somebody else"
+	err := e.store.EditCommitment(e.rep2Ctx, id, weeklyplan.CommitmentEdit{Label: &label})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("a teammate editing rep1's commitment got %v, wanted not found", err)
+	}
+}
+
+// One correction is one audit row and one event, like every other write here.
+//
+// A no-op correction is NEITHER. Filing an audit row saying a rep changed
+// something they did not is a false record, and bumping the version would move
+// a row a concurrent reader is holding.
+func TestACorrectionLandsOneAuditRowAndANoOpLandsNone(t *testing.T) {
+	e := setupPlan(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	id := planCommitment(t, e, e.rep1Ctx, "the original")
+
+	const audits = `SELECT count(*) FROM audit_log
+	                 WHERE entity_type = 'weekly_plan_commitment' AND entity_id = $1
+	                   AND action = 'update'`
+	before := countRows(t, owner, ctx, audits, id)
+
+	label := "the corrected"
+	if err := e.store.EditCommitment(e.rep1Ctx, id,
+		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
+		t.Fatalf("correcting: %v", err)
+	}
+	if got := countRows(t, owner, ctx, audits, id) - before; got != 1 {
+		t.Errorf("one correction filed %d audit rows, wanted 1", got)
+	}
+
+	// The same label again changes nothing.
+	after := countRows(t, owner, ctx, audits, id)
+	if err := e.store.EditCommitment(e.rep1Ctx, id,
+		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
+		t.Fatalf("re-sending the same label: %v", err)
+	}
+	if got := countRows(t, owner, ctx, audits, id) - after; got != 0 {
+		t.Errorf("a correction that changed nothing filed %d audit rows", got)
+	}
+}
+
+// commitmentByID finds one commitment on a plan the test just read back.
+func commitmentByID(t *testing.T, plan weeklyplan.Plan, id ids.UUID) weeklyplan.Commitment {
+	t.Helper()
+	for _, c := range plan.Commitments {
+		if c.ID == id {
+			return c
+		}
+	}
+	t.Fatalf("commitment %s is not on the plan", id)
+	return weeklyplan.Commitment{}
+}
+
+// A closed week is frozen into a review that has already been counted, so its
+// commitments stop being editable — the same refusal the settle path makes.
+func TestCorrectingACommitmentOnAClosedWeekIsRefused(t *testing.T) {
+	e := setupPlan(t)
+	id := planCommitment(t, e, e.rep1Ctx, "written while the week was open")
+
+	// CloseWeek settles the week BEFORE the instant it is given — the same
+	// window the review covers — so closing the week this commitment lives in
+	// means standing a week later.
+	if _, err := e.store.CloseWeek(e.rep1Ctx, planClock.AddDate(0, 0, 7)); err != nil {
+		t.Fatalf("closing the week: %v", err)
+	}
+
+	label := "rewritten after the close"
+	err := e.store.EditCommitment(e.rep1Ctx, id, weeklyplan.CommitmentEdit{Label: &label})
+	if err == nil {
+		t.Fatal("a commitment on a closed week was edited — the review's counts no longer agree with the rows they were counted from")
+	}
+	var parse *values.ParseError
+	if !errors.As(err, &parse) || parse.Code != "week_closed" {
+		t.Errorf("editing a closed week gave %v, wanted a week_closed refusal", err)
+	}
 }

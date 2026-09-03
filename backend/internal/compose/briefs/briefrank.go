@@ -90,6 +90,10 @@ func (e *BriefEngine) WithL2Ranker(brain briefBrain, log *slog.Logger) *BriefEng
 // rate yields NULL — the revenue factor floors rather than guessing (a
 // wrong number is worse than a missing one). asOfPos is the bind position
 // of the as-of date.
+// THE SECOND SPELLING, AND WHY. compose.BaseValueSQL is the same expression.
+// This package cannot call it — compose imports briefs, so the reverse is a
+// cycle — so the two are held character-identical by
+// TestOneSpellingOfADealsBaseValue rather than left to drift.
 func briefBaseValueSQL(asOfPos, basePos int) string {
 	return fmt.Sprintf(`CASE
 		WHEN d.amount_minor IS NULL THEN NULL
