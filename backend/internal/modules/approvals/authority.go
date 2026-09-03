@@ -15,11 +15,8 @@ import (
 	"slices"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -304,60 +301,6 @@ var targetResolvedGrants = map[string]principal.Action{
 	"update_record":  principal.ActionUpdate,
 	"create_record":  principal.ActionCreate,
 }
-
-// decidedEcho builds the approved/rejected payload a kind's decision
-// echoes, given the decided approval's own id and the deciding human's
-// user id — the fixed shape every decided-echo carries today.
-type decidedEcho struct {
-	approved, rejected func(approvalID, decidedBy openapi_types.UUID) events.Payload
-}
-
-// kindDecidedEvents names the domain event a decision echoes for kinds
-// whose lifecycle the event catalog tracks beyond approval.decided.
-var kindDecidedEvents = map[string]decidedEcho{
-	"coldstart": {
-		approved: func(approvalID, decidedBy openapi_types.UUID) events.Payload {
-			return crmcontracts.PublicEventColdstartAccepted{ApprovalId: approvalID, DecidedBy: decidedBy}
-		},
-		rejected: func(approvalID, decidedBy openapi_types.UUID) events.Payload {
-			return crmcontracts.PublicEventColdstartRejected{ApprovalId: approvalID, DecidedBy: decidedBy}
-		},
-	},
-}
-
-// The target types this package names in more than one place. They are the
-// `target_entity_type` vocabulary the staged rows carry, and this package spells
-// each in several places — the visibility probe's classification, the
-// decision-grant map, and the version-table whitelist. One spelling, because a
-// typo makes a target undecidable in the first and unpinnable in the last, and
-// neither failure announces itself.
-const (
-	targetOffer        = "offer"
-	targetProduct      = "product"
-	targetRelationship = "relationship"
-	targetSavedView    = "saved_view"
-	targetSignal       = "signal"
-	targetTag          = "tag"
-	// The workspace-shared config rows an object grant governs, each named by
-	// both the existence probe and the version-table whitelist.
-	targetOfferTemplate       = "offer_template"
-	targetWebhookSubscription = "webhook_subscription"
-	// The effective-dated rate sheets. Both are named twice — the probe
-	// classification and the decision-grant map — and both are workspace-scoped
-	// config with no row of their own until a proposal is accepted.
-	targetFxRate      = "fx_rate"
-	targetAIModelRate = "ai_model_rate"
-	// The row-scoped record tables. Named as a SET rather than one at a time: this
-	// package spells them in the probe classification, the decision-grant map and
-	// the version-table whitelist, and a typo makes a target undecidable in the
-	// first and unpinnable in the last without announcing either.
-	tablePerson       = "person"
-	tableOrganization = "organization"
-	tableDeal         = "deal"
-	tableLead         = "lead"
-	tableProject      = "project"
-	tableList         = "list"
-)
 
 // selfOnlyKinds are the staging kinds whose proposal is nobody's business but
 // the member it was staged for.
