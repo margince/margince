@@ -30,10 +30,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -88,6 +92,20 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	project := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"project","fields":{"name":"Conformance project","organization_id":"`+
 			org.String()+`"}}`)
+
+	// The two producers the forecast tools read. The lane's seat already holds
+	// what the real admin role holds over a forecast — create + read, plus read
+	// on source health — so nothing about the grants stops these calls; what
+	// stopped them is that four of the five read a row nobody had written.
+	openingSnapshot, closingSnapshot := twoFrozenForecasts(ctx, t, e)
+	oneFinishedInputCheck(ctx, t, e)
+
+	// A second word for update_tag and a third for merge_tags, so one
+	// vocabulary write cannot decide what the next tool reads: a merge RETIRES
+	// its source, and the tools below still have to find `tag` where they left
+	// it.
+	renamable := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"to-be-renamed"}`)
+	foldable := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"to-be-folded"}`)
 
 	// The brief is a persisted read-model, so the lane assembles one for this
 	// rep before reading it: read_brief never ranks, and an unassembled brief
@@ -224,7 +242,42 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"advance_project_phase", `{"project_id":"` + project.String() + `","to_phase":"pursuing"}`},
 		// Renaming the word coined above. Both tag-vocabulary writes are reachable
 		// here: AdminPerms carries tag create/read/update/delete.
-		{"update_tag", `{"tag_id":"` + tag.String() + `","name":"conformance-renamed","color":"amber"}`},
+		{"update_tag", `{"tag_id":"` + renamable.String() + `","name":"conformance-renamed","color":"amber"}`},
+		// One record's place in the vocabulary: enumerated, read one at a time,
+		// applied, read back off the record, and taken off again. Every one of
+		// these was waived as needing `tag.read` that "this lane's seat does not
+		// carry" — it carries it, and coining the tag above under that same seat
+		// is the proof. A waiver whose reason has expired reads as covered while
+		// certifying nothing.
+		{"list_tags", `{}`},
+		{"get_tag", `{"tag_id":"` + tag.String() + `"}`},
+		{"apply_tag", `{"tag_id":"` + tag.String() +
+			`","record_type":"person","record_id":"` + person.String() + `"}`},
+		{"get_record_tags", `{"record_type":"person","record_id":"` + person.String() + `"}`},
+		{"remove_tag", `{"tag_id":"` + tag.String() +
+			`","record_type":"person","record_id":"` + person.String() + `"}`},
+		// The one vocabulary verb that reaches a human first, invoked as one:
+		// this lane runs as a human, so it returns the merge itself rather than
+		// an approval reference — which is the document the schema describes.
+		//
+		// Worth the third tag it costs. `TagMergeResult` is two bare counts and
+		// is the shape of nothing else on this surface — `update_tag` answers a
+		// `Tag` — so a waiver here leaves the one answer where `0` and absent
+		// are the same JSON unproven against a live handler.
+		{"merge_tags", `{"tag_id":"` + foldable.String() +
+			`","into_tag_id":"` + tag.String() + `"}`},
+		// The forecast: what a period is expected to close, the difference
+		// between two frozen states of it, what the inputs were checked
+		// against, what they still need, and how current the sources are. Each
+		// carries a shape a schema alone cannot hold — two slices that are
+		// empty and never null, and a source that was not read carrying no date
+		// where a checked one carries one.
+		{"forecast_readings", `{}`},
+		{"forecast_movement", `{"from":"` + openingSnapshot.String() +
+			`","to":"` + closingSnapshot.String() + `","reading":"open"}`},
+		{"forecast_input_checks", `{}`},
+		{"list_input_checks", `{}`},
+		{"data_coverage", `{}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
@@ -268,44 +321,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
 		"carry — a migration run is an admin-scoped object, and granting it here would widen the " +
 		"authority every other tool in the sweep runs under",
-	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
-	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
-	// merge_tags is confirm-first (TierConfirmationRequired) AND it consumes
-	// its arguments: the merged tag is gone afterwards, so a call here would
-	// have to mint two tags of its own and leave one deleted. The vocabulary
-	// merge's own behaviour — what moves, what the surviving tag keeps, what a
-	// saved view naming the merged word then selects — is held against a real
-	// database by the collections suite, which is where the interesting half
-	// of this operation lives.
-	"merge_tags": "confirm-first, and destructive: it consumes the tag it merges, so this sweep " +
-		"would have to mint a second tag purely to destroy it — and the answer shape it would " +
-		"prove is update_tag's, which is called above. The merge's own behaviour is held by the " +
-		"collections integration suite",
-	"apply_tag": "needs a seat holding tag.read, which this lane's seat does not carry — " +
-		"granting it here would widen the authority every other tool in the sweep runs under, " +
-		"and the answer shape it would prove is the one remove_tag already shares",
-	"remove_tag": "same missing tag.read as apply_tag above",
-	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
-		"carry — measured, not assumed: the bare call comes back permission denied. Granting it " +
-		"here would widen the authority every other tool in the sweep runs under",
-	"forecast_input_checks": "same missing forecast.read as forecast_readings above",
-	"data_coverage": "needs a seat holding data_coverage.read, which this lane's seat does not " +
-		"carry — measured, not assumed: the bare call comes back permission denied. Its own object, " +
-		"not the forecast's, so it clears the lane on a grant of its own rather than with the three above",
-	"list_input_checks": "same missing forecast.read as forecast_readings above — it reads the " +
-		"exceptions behind that tool's summary off the same forecast surface, so it clears the " +
-		"lane exactly when the others do",
-	"forecast_movement": "same missing forecast.read as forecast_readings above, and it also " +
-		"requires a `from`/`to` window, so a bare call would not reach the handler either way",
-	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
-		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
-		"than proven elsewhere",
-	"get_tag": "same missing tag.read as apply_tag above. It answers ONE row of the shape list_tags " +
-		"answers many of, so the two are unproven together rather than one covering the other — " +
-		"whichever seat eventually carries tag.read reaches both",
-	"get_record_tags": "same missing tag.read as apply_tag above. Its answer shape IS held, " +
-		"against a real database, by the record-tags integration suite — including the withheld " +
-		"case, which is the one a schema alone could not prove",
+	"read_import_report":   "needs a run that has been dry-run, which needs the object store above",
+	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
 	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
@@ -318,6 +335,81 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	// without standing that producer up.
 	"decide_approval_bundle": "needs a multi-proposal producer to mint a bundle",
 })
+
+// twoFrozenForecasts freezes two states of one period, so the movement tool has
+// a difference to classify.
+//
+// Taken through the store's own writer rather than by INSERT: a snapshot is a
+// headline plus the rows it was summed from, and the movement tool reads BOTH
+// sides back — so a hand-built row would prove the classifier against a shape
+// production never writes.
+//
+// `recheck` rather than `daily`, which the arbiter admits once per period,
+// scope and local day: two same-day daily snapshots are the collision that
+// index exists to cause, and a recheck is deliberately additional.
+func twoFrozenForecasts(ctx context.Context, t *testing.T, e *Env) (ids.UUID, ids.UUID) {
+	t.Helper()
+	store := forecasting.NewStore(compose.InstallationDB(e.Pool))
+	period, err := forecasting.ResolvePeriod(
+		forecasting.PeriodQuarter, time.Now().UTC(), 1, time.UTC)
+	if err != nil {
+		t.Fatalf("resolving the period the snapshots describe: %v", err)
+	}
+	freeze := func(open int64, at time.Time) ids.UUID {
+		var id ids.UUID
+		if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+				Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+				Trigger: forecasting.TriggerRecheck, BaseCurrency: "EUR",
+				Readings: forecasting.Readings{OpenMinor: open},
+				TakenAt:  at,
+			})
+			return err
+		}); err != nil {
+			t.Fatalf("freezing a forecast for the movement tool: %v", err)
+		}
+		return id
+	}
+	taken := time.Now().UTC()
+	return freeze(100_000, taken.Add(-time.Hour)), freeze(140_000, taken)
+}
+
+// oneFinishedInputCheck records a completed nightly pass, so the tools that
+// report one have a run to read.
+//
+// Through the store's own three writers, in the order the checker uses them: a
+// run is OPENED, says how far it reached into each source, and is then closed
+// with a verdict. A row inserted directly would answer the read while proving
+// nothing about the pass that produces it.
+func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
+	t.Helper()
+	store := assurance.NewStore(compose.InstallationDB(e.Pool))
+	asOf := time.Now().UTC()
+	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		run, err := store.StartRun(ctx, tx, asOf)
+		if err != nil {
+			return err
+		}
+		// Both arms of the coverage answer: a source the pass read through,
+		// which carries a date, and one it could not, which must not. That
+		// second arm is what makes `checks_incomplete` a different answer from
+		// a clean pipeline.
+		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
+			Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &asOf,
+		}); err != nil {
+			return err
+		}
+		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
+			Source: "offers", State: assurance.CoverageUnavailable,
+		}); err != nil {
+			return err
+		}
+		return store.FinishRun(ctx, tx, run, 1, 0, assurance.StatusComplete, "ready")
+	}); err != nil {
+		t.Fatalf("recording a finished input check for the forecast tools: %v", err)
+	}
+}
 
 // stageOneProposal puts a single proposal in the queue through the approvals
 // engine itself — the writer every producer uses — rather than an INSERT, so
