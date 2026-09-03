@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -181,8 +182,14 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		// set. In the SAME transaction as the derivation above, so a deal
 		// closing mid-read cannot make the lane say a contact is worth chasing
 		// for a reason that stopped being true between two statements.
+		//
+		// A reader without the edge grant NARROWS rather than fails. This lane
+		// answers "who have you stopped talking to", and the deal behind a
+		// silence is one fact on that answer, not the answer: failing here
+		// would take a rep's whole decay lane away over a grant that governs
+		// something else. They lose the ranking bump and keep the row.
 		funded, err := deals.OpenDealPeople(ctx, tx, candidates)
-		if err != nil {
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
 		lapsed = quietRelationships(quiet, changed, funded, now)
