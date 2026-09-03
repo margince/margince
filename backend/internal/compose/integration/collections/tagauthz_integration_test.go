@@ -37,7 +37,7 @@ func createTagViaStore(t *testing.T, e *integration.Env, tags *collectionsmod.St
 	t.Helper()
 	tag, err := tags.NewTag(e.Admin(), name, "")
 	if err != nil {
-		t.Fatalf("seeding the tag: %v", err)
+		t.Fatalf("seeding the tag %q: %v", name, err)
 	}
 	return ids.From[ids.TagKind](tag.TagID)
 }
