@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // The composed read behind the canonical email viewer.
@@ -37,6 +38,15 @@ import (
 // — a support exchange runs to hundreds — and a drawer that fetched every
 // message would make opening the newest one cost the whole history.
 const maxThreadMembers = 20
+
+// The participant roles this viewer reads. A closed set, named so the query
+// and the scan cannot spell one of them differently.
+const (
+	roleFrom = "from"
+	roleTo   = "to"
+	roleCc   = "cc"
+	roleBcc  = "bcc"
+)
 
 // GetEmailPresentation composes one email for reading.
 func (s *Store) GetEmailPresentation(ctx context.Context, id ids.ActivityID, threadCursor *string) (crmcontracts.EmailPresentation, error) {
@@ -130,7 +140,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	if err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
-	out.Thread = thread
+	out.Thread = &thread
 
 	// Both actions are the caller's because the content is: a reader inside the
 	// audience may answer the message and may correct what it is filed against.
@@ -278,119 +288,6 @@ func withheldAccess() crmcontracts.EmailAccess {
 	}
 }
 
-// readEmailAccess assembles who reads this message and what this caller may do
-// about it.
-//
-// change_mode is decided here, by the same test the write itself applies:
-// refuseCapturedAudienceWrite refuses a direct audience write on a message any
-// mailbox brought in, because a captured message's audience is derived from
-// its importers rather than declared. The browser has been guessing this from
-// the "connector:" prefix on captured_by, which puts a backend ownership rule
-// in display code and gets a hand-typed threaded reply wrong. The server knows
-// which write it would accept, so the server says.
-func readEmailAccess(
-	ctx context.Context,
-	tx pgx.Tx,
-	id ids.ActivityID,
-	activity crmcontracts.Activity,
-) (crmcontracts.EmailAccess, error) {
-	out := crmcontracts.EmailAccess{
-		ContentState:  crmcontracts.EmailAccessContentStateAvailable,
-		ChangeMode:    crmcontracts.EmailAccessChangeModeNone,
-		ChangeScope:   ptr(crmcontracts.EmailAccessChangeScopeNone),
-		DisplayStatus: crmcontracts.EmailAccessStatusTeam,
-	}
-	if activity.Audience != nil {
-		aud := crmcontracts.ActivityAudience(*activity.Audience)
-		out.Audience = &aud
-		out.DisplayStatus = statusForAudience(aud)
-	}
-	// The reason is content: it describes what the message is about. It travels
-	// only with a message the caller may read, which is the branch this is in.
-	out.Explanation = activity.AudienceReason
-
-	var imported bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1)`,
-		id.UUID).Scan(&imported); err != nil {
-		return crmcontracts.EmailAccess{}, fmt.Errorf("activities: reading whether a message was imported: %w", err)
-	}
-
-	writable := auth.EnsureActivityWritable(ctx, tx, id.UUID) == nil
-	switch {
-	case imported:
-		// A captured message: the caller changes their own contribution to the
-		// thread, and only their own. Every importing seat holds one, so this
-		// is offered to an importer rather than to a writer of the row.
-		sender, err := callerIsSenderSeat(ctx, tx, id)
-		if err != nil {
-			return crmcontracts.EmailAccess{}, err
-		}
-		out.CanChange = sender
-		if sender {
-			out.ChangeMode = crmcontracts.EmailAccessChangeModeThreadContribution
-			out.ChangeScope = ptr(crmcontracts.EmailAccessChangeScopeThread)
-		}
-	case writable:
-		// Hand-logged: its audience is exactly what somebody set, so a writer
-		// of the row sets it.
-		out.CanChange = true
-		out.ChangeMode = crmcontracts.EmailAccessChangeModeMessageAudience
-		out.ChangeScope = ptr(crmcontracts.EmailAccessChangeScopeMessage)
-	}
-
-	// Who is named on a selected audience, read back only for the caller who
-	// may change the set. A reader with no standing to edit it has none to
-	// enumerate it either.
-	if out.CanChange && activity.Audience != nil && *activity.Audience == crmcontracts.ActivityAudienceSelected {
-		members, err := readSelectedMembers(ctx, tx, id)
-		if err != nil {
-			return crmcontracts.EmailAccess{}, err
-		}
-		out.SelectedMembers = &members
-	}
-	return out, nil
-}
-
-// statusForAudience is the word the badge prints for a message the caller can
-// read. "team" never means the whole workspace: the linked record's own scope
-// still decides who may discover the row at all.
-func statusForAudience(aud crmcontracts.ActivityAudience) crmcontracts.EmailAccessStatus {
-	switch aud {
-	case crmcontracts.ActivityAudienceParticipants:
-		return crmcontracts.EmailAccessStatusParticipants
-	case crmcontracts.ActivityAudienceSelected:
-		return crmcontracts.EmailAccessStatusSelected
-	default:
-		return crmcontracts.EmailAccessStatusTeam
-	}
-}
-
-func readSelectedMembers(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]crmcontracts.AudienceMember, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT subject_type, subject_id
-		  FROM activity_audience_member
-		 WHERE activity_id = $1
-		 ORDER BY subject_type, subject_id`, id.UUID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []crmcontracts.AudienceMember{}
-	for rows.Next() {
-		var subjectType string
-		var subjectID ids.UUID
-		if err := rows.Scan(&subjectType, &subjectID); err != nil {
-			return nil, err
-		}
-		out = append(out, crmcontracts.AudienceMember{
-			SubjectType: crmcontracts.AudienceMemberSubjectType(subjectType),
-			SubjectId:   openapi_types.UUID(subjectID),
-		})
-	}
-	return out, rows.Err()
-}
-
 // readThreadPage reads the rest of the conversation as summaries, newest
 // first. Bounded and paged: a thread has no ceiling, and a drawer that fetched
 // every message would make opening the newest one cost the whole history.
@@ -404,9 +301,13 @@ func readThreadPage(
 	tx pgx.Tx,
 	activity crmcontracts.Activity,
 	cursor *string,
-) (*crmcontracts.EmailThreadPage, error) {
+) (crmcontracts.EmailThreadPage, error) {
+	empty := crmcontracts.EmailThreadPage{Members: []crmcontracts.EmailSummary{}}
+	// A message the provider gave no conversation key is its own whole
+	// conversation: an empty page rather than an absent one, so the drawer
+	// renders one message instead of deciding what a missing thread means.
 	if activity.ThreadKey == nil || *activity.ThreadKey == "" {
-		return nil, nil
+		return empty, nil
 	}
 	key := *activity.ThreadKey
 	limit := maxThreadMembers
@@ -416,7 +317,7 @@ func readThreadPage(
 		Limit:     &limit,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 	out := crmcontracts.EmailThreadPage{Members: []crmcontracts.EmailSummary{}}
 	for _, member := range members {
@@ -430,7 +331,7 @@ func readThreadPage(
 	if page.NextCursor != "" {
 		out.NextCursor = &page.NextCursor
 	}
-	return &out, nil
+	return out, nil
 }
 
 func ptr[T any](v T) *T { return &v }
@@ -489,13 +390,13 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 			party.UserId = &uid
 		}
 		switch role {
-		case "from":
+		case roleFrom:
 			out.from = append(out.from, party)
-		case "to":
+		case roleTo:
 			out.to = append(out.to, party)
-		case "cc":
+		case roleCc:
 			out.cc = append(out.cc, party)
-		case "bcc":
+		case roleBcc:
 			out.bcc = append(out.bcc, party)
 		}
 	}
