@@ -291,6 +291,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
 		"carry — the forecast is a management-scoped object, and granting it here would widen " +
 		"the authority every other tool in the sweep runs under, exactly as the tag family above",
+	"forecast_input_checks": "same missing forecast.read as forecast_readings above. It takes no " +
+		"arguments, so the grant is the only thing between this lane and the call",
 	"forecast_movement": "same missing forecast.read as forecast_readings above, and beyond it a " +
 		"pair of stored snapshots to difference: its two required ids name snapshot rows, so a " +
 		"call without a snapshot producer would exercise the not-found path rather than the " +

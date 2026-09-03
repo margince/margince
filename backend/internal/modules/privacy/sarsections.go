@@ -211,7 +211,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// this date was the basis", which is what Art. 15 asks. Export the note
 		// only alongside telling reps, at the surface where they type it, that
 		// the subject can read it.
-		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, captured_at
+		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at
 		   FROM consent_qualifying_event
 		   WHERE person_id = $1`, nil},
 		// The token row itself is deliberately NOT read: it is a live
