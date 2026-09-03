@@ -7941,15 +7941,16 @@ export const vi = {
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
     "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
-  "firstRun.google.helpSignIn":
-    "Mọi người đăng nhập bằng Google qua chính app này: lưu ở đây xong, trang đăng nhập sẽ hiện “Continue with Google” cho tất cả người bạn mời, miễn là redirect URI đăng nhập ở trên đã được đăng ký trong app.",
+  "firstRun.platform.redirectTitle": "Đăng ký các redirect URI này trong app",
+  "firstRun.platform.redirectHint":
+    "Sao chép từng cái vào app trước khi lưu ở đây. Đăng nhập là thứ đưa nút đăng nhập lên trang đăng nhập cho mọi người bạn mời; Hộp thư và Lịch là thứ cho phép mọi người kết nối của họ. Thiếu một cái thì lỗi xảy ra ở màn hình đồng ý của nhà cung cấp, không phải ở đây.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
   "firstRun.google.helpStep2":
     "Bật Gmail API và đưa cả hai scope gmail.readonly và gmail.send lên màn hình đồng ý. Chúng đi cùng một lần đồng ý là có chủ ý: Google không thêm scope vào refresh token đã cấp, nên xin quyền gửi sau này đồng nghĩa với việc kết nối hộp thư hai lần.",
   "firstRun.google.helpStep3":
-    "Thêm một authorized redirect URI cho từng thứ sẽ dùng. Chỉ Mail là bắt buộc; thêm Calendar nếu cần lịch, và thêm URI đăng nhập nếu mọi người sẽ đăng nhập Margince bằng tài khoản Google.",
+    "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là cái cần cho thư; Lịch và Đăng nhập làm đúng như tên gọi.",
   "firstRun.google.helpStep4":
     "Chép client ID và client secret mà Google hiển thị vào hai ô bên dưới. Secret chỉ được gửi một lần và niêm phong trong key vault; sau đó không đọc lại được ở bất kỳ đâu.",
   "firstRun.google.helpConsole": "Google Cloud credentials console",
@@ -7961,9 +7962,9 @@ export const vi = {
   "firstRun.platform.foot":
     "Câu trả lời ở đây có thể đổi sau ở Cài đặt → Quản trị.",
   "firstRun.microsoft.note":
-    "Đăng ký một app trong Microsoft Entra với các redirect URI bên dưới, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn: hộp thư của thư mục đó kết nối qua app, và người của thư mục đó đăng nhập bằng app.",
+    "Đăng ký một app trong Microsoft Entra với các redirect URI bên trên, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn: hộp thư của thư mục đó kết nối qua app, và người của thư mục đó đăng nhập bằng app.",
   "firstRun.microsoft.helpSignIn":
-    "Mọi người đăng nhập bằng Microsoft qua chính app này, trên thư mục nó được ghim vào: lưu ở đây kèm ID thư mục xong, trang đăng nhập sẽ hiện “Continue with Microsoft” cho tất cả người bạn mời, miễn là redirect URI đăng nhập ở trên đã được đăng ký trong app. Không ghim thì hộp thư vẫn kết nối được, nhưng không ai đăng nhập được cho đến khi người vận hành server nêu tên các thư mục của bạn trong MARGINCE_MICROSOFT_SIGNIN_TENANT.",
+    "Mọi người đăng nhập bằng Microsoft trên thư mục app được ghim vào. Không ghim thì hộp thư vẫn kết nối được, nhưng không ai đăng nhập được cho đến khi người vận hành server nêu tên các thư mục của bạn trong MARGINCE_MICROSOFT_SIGNIN_TENANT.",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",

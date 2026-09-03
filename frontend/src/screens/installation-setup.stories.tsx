@@ -98,6 +98,14 @@ function setup(steps: ReadonlyArray<{ step: string; configured: boolean }>) {
             purpose: "mailbox_connect",
             url: "https://crm.example/v1/connectors/graph/callback",
           },
+          {
+            purpose: "calendar_connect",
+            url: "https://crm.example/v1/connectors/graphcal/callback",
+          },
+          {
+            purpose: "sign_in",
+            url: "https://crm.example/v1/auth/oidc/microsoft/callback",
+          },
         ],
       }),
   };

@@ -8042,15 +8042,17 @@ export const de = {
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
     "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Anmeldung per E-Mail und Passwort.",
-  "firstRun.google.helpSignIn":
-    "Die Anmeldung mit Google läuft über dieselbe App: Sobald sie hier gespeichert ist, bietet die Anmeldeseite allen Eingeladenen „Continue with Google“ an, solange die Weiterleitungs-URI für die Anmeldung oben in der App registriert ist.",
+  "firstRun.platform.redirectTitle":
+    "Registrieren Sie diese Weiterleitungs-URIs in der App",
+  "firstRun.platform.redirectHint":
+    "Kopieren Sie jede in die App, bevor Sie hier speichern. Anmeldung bringt den Anmelde-Button für alle Eingeladenen auf die Anmeldeseite; Postfach und Kalender lassen die Leute ihre verbinden. Fehlt eine, scheitert es auf der Zustimmungsseite des Anbieters, nicht hier.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
   "firstRun.google.helpStep1":
     "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
   "firstRun.google.helpStep2":
     "Die Gmail API aktivieren und beide Bereiche gmail.readonly und gmail.send auf den Zustimmungsbildschirm setzen. Sie gehören absichtlich in eine Zustimmung: Google ergänzt einen Bereich nicht nachträglich an einem bereits ausgegebenen Refresh-Token, ein späteres Senden-Recht bedeutet also, das Postfach zweimal zu verbinden.",
   "firstRun.google.helpStep3":
-    "Für alles, was genutzt wird, eine autorisierte Weiterleitungs-URI hinterlegen. Nötig ist nur Mail; Kalender nur bei Kalendernutzung, und die Anmelde-URI nur, wenn sich Leute mit ihrem Google-Konto bei Margince anmelden sollen.",
+    "Unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten hinterlegen. Postfach braucht es für Mail; Kalender und Anmeldung tun, was ihr Name sagt.",
   "firstRun.google.helpStep4":
     "Client-ID und Client-Secret aus Google in die beiden Felder unten kopieren. Das Secret wird einmal gesendet und im Schlüsseltresor versiegelt; es ist danach nirgends mehr lesbar.",
   "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
@@ -8062,9 +8064,9 @@ export const de = {
   "firstRun.platform.foot":
     "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
   "firstRun.microsoft.note":
-    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs unten und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
+    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
   "firstRun.microsoft.helpSignIn":
-    "Die Anmeldung mit Microsoft läuft über dieselbe App, in dem Verzeichnis, an das sie gebunden ist: Sobald sie hier mit einer Verzeichnis-ID gespeichert ist, bietet die Anmeldeseite allen Eingeladenen „Continue with Microsoft“ an, solange die Weiterleitungs-URI für die Anmeldung oben in der App registriert ist. Ohne Bindung verbinden sich Postfächer weiterhin, aber niemand meldet sich an, bis wer den Server betreibt Ihre Verzeichnisse in MARGINCE_MICROSOFT_SIGNIN_TENANT benennt.",
+    "Die Anmeldung mit Microsoft läuft in dem Verzeichnis, an das die App gebunden ist. Ohne Bindung verbinden sich Postfächer weiterhin, aber niemand meldet sich an, bis wer den Server betreibt Ihre Verzeichnisse in MARGINCE_MICROSOFT_SIGNIN_TENANT benennt.",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",

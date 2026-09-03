@@ -530,28 +530,44 @@ const GOOGLE_CREDENTIALS_CONSOLE =
   "https://console.cloud.google.com/apis/credentials";
 
 /**
+ * The redirect URIs the app must carry, in the open and each with its copy
+ * button: the one thing on this step that is done in the vendor's console and
+ * not here, and the one a first run most often skips. The Sign-in row is what
+ * puts the button on the login page, so the hint says so before the list.
+ */
+function AppRedirectUris({
+  vendor,
+  uris,
+}: Readonly<{
+  vendor: Vendor;
+  uris: readonly { purpose: string; url: string }[] | undefined;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Callout tone="info" title={t("firstRun.platform.redirectTitle")}>
+        <p>{t("firstRun.platform.redirectHint")}</p>
+      </Callout>
+      <RedirectUris uris={uris} sub={t(vendorCopy[vendor].redirectSub)} />
+    </>
+  );
+}
+
+/**
  * Where the client id and secret come from, folded away.
  *
  * A fold rather than four paragraphs above the fields: an operator who has done
  * this before wants the two boxes, and one who has not needs every step. Open
- * by default would push the actual form below the fold for everybody. The
- * redirect URIs inside it are the server's own list, never spelled here.
+ * by default would push the actual form below the fold for everybody.
  */
-function GoogleAppHelp({
-  uris,
-}: Readonly<{
-  uris: readonly { purpose: string; url: string }[] | undefined;
-}>) {
+function GoogleAppHelp() {
   const t = useT();
   return (
     <Disclosure summary={t("firstRun.google.helpToggle")}>
       <ol className="ob-fr-help">
         <li>{t("firstRun.google.helpStep1")}</li>
         <li>{t("firstRun.google.helpStep2")}</li>
-        <li>
-          {t("firstRun.google.helpStep3")}
-          <RedirectUris uris={uris} sub={t(vendorCopy.google.redirectSub)} />
-        </li>
+        <li>{t("firstRun.google.helpStep3")}</li>
         <li>{t("firstRun.google.helpStep4")}</li>
       </ol>
       <p className="ob-fr-help-note">
@@ -560,9 +576,6 @@ function GoogleAppHelp({
         </OffsiteLink>
       </p>
       <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
-      {/* The sign-in step, here rather than on the screen itself. It is work
-          for whoever runs the server, not for the admin filling this form. */}
-      <p className="ob-fr-help-note">{t("firstRun.google.helpSignIn")}</p>
     </Disclosure>
   );
 }
@@ -596,19 +609,16 @@ function VendorAppFields({
   }, [save.isPending, onBusy]);
   return (
     <>
+      <AppRedirectUris vendor={vendor} uris={app.data?.redirect_uris} />
       {vendor === "google" ? (
-        <GoogleAppHelp uris={app.data?.redirect_uris} />
+        <GoogleAppHelp />
       ) : (
         <>
           <p className="ob-fr-help-note">{t("firstRun.microsoft.note")}</p>
-          <RedirectUris
-            uris={app.data?.redirect_uris}
-            sub={t(vendorCopy.microsoft.redirectSub)}
-          />
           {/* The pin below is also the directory sign-in runs on, which the
-              Google form has no equivalent of: said here, beside the URIs,
-              because an admin who leaves it empty gets working mailboxes and
-              no sign-in, and nothing else on this screen would say why. */}
+              Google form has no equivalent of: said here, because an admin
+              who leaves it empty gets working mailboxes and no sign-in, and
+              nothing else on this screen would say why. */}
           <p className="ob-fr-help-note">
             {t("firstRun.microsoft.helpSignIn")}
           </p>

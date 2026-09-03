@@ -8112,15 +8112,16 @@ export const en = {
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
     "Each mailbox connects with its own IMAP app-password. Sign-in is email and password.",
-  "firstRun.google.helpSignIn":
-    "People sign in with Google through this same app: once it is saved here, the login page offers Continue with Google to everyone you invite, as long as the sign-in redirect URI above is registered on it.",
+  "firstRun.platform.redirectTitle": "Register these redirect URIs on the app",
+  "firstRun.platform.redirectHint":
+    "Copy each one into the app before you save it here. Sign-in is what puts the sign-in button on the login page for everyone you invite; Mailbox and Calendar are what let people connect theirs. A missing one fails at the vendor's consent screen, not here.",
   "firstRun.google.helpToggle": "Where do I get these?",
   "firstRun.google.helpStep1":
     "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
   "firstRun.google.helpStep2":
     "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
   "firstRun.google.helpStep3":
-    "Add an authorized redirect URI for each thing you will use. Mail is the only one you need; add Calendar if you want calendar too, and the sign-in one if people will sign in to Margince with their Google account.",
+    "Under Authorized redirect URIs, add the ones listed above. Mailbox is the one you need for mail; Calendar and Sign-in are what the other two do.",
   "firstRun.google.helpStep4":
     "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
   "firstRun.google.helpConsole": "Google Cloud credentials console",
@@ -8132,9 +8133,9 @@ export const en = {
   "firstRun.platform.foot":
     "Whatever you answer here can be changed later under Settings → Admin.",
   "firstRun.microsoft.note":
-    "Register an app in Microsoft Entra with the redirect URIs below, then paste its client id and secret here. Pin it to your directory: that is whose mailboxes connect through it, and whose people sign in with it.",
+    "Register an app in Microsoft Entra with the redirect URIs above, then paste its client id and secret here. Pin it to your directory: that is whose mailboxes connect through it, and whose people sign in with it.",
   "firstRun.microsoft.helpSignIn":
-    "People sign in with Microsoft through this same app, on the directory it is pinned to: once it is saved with a directory ID, the login page offers Continue with Microsoft to everyone you invite, as long as the sign-in redirect URI above is registered on it. Left unpinned, mailboxes still connect, but nobody signs in until whoever runs the server names your directories in MARGINCE_MICROSOFT_SIGNIN_TENANT.",
+    "People sign in with Microsoft on the directory the app is pinned to. Left unpinned, mailboxes still connect, but nobody signs in until whoever runs the server names your directories in MARGINCE_MICROSOFT_SIGNIN_TENANT.",
   "firstRun.ai.rankedHint":
     "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
   "firstRun.ai.rankedUnavailable":

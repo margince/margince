@@ -120,7 +120,13 @@ function mount(
       return jsonResponse({ data: SEEDED_SHEET });
     }
     if (url.includes("/installation/oauth-apps/")) {
-      return jsonResponse({ source: "none", client_id: "", redirect_uris: [] });
+      return jsonResponse({
+        source: "none",
+        client_id: "",
+        redirect_uris: [
+          { purpose: "sign_in", url: "https://crm.example/v1/auth/oidc/x" },
+        ],
+      });
     }
     return jsonResponse(report);
   });
@@ -173,6 +179,12 @@ describe("the first-run setup gate", () => {
     ).toHaveProperty("checked", true);
     expect(screen.getByLabelText("Client ID")).toBeTruthy();
     expect(screen.getByLabelText("Client secret")).toBeTruthy();
+    // The redirect URIs are registered in the vendor's console, which is the
+    // one part of this step done elsewhere: they stand in the open with their
+    // copy buttons, not behind the fold the rest of the help sits in.
+    expect(
+      await screen.findByRole("button", { name: "Copy Sign-in URI" }),
+    ).toBeTruthy();
   });
 
   it("stores the vendor's app through the same route settings uses", async () => {
@@ -200,10 +212,13 @@ describe("the first-run setup gate", () => {
     await user.click(
       await screen.findByRole("radio", { name: /Microsoft 365/ }),
     );
-    // The same app signs people in, on the directory it is pinned to: the
-    // screen says so, because an unpinned app connects mailboxes and signs
-    // nobody in, and nothing else would explain the missing button.
-    expect(screen.getByText(/Continue with Microsoft/)).toBeTruthy();
+    // The redirect URIs are the one thing done in the vendor's console, so
+    // the step says so in the open rather than in a fold; and the pin is
+    // the directory sign-in runs on, which nothing else would explain.
+    expect(
+      screen.getByText("Register these redirect URIs on the app"),
+    ).toBeTruthy();
+    expect(screen.getByText(/pinned to/)).toBeTruthy();
     await user.type(screen.getByLabelText("Client ID"), "entra-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
