@@ -341,44 +341,13 @@ func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 	}
 }
 
-// grantMarketingConsent takes the recipient through the double-opt-in round
-// trip marketing_email requires — the server mints the token, the confirming
-// grant presents it — so the send under that purpose is lawful at both the
-// request-time gate and the dispatcher's.
+// grantMarketingConsent takes the recipient through the round trip
+// marketing_email requires — the workspace mails them a single-use confirm
+// link and they answer from their own mailbox — so the send under that purpose
+// is lawful at both the request-time gate and the dispatcher's.
 func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	t.Helper()
-	var purposes struct {
-		Data []struct {
-			ID  string `json:"id"`
-			Key string `json:"key"`
-		} `json:"data"`
-	}
-	if status := p.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
-		t.Fatalf("list purposes → %d", status)
-	}
-	var marketing string
-	for _, purpose := range purposes.Data {
-		if purpose.Key == "marketing_email" {
-			marketing = purpose.ID
-		}
-	}
-	if marketing == "" {
-		t.Fatalf("bootstrap seeded no marketing purpose: %+v", purposes.Data)
-	}
-	var issued struct {
-		Token string `json:"token"`
-	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/double-opt-in", AnyMap{
-		"purpose_id": marketing, "deliver": false,
-	}, nil, &issued); status != http.StatusCreated {
-		t.Fatalf("issue the double-opt-in token → %d", status)
-	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
-		"purpose_id": marketing, "new_state": "granted",
-		"lawful_basis": "consent", "double_opt_in_token": issued.Token,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("confirm the marketing grant → %d", status)
-	}
+	answerMarketingByConfirmLink(t, p.AppEnv, p.mail, p.personID, "granted")
 }
 
 // Revocation binds mid-flight on the one lane that reaches a real external

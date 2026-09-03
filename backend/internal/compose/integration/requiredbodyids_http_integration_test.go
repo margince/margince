@@ -119,6 +119,20 @@ type requiredIDCase struct {
 	method, path      string
 	omitted, supplied AnyMap
 	field             string
+	// suppliedStatus overrides the 404 the supplied arm otherwise owes, for a
+	// route that refuses everybody BEFORE it looks at any row. Zero means 404.
+	// A row that sets it must say why beside it: the default is what keeps the
+	// surface from enumerating rows, so an exception is only sound when the
+	// route cannot vary its answer by whether the row exists.
+	suppliedStatus int
+}
+
+// suppliedWant answers the status the supplied arm owes.
+func (c requiredIDCase) suppliedWant() int {
+	if c.suppliedStatus != 0 {
+		return c.suppliedStatus
+	}
+	return http.StatusNotFound
 }
 
 // requiredIDCases is every body this suite drives, keyed by the field under
@@ -160,9 +174,22 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			supplied: AnyMap{"new_state": "granted", "purpose_id": absent},
 			field:    "purpose_id",
 		},
+		// The issuance endpoint is retired and refuses every caller with a 409
+		// (#3807), after probing the body id — the handler probes first on
+		// purpose, so that a route refusing for its own reasons does not become
+		// the one place a missing id goes unnamed, which is what the omitted arm
+		// below holds it to.
+		//
+		// Its supplied arm therefore owes a 409 rather than a 404, and that is
+		// not a hole in the existence-hiding rule: the refusal is reached before
+		// any row is looked at, so it cannot vary by whether the purpose exists.
+		// TestDoubleOptInIssuanceRefusesAndMintsNothing drives the same endpoint
+		// with two VISIBLE purposes and gets the same 409, which is the half
+		// this row cannot see.
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
+			suppliedStatus: http.StatusConflict,
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
@@ -219,12 +246,13 @@ func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
 					"guessing which key they forgot", problem.Details.Errors, tc.field)
 			}
 		})
-		t.Run(name+"/supplied but invisible stays a 404", func(t *testing.T) {
+		t.Run(name+"/supplied but invisible says nothing about the row", func(t *testing.T) {
 			var problem problemBody
 			status := e.Call(t, tc.method, tc.path, tc.supplied, nil, &problem)
-			if status != http.StatusNotFound {
-				t.Fatalf("→ %d, want 404: a well-formed id that names nothing must not be distinguishable "+
-					"from one the caller may not see, or the status code enumerates rows: %+v", status, problem)
+			if status != tc.suppliedWant() {
+				t.Fatalf("→ %d, want %d: a well-formed id that names nothing must not be distinguishable "+
+					"from one the caller may not see, or the status code enumerates rows: %+v",
+					status, tc.suppliedWant(), problem)
 			}
 			// And it must not name the field either: a 404 that said "purpose_id"
 			// would confirm the caller's id was structurally accepted and only

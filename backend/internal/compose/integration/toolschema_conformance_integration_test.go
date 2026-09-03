@@ -73,6 +73,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	deal := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"deal","fields":{"name":"Conformance renewal","pipeline_id":"`+
 			pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
+	// The tag vocabulary is not a record type, so it has its own door. Coined
+	// here rather than in the table below for the reason create_record is: the
+	// call that MAKES the subject holds its own answer to its schema on the
+	// way past, and update_tag below needs the id it returns.
+	tag := coinTagThroughTheToolSurface(ctx, t, registry, "Conformance")
 	activity := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"activity","fields":{"kind":"note","body":"to be relinked"}}`)
 	// Records the confirm-first sweep consumes, each its own so one tool's write
@@ -221,6 +226,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			`","target_id":"` + person.String() + `"}`},
 		{"advance_project_phase", `{"project_id":"` + project.String() + `","to_phase":"pursuing"}`},
 		// The confirm-first queue read back through its own doors.
+		// The vocabulary's edit door, over the word the fixture coined. The
+		// colour is set rather than omitted, because an omitted field is the
+		// arm that changes nothing and would hold the answer to the schema
+		// without the write ever running.
+		{"update_tag", `{"tag_id":"` + tag.String() + `","name":"Conformance Renamed","color":"teal"}`},
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
 		{"decide_approval", `{"staged_action_id":"` + waiting.String() + `","decision":"reject"}`},
@@ -278,6 +288,13 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"get_record_tags": "same missing tag.read as apply_tag above. Its answer shape IS held, " +
 		"against a real database, by the record-tags integration suite — including the withheld " +
 		"case, which is the one a schema alone could not prove",
+	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
+		"carry — the forecast is a management-scoped object, and granting it here would widen " +
+		"the authority every other tool in the sweep runs under, exactly as the tag family above",
+	"forecast_movement": "same missing forecast.read as forecast_readings above, and beyond it a " +
+		"pair of stored snapshots to difference: its two required ids name snapshot rows, so a " +
+		"call without a snapshot producer would exercise the not-found path rather than the " +
+		"waterfall this schema describes",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
 	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
@@ -323,7 +340,10 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	// every record the calls below read was made through it, and
 	// createThroughTheToolSurface holds each of those answers to its schema and
 	// its envelope on the way past.
-	invoked := map[string]bool{"create_record": true}
+	// create_tag is excused for the same reason: update_tag below edits the word
+	// it coined, and coinTagThroughTheToolSurface holds that answer to its
+	// schema and its envelope on the way past.
+	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
 	}
@@ -341,6 +361,36 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	// describing a tool that is gone, which reads as covered while certifying
 	// nothing.
 	unreachableInThisLane.AssertAllMatched(t)
+}
+
+// coinTagThroughTheToolSurface makes one tag and returns its id, holding
+// create_tag's own answer to its declared schema and envelope on the way — the
+// vocabulary's create door, which is not a record type and so does not go
+// through create_record.
+func coinTagThroughTheToolSurface(ctx context.Context, t *testing.T, registry *agents.Registry, name string) ids.UUID {
+	t.Helper()
+	spec, registered := registry.Spec("create_tag")
+	if !registered {
+		t.Fatal("create_tag is not registered")
+	}
+	args := `{"name":"` + name + `"}`
+	out, err := registry.Invoke(ctx, "create_tag", json.RawMessage(args))
+	if err != nil {
+		t.Fatalf("create_tag(%s): %v", args, err)
+	}
+	if defect := agents.ResultDefect(spec.OutputSchema, out); defect != "" {
+		t.Fatalf("create_tag answered %s, which does not keep its own schema: %s", out, defect)
+	}
+	assertEnvelopePopulated(t, "create_tag", out)
+	var coined struct {
+		Data struct {
+			TagID ids.UUID `json:"tag_id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &coined); err != nil {
+		t.Fatalf("unreadable create_tag answer %s: %v", out, err)
+	}
+	return coined.Data.TagID
 }
 
 // createThroughTheToolSurface makes one record and returns its id, holding the

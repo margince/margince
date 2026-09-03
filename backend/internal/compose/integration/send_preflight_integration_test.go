@@ -48,6 +48,10 @@ type preflightEnv struct {
 	activityID string
 	personID   string
 	ws, user   string
+	// mail is the operator relay. A marketing send needs a granted
+	// marketing_email consent, and the only thing that grants a double-opt-in
+	// purpose is a link the workspace mails to the subject.
+	mail *confirmRelay
 }
 
 // setupPreflight boots the api composition WITH the Google app configured, so
@@ -88,7 +92,8 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	opts := append([]compose.Option{compose.WithKeyvault(vault)}, extra...)
+	mail, withMail := withConfirmRelay()
+	opts := append([]compose.Option{compose.WithKeyvault(vault), withMail}, extra...)
 	// A marketing send derives a one-click unsubscribe link and refuses
 	// without a boot-configured base to build it from, so the fixture
 	// carries one — an install that can send at all has one.
@@ -148,7 +153,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user}
+	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user, mail: mail}
 }
 
 // send issues the authenticated send and returns the status plus the
