@@ -16,6 +16,7 @@ import {
   formatDuration,
   formatMoneyOrAbsent,
   formatNumber,
+  formatTimeOfDay,
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -1342,9 +1343,12 @@ export function TimelineRow({
           <span className={dotClass(entry)} />
         </span>
         <div className="tl-body">
+          {/* The TIME, not the date: the gutter beside this already carries
+              the day, and printing it twice on one row spends the space that
+              tells two messages on one subject apart. */}
           <EmailEntry
             summary={entry.emailSummary}
-            timestamp={formatDate(entry.atIso, locale, zone)}
+            timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
             onOpen={entry.onOpenEmail}
           />
           {flag}
@@ -1388,9 +1392,18 @@ export function TimelineRow({
           )}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
-              fact about the relationship, which is what the row is for. */}
+              fact about the relationship, which is what the row is for.
+              A WITHHELD row keeps the direction and loses the name: "Received
+              from Ana" beside a message whose subject the row just refused
+              still says who this record is talking to, which is the thing the
+              audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span className="tl-direction">{directionPhrase(entry, t)}</span>
+            <span className="tl-direction">
+              {directionPhrase(
+                entry.withheld ? { ...entry, counterparts: undefined } : entry,
+                t,
+              )}
+            </span>
           )}
           {entry.via}
           {flag}

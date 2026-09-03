@@ -899,3 +899,13 @@
   padding: 0 var(--space-2);
   white-space: nowrap;
 }
+
+/* The canonical email row inside a timeline. `.tl-body` already pays the
+   block padding that aligns a row with its dot in the rail, so the row drops
+   its own — two paddings would push the message down off the dot that marks
+   where it sits on the chronology. Its inline padding goes too: the gutter and
+   the rail set the row's left edge, and a row indented past them reads as
+   nested under the entry above it. */
+.timeline .tl-body > .emailentry {
+  padding: 0;
+}

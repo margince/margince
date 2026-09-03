@@ -10,7 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -266,6 +266,18 @@ export function PersonPageV2({
   // the aside and a row in the body lead to the same place.
   const [openEmail, setOpenEmail] = useState<string | null>(null);
   const { locale } = useLocale();
+  // The page is not keyed by the contact it shows, so React keeps this state
+  // across a move from one contact to the next. A drawer left open would
+  // reopen the previous person's message over the new person's record — the
+  // reader sees somebody else's mail filed under a contact it was never on.
+  // The id is the identity here, so a change in it closes what was open.
+  const shownFor = useRef(id);
+  if (shownFor.current !== id) {
+    shownFor.current = id;
+    if (openEmail) {
+      setOpenEmail(null);
+    }
+  }
   const t = useT();
   const recordZone = useRecordZone();
   const view = useQuery({
