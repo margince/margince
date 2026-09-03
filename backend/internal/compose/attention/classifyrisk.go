@@ -121,6 +121,12 @@ func expectedRevenue(item crmcontracts.AttentionItem, money dayMoney) (int64, bo
 	if !money.converted() {
 		return *item.Deal.AmountMinor, true
 	}
+	// The same guard dayMoney.value already holds for the reason field: a
+	// converted figure with no base currency named is not a smaller answer,
+	// it is no answer, and must not drive a material verdict either.
+	if money.base == "" {
+		return 0, false
+	}
 	converted, priced := money.byItem[item.Id]
 	return converted, priced
 }

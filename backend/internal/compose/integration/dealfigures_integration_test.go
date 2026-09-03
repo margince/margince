@@ -194,10 +194,17 @@ func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
 // A close date that has not yet arrived — today's or later — is not overdue.
 // Today itself is the boundary this asserts: CloseIsOverdue is a calendar-date
 // comparison, and a deal due today is due today, not late.
+//
+// The seed and Figures' own read of "now" must agree on what day it is: a
+// wall-clock instant seeded here and re-read by Figures moments later could
+// straddle UTC midnight between the two calls, which would make the seeded
+// date read as YESTERDAY and fail this test on a defect it does not have. One
+// pinned instant closes that gap.
 func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
 	e := Setup(t)
-	today := time.Now().UTC()
-	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, today)
+	now := time.Now().UTC()
+	e.Deals.WithClock(func() time.Time { return now })
+	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, now)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
 	figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})

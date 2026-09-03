@@ -317,6 +317,26 @@ func TestAConvertedDealWithNoNamedBaseCarriesNoExpectedMinorBase(t *testing.T) {
 	}
 }
 
+// The same unnamed conversion must not drive a material verdict either: an
+// amount with no named currency is not a smaller error than none, whether it
+// reaches the reader as the row's ExpectedMinorBase or as the "material" /
+// "below_material" reason classifyRisk states over it.
+func TestAConvertedDealWithNoNamedBaseStatesNoMaterialVerdict(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen))),
+	}
+	fx := stubFX{base: "", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	for _, because := range out.Queue[0].Because {
+		if because.Kind == "material" || because.Kind == "below_material" {
+			t.Fatalf("stated %q over a figure converted with no base currency named", because.Kind)
+		}
+	}
+}
+
 // A deal the estate cannot price states no base-currency figure: null means
 // "could not be priced", the same null a client already reads for an unpriced
 // deal's other money fields, not a second and different meaning of null.
