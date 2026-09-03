@@ -1,0 +1,51 @@
+{
+  "task": "growth_fit",
+  "provider": "openai_compatible",
+  "served_model": "openai/gpt-oss-120b",
+  "env_class": "eu_hosted",
+  "prompt_version": "pe0c958411b1115db16d2baa549827359",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 3,
+  "passed": 0,
+  "reliability": 0,
+  "reported_accepted": 0,
+  "reported_wrong_answer": 3,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": [
+    "offer",
+    "positioning",
+    "proof"
+  ],
+  "score_p50": 90,
+  "score_min": 30,
+  "latency_p50": 2088,
+  "latency_p95": 2730,
+  "mean_tokens": 4065,
+  "mean_tokens_in": 1500,
+  "mean_tokens_out": 2565,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 491,
+  "judge_served_model": "gemini-3.5-flash",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "ran_at": "2026-09-03T04:23:58Z",
+  "scenarios": [
+    {
+      "scenario": "growth_fit_reads_their_facts_against_our_offering",
+      "site": "growth_fit",
+      "stamp": "d3369e41c5c80e5aaba8c7ba192961d2164611cf81031cd49702a7397ed836133cb7cf5bfc7b1349771d8219b0231d6a25a9fe4880960c8427acf364927ae092cbed4f7c12f110e2310912b3d82ccaaa2a9d3a34aae315e5be4d27df809e3e47",
+      "verdict": "not_supported",
+      "runs": 3,
+      "passed": 0,
+      "reported_accepted": 0,
+      "reported_wrong_answer": 3,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

@@ -31,6 +31,26 @@ type ProviderConfig struct {
 	// Nil — the common case — means the provider's own answer: text-only on the
 	// two OpenAI-wire providers, whatever the wire carries on the rest.
 	Input []string `yaml:"input" json:"input,omitempty"`
+	// Routing is the broker's upstream-selection preferences. It applies only to
+	// an openai_compatible binding pointed at OpenRouter — the one case where a
+	// binding sits in front of many inference hosts rather than one — and the
+	// parser refuses it anywhere else rather than sending a vendor fields it
+	// never asked for.
+	//
+	// Three states, and the difference between the last two is the point:
+	//
+	//   absent      → the product default (DefaultOpenRouterRouting), which is
+	//                 reliability over price
+	//   routing: {} → explicitly no preferences: the broker's own price-weighted
+	//                 routing, which is what this binding did before the default
+	//                 existed
+	//   routing: {…} → exactly what is written
+	//
+	// A pointer rather than a value so those three stay distinguishable, and
+	// distinguishable through the settings store too: an omitted key and a
+	// written `{}` are different JSON, so the round trip preserves the operator's
+	// choice instead of quietly re-defaulting an opt-out on the next read.
+	Routing *OpenRouterRouting `yaml:"routing" json:"routing,omitempty"`
 }
 
 // Provider defaults. The Anthropic URL is the vendor's public API; a
@@ -153,6 +173,10 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			localOnly:       false,
 			defaultModel:    cfg.Model,
 			attachmentMIMEs: carriageFor(cfg.Input),
+			// Only the cloud binding takes these: a local vLLM deployment serves
+			// one model from one host, so upstream selection has nothing to
+			// choose between and a `provider` object would be noise on its wire.
+			routing: cfg.Routing,
 		}, nil
 	case providerOpenAI:
 		key := cloudKey(providerOpenAI, keys)

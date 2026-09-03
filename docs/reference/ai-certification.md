@@ -37,13 +37,13 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 37 |
-| … best state `current` | 25 |
-| … best state `partial` | 1 |
+| … best state `current` | 35 |
+| … best state `partial` | 0 |
 | … best state `stale` | 2 |
-| … `absent` on every binding | 9 |
+| … `absent` on every binding | 0 |
 | Scenarios in the corpus | 126 |
-| Committed records | 44 |
-| Bindings measured | 9 |
+| Committed records | 59 |
+| Bindings measured | 10 |
 
 A site's *best* state is the strongest any of its bindings reached. A site
 `current` on one model and `stale` on three is counted once, as `current` —
@@ -57,17 +57,25 @@ been run against — not how many exist — and the three state columns split
 those sites by whether the measurement still describes what this build sends.
 The band columns count the same sites by the verdict each reached.
 
-| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | `certified` | `supported_degraded` | `not_supported` |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 17 | 1 | 2 | 249 | 225 | 0.90 | 12 | 1 | 7 |
-| `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 2 | 0 | 1 |
-| `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 7 | 0 | 2 |
-| `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 0 | 0 | 1 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 8 | 0 | 3 |
-| `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 1 | 2 | 0 |
-| `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 17 | 16 | 1 | 0 | 162 | 144 | 0.89 | 6 | 4 | 7 |
-| `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 4 | 0 | 1 |
+SLOWEST p95 is the highest p95 any one record folded here recorded, not a
+percentile over the binding's calls. Percentiles do not average: a mean of
+per-record p95s would be a number nothing measured and nobody would feel,
+while the worst record's own figure is a real measurement and is what a
+deployment notices first. Each record's own p50 and p95 are in the site
+tables below.
+
+| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 16 | 1 | 3 | 249 | 225 | 0.90 | 3370ms | 12 | 1 | 7 |
+| `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 44515ms | 2 | 0 | 1 |
+| `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 20319ms | 7 | 0 | 2 |
+| `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
+| `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
+| `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
+| `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 30 | 28 | 0 | 2 | 324 | 260 | 0.80 | 9128ms | 14 | 6 | 10 |
+| `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
 
@@ -88,6 +96,7 @@ model, real network).
 |---|---|---|
 | `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 21 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 15 more |
 | `agent_loop/loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `agent_loop/loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 21 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 15 more |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/acts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -107,8 +116,10 @@ model, real network).
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_fact_extract/page_facts` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `site_fact_extract/page_facts` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it |
 | `voice_build/derive` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/eval_draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `voice_build/eval_scores` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario judge_ranks_the_author_rhythm_above_generic_ai_prose — or the prompt this build now builds from it — has changed since the record scored it |
 | `voice_build/eval_scores` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 
 ## Sites, their scenarios and their records
@@ -158,12 +169,18 @@ Scenarios (23):
 | `the_stage_id_comes_from_the_pipeline` | `accepted` | [the_stage_id_comes_from_the_pipeline.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/the_stage_id_comes_from_the_pipeline.yaml) |
 | `who_knows_needs_the_person` | `accepted` | [who_knows_needs_the_person.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_person.yaml) |
 
-Records (2):
+Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 2/23 | `not_supported` | 69 | 59 | 0.86 | 59 | 10 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 115 | 74 | 0.64 | 74 | 40 | 1 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 2/23 | `not_supported` | 69 | 59 | 0.86 | 955ms | 1314ms | 59 | 10 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 115 | 74 | 0.64 | 1804ms | 2954ms | 74 | 40 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 2/23 | `not_supported` | 69 | 38 | 0.55 | 1337ms | 3122ms | 38 | 11 | 20 | 0 |
 
 ### `brief_ranking`
 
@@ -177,13 +194,19 @@ Scenarios (1):
 |---|---|---|
 | `reorder_two_candidates_by_momentum` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
 
-Records (3):
+Records (4):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 3 | 3 | 1.00 | 2865ms | 3003ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 1856ms | 1899ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1607ms | 1821ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 9126ms | 18372ms | 3 | 0 | 0 | 0 |
 
 ### `capture_classify`
 
@@ -203,11 +226,16 @@ Scenarios (5):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 2 | 0.67 | 2 | 0 | 1 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1094ms | 2464ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 2 | 0.67 | 1407ms | 1467ms | 2 | 0 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 810ms | 1755ms | 15 | 0 | 0 | 0 |
 
 ### `capture_confidentiality_verdict`
 
@@ -229,10 +257,15 @@ Scenarios (7):
 
 Records (2):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 7/7 | `not_supported` | 21 | 18 | 0.86 | 18 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 7/7 | `supported_degraded` | 21 | 20 | 0.95 | 20 | 1 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 7/7 | `not_supported` | 21 | 18 | 0.86 | 1024ms | 1337ms | 18 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 7/7 | `certified` | 21 | 21 | 1.00 | 662ms | 1376ms | 21 | 0 | 0 | 0 |
 
 ### `capture_counterparty_verdict`
 
@@ -263,11 +296,16 @@ Scenarios (16):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `partial` | 13/16 | `certified` | 39 | 39 | 1.00 | 39 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `certified` | 9 | 9 | 1.00 | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `partial` | 13/16 | `not_supported` | 39 | 34 | 0.87 | 34 | 5 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `partial` | 13/16 | `certified` | 39 | 39 | 1.00 | 904ms | 1210ms | 39 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `certified` | 9 | 9 | 1.00 | 1856ms | 22390ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 16/16 | `not_supported` | 48 | 38 | 0.79 | 710ms | 1544ms | 38 | 8 | 2 | 0 |
 
 ### `cert_judge`
 
@@ -282,13 +320,19 @@ Scenarios (2):
 | `grades_a_fabricated_answer_poorly` | `accepted` | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
 | `grades_a_well_grounded_answer_highly` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
 
-Records (3):
+Records (4):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
-| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 6 | 6 | 1.00 | 1906ms | 2180ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 1319ms | 1966ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1380ms | 3738ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 2425ms | 2800ms | 6 | 0 | 0 | 0 |
 
 ### `cold_start`
 
@@ -308,11 +352,16 @@ Scenarios (5):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 11 | 0.73 | 11 | 0 | 4 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1098ms | 1568ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 15 | 1.00 | 1032ms | 3618ms | 15 | 0 | 0 | 0 |
 
 #### `cold_start/company_message`
 
@@ -326,11 +375,16 @@ Scenarios (1):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1098ms | 1568ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1032ms | 3618ms | 3 | 0 | 0 | 0 |
 
 #### `cold_start/field_extract`
 
@@ -344,11 +398,16 @@ Scenarios (1):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1098ms | 1568ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1032ms | 3618ms | 3 | 0 | 0 | 0 |
 
 #### `cold_start/sitereadmessage`
 
@@ -363,11 +422,16 @@ Scenarios (2):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 3 | 0.50 | 3 | 0 | 3 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 4 | 0.67 | 4 | 0 | 2 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 3 | 0.50 | 1098ms | 1568ms | 3 | 0 | 3 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1609ms | 5612ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 5 | 0.83 | 1032ms | 3618ms | 5 | 0 | 1 | 0 |
 
 ### `corpus_ask`
 
@@ -383,11 +447,17 @@ Scenarios (3):
 | `corpus_ask_returns_nothing_when_the_only_passage_does_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_02.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml) |
 | `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
 
-Records (1):
+Records (2):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | - | `certified` | 9 | 9 | 1.00 | 9 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | - | `certified` | 9 | 9 | 1.00 | 895ms | 1457ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1366ms | 4299ms | 9 | 0 | 0 | 0 |
 
 ### `deal_health`
 
@@ -402,7 +472,16 @@ Scenarios (2):
 | `deal_status_offer_left_hanging` | `accepted` | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
 | `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1139ms | 1778ms | 6 | 0 | 0 | 0 |
 
 ### `document_extract`
 
@@ -421,9 +500,14 @@ Scenarios (4):
 
 Records (1):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 12 | 12 | 1.00 | 12 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 12 | 12 | 1.00 | 7387ms | 9456ms | 12 | 0 | 0 | 0 |
 
 ### `draft_reply`
 
@@ -441,12 +525,17 @@ Scenarios (1):
 
 Records (4):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1565ms | 3014ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 20957ms | 44515ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 8077ms | 20319ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1436ms | 2784ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/first`
 
@@ -460,10 +549,15 @@ Scenarios (1):
 
 Records (2):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1565ms | 3014ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1436ms | 2784ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/intro`
 
@@ -478,10 +572,15 @@ Scenarios (2):
 
 Records (2):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 5 | 0.83 | 5 | 0 | 1 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 1565ms | 3014ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1436ms | 2784ms | 6 | 0 | 0 | 0 |
 
 #### `draft_reply/person`
 
@@ -495,12 +594,17 @@ Scenarios (1):
 
 Records (4):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1565ms | 3014ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 20957ms | 44515ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `certified` | 3 | 3 | 1.00 | 8077ms | 20319ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1436ms | 2784ms | 3 | 0 | 0 | 0 |
 
 #### `draft_reply/reply`
 
@@ -517,13 +621,18 @@ Scenarios (4):
 
 Records (5):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `not_supported` | 12 | 12 | 1.00 | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `not_supported` | 12 | 12 | 1.00 | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 12 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1565ms | 3014ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · eu_hosted` | `stale` | - | `not_supported` | 12 | 12 | 1.00 | 20957ms | 44515ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · eu_hosted` | `stale` | - | `not_supported` | 12 | 12 | 1.00 | 8077ms | 20319ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2508ms | 2685ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `not_supported` | 12 | 12 | 1.00 | 1436ms | 2784ms | 12 | 0 | 0 | 0 |
 
 ### `enrich`
 
@@ -537,14 +646,22 @@ Scenarios (1):
 |---|---|---|
 | `contact_fields_from_a_mail_signature` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/basic_01.yaml) |
 
-Records (2):
+Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 1 | 0.33 | 1 | 2 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 1 | 0.33 | 1350ms | 1413ms | 1 | 2 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 3 | 1.00 | 2469ms | 2500ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 904ms | 904ms | 3 | 0 | 0 | 0 |
 
 ### `growth_fit`
+
+Certified without the company context production prepends (`offer`, `positioning`, `proof`): this lane runs with no database to assemble it from.
 
 #### `growth_fit/growth_fit`
 
@@ -556,7 +673,16 @@ Scenarios (1):
 |---|---|---|
 | `growth_fit_reads_their_facts_against_our_offering` | `accepted` | [clear_fit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 2088ms | 2730ms | 0 | 3 | 0 | 0 |
 
 ### `offer_draft`
 
@@ -576,12 +702,18 @@ Scenarios (5):
 | `rich_context_under_a_tight_token_cap` | `accepted` | [token_cap.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/token_cap.yaml) |
 | `two_sources_disagree_on_price` | `accepted` | [contradictory_sources.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml) |
 
-Records (2):
+Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 6 | 3 | 0 | 6 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 15 | 12 | 0.80 | 9 | 3 | 0 | 3 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 850ms | 1634ms | 6 | 3 | 0 | 6 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 15 | 12 | 0.80 | 3394ms | 8447ms | 9 | 3 | 0 | 3 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 816ms | 1904ms | 9 | 2 | 1 | 3 |
 
 ### `propose_roles`
 
@@ -599,9 +731,14 @@ Scenarios (3):
 
 Records (1):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 6 | 3 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 7 | 0.78 | 1010ms | 2660ms | 7 | 2 | 0 | 0 |
 
 ### `rate_extract`
 
@@ -616,13 +753,19 @@ Scenarios (2):
 | `fx_rates_json_api_grounded` | `accepted` | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
 | `fx_rates_two_pairs_grounded` | `accepted` | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
 
-Records (3):
+Records (4):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
-| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 6 | 6 | 1.00 | 2598ms | 5144ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 2384ms | 3001ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1757ms | 2632ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 6 | 6 | 1.00 | 4206ms | 5262ms | 6 | 0 | 0 | 0 |
 
 #### `rate_extract/pricing`
 
@@ -634,13 +777,19 @@ Scenarios (1):
 |---|---|---|
 | `pricing_table_two_models_grounded` | `accepted` | [pricing_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml) |
 
-Records (3):
+Records (4):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | - | `certified` | 3 | 3 | 1.00 | 2598ms | 5144ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 2384ms | 3001ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1757ms | 2632ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `current` | - | `certified` | 3 | 3 | 1.00 | 4206ms | 5262ms | 3 | 0 | 0 | 0 |
 
 ### `signal_extract`
 
@@ -657,7 +806,16 @@ Scenarios (4):
 | `notice_served_in_a_polite_reply` | `accepted` | [contract_ended_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/contract_ended_01.yaml) |
 | `the_mail_tries_to_write_the_record` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/injection_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 4/4 | `supported_degraded` | 12 | 11 | 0.92 | 704ms | 1513ms | 11 | 1 | 0 | 0 |
 
 ### `site_extract`
 
@@ -675,14 +833,20 @@ Scenarios (5):
 | `one_legal_page_naming_two_entities` | `abstained` | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
 | `services_page_profile_fields_grounded` | `accepted` | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
 
-Records (4):
+Records (5):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 11 | 0.73 | 11 | 1 | 0 | 3 |
-| `openai_compatible · anthropic/claude-haiku-4.5 · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 6 | 6 | 0 | 3 |
-| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 9 | 0.75 | 6 | 3 | 0 | 3 |
-| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 10 | 0.83 | 4 | 2 | 0 | 6 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.5-flash · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 11 | 0.73 | 4492ms | 6458ms | 11 | 1 | 0 | 3 |
+| `openai_compatible · anthropic/claude-haiku-4.5 · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 2566ms | 3731ms | 6 | 6 | 0 | 3 |
+| `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 9 | 0.75 | 2481ms | 4574ms | 6 | 3 | 0 | 3 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 3036ms | 4477ms | 9 | 3 | 0 | 3 |
+| `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `not_supported` | 12 | 10 | 0.83 | 7831ms | 17213ms | 4 | 2 | 0 | 6 |
 
 ### `site_fact_extract`
 
@@ -698,12 +862,18 @@ Scenarios (3):
 | `impressum_page_company_facts_and_entities` | `accepted` | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
 | `services_page_offering_facts` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
 
-Records (2):
+Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 2/3 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 2/3 | `certified` | 15 | 15 | 1.00 | 1203ms | 2380ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 2547ms | 3532ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 2/3 | `certified` | 9 | 9 | 1.00 | 839ms | 9128ms | 9 | 0 | 0 | 0 |
 
 ### `site_triage`
 
@@ -723,11 +893,18 @@ Scenarios (5):
 
 Records (1):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 591ms | 1148ms | 15 | 0 | 0 | 0 |
 
 ### `summarize`
+
+Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
 #### `summarize/meeting_plan`
 
@@ -739,7 +916,16 @@ Scenarios (1):
 |---|---|---|
 | `meeting_plan_reads_the_thread_that_matters` | `accepted` | [meeting_plan_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 1270ms | 1950ms | 2 | 1 | 0 | 0 |
 
 #### `summarize/org_ask`
 
@@ -752,7 +938,16 @@ Scenarios (2):
 | `ask_meeting_prep_stays_silent_about_a_withheld_section` | `accepted` | [ask_meeting_prep_restricted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml) |
 | `ask_whats_open_answers_the_pipeline_not_the_history` | `accepted` | [ask_whats_open_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1270ms | 1950ms | 6 | 0 | 0 | 0 |
 
 #### `summarize/org_brief`
 
@@ -765,7 +960,16 @@ Scenarios (2):
 | `brief_names_the_stalled_deal_and_the_last_touch` | `accepted` | [stalled_account_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml) |
 | `brief_stays_silent_about_a_withheld_section` | `accepted` | [restricted_reader_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 0 | 0.00 | 1270ms | 1950ms | 0 | 0 | 0 | 6 |
 
 #### `summarize/org_dossier`
 
@@ -777,7 +981,16 @@ Scenarios (1):
 |---|---|---|
 | `dossier_describes_the_company_not_the_relationship` | `accepted` | [dossier_describes_the_company_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1270ms | 1950ms | 3 | 0 | 0 | 0 |
 
 ### `transcript_propose`
 
@@ -793,7 +1006,16 @@ Scenarios (3):
 | `a_speaker_tries_to_write_the_record` | `accepted` | [injection_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/injection_01.yaml) |
 | `one_side_promises_revised_pricing` | `accepted` | [commitment_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_01.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `supported_degraded` | 9 | 8 | 0.89 | 616ms | 1128ms | 8 | 1 | 0 | 0 |
 
 ### `voice_build`
 
@@ -809,11 +1031,16 @@ Scenarios (1):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 3 | 0 | 0.00 | 0 | 0 | 3 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 2 | 0 | 1 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 963ms | 3370ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 3 | 0 | 0.00 | 1358ms | 20620ms | 0 | 0 | 3 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 848ms | 1991ms | 3 | 0 | 0 | 0 |
 
 #### `voice_build/eval_draft`
 
@@ -827,11 +1054,16 @@ Scenarios (1):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 963ms | 3370ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 848ms | 1991ms | 3 | 0 | 0 | 0 |
 
 #### `voice_build/eval_scores`
 
@@ -845,11 +1077,16 @@ Scenarios (1):
 
 Records (3):
 
-| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 2 | 0.67 | 2 | 0 | 1 | 0 |
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 963ms | 3370ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 848ms | 1991ms | 3 | 0 | 0 | 0 |
 
 ### `weekly_review`
 
@@ -865,5 +1102,14 @@ Scenarios (3):
 | `a_quiet_week_is_reported_as_quiet_rather_than_dressed_up` | `accepted` | [a_quiet_week_is_said_to_be_quiet.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml) |
 | `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
 
-No record: this site has never been certified on any binding.
+Records (1):
+
+p50 and p95 are the RECORD's own latency — the whole run that produced it,
+across every site it measured, because that is the granularity a record
+keeps. They are not this one site's figures, and a record covering several
+sites repeats the same pair on each of their rows.
+
+| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 4 | 0.44 | 779ms | 1315ms | 4 | 5 | 0 | 0 |
 
