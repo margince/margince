@@ -404,6 +404,7 @@ var tableOwners = map[string]string{
 	// way it owns idempotency_key and agent_task.
 	"activity_kind":    "internal/compose",
 	"channel_provider": "internal/compose",
+	"analytics_share":  "internal/compose",
 	"brief_run":        "internal/compose/briefs",
 	"brief_item":       "internal/compose/briefs",
 	// The weekly retrospective, in its own aggregate rather than the brief's:

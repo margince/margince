@@ -136,7 +136,7 @@ func triageSchema() json.RawMessage {
 //promptvoice:exempt decides what a website IS and answers a classification with a confidence; no sentence reaches a reader.
 func triageRequest(page crawlPage, lang string) model.Request {
 	fence := promptfence.New()
-	body := fmt.Sprintf("url: %s\n\n%s", page.URL, triageExcerpt(page.Text))
+	body := fmt.Sprintf("url: %s\n\n%s", page.URL, triageExcerpt(page.prose()))
 	return model.Request{
 		System:         triageSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(body)}},

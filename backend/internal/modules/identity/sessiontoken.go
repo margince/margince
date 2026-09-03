@@ -10,14 +10,10 @@ package identity
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,16 +27,12 @@ func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash 
 
 // mintSessionToken returns the raw cookie value and the SHA-256 hex the
 // database stores — the raw token never touches the DB (ADR-0043).
+//
+// Through the shared primitive rather than spelled here: every bearer
+// capability in this tree obeys the same rule, and a second spelling of the
+// mint is where two of them come to disagree about what gets stored.
 func mintSessionToken() (raw, hash string, err error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", "", fmt.Errorf("crmauth: minting session token: %w", err)
-	}
-	raw = base64.RawURLEncoding.EncodeToString(buf)
-	return raw, hashToken(raw), nil
+	return bearer.Mint()
 }
 
-func hashToken(raw string) string {
-	sum := sha256.Sum256([]byte(raw))
-	return hex.EncodeToString(sum[:])
-}
+func hashToken(raw string) string { return bearer.Digest(raw) }

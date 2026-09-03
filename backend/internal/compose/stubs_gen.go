@@ -907,6 +907,22 @@ func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "GetForecastMovement")
 }
 
+func (stubs) OpenForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "OpenForecastShare")
+}
+
+func (stubs) ExportForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "ExportForecastShare")
+}
+
+func (stubs) CreateForecastShare(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateForecastShare")
+}
+
+func (stubs) RevokeForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeForecastShare")
+}
+
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
 	httperr.NotImplemented(w, r, "ListFxRates")
 }
@@ -2225,6 +2241,10 @@ func (stubs) RotateWebhookSecret(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) AddWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "AddWeeklyPlanCommitment")
+}
+
+func (stubs) EditWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "EditWeeklyPlanCommitment")
 }
 
 func (stubs) AskForWeeklyPlanHelp(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {

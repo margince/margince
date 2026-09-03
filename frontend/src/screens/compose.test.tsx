@@ -1795,6 +1795,129 @@ describe("TimelineActions", () => {
     expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
   });
 
+  // `selected` is the API's third audience and the dialog offered two, because
+  // choosing it without a way to name anybody is a choice the reader cannot
+  // complete. These are the claims that closed that.
+  it("names the people a message is limited to and submits them as one set", async () => {
+    const roster = {
+      "GET /users": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "u-2",
+              display_name: "Lena Fischer",
+              email: "lena@demo.test",
+            },
+            // An agent seat, which the picker must not offer: a message is
+            // limited to people and teams, never to an agent.
+            {
+              id: "u-9",
+              display_name: "Margince",
+              email: "agent@demo.test",
+              is_agent: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /teams": () =>
+        jsonResponse({
+          data: [{ id: "t-1", name: "Vertrieb" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+    };
+    const sent = stubRoutes(roster);
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a6",
+          captured_by: "human:u1",
+          version: 3,
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Visibility" }));
+    await userEvent.click(screen.getByLabelText(/Named people/));
+
+    // An agent seat is not on offer.
+    expect(await screen.findByLabelText(/Lena Fischer/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Margince/)).toBeNull();
+
+    await userEvent.click(screen.getByLabelText(/Lena Fischer/));
+    await userEvent.click(screen.getByLabelText(/Vertrieb/));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save visibility" }),
+    );
+
+    const write = sent.find(
+      (each) => each.key === "PATCH /activities/a6/audience",
+    );
+    // Fails loudly rather than passing vacuously: `find` answering undefined
+    // makes `write?.body` undefined, and a toEqual against undefined would
+    // report the write as absent instead of wrong.
+    if (!write) {
+      throw new Error(
+        `no audience write was sent; saw ${sent.map((e) => e.key).join(", ")}`,
+      );
+    }
+    expect(write.body).toEqual({
+      audience: "selected",
+      members: [
+        { subject_type: "user", subject_id: "u-2" },
+        { subject_type: "team", subject_id: "t-1" },
+      ],
+    });
+  });
+
+  // Limiting a message to NOBODY is not a limit anybody meant, and it would
+  // lock the author out of their own correspondence. The confirm refuses it
+  // rather than the server having to.
+  it("refuses to save a named audience with nobody named", async () => {
+    stubRoutes({
+      "GET /users": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "u-2",
+              display_name: "Lena Fischer",
+              email: "lena@demo.test",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /teams": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a7",
+          captured_by: "human:u1",
+          version: 3,
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Visibility" }));
+    await userEvent.click(screen.getByLabelText(/Named people/));
+    await screen.findByLabelText(/Lena Fischer/);
+
+    expect(
+      screen
+        .getByRole("button", { name: "Save visibility" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
   it("keeps the per-message control on hand-typed mail once narrowed", () => {
     const narrowedHandTyped: Activity = {
       ...activity202,

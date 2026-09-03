@@ -1526,6 +1526,11 @@ export const de = {
   "compose.audienceParticipants": "Nur Beteiligte",
   "compose.audienceParticipantsHint":
     "Nur die Personen auf dieser Nachricht lesen Betreff und Inhalt. Andere sehen nur, dass an diesem Tag eine Nachricht gewechselt wurde.",
+  "compose.audienceSelected": "Benannte Personen",
+  "compose.audienceSelectedHint":
+    "nur die Personen und Teams, die Sie benennen, sowie alle, die bereits auf der Nachricht stehen.",
+  "compose.audienceMembersLegend": "Wer sie lesen darf",
+  "compose.audienceMembersLoading": "Personenliste wird gelesen…",
   "compose.audienceConfirm": "Sichtbarkeit speichern",
   "compose.audienceNote":
     "Gilt nur f\u00fcr diese Nachricht \u2014 nicht f\u00fcr den Thread und nicht f\u00fcr den Kontakt.",
@@ -2445,12 +2450,12 @@ export const de = {
     "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
   "teamweekly.reading.firstResponse": "Erstreaktion",
   "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
-  "teamweekly.reading.commitments": "Eingehaltene Zusagen",
+  "teamweekly.reading.commitments": "Planzusagen eingehalten",
   "teamweekly.card.firstResponse": "Rechtzeitig beantwortet",
   "teamweekly.card.firstResponseBasis": "{breached} überschritten",
   "teamweekly.card.meetings": "Termine mit nächstem Schritt",
   "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
-  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitments": "Planzusagen eingehalten",
   "teamweekly.card.commitmentsBasis": "des Zugesagten",
   "teamweekly.card.won": "Gewonnen",
   "teamweekly.card.wonBasis": "{lost} verloren",
@@ -2467,7 +2472,7 @@ export const de = {
   "teamweekly.coach.empty": "In dieser Woche war niemand in diesem Team.",
   "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
   "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
-  "teamweekly.focus.commitments_missed": "Zusagen verpasst",
+  "teamweekly.focus.commitments_missed": "Planzusagen verpasst",
   "teamweekly.focus.meetings_without_next_step":
     "Termine ohne nächsten Schritt",
   "teamweekly.focus.strong_week": "Zum Nachmachen",
@@ -2505,7 +2510,7 @@ export const de = {
   "home.weekly.pickWeek": "Andere Woche öffnen",
   "home.weekly.none":
     "Noch kein Wochenrückblick — der erste wird am Montag nach deiner ersten vollen Woche geschrieben.",
-  "home.weekly.promised": "Zugesagt, erledigt",
+  "home.weekly.tasksDelivered": "Aufgaben erledigt",
   "home.weekly.ofDue": "{done} von {due}",
   "home.weekly.dealsWon": "Gewonnen",
   "home.weekly.dealsLost": "Verloren",
@@ -2519,7 +2524,7 @@ export const de = {
   "home.weekly.sincePrior": "{delta} ggü. Vorwoche",
   "home.weekly.leadsAnswered": "Leads rechtzeitig beantwortet",
   "home.weekly.ofRouted": "{answered} von {routed}",
-  "home.weekly.promisesKept": "Zusagen eingehalten",
+  "home.weekly.planCommitmentsKept": "Planzusagen eingehalten",
   "home.weekly.meetingsHeld": "Meetings mit nächstem Schritt",
   "home.weekly.ofMeetings": "{withStep} von {held}",
   "home.weekly.carriedOver": "Übernommen",
@@ -3149,6 +3154,30 @@ export const de = {
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.share.open": "Ansicht teilen",
+  "analytics.share.title": "Diese Ansicht teilen",
+  "analytics.share.kindLegend": "Was der Link zeigt",
+  "analytics.share.liveLabel": "Live-Ansicht",
+  "analytics.share.liveHelp":
+    "Wird bei jedem Öffnen neu berechnet, begrenzt auf das, was die lesende Person sehen darf. Die Zahlen bewegen sich mit der Pipeline.",
+  "analytics.share.snapshotLabel": "Eingefrorener Stand",
+  "analytics.share.snapshotHelp":
+    "Die Zahlen, wie sie beim Einfrieren standen. Sie ändern sich nicht, deshalb nennt der Link den Zeitpunkt.",
+  "analytics.share.snapshotUnavailable":
+    "Für diesen Zeitraum wurde noch kein Stand eingefroren.",
+  "analytics.share.expiryNote":
+    "Der Link läuft nach 30 Tagen ab. Sie können ihn früher schließen.",
+  "analytics.share.create": "Link erstellen",
+  "analytics.share.linkTitle": "Ihr Link",
+  "analytics.share.linkWarning":
+    "Der Link wird nur dieses eine Mal angezeigt. Kopieren Sie ihn jetzt — er lässt sich nicht erneut auslesen.",
+  "analytics.share.leaveWarning":
+    "Wenn Sie ohne Kopieren schließen, ist der Link verloren. Sie müssten einen neuen erstellen.",
+  "analytics.share.copy": "Link kopieren",
+  "analytics.share.copied": "Kopiert",
+  "analytics.share.copyFailed":
+    "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
+  "analytics.share.done": "Fertig",
   "analytics.frame": "Stand {asOf} · {zone} · {currency}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
   "review.ready": "Bereit",

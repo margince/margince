@@ -129,6 +129,47 @@ describe("the Brief's dials", () => {
     expect(globalThis.history.length).toBe(before);
   });
 
+  // The rail belongs to the view it is beside.
+  //
+  // Every panel in it answers a question about TODAY — what the day is booked
+  // with, what is owed now, what arrived overnight. Under the weekly they sit
+  // beside a week that closed, so the page shows a rep "Today's schedule" next
+  // to a retrospective and reads as two screens overlaid.
+  //
+  // The work column already switches on the view. The rail did not, because it
+  // is drawn once outside that branch and nothing asserted otherwise.
+  it("leaves the morning's rail off the weekly", async () => {
+    globalThis.location.hash = "#/home?view=weekly";
+    stubHome(["mine"]);
+    render(<HomeScreen />);
+
+    await screen.findByRole("group", { name: en["brief.view.label"] });
+    await waitFor(() =>
+      expect(document.querySelector("#home-weekly")).not.toBeNull(),
+    );
+    expect(document.querySelector("#home-schedule")).toBeNull();
+    expect(document.querySelector("#home-watch")).toBeNull();
+    // And the TRACK is gone with them. The <aside> element is gated on having
+    // content, but the grid template is on the wrapper and driven by `shape` —
+    // so dropping only the contents leaves the weekly at seventy per cent
+    // width beside a third of nothing, which reads as a rail that failed to
+    // load rather than one that was never there. `page-zones-aside` is the
+    // class that reserves the column.
+    expect(document.querySelector(".page-zones-aside")).toBeNull();
+  });
+
+  // And it is still there on the morning, or the assertion above passes over a
+  // rail that was deleted rather than placed.
+  it("keeps the rail on the morning", async () => {
+    stubHome(["mine"]);
+    render(<HomeScreen />);
+
+    await waitFor(() =>
+      expect(document.querySelector("#home-schedule")).not.toBeNull(),
+    );
+    expect(document.querySelector(".page-zones-aside")).not.toBeNull();
+  });
+
   // DECISION 5, ON THE PAGE. Every combination the dials offer must draw
   // something. An empty work column under a selectable dial is the defect the
   // rule exists to prevent, and it is invisible to a test that only checks the

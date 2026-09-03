@@ -107,10 +107,10 @@ func weeklyLines(line writeLine) {
 		"Your week of ",
 		"Deine Woche ab ",
 		"Tuần của bạn từ ")
-	line(func(c *Copy) *string { return &c.WeeklyPromised },
-		"Promised, delivered",
-		"Zugesagt, erledigt",
-		"Đã hứa, đã xong")
+	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
+		"Tasks delivered",
+		"Aufgaben erledigt",
+		"Công việc đã hoàn thành")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
