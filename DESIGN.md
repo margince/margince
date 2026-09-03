@@ -323,19 +323,43 @@ one present, none at full depth:
   three rated dimensions, then the spine. The thread is folded — "Read the
   thread · 5" opens the five most recent exchanges inside the pane; "Full
   history" is the History tab.
-- **Left column**: What needs you, led by the agent's move ("You owe them",
-  its sentence, its three sources, the filled verb that does it) and capped
-  at two more rows with a "2 more" foot; Deals, three rows; People as chips
-  with a "+N".
-- **Right column**: the one suggestion as the agent's card (its label, a
-  headline in the display face, one paragraph, its sources, Accept / Edit /
-  Dismiss), the ask field, and About — the lead sentence, one paragraph, its
-  sources, "Profile" for the rest.
+- **Left column**: What needs you, one list. Your move leads it as the
+  agent's row (a headline in the display face, one sentence, its sources,
+  the filled verb that does it); the agent's suggestion is the second row
+  of the same list, not a card beside it; then the tasks, the call as the
+  task of preparing it. Below it Deals, three rows.
+- **Right column**: the ask field, About (the lead sentence, one paragraph,
+  its sources, "Profile" for the rest), People as chips with a "+N".
 - **The details panel is hidden until asked**, and the Details control in
   the top bar opens it on the right at 300px with the fields, the people and
   the tags. It is the only thing on the glance that starts closed.
-- No zone numbers. Commercial and the rest of About are the full overview,
+- No zone numbers. Commercial and the rest of About are the deep overview,
   one click away, with the same panes.
+
+**One home per fact, one word per screen.** The glance says each thing once:
+the readings carry the figures, the 360 sentence carries the because, the
+spine carries the time, the needs list carries the verbs. "Your move" is a
+reading, a spine stop and the lead row's eyebrow, never a second verdict word:
+the 360 owns the only display-face word on the screen, and it is about the
+record ("Good", "Live", "Promise overdue"), while the needs list's lead is a
+sentence about you. The way in sits on the facts line, because that is the
+first thing a rep wants before a call.
+
+**The same depth on every record.** Contact, deal and lead follow the company
+glance line for line; what changes is the content of each slot.
+
+| Slot | Company | Contact | Deal | Lead |
+|---|---|---|---|---|
+| Live dot | In conversation | Your move (warn) | Your move (warn) | In motion |
+| Facts | city · industry · size · owner · way in | title · employer · email · phone · way in | account · value · stage · close · owner · partner | title · company · email · source · owner |
+| Filled verb | New deal | Reply on her thread | Confirm the rate | Qualify |
+| Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The people · Momentum | Company · Score · First response · Next · Your move |
+| 360 word | Good | Promise overdue | Live | In motion |
+| In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
+| Needs-list lead | Your move | The move the call names | Margince found this, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
+| Second left pane | Deals | The deal she decides, with the room | The buying committee, with the cover gap | The score as factors |
+| Right column | Ask · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
+| Tabs | Overview · History · People · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
 
 The test: a rep back from a week away reads the glance in ten seconds and
 knows where the account stands, what happened last, what they owe, and what
@@ -378,6 +402,12 @@ Network (the best route, the ways in, what changed), Deals (the seats she
 holds), Meetings (next, with brief and room; past), Data & tools (the provider
 snapshot and what Margince read), Documents; on a deal Documents and History;
 on a lead History.
+
+### The deep overview, record by record
+
+The numbered anatomies below are the deep overview: everything a record can
+say, in order. The glance draws its panes from them and the sub pages carry
+the rest; nothing below is lost, it is one click further in.
 
 ### The company record
 
