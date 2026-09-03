@@ -572,7 +572,6 @@ export const en = {
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
   "list.viewAll": "All",
-  "list.viewAZ": "A–Z",
   "list.viewHot": "Hot",
   "list.overlayReadOnly":
     "Sorting and filters read through HubSpot — open it there",

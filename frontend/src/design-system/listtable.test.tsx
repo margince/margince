@@ -926,6 +926,40 @@ describe("views", () => {
   });
 });
 
+// A list screen is a table and nothing else, so the page's own name belongs in
+// the header that already carries the tabs and the count rather than on a line
+// of its own above the card. What the tests hold is the ARITHMETIC of headings:
+// exactly one h1 when a title is given, and none at all when it is not — the
+// shell prints the heading for every screen that does not pass one, and a
+// surface that drew its own unconditionally would name those pages twice.
+describe("the page's name in the header", () => {
+  it("names the page in the header's own level-1 heading", () => {
+    const { container } = render(
+      <ListTable
+        title="Contacts"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    const heading = screen.getByRole("heading", { level: 1, name: "Contacts" });
+    expect(container.querySelector(".lt-head")?.contains(heading)).toBe(true);
+  });
+
+  it("draws no heading for a surface that is not the page", () => {
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  });
+});
+
 describe("pagination", () => {
   it("shows only the first 25 of 60 rows, with a 3-button pager", () => {
     render(

@@ -528,7 +528,6 @@ export const de = {
   "list.showArchived": "Archivierte anzeigen",
   "list.loadMore": "Mehr laden",
   "list.viewAll": "Alle",
-  "list.viewAZ": "A–Z",
   "list.viewHot": "Heiß",
   "list.overlayReadOnly":
     "Sortierung und Filter laufen über HubSpot — dort öffnen",

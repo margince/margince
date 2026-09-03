@@ -134,6 +134,7 @@ export function nextSortValue(
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 export function ListSurface({
+  title,
   views = [],
   activeView = 0,
   onViewChange,
@@ -152,6 +153,20 @@ export function ListSurface({
   children,
   footer,
 }: Readonly<{
+  /**
+   * The page's own name, when this surface IS the page.
+   *
+   * A list screen is a header row, a toolbar and rows: the name printed above
+   * that card cost a whole band of a phone's screen to say one word the top
+   * bar's trail had already said, and pushed the dials below the fold. Given
+   * here it stands in the header it belongs to, on the line that already
+   * carries the tabs and the count.
+   *
+   * It renders an h1, so the shell must not print one too — a screen that
+   * passes this joins `SELF_HEADED_SCREENS` (app/pagemeta.ts) in the same
+   * change, or the page is named twice at heading level.
+   */
+  title?: ReactNode;
   views?: readonly ListView[];
   activeView?: number;
   onViewChange?: (index: number) => void;
@@ -202,6 +217,7 @@ export function ListSurface({
   return (
     <div className="lt">
       <div className="lt-head">
+        {title && <h1 className="lt-title t-display">{title}</h1>}
         {views.length > 0 && (
           <div className="lt-views">
             {views.map((view, index) => (
@@ -278,11 +294,10 @@ function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
   if (!children) {
     return null;
   }
-  return narrow ? (
-    <OverflowMenu label={t("list.headActions")}>{children}</OverflowMenu>
-  ) : (
-    <>{children}</>
-  );
+  if (!narrow) {
+    return children;
+  }
+  return <OverflowMenu label={t("list.headActions")}>{children}</OverflowMenu>;
 }
 
 /**

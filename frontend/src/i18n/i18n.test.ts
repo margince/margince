@@ -155,10 +155,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deals.unit",
   "history.actorAgent",
 
-  // The alphabetical sort view: the Vietnamese alphabet also runs A to Z, so
-  // the label names the same range in either catalog.
-  "list.viewAZ",
-
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",
   "locale.name.de",

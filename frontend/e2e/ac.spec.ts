@@ -982,7 +982,12 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(
       page.getByText("Sortierung und Filter laufen über HubSpot"),
     ).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Sortieren" })).toHaveCount(
+    // A PREFIX, because the dial has two names: it reads "Sortieren" with no
+    // order in force and "Sortierung: <Spalte>" with one. An assertion that no
+    // dial is offered has to be unable to miss either, or it passes by failing
+    // to look — which is what an equality test on the bare verb started doing
+    // the day the dial began naming the order it holds.
+    await expect(page.getByRole("combobox", { name: /^Sortier/ })).toHaveCount(
       0,
     );
     await expect(page.getByRole("searchbox")).toBeVisible();

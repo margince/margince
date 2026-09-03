@@ -33,6 +33,18 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
+/* THE PAGE'S NAME, in the header of the card that is the page.
+   `flex: none` and no wrap: it is one translated word or two, and the tabs and
+   the count are what the row gives its space to. It keeps the display face the
+   standalone heading had, so a reader who knew where the name was still finds
+   the same word in the same type — one line higher. */
+.lt-title {
+  flex: none;
+  margin: 0;
+  font-family: var(--f-display);
+  line-height: 1.15;
+}
+
 .lt-views {
   display: flex;
   gap: var(--space-1);
@@ -446,9 +458,15 @@
  * because losing the dial is not a reason to lose the fact. Sits on the tools
  * row's own line, in the surrounding type, so it reads as the answer a picker
  * would have given rather than as a label of its own. */
+/* WHAT the rows are drawn FROM, where a picker would stand if there were more
+   than one to pick. Meta type, and quieter than any control beside it: at the
+   size of the dials it read as a third segment of the Board/Table switch —
+   a tab that refused every press, which is the defect the picker was removed
+   for in the first place. */
 .lt-scope {
   align-self: center;
-  color: var(--textSecondary);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -1039,6 +1057,14 @@
   .lt-tools,
   .lt-foot {
     flex-wrap: wrap;
+  }
+
+  /* At phone width the name takes the whole first line: sharing it with a rail
+     of eight view tabs left both truncated, and the name is what says which
+     page this is. */
+  .lt-title {
+    width: 100%;
+    font-size: var(--fs-h2);
   }
 
   /* The count stops competing with the tabs for the same line. */

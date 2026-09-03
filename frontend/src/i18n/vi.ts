@@ -524,7 +524,6 @@ export const vi = {
   "list.showArchived": "Hiện mục lưu trữ",
   "list.loadMore": "Tải thêm",
   "list.viewAll": "Tất cả",
-  "list.viewAZ": "A–Z",
   "list.viewHot": "Tiềm năng cao",
   "list.overlayReadOnly": "Sắp xếp và bộ lọc đọc qua HubSpot — hãy mở bên đó",
   "table.range": "{first}–{last} trong {count} {unit}",
