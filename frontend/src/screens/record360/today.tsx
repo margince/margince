@@ -67,10 +67,10 @@ export function TodayPanel({
       {/* The count beside the name, the mock's `h3 small`: "1 overdue" is a
           fact about the list's head, and as a footer band under the rows it
           floated alone at the bottom of the pane. */}
-      <span className="co-360-headtext">
+      <div className="co-360-headtext">
         <Eyebrow as="h3">{t("today.title")}</Eyebrow>
         {footer}
-      </span>
+      </div>
       {onOpenTasks && (
         <Button small variant="ghost" onClick={onOpenTasks}>
           {t("co.suggest.viewTasks")}
