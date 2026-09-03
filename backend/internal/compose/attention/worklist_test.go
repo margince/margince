@@ -642,7 +642,7 @@ func TestASendersOwnDisplayNameIsNotACompanyMatch(t *testing.T) {
 
 	item := approvalItem(approval, func(string) bool { return false })
 
-	if item.Detail != nil && strings.Contains(*item.Detail, stagedKnownCompany) {
+	if item.Staged != nil && item.Staged.KnownCompany != nil && *item.Staged.KnownCompany {
 		t.Fatal("a sender's own display name was taken for a company we know")
 	}
 }

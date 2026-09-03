@@ -27001,8 +27001,9 @@ export interface components {
              *
              *     The idle window here is DELIBERATELY shorter than the product-wide `stalled`
              *     threshold: a queue that only speaks once a deal meets the stalled bar is
-             *     reporting a two-month-old fact rather than warning. `detail` names the window
-             *     actually used, so the card never implies a patience the server did not apply.
+             *     reporting a two-month-old fact rather than warning. `quiet_days` carries the
+             *     window actually used, so the card never implies a patience the server did not
+             *     apply.
              *
              *     Absent — not empty — on an installation whose feed does not read deals.
              */
@@ -27013,9 +27014,9 @@ export interface components {
              *
              *     A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
              *     a contact carrying no open deal never reaches that lane, and those are exactly
-             *     the relationships that lapse unnoticed. `detail` carries the silence in days,
-             *     from the same §4 derivation the contact's own page shows, so the two surfaces
-             *     cannot come to disagree about when somebody went quiet.
+             *     the relationships that lapse unnoticed. `quiet_days` carries the silence, from
+             *     the same §4 derivation the contact's own page shows, so the two surfaces cannot
+             *     come to disagree about when somebody went quiet.
              *
              *     Only relationships this reader actually had: a contact nobody here ever spoke
              *     to has not gone quiet, and a lane that said otherwise would report every
@@ -27268,8 +27269,39 @@ export interface components {
              *     and the client writes the line in the reader's own.
              */
             title?: string;
-            /** @description One supporting line: what changed, or what the evidence said. */
+            /**
+             * @description One supporting line: what changed, or what the evidence said. PROSE, in a
+             *     language a reader reads — a bounce reason, a park reason, the mailbox that
+             *     stopped syncing, what an AI task was about.
+             *
+             *     It is not a channel for anything else. Three producers used the field as one,
+             *     each with its own reader parsing the value back out: two wrote a bare day count
+             *     and one wrote internal marker words. So the field meant "a sentence" on twelve
+             *     sources and something else on three, and a client drawing it faithfully printed
+             *     a naked "90" under one title and "machine_sender" under another.
+             *
+             *     Both now travel typed — `quiet_days` and `staged` below — and the client writes
+             *     the sentence in the reader's own language.
+             *
+             *     ONE source is still an exception, and a client must know it: `sync_health` fills
+             *     this field with its own vocabulary — the affected object classes, the failure
+             *     class, or the budget band — for a client to write a sentence from. Those are
+             *     words like `shed` and `deal, person`. A client that has not written that
+             *     sentence draws nothing for that source rather than the value.
+             */
             detail?: string;
+            staged?: components["schemas"]["AttentionStagedFacts"];
+            /**
+             * @description How many days a deal or a relationship has been idle, where the producing lane
+             *     measures one. Sent by `deal_at_risk` and `relationship_decay`.
+             *
+             *     Typed rather than written into `detail` because it is a number the queue READS
+             *     and not only something it shows: it becomes the row's `quiet_days` reason, the
+             *     deal card's own figure, and the age each row carries into the ordering. A number
+             *     parsed back out of a sentence reads as zero the day somebody rewords the
+             *     sentence, and every one of those uses would go quietly wrong together.
+             */
+            quiet_days?: number | null;
             /**
              * @description Which underlying CONDITION this row reports, for a surface that groups repeated
              *     failures of one thing into one row. Two failures of one broken automation carry
@@ -27279,8 +27311,30 @@ export interface components {
              *     meaning. A row that reports no shared condition omits it. Present only on the
              *     system-health sources, where "the same thing broke again" is a question a reader
              *     has.
+             *
+             *     `cause_label` is the half a reader sees. The two are separate because they must
+             *     be able to disagree: a rule's NAME is mutable and not unique, so an identity
+             *     built from it would merge two rules that happen to share a name and split one
+             *     that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
              */
             cause_ref?: string;
+            /**
+             * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
+             *     stopped.
+             *
+             *     Minted by the LANE that mints the cause, because only that lane knows which of
+             *     the records it read is the condition's name. It is deliberately not derived from
+             *     a sampled member's title: the members of a group are alike, not identical, and
+             *     one member's subject describes that member rather than the thing they share.
+             *
+             *     ABSENT is a real answer, not a gap. A lane whose only candidate is a vocabulary
+             *     key sends nothing rather than a plausible-looking one — the AI-work lane is that
+             *     case, since its task kinds are generated enum keys, and a rep reading
+             *     "site_triage failed 8 times" is being shown the vocabulary this field exists to
+             *     replace. A group with no words is named by its kind alone, and a client never
+             *     falls back to rendering `cause_ref`.
+             */
+            cause_label?: string;
             /** @description Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first. */
             rank?: number;
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
@@ -27334,6 +27388,24 @@ export interface components {
              *     database rather than their own records.
              */
             evidence: components["schemas"]["AttentionPairEvidence"][];
+        };
+        /**
+         * @description What the verdict engine already worked out about a staged contact decision, so a
+         *     surface can group alike questions without reading the proposal a second time.
+         *
+         *     Read from the payload the engine staged rather than re-derived, because a second
+         *     opinion would put one decision in two groups across two reads.
+         *
+         *     Typed because these are FLAGS a client tests, not words a reader sees. They used to
+         *     ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+         *     a reader doing a substring match to get them back — which made the supporting line
+         *     undrawable on this source and would have shown a rep an internal token.
+         */
+        AttentionStagedFacts: {
+            /** @description The address is a sending system rather than a person. */
+            machine_sender?: boolean;
+            /** @description The address's domain already names a company in this workspace. */
+            known_company?: boolean;
         };
         /**
          * @description The deal behind a `deal_at_risk` item: the facts its card states, so a client
@@ -27906,7 +27978,27 @@ export interface components {
              *     parsed. Absent on a row that reports no shared condition.
              */
             cause_ref?: string;
-            /** @description One supporting line. */
+            /**
+             * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
+             *     stopped. This is the half a reader sees; the identity beside it is not drawable.
+             *
+             *     Present wherever the producing lane named the condition. A row whose lane named
+             *     none is described by its kind alone.
+             */
+            cause_label?: string;
+            /**
+             * @description One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
+             *     stopped, what an AI task was about.
+             *
+             *     Not a channel for anything else. A value the queue itself reads travels typed
+             *     beside this field, never inside it: a figure parsed back out of a sentence reads
+             *     as zero the day somebody rewords the sentence.
+             *
+             *     ONE source is an exception a client must know: `sync_health` fills this with its
+             *     own vocabulary — the affected object classes, the failure class, the budget band
+             *     — for a client to write a sentence from. Those are words like `shed`. A client
+             *     that has not written that sentence draws nothing for that source.
+             */
             detail?: string;
             /** @description The facts that put this item at this level, in the order they were weighed. */
             because: components["schemas"]["WorklistReason"][];
@@ -28145,11 +28237,25 @@ export interface components {
             /** @description A few members, named, so the group can be checked before it is answered. */
             sample?: string[];
             /**
-             * @description What the members have in common, for a `system_incident`: the rule's name,
-             *     the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
-             *     rather than only how often.
+             * @description WHICH condition the members share, for a `system_incident` — the identity the
+             *     group was formed on, carried so a client can tell two groups apart and find
+             *     the same row again on a re-read.
+             *
+             *     An opaque identity, never rendered. It is a `cause_ref` and reads like one
+             *     (`automation_run:<uuid>`), so a client that put it on screen would show a rep
+             *     "automation_run:01a0… failed 12 times". `label` is the half to draw.
              */
             cause?: string;
+            /**
+             * @description What `cause` identifies, in words — the automation's name, the mailbox that
+             *     stopped. This is what a row says.
+             *
+             *     Absent where the lane that formed the group minted no name for the condition.
+             *     A client then names the group by its kind alone and NEVER falls back to
+             *     `cause`, because an identity on screen is worse than a vaguer sentence: the
+             *     reader cannot act on it and cannot tell it from a bug.
+             */
+            label?: string;
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is

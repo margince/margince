@@ -324,3 +324,114 @@ export const ATeamBiggerThanTheBoardCanCount: Story = {
     );
   },
 };
+
+// A day of things that went wrong, each saying WHAT went wrong.
+//
+// The story worth looking at for this change: six system rows whose supporting
+// line was on the wire all along and drawn for none of them. A rep reading
+// "A mailbox stopped syncing" could not tell which mailbox, and "Automation
+// failed" named neither the rule nor the reason.
+//
+// The group row is the other half. Its `cause` is the identity twelve failures
+// were folded on and reads like one; the sentence is written from `label`, so
+// the row says which rule broke rather than "automation_run:01a0… failed 12
+// times".
+export const WhatWentWrong: Story = {
+  render: () => {
+    stubDay({
+      as_of: "2026-08-31T09:00:00Z",
+      scope: "mine",
+      scope_options: ["mine"],
+      summary: { urgent: 0, due: 2, lower_priority: 4, total: 6 },
+      sources_unavailable: [],
+      reach: [],
+      readings: {
+        revenue_at_risk_minor: 0,
+        revenue_currency: "EUR",
+        buyer_replies: 0,
+        prospecting: 0,
+        review: 0,
+        more_available: false,
+      },
+      counts: [],
+      queue: [
+        {
+          id: "b1",
+          source: "bounce",
+          category: "customer_waiting",
+          level: 3,
+          consequence: "buyer_waits",
+          title: "Your quote never arrived",
+          detail: "The address does not exist at that domain.",
+          because: [],
+          actions: [],
+        },
+        {
+          id: "u1",
+          source: "undelivered",
+          category: "customer_waiting",
+          level: 3,
+          consequence: "buyer_waits",
+          title: "A message never left",
+          detail: "Held: the recipient has not consented to marketing mail.",
+          because: [],
+          actions: [],
+        },
+        {
+          id: "g1",
+          source: "automation_run",
+          category: "system",
+          level: 6,
+          consequence: "data_drifts",
+          because: [],
+          actions: [],
+          batch: {
+            key: "system_incident",
+            count: 12,
+            cause: "automation_run:01a05500-0000-7000-8000-0000000000a1",
+            label: "Notify sales on a new lead",
+          },
+        },
+        {
+          id: "c1",
+          source: "capture_health",
+          category: "system",
+          level: 6,
+          consequence: "data_drifts",
+          kind: "disconnected",
+          title: "A mailbox stopped syncing",
+          detail: "lena.fischer@margince.test",
+          because: [],
+          actions: [],
+        },
+        {
+          id: "w1",
+          source: "ai_work_health",
+          category: "system",
+          level: 6,
+          consequence: "data_drifts",
+          title: "A recap did not generate",
+          detail: "Acme Renewal",
+          because: [],
+          actions: [],
+        },
+        {
+          id: "i1",
+          source: "introduction_request",
+          category: "decisions",
+          level: 5,
+          consequence: "work_blocked",
+          title: "Katrin asked for an introduction",
+          detail: "They asked to be introduced to the buyer at Turbinenbau.",
+          because: [],
+          actions: [],
+        },
+      ],
+    });
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
