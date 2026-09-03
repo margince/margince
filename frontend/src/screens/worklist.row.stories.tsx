@@ -95,3 +95,67 @@ export const ANoticeSettling: Story = {
     );
   },
 };
+
+// A meeting, drawn with the clock a rep is racing.
+//
+// The state this row could not reach before: it said "starting shortly" whether
+// the meeting began in four minutes or in fifty, so the one row that has to be
+// opened BEFORE a wall-clock time was the row that would not say the time.
+//
+// Dated deliberately far enough out that the story is stable whenever it is
+// looked at — a fixture pinned to "today" renders differently every day and the
+// snapshot argues with itself.
+export const AMeetingWithItsStartTime: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "m1",
+      source: "meeting",
+      category: "meetings",
+      level: 1,
+      consequence: "meeting_unprepared",
+      title: "Quarterly review with Turbinenbau",
+      kind: "unprepared",
+      due_at: "2026-09-02T13:00:00Z",
+      because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A task nobody has taken, with the date it is due and how it is put down.
+//
+// Three states the row gained at once: the due moment drawn, "nobody owns it"
+// said out loud, and the spans behind "For how long" — opened here, because a
+// popover closed is a story that shows nothing about what it holds.
+export const ATaskNobodyOwnsBeingPutDown: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000a1",
+      source: "task",
+      category: "tasks",
+      level: 3,
+      consequence: "task_slips",
+      title: "Send the retrofit quote",
+      due_at: "2026-09-02T15:00:00Z",
+      because: [{ kind: "due_today" }, { kind: "unassigned" }],
+      actions: [],
+      dispositions: ["snooze", "not_mine"],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "For how long" }),
+    );
+  },
+};

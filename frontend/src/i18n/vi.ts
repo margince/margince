@@ -7761,9 +7761,16 @@ export const vi = {
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Rà soát",
   "worklist.disposition.verb.snooze": "Để sau",
+  "worklist.disposition.snoozeFor": "Trong bao lâu",
+  "worklist.disposition.snoozeDays_one": "{value} ngày",
+  "worklist.disposition.snoozeDays_other": "{value} ngày",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
   "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.doneSnooze_one":
+    "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.doneSnooze_other":
+    "Sẽ trở lại danh sách của bạn sau {value} ngày.",
   "worklist.disposition.done.not_mine":
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
@@ -7966,6 +7973,8 @@ export const vi = {
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
   "worklist.deal.closes": "chốt {date}",
+  "worklist.when.starts": "bắt đầu {when}",
+  "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",
   "person.readings.title": "Vị thế của liên hệ này",

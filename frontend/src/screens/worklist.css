@@ -166,6 +166,7 @@
 }
 
 .worklist-row-detail,
+.worklist-row-when,
 .worklist-row-facts,
 .worklist-row-sample,
 .worklist-row-because,
@@ -270,4 +271,13 @@
 }
 .worklist-pair-name {
   font-weight: 600;
+}
+
+/* The snooze spans, stacked inside their popover: three short verbs read as a
+   list of choices rather than as a sentence when they sit on one line. */
+.worklist-snooze-spans {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }
