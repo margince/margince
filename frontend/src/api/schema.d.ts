@@ -10716,6 +10716,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/movement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What moved the forecast between two snapshots, and which deals moved it.
+         * @description The difference between two frozen states, classified into named causes.
+         *
+         *     Opening plus every bucket equals closing, exactly. Both sides are sums of the
+         *     per-deal integers each snapshot stored, so this is an identity rather than an
+         *     approximation — a waterfall whose bars do not reach the closing bar is a picture
+         *     that has to be explained away, and there is no such picture here.
+         *
+         *     A deal appears in exactly ONE bucket. One that both slipped and was repriced has
+         *     moved for one reason as far as a reader is concerned: it left. Counting it twice
+         *     would double its money and break the identity.
+         *
+         *     `definition` is the escape hatch that keeps the rest honest. When the two snapshots
+         *     were computed under different metric definitions, the WHOLE difference belongs to
+         *     that bucket: a number that moved because the rules changed must never be reported
+         *     as the business moving. `model` is its smaller sibling — a probability the product
+         *     re-scored, kept apart from sales movement for the same reason.
+         *
+         *     A deal absent from the closing snapshot — archived, or moved out of the caller's
+         *     scope — leaves through `reopened_or_archived` with its whole prior contribution.
+         *     Without that its money would simply vanish, with no row saying where it went.
+         */
+        get: operations["getForecastMovement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/calls": {
         parameters: {
             query?: never;
@@ -22289,6 +22328,47 @@ export interface components {
             current_call?: components["schemas"]["ForecastCall"];
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
+        };
+        /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
+        ForecastMovement: {
+            /** @enum {string} */
+            reading: "open" | "weighted" | "evidence" | "best_case";
+            /** Format: int64 */
+            opening_minor: number;
+            /** Format: int64 */
+            closing_minor: number;
+            /** @description The named causes, in the order a waterfall draws them — what arrived, what crossed the period, what was repriced, and only then what the machinery did. A bucket that moved nothing is absent rather than zero. */
+            buckets: components["schemas"]["ForecastMovementBucket"][];
+            /** @description One row per deal that moved, each in exactly one bucket. */
+            deals: components["schemas"]["ForecastMovementDeal"][];
+        };
+        ForecastMovementBucket: {
+            /** @enum {string} */
+            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
+            /** Format: int64 */
+            amount_minor: number;
+            deal_count: number;
+        };
+        ForecastMovementDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            bucket: string;
+            /** Format: int64 */
+            amount_minor: number;
+            /**
+             * Format: int64
+             * @description Absent for a deal that was not in the opening snapshot at all.
+             */
+            from_minor?: number;
+            /** Format: int64 */
+            to_minor?: number;
+            /**
+             * Format: uuid
+             * @description The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
+             */
+            audit_id?: string;
+            /** Format: uuid */
+            approval_id?: string;
         };
         NewForecastCall: {
             /**
@@ -45513,6 +45593,37 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastMovement: {
+        parameters: {
+            query: {
+                /** @description The opening snapshot. */
+                from: string;
+                /** @description The closing snapshot. */
+                to: string;
+                /** @description Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. */
+                reading?: "open" | "weighted" | "evidence" | "best_case";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The classified difference. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastMovement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

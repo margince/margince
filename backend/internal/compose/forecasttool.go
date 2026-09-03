@@ -179,3 +179,53 @@ func forecastCallToTool(call forecasting.Call) map[string]any {
 	}
 	return out
 }
+
+// movementToolReader answers forecast_movement, through the same store the
+// endpoint reads. One classifier, two transports.
+func movementToolReader(pool *pgxpool.Pool) agents.MovementReader {
+	store := forecasting.NewStore(InstallationDB(pool))
+	return func(ctx context.Context, req agents.MovementRequest) (json.RawMessage, error) {
+		reading := forecasting.ReadingOpen
+		if req.Reading != "" {
+			reading = forecasting.Reading(req.Reading)
+		}
+		moved, err := store.Movement(ctx, reading, req.From, req.To)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(movementToolResult(reading, moved))
+	}
+}
+
+func movementToolResult(reading forecasting.Reading, in forecasting.Movement) agents.ForecastMovementResult {
+	out := agents.ForecastMovementResult{
+		Reading:      string(reading),
+		OpeningMinor: in.OpeningMinor,
+		ClosingMinor: in.ClosingMinor,
+		// Empty, never nil: "nothing moved" is a real answer, and null reads as
+		// "unknown" to a model.
+		Buckets: []agents.ForecastMovementBucketResult{},
+		Deals:   []agents.ForecastMovementDealResult{},
+	}
+	for _, b := range in.Buckets {
+		out.Buckets = append(out.Buckets, agents.ForecastMovementBucketResult{
+			Name: b.Name, AmountMinor: b.AmountMinor, DealCount: b.DealCount,
+		})
+	}
+	for _, d := range in.Deals {
+		deal := agents.ForecastMovementDealResult{
+			DealID: d.DealID, Bucket: d.Bucket, AmountMinor: d.AmountMinor,
+			FromMinor: d.FromMinor, ToMinor: d.ToMinor,
+		}
+		if d.AuditID != nil {
+			id := d.AuditID.String()
+			deal.AuditID = &id
+		}
+		if d.ApprovalID != nil {
+			id := d.ApprovalID.String()
+			deal.ApprovalID = &id
+		}
+		out.Deals = append(out.Deals, deal)
+	}
+	return out
+}

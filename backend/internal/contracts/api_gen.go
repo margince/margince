@@ -5491,6 +5491,78 @@ func (e ForecastCallScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastMovementReading.
+const (
+	ForecastMovementReadingBestCase ForecastMovementReading = "best_case"
+	ForecastMovementReadingEvidence ForecastMovementReading = "evidence"
+	ForecastMovementReadingOpen     ForecastMovementReading = "open"
+	ForecastMovementReadingWeighted ForecastMovementReading = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementReading enum.
+func (e ForecastMovementReading) Valid() bool {
+	switch e {
+	case ForecastMovementReadingBestCase:
+		return true
+	case ForecastMovementReadingEvidence:
+		return true
+	case ForecastMovementReadingOpen:
+		return true
+	case ForecastMovementReadingWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementBucketName.
+const (
+	ForecastMovementBucketNameAmount             ForecastMovementBucketName = "amount"
+	ForecastMovementBucketNameCategory           ForecastMovementBucketName = "category"
+	ForecastMovementBucketNameDefinition         ForecastMovementBucketName = "definition"
+	ForecastMovementBucketNameFx                 ForecastMovementBucketName = "fx"
+	ForecastMovementBucketNameLost               ForecastMovementBucketName = "lost"
+	ForecastMovementBucketNameModel              ForecastMovementBucketName = "model"
+	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
+	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
+	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
+	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
+	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
+	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementBucketName enum.
+func (e ForecastMovementBucketName) Valid() bool {
+	switch e {
+	case ForecastMovementBucketNameAmount:
+		return true
+	case ForecastMovementBucketNameCategory:
+		return true
+	case ForecastMovementBucketNameDefinition:
+		return true
+	case ForecastMovementBucketNameFx:
+		return true
+	case ForecastMovementBucketNameLost:
+		return true
+	case ForecastMovementBucketNameModel:
+		return true
+	case ForecastMovementBucketNameNew:
+		return true
+	case ForecastMovementBucketNamePulledIn:
+		return true
+	case ForecastMovementBucketNamePushedOut:
+		return true
+	case ForecastMovementBucketNameReopenedOrArchived:
+		return true
+	case ForecastMovementBucketNameStageWeight:
+		return true
+	case ForecastMovementBucketNameWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastReadingsScopeKind.
 const (
 	ForecastReadingsScopeKindOwner     ForecastReadingsScopeKind = "owner"
@@ -13732,6 +13804,30 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for GetForecastMovementParamsReading.
+const (
+	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
+	GetForecastMovementParamsReadingEvidence GetForecastMovementParamsReading = "evidence"
+	GetForecastMovementParamsReadingOpen     GetForecastMovementParamsReading = "open"
+	GetForecastMovementParamsReadingWeighted GetForecastMovementParamsReading = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
+func (e GetForecastMovementParamsReading) Valid() bool {
+	switch e {
+	case GetForecastMovementParamsReadingBestCase:
+		return true
+	case GetForecastMovementParamsReadingEvidence:
+		return true
+	case GetForecastMovementParamsReadingOpen:
+		return true
+	case GetForecastMovementParamsReadingWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListLeadsParamsCapturedByKind.
 const (
 	ListLeadsParamsCapturedByKindAgent     ListLeadsParamsCapturedByKind = "agent"
@@ -20852,6 +20948,46 @@ type ForecastCall struct {
 
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
+
+// ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
+type ForecastMovement struct {
+	// Buckets The named causes, in the order a waterfall draws them — what arrived, what crossed the period, what was repriced, and only then what the machinery did. A bucket that moved nothing is absent rather than zero.
+	Buckets      []ForecastMovementBucket `json:"buckets"`
+	ClosingMinor int64                    `json:"closing_minor"`
+
+	// Deals One row per deal that moved, each in exactly one bucket.
+	Deals        []ForecastMovementDeal  `json:"deals"`
+	OpeningMinor int64                   `json:"opening_minor"`
+	Reading      ForecastMovementReading `json:"reading"`
+}
+
+// ForecastMovementReading defines model for ForecastMovement.Reading.
+type ForecastMovementReading string
+
+// ForecastMovementBucket defines model for ForecastMovementBucket.
+type ForecastMovementBucket struct {
+	AmountMinor int64                      `json:"amount_minor"`
+	DealCount   int                        `json:"deal_count"`
+	Name        ForecastMovementBucketName `json:"name"`
+}
+
+// ForecastMovementBucketName defines model for ForecastMovementBucket.Name.
+type ForecastMovementBucketName string
+
+// ForecastMovementDeal defines model for ForecastMovementDeal.
+type ForecastMovementDeal struct {
+	AmountMinor int64               `json:"amount_minor"`
+	ApprovalId  *openapi_types.UUID `json:"approval_id,omitempty"`
+
+	// AuditId The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
+	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
+	Bucket  string              `json:"bucket"`
+	DealId  openapi_types.UUID  `json:"deal_id"`
+
+	// FromMinor Absent for a deal that was not in the opening snapshot at all.
+	FromMinor *int64 `json:"from_minor,omitempty"`
+	ToMinor   *int64 `json:"to_minor,omitempty"`
+}
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
@@ -32880,6 +33016,21 @@ type GetForecastParamsPeriod string
 
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
+
+// GetForecastMovementParams defines parameters for GetForecastMovement.
+type GetForecastMovementParams struct {
+	// From The opening snapshot.
+	From openapi_types.UUID `form:"from" json:"from"`
+
+	// To The closing snapshot.
+	To openapi_types.UUID `form:"to" json:"to"`
+
+	// Reading Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+	Reading *GetForecastMovementParamsReading `form:"reading,omitempty" json:"reading,omitempty"`
+}
+
+// GetForecastMovementParamsReading defines parameters for GetForecastMovement.
+type GetForecastMovementParamsReading string
 
 // ListFxRatesParams defines parameters for ListFxRates.
 type ListFxRatesParams struct {
@@ -44971,6 +45122,9 @@ type ServerInterface interface {
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
+	// What moved the forecast between two snapshots, and which deals moved it.
+	// (GET /forecast/movement)
+	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -47299,6 +47453,12 @@ func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, param
 // Record what somebody believes will close.
 // (POST /forecast/calls)
 func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What moved the forecast between two snapshots, and which deals moved it.
+// (GET /forecast/movement)
+func (_ Unimplemented) GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58348,6 +58508,73 @@ func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordForecastCall(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastMovement operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastMovementParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reading" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reading", r.URL.Query(), &params.Reading, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reading"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reading", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastMovement(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74367,6 +74594,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)

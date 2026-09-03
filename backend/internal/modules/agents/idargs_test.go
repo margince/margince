@@ -238,6 +238,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterForecastTool(r, func(context.Context, ForecastRequest) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
+	RegisterMovementTool(r, func(context.Context, MovementRequest) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
 	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,

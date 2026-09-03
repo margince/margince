@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 62,
-    "tokens": 19721,
-    "median_tool_tokens": 274,
-    "mean_tool_tokens": 317
+    "tools": 63,
+    "tokens": 20079,
+    "median_tool_tokens": 275,
+    "mean_tool_tokens": 318
   },
   "agents": [
     {
@@ -140,6 +140,10 @@
     {
       "name": "search_records",
       "tokens": 392
+    },
+    {
+      "name": "forecast_movement",
+      "tokens": 358
     },
     {
       "name": "search_context",

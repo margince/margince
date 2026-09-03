@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 62 |
+| Tools | 63 |
 | Resources | 9 |
-| Tool catalog | 177.2 KB |
+| Tool catalog | 180.3 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 46238 |
+| Approx. wire tokens | 47027 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 85.1 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 41.3 KB | 23% | Yes, every step |
-| Input schemas | 37.6 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 13.1 KB | 7% | Partly |
-| **Description + input schema** | **79.0 KB** | **44%** | **the recurring cost** |
+| Output schemas | 86.6 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 42.3 KB | 23% | Yes, every step |
+| Input schemas | 38.1 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 13.3 KB | 7% | Partly |
+| **Description + input schema** | **80.4 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (62)
+### Tools (63)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -82,6 +82,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
+| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.0 KB |
 | [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.5 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
@@ -3907,6 +3908,213 @@ Learn about an organization by reading its public website, and propose what was 
 {
   "properties": {
     "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### forecast_movement
+
+**What moved the forecast**
+
+The difference between two forecast snapshots, classified into named causes. Opening plus every bucket equals closing, exactly — so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent. `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket. `model` means a probability the product re-scored. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "from": {
+      "description": "The opening snapshot.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "reading": {
+      "description": "Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+      "enum": [
+        "open",
+        "weighted",
+        "evidence",
+        "best_case"
+      ],
+      "type": "string"
+    },
+    "to": {
+      "description": "The closing snapshot.",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "from",
+    "to"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "buckets": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "deal_count": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "deal_count",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "closing_minor": {
+          "type": "integer"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "approval_id": {
+                "type": "string"
+              },
+              "audit_id": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "from_minor": {
+                "type": "integer"
+              },
+              "to_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "bucket",
+              "deal_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "opening_minor": {
+          "type": "integer"
+        },
+        "reading": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buckets",
+        "closing_minor",
+        "deals",
+        "opening_minor",
+        "reading"
+      ],
       "type": "object"
     },
     "evidence": {

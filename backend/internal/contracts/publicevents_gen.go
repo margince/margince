@@ -96,6 +96,30 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventForecastSnapshotCreatedTrigger.
+const (
+	Call        PublicEventForecastSnapshotCreatedTrigger = "call"
+	Daily       PublicEventForecastSnapshotCreatedTrigger = "daily"
+	PeriodClose PublicEventForecastSnapshotCreatedTrigger = "period_close"
+	Recheck     PublicEventForecastSnapshotCreatedTrigger = "recheck"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastSnapshotCreatedTrigger enum.
+func (e PublicEventForecastSnapshotCreatedTrigger) Valid() bool {
+	switch e {
+	case Call:
+		return true
+	case Daily:
+		return true
+	case PeriodClose:
+		return true
+	case Recheck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventIntroRequestClosedReason.
 const (
 	IntroRequestClosedCancelled PublicEventIntroRequestClosedReason = "cancelled"
@@ -250,6 +274,7 @@ const (
 	EmailSignatureChanged                 SubscribableEventType = "email_signature.changed"
 	EngagementReply                       SubscribableEventType = "engagement.reply"
 	ForecastCreated                       SubscribableEventType = "forecast.created"
+	ForecastSnapshotCreated               SubscribableEventType = "forecast.snapshot_created"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
 	IntroRequestClosed                    SubscribableEventType = "intro_request.closed"
@@ -407,6 +432,8 @@ func (e SubscribableEventType) Valid() bool {
 	case EngagementReply:
 		return true
 	case ForecastCreated:
+		return true
+	case ForecastSnapshotCreated:
 		return true
 	case IncumbentConnected:
 		return true
@@ -1115,6 +1142,22 @@ type PublicEventForecastCreated struct {
 	// SupersedesId The call this one replaces. Absent on the first call of a period — which is a different fact from replacing nothing, and a consumer tracking revisions needs to tell them apart.
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
+
+// PublicEventForecastSnapshotCreated Payload for forecast.snapshot_created — a set of readings was frozen, with the per-deal rows behind them. A subscriber watching for movement waits on this: the difference between two snapshots is only answerable once the second exists.
+// The COUNTS ride along and the money does not. How many deals a run considered says whether it ran completely, which is what a consumer needs to decide whether to trust the state; the totals are a read away and putting them on a bus makes two places to correct when a definition changes.
+type PublicEventForecastSnapshotCreated struct {
+	// EligibleCount How many deals the run considered. A consumer comparing this against the previous snapshot's count sees a run that covered less of the pipeline.
+	EligibleCount int                `json:"eligible_count"`
+	PeriodEnd     openapi_types.Date `json:"period_end"`
+	PeriodStart   openapi_types.Date `json:"period_start"`
+	SnapshotId    openapi_types.UUID `json:"snapshot_id"`
+
+	// Trigger Why it was taken. Only `daily` is arbitrated to one per local day.
+	Trigger PublicEventForecastSnapshotCreatedTrigger `json:"trigger"`
+}
+
+// PublicEventForecastSnapshotCreatedTrigger Why it was taken. Only `daily` is arbitrated to one per local day.
+type PublicEventForecastSnapshotCreatedTrigger string
 
 // PublicEventIncumbentConnected Payload for incumbent.connected — the installation completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection) and flipped to overlay_mode.sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent.
 type PublicEventIncumbentConnected struct {
@@ -2162,6 +2205,10 @@ func (PublicEventForecastCreated) EventType() string { return "forecast.created"
 
 func (PublicEventForecastCreated) EntityType() string { return "user" }
 
+func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.snapshot_created" }
+
+func (PublicEventForecastSnapshotCreated) EntityType() string { return "user" }
+
 func (PublicEventIncumbentConnected) EventType() string { return "incumbent.connected" }
 
 func (PublicEventIncumbentConnected) EntityType() string { return "incumbent_connection" }
@@ -2493,6 +2540,7 @@ var PublicEventVersions = map[string]int{
 	"email_signature.changed":                   1,
 	"engagement.reply":                          1,
 	"forecast.created":                          1,
+	"forecast.snapshot_created":                 1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,
 	"intro_request.closed":                      1,

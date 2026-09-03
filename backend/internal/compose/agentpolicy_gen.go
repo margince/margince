@@ -224,6 +224,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/extensions":                                                 {Op: "listExtensions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/field-history":                                              {Op: "getFieldHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/forecast":                                                   {Op: "getForecast", Access: "tool", Tool: "forecast_readings", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/forecast/movement":                                          {Op: "getForecastMovement", Access: "tool", Tool: "forecast_movement", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/imports/{id}":                                               {Op: "getImportRun", Access: "tool", Tool: "read_import_run", RecordType: "import_run", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/imports/{id}/report":                                        {Op: "getImportRunReport", Access: "tool", Tool: "read_import_report", RecordType: "import_run", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/installation/license":                                       {Op: "getLicenseEntitlement", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

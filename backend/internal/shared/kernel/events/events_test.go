@@ -96,6 +96,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// sla_breached — the noun carries which half of comms it happened to.
 		"delivery_bounced": true,
 		"state_changed":    true,
+		"snapshot_created": true,
 		"profile_created":  true, "profile_updated": true, "profile_archived": true,
 		"corpus_changed": true, "build_changed": true, "version_changed": true,
 		"draft_outcome_recorded": true,

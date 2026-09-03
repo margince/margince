@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -93,6 +94,17 @@ type Contribution struct {
 	// inferred from a nil amount, because "we have no price" and "we could not
 	// convert it" are different facts and a reader is owed which one.
 	ExclusionReason string
+
+	// What changed this deal since the previous snapshot, recorded at write
+	// time. audit_log has no correlation column to join on later, so
+	// reconstructing the link at read time means guessing from timestamps —
+	// wrong exactly when two changes land in the same second, which a busy
+	// pipeline produces daily. Nil means the deal did not change, which is a
+	// real answer and the common one.
+	AuditID *ids.UUID
+	// The approval that authorised the change, where one did. Naming the actor
+	// without naming what let them act tells half the story.
+	ApprovalID *ids.UUID
 }
 
 // Exclusion reasons a contribution can carry, matching the migration's CHECK.
