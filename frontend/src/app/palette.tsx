@@ -187,8 +187,12 @@ function useSearchCommands(query: string): Command[] {
       return data.data;
     },
   });
-  const hits = (result.data ?? []).filter((hit) =>
-    RECORD_KINDS.has(hit.type as EntityKind),
+  // A tag rides alongside the records rather than being filtered out with the
+  // types that have no page. It is not an ENTITY kind — there is no tag 360 —
+  // but it has a page of its own, and reaching it is the point of typing a word
+  // into the palette: the tag page is where the records carrying it are listed.
+  const hits = (result.data ?? []).filter(
+    (hit) => RECORD_KINDS.has(hit.type as EntityKind) || hit.type === "tag",
   );
   const projectLines = useProjectHitLines(
     hits.filter((hit) => hit.type === "project").map((hit) => hit.id),
@@ -205,7 +209,12 @@ function useSearchCommands(query: string): Command[] {
         ? (projectLines.get(hit.id) ?? hit.type)
         : hit.type,
     type: "record" as const,
-    route: ENTITY[hit.type as EntityKind].route(hit.id),
+    // A tag's page is not in the ENTITY registry, which maps record kinds to
+    // their 360; reading it for a tag would throw on a missing entry.
+    route:
+      hit.type === "tag"
+        ? { screen: "tags" as const, id: hit.id }
+        : ENTITY[hit.type as EntityKind].route(hit.id),
   }));
 }
 

@@ -22546,6 +22546,8 @@ export interface components {
             snippet?: string | null;
             /** @description Relevance score. */
             score?: number | null;
+            /** @description For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
+            carried_by?: number | null;
             /**
              * @description Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
              * @enum {string|null}

@@ -31026,6 +31026,14 @@ components:
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
         score: { type: [number, 'null'], description: Relevance score. }
+        carried_by:
+          type: [integer, 'null']
+          description: >
+            For a `tag` hit only: how many people, companies and deals carry this word, as
+            THIS caller may see them — the same three types the tag page counts and the
+            filters offer, not every type `taggable` admits. It is what tells a searcher
+            whether the word is worth opening before they open it. Null on every other hit
+            type, and null when no count was taken.
         trust_tier:
           type: [string, 'null']
           enum: [authoritative, external, unverified, null]
