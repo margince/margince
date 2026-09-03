@@ -284,7 +284,10 @@ export const BoardInSurface: StoryObj = {
         },
       ]}
     >
-      <PipelineBoard columns={boardColumns} />
+      <PipelineBoard
+        columns={boardColumns}
+        cardHref={(d) => `#/deals/${d.id}`}
+      />
     </ListSurface>
   ),
 };
@@ -346,7 +349,12 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithAbsentMoney: StoryObj = {
-  render: () => <PipelineBoard columns={absentMoneyColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={absentMoneyColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };
 
 // A company has three readings on a card, and the whole point of the middle one
@@ -375,7 +383,12 @@ const withheldCompanyColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithWithheldCompany: StoryObj = {
-  render: () => <PipelineBoard columns={withheldCompanyColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={withheldCompanyColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };
 
 // A STAGE NAME LONGER THAN ITS COLUMN, which is the case the head is built for:
@@ -410,5 +423,10 @@ const longStageColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithALongStageName: StoryObj = {
-  render: () => <PipelineBoard columns={longStageColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={longStageColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };

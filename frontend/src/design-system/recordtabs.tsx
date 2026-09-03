@@ -17,8 +17,8 @@
 // two unrelated layouts behind one name for the sake of one shared signature.
 
 import type { ReactNode } from "react";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
+import { OptionCount } from "./atoms";
 import "./recordtabs.css";
 
 /**
@@ -70,7 +70,7 @@ export function RecordTabs<Option extends string>({
   trailing?: ReactNode;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
+
   return (
     <div className="recordtabs">
       <div className="recordtabs-row">
@@ -94,9 +94,7 @@ export function RecordTabs<Option extends string>({
               >
                 {labels[option]}
                 {count !== undefined && (
-                  <span className="recordtabs-count t-mono">
-                    {formatNumber(count, locale)}
-                  </span>
+                  <OptionCount count={count} className="recordtabs-count" />
                 )}
                 {marks?.[option] && (
                   <span className="recordtabs-mark" aria-hidden="true" />

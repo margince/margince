@@ -184,11 +184,32 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
 
 export function DealCard({
   deal,
+  href,
   onOpen,
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
-  onOpen?: (deal: BoardDeal) => void;
+  /**
+   * The deal's own address.
+   *
+   * An anchor and not a button, which is what this was: a card that opens a
+   * record is a link, and drawn as a button it could not be opened in a new
+   * tab, middle-clicked, or copied — while every other record row in the
+   * product could. The board is the one surface where a rep wants three deals
+   * open side by side, so it was the worst place to lose that.
+   *
+   * The address arrives as a prop because this tier holds no routes: it is the
+   * same reason `OffsiteLink` takes an href and `ProjectLinks` takes an
+   * adapter.
+   */
+  href: string;
+  /**
+   * What a press does BESIDE following the link, and the reason the event
+   * comes with it: the board's card is draggable, and the click that ends a
+   * drag must not also navigate. A caller that needs to refuse the press calls
+   * `preventDefault` on the event it is handed.
+   */
+  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
   dragHandlers?: {
     draggable: true;
     onDragStart: (event: React.DragEvent) => void;
@@ -207,11 +228,11 @@ export function DealCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <button
-      type="button"
+    <a
+      href={href}
       className={classes}
       data-deal={deal.id}
-      onClick={() => onOpen?.(deal)}
+      onClick={(event) => onOpen?.(deal, event)}
       {...dragHandlers}
     >
       <span className="deal-name">{deal.name}</span>
@@ -229,7 +250,7 @@ export function DealCard({
         )}
         {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
       </span>
-    </button>
+    </a>
   );
 }
 
@@ -259,7 +280,14 @@ type PlainBoardProps<Record extends BoardRecord> = BoardHandlers<Record> & {
 type DealBoardProps = BoardHandlers<BoardDeal> & {
   variant?: "deal";
   columns: BoardMoneyColumn[];
-  onOpen?: (deal: BoardDeal) => void;
+  /**
+   * Each card's own address. Required, because every card on this board opens a
+   * deal and a card that opens a record is a link — see `DealCard`'s `href`.
+   * A function rather than a field on the deal: the ADDRESS is the screen's
+   * vocabulary and this tier holds no routes.
+   */
+  cardHref: (deal: BoardDeal) => string;
+  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
 };
 
 type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
@@ -400,6 +428,7 @@ export function PipelineBoard<Record extends BoardRecord>(
       renderCard={(deal, column) => (
         <DealCard
           deal={deal}
+          href={props.cardHref(deal)}
           onOpen={props.onOpen}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />

@@ -199,9 +199,7 @@ export function BlockedDomainsCard() {
                     // which is a fact about the installation rather than a read
                     // that failed. The states that are not this one are the
                     // query gate's above.
-                    <EmptyState>
-                      <p>{t("blockedDomains.none")}</p>
-                    </EmptyState>
+                    <EmptyState>{t("blockedDomains.none")}</EmptyState>
                   ) : (
                     <div className="form-stack settingrow-measure">
                       <DataTable

@@ -519,6 +519,12 @@
       color-mix(in srgb, var(--accent) 6%, transparent),
       transparent 58%
     ),
+    /* Not --accentSurface, and this is worth stating because it looks like it
+       should be: that token is the FLAT accent wash at one strength, and these
+       are the two ENDS of a gradient. A token can supply one stop, so using it
+       for the 5%-ish end and a color-mix for the other would read as one
+       authority where there are two. Three more tokens for one screen's two
+       gradients is the other wrong answer. */
     linear-gradient(
       160deg,
       color-mix(in srgb, var(--accent) 4%, var(--bgElevated)) 0%,

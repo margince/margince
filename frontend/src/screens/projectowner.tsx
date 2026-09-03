@@ -105,7 +105,9 @@ export function AssignProjectOwnerAction({
           mutation.reset();
         }}
         title={t("project.assignOwnerTitle")}
-        confirmLabel={t("deals.confirm")}
+        // The verb, not "Confirm": the last control before a write says which
+        // write it is, and `deals.confirm` names no outcome at all.
+        confirmLabel={t("project.assignOwnerConfirm")}
         confirmReason={
           picked ? undefined : t("project.assignOwnerNoneSelected")
         }

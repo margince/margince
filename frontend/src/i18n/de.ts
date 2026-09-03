@@ -257,6 +257,7 @@ export const de = {
   "deal.staged": "vorgemerkt",
   "record.notShown": "Nicht angezeigt",
   "record.timelineLoading": "Verlauf dieses Datensatzes wird geladen…",
+  "record.chronologyLoading": "Änderungsverlauf wird gelesen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
   "record.save": "Speichern",
@@ -1069,6 +1070,7 @@ export const de = {
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
+  "finance.loading": "Rechnungen werden gelesen…",
   "finance.syncing":
     "Abgleich mit der Buchhaltungsquelle läuft. Zahlen erscheinen nach dem ersten Durchlauf.",
   "finance.noConnection":
@@ -2209,6 +2211,7 @@ export const de = {
   "deals.winReasonOther": "Etwas anderes",
   "deals.winReasonDetail": "Was war es?",
   "deals.confirm": "Bestätigen",
+  "deals.loading": "Deals werden gelesen…",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
@@ -2228,7 +2231,6 @@ export const de = {
   "deal.committee.empty": "Für diesen Deal ist niemand hinterlegt",
   "deal.committee.engaged": "Im Austausch",
   "deal.committee.quiet": "Keine Antwort",
-  "deal.committee.unnamedSeat": "Beteiligte Person, für Sie nicht sichtbar",
   "deal.committee.legendEngaged": "Im Austausch mit uns",
   "deal.committee.legendQuiet": "Am Deal beteiligt, aber still",
   "deal.committee.legendGap": "Fehlende Abdeckung",
@@ -2383,6 +2385,7 @@ export const de = {
   "decision.expired": "Abgelaufen",
   "decision.expiresIn": "läuft ab in {countdown}",
   "decision.detail": "Freigabe-Detail",
+  "decision.detailLoading": "Freigabe wird gelesen…",
   "decision.detailTechnical": "Technische Details",
   "decision.detailAsked": "Gefragt am",
   "decision.detailDecided": "Entschieden am",
@@ -2406,7 +2409,7 @@ export const de = {
   "home.honestShort":
     "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
   "home.overflow":
-    "{shown} von {count} qualifizierten Deals — ehrlich kurz, oben die besten.",
+    "Es werden die {shown} höchstplatzierten von {count} qualifizierten Deals gezeigt.",
   "home.narrativeNoPass":
     "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
@@ -2617,6 +2620,7 @@ export const de = {
   "home.readings.label": "Dein Morgen in fünf Kennzahlen",
   "home.readings.truncated":
     "Eine Quelle wurde bis zur Grenze gelesen, jede Zahl oben ist also ein Mindestwert.",
+  "home.readings.openLane": "Diese öffnen",
   "home.readings.waiting": "Kunden warten",
   "home.readings.waitingBasis": "warten auf eine Antwort",
   "home.readings.meetings": "Termine heute",
@@ -2641,7 +2645,7 @@ export const de = {
   "home.deck.viewDeck": "Stapel",
   "home.deck.viewList": "Liste",
   "home.deck.keys":
-    "→ annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U zurücknehmen · Enter senden",
+    "Pfeiltasten stellen eine Entscheidung bereit: → annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U zurücknehmen · Enter sendet das Bereitgestellte",
   "home.deck.behind_one": "1 weitere Karte dahinter",
   "home.deck.behind_other": "{count} weitere Karten dahinter",
   "home.deck.staged_one": "1 Entscheidung vorbereitet",
@@ -3170,6 +3174,7 @@ export const de = {
   "tasks.complete": "Erledigt",
   "tasks.snooze": "1 Tag später",
   "tasks.detail": "Aufgabe",
+  "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
@@ -3275,6 +3280,9 @@ export const de = {
   "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die gewichtete Summe — pro Deal gerundet, sodass sie immer mit „Diese Zahl erklären“ übereinstimmt.",
   "analytics.company": "Firma",
+  "analytics.openStageDeals": "Die Deals in {stage} öffnen",
+  "analytics.openCompanyDeals": "Die Deals dieses Unternehmens öffnen",
+  "analytics.noCompany": "Kein Unternehmen",
   "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
 
@@ -3311,7 +3319,7 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
-  "brief.coverage.summary": "Einige Quellen haben mehr, als diese Seite zeigt",
+  "brief.coverage.summary": "Welche Quellen mehr hatten",
   "brief.coverage.bounded":
     "{shown} von mindestens {considered} gelesenen angezeigt",
   "delivery.morningLabel": "Ihr Tagesbriefing",
@@ -6906,6 +6914,7 @@ export const de = {
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
+  "person.graph.sideColumn": "Vorstellungen und Momente",
   "person.graph.recordWorksWith": "Festhalten: arbeitet mit {name} zusammen",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
@@ -7702,6 +7711,7 @@ export const de = {
   "project.assignOwnerTitle": "Einer Kolleg:in zuweisen",
   "project.assignOwnerSearch": "Kolleg:innen suchen",
   "project.assignOwnerNoneSelected": "Erst eine Kolleg:in auswählen",
+  "project.assignOwnerConfirm": "Zuweisen",
   "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Ende",
@@ -7730,6 +7740,8 @@ export const de = {
   "project.rollups.empty": "Noch keine Kennzahlen zu diesem Projekt.",
   "project.rollups.openValue": "Offenes Dealvolumen",
   "project.rollups.wonValue": "Gewonnenes Dealvolumen",
+  "project.rollups.openDeals": "Die Deals öffnen",
+  "project.rollups.openCommitmentsList": "Offene Zusagen öffnen",
   "project.rollups.openCommitments": "Offene Zusagen",
   "project.rollups.lastActivity": "Letzte Aktivität",
   "project.rollups.never": "noch nichts",
@@ -7748,6 +7760,7 @@ export const de = {
   "project.stakeholders.empty":
     "Noch niemand ist an diesem Projekt beteiligt. Beteiligte sind Personen mit einer Rolle hier — Sponsor, Projektleitung, Champion.",
   "project.stakeholders.add": "Beteiligten hinzufügen",
+  "project.stakeholders.addConfirm": "Hinzufügen",
   "project.stakeholders.addHint":
     "Eine Rolle pro Person. Wer schon an diesem Projekt beteiligt ist, wechselt auf die hier gewählte Rolle.",
   "project.stakeholders.searchLabel": "Personen nach Namen suchen",
@@ -7890,6 +7903,7 @@ export const de = {
   "worklist.readings.revenue": "Umsatz in Gefahr",
   "worklist.readings.revenue.detail": "Über die heute treibenden Deals",
   "worklist.readings.revenue.unpriced": "Kein gefährdeter Deal war bewertbar",
+  "worklist.readings.openLane": "Diese Spur öffnen",
   "worklist.readings.replies": "Kundenantworten",
   "worklist.readings.replies.detail": "Kunden warten auf eine Antwort",
   "worklist.readings.prospecting": "Neugeschäft",
@@ -8041,8 +8055,9 @@ export const de = {
   "worklist.verb.acknowledge": "Verstanden",
   "worklist.verb.acknowledgeFailed":
     "Das konnte nicht als gelesen markiert werden.",
-  "worklist.source.failed": "{source} konnte nicht gelesen werden",
-  "worklist.source.withheld": "{source} ist für dein Konto nicht sichtbar",
+  "worklist.source.failed": "Eine Quelle konnte nicht gelesen werden: {source}",
+  "worklist.source.withheld":
+    "Eine Quelle ist für dein Konto nicht sichtbar: {source}",
   "worklist.untitled.generic": "Etwas braucht dich",
   "worklist.batch.likely_automated": "{count} vermutlich automatische Absender",
   "worklist.batch.company_match": "{count} Adressen bei bekannten Firmen",
@@ -8101,6 +8116,7 @@ export const de = {
   "lead.standing.rests.captured": "Erfasst am {at}.",
   "lead.standing.rests.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.rests.engaged": "Engagement erfasst am {at}.",
+  "lead.readings.openStatus": "Leads mit diesem Status öffnen",
   "lead.readings.title": "Wo dieser Lead steht",
   "lead.readings.firstResponse": "Erste Antwort",
   "lead.readings.noClock": "kein Antwortziel gesetzt",

@@ -487,23 +487,33 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   page,
 }) => {
   await page.goto("/#/deals");
-  // A record's name is asserted by ROLE, on both sides of the swap: the board
-  // draws a deal as a button wrapping the name, the table as a link, and each
-  // view is asked for what it actually draws. Text alone says nothing about
-  // which element it found, and it goes ambiguous the moment anything else on
-  // the page legitimately repeats the name — the table's visually-hidden
-  // "<name> auswählen" bulk-select label does, and so does the agent panel's
-  // spoken status line ("Reading the <name> deal").
+  // Both views draw a deal as a LINK now — a card that opens a record is an
+  // anchor, so middle-click and open-in-new-tab work on it — which is why the
+  // board side is identified by the card's own `data-deal` and not by its role.
+  // Role used to tell the two views apart, and it cannot any more; asserting it
+  // alone would pass on either view and stop testing the swap at all.
   //
-  // The card is matched by substring on purpose, and the headings elsewhere in
-  // this file are `exact` for the same reason: a board card's accessible name is
-  // the whole card read out — name, company, value, age, badges — so the deal's
-  // name is a fragment of it by construction and the assertion here is "a card
-  // for this deal is on the board", not "this text is the card".
-  await expect(
-    page.getByRole("button", { name: "Fleet retrofit" }),
-  ).toBeVisible();
+  // Neither side is asserted on text alone: text says nothing about which
+  // element it found, and it goes ambiguous the moment anything else on the page
+  // legitimately repeats the name — the table's visually-hidden "<name>
+  // auswählen" bulk-select label does, and so does the agent panel's spoken
+  // status line ("Reading the <name> deal").
+  //
+  // The card is matched by substring on purpose: a board card's accessible name
+  // is the whole card read out — name, company, value, age, badges — so the
+  // deal's name is a fragment of it by construction, and the assertion is "a
+  // card for this deal is on the board", not "this text is the card".
+  const boardCard = page.locator('[data-deal="d-fleet"]');
+  await expect(boardCard).toBeVisible();
+  // The card IS the link — `data-deal` sits on the anchor — and the role is
+  // asserted rather than assumed, because that is the behaviour the change
+  // bought: a middle-click and an open-in-new-tab on a deal card.
+  await expect(boardCard).toHaveRole("link");
+  await expect(boardCard).toContainText("Fleet retrofit");
   await page.getByRole("button", { name: "Tabelle" }).click();
+  // The board is gone, so its card locator is the proof the view swapped
+  // rather than drew both at once.
+  await expect(boardCard).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Fleet retrofit" }),
   ).toBeVisible();
@@ -516,10 +526,10 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   page,
 }) => {
   await page.goto("/#/deals");
-  await expect(
-    page.getByRole("button", { name: "Fleet retrofit" }),
-  ).toBeVisible();
+  // Waited for by the locator the drag actually uses, so the wait and the
+  // action cannot disagree about which element the test is about.
   const card = page.locator('[data-deal="d-fleet"]');
+  await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
   await card.dragTo(won);
   await expect(page.getByText("Nach Won verschieben?")).toBeVisible();
@@ -941,9 +951,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     // invalidate, so only the SERVER side (this mock's route table) has
     // flipped — the mounted screen's own state has not.
     await page.goto("/#/deals");
-    await expect(
-      page.getByRole("button", { name: "Fleet retrofit" }),
-    ).toBeVisible();
+    await expect(page.locator('[data-deal="d-fleet"]')).toBeVisible();
     await mockApi(page, { sor: "overlay" });
 
     // d-fleet (stage s2, "Proposal") → s3 ("Negotiation"), both open-semantic

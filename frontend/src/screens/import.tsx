@@ -96,9 +96,7 @@ export function ImportCard() {
     return (
       <Panel title={t("import.title")}>
         <PanelBody>
-          <EmptyState>
-            <p className="t-small">{t("import.withheld")}</p>
-          </EmptyState>
+          <EmptyState>{t("import.withheld")}</EmptyState>
         </PanelBody>
       </Panel>
     );

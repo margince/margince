@@ -426,11 +426,7 @@ export function JobHealthCard() {
     // absence of an answer: while /me is in flight nobody holds any role yet.
     body = (
       <QueryGate query={me}>
-        {() => (
-          <EmptyState>
-            <p className="t-small">{t("jobs.adminOnly")}</p>
-          </EmptyState>
-        )}
+        {() => <EmptyState>{t("jobs.adminOnly")}</EmptyState>}
       </QueryGate>
     );
   } else {

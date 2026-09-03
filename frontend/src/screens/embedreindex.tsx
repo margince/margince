@@ -311,11 +311,7 @@ export function EmbedReindexCard() {
   if (!canRead) {
     body = (
       <QueryGate query={me}>
-        {() => (
-          <EmptyState>
-            <p className="t-small">{t("embedreindex.withheld")}</p>
-          </EmptyState>
-        )}
+        {() => <EmptyState>{t("embedreindex.withheld")}</EmptyState>}
       </QueryGate>
     );
   } else {

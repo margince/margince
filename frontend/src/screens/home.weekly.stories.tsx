@@ -2,155 +2,168 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { WeeklyReview } from "./home.queries";
+import { userEvent, within } from "storybook/test";
+import {
+  firstWeek,
+  narratedWeek,
+  PRIOR_WEEK_START,
+  WEEK_START,
+} from "./home.fixtures";
 import { WeeklySection } from "./home.weekly";
 import {
   installFetchStub,
   jsonResponse,
-  meRoute,
   type RouteMap,
   StoryProviders,
 } from "./story-utils";
 
-// The week that closed, on the Brief's weekly.
+// The week just gone, drawn on its own.
 //
-// It renders what was WRITTEN when the week closed — nothing here recomputes,
-// because a retrospective that changed when you reopened it would not be one.
-// So the frames differ in what the CLOSE recorded rather than in what the page
-// decided: a week with a narrative and a week without it are two different
-// records, and the second is what a run that could not read the account leaves
-// behind.
+// `home.stories.tsx` documents the whole morning, and the weekly reaches a
+// reader there only through whichever view the dial is on — so the panel's own
+// states had no frame of their own. They are worth one, because what this panel
+// draws differently is a question of what the review SAYS, and three of those
+// answers are SILENCES a reader has to be able to tell apart: nobody narrated
+// the week, a pass ran and found it unremarkable, and there is no review at
+// all. Two of them are the same blank space unless the panel says which.
 //
-// Read every frame in BOTH themes with the toolbar's Theme control.
+// NO SESSION ROUTE ANYWHERE BELOW, and the absence is the deliberate kind: this
+// panel consults no grant and no seat, so nothing here asks for `GET /me`. A
+// `meRoute` line would be a claim about a principal the surface never reads.
+//
+// EVERY INSTANT IS FIXED. A review built from `new Date()` documents whichever
+// day the catalog was opened on, and both dates this panel prints — the week it
+// names and the day each deal line closed — would then say something different
+// every time somebody looked.
 
-const WEEK = "2026-06-29";
-const PRIOR_WEEK = "2026-06-22";
-
-const counts: WeeklyReview["counts"] = {
-  tasks_due: 5,
-  tasks_done: 4,
-  tasks_carried_over: 2,
-  deals_moved: 3,
-  deals_won: 1,
-  deals_lost: 1,
-  proposals_accepted: 7,
-  proposals_rejected: 2,
-  brief_items_acted: 6,
-  brief_items_dismissed: 3,
-  leads_routed: 9,
-  leads_answered_in_target: 7,
-  leads_breached: 2,
-  meetings_held: 5,
-  meetings_with_next_step: 3,
-  commitments_due: 4,
-  commitments_kept: 3,
-};
-
-function review(over: Partial<WeeklyReview> = {}): WeeklyReview {
+/**
+ * The panel with both of its reads answered.
+ *
+ * The review and the archive index are SEPARATE reads, so each frame states
+ * both: the picker only appears above a rep who has more than one week, and a
+ * frame that left the index to the stub's empty page would silently be a story
+ * about a rep with no archive.
+ */
+function weekly(review: () => Response, weeks: readonly string[]): RouteMap {
   return {
-    id: "01a04000-0000-7000-8000-00000000000a",
-    local_week_start: WEEK,
-    generated_at: "2026-07-06T06:00:00Z",
-    as_of: "2026-07-06T06:00:00Z",
-    counts,
-    deals: [
-      {
-        deal_id: "01a04000-0000-7000-8000-00000000000b",
-        label: "Weber Rahmenvertrag",
-        outcome: "won",
-        occurred_at: "2026-07-02T14:00:00Z",
-      },
-      {
-        deal_id: "01a04000-0000-7000-8000-00000000000c",
-        label: "Nordwind Logistik renewal",
-        outcome: "lost",
-        occurred_at: "2026-07-03T09:30:00Z",
-      },
-    ],
-    ...over,
-  } as WeeklyReview;
+    "GET /weekly-reviews": () => jsonResponse({ weeks }),
+    "GET /weekly-reviews/latest": review,
+  };
 }
 
-function frame(latest: () => Response, weeks: readonly string[]) {
-  const routes: RouteMap = {
-    "GET /me": meRoute({}),
-    "GET /weekly-reviews/latest": latest,
-    "GET /weekly-reviews": () => jsonResponse({ weeks }),
+function panel(routes: RouteMap) {
+  return () => {
+    installFetchStub(routes);
+    return (
+      <StoryProviders>
+        <WeeklySection />
+      </StoryProviders>
+    );
   };
-  installFetchStub(routes);
-  return (
-    <StoryProviders>
-      <WeeklySection />
-    </StoryProviders>
-  );
 }
 
 const meta: Meta<typeof WeeklySection> = {
-  title: "Shell/Weekly review",
+  title: "Shell/Home weekly review",
   component: WeeklySection,
 };
 export default meta;
-
 type Story = StoryObj<typeof WeeklySection>;
 
-/** A closed week with everything the close could record: the outcomes as one
- *  strip, the workings under it, and the deals that ended named as they were
- *  called that week. */
-export const Written: Story = {
-  render: () =>
-    frame(
+// The Monday the panel was designed for: the sentence marked as agent-authored,
+// five outcomes read across as one comparison, the other five figures as a list
+// under them, and the week's closed deals last.
+export const NarratedWeek: Story = {
+  render: panel(
+    weekly(() => jsonResponse(narratedWeek), [WEEK_START, PRIOR_WEEK_START]),
+  ),
+};
+
+// The honest degrade: the week was measured and nobody narrated it. Every
+// number is still there, and the panel says the sentence is missing — a rep who
+// met silence instead would conclude there was nothing to remark on, when the
+// truth is that no pass ran.
+export const WithoutItsSentence: Story = {
+  render: panel(
+    weekly(
       () =>
-        jsonResponse(
-          review({
-            narrative: "Weber signed; two promises slipped to this week.",
-            narrated_at: "2026-07-06T06:05:00Z",
-          }),
-        ),
-      [WEEK],
+        jsonResponse({ ...narratedWeek, narrative: null, narrated_at: null }),
+      [WEEK_START, PRIOR_WEEK_START],
     ),
+  ),
 };
 
-/** A week whose readings exist and whose sentence does not. The absence is
- *  stated rather than papered over: an unwritten narrative is a fact about the
- *  run, and inventing one would put words in the account's mouth. */
-export const WithoutNarrative: Story = {
-  render: () =>
-    frame(
-      () => jsonResponse(review({ narrative: null, narrated_at: null })),
-      [WEEK],
+// A pass that ran and found the week unremarkable: no sentence AND no notice.
+// The stamp is the only thing separating this frame from the one above, which is
+// exactly why both are here — on screen they differ by one line of caption.
+export const QuietlyNarrated: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ ...narratedWeek, narrative: null }),
+      [WEEK_START, PRIOR_WEEK_START],
     ),
+  ),
 };
 
-/** Two weeks on record, so the picker appears. Deltas hang off the prior week's
- *  own counts — a first week has nothing to have stayed level against and gets
- *  no delta line at all. */
-export const AgainstThePriorWeek: Story = {
-  render: () =>
-    frame(
-      () =>
-        jsonResponse(
-          review({
-            prior: {
-              local_week_start: PRIOR_WEEK,
-              counts: { ...counts, deals_won: 3, commitments_kept: 1 },
-            },
-          } as Partial<WeeklyReview>),
-        ),
-      [WEEK, PRIOR_WEEK],
-    ),
+// A first week: no delta line under any slot, and no deal lines under the
+// figures. A rep's first week did not stay level — it had nothing to stay level
+// against, and "±0" beside every figure would claim a comparison nobody made.
+export const FirstWeek: Story = {
+  render: panel(weekly(() => jsonResponse(firstWeek), [WEEK_START])),
 };
 
-/** A rep whose first Monday has not come round yet. 404 is the honest answer;
- *  a page of zeroes would claim a week that was measured and empty. */
-export const NoneYet: Story = {
-  render: () => frame(() => jsonResponse({ title: "Not Found" }, 404), []),
+// A week whose wins cannot be priced. One deal in a currency with no usable
+// rate makes the whole sum unanswerable — an open deal freezes no rate, and
+// nothing is converted at an invented rate of 1 — so the slot falls back to the
+// COUNT of deals won.
+//
+// The frame beside `NarratedWeek` is the point: "€96,500.00" and "3" are two
+// different claims about one week, and a reader has to be able to tell which
+// they are looking at without knowing the FX rules.
+export const WinsCouldNotBePriced: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ ...narratedWeek, pipeline: undefined }),
+      [WEEK_START, PRIOR_WEEK_START],
+    ),
+  ),
 };
 
-/** A read the reader's grant refuses. The panel keeps its place and says so. */
-export const Refused: Story = {
-  render: () =>
-    frame(
-      () => jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
-      [],
+// The archive, open. The picker is the only door to a past week — the product
+// deliberately gives the retrospective no nav entry — so a header that drew no
+// picker for a rep with weeks behind them would strand every one of them.
+export const ArchiveOfWeeks: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse(narratedWeek),
+      [WEEK_START, PRIOR_WEEK_START, "2026-06-15", "2026-06-08"],
     ),
+  ),
+  play: async ({ canvasElement }) => {
+    // The trigger, not the list: the listbox portals to the document, and a
+    // canvas-scoped lookup for it would reject after the frame was taken.
+    await userEvent.click(
+      await within(canvasElement).findByRole("combobox", {
+        name: "Open another week",
+      }),
+    );
+  },
+};
+
+// The rep whose first Monday has not come round yet. A 404 is the honest answer
+// here rather than a failure, and the panel says so in a sentence: a page of
+// zeroes would claim a week that was measured and empty.
+export const NoReviewYet: Story = {
+  render: panel(weekly(() => jsonResponse({ title: "Not Found" }, 404), [])),
+};
+
+// The read refused. A failure and an absence are different facts, and this is
+// the one the panel must not draw as "no review yet": nothing here says the
+// week was empty, because nobody knows what the week held.
+export const ReadRefused: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ title: "Internal Server Error" }, 500),
+      [WEEK_START],
+    ),
+  ),
 };

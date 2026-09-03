@@ -89,7 +89,7 @@
 .callout-danger::before,
 .callout-danger .callout-icon,
 .callout-danger .callout-title {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .callout-danger::before {
   background: var(--danger);

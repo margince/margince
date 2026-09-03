@@ -238,6 +238,9 @@ export const AddConnectionFailed: Story = {
     await openAddDialog(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
+      // "Connect Outlook": the button's accessible name is
+      // `connectors.connectProvider` filled with `connectors.provGraph`, and
+      // that provider's word moved from Microsoft to Outlook.
       await body.findByRole("button", { name: "Connect Outlook" }),
     );
     await body.findByRole("alert");

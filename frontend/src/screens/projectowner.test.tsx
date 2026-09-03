@@ -107,10 +107,10 @@ describe("AssignProjectOwnerAction", () => {
       "Jane",
     );
     await user.click(await screen.findByRole("button", { name: "Jane Doe" }));
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await user.click(screen.getByRole("button", { name: "Assign" }));
 
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Assign" })).toBeNull(),
     );
     expect(calls).toHaveLength(1);
     expect(calls[0].body).toMatchObject({ owner_id: "u-42" });
@@ -130,7 +130,7 @@ describe("AssignProjectOwnerAction", () => {
     render(<AssignProjectOwnerAction project={project} />);
 
     await user.click(screen.getByTestId("assign-project-owner"));
-    const confirm = screen.getByRole("button", { name: "Confirm" });
+    const confirm = screen.getByRole("button", { name: "Assign" });
     // Pins the REFUSAL itself, not just its consequence: `picked && mutate(...)`
     // would also send nothing if `picked` stayed null for some other reason,
     // so a disabled-button regression could otherwise slip past this test.
@@ -162,7 +162,7 @@ describe("AssignProjectOwnerAction", () => {
       "Jane",
     );
     await user.click(await screen.findByRole("button", { name: "Jane Doe" }));
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await user.click(screen.getByRole("button", { name: "Assign" }));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(
@@ -170,7 +170,7 @@ describe("AssignProjectOwnerAction", () => {
     ).toBeTruthy();
     // The dialog stays open on failure — the reader can retry or cancel,
     // rather than the write vanishing with nothing on screen.
-    expect(screen.getByRole("button", { name: "Confirm" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
 
     // Closing and reopening starts clean: a failure from an attempt nobody
     // has repeated yet must not resurface as if it just happened again.

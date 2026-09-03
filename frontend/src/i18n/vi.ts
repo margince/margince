@@ -262,6 +262,7 @@ export const vi = {
   "deal.archived": "đã lưu trữ",
   "record.notShown": "Không hiển thị",
   "record.timelineLoading": "Đang tải lịch sử của bản ghi này…",
+  "record.chronologyLoading": "Đang đọc lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
   "record.save": "Lưu",
@@ -1054,6 +1055,7 @@ export const vi = {
   "finance.title": "Tài chính",
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",
+  "finance.loading": "Đang đọc hoá đơn…",
   "finance.syncing":
     "Đang đồng bộ với nguồn kế toán. Số liệu sẽ hiện sau lần quét đầu tiên.",
   "finance.noConnection":
@@ -2192,6 +2194,7 @@ export const vi = {
   "deals.winReasonOther": "Trường hợp khác",
   "deals.winReasonDetail": "Cụ thể là gì?",
   "deals.confirm": "Xác nhận",
+  "deals.loading": "Đang đọc danh sách deal…",
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
@@ -2211,7 +2214,6 @@ export const vi = {
   "deal.committee.empty": "Chưa có ai được ghi nhận cho giao dịch này",
   "deal.committee.engaged": "Đang trao đổi",
   "deal.committee.quiet": "Chưa hồi đáp",
-  "deal.committee.unnamedSeat": "Một người tham gia bạn không xem được",
   "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
   "deal.committee.legendQuiet": "Có tham gia nhưng không trao đổi",
   "deal.committee.legendGap": "Thiếu người phụ trách",
@@ -2359,6 +2361,7 @@ export const vi = {
   "decision.expired": "Đã hết hạn",
   "decision.expiresIn": "hết hạn sau {countdown}",
   "decision.detail": "Chi tiết phê duyệt",
+  "decision.detailLoading": "Đang đọc phê duyệt này…",
   "decision.detailTechnical": "Chi tiết kỹ thuật",
   "decision.detailAsked": "Đã hỏi",
   "decision.detailDecided": "Đã quyết định",
@@ -2382,7 +2385,7 @@ export const vi = {
   "home.honestShort":
     "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
   "home.overflow":
-    "{shown} trong {count} deal đạt ngưỡng — phần đầu ngắn gọn và trung thực.",
+    "Đang hiển thị {shown} deal được xếp hạng cao nhất trong {count} deal đạt ngưỡng.",
   "home.narrativeNoPass":
     "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
   "home.panel.weekly": "Tuần trước",
@@ -2593,6 +2596,7 @@ export const vi = {
   "home.readings.label": "Buổi sáng của bạn qua năm chỉ số",
   "home.readings.truncated":
     "Một nguồn đã được đọc đến giới hạn, nên mọi con số ở trên là mức tối thiểu.",
+  "home.readings.openLane": "Mở những mục này",
   "home.readings.waiting": "Khách đang chờ",
   "home.readings.waitingBasis": "đang chờ trả lời",
   "home.readings.meetings": "Cuộc họp hôm nay",
@@ -2617,7 +2621,7 @@ export const vi = {
   "home.deck.viewDeck": "Chồng thẻ",
   "home.deck.viewList": "Danh sách",
   "home.deck.keys":
-    "→ chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi",
+    "Mũi tên chuẩn bị một quyết định: → chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi những gì đã chuẩn bị",
   "home.deck.behind_one": "còn 1 thẻ phía sau",
   "home.deck.behind_other": "còn {count} thẻ phía sau",
   "home.deck.staged_one": "1 quyết định đã xếp",
@@ -3136,6 +3140,7 @@ export const vi = {
   "tasks.complete": "Đánh dấu xong",
   "tasks.snooze": "Hoãn 1 ngày",
   "tasks.detail": "Công việc",
+  "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",
   "tasks.logged": "Đã ghi nhận",
 
@@ -3241,6 +3246,9 @@ export const vi = {
   "analytics.forecastBanner":
     'Mỗi ô hiển thị tổng chưa trọng số, và bên dưới là tổng có trọng số — được làm tròn theo từng deal, nên luôn khớp với "Giải thích con số này".',
   "analytics.company": "Công ty",
+  "analytics.openStageDeals": "Mở các deal ở {stage}",
+  "analytics.openCompanyDeals": "Mở các deal của công ty này",
+  "analytics.noCompany": "Không có công ty",
   "analytics.openDeals": "Deal đang mở",
   "explain.sources": "Các dòng nguồn",
 
@@ -3277,8 +3285,7 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
-  "brief.coverage.summary":
-    "Một số nguồn có nhiều hơn những gì trang này hiển thị",
+  "brief.coverage.summary": "Những nguồn nào còn nhiều hơn",
   "brief.coverage.bounded": "Hiển thị {shown} trên ít nhất {considered} đã đọc",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
@@ -6832,6 +6839,7 @@ export const vi = {
   "person.graph.noRoute":
     "Chưa ai bên mình trao đổi với họ hay với ai ở công ty họ.",
   "person.graph.noDirect": "Chưa ai bên mình trao đổi với họ.",
+  "person.graph.sideColumn": "Giới thiệu và khoảnh khắc",
   "person.graph.recordWorksWith": "Ghi nhận: làm việc cùng {name}",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",
@@ -7615,6 +7623,7 @@ export const vi = {
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
   "project.assignOwnerNoneSelected": "Hãy chọn một đồng nghiệp trước",
+  "project.assignOwnerConfirm": "Giao",
   "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
@@ -7642,6 +7651,8 @@ export const vi = {
   "project.rollups.empty": "Chưa có số liệu cho dự án này.",
   "project.rollups.openValue": "Giá trị thương vụ đang mở",
   "project.rollups.wonValue": "Giá trị thương vụ đã thắng",
+  "project.rollups.openDeals": "Mở các deal",
+  "project.rollups.openCommitmentsList": "Mở phần còn nợ",
   "project.rollups.openCommitments": "Cam kết đang mở",
   "project.rollups.lastActivity": "Hoạt động gần nhất",
   "project.rollups.never": "chưa có gì",
@@ -7660,6 +7671,7 @@ export const vi = {
   "project.stakeholders.empty":
     "Chưa ai có vai trò trong dự án này. Bên liên quan là người giữ một vai trò ở đây — nhà tài trợ, trưởng dự án, người ủng hộ.",
   "project.stakeholders.add": "Thêm bên liên quan",
+  "project.stakeholders.addConfirm": "Thêm",
   "project.stakeholders.addHint":
     "Mỗi người một vai trò. Chọn lại người đã có trong dự án sẽ đổi họ sang vai trò bạn chọn ở đây.",
   "project.stakeholders.searchLabel": "Tìm người theo tên",
@@ -7800,6 +7812,7 @@ export const vi = {
   "worklist.readings.revenue.detail": "Trên các thương vụ đang trôi hôm nay",
   "worklist.readings.revenue.unpriced":
     "Không thương vụ rủi ro nào định giá được",
+  "worklist.readings.openLane": "Mở luồng này",
   "worklist.readings.replies": "Khách phản hồi",
   "worklist.readings.replies.detail": "Khách đang chờ một câu trả lời",
   "worklist.readings.prospecting": "Tìm kiếm khách hàng",
@@ -7942,8 +7955,8 @@ export const vi = {
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
-  "worklist.source.failed": "Không đọc được {source}",
-  "worklist.source.withheld": "{source} bị ẩn với tài khoản của bạn",
+  "worklist.source.failed": "Không đọc được một nguồn: {source}",
+  "worklist.source.withheld": "Một nguồn bị ẩn với tài khoản của bạn: {source}",
   "worklist.untitled.generic": "Có việc cần bạn",
   "worklist.batch.likely_automated": "{count} người gửi có thể tự động",
   "worklist.batch.company_match": "{count} địa chỉ ở công ty đã biết",
@@ -8001,6 +8014,7 @@ export const vi = {
   "lead.standing.rests.captured": "Ghi nhận ngày {at}.",
   "lead.standing.rests.noResponse": "Chưa ghi nhận phản hồi đầu tiên.",
   "lead.standing.rests.engaged": "Ghi nhận tương tác ngày {at}.",
+  "lead.readings.openStatus": "Mở các lead ở trạng thái này",
   "lead.readings.title": "Vị thế của khách hàng tiềm năng này",
   "lead.readings.firstResponse": "Phản hồi đầu tiên",
   "lead.readings.noClock": "chưa đặt mục tiêu phản hồi",

@@ -265,9 +265,7 @@ export function KnowledgeCard() {
       <Panel title={t("knowledge.title")}>
         <PanelBody>
           <p className="t-caption">{t("knowledge.sub")}</p>
-          <EmptyState>
-            <p className="t-small">{t("knowledge.withheld")}</p>
-          </EmptyState>
+          <EmptyState>{t("knowledge.withheld")}</EmptyState>
         </PanelBody>
       </Panel>
     );
@@ -385,9 +383,7 @@ function DocumentList({
       {(data) => (
         <div className="form-stack">
           {data.items.length === 0 ? (
-            <EmptyState>
-              <p className="t-small">{t("knowledge.noDocuments")}</p>
-            </EmptyState>
+            <EmptyState>{t("knowledge.noDocuments")}</EmptyState>
           ) : (
             data.items.map((doc) => (
               <DocumentRow

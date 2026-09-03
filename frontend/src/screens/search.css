@@ -10,7 +10,7 @@
   padding: var(--space-3) var(--space-4);
 }
 .search-group h2 {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .search-hits {
   list-style: none;
