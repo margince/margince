@@ -2518,6 +2518,7 @@ export const en = {
   "teamweekly.card.commitmentsBasis": "of what was owed",
   "teamweekly.card.won": "Won",
   "teamweekly.card.wonBasis": "{lost} lost",
+  "teamweekly.card.wonBasisValue": "{value} won · {lost} lost",
   "teamweekly.card.reps": "Members counted",
   "teamweekly.card.repsBasis": "whose week was read in full",
   "teamweekly.movement.title": "What the week did",

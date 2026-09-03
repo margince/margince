@@ -2445,6 +2445,7 @@ export const vi = {
   "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
   "teamweekly.card.won": "Thắng",
   "teamweekly.card.wonBasis": "{lost} thua",
+  "teamweekly.card.wonBasisValue": "thắng {value} · thua {lost}",
   "teamweekly.card.reps": "Thành viên được tính",
   "teamweekly.card.repsBasis": "có tuần được đọc đầy đủ",
   "teamweekly.movement.title": "Tuần đã làm được gì",

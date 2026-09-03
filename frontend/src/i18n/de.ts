@@ -2469,6 +2469,7 @@ export const de = {
   "teamweekly.card.commitmentsBasis": "des Zugesagten",
   "teamweekly.card.won": "Gewonnen",
   "teamweekly.card.wonBasis": "{lost} verloren",
+  "teamweekly.card.wonBasisValue": "{value} gewonnen · {lost} verloren",
   "teamweekly.card.reps": "Gezählte Mitglieder",
   "teamweekly.card.repsBasis": "deren Woche vollständig gelesen wurde",
   "teamweekly.movement.title": "Was die Woche bewegt hat",
