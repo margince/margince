@@ -8,6 +8,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
 import { type TimelineEntry, TimelineRow } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
+import { dealsFilteredBy } from "./dealsaddress";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
   liveProjects,
@@ -210,11 +211,20 @@ export function DealsCard({
               {t("co.deals.wonLifetime")}{" "}
               {formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
             </span>
-            <span>
+            {/* The lost count names a set of this company's deals, so it is
+                the way into them. Narrowed by company and not by a lost STAGE:
+                there is no single closed-lost stage id across pipelines and no
+                `status` dial on the wire, so a company's deals is the honest
+                door — the one that answers a question rather than one that
+                looks like it does. */}
+            <a
+              className="link-button"
+              href={dealsFilteredBy("organization_id", view.organization.id)}
+            >
               {t("co.deals.lostCount", {
                 count: formatNumber(deals.lost_count, locale),
               })}
-            </span>
+            </a>
           </p>
         )
       }
@@ -342,9 +352,19 @@ export function CommercialPanel({
           locale,
         )}
       />
+      {/* The same figure as the deals card's, and the same door — narrowed by
+          company, because no `status` dial and no cross-pipeline lost stage
+          exists to narrow it further. */}
       <CommercialFigure
         label={t("co.commercial.lostFigure")}
-        value={formatNumber(deals.lost_count, locale)}
+        value={
+          <a
+            className="link-button"
+            href={dealsFilteredBy("organization_id", view.organization.id)}
+          >
+            {formatNumber(deals.lost_count, locale)}
+          </a>
+        }
       />
     </PanelBody>
   );
@@ -447,7 +467,7 @@ export function CommercialPanel({
 function CommercialFigure({
   label,
   value,
-}: Readonly<{ label: string; value: string }>) {
+}: Readonly<{ label: string; value: ReactNode }>) {
   return (
     <div className="co-figure">
       <Eyebrow>{label}</Eyebrow>

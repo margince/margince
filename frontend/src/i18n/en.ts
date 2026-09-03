@@ -2271,7 +2271,6 @@ export const en = {
   "deal.committee.empty": "No stakeholder is recorded on this deal",
   "deal.committee.engaged": "Talking",
   "deal.committee.quiet": "No reply",
-  "deal.committee.unnamedSeat": "A stakeholder you cannot see",
   "deal.committee.legendEngaged": "Talking with us",
   "deal.committee.legendQuiet": "On the deal, not talking",
   "deal.committee.legendGap": "Missing cover",
@@ -3325,6 +3324,9 @@ export const en = {
   "analytics.forecastBanner":
     "Each tile shows the raw total and, beneath it, the probability-weighted total — rounded per deal, so it always reconciles to Explain This Number.",
   "analytics.company": "Company",
+  "analytics.openStageDeals": "Open the deals in {stage}",
+  "analytics.openCompanyDeals": "Open this company's deals",
+  "analytics.noCompany": "No company",
   "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
 
@@ -7814,6 +7816,8 @@ export const en = {
   "project.rollups.empty": "No figures for this project yet.",
   "project.rollups.openValue": "Open deal value",
   "project.rollups.wonValue": "Won deal value",
+  "project.rollups.openDeals": "Open the deals",
+  "project.rollups.openCommitmentsList": "Open what is owed",
   "project.rollups.openCommitments": "Open commitments",
   "project.rollups.lastActivity": "Last activity",
   "project.rollups.never": "nothing yet",

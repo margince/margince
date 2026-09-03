@@ -2,6 +2,7 @@ import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { dealsFilteredBy } from "./dealsaddress";
 import { navigate, useRoute } from "../app/router";
 import {
   Button,
@@ -112,6 +113,21 @@ export function sectionFromAddress(segment: string | undefined): Section {
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 type Derivation = components["schemas"]["ReportDerivation"];
 type Stage = components["schemas"]["Stage"];
+
+// A figure that names a set, drawn as the way into it. The count stays the
+// text — a reader is looking for the number, not for a verb — and the link is
+// what the number now is.
+function CountLink({
+  count,
+  href,
+  title,
+}: Readonly<{ count: number; href: string; title: string }>) {
+  return (
+    <a className="link-button" href={href} title={title}>
+      {String(count)}
+    </a>
+  );
+}
 
 // The report engine's own name for the currency dimension. Spelled once: it
 // reaches the request, every row read and the column header, and a typo in any
@@ -383,7 +399,11 @@ function CompanyTable({
             typeof row.organization_id === "string" ? (
               <EntityRef kind="organization" id={row.organization_id} />
             ) : (
-              ""
+              // Deals with no company at all, grouped into one row. An empty
+              // cell read as a rendering fault; this says what the row is, and
+              // it is a fact about the data rather than a permission — so it
+              // says "none", which no other state is allowed to claim.
+              <span className="t-caption">{t("analytics.noCompany")}</span>
             ),
         },
         {
@@ -396,7 +416,16 @@ function CompanyTable({
         {
           key: "count",
           header: t("analytics.openDeals"),
-          render: (row: ReportRow) => String(rowCount(row, "deal_count")),
+          render: (row: ReportRow) =>
+            typeof row.organization_id === "string" ? (
+              <CountLink
+                count={rowCount(row, "deal_count")}
+                href={dealsFilteredBy("organization_id", row.organization_id)}
+                title={t("analytics.openCompanyDeals")}
+              />
+            ) : (
+              String(rowCount(row, "deal_count"))
+            ),
         },
         {
           key: "raw",
@@ -490,7 +519,13 @@ function StageTable({
         {
           key: "count",
           header: t("analytics.count"),
-          render: (row: StageAgg) => String(row.count),
+          render: (row: StageAgg) => (
+            <CountLink
+              count={row.count}
+              href={dealsFilteredBy("stage_id", row.stageId)}
+              title={t("analytics.openStageDeals", { stage: row.stageName })}
+            />
+          ),
         },
         {
           key: "raw",

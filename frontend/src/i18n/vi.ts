@@ -2212,7 +2212,6 @@ export const vi = {
   "deal.committee.empty": "Chưa có ai được ghi nhận cho giao dịch này",
   "deal.committee.engaged": "Đang trao đổi",
   "deal.committee.quiet": "Chưa hồi đáp",
-  "deal.committee.unnamedSeat": "Một người tham gia bạn không xem được",
   "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
   "deal.committee.legendQuiet": "Có tham gia nhưng không trao đổi",
   "deal.committee.legendGap": "Thiếu người phụ trách",
@@ -3242,6 +3241,9 @@ export const vi = {
   "analytics.forecastBanner":
     'Mỗi ô hiển thị tổng chưa trọng số, và bên dưới là tổng có trọng số — được làm tròn theo từng deal, nên luôn khớp với "Giải thích con số này".',
   "analytics.company": "Công ty",
+  "analytics.openStageDeals": "Mở các deal ở {stage}",
+  "analytics.openCompanyDeals": "Mở các deal của công ty này",
+  "analytics.noCompany": "Không có công ty",
   "analytics.openDeals": "Deal đang mở",
   "explain.sources": "Các dòng nguồn",
 
@@ -7644,6 +7646,8 @@ export const vi = {
   "project.rollups.empty": "Chưa có số liệu cho dự án này.",
   "project.rollups.openValue": "Giá trị thương vụ đang mở",
   "project.rollups.wonValue": "Giá trị thương vụ đã thắng",
+  "project.rollups.openDeals": "Mở các deal",
+  "project.rollups.openCommitmentsList": "Mở phần còn nợ",
   "project.rollups.openCommitments": "Cam kết đang mở",
   "project.rollups.lastActivity": "Hoạt động gần nhất",
   "project.rollups.never": "chưa có gì",

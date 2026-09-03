@@ -50,8 +50,19 @@ function deal(over: Partial<Deal> = {}): Deal {
   } as Deal;
 }
 
+// One harness, with the query client: the seat cells resolve a person through
+// `EntityRef` now, so every card on this record needs one. There were two
+// helpers before — this and `showFacts` below — differing only in whether they
+// supplied it.
 function show(node: React.ReactNode) {
-  return render(<LocaleProvider initial="en">{node}</LocaleProvider>);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{node}</LocaleProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe("the sentence says whose move it is", () => {
@@ -327,19 +338,8 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
     { id: "st-2", name: "Proposal" },
   ];
 
-  function showFacts(node: React.ReactNode) {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    return render(
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">{node}</LocaleProvider>
-      </QueryClientProvider>,
-    );
-  }
-
   it("names the stage rather than showing its id", () => {
-    showFacts(
+    show(
       <DealFacts
         deal={{ amount_minor: 6_400_000, currency: "EUR", stage_id: "st-1" }}
         stages={stages}
@@ -351,7 +351,7 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
   });
 
   it("says a deal is unassigned rather than leaving the owner blank", () => {
-    showFacts(
+    show(
       <DealFacts
         deal={{ amount_minor: 1000, currency: "EUR", stage_id: "st-1" }}
         stages={stages}
@@ -366,7 +366,7 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
   it("names the field it may not show rather than printing a dash", () => {
     // A rep who may read the deal but not its amount. A bare "—" would read
     // as "this deal has no value", which is a different and wrong statement.
-    showFacts(
+    show(
       <DealFacts
         deal={{
           amount_minor: null,
@@ -389,7 +389,7 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
     // both reach the fallback with a real uuid in hand, and printing it puts a
     // machine identifier where a reader expects "Qualified".
     const foreign = "01a02be8-c8d5-7d9b-bb60-a5e1ad68533c";
-    showFacts(
+    show(
       <DealFacts
         deal={{ amount_minor: 1000, currency: "EUR", stage_id: foreign }}
         stages={stages}

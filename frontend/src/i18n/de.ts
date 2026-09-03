@@ -2229,7 +2229,6 @@ export const de = {
   "deal.committee.empty": "Für diesen Deal ist niemand hinterlegt",
   "deal.committee.engaged": "Im Austausch",
   "deal.committee.quiet": "Keine Antwort",
-  "deal.committee.unnamedSeat": "Beteiligte Person, für Sie nicht sichtbar",
   "deal.committee.legendEngaged": "Im Austausch mit uns",
   "deal.committee.legendQuiet": "Am Deal beteiligt, aber still",
   "deal.committee.legendGap": "Fehlende Abdeckung",
@@ -3276,6 +3275,9 @@ export const de = {
   "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die gewichtete Summe — pro Deal gerundet, sodass sie immer mit „Diese Zahl erklären“ übereinstimmt.",
   "analytics.company": "Firma",
+  "analytics.openStageDeals": "Die Deals in {stage} öffnen",
+  "analytics.openCompanyDeals": "Die Deals dieses Unternehmens öffnen",
+  "analytics.noCompany": "Kein Unternehmen",
   "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
 
@@ -7732,6 +7734,8 @@ export const de = {
   "project.rollups.empty": "Noch keine Kennzahlen zu diesem Projekt.",
   "project.rollups.openValue": "Offenes Dealvolumen",
   "project.rollups.wonValue": "Gewonnenes Dealvolumen",
+  "project.rollups.openDeals": "Die Deals öffnen",
+  "project.rollups.openCommitmentsList": "Offene Zusagen öffnen",
   "project.rollups.openCommitments": "Offene Zusagen",
   "project.rollups.lastActivity": "Letzte Aktivität",
   "project.rollups.never": "noch nichts",
