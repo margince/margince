@@ -153,6 +153,20 @@ func activityAudience(t *testing.T, e *integration.Env, id ids.UUID) string {
 // the row production would have written.
 func seedThreadQuestion(t *testing.T, e *integration.Env, threadKey string, activityID ids.UUID) ids.UUID {
 	t.Helper()
+	// The classified mailbox the question belongs to. A question is claimed
+	// only for a seat still asking to be classified, so a fixture without the
+	// connection describes a mailbox that never had one.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_connection
+			       (user_id, provider, status, credential_ref, mail_posture)
+			VALUES ($1, 'gmail', 'connected', 'vault:test', 'classified')
+			ON CONFLICT (user_id, provider)
+			DO UPDATE SET mail_posture = 'classified', archived_at = NULL`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the classified mailbox the question belongs to: %v", err)
+	}
 	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return store.EnsureTx(context.Background(), tx, threadKey, e.Rep1, activityID, time.Now().Add(-time.Minute))
@@ -469,7 +483,16 @@ func TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing(t *te
 
 	// The erasure the retention path performs, which SET NULLs the pointer.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `DELETE FROM activity WHERE id = $1`, activityID)
+		if _, err := tx.Exec(context.Background(),
+			`DELETE FROM activity WHERE id = $1`, activityID); err != nil {
+			return err
+		}
+		// Past the grace a live capture is given to supply its own pointer.
+		// The erasure is minutes old by the time a sweep sees it; a row this
+		// second old belongs to a transaction still in flight.
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_thread_verdict SET updated_at = now() - interval '1 hour' WHERE id = $1`,
+			threadID)
 		return err
 	}); err != nil {
 		t.Fatalf("erasing the message the question was about: %v", err)
