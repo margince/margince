@@ -153,9 +153,9 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	loc, err := time.LoadLocation(tzName)
+	loc, err := installationZone(tzName)
 	if err != nil {
-		return fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+		return err
 	}
 
 	velocities := map[ids.PipelineID]float64{}

@@ -32233,11 +32233,11 @@ type WorklistCountCategory string
 
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
 // `amount_minor` converted to the installation's base currency — the only figure by
-// which two deals in different currencies may be compared. It does not yet weight by
-// `win_probability`: the pipeline this row comes from does not read a deal's stage
-// today, so the two fields are independent facts rather than one computed from the
-// other, and a reader must not multiply them together expecting the product to equal
-// a risk-adjusted figure the API does not compute.
+// which two deals in different currencies may be compared. It is not weighted by
+// `win_probability`: the pipeline this row comes from does not read a deal's stage,
+// so the two fields are independent facts rather than one computed from the other,
+// and a reader must not multiply them together expecting the product to equal a
+// risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor       *int64              `json:"amount_minor,omitempty"`
 	Currency          *string             `json:"currency,omitempty"`
@@ -32316,11 +32316,11 @@ type WorklistItem struct {
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by
-	// which two deals in different currencies may be compared. It does not yet weight by
-	// `win_probability`: the pipeline this row comes from does not read a deal's stage
-	// today, so the two fields are independent facts rather than one computed from the
-	// other, and a reader must not multiply them together expecting the product to equal
-	// a risk-adjusted figure the API does not compute.
+	// which two deals in different currencies may be compared. It is not weighted by
+	// `win_probability`: the pipeline this row comes from does not read a deal's stage,
+	// so the two fields are independent facts rather than one computed from the other,
+	// and a reader must not multiply them together expecting the product to equal a
+	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
 	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that

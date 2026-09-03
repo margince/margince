@@ -29,12 +29,15 @@ import (
 )
 
 // nameTheMoney puts a deal's figures on every lane item that names one and
-// carries none — and drops the item where Figures cannot answer for it at
-// all, since a row that can name nothing is not a suggestion.
+// carries none.
 //
 // Items that already have facts are left alone: the lane that produced them
 // read the deal under this same reader, and asking again could only produce a
-// second answer to a settled question.
+// second answer to a settled question. Whether a row belongs on the day at
+// all when its deal cannot be resolved is the briefing lane's own question,
+// asked at its source (attentionBriefing.Queue, over the SAME DealFacts
+// reader) — this pass runs after that filter has already applied, so it is
+// never the one deciding whether a row survives.
 func (s *Service) nameTheMoney(ctx context.Context, day *crmcontracts.Attention) error {
 	if s.dealFacts == nil {
 		return nil
@@ -60,28 +63,20 @@ func (s *Service) nameTheMoney(ctx context.Context, day *crmcontracts.Attention)
 		return err
 	}
 	for _, lane := range lanes {
-		kept := make([]crmcontracts.AttentionItem, 0, len(*lane))
 		for i := range *lane {
-			item := (*lane)[i]
-			id, needsFigures := needsDealFigures(item)
-			if !needsFigures {
-				kept = append(kept, item)
+			id, ok := needsDealFigures((*lane)[i])
+			if !ok {
 				continue
 			}
 			found, ok := figures[id]
 			if !ok {
-				// The deal is gone (archived, deleted) or the reader can no
-				// longer see it — Figures answers the same absence either
-				// way, and a row that can name nothing is not a suggestion:
-				// dropped here rather than left on the page with no amount,
-				// no close date and no reason, still offering act/set_aside/
-				// dismiss over a deal that no longer resolves.
+				// The reader may not see this deal, or it is gone. The row
+				// keeps its name and says no more, which is the shape an
+				// unnamed subject already has.
 				continue
 			}
-			applyDealFigures(&item, found)
-			kept = append(kept, item)
+			applyDealFigures(&(*lane)[i], found)
 		}
-		*lane = kept
 	}
 	return nil
 }
