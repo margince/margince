@@ -64,7 +64,13 @@ function Frame({ activity }: Readonly<{ activity: Activity }>) {
   });
   return (
     <StoryProviders>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-2)",
+          alignItems: "center",
+        }}
+      >
         <TimelineActions
           activity={activity}
           entityType="deal"

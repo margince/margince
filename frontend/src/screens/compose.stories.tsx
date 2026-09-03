@@ -7,8 +7,8 @@ import type { components } from "../api/schema";
 import { ComposeModal, RelinkModal } from "./compose";
 import {
   installFetchStub,
-  meRoute,
   jsonResponse,
+  meRoute,
   type RouteMap,
   StoryProviders,
 } from "./story-utils";
