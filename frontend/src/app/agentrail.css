@@ -81,8 +81,7 @@
   border: 1px solid var(--aiMed);
   border-radius: var(--r-md);
   background:
-    linear-gradient(160deg, var(--aiLight), transparent 80%),
-    var(--pane);
+    linear-gradient(160deg, var(--aiLight), transparent 80%), var(--pane);
   color: var(--textPrimary);
   text-align: left;
   cursor: pointer;
@@ -146,7 +145,7 @@
 }
 .arline {
   max-width: 100%;
-  font-size: var(--fs-body);
+  font-size: var(--fs-sm);
   line-height: 1.3;
   color: var(--textPrimary);
   /* Two lines, always. Not "up to two": the line changes several times a second
@@ -162,7 +161,6 @@
   min-height: 2.6em;
   overflow: hidden;
   align-content: start;
-  font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
 }
 /* What the TOOL is fetching, under the agent's line and plainly subordinate to
