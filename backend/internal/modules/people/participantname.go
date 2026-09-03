@@ -21,10 +21,13 @@ package people
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -37,14 +40,26 @@ import (
 // activities owns — a SELECT, so the table-ownership gate (which scans writes)
 // is not in question, and PeopleOwedACohortRepair already reads it the same way.
 func FillParticipantNamesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error {
+	// The redirect is followed BEFORE liveness is judged, and liveness is judged
+	// on the record the redirect LANDS on. A merge archives the source and
+	// points it at the survivor in one write, so testing the source's own
+	// archived_at drops an attendee whose record merely moved, and the survivor
+	// keeps its local-part name forever. capture.meetingParticipantsWithPeople
+	// resolves it the same way, for the same reason.
+	//
+	// Ordered by the row rather than left to the planner: one person can be on
+	// a meeting under two addresses spelled two ways, and completePersonName is
+	// one-way, so which spelling wins must not depend on the query plan.
 	rows, err := tx.Query(ctx, `
-		SELECT coalesce(p.merged_into_id, ap.person_id), ap.display_name, ap.address
+		SELECT survivor.id, ap.display_name, ap.address
 		  FROM activity_participant ap
 		  JOIN person p ON p.id = ap.person_id
+		  JOIN person survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
 		 WHERE ap.activity_id = $1
 		   AND ap.person_id IS NOT NULL
 		   AND coalesce(ap.display_name, '') <> ''
-		   AND p.archived_at IS NULL`, activityID)
+		   AND survivor.archived_at IS NULL
+		 ORDER BY survivor.id, ap.address`, activityID)
 	if err != nil {
 		return fmt.Errorf("people: reading the names an invitation gave: %w", err)
 	}
@@ -53,6 +68,25 @@ func FillParticipantNamesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 		return err
 	}
 	for _, attendee := range named {
+		// The name is written by whoever sent the invitation, and they are
+		// outside this workspace. So the same probe the meeting FILING makes
+		// (capture.linkResolvedMeetingParticipants) is made here, and for a
+		// sharper reason: filing a meeting under a record puts a message on a
+		// page, while this writes the record's own name. Without it an outside
+		// organizer could put a colleague's contact on an invitation, type a
+		// plausible name for them, and have it stick — on a record they can
+		// neither see nor reach.
+		//
+		// Not-found is skipped rather than failed, exactly as the filing skips
+		// it: the meeting happened, the attendee row already records who was
+		// there, and refusing the whole capture over a name would throw away a
+		// message that was read successfully.
+		if err := auth.EnsureLinkTarget(ctx, tx, entityPerson, attendee.person.UUID); err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+				continue
+			}
+			return fmt.Errorf("people: checking the attendee %s a name was given for: %w", attendee.person, err)
+		}
 		if _, err := completePersonName(ctx, tx, attendee.person,
 			ParsePersonName(attendee.displayName, attendee.address)); err != nil {
 			return err

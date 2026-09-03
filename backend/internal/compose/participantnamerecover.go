@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -49,6 +50,13 @@ func recoverAttendeeNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit in
 	if limit <= 0 {
 		return 0, fmt.Errorf("compose: the attendee name recovery needs a positive batch limit, got %d", limit)
 	}
+	// One correlation id per batch, minted here because this pass has no
+	// request behind it. The fill it drives is an audited write and storekit
+	// refuses to emit without one — and the refusal would be silent in the
+	// worst way: the transaction rolls back, the rows it would have named stay
+	// NULL, the same batch is selected on the next tick, and the pass retries
+	// forever while reporting nothing.
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var settled int
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		candidates, err := selectNameRecoveryCandidates(ctx, tx, limit)
