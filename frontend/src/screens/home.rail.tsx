@@ -3,7 +3,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DealCard } from "../design-system/composed";
@@ -380,7 +380,9 @@ export function WatchPanel({
             <DealCard
               key={deal.id}
               deal={toBoardDeal(deal, naming)}
-              onOpen={() => navigate({ screen: "deals", id: deal.id })}
+              // A link, so no press handler: nothing here drags, and the
+              // address is the whole behaviour.
+              href={routeHash({ screen: "deals", id: deal.id })}
             />
           ))}
         </SurfaceState>

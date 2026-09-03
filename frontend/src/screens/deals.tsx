@@ -9,6 +9,7 @@ import {
   type ComponentProps,
   type Dispatch,
   type DragEvent,
+  type MouseEvent,
   type ReactNode,
   type SetStateAction,
   useId,
@@ -23,7 +24,7 @@ import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -1826,6 +1827,9 @@ function DealBoardBody({
             ) : (
               <>
                 <PipelineBoard
+                  cardHref={(deal) =>
+                    routeHash({ screen: "deals", id: deal.id })
+                  }
                   columns={buildColumns(
                     effectivePipeline.stages ?? [],
                     loadedDeals,
@@ -1889,9 +1893,13 @@ function useBoardInteractions({
 
   // Board interactions are hoisted here so the render-prop tree below doesn't
   // nest their event callbacks past the readable depth.
-  const openDeal = (deal: BoardDeal) => {
-    if (Date.now() - lastDragEnd.current > 250) {
-      navigate({ screen: "deals", id: deal.id });
+  // The card is a LINK now, so this no longer navigates — the href does. What
+  // is left is the one thing a link cannot know: the click that ends a drag is
+  // not a click on the card, and following it would open a deal the reader was
+  // only moving.
+  const openDeal = (_deal: BoardDeal, event: MouseEvent) => {
+    if (Date.now() - lastDragEnd.current <= 250) {
+      event.preventDefault();
     }
   };
 
