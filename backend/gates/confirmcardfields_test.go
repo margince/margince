@@ -42,9 +42,16 @@ const theConfirmProjection = "internal/modules/consent/confirmcard.go"
 // supplied or is entitled to be told.
 var disclosableToTheSubject = map[string]bool{
 	"full_name": true,
-	"title":     true,
-	"email":     true,
-	"phone":     true,
+	// The consent link's own page reads the purpose it asks about: its key and
+	// the operator-facing label. Both are this workspace's own vocabulary for a
+	// subscription — "Newsletter" — and naming the thing somebody is being
+	// asked to confirm is the entire content of that page. A page that could
+	// not say which subscription it meant would be asking them to agree to
+	// something unnamed.
+	"label": true,
+	"title": true,
+	"email": true,
+	"phone": true,
 	// The employer, and the columns the employment read needs to find it.
 	"display_name":    true,
 	"organization_id": true,

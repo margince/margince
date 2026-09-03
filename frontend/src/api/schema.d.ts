@@ -8645,7 +8645,7 @@ export interface paths {
          *     The token is never returned. It is only ever mailed — returning it would defeat the
          *     mailbox-as-evidence property above, and this link IS how a double-opt-in purpose gets
          *     confirmed now that no operator-held token exists.
-         *     A fresh request supersedes any unspent earlier link for the same person.
+         *     A fresh request supersedes any unspent earlier link of the SAME KIND for this person — a record-confirmation request does not expire a pending subscription-confirmation link, because they ask different questions and arrive in different mails.
          *
          *     `provider_accepted` reports whether the relay took the message, and `sendable` says whether
          *     this installation can send at all. Both, because they are different facts and a reader's next
@@ -35237,7 +35237,11 @@ export interface operations {
                      * @enum {string}
                      */
                     marketing_choice?: "granted" | "withdrawn";
-                    /** @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant. */
+                    /**
+                     * @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+                     *     grant. Bounded because it is stored on the proof row and read back through the subject
+                     *     access export — the same bound is enforced server-side, and the two are one rule.'
+                     */
                     marketing_wording?: string;
                 };
             };
