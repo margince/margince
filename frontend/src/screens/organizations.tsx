@@ -2376,7 +2376,15 @@ function CommercialSection({
 function RecentActivitySection360({
   view,
   loading,
-}: Readonly<{ view?: Organization360View; loading: boolean }>) {
+  onOpenRecord,
+}: Readonly<{
+  view?: Organization360View;
+  loading: boolean;
+  // The page's own citation router. An email row opens through it exactly as a
+  // cited activity does, so the account has one drawer and not a second one
+  // this section owns.
+  onOpenRecord: (entityType: string, entityId: string) => void;
+}>) {
   const t = useT();
   const logged = view?.activities?.data ?? [];
   const state = sectionState(
@@ -2403,6 +2411,7 @@ function RecentActivitySection360({
     <CompanyRecentList
       activities={logged.slice(0, RECENT_360_LIMIT)}
       nameOf={recordNamesIn(view)}
+      onOpenRecord={onOpenRecord}
     />
   );
 }
@@ -2417,10 +2426,12 @@ function RecentActivitySection({
   view,
   loading,
   onOpenHistory,
+  onOpenRecord,
 }: Readonly<{
   view?: Organization360View;
   loading: boolean;
   onOpenHistory: () => void;
+  onOpenRecord: (entityType: string, entityId: string) => void;
 }>) {
   const t = useT();
   return (
@@ -2436,7 +2447,11 @@ function RecentActivitySection({
           chronicle; inside the account's reading this section answers whether
           anything moved and which way, and the chronicle answered it in five
           screens. */}
-      <RecentActivitySection360 view={view} loading={loading} />
+      <RecentActivitySection360
+        view={view}
+        loading={loading}
+        onOpenRecord={onOpenRecord}
+      />
     </Section>
   );
 }
@@ -2656,6 +2671,7 @@ function CompanyOverviewStack({
                 view={view}
                 loading={loading}
                 onOpenHistory={onOpenHistory}
+                onOpenRecord={onOpenRecord}
               />
             </Panel>
           </RecordReadingPair>
