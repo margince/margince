@@ -43,8 +43,12 @@ func TestStreamsMatchSpecList(t *testing.T) {
 	// missing from it is one a reset silently leaves behind.
 	// The aitask stream joins them for the same reason and only that reason:
 	// it is enumerable and resettable, while staying outside coreStreams() so
-	// no all-stream group subscribes to an internal projection feed.
-	want := append(append([]string{}, coreFamilyStreams...), "gw:events:crm:extension", "gw:events:crm:aitask")
+	// no all-stream group subscribes to an internal projection feed. The brief
+	// stream is the second of that kind — product telemetry, not a family — and
+	// belongs here for the resettability half: a reset that left a rep's
+	// reading history behind would outlive the data it describes.
+	want := append(append([]string{}, coreFamilyStreams...),
+		"gw:events:crm:extension", "gw:events:crm:aitask", "gw:events:crm:brief")
 	sort.Strings(want)
 	if got := Streams(); !reflect.DeepEqual(got, want) {
 		t.Errorf("Streams() = %v, want the events.md stream set plus the extension stream %v", got, want)
