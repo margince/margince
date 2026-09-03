@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1688 | 7% | 15312 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14465 | 15 | 8 |
-| _whole served catalog, for scale_ | 63 | 20079 | 83% | — | — | — |
+| _whole served catalog, for scale_ | 65 | 20514 | 85% | — | — | — |
 
 ### `morning_brief`
 
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 275 tokens, mean 318, across 63 served tools.
+Median 274 tokens, mean 315, across 65 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -175,10 +175,12 @@ a term in an addition.
 | `relink_activities` | 237 | — |
 | `read_record` | 229 | 2 scenarios |
 | `relink_thread` | 228 | — |
+| `update_tag` | 228 | — |
 | `disqualify_lead` | 221 | — |
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
 | `read_brief` | 213 | — |
+| `create_tag` | 206 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
 | `remove_tag` | 198 | — |

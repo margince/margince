@@ -7889,12 +7889,15 @@ paths:
     post:
       tags: [Tags]
       operationId: createTag
-      # Human-only, and now the ONLY door that coins a word. apply_tag used to
-      # create one when the workspace had none; it refuses instead, because a
-      # vocabulary an agent can extend on a misspelling is not governed. Adding
-      # to it is an admin or ops act, taken deliberately at a surface where the
-      # existing words are on screen.
-      x-agent-access: human-only
+      # The ONLY door that coins a word. apply_tag used to create one when the
+      # workspace had none; it refuses instead, so a vocabulary cannot grow by
+      # a misspelling passing through a tagging.
+      #
+      # Reachable by an agent, and governed by the grant rather than by the
+      # door: coining needs tag.create, which the seeded roles give Admin and
+      # Ops alone. A seat trusted to add vocabulary in the UI is trusted to do
+      # it here; a rep holding only tag.read is refused either way.
+      x-mcp-tool: { verb: create_tag, record_type: tag, tier: auto_execute, scope: write }
       summary: Create a tag.
       requestBody:
         required: true
@@ -7938,7 +7941,7 @@ paths:
       operationId: updateTag
       # Human-only for the same reason createTag is: renaming a word every seat
       # can already apply changes what a filter selects for everyone at once.
-      x-agent-access: human-only
+      x-mcp-tool: { verb: update_tag, record_type: tag, tier: auto_execute, scope: write }
       summary: Rename, recolour or describe a tag.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
