@@ -149,7 +149,13 @@ export const BarsAgainstAWhole: Story = {
       rows={[
         { key: "qualified", label: "Qualified", value: 80, amount: "€80,000" },
         { key: "proposal", label: "Proposal", value: 45, amount: "€45,000" },
-        { key: "late", label: "Slipped", value: 12, amount: "€12,000", tone: "warn" },
+        {
+          key: "late",
+          label: "Slipped",
+          value: 12,
+          amount: "€12,000",
+          tone: "warn",
+        },
       ]}
     />
   ),

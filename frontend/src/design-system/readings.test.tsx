@@ -177,7 +177,9 @@ describe("BarList", () => {
   // itself each row fills its own track and the list says every stage is equal,
   // which is the opposite of what a ranking is for.
   it("draws every bar against one denominator, not against itself", () => {
-    const { container } = render(<BarList rows={rows} label="Deals by stage" />);
+    const { container } = render(
+      <BarList rows={rows} label="Deals by stage" />,
+    );
     const [first, second] = bars(container);
     expect(first.style.width).toBe("100%");
     expect(second.style.width).toBe("25%");

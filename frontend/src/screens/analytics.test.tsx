@@ -19,6 +19,7 @@ import {
   AnalyticsScreen,
   buildStageAggregates,
   parseDerivationQuery,
+  sectionFromAddress,
 } from "./analytics";
 
 // D2 acceptance: a report picker over deals-by-stage (unchanged), forecast
@@ -51,6 +52,12 @@ const render = (ui: ReactNode) => {
 
 type ReportsStubOpts = {
   onRun?: (key: string, body: Record<string, unknown>) => void;
+  // Model a server that sends only PART of the frame — an installation
+  // mid-upgrade, which is the one place a partial result actually arrives.
+  // Dropping the whole frame would be a weaker fixture: a guard that checks
+  // only one of the three fields passes against it, and the caption then
+  // renders with an undefined zone.
+  partialFrame?: boolean;
   stageRows?: Record<string, unknown>[];
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
@@ -115,6 +122,17 @@ function reportsStub(opts: ReportsStubOpts = {}) {
         plan: {},
         columns: [],
         rows,
+        // The frame the server sends with every result. A fixture that omits
+        // it models a response no live server produces, and the screen would
+        // then be tested against a shape it never meets.
+        as_of: "2026-03-04T09:00:00Z",
+        ...(opts.partialFrame
+          ? {}
+          : {
+              timezone: "Europe/Berlin",
+              base_currency: "EUR",
+              fiscal_year_start_month: 1,
+            }),
         derivation_url: `/v1/reports/${key}/derivation?by=stage_id&agg=sum:amount_minor:raw_minor&stage_id=pl-s1`,
       });
     }
@@ -122,10 +140,20 @@ function reportsStub(opts: ReportsStubOpts = {}) {
   });
 }
 
+// The pipeline reports live behind their own tab now, and Forecast is the
+// section a reader lands on. A test that wants deals-by-stage opens the tab
+// the way a reader does, rather than asserting against a default that moved.
+async function openPipeline() {
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: "Pipeline" }));
+}
+
 describe("AnalyticsScreen", () => {
-  it("defaults to deals-by-stage and renders unweighted/weighted columns", async () => {
+  it("renders unweighted/weighted columns under Pipeline", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
+    await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
   });
 
@@ -148,7 +176,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Forecast categories" }),
+      await screen.findByRole("button", { name: "Forecast" }),
     );
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
@@ -190,7 +218,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Forecast categories" }),
+      await screen.findByRole("button", { name: "Forecast" }),
     );
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
@@ -215,6 +243,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
+    await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     expect(
       bodies.some(
@@ -246,7 +275,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Open deals per company" }),
+      await screen.findByRole("button", { name: "Pipeline" }),
     );
     await waitFor(() => expect(screen.getByText("o1")).toBeTruthy());
   });
@@ -320,6 +349,7 @@ describe("reports never sum money across currencies", () => {
       reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
     );
     render(<AnalyticsScreen />);
+    await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     const stagePlan = bodies.find((sent) => sent.key === "deals-by-stage");
     expect(stagePlan?.body).toMatchObject({
@@ -350,6 +380,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
+    await openPipeline();
     expect(
       await screen.findByText(formatMoney(100_000, "EUR", "en")),
     ).toBeTruthy();
@@ -381,6 +412,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
+    await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     // The count is real and stays; only the money is unknown.
     expect(screen.getByText("4")).toBeTruthy();
@@ -391,9 +423,7 @@ describe("reports never sum money across currencies", () => {
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
-    await userEvent
-      .setup()
-      .click(await screen.findByText("Forecast categories"));
+    await userEvent.setup().click(await screen.findByText("Forecast"));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -479,9 +509,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent
-      .setup()
-      .click(await screen.findByText("Forecast categories"));
+    await userEvent.setup().click(await screen.findByText("Forecast"));
     // Both currencies of the uncategorised pipeline, each in its own unit.
     expect(
       await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
@@ -513,12 +541,73 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent
-      .setup()
-      .click(await screen.findByText("Forecast categories"));
+    await userEvent.setup().click(await screen.findByText("Forecast"));
     await waitFor(() =>
       expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
     );
     expect(screen.queryByText("No category yet")).toBeNull();
+  });
+});
+
+// The address names a SECTION, and a section may hold several reports. The old
+// addresses named a REPORT — those links are in bookmarks and in sent mail, so
+// each one still has to answer.
+describe("sectionFromAddress", () => {
+  it("takes a section straight from the address", () => {
+    expect(sectionFromAddress("pipeline")).toBe("pipeline");
+    expect(sectionFromAddress("forecast")).toBe("forecast");
+  });
+
+  // #/analytics/deals-by-stage was a real address for as long as the picker
+  // existed. Answering it with the default section would drop the reader on a
+  // page that is not the one they saved.
+  it("answers an old report address with the section that now holds it", () => {
+    expect(sectionFromAddress("deals-by-stage")).toBe("pipeline");
+    expect(sectionFromAddress("open-deals-per-company")).toBe("pipeline");
+  });
+
+  // A segment is whatever a reader typed. Anything unrecognized lands on the
+  // first section rather than rendering an empty screen.
+  it("falls back to the first section for anything it does not know", () => {
+    expect(sectionFromAddress(undefined)).toBe("forecast");
+    expect(sectionFromAddress("nonsense")).toBe("forecast");
+  });
+});
+
+// Pipeline draws deals-by-stage and open-deals-per-company, so its captions
+// come in pairs. Named rather than written as a bare 2, so a third report
+// added to the section reads as a deliberate change here.
+const SECTION_REPORT_COUNT_PIPELINE = 2;
+
+describe("the report frame", () => {
+  // A total with no zone and no currency beside it is a number the reader
+  // places by assumption, and the assumption is their own zone.
+  it("names the instant, the zone and the currency the figures were cut in", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    // One per report, not one per screen: each result carries its own frame,
+    // and a section holding two reports could be showing two results computed
+    // moments apart. A single caption over both would claim they share an
+    // instant they do not.
+    const captions = await screen.findAllByText(/Europe\/Berlin/);
+    expect(captions).toHaveLength(SECTION_REPORT_COUNT_PIPELINE);
+    expect(captions[0].textContent).toContain("EUR");
+  });
+
+  // A server mid-upgrade sends a partial frame. Naming two of the three would
+  // be worse than naming none, so the caption is drawn or it is not.
+  it("draws no caption at all when the server sent only part of the frame", async () => {
+    vi.stubGlobal("fetch", reportsStub({ partialFrame: true }));
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    // The REPORT still renders. That is the half that makes this test mean
+    // something: a guard checking only `as_of` also produces no caption here,
+    // but by throwing inside formatDateTime — which takes the whole card down
+    // and leaves the reader with no figures at all. Asserting the absence of
+    // the caption alone would pass against that.
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
+    expect(screen.queryByText(/As of/)).toBeNull();
   });
 });

@@ -12,7 +12,9 @@ const counts = [
 
 describe("EvidenceReceipt", () => {
   it("shows every count it was given", () => {
-    render(<EvidenceReceipt title="Data and evidence checked" counts={counts} />);
+    render(
+      <EvidenceReceipt title="Data and evidence checked" counts={counts} />,
+    );
     for (const fact of counts) {
       expect(screen.getByText(fact.term)).toBeTruthy();
       expect(screen.getByText(fact.value)).toBeTruthy();
