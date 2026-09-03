@@ -91,10 +91,7 @@ function renderList(
 ) {
   return render(
     <LocaleProvider initial="en">
-      <CompanyRecentList
-        activities={activities}
-        onOpenRecord={onOpenRecord}
-      />
+      <CompanyRecentList activities={activities} onOpenRecord={onOpenRecord} />
     </LocaleProvider>,
   );
 }

@@ -212,8 +212,6 @@ describe("the person page's memory card", () => {
     expect(
       screen.getByText("Wants the fleet numbers before we talk pricing."),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: /Call prep/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Call prep/ })).toBeNull();
   });
 });
