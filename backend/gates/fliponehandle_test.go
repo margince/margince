@@ -51,13 +51,21 @@ func TestTheOverlayFlipLaneResolvesOneWorkspaceHandle(t *testing.T) {
 	// silently matched no file at all, or if the lane stopped resolving a
 	// handle by any route.
 	//
-	// Counted PER FUNCTION, not per file. Two resolutions in flip.go is the
-	// correct shape and always was: the parity dry-run is its own operation —
-	// zero-write, no run id, no operator — and Execute is another. What must
-	// never happen is one operation resolving twice, because that is the
-	// divergence itself rather than a route to it. A file-wide count of one
-	// would fail today and say nothing about the invariant; a file-wide count
-	// of "any" would admit Execute asking twice.
+	// Counted against NAMED ENTRY POINTS, not per function and not per file.
+	// Each is finer than the last for a reason the coarser version misses:
+	//
+	//   - per FILE would demand one call and fail today. Two resolutions in
+	//     this file is the correct shape and always was — the parity dry-run is
+	//     its own operation (zero-write, no run id, no operator) and Execute is
+	//     another.
+	//   - per FUNCTION admits a helper. Execute resolves once, a helper it
+	//     calls resolves once, both counts are one, and the operation is back
+	//     to two handles — which is the defect, not a route to it.
+	//
+	// So resolution is a PRIVILEGE of the two operation entry points, and every
+	// other function in the lane must receive the handle. That is the rule that
+	// cannot be satisfied by moving the second call somewhere else.
+	resolvers := map[string]bool{"Execute": true, "parityPreview": true}
 	acting := map[string]int{}
 	installation := 0
 	for _, decl := range file.Decls {
@@ -70,12 +78,12 @@ func TestTheOverlayFlipLaneResolvesOneWorkspaceHandle(t *testing.T) {
 			if !ok {
 				return true
 			}
-			// calleeName (retentionscope_test.go) already answers this for
-			// the package, and it handles a QUALIFIED call as well as a bare
-			// one — which matters here even though dbhandle.go is the same
-			// package today: a helper that later moves would arrive as a
-			// selector and slip past a gate that only looked at identifiers,
-			// and a prohibition that stops matching is one that passes.
+			// calleeName (retentionscope_test.go) already answers this for the
+			// package, and it handles a QUALIFIED call as well as a bare one —
+			// which matters here even though dbhandle.go is the same package
+			// today: a helper that later moves would arrive as a selector and
+			// slip past a gate that only looked at identifiers, and a
+			// prohibition that stops matching is one that passes.
 			switch calleeName(call) {
 			case "actingWorkspaceDB":
 				acting[fn.Name.Name]++
@@ -86,12 +94,22 @@ func TestTheOverlayFlipLaneResolvesOneWorkspaceHandle(t *testing.T) {
 		})
 	}
 
-	if len(acting) == 0 {
-		t.Errorf("%s reaches actingWorkspaceDB nowhere — the lane stopped resolving the "+
-			"operator's workspace, and this gate was about to pass having checked nothing", lane)
+	for name := range resolvers {
+		if acting[name] == 0 {
+			t.Errorf("%s: %s resolves no workspace handle. It is one of the lane's operation "+
+				"entry points, so if it stopped resolving one this gate was about to pass "+
+				"having checked nothing — or the entry point was renamed and this list is "+
+				"now describing a function that does not exist", lane, name)
+		}
 	}
 	for fn, count := range acting {
-		if count > 1 {
+		switch {
+		case !resolvers[fn]:
+			t.Errorf("%s: %s resolves the acting workspace, and only the operation entry "+
+				"points (%s) may. A helper that resolves its own handle puts the operation "+
+				"back on two of them however few times each function asks (#2561) — take the "+
+				"handle as a parameter instead.", lane, fn, strings.Join(sortedKeys(resolvers), ", "))
+		case count > 1:
 			t.Errorf("%s: %s resolves the acting workspace %d times. One operation, one handle — "+
 				"a second resolution inside one function is the divergence #2561 closed, not a "+
 				"route to it. Resolve once and hand it down.", lane, fn, count)
