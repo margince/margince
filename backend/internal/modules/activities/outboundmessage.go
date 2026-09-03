@@ -12,7 +12,11 @@ package activities
 // unsubscribe token and the recorded one carries a redacted copy, and having
 // both projections in one place is what keeps that difference deliberate.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/ids"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
 
 // outboundMessage is one send's derived facts, computed before the
 // transaction opens so the transaction holds writes only. The timeline row and
@@ -109,9 +113,28 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading) Delivery
 		FromName:        m.fromName,
 		Attachments:     m.files,
 		ConsentPurpose:  m.in.ConsentPurpose,
+		Authorization:   m.authorization(),
 		InReplyTo:       chain.inReplyTo,
 		References:      chain.references,
 		ThreadKey:       chain.threadKey,
 		ListUnsubscribe: m.listUnsubscribe,
+	}
+}
+
+// authorization is the question the engine is asked about this message.
+//
+// Built here because this is where the whole message is known — the merged
+// recipient list including blind copies, the content that will actually go out,
+// and the purpose the caller named. A stager that rebuilt it would be reading
+// the same message a second time, and the two readings would drift.
+//
+// Recipients is the MERGED list, not the To: line. A blind copy is blind to the
+// other recipients and never to the engine.
+func (m outboundMessage) authorization() commsauthz.Request {
+	return commsauthz.Request{
+		Recipients:       connector.EmailRecipients(m.in.Recipients),
+		LegacyPurposeKey: m.in.ConsentPurpose,
+		Subject:          m.in.Subject,
+		Body:             m.body,
 	}
 }
