@@ -230,8 +230,15 @@ function fitBackingStore(
   box: DOMRect,
 ): void {
   const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
-  el.width = box.width * dpr;
-  el.height = box.height * dpr;
+  const width = Math.round(box.width * dpr);
+  const height = Math.round(box.height * dpr);
+  // Assigning a canvas's size reallocates its buffer even when the value is
+  // unchanged, and the motes layer is the size of the window: left unguarded,
+  // that is a full-screen allocation on every frame.
+  if (el.width !== width || el.height !== height) {
+    el.width = width;
+    el.height = height;
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 

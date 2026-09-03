@@ -43,6 +43,16 @@
 .crawl-motes {
   position: fixed;
   inset: 0;
+  /* BOTH dimensions, stated. A canvas is a replaced element, and for one that
+     is positioned, `inset: 0` does not stretch it: its intrinsic size wins and
+     the far edges are simply dropped. Its intrinsic size is its pixel buffer,
+     and the frame loop sets that buffer FROM the box it measures, times the
+     device pixel ratio — so without these two lines a retina screen doubled the
+     layer every frame until the page was one white canvas. At a ratio of one
+     the same loop is a fixed point, which is why it never showed on a headless
+     run. */
+  width: 100%;
+  height: 100%;
   z-index: 1;
   pointer-events: none;
 }
