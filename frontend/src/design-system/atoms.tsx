@@ -1240,6 +1240,36 @@ export function SectionHeader({
   );
 }
 
+/**
+ * The figure beside an option's name, in a strip that counts what is behind
+ * each one.
+ *
+ * One component because the count is four decisions, not a number: the mono
+ * face so a column of them lines up, the reader's own number format, the host's
+ * class, and the SEPARATOR — which is the one that was missing. Both strips
+ * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
+ * reader speaks was "People2", "Deals0", "Tasks0". The comma is
+ * visually hidden because the gap between them is already drawn in CSS; what it
+ * fixes is the spoken name, where there was nothing between the two at all.
+ *
+ * It renders INSIDE the option's button, which is what puts the figure in that
+ * option's accessible name rather than leaving it to a sighted reader alone.
+ */
+export function OptionCount({
+  count,
+  className,
+}: Readonly<{ count: number; className: string }>) {
+  const { locale } = useLocale();
+  return (
+    <>
+      <span className="sr-only">, </span>
+      <span className={`${className} t-mono`}>
+        {formatNumber(count, locale)}
+      </span>
+    </>
+  );
+}
+
 export function SegmentedControl<Option extends string>({
   options,
   value,
@@ -1289,9 +1319,7 @@ export function SegmentedControl<Option extends string>({
           >
             {labels[option]}
             {count !== undefined && (
-              <span className="segmented-count t-mono">
-                {formatNumber(count, locale)}
-              </span>
+              <OptionCount count={count} className="segmented-count" />
             )}
             {marks?.[option] && <span className="segmented-mark" aria-hidden />}
           </button>

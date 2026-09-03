@@ -2386,7 +2386,7 @@
   padding: 0 5px;
   border-radius: var(--r-full);
   background: var(--dangerBg);
-  color: var(--danger);
+  color: var(--dangerText);
   font-family: var(--f-body);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);

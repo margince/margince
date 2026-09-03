@@ -32,7 +32,10 @@
 .badge-success {
   background:
     linear-gradient(var(--successBg), var(--successBg)), var(--bgElevated);
-  color: var(--success);
+  /* --successText for the reason FieldDiff's new value takes it: --success on
+     --successBg is 4.48:1 at this size. The warn and danger tones keep their
+     own ink, which clears AA on their own tints. */
+  color: var(--successText);
 }
 .badge-warn {
   background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
@@ -41,7 +44,9 @@
 .badge-danger {
   background:
     linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
-  color: var(--danger);
+  /* --dangerText, the ink role, not --danger, which is also a fill: over this
+     tint the dark theme's --danger is 3.88:1 on the darker card grounds. */
+  color: var(--dangerText);
 }
 .badge-ai {
   background: var(--aiLight);
@@ -1492,7 +1497,7 @@
 }
 .overflow-menu-items .btn-danger:hover:not(:disabled) {
   background: var(--dangerBg);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 /* A row that is SET — an item holding a region open, a toggle that is on. It
    arrives as `aria-expanded`, as `aria-pressed`, or as the primary variant a

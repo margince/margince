@@ -240,11 +240,25 @@
 
   --success: #15803d;
   --successBg: rgba(34, 197, 94, 0.12);
+  /* Text and glyphs ON --successBg, split out for the reason --aiText is split
+   * out: --success over its own family's tint measures 4.48:1 at 12px, which
+   * axe reads as a serious AA failure, and the two writers of that pair
+   * (FieldDiff's new value, badge-success) each looked fine in isolation. The
+   * other two status families need no such token — --warn and --danger clear AA
+   * on their own tints — and tokens.test.ts now measures all three so a retune
+   * finds out there. */
+  --successText: #146c36;
   --warn: #92400e;
   --warnBg: rgba(251, 191, 36, 0.16);
   --warnBorder: rgba(251, 191, 36, 0.45);
   --danger: #b91c1c;
   --dangerBg: rgba(239, 68, 68, 0.1);
+  /* Text and glyphs ON --dangerBg. It coincides with --danger in this theme —
+   * the light red clears AA on its own tint over every ground — and does NOT
+   * in dark, where the lifted --danger measures 3.88:1 over --bgHover. Named in
+   * both so a call site reads the role rather than knowing which theme
+   * collapses it, exactly as --successText and --textOnAccentControl do. */
+  --dangerText: #b91c1c;
 
   --r-sm: 8px;
   /* The one radius for a control a hand operates — button, input, select
@@ -599,9 +613,19 @@
   --textMeta: #8fa099;
 
   --success: #4ade80;
+  /* Dark inverts the problem: the lifted --success IS the readable ink on the
+   * tint over a dark card, so the two coincide here. Named anyway, because the
+   * call sites read the role and must not have to know which theme collapses
+   * it — the same reason --textOnAccentControl exists. */
+  --successText: #4ade80;
   --warn: #fbbf24;
   --danger: #f87171;
   --dangerBg: rgba(248, 113, 113, 0.16);
+  /* Lifted further than --danger: the tint is painted on --bgCard and --bgHover
+   * as well as on the elevated ground, and --danger over the darker two is
+   * 4.22:1 and 3.88:1. --danger itself stays put — it is also a FILL, under
+   * white ink, and lightening that would cost the fill its own contrast. */
+  --dangerText: #fb9a9a;
 }
 
 /*
@@ -689,9 +713,11 @@
     --textMeta: #8fa099;
 
     --success: #4ade80;
+    --successText: #4ade80;
     --warn: #fbbf24;
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);
+    --dangerText: #fb9a9a;
   }
 }
 
