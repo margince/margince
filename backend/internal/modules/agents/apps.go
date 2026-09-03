@@ -248,7 +248,7 @@ type resourceUIWire struct {
 
 // resourceCSPWire carries the four allowlists. NONE of them is `omitempty`, and
 // every one is normalized to an empty array rather than left nil — see
-// originsOrEmpty.
+// closedList.
 type resourceCSPWire struct {
 	//nolint:tagliatelle // the four domain members are the extension's own, camelCase by the specification
 	ConnectDomains []string `json:"connectDomains"`
@@ -305,10 +305,13 @@ func resourceUIMeta(resource mcp.Resource) *resourceUIWire {
 	}
 	return &resourceUIWire{
 		CSP: resourceCSPWire{
-			ConnectDomains:  originsOrEmpty(resource.UI.CSP.ConnectDomains),
-			ResourceDomains: originsOrEmpty(resource.UI.CSP.ResourceDomains),
-			FrameDomains:    originsOrEmpty(resource.UI.CSP.FrameDomains),
-			BaseURIDomains:  originsOrEmpty(resource.UI.CSP.BaseURIDomains),
+			// A host builds its content-security policy from these and MUST NOT
+			// admit an origin they do not name, so an empty list is an
+			// instruction to deny everything. `null` would read as unspecified.
+			ConnectDomains:  closedList(resource.UI.CSP.ConnectDomains),
+			ResourceDomains: closedList(resource.UI.CSP.ResourceDomains),
+			FrameDomains:    closedList(resource.UI.CSP.FrameDomains),
+			BaseURIDomains:  closedList(resource.UI.CSP.BaseURIDomains),
 		},
 		Permissions:   requestedPermissions(resource.UI.Permissions),
 		Domain:        resource.UI.Domain,
@@ -316,16 +319,13 @@ func resourceUIMeta(resource mcp.Resource) *resourceUIWire {
 	}
 }
 
-// originsOrEmpty normalizes an allowlist so the wire carries `[]` and never
-// `null`.
+// closedList normalizes a list so the wire carries `[]` and never `null`.
 //
-// This is the self-contained posture's whole load-bearing detail. A host builds
-// its content-security policy from these lists and MUST NOT admit an origin
-// they do not name — so an empty list is an instruction to deny everything,
-// while `null` is a list the host was not given and may read as "unspecified",
-// which is where a permissive default lives. The two look alike in Go and mean
-// opposite things to the thing enforcing them.
-func originsOrEmpty(origins []string) []string {
+// The two look alike in Go and say opposite things to a reader: `[]` is a
+// closed list holding nothing, `null` is a list that was not stated — an
+// omission, and an omission is where a permissive default lives. Both callers
+// depend on that distinction for their own reason, and each says so at the call.
+func closedList(origins []string) []string {
 	if origins == nil {
 		return []string{}
 	}

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 70,
     "resources": 10,
-    "tool_catalog_bytes": 197663,
+    "tool_catalog_bytes": 197668,
     "resource_catalog_bytes": 3915,
-    "approx_wire_tokens_total": 50394,
+    "approx_wire_tokens_total": 50395,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 47770,
-      "input_schema_bytes": 38880,
+      "input_schema_bytes": 38885,
       "output_schema_bytes": 95916,
-      "description_plus_input_schema_bytes": 86650
+      "description_plus_input_schema_bytes": 86655
     }
   },
   "tools": {
@@ -11192,7 +11192,7 @@
               "type": "array"
             },
             "report": {
-              "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company: count as open_deals grouped by organization_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` in a plan comes from list_pipelines.",
+              "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company: count as open_deals grouped by organization_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
               "enum": [
                 "activities-by-kind",
                 "deals-by-stage",

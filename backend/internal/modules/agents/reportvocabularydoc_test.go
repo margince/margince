@@ -141,13 +141,37 @@ func TestTheProvenanceNoteIsKeyedOnWhatIsRendered(t *testing.T) {
 	if !strings.Contains(withPipeline.Notes[0], "list_pipelines") {
 		t.Errorf("the note does not name the tool that yields the id: %s", withPipeline.Notes[0])
 	}
-	// The same catalog with both ids gone from every slot of every report — the
-	// note is keyed on all three vocabularies, so clearing one would leave the
-	// case passing for the wrong reason.
-	noPipeline := twoReportCatalog()
-	noPipeline[0].GroupBy = []string{"status"}
-	noPipeline[0].Filters = []string{"owner_id"}
-	if notes := readDocument(t, noPipeline).Notes; len(notes) != 0 {
+	// The note is keyed on ALL THREE vocabularies, so each one is exercised
+	// alone: a catalog whose only mention of a pipeline id is in `aggregates`
+	// must still carry the note, and only a catalog with none anywhere must not.
+	// Clearing two slots together — which the first version of this test did —
+	// leaves the third loop deletable with nothing failing.
+	for _, slot := range []string{"group_by", "filters", "aggregates"} {
+		t.Run("named only in "+slot, func(t *testing.T) {
+			only := []ReportCatalogEntry{{Report: "somewhere", Defaults: "count as rows"}}
+			switch slot {
+			case "group_by":
+				only[0].GroupBy = []string{"pipeline_id"}
+			case "filters":
+				only[0].Filters = []string{"stage_id"}
+			case "aggregates":
+				only[0].Aggregates = []string{"pipeline_id"}
+			}
+			if notes := readDocument(t, only).Notes; len(notes) == 0 {
+				t.Errorf("a catalog naming a pipeline id in %s alone carries no note about where one "+
+					"comes from, so a correct refusal dead-ends", slot)
+			}
+		})
+	}
+	// And a catalog naming neither id anywhere carries no advice about them.
+	silent := []ReportCatalogEntry{{
+		Report:     "nothing-keyed-on-a-pipeline",
+		GroupBy:    []string{"status"},
+		Filters:    []string{"owner_id"},
+		Aggregates: []string{"amount_minor"},
+		Defaults:   "count as rows",
+	}}
+	if notes := readDocument(t, silent).Notes; len(notes) != 0 {
 		t.Errorf("a catalog naming no pipeline id still carries %v — advice about a key no plan "+
 			"can use", notes)
 	}

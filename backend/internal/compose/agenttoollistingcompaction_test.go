@@ -68,11 +68,22 @@ func TestTheCompactionStillRemovesWhatTheFrameStatesOnce(t *testing.T) {
 	specs := servedSurface(t).Specs()
 	served := runner.ToolListing(specs)
 	var retryDescriptions, closedForms int
+	// The retry key's SERVED description, read out of the real catalog rather
+	// than typed here. A literal would search for a string the surface no longer
+	// writes the moment somebody rewords it — passing on nothing, which is the
+	// one direction a census must not fail in.
+	var retryDescription string
 	for _, spec := range specs {
 		schema := string(spec.InputSchema)
-		if strings.Contains(schema, `"`+mcp.ReservedIdempotencyKeyArg+`":{`) &&
-			strings.Contains(schema, `"description"`) {
+		if described := servedRetryKeyDescription(t, spec); described != "" {
 			retryDescriptions++
+			if retryDescription == "" {
+				retryDescription = described
+			} else if described != retryDescription {
+				t.Errorf("%s describes the retry key differently from its siblings; the surface has "+
+					"ONE definition of that member and the frame states ONE rule:\n  %s\n  %s",
+					spec.Name, retryDescription, described)
+			}
 		}
 		closedForms += strings.Count(schema, `"additionalProperties":false`)
 	}
@@ -93,10 +104,38 @@ func TestTheCompactionStillRemovesWhatTheFrameStatesOnce(t *testing.T) {
 		t.Errorf("the rendered listing still carries the closed form somewhere, so a nested object is "+
 			"escaping the compaction (%d occurrences across the served schemas)", closedForms)
 	}
-	if strings.Contains(served, "Same key, same result") {
-		t.Errorf("the rendered listing still carries the retry key's description, which the surface "+
-			"defines once and the frame states once (%d tools splice it)", retryDescriptions)
+	if strings.Contains(served, retryDescription) {
+		t.Errorf("the rendered listing still carries the retry key's served description, which the "+
+			"surface defines once and the frame states once (%d tools splice it): %s",
+			retryDescriptions, retryDescription)
 	}
+	// The other end of the same invariant: the catalogue's description and the
+	// frame's sentence come from ONE constant. If they ever diverge, the checks
+	// above go looking for text nothing writes and pass on nothing.
+	if !strings.Contains(retryDescription, mcp.ReservedIdempotencyKeyRule) {
+		t.Errorf("the served description %q does not carry mcp.ReservedIdempotencyKeyRule, so the "+
+			"catalogue and the frame are stating one rule from two sources again", retryDescription)
+	}
+}
+
+// servedRetryKeyDescription returns the description the SERVED schema gives the
+// retry key, or "" when this tool does not carry the member.
+//
+// Parsed rather than pattern-matched: the member's presence and its description
+// are two different facts, and a schema that merely mentions the name somewhere
+// in its own prose is not a schema that declares the argument.
+func servedRetryKeyDescription(t *testing.T, spec mcp.ToolSpec) string {
+	t.Helper()
+	var parsed struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &parsed); err != nil {
+		t.Errorf("%s: the served input schema is not a JSON object: %v", spec.Name, err)
+		return ""
+	}
+	return parsed.Properties[mcp.ReservedIdempotencyKeyArg].Description
 }
 
 // tools/list must NOT move. The compaction is the runner's rendering, and a
@@ -131,6 +170,45 @@ func TestTheServedSurfaceKeepsWhatTheListingOmits(t *testing.T) {
 	if retryKeyed == 0 || closed == 0 {
 		t.Fatalf("the served surface splices the retry key into %d tools and closes %d schemas; "+
 			"with either at zero this test asserts nothing about tools/list", retryKeyed, closed)
+	}
+}
+
+// systemFrameBudgetNumerator / Denominator bound the frame at 1/16 of the
+// window — 1,536 tokens against today's 351.
+//
+// The bound exists because this change made the frame a PLACE TO PUT THINGS.
+// Moving a sentence out of 32 schemas and into the frame trades (tools x
+// sentence) for (1 x sentence), which is a good trade and an inviting one, and
+// the catalog floor measures the LISTING alone. Without a bound the only thing
+// between a paragraph in the frame and every run of every agent paying for it
+// is somebody noticing a regenerated doc diff.
+//
+// Generous on purpose: it is a ceiling on the shape of the mistake, not a
+// budget to argue with. Four times today's frame still fails long before it
+// could displace the observations a run reasons over.
+const (
+	systemFrameBudgetNumerator   = 1
+	systemFrameBudgetDenominator = 16
+)
+
+// The system frame stays a frame.
+//
+// Fails in the UP direction only — a frame that got shorter is not a defect, and
+// pinning the number would make every wording change a test edit.
+func TestTheSystemFrameStaysWithinItsShareOfTheWindow(t *testing.T) {
+	frame := runner.SystemFrameTokens()
+	budget := runner.PromptTokenCeiling * systemFrameBudgetNumerator / systemFrameBudgetDenominator
+	if frame > budget {
+		t.Errorf("the system frame costs ~%d tokens against the %d this build allows it (%d/%d of "+
+			"the window). It is paid on EVERY step of EVERY run and the catalog floor does not "+
+			"measure it, so what grows here comes out of the observations a run reasons over. "+
+			"Move the rule to the tool whose meaning it is, or argue for the share.",
+			frame, budget, systemFrameBudgetNumerator, systemFrameBudgetDenominator)
+	}
+	// A frame of nothing would mean systemPrompt stopped rendering, which would
+	// make every other assertion here vacuous.
+	if frame == 0 {
+		t.Fatal("the system frame measures zero tokens, so this bound is holding nothing")
 	}
 }
 

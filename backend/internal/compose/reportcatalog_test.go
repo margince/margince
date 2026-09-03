@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -222,6 +223,46 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 	var plan reportRequest
 	if err := strictDecodeReportPlan(json.RawMessage(`{"group_by":["stage_id"]} {"group_by":["status"]}`), &plan); err == nil {
 		t.Fatal("a second JSON value after the plan was ignored")
+	}
+}
+
+// EVERY key in run_report's enum is described by its default answer.
+//
+// This is the invariant the certification lane bought at a price. The first pass
+// deferred each report's default into the published document along with the
+// three name lists, leaving an enum of nine bare keys — and on the goal "how
+// much open pipeline do we have in each stage" every run reached for the
+// vocabulary door instead of the report, because `deals-by-stage` answers that
+// goal with no plan at all and a bare key does not say so. 2/3 to 0/3.
+//
+// So the default is the only per-report content left in the description, and a
+// report that shipped without one would silently reopen exactly that failure:
+// describeReportDefaults returns "" for a spec with neither default aggregates
+// nor default grouping, which is a shape runAdHocPlan already builds. Nothing
+// else on this surface tells a caller which report answers their question.
+//
+// Derived from the engine's own catalog, so a report added tomorrow inherits the
+// obligation rather than escaping it.
+func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
+	catalog := reportToolCatalog()
+	if len(catalog) == 0 {
+		t.Fatal("the prebuilt catalog is empty, so this test proved nothing")
+	}
+	described := agents.RenderedReportKeyGuidance(catalog)
+	for _, entry := range catalog {
+		if entry.Defaults == "" {
+			t.Errorf("%s answers nothing by default, so run_report's description reduces it to a bare "+
+				"enum key — which is what sent every certification run to the vocabulary door instead "+
+				"of the report. Give the spec a defaultAggs or a defaultBy.", entry.Report)
+			continue
+		}
+		if !strings.Contains(described, entry.Report) {
+			t.Errorf("%s is in the enum and not in the description", entry.Report)
+		}
+		if !strings.Contains(described, entry.Defaults) {
+			t.Errorf("%s: the description does not say what it answers by default: %q",
+				entry.Report, entry.Defaults)
+		}
 	}
 }
 

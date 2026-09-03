@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1621 | 6% | 15787 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2453 | 9% | 14955 | 15 | 8 |
-| _whole served catalog, for scale_ | 70 | 19783 | 80% | — | — | — |
+| _whole served catalog, for scale_ | 70 | 19785 | 80% | — | — | — |
 
 ### `morning_brief`
 
@@ -138,7 +138,7 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 785 | 3 scenarios |
+| `run_report` | 786 | 3 scenarios |
 | `preview_import` | 677 | — |
 | `log_activity` | 635 | 1 scenario |
 | `update_record` | 572 | 4 scenarios |

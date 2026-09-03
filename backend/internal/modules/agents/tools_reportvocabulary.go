@@ -18,11 +18,11 @@ package agents
 //     vocabulary route the runner has, which is the reason it exists.
 //
 // Without a door, both of those recover only by refusal — honest, and enough to
-// get there, but the query vocabulary already showed what that costs. On
-// 2026-08-26 a client probed four spellings of a geo field, was correctly
-// refused four times, and told its user this workspace's organizations carry no
-// address at all. The refusals were right and the conclusion was false, which is
-// the worst pairing available.
+// get there in principle. What that costs was already measured on the QUERY
+// vocabulary, whose own tool file records the incident: refusals that were each
+// correct, and a caller that reasoned from them to a false statement about the
+// product. The shape transfers; the incident is not this vocabulary's and is not
+// retold here.
 //
 // NOT a second copy: the handler renders the resource's own document, over the
 // same catalog, so the tool and the resource cannot drift.

@@ -211,22 +211,38 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	if bare := describeReportCatalog(silent); strings.Contains(bare, "answers-nothing: .") {
 		t.Errorf("a report with no default rendered an empty clause: %s", bare)
 	}
-	// And the three VOCABULARIES are gone. That is the saving, and it is the
-	// half a caller only needs when narrowing: a description still listing one
+	// And the three VOCABULARIES are gone. That is the saving, and it is the half
+	// a caller only needs when narrowing: a description still listing one
 	// report's names would be the same second copy in a shorter font.
 	//
-	// `pipeline_id` and `stage_id` are deliberately NOT in this list even though
-	// they are vocabulary names. They appear in the provenance sentence — "a
-	// pipeline_id or stage_id in a plan comes from list_pipelines" — which is
+	// DERIVED from the fixture rather than listed, so renaming a name in
+	// twoReportCatalog() cannot leave this passing while the description recites
+	// the new one.
+	//
+	// The two provenance ids are the documented exception. They appear in "a
+	// pipeline_id or stage_id used in a plan comes from list_pipelines", which is
 	// where a caller learns the ids are obtainable at all, and
-	// TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines requires it as
-	// long as the schema names them. A residue check that swept them up would be
+	// TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines requires that
+	// sentence as long as the schema names them. Sweeping them up here would be
 	// demanding the removal of the one sentence another gate demands.
-	for _, recited := range []string{"owner_id", "phase", "days"} {
-		if strings.Contains(described, recited) {
-			t.Errorf("the description still recites the vocabulary name %q, so the tokens the "+
-				"move bought are still being spent: %s", recited, described)
+	provenance := map[string]bool{"pipeline_id": true, "stage_id": true}
+	swept := 0
+	for _, entry := range twoReportCatalog() {
+		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
+			for _, name := range names {
+				if provenance[name] {
+					continue
+				}
+				swept++
+				if strings.Contains(described, name) {
+					t.Errorf("the description still recites the vocabulary name %q, so the tokens "+
+						"the move bought are still being spent: %s", name, described)
+				}
+			}
 		}
+	}
+	if swept == 0 {
+		t.Fatal("the fixture's vocabularies are all provenance ids, so this swept nothing")
 	}
 }
 

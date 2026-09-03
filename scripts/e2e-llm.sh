@@ -140,23 +140,22 @@ seed_everything
 COOKIES="$WORK/cookies"
 MCP_CONFIG="$WORK/mcp.json"
 
-# MCP_SERVER is the name this lane registers its throwaway server under, and it
-# is deliberately NOT `margince`.
+# MCP_SERVER is the name this lane registers its throwaway server under, and the
+# name is load-bearing.
 #
-# The CLI keeps a per-project list of MCP servers an operator has turned off
-# (`disabledMcpServers` in ~/.claude.json) and it is keyed on the server's NAME.
-# `margince` is exactly the name a Margince developer gives their own hand-wired
-# server — this machine had `margince`, `margince-local-dev`, `margince-staging`
-# and `margince-uat` — so the lane's ephemeral fixture inherited whatever
-# enable/disable state the operator had left on a server of the same name. It
-# came up `disabled`, the assistant was handed zero tools, the model wrote prose
-# shaped like tool calls, and the checker reported every scenario as "the answer
-# was not drawn from Margince".
+# The CLI keeps a per-project list of MCP servers an operator has turned off, and
+# it is keyed on the server's NAME. A plain product name is what a developer
+# calls their own hand-wired server, so a lane using one inherits whatever
+# enable/disable state that developer left behind: the server comes up disabled,
+# the assistant is handed zero tools, and the checker reports every scenario as
+# "the answer was not drawn from Margince" — the product blamed for one line of
+# somebody's local configuration.
 #
-# --strict-mcp-config does not help: it ignores other CONFIGURATIONS, not the
-# disable list. And the server cannot be re-enabled from the /mcp dialog either,
-# because it is injected at runtime and so is never a CONFIGURED server — only
-# its disable entry persists. A distinctive name is what decouples the two.
+# Neither obvious escape works. --strict-mcp-config ignores other
+# CONFIGURATIONS, not the disable list; and the server cannot be re-enabled from
+# the interactive MCP dialog, because it is injected at runtime and so is never
+# a CONFIGURED server — only its disable entry persists. So the lane takes a
+# name nobody would hand-wire, and the guard in run_once catches the next cause.
 MCP_SERVER=margince_e2e_llm
 
 # mint_passport signs in and writes the MCP config.
@@ -243,11 +242,11 @@ run_once() {
   # establish it. That probe talks to the stack directly; this asks the CLI what
   # it actually attached, which is a different question with its own answers.
   #
-  # `disabled` is the one that cost an afternoon, and MCP_SERVER's comment above
-  # says why it happened and how the name now prevents it. The guard stays
-  # regardless: the next cause of an unattached server will be a different one,
-  # and what makes this expensive is not the cause but that the lane reports it
-  # as the product failing.
+  # MCP_SERVER's comment above covers the `disabled` cause and how the name now
+  # prevents it. This guard is not about that cause: the next reason a server
+  # fails to attach will be a different one, and what makes any of them
+  # expensive is not the cause but that the lane reports it as the product
+  # failing.
   local status
   status="$(python3 -c '
 import json, sys

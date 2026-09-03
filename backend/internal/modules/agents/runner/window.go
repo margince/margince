@@ -279,7 +279,7 @@ Rules:
 - The trigger is ` + triggerProvenance + `: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
-- ` + surfaceSchemaRules + `- `)
+` + surfaceSchemaRules + `- `)
 	b.WriteString(fence.Rule("captured external"))
 	// The rule governs the run's final summary, which is filed on a record the
 	// whole team reads. Empty when the caller passed none — the certification
@@ -304,17 +304,27 @@ Available tools:
 // independently of any schema. A rule true of one tool belongs in that tool's
 // own description, where it is paid for once by the tool that needs it.
 //
-// It costs the frame ~40 tokens on every run and the compaction saves ~1,165 on
-// every listing. The frame's own tokens are published in
-// docs/reference/agent-tool-budget.md, because a saving that quietly re-spends
-// part of itself somewhere unmeasured is the shape this whole change is against.
+// It is paid once per run against what the compaction saves on every listing.
+// No figure is written here on purpose: both numbers are DERIVED and published
+// (system_frame_tokens and catalog.tokens in docs/reference/agent-tool-budget.json),
+// and a hand-typed one in a change whose whole subject is token counts is the
+// first thing to go stale — the first draft of this comment said ~40 where the
+// measured cost is ~65.
+//
+// The retry key's meaning comes from mcp.ReservedIdempotencyKeyRule, which the
+// member's own schema description also reads. Two hand-written copies of one
+// rule would drift with nothing failing, and every check on it matches the text.
+//
+// COMPLETE BULLET LINES, leading dash included. It was stitched between dashes
+// supplied by the caller, which made the constant unreadable alone and meant a
+// third sentence had to get punctuation right in two places.
 //
 // One line per omission, and no more: the schema-equivalence gate asserts the
 // other direction too — the frame states nothing about a member the compaction
 // leaves in place.
-const surfaceSchemaRules = `An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.
-- Any mutating tool accepts an optional ` + "`" + mcp.ReservedIdempotencyKeyArg + "`" + ` string. Same key, same result; a key reused with other arguments is refused.
-`
+const surfaceSchemaRules = "- An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.\n" +
+	"- Any mutating tool accepts an optional `" + mcp.ReservedIdempotencyKeyArg + "` string. " +
+	mcp.ReservedIdempotencyKeyRule + "\n"
 
 // SystemFrameTokens is what the system prompt costs BEFORE any tool is listed:
 // the output contract, the rules — surfaceSchemaRules included — and the prompt

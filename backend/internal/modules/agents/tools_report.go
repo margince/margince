@@ -156,23 +156,49 @@ func describeReportCatalog(catalog []ReportCatalogEntry) string {
 // reports group by `pipeline_id` and `stage_id`, and naming an id a caller
 // cannot obtain is a correct refusal that dead-ends.
 //
-// It sits HERE and not only in the document because the obligation follows the
+// It sits HERE as well as in the document because the obligation follows the
 // NAMES: TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines reads the
 // input schema, and restoring the defaults put those ids back into it. When the
 // first pass deferred the defaults, the ids left the schema and this sentence
 // went with them — correctly. They are back, so it is.
 //
-// Keyed on the vocabularies actually rendered, so a catalog without those keys
-// does not carry advice about them.
+// The predicate and the sentence are SHARED with the document rather than
+// re-typed there: they were two copies of one obligation and had already
+// drifted by a word.
 func writePipelineSource(b *strings.Builder, catalog []ReportCatalogEntry) {
+	if catalogNamesAPipelineID(catalog) {
+		b.WriteString(" ")
+		b.WriteString(pipelineIDProvenance)
+	}
+}
+
+// pipelineIDProvenance is the one sentence saying where those ids come from,
+// read by run_report's description and by the published document.
+const pipelineIDProvenance = "A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines."
+
+// catalogNamesAPipelineID reports whether any rendered vocabulary names an id a
+// caller has to obtain elsewhere. Keyed on what is actually rendered, so a
+// catalog without those keys carries no advice about them.
+func catalogNamesAPipelineID(catalog []ReportCatalogEntry) bool {
 	for _, entry := range catalog {
 		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
 			if slices.Contains(names, "pipeline_id") || slices.Contains(names, "stage_id") {
-				b.WriteString(" A `pipeline_id` or `stage_id` in a plan comes from list_pipelines.")
-				return
+				return true
 			}
 		}
 	}
+	return false
+}
+
+// RenderedReportKeyGuidance is what run_report's `report` argument says about
+// the catalog, for the composition to hold against the engine's own specs.
+//
+// Exported for ONE reader: the gate that every enum key is described by its
+// default answer. That obligation belongs to the composition, which owns the
+// prebuilt specs, and it cannot be checked without the rendered text this
+// package produces.
+func RenderedReportKeyGuidance(catalog []ReportCatalogEntry) string {
+	return describeReportCatalog(catalog)
 }
 
 // writeReportDefaults renders what each report answers with no plan — the one

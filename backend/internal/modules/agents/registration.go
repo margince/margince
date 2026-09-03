@@ -190,16 +190,58 @@ func assertObjectSchemas(spec mcp.ToolSpec) error {
 		if s.raw == nil {
 			continue
 		}
-		var declared struct {
-			Type string `json:"type"`
-		}
+		// Decoded ONCE, as members, because two things are judged from it: the
+		// declared type and whether the schema composes. Decoding twice would
+		// mean a second error to either report redundantly or swallow.
+		var declared map[string]json.RawMessage
 		if err := json.Unmarshal(s.raw, &declared); err != nil {
 			return fmt.Errorf("%s has an %s that is not valid JSON, which makes the whole tools/list response unencodable: %w",
 				spec.Name, s.field, err)
 		}
-		if declared.Type != "object" {
+		var declaredType string
+		if raw, stated := declared["type"]; stated {
+			if err := json.Unmarshal(raw, &declaredType); err != nil {
+				return fmt.Errorf("%s's %s declares a `type` that is not a string: %w", spec.Name, s.field, err)
+			}
+		}
+		if declaredType != "object" {
 			return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
-				spec.Name, s.field, declared.Type)
+				spec.Name, s.field, declaredType)
+		}
+		// A COMPOSING schema is refused for EVERY served spec, not only the
+		// mutating ones spliceRetryKey happens to walk.
+		//
+		// It was refused there alone, which made a true statement about part of
+		// the surface: the runner's listing renderer reaches an object schema
+		// through `properties` and `items` and nowhere else, so a read-only tool
+		// composing its schema would have escaped the compaction in silence —
+		// nothing failing, and the headroom the budget page publishes larger
+		// than the headroom that exists. This is the same obligation as one
+		// fitness function instead of a point check.
+		if err := assertNoSchemaComposition(spec.Name, s.field, declared); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// assertNoSchemaComposition refuses a schema this surface cannot reason about.
+//
+// Two things depend on an object schema being reachable by walking `properties`
+// and `items`: spliceRetryKey, which cannot add a top-level member to a schema
+// whose closed branch would then reject it, and the runner's listing
+// compaction, which would leave a composed branch unvisited. Neither is a
+// judgement about JSON Schema — they are limits of this tree, so a schema that
+// composes gets an answer at boot rather than a puzzle at call time.
+//
+// It takes the DECODED members rather than the bytes, so there is one decode
+// and no second error to swallow.
+func assertNoSchemaComposition(tool, field string, shape map[string]json.RawMessage) error {
+	for _, keyword := range []string{"allOf", "anyOf", "oneOf", "$ref"} {
+		if _, composed := shape[keyword]; composed {
+			return fmt.Errorf("%s's %s uses `%s`, which this surface cannot reason about: "+
+				"the retry-key splice cannot reach inside it and the runner's listing renderer "+
+				"would not walk it", tool, field, keyword)
 		}
 	}
 	return nil
@@ -214,8 +256,12 @@ func assertObjectSchemas(spec mcp.ToolSpec) error {
 // catalogue a client caches, and not by every turn of every run. Keep it short
 // anyway — a client holds it for a whole session — but the reason is now the
 // catalogue and not the window.
+//
+// The SENTENCE is mcp.ReservedIdempotencyKeyRule, not a literal here: the
+// runner's frame states the same rule once for the whole listing, and two
+// hand-written copies of it would drift with nothing failing.
 const retryKeyProperty = `{"type":"string","maxLength":255,` +
-	`"description":"Optional. Same key, same result; a key reused with other arguments is refused."}`
+	`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}`
 
 // unitOwned reports whether an extension unit shipped this tool's handler,
 // rather than the core tree. mcp.UnitScopedTool is the one declaration of that

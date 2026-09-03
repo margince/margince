@@ -28,7 +28,7 @@ func mutatingSpec() mcp.ToolSpec {
 		InputSchema: json.RawMessage(`{"type":"object","required":["record_id"],"properties":{` +
 			`"record_id":{"type":"string","description":"The record this happened on."},` +
 			`"idempotency_key":{"type":"string","maxLength":255,` +
-			`"description":"Optional. Same key, same result; a key reused with other arguments is refused."}},` +
+			`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
 			`"additionalProperties":false}`),
 	}
 }
@@ -52,7 +52,7 @@ func nestedSpec() mcp.ToolSpec {
 // it no longer needs, 32 times over, is the sentence the frame states once.
 func TestTheRetryKeysDescriptionIsOmittedAndTheMemberKept(t *testing.T) {
 	compacted := CompactSchema(mutatingSpec().InputSchema)
-	if strings.Contains(compacted, "Same key, same result") {
+	if strings.Contains(compacted, mcp.ReservedIdempotencyKeyRule) {
 		t.Errorf("the retry key's description is still rendered per tool:\n%s", compacted)
 	}
 	// Maps rather than nested structs: JSON Schema's own keywords are camelCase
@@ -129,6 +129,36 @@ func TestAToolThatMentionsTheReservedNameKeepsItsOwnProse(t *testing.T) {
 	}
 }
 
+// THE SECOND PLANTED CASE, and the one the first version of this compaction got
+// wrong: a member NAMED `idempotency_key` nested inside an array's items.
+//
+// The surface owns that name at the ROOT of a mutating tool's schema and nowhere
+// else — spliceRetryKey writes it into the top-level `properties` and refuses a
+// tool that declares it there itself. A nested one is somebody's own per-item
+// key, exactly the shape a batch tool invites, and the frame's sentence is not
+// about it. Nothing in the catalog nests one today, which is what made this
+// invisible rather than harmless.
+func TestANestedMemberOfTheReservedNameKeepsItsDescription(t *testing.T) {
+	const perItem = "The key for THIS item, distinct from the call's own."
+	spec := json.RawMessage(`{"type":"object","properties":{` +
+		`"items":{"type":"array","items":{"type":"object","properties":{` +
+		`"idempotency_key":{"type":"string","description":"` + perItem + `"}},` +
+		`"additionalProperties":false}},` +
+		`"idempotency_key":{"type":"string","maxLength":255,` +
+		`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
+		`"additionalProperties":false}`)
+	compacted := CompactSchema(spec)
+	if !strings.Contains(compacted, perItem) {
+		t.Errorf("a NESTED member named %q lost its own description, which the surface never wrote "+
+			"and the frame does not state:\n%s", mcp.ReservedIdempotencyKeyArg, compacted)
+	}
+	// And the ROOT one is still compacted — otherwise this test would pass by
+	// the compaction having stopped working altogether.
+	if strings.Contains(compacted, "Optional. "+mcp.ReservedIdempotencyKeyRule) {
+		t.Errorf("the root retry key kept its description, so the level rule went the wrong way:\n%s", compacted)
+	}
+}
+
 // `approval_id` is NOT compacted, and that is a decision rather than an
 // omission: it carries three descriptions across nineteen members, and one of
 // them is a per-tool replay instruction that no frame sentence replaces. Keying
@@ -143,6 +173,64 @@ func TestTheApprovalKeyIsNotCompacted(t *testing.T) {
 	compacted := CompactSchema(spec)
 	if !strings.Contains(compacted, instruction) {
 		t.Errorf("approval_id's per-tool replay instruction was compacted away:\n%s", compacted)
+	}
+}
+
+// A property NAMED `items` or `properties` is a property, not a keyword.
+//
+// The distinction is real on this surface: an import tool's input schema
+// declares `properties.items` as an array. It is safe because property names
+// are walked in compactSchemaProperties and keywords in compactSchemaShape, so
+// the two never see each other's namespace — but "safe by construction" is the
+// kind of claim that wants a case, because the fix for something else could
+// merge those two walks without anybody noticing this.
+func TestAPropertyNamedLikeAKeywordIsStillAProperty(t *testing.T) {
+	spec := json.RawMessage(`{"type":"object","properties":{` +
+		`"items":{"type":"array","description":"The rows to import.","items":{"type":"object",` +
+		`"properties":{"ref":{"type":"string","description":"This row's ref."}},` +
+		`"additionalProperties":false}},` +
+		`"properties":{"type":"object","description":"Extra columns, by name."}},` +
+		`"additionalProperties":false}`)
+	compacted := CompactSchema(spec)
+	var parsed struct {
+		Properties map[string]map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal([]byte(compacted), &parsed); err != nil {
+		t.Fatalf("the compacted schema is not valid JSON: %v\n%s", err, compacted)
+	}
+	for _, name := range []string{"items", "properties"} {
+		if _, present := parsed.Properties[name]; !present {
+			t.Errorf("the property named %q was consumed as a JSON Schema keyword:\n%s", name, compacted)
+		}
+	}
+	for _, kept := range []string{`"The rows to import."`, `"This row's ref."`, `"Extra columns, by name."`} {
+		if !strings.Contains(compacted, kept) {
+			t.Errorf("the compaction dropped %s, which is per-tool meaning:\n%s", kept, compacted)
+		}
+	}
+	// The nested closed form still goes, so this is not passing by the
+	// compaction having skipped the whole schema.
+	if strings.Contains(compacted, `"additionalProperties":false`) {
+		t.Errorf("the closed form survived, so nothing was compacted here at all:\n%s", compacted)
+	}
+}
+
+// The shared rule has to survive being pasted into a JSON string literal.
+//
+// registration.go builds the member's `description` by concatenating this
+// constant into a raw Go string that IS JSON — there is no encoder in that path,
+// because the property is a compile-time constant. A quote or a backslash in the
+// rule would produce a schema that does not parse, and the whole tools/list
+// response with it. The runtime enforcement is a boot-time panic in a code path
+// no test exercises by name, so the character set is asserted here instead.
+func TestTheSharedRetryKeyRuleIsSafeInAJSONLiteral(t *testing.T) {
+	if strings.ContainsAny(mcp.ReservedIdempotencyKeyRule, "\"\\\n\r\t") {
+		t.Errorf("mcp.ReservedIdempotencyKeyRule contains a character that needs JSON escaping, and "+
+			"the surface pastes it into a JSON string literal unescaped: %q",
+			mcp.ReservedIdempotencyKeyRule)
+	}
+	if mcp.ReservedIdempotencyKeyRule == "" {
+		t.Error("the shared rule is empty, so the frame states nothing and every check on it is vacuous")
 	}
 }
 
@@ -180,7 +268,7 @@ func TestTheFrameStatesExactlyWhatTheCompactionOmits(t *testing.T) {
 		t.Error("the listing omits the retry key's description and the frame never states the rule, " +
 			"so a run can no longer learn that the argument exists")
 	}
-	if !strings.Contains(frame, "Same key, same result") {
+	if !strings.Contains(frame, mcp.ReservedIdempotencyKeyRule) {
 		t.Error("the frame does not say what a reused key does, which is the whole content of the " +
 			"sentence the listing stopped printing")
 	}
@@ -203,7 +291,7 @@ func TestTheFrameStatesExactlyWhatTheCompactionOmits(t *testing.T) {
 // isolation while ToolListing kept printing the original.
 func TestTheListingRendersTheCompactedSchema(t *testing.T) {
 	listing := ToolListing([]mcp.ToolSpec{mutatingSpec(), nestedSpec()})
-	if strings.Contains(listing, "Same key, same result") {
+	if strings.Contains(listing, mcp.ReservedIdempotencyKeyRule) {
 		t.Errorf("the listing still prints the retry key's description:\n%s", listing)
 	}
 	if strings.Contains(listing, `"additionalProperties":false`) {

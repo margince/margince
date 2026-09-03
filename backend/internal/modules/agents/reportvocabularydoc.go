@@ -28,7 +28,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -165,7 +164,12 @@ func (r ReportVocabularyResource) document() reportVocabularyDoc {
 	entries := make([]reportVocabularyEntry, 0, len(r.catalog))
 	for _, entry := range r.catalog {
 		entries = append(entries, reportVocabularyEntry{
-			Report:     entry.Report,
+			Report: entry.Report,
+			// closedList, never the raw slice: two reports declare no measures
+			// at all, and `null` there reads as a vocabulary not stated rather
+			// than one that is empty — so a caller sends a plausible aggregate
+			// name into an argument that accepts none. The recital this document
+			// replaced wrote `(none)` for exactly this reason.
 			GroupBy:    closedList(entry.GroupBy),
 			Filters:    closedList(entry.Filters),
 			Aggregates: closedList(entry.Aggregates),
@@ -181,29 +185,16 @@ func (r ReportVocabularyResource) document() reportVocabularyDoc {
 	}
 }
 
-// closedList renders an empty vocabulary as `[]` and never as `null`, because
-// the two say different things to a reader: `[]` is a closed list with nothing
-// in it, and `null` reads as a list not stated — an omission. Two reports
-// declare no measures at all, and a caller who reads that as an omission sends
-// a plausible aggregate name into an argument that accepts none. The recital
-// this document replaced wrote `(none)` for exactly this reason.
-func closedList(names []string) []string {
-	if names == nil {
-		return []string{}
-	}
-	return names
-}
-
 // reportVocabularySurfaceNotes closes the obligation the vocabularies open:
 // several reports filter and group by `pipeline_id` and `stage_id`, and naming
 // an id a caller cannot obtain is a correct refusal that dead-ends.
+//
+// Predicate and sentence both shared with run_report's own description
+// (writePipelineSource), because one obligation stated in two places is what
+// drifts.
 func reportVocabularySurfaceNotes(catalog []ReportCatalogEntry) []string {
-	for _, entry := range catalog {
-		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
-			if slices.Contains(names, "pipeline_id") || slices.Contains(names, "stage_id") {
-				return []string{"A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines."}
-			}
-		}
+	if catalogNamesAPipelineID(catalog) {
+		return []string{pipelineIDProvenance}
 	}
 	return nil
 }

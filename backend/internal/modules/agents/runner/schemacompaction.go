@@ -29,12 +29,14 @@ import (
 //     report plan — so the frame's sentence is true of the surface rather than a
 //     promise the schema was making alone.
 //
-// KEYED ON OWNERSHIP, never on description text. Dropping a member because its
-// wording matched would go wrong the first time a tool worded its own; the
-// surface owns `idempotency_key` by name, which is why the name lives in the
-// port. `approval_id` is deliberately NOT compacted: it carries three
-// descriptions and one of them is a per-tool replay instruction that no frame
-// sentence replaces.
+// KEYED ON OWNERSHIP, never on description text, and ownership means the name
+// AT THE LEVEL the surface writes it. Dropping a member because its wording
+// matched would go wrong the first time a tool worded its own; dropping one
+// because its NAME matched at any depth would go wrong the first time a batch
+// tool carried a per-item key of the same name, which is why the level is part
+// of the rule (atSchemaRoot below). `approval_id` is deliberately NOT compacted
+// at all: it carries three descriptions and one of them is a per-tool replay
+// instruction that no frame sentence replaces.
 //
 // The member itself STAYS — only its description goes. A model still has to
 // know the argument exists, its type and its bound to send one.
@@ -58,24 +60,44 @@ func CompactSchema(inputSchema json.RawMessage) string {
 	if err := json.Unmarshal(inputSchema, &shape); err != nil {
 		return string(inputSchema)
 	}
-	compacted, err := json.Marshal(compactSchemaShape(shape))
+	compacted, err := json.Marshal(compactSchemaShape(shape, atSchemaRoot))
 	if err != nil {
 		return string(inputSchema)
 	}
 	return string(compacted)
 }
 
+// atSchemaRoot / nestedInSchema say which level compactSchemaShape is walking,
+// because ONE of the two omissions is level-sensitive and the other is not.
+//
+// The surface owns `idempotency_key` at the ROOT of a mutating tool's schema and
+// nowhere else: spliceRetryKey writes it into the top-level `properties` and
+// refuses a tool that declares it there itself. A member of that name nested
+// inside an array's items is somebody's own per-item key — a batch tool's, say —
+// and the frame's sentence is not about it, so taking its description away would
+// be silently removing per-tool meaning.
+//
+// `"additionalProperties":false` is not level-sensitive: it means the same thing
+// wherever it appears, and the frame's sentence covers all of it.
+const (
+	atSchemaRoot   = true
+	nestedInSchema = false
+)
+
 // compactSchemaShape rewrites one schema object and everything nested under it.
 //
 // It recurses because `additionalProperties` is not only a top-level member:
 // run_report's `aggregates` items close themselves, and the whole-catalog count
-// is 77 across 70 tools for that reason. The recursion walks `properties` and
-// `items`, which are the two places this surface nests an object schema.
+// is 78 across 70 tools for that reason. The recursion walks `properties` and
+// `items`, which are the two places this surface nests an object schema — and
+// that claim is HELD rather than asserted: assertObjectSchemas refuses a served
+// schema that composes with allOf/anyOf/oneOf/$ref, so there is no third place
+// for an object schema to hide.
 //
 // Read back as members and re-marshalled, the way spliceRetryKey does it:
 // marshalling a map sorts its keys, so every process renders the same bytes and
 // the equivalence gate can compare them.
-func compactSchemaShape(shape map[string]json.RawMessage) map[string]json.RawMessage {
+func compactSchemaShape(shape map[string]json.RawMessage, root bool) map[string]json.RawMessage {
 	out := make(map[string]json.RawMessage, len(shape))
 	for key, raw := range shape {
 		switch key {
@@ -88,7 +110,7 @@ func compactSchemaShape(shape map[string]json.RawMessage) map[string]json.RawMes
 			}
 			out[key] = raw
 		case schemaProperties:
-			out[key] = compactSchemaProperties(raw)
+			out[key] = compactSchemaProperties(raw, root)
 		case schemaItems:
 			out[key] = compactNestedSchema(raw)
 		default:
@@ -98,16 +120,16 @@ func compactSchemaShape(shape map[string]json.RawMessage) map[string]json.RawMes
 	return out
 }
 
-// compactSchemaProperties compacts each property's own schema, and strips the
-// description from the one member the surface owns.
-func compactSchemaProperties(raw json.RawMessage) json.RawMessage {
+// compactSchemaProperties compacts each property's own schema, and at the ROOT
+// strips the description from the one member the surface owns there.
+func compactSchemaProperties(raw json.RawMessage, root bool) json.RawMessage {
 	var properties map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &properties); err != nil {
 		return raw
 	}
 	rewritten := make(map[string]json.RawMessage, len(properties))
 	for name, property := range properties {
-		if name == mcp.ReservedIdempotencyKeyArg {
+		if root && name == mcp.ReservedIdempotencyKeyArg {
 			rewritten[name] = withoutDescription(property)
 			continue
 		}
@@ -127,7 +149,7 @@ func compactNestedSchema(raw json.RawMessage) json.RawMessage {
 	if err := json.Unmarshal(raw, &nested); err != nil {
 		return raw
 	}
-	encoded, err := json.Marshal(compactSchemaShape(nested))
+	encoded, err := json.Marshal(compactSchemaShape(nested, nestedInSchema))
 	if err != nil {
 		return raw
 	}

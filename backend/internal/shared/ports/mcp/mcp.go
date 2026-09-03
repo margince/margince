@@ -134,10 +134,31 @@ func (s ToolSpec) ReadOnly() bool {
 // surface for a string or keeping a second copy of it — and a second copy of an
 // argument NAME is the one that goes wrong silently, because a listing that
 // omits `idempotency_ke` still renders and still looks right.
+//
+// ReservedApprovalIDArg has ONE production reader — the surface's own alias —
+// and is here because the two are the surface's reserved pair and a reader
+// looking for one should find the other beside it. What holds it to that and
+// stops it drifting into the frame is the runner's assertion that the frame
+// states nothing about a member the listing still renders per tool.
 const (
 	ReservedApprovalIDArg     = "approval_id"
 	ReservedIdempotencyKeyArg = "idempotency_key"
 )
+
+// ReservedIdempotencyKeyRule is what the retry key MEANS, spelled once.
+//
+// Two surfaces state it and they must not drift: the tool catalogue carries it
+// as the member's own `description` (the surface splices it into every mutating
+// core tool), and the agent runner's system frame states it once for the whole
+// listing because the listing omits it per tool. It was written out twice, and
+// every check on it matched the literal text — so a reword would have left the
+// frame asserting a rule the catalogue no longer made, with the leak detector
+// searching for a string that was no longer anywhere and passing on nothing.
+//
+// It reads as a bare clause rather than a sentence so each surface can frame it
+// in its own voice: the schema prefixes "Optional.", the frame names the
+// argument and its type first.
+const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with other arguments is refused."
 
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the
