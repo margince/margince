@@ -586,3 +586,115 @@ func TestAReadableThreadIsStillClaimed(t *testing.T) {
 	}
 	t.Fatal("a thread whose message is readable was not claimed")
 }
+
+// TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead is the ordering
+// accident this pass exists to correct.
+//
+// The classifier reads one message and answers about the conversation. Messages
+// of that conversation already imported when the answer came back used to keep
+// their import posture for good: the thread's question is answered, and the
+// unique ledger row stops a second one being opened. In the demo database that
+// is 230 messages held on threads their own verdict called ordinary.
+func TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	const lawyer = "anwalt@kanzlei.example"
+
+	judged := seedHeldThreadMail(t, e, "thread-siblings", customer, "Nachbestellung")
+	alsoCustomer := seedHeldThreadMail(t, e, "thread-siblings", customer, "Nachtrag")
+	fromLawyer := seedHeldThreadMail(t, e, "thread-siblings", lawyer, "Aufhebungsvertrag")
+	threadID := seedThreadQuestion(t, e, "thread-siblings", judged)
+
+	runConfidentiality(t, e, threadID, confidentialityOrdinary, 0.95)
+
+	if got := activityAudience(t, e, judged); got != "workspace" {
+		t.Fatalf("the judged message is %q, want workspace", got)
+	}
+	if got := activityAudience(t, e, alsoCustomer); got != "workspace" {
+		t.Fatalf("a second message from the sender the verdict READ is %q, want workspace: "+
+			"it is the same correspondence, and only import order kept it held", got)
+	}
+	if got := importVerdictFor(t, e, alsoCustomer, e.Rep1); got != capture.VerdictCleared {
+		t.Fatalf("that message's import row says %q, want cleared", got)
+	}
+
+	// The message from a sender the verdict never read is NOT published on an
+	// answer about somebody else's mail.
+	if got := activityAudience(t, e, fromLawyer); got != "participants" {
+		t.Fatalf("a message from a sender the verdict never read is %q, want participants", got)
+	}
+	if got := threadStatus(t, e, threadID); got != capture.VerdictPending {
+		t.Fatalf("thread status = %q, want pending: the unread sender must be asked about", got)
+	}
+	var pointer ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT first_activity_id FROM capture_thread_verdict WHERE id = $1`, threadID).Scan(&pointer)
+	}); err != nil {
+		t.Fatalf("reading the re-opened pointer: %v", err)
+	}
+	if pointer != fromLawyer {
+		t.Fatalf("the re-opened question points at %s, want the lawyer's message %s", pointer, fromLawyer)
+	}
+	// The senders this verdict cleared are remembered, so the next message from
+	// one of them inherits instead of buying another model call.
+	var seen []string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT seen_addresses FROM capture_thread_verdict WHERE id = $1`, threadID).Scan(&seen)
+	}); err != nil {
+		t.Fatalf("reading seen addresses: %v", err)
+	}
+	if len(seen) == 0 || seen[0] != customer {
+		t.Fatalf("seen addresses = %v, want the customer kept across the re-open", seen)
+	}
+}
+
+// TestAHoldingVerdictHoldsEverySibling is the other half of the admission rule.
+//
+// "This conversation is private" is true of the whole conversation whoever
+// wrote which part, so a holding verdict takes every message — including the
+// one from a sender it never read, which an opening verdict must not touch.
+func TestAHoldingVerdictHoldsEverySibling(t *testing.T) {
+	e := integration.Setup(t)
+	judged := seedHeldThreadMail(t, e, "thread-personnel", "hr@kunde.example", "Kündigung")
+	fromLawyer := seedHeldThreadMail(t, e, "thread-personnel", "anwalt@kanzlei.example", "Aufhebung")
+	threadID := seedThreadQuestion(t, e, "thread-personnel", judged)
+
+	runConfidentiality(t, e, threadID, confidentialityPersonnel, 0.95)
+
+	for _, id := range []ids.UUID{judged, fromLawyer} {
+		if got := activityAudience(t, e, id); got != "participants" {
+			t.Fatalf("a message on a personnel thread is %q, want participants", got)
+		}
+		if got := importVerdictFor(t, e, id, e.Rep1); got != capture.VerdictHeld {
+			t.Fatalf("its import row says %q, want held — including the message the "+
+				"classifier never read, because the conversation is what was judged", got)
+		}
+	}
+	if got := threadStatus(t, e, threadID); got == capture.VerdictPending {
+		t.Fatal("a held thread was re-opened; new information that it involves somebody " +
+			"unexpected is never a reason to re-ask whether it may be published")
+	}
+}
+
+// TestOneSeatsSiblingStampDoesNotPublishAColleaguesHeldMessage is the per-owner
+// model at the point the wider stamp could break it.
+func TestOneSeatsSiblingStampDoesNotPublishAColleaguesHeldMessage(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	judged := seedHeldThreadMail(t, e, "thread-two-seats", customer, "Nachbestellung")
+	shared := seedHeldThreadMail(t, e, "thread-two-seats", customer, "Nachtrag")
+	addImportRowFor(t, e, shared, e.Rep2)
+	threadID := seedThreadQuestion(t, e, "thread-two-seats", judged)
+
+	runConfidentiality(t, e, threadID, confidentialityOrdinary, 0.95)
+
+	if got := activityAudience(t, e, shared); got != "participants" {
+		t.Fatalf("a message a colleague's mailbox still holds is %q, want participants: "+
+			"one seat's answer is not the other's", got)
+	}
+	if got := importVerdictFor(t, e, shared, e.Rep1); got != capture.VerdictCleared {
+		t.Fatalf("the answering seat's own contribution says %q, want cleared", got)
+	}
+}

@@ -236,10 +236,30 @@ func (e *ConfidentialityVerdictEngine) apply(
 		if err := e.threads.RecordOutcomeTx(ctx, tx, row, status, kind); err != nil {
 			return err
 		}
+		// The same answer, applied to the messages of this thread this seat had
+		// already imported when it came back. A message that arrives AFTER a
+		// verdict inherits it; one that arrived before it used to keep its
+		// import posture for good, because the thread's question is answered
+		// and the unique ledger row stops a second one being opened. Import
+		// order is the accident; the admission rule is unchanged.
+		outcome, err := e.threads.RecordOutcomeOnThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
+		if err != nil {
+			return err
+		}
 		if err := e.retractPrivateContactsTx(ctx, tx, row, kind); err != nil {
 			return err
 		}
-		return recomputeJudgedMessageTx(ctx, tx, row)
+		if err := recomputeJudgedMessageTx(ctx, tx, row); err != nil {
+			return err
+		}
+		// Each stamped sibling re-derived over every seat's contribution, so a
+		// colleague's mailbox still holding this message keeps holding it.
+		for _, id := range outcome.Stamped {
+			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's

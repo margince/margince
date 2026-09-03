@@ -101,7 +101,18 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 // a new recipient is copied on is still the conversation the classifier read;
 // a message WRITTEN by somebody it never saw is not.
 func senderWasSeen(rec connector.NormalizedRecord, seen []string) bool {
-	from := strings.ToLower(strings.TrimSpace(rec.Counterparty.Email))
+	return addressWasSeen(rec.Counterparty.Email, seen)
+}
+
+// addressWasSeen is that rule with the message taken away, so the arriving
+// message and an already-stored sibling are admitted on identical terms.
+//
+// Spelled once on purpose: two copies of "was this sender part of what the
+// verdict read" drift, and the direction they drift in publishes mail.
+//
+// Held by: TestTheSeenSenderRuleIsSpelledOnce (backend/gates/seenaddressrule_test.go)
+func addressWasSeen(address string, seen []string) bool {
+	from := strings.ToLower(strings.TrimSpace(address))
 	if from == "" {
 		return false
 	}
