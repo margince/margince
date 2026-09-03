@@ -16,23 +16,23 @@ exists, and what it displaces is the observations the run is reasoning over.
 Each agent declares its tools in [`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml)
 under `agent_loop`'s `agents:`. Read the numbers below **before** adding one.
 
-The window is 28672 tokens. An agent's listing may take 20309 of them (17/24). The whole
-served catalog is held to 25088 — a floor for the certification lane, not a budget any
+The window is 24576 tokens. An agent's listing may take 17408 of them (17/24). The whole
+served catalog is held to 21504 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
 ## The declared agents
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1688 | 5% | 18621 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2535 | 8% | 17774 | 15 | 8 |
-| _whole served catalog, for scale_ | 69 | 21227 | 74% | — | — | — |
+| `morning_brief` | 5 | 1688 | 6% | 15720 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14873 | 15 | 8 |
+| _whole served catalog, for scale_ | 69 | 21227 | 86% | — | — | — |
 
 ### `morning_brief`
 
 > Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
 
-Attaches 5 tools for 1688 tokens, leaving 18621 of its budget and 26984 tokens of the
+Attaches 5 tools for 1688 tokens, leaving 15720 of its budget and 22888 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -55,7 +55,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2535 tokens, leaving 17774 of its budget and 26137 tokens of the
+Attaches 7 tools for 2535 tokens, leaving 14873 of its budget and 22041 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`

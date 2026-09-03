@@ -301,11 +301,17 @@ const (
 // 24,000 leaves 3,000 for those three, which is ample for a one-turn replay.
 //
 // No feature is expected to argue with this number, and one that has to is a
-// signal about the CEILING rather than about itself. That happened once: at a
-// PromptTokenCeiling of 24,000 this floor left 63 tokens for a 67-tool catalog,
-// and the next verb anyone added failed here (margince/margince#3882). The
-// ceiling is now derived from the local provider's own cap rather than picked,
-// which is what gives this fraction room to mean something again.
+// signal about the CEILING rather than about itself. That happened at a
+// PromptTokenCeiling of 24,000, where this floor left 63 tokens for a 67-tool
+// catalog and the next verb anyone added failed here (margince/margince#3882).
+// The ceiling is now derived from the local provider's cap rather than picked.
+//
+// THE ROOM IS STILL SMALL: a few hundred tokens, which is one or two more
+// verbs. That is not an oversight to trim the ceiling for — the slack the
+// ceiling holds covers prompt bytes this side cannot count, and spending it
+// here buys tool descriptions at the price of truncating runs. When this fails
+// again, the question is which tools the certification lane needs to offer at
+// once, not how to make the number bigger.
 //
 // The per-agent bound above is the one that rations anything.
 const (
