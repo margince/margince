@@ -27418,6 +27418,17 @@ export interface components {
             subject?: components["schemas"]["AttentionSubject"];
             deal?: components["schemas"]["WorklistDealFacts"];
             batch?: components["schemas"]["WorklistBatch"];
+            /**
+             * @description The two records a `dedupe_candidate` proposes to merge, and the evidence that
+             *     raised it — the same payload the lane feed carries, forwarded so the decision
+             *     can be MADE where it is shown rather than sent somewhere to be made.
+             *
+             *     Present only when the reader may see BOTH sides; the lane's own
+             *     both-sides-visible rule decides that, and an item arriving without it offers
+             *     no merge. A row that named neither record could only ask a reader to go and
+             *     look, which is the hand-off this queue exists to remove.
+             */
+            pair?: components["schemas"]["AttentionPair"];
             move?: components["schemas"]["WorklistMove"];
             /**
              * Format: date-time

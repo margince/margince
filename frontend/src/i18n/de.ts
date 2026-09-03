@@ -7683,6 +7683,12 @@ export const de = {
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
+  "worklist.pair.ask": "Welcher Datensatz soll bleiben?",
+  "worklist.pair.keep": "Diesen behalten",
+  "worklist.pair.notDuplicate": "Nicht dieselben",
+  "worklist.pair.related": "{count} verknüpft",
+  "worklist.pair.failed":
+    "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
   "worklist.needsPrep": "Unvorbereitet",
   "worklist.pane.title": "Zu diesem Datensatz",
   "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",

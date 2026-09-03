@@ -36317,6 +36317,17 @@ components:
         subject: { $ref: '#/components/schemas/AttentionSubject' }
         deal: { $ref: '#/components/schemas/WorklistDealFacts' }
         batch: { $ref: '#/components/schemas/WorklistBatch' }
+        pair:
+          allOf: [{ $ref: '#/components/schemas/AttentionPair' }]
+          description: |
+            The two records a `dedupe_candidate` proposes to merge, and the evidence that
+            raised it — the same payload the lane feed carries, forwarded so the decision
+            can be MADE where it is shown rather than sent somewhere to be made.
+
+            Present only when the reader may see BOTH sides; the lane's own
+            both-sides-visible rule decides that, and an item arriving without it offers
+            no merge. A row that named neither record could only ask a reader to go and
+            look, which is the hand-off this queue exists to remove.
         move: { $ref: '#/components/schemas/WorklistMove' }
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
