@@ -10753,6 +10753,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How current the sources behind the numbers are.
+         * @description Source health: which connectors the nightly check could read, how far back each
+         *     reaches, and what it could not open.
+         *
+         *     Gated on `data_coverage`, which admin and ops hold and nobody else does. That is a
+         *     decision rather than an oversight: a rep shown their installation's connector
+         *     health has been handed somebody else's job, and a screen reporting a problem they
+         *     cannot act on teaches them to ignore the screen.
+         *
+         *     Only a `checked` source carries `checked_through`. A date on a stale or unavailable
+         *     one would read as "checked up to then" when nothing was read at all — which is the
+         *     difference between a quiet week and a broken connector.
+         */
+        get: operations["getDataCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open findings this caller can see.
+         * @description What the nightly check found, ordered the way a manager with ten minutes before a
+         *     call needs it: high severity first, then by the money at stake.
+         *
+         *     The list is SCOPED to what the caller can open. The scan itself reads the whole
+         *     pipeline — a duplicate-detection rule seeing one rep's deals would report no
+         *     duplicates — and that decision is paid for here: a finding about a deal the caller
+         *     cannot see is a finding they never meet. There is deliberately no count of what was
+         *     withheld, because a count of what somebody may not read is itself a statement about
+         *     how much of it there is.
+         *
+         *     `claim` and `observed` hold structured values whose keys depend on the exception
+         *     type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
+         *     body: a frozen copy of a protected sentence outlives the protection on its source.
+         */
+        get: operations["listInputChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/assurance/exceptions/{id}/resolve": {
         parameters: {
             query?: never;
@@ -22415,6 +22477,44 @@ export interface components {
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
         };
+        /** @description One finding from the nightly input check. */
+        InputCheck: {
+            /** Format: uuid */
+            id: string;
+            /** @description Which question noticed it. The key set in `claim` and `observed` depends on this. */
+            type: string;
+            /** @enum {string} */
+            subject_kind: "deal" | "signal" | "offer" | "contract";
+            /** Format: uuid */
+            subject_id: string;
+            /** @enum {string} */
+            severity: "low" | "medium" | "high";
+            /**
+             * Format: int64
+             * @description How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+             */
+            affected_minor?: number;
+            currency?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** @enum {string} */
+            status: "open" | "resolved" | "expired";
+            /** @description What the record says, as structured values only. */
+            claim?: {
+                [key: string]: unknown;
+            };
+            /** @description What the check found, as structured values only. */
+            observed?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            first_seen_at: string;
+            /**
+             * Format: date-time
+             * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+             */
+            last_seen_at: string;
+        };
         ResolveInputCheck: {
             /**
              * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
@@ -22435,6 +22535,15 @@ export interface components {
              * @description When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
              */
             expires_at?: string;
+        };
+        /** @description How current the sources behind the forecast's numbers are. */
+        DataCoverage: {
+            /** Format: uuid */
+            run_id: string;
+            /** Format: date-time */
+            as_of: string;
+            /** @description The sources the run tried, and how far it reached into each. A source absent from this list is one the run did not attempt — different from one it attempted and could not read, which the state field says. */
+            sources: components["schemas"]["ForecastAssuranceSource"][];
         };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
@@ -22633,7 +22742,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -23159,6 +23268,8 @@ export interface components {
             score?: number | null;
             /** @description For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
+            /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /**
              * @description Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
              * @enum {string|null}
@@ -45806,6 +45917,59 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    getDataCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The most recent run's source health. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataCoverage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No run has completed yet. A fresh installation has not been checked. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listInputChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open findings, most material first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InputCheck"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     resolveInputCheck: {

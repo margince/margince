@@ -15905,6 +15905,69 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No run has completed yet. A fresh installation has not been checked.
+  /analytics/coverage:
+    get:
+      tags: [Reports]
+      operationId: getDataCoverage
+      summary: How current the sources behind the numbers are.
+      description: |
+        Source health: which connectors the nightly check could read, how far back each
+        reaches, and what it could not open.
+
+        Gated on `data_coverage`, which admin and ops hold and nobody else does. That is a
+        decision rather than an oversight: a rep shown their installation's connector
+        health has been handed somebody else's job, and a screen reporting a problem they
+        cannot act on teaches them to ignore the screen.
+
+        Only a `checked` source carries `checked_through`. A date on a stale or unavailable
+        one would read as "checked up to then" when nothing was read at all — which is the
+        difference between a quiet week and a broken connector.
+      x-mcp-tool: { verb: data_coverage, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The most recent run's source health.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DataCoverage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No run has completed yet. A fresh installation has not been checked.
+  /forecast/assurance/exceptions:
+    get:
+      tags: [Reports]
+      operationId: listInputChecks
+      summary: The open findings this caller can see.
+      description: |
+        What the nightly check found, ordered the way a manager with ten minutes before a
+        call needs it: high severity first, then by the money at stake.
+
+        The list is SCOPED to what the caller can open. The scan itself reads the whole
+        pipeline — a duplicate-detection rule seeing one rep's deals would report no
+        duplicates — and that decision is paid for here: a finding about a deal the caller
+        cannot see is a finding they never meet. There is deliberately no count of what was
+        withheld, because a count of what somebody may not read is itself a statement about
+        how much of it there is.
+
+        `claim` and `observed` hold structured values whose keys depend on the exception
+        type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
+        body: a frozen copy of a protected sentence outlives the protection on its source.
+      x-mcp-tool: { verb: list_input_checks, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The open findings, most material first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/InputCheck' }
+                additionalProperties: false
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /forecast/assurance/exceptions/{id}/resolve:
     post:
       tags: [Reports]
@@ -30751,6 +30814,45 @@ components:
             much of it there is, so the reader is told the figure is partial and not by
             how much.
       additionalProperties: false
+    InputCheck:
+      type: object
+      description: One finding from the nightly input check.
+      required: [id, type, subject_kind, subject_id, severity, status, first_seen_at, last_seen_at]
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          description: >-
+            Which question noticed it. The key set in `claim` and `observed` depends on
+            this.
+        subject_kind: { type: string, enum: [deal, signal, offer, contract] }
+        subject_id: { type: string, format: uuid }
+        severity: { type: string, enum: [low, medium, high] }
+        affected_minor:
+          type: integer
+          format: int64
+          description: >-
+            How much money the finding puts in question. Absent where that cannot be said
+            — which is different from zero, and zero would claim nothing is at stake.
+        currency: { type: string }
+        owner_id: { type: string, format: uuid }
+        status: { type: string, enum: [open, resolved, expired] }
+        claim:
+          type: object
+          additionalProperties: true
+          description: What the record says, as structured values only.
+        observed:
+          type: object
+          additionalProperties: true
+          description: What the check found, as structured values only.
+        first_seen_at: { type: string, format: date-time }
+        last_seen_at:
+          type: string
+          format: date-time
+          description: >-
+            The most recent run that still found it. A finding seen for weeks is a
+            different thing from one that appeared last night.
+      additionalProperties: false
     ResolveInputCheck:
       type: object
       required: [outcome]
@@ -30783,6 +30885,21 @@ components:
           description: >-
             When a suppressing answer stops holding. Omitted, it is the 90-day ceiling;
             beyond the ceiling it is refused rather than shortened.
+      additionalProperties: false
+    DataCoverage:
+      type: object
+      description: How current the sources behind the forecast's numbers are.
+      required: [run_id, as_of, sources]
+      properties:
+        run_id: { type: string, format: uuid }
+        as_of: { type: string, format: date-time }
+        sources:
+          type: array
+          description: >-
+            The sources the run tried, and how far it reached into each. A source absent
+            from this list is one the run did not attempt — different from one it
+            attempted and could not read, which the state field says.
+          items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
       additionalProperties: false
     ForecastAssurance:
       type: object
@@ -31034,7 +31151,7 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast]
+         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage]
 
     RbacAction:
       type: string
@@ -31826,6 +31943,17 @@ components:
             filters offer, not every type `taggable` admits. It is what tells a searcher
             whether the word is worth opening before they open it. Null on every other hit
             type, and null when no count was taken.
+        email_summary:
+          allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            The canonical email row, on an `activity` hit whose activity is an email THIS
+            caller may read. Null on every other hit type, and null for a non-email activity
+            — a call, a note, a task and a meeting are activities too, and each keeps its
+            generic hit. An email whose content is not this caller's produces no hit at all,
+            because the activity branch is content-gated. A client renders the canonical row
+            when this is present and falls back to `title`/`snippet` when it is not.
         trust_tier:
           type: [string, 'null']
           enum: [authoritative, external, unverified, null]
@@ -36874,7 +37002,18 @@ components:
             draws a heading when the band changes and never re-sorts.
         dispositions:
           type: array
-          items: { type: string, enum: [snooze, not_mine, not_sales] }
+          items:
+            type: string
+            enum: [snooze, not_mine, not_sales]
+            # Named explicitly. These three values also appear on the activity
+            # disposition event, and which enum gets the BARE constant is
+            # decided by generator ordering — so adding an unrelated schema
+            # elsewhere in the contract can flip it and break the build in a
+            # module neither schema belongs to.
+            x-enum-varnames:
+              - WorklistDispositionSnooze
+              - WorklistDispositionNotMine
+              - WorklistDispositionNotSales
           description: |
             The ways this row can be PUT DOWN, as the server declares them. A client
             never infers this from `source`: which rows a rep may judge is a server

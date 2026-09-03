@@ -319,14 +319,19 @@ func (w *flipWriters) ensurePerson(ctx context.Context, row migration.Row) (migr
 		fullName = overlayUnnamed
 	}
 	in := people.CreatePersonInput{
-		FullName:  fullName,
-		FirstName: fieldStringPtr(row.Fields, "first_name"),
-		LastName:  fieldStringPtr(row.Fields, "last_name"),
-		Title:     fieldStringPtr(row.Fields, "title"),
-		OwnerID:   owner,
-		Address:   overlayAddress(row.Fields),
-		Emails:    flipPersonEmails(row.Fields),
-		Source:    w.provenance(flipObjectPerson, row.ExternalID),
+		// Recorded as the import it is. unknown_legacy is the honest answer
+		// where a door cannot say why a contact exists; here the door knows,
+		// and letting it default would make the same import, arriving through the flip writer
+		// indistinguishable from a rep typing a name in.
+		Acquisition: people.Acquisition{Kind: people.AcquiredPurchasedOrImported},
+		FullName:    fullName,
+		FirstName:   fieldStringPtr(row.Fields, "first_name"),
+		LastName:    fieldStringPtr(row.Fields, "last_name"),
+		Title:       fieldStringPtr(row.Fields, "title"),
+		OwnerID:     owner,
+		Address:     overlayAddress(row.Fields),
+		Emails:      flipPersonEmails(row.Fields),
+		Source:      w.provenance(flipObjectPerson, row.ExternalID),
 	}
 	if _, err := w.landRecord(ctx, flipObjectPerson, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
 		person, err := w.people.CreatePersonTx(ctx, tx, in)

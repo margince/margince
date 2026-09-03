@@ -13,6 +13,14 @@ backend; the Vite/React web UI ships separately). The docs follow the [Diátaxis
 **[principles](principles/README.md)** — the handful of statements about this codebase's shape that
 settle a class of arguments before they start.
 
+**Designing anything a person can see?** [`DESIGN.md`](../DESIGN.md) at the
+repository root is the visual language: the look every new surface is designed
+against, and the research behind it. The plan for landing it, one PR per
+step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md) with its
+two continuations for the record pages and the remaining surfaces. The
+component catalog stays in
+[`frontend/src/design-system/README.md`](../frontend/src/design-system/README.md).
+
 **New to the backend? Start with [tutorials/getting-started.md](tutorials/getting-started.md), then
 [explanation/backend-onboarding.md](explanation/backend-onboarding.md)** — the orientation hub that
 maps the codebase and links everything below.

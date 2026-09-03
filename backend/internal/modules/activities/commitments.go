@@ -240,7 +240,7 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) i
 		// The definition of the set, and the partial index's own predicate.
 		sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindTask))),
 		"a.is_done = false",
-		"a.archived_at IS NULL",
+		activityLive,
 	}
 	// The timeline's own scope rule: an activity carries no owner, so who may
 	// read one is decided by the records it links to. A task is the most

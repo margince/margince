@@ -2,6 +2,11 @@
 
 Read this before you hand-roll a control.
 
+This file is the catalog: what exists and what each thing is for. How a screen
+should LOOK — grounds, chrome, type, depth, the anatomy of a record page — is
+[`DESIGN.md`](../../../DESIGN.md) at the repository root; read that first when
+the question is taste rather than parts.
+
 ## The rule
 
 **Every interactive control comes from this directory.** A native `<select>`, a
@@ -135,6 +140,7 @@ is what makes it findable at a glance for the readers who can see it.
 | `RecordPicker` | Search → candidates → pick, for choosing an existing record | `recordpicker.tsx` | ✅ |
 | `PassportSelect` / `ScopeChips` | Which agent passport, and the scopes it carries | `passportselect.tsx` | ✅ |
 | `Modal` | The one dialog: portalled, Escape-closing, Tab kept inside. `placement="right"` is the drawer form — full height on the right edge, the record behind still legible; on a phone both are the same full-screen sheet | `atoms.tsx` | ✅ (`Dialog` centred, `Drawer` right) |
+| `ResolveSheet` | Answering a finding from the nightly input check, as a right-placed `Modal`. The six outcomes are not interchangeable and which fields a person must fill depends on which they picked: the two SUPPRESSING answers (`value_correct`, `not_relevant`) take a finding off every screen, so both ask why and offer an expiry; `remind_later` asks when it comes back, because a deferral with no date is a dismissal wearing a different word. Those rules MIRROR the server's refusals rather than inventing their own — a sheet that let somebody submit what the server rejects spends their attention on a round trip that was always going to fail, and one demanding more than the server does invents a rule nobody agreed to. It submits only the fields the chosen outcome takes, so an expiry never rides along with a deferral and records a suppression nobody chose. `condition_cleared` is deliberately absent from the outcomes: that is the check's own answer. Holds no copy — three surfaces open it (Analytics, Home, Worklist) and a sheet spelling its own labels would give the same answer three names | `resolvesheet.tsx` | ✅ |
 | `ConfirmModal` | A dialog that asks before something irreversible. It owns the heading, the error line and the Cancel/Confirm pair, so a caller reaching for a bare `Modal` and writing its own `h2` plus a flex footer has written this component again — three lead dialogs had. `confirmDisabled` refuses the confirm as a STATE; `confirmReason` refuses it with a SENTENCE, which is what a precondition the reader could meet needs — `Button`'s own `reason` disables the control, prints the line beside it and wires `aria-describedby`, and a dialog whose confirm is dead with no explanation is a dead end. Pass one or the other, never both | `confirmmodal.tsx` | ✅ |
 | `NamePrompt` | A write whose only input is a name: trigger, dialog, name box, save. It owns the name, the rule that an empty one cannot be saved, and clearing the box on success — the chrome is `ConfirmModal`'s, which is what keeps it from being a second dialog. `onSave` takes a `done` callback rather than returning a promise, because a refused write must leave the dialog open with what was typed still in it; the caller calls `done` from its own success path. Reach for it instead of hand-rolling a `Modal` with a `Field` — the saved-view action did that, and the second surface needing the same question would have asked it differently | `nameprompt.tsx` | ✅ |
 | `OverflowMenu` | The verbs a record offers but a reader rarely wants | `atoms.tsx` | ✅ |

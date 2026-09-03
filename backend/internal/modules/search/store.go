@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -35,6 +36,14 @@ type Store struct {
 	// ask): a tag hit then carries no count, which reads as "not known" and
 	// never as zero.
 	carriedBy TagReachCounter
+	// emailSummaries answers the email row behind an activity hit, for THIS
+	// caller. It is the activities store's own reader, injected by compose
+	// because a module never imports a sibling.
+	//
+	// Nil where nothing supplied it (a worker's store, a test that does not
+	// ask): an email hit then carries no row, and the frontend renders it the
+	// generic way rather than showing a blank canonical one.
+	emailSummaries EmailSummaryReader
 }
 
 // NewStore opens this module's store on a handle already bound to the
@@ -49,6 +58,12 @@ func (s *Store) WithTagReach(count TagReachCounter) *Store {
 	return s
 }
 
+// WithEmailSummaries binds the reader behind an email hit's `email_summary`.
+func (s *Store) WithEmailSummaries(read EmailSummaryReader) *Store {
+	s.emailSummaries = read
+	return s
+}
+
 // bounded is this store with a time ceiling on every statement it runs.
 //
 // The ceiling rides the HANDLE, so it reaches the lanes this store opens for
@@ -58,7 +73,7 @@ func (s *Store) WithTagReach(count TagReachCounter) *Store {
 func (s *Store) bounded(budget time.Duration) *Store {
 	// Every field travels, not just the handle: this rebuilds the store, so a
 	// field left out here is one the bounded lane silently does without.
-	return &Store{db: s.db.Bounded(budget), carriedBy: s.carriedBy}
+	return &Store{db: s.db.Bounded(budget), carriedBy: s.carriedBy, emailSummaries: s.emailSummaries}
 }
 
 // forWorkspace is this store re-bound to one tenant of the fleet enumeration.
@@ -84,6 +99,10 @@ type Hit struct {
 	// CarriedBy is set on a `tag` hit alone: how many records the caller may
 	// see carry this word. Nil elsewhere, and nil when no counter is bound.
 	CarriedBy *int
+	// EmailSummary is set on an `activity` hit whose activity is an email the
+	// caller may read. Nil on every other hit type, nil for a non-email
+	// activity, and nil when no reader is bound.
+	EmailSummary *crmcontracts.EmailSummary
 }
 
 type Page struct {
@@ -325,7 +344,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		if page, err = scanRankedPage(rows, limit); err != nil {
 			return err
 		}
-		return s.countTagReach(ctx, tx, page.Hits)
+		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
+			return err
+		}
+		return s.attachEmailSummaries(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err

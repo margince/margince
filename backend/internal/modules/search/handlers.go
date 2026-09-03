@@ -24,8 +24,11 @@ type Handlers struct {
 // NewHandlers binds the HTTP search surface. `tagReach` counts what a tag hit
 // is on for the asking caller; compose supplies the collections store's own
 // counter, and a nil one leaves every hit's count absent rather than zero.
-func NewHandlers(db *database.DB, tagReach TagReachCounter) Handlers {
-	store := NewStore(db).WithTagReach(tagReach)
+// `emailRows` answers the canonical email row behind an activity hit; compose
+// supplies the activities store's own reader, and a nil one leaves every email
+// hit rendering the generic way.
+func NewHandlers(db *database.DB, tagReach TagReachCounter, emailRows EmailSummaryReader) Handlers {
+	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The
 	// request-path embed lane compose binds is for the RANKED half, and
@@ -71,6 +74,11 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		// address would give every result the last hit's number.
 		if hit.CarriedBy != nil {
 			result.CarriedBy = ptr(*hit.CarriedBy)
+		}
+		// Same copy, same reason: the address of the loop's own variable would
+		// give every result the last hit's row.
+		if hit.EmailSummary != nil {
+			result.EmailSummary = ptr(*hit.EmailSummary)
 		}
 		// native records are authoritative
 		result.TrustTier = ptr(crmcontracts.SearchResultTrustTierAuthoritative)
