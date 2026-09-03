@@ -74,3 +74,47 @@ func decayMatters(facts *crmcontracts.AttentionRelationshipFacts) bool {
 	return *facts.Strength == crmcontracts.AttentionRelationshipFactsStrengthModerate ||
 		*facts.Strength == crmcontracts.AttentionRelationshipFactsStrengthStrong
 }
+
+// sourceDecay is the lane's own name on the wire, spelled once here because
+// three places now match on it and a typo in any of them would simply stop
+// matching — a suppressor that silently suppresses nothing.
+const sourceDecay = crmcontracts.WorklistItemSource("relationship_decay")
+
+// dropDecayAlreadyWaiting removes the lapsed-relationship row for a person the
+// reader is already shown as waiting on.
+//
+// One person is one row. The two lanes say opposite things about the same
+// contact and both are true: nobody has spoken in sixty days, AND that person
+// wrote last week and is waiting for an answer. Drawn together they read as a
+// contradiction, and the rep is left to work out which one to believe.
+//
+// The WAITING row wins, for the reason the drifting-deal suppressor gives: it
+// is the more urgent and the more actionable of the two, because it names the
+// message to reply to. A silence has no message to point at.
+//
+// Nothing is absorbed onto the survivor, unlike the deal case. What the decay
+// row would have added — how long the silence ran — is a claim the waiting row
+// contradicts rather than completes: the contact is not quiet, they are
+// unanswered.
+func dropDecayAlreadyWaiting(rows []ranked) []ranked {
+	waitingPeople := map[string]bool{}
+	for _, row := range rows {
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectPerson {
+			waitingPeople[row.item.Subject.Id.String()] = true
+		}
+	}
+	if len(waitingPeople) == 0 {
+		return rows
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		// The decay row's id IS the person's id, which is what makes this
+		// match at all: the lane has no activity to key on.
+		if row.item.Source == sourceDecay && waitingPeople[row.item.Id] {
+			continue
+		}
+		kept = append(kept, row)
+	}
+	return kept
+}

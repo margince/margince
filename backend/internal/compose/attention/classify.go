@@ -49,6 +49,12 @@ const sourceAtRisk = "deal_at_risk"
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 
+// subjectPerson is the subject type a person-shaped row names. Spelled beside
+// its sibling because the decay renderer and the suppressor pairing that lane
+// against a waiting row both match on it, and a literal that stops matching
+// suppresses nothing while still reading green.
+const subjectPerson = "person"
+
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes

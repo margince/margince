@@ -223,6 +223,10 @@ func (s *Service) worklistFrom(
 	// One late reply is one row, not three: the escalation's own task about a
 	// lead this queue already shows says nothing the lead row does not.
 	rows = dropEscalationTasksAlreadyOwed(rows)
+	// One PERSON is one row. "Nobody has spoken to them in sixty days" and
+	// "they wrote last week and are waiting" are both true of the same contact
+	// and read as a contradiction side by side.
+	rows = dropDecayAlreadyWaiting(rows)
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
