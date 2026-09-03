@@ -163,10 +163,11 @@ describe("HomeScreen — the context rail", () => {
     expect(
       await within(panel ?? card).findByText("Nordwind Logistik"),
     ).toBeTruthy();
-    // And the count reaches the glance, where 1 is a fact rather than a default.
-    // The readings strip is drawn from the worklist answer and knows nothing
-    // about the deals page, so the glance is what carries this figure.
-    expect(screen.getByTestId("glance-quiet").textContent).toContain("1");
+    // The quiet deal is on the page as a CARD rather than as a count. The
+    // briefing line that carried "1 has gone quiet" is gone: the panel listing
+    // the deal itself says more than a figure above it could, and says it in
+    // the one place a reader can act on it.
+    expect(within(panel ?? card).getByText("Ostwind refit")).toBeTruthy();
   });
 
   it("says so when nothing has gone quiet", async () => {
