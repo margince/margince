@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { ComposeModal, RelinkModal } from "./compose";
 import {
   installFetchStub,
+  meRoute,
   jsonResponse,
   type RouteMap,
   StoryProviders,
@@ -94,6 +95,11 @@ function validationProblem(field: string, code: string, message: string) {
 function composeStory(routes: RouteMap) {
   return () => {
     installFetchStub({
+      // Every story here renders a control that reads the session. Without
+      // this route the stub's list-shaped fallback reads as a malformed one,
+      // which fails every grant closed and draws a branch no story is named
+      // for.
+      "GET /me": meRoute({}),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
       ...routes,
     });
@@ -264,6 +270,7 @@ export const SendUnavailable: Story = {
 function channelReplyStory(conversation: RouteMap[string]) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute({}),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
       "GET /activities/act-1": conversation,
       "GET /projects/proj-1": () =>

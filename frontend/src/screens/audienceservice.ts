@@ -123,10 +123,16 @@ export function useMessageAudience(options: {
       if (error) throwProblem(error);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       for (const queryKey of options.invalidate()) {
         queryClient.invalidateQueries({ queryKey });
       }
+      // The message's own canonical read, wherever it is mounted. The caller
+      // names its screen's keys; this one is the same for every caller, so it
+      // is not theirs to remember.
+      queryClient.invalidateQueries({
+        queryKey: emailPresentationKey(variables.activityId),
+      });
       options.onSettled?.();
     },
   });
