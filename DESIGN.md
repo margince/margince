@@ -12,30 +12,28 @@ Read this once before designing anything a person can see, and again when a
 screen "looks fine but not like the others" — that sentence is the symptom this
 file exists to cure.
 
-## 1. Why the product looks stitched together today
+## 1. Five things the language refuses
 
-Diagnosis first, because a new language that does not name the old failure
-repeats it.
+Stated first, because the rules below are easier to hold when the failure
+each one prevents is named.
 
-- **Everything is a box.** Panels inside panels, each with its own 1px border,
-  its own radius and its own shadow, on a page that is nearly the same white as
-  the panels. Nothing is allowed to be a *section*; every block has to be a
-  *card*, so every block has the same visual rank and the eye has nowhere to land.
-- **The chrome is the same colour as the content.** A white sidebar beside a
-  white page beside white cards is three surfaces asking to be the foreground.
-  The frame competes with what it frames.
-- **One typeface at one size does every job.** Titles, labels, values and body
-  differ by a few pixels and a weight step, so a record name and a field label
-  read as the same kind of thing.
-- **Numbers are set like words.** Money and counts sit in a proportional face
-  with no alignment, so a column of amounts is a ragged block rather than a
-  ledger.
-- **Colour is spent on nothing.** The brand emerald is a button and a link; the
-  rest of the page is grey. A product with a strong opinion about *who did this*
-  (a person or an agent) shows that opinion at chip size only.
+- **Everything as a box.** Panels inside panels, each with its own border,
+  radius and shadow, on a ground nearly the same colour as the panels. When
+  every block is a card, every block has the same visual rank and the eye has
+  nowhere to land. A page has *sections*, and few of them are cards.
+- **Chrome the colour of the content.** A sidebar, a page and a card in the
+  same white are three surfaces asking to be the foreground. The frame must
+  recede from what it frames.
+- **One typeface at one size for every job.** When titles, labels, values and
+  body differ only by a few pixels and a weight step, a record's name and a
+  field label read as the same kind of thing.
+- **Numbers set like words.** Money and counts in a proportional face with no
+  alignment make a column of amounts a ragged block rather than a ledger.
+- **Colour spent on nothing.** When the accent is a button and a link and the
+  rest is grey, a product with a strong opinion about *who did this* (a person
+  or an agent) shows that opinion at chip size only.
 
-The result reads as a competent generic admin template. The fix is not a new
-colour; it is a hierarchy.
+The answer to all five is not a new colour; it is a hierarchy.
 
 ## What the refined products actually do
 
@@ -72,8 +70,8 @@ checked against it. The sources are listed at the end of the section.
    Stripe sets text in deep slate on near-white; Refactoring UI's rule is that
    a gray far from mid-lightness needs saturation or it looks washed out.
    **Rule:** `--ink #101a15` and the whole ink and ground ladder sit on the
-   emerald hue at low chroma, which is what stops the page from reading as a
-   grey template with a green sticker.
+   emerald hue at low chroma, which is what keeps the page from reading as a
+   grey page with a green accent.
 6. **One chromatic accent, spent almost nowhere.** Linear's lavender is brand,
    the primary button and the focus ring, and nothing else; Raycast's primary
    action is plain white; Vercel's blue is a status colour and a focus ring.
