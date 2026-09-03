@@ -150,22 +150,65 @@ func insertTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, reps []Te
 	return nil
 }
 
-// TeamReview answers one team's frozen week.
+// mayReadTeam decides whether this caller may open this team's week.
 //
-// Gated on a row scope of team or wider: a team snapshot is a team question,
-// and an own-scoped reader asking it would get a page about people whose rows
-// they cannot read. The membership itself is not re-checked here — the caller
-// resolved which teams they lead when they asked, and the snapshot names the
-// team it is about.
-func (e *Engine) TeamReview(
-	ctx context.Context, teamID ids.UUID, week time.Time,
-) (TeamReview, error) {
+// TWO QUESTIONS, and both have to be asked. The row scope says whether a team
+// snapshot is a question this reader may ask at all — an own-scoped reader
+// would get a page about people whose rows they cannot read. Membership says
+// WHICH team, and without it a lead of one team reads any other team's week by
+// changing one query parameter, because the team id arrives from the request
+// and nothing else narrows the row.
+//
+// A reader who sees every row passes without the membership question, matching
+// how attention/scope.go resolves an owner: a management seat reaches every row
+// by definition, and asking membership of it would refuse a reader the
+// row-scope predicate then admits.
+//
+// It is NOT what lets the weekly job re-read the snapshot it just wrote: that
+// job composes under a MEMBER's own authority rather than the system principal,
+// deliberately, so its re-read passes the membership question like any other
+// team-scoped reader. Its engine therefore needs the seam bound.
+//
+// An out-of-team lead gets ErrNotFound, not ErrPermissionDenied. A refusal that
+// distinguished "this team exists but is not yours" from "no such team" would
+// let an outsider enumerate the chart one id at a time — the same reason a
+// row-scope miss reads as 404 everywhere else in this tree.
+func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return TeamReview{}, err
+		return err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Permissions.RowScope == principal.RowScopeOwn {
-		return TeamReview{}, apperrors.ErrPermissionDenied
+		return apperrors.ErrPermissionDenied
+	}
+	// auth.Unbounded rather than a RowScopeAll comparison of its own: it is the
+	// tree's one spelling of "sees every row", and it also admits the system
+	// principal — which the weekly job composes under when it re-reads a
+	// snapshot it has just written to answer idempotently.
+	if auth.Unbounded(actor) {
+		return nil
+	}
+	// Fails closed. An unbound seam is a wiring mistake, and serving the
+	// snapshot anyway would hand every lead every team's week.
+	if e.teams == nil {
+		return apperrors.ErrNotFound
+	}
+	member, err := e.teams.CallerLeadsLiveTeam(ctx, teamID)
+	if err != nil {
+		return err
+	}
+	if !member {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+// TeamReview answers one team's frozen week.
+func (e *Engine) TeamReview(
+	ctx context.Context, teamID ids.UUID, week time.Time,
+) (TeamReview, error) {
+	if err := e.mayReadTeam(ctx, teamID); err != nil {
+		return TeamReview{}, err
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
@@ -193,12 +236,8 @@ func (e *Engine) LatestTeamReview(
 	if week != nil {
 		return e.TeamReview(ctx, teamID, *week)
 	}
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+	if err := e.mayReadTeam(ctx, teamID); err != nil {
 		return TeamReview{}, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Permissions.RowScope == principal.RowScopeOwn {
-		return TeamReview{}, apperrors.ErrPermissionDenied
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
