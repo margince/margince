@@ -1740,24 +1740,35 @@ function DealViewTools({
       {/* Both views read one pipeline: the table binds the same query the
           board does, and its stage chip offers that pipeline's stages. So the
           picker stands in both — hidden on the table it locked the reader to a
-          pipeline they could neither see nor change. */}
-      <Select
-        className="input"
-        aria-label={t("deals.pipeline")}
-        placeholder={t("deals.pipeline")}
-        value={pipelineId}
-        onChange={(next) => {
-          // A stage belongs to one pipeline; switching pipeline strands any
-          // stage_id filter (the chip blanks out but useDeals would still
-          // forward the old id and filter a foreign stage → 0 rows).
-          setPipelineId(next);
-          setOrClearFilter(setQuery, "stage_id", "");
-        }}
-        options={pipelines.map((pipeline) => ({
-          value: pipeline.id,
-          label: pipeline.name,
-        }))}
-      />
+          pipeline they could neither see nor change.
+          A CHOICE OF ONE IS NOT A CHOICE. An installation with a single
+          pipeline was offered a menu whose only entry was the pipeline already
+          showing, which is a dial that refuses every press. The NAME still
+          stands, as text: the reader keeps the fact and loses only the control,
+          which is what they lost nothing by. */}
+      {pipelines.length > 1 ? (
+        <Select
+          className="input"
+          aria-label={t("deals.pipeline")}
+          placeholder={t("deals.pipeline")}
+          value={pipelineId}
+          onChange={(next) => {
+            // A stage belongs to one pipeline; switching pipeline strands any
+            // stage_id filter (the chip blanks out but useDeals would still
+            // forward the old id and filter a foreign stage → 0 rows).
+            setPipelineId(next);
+            setOrClearFilter(setQuery, "stage_id", "");
+          }}
+          options={pipelines.map((pipeline) => ({
+            value: pipeline.id,
+            label: pipeline.name,
+          }))}
+        />
+      ) : (
+        pipelines.length === 1 && (
+          <span className="lt-scope">{pipelines[0].name}</span>
+        )
+      )}
     </>
   );
 }

@@ -246,6 +246,7 @@ export const de = {
   "explain.title": "So setzt sich die Zahl zusammen",
   "explain.rate": "Kurs {rate} am {date}",
 
+  "board.colHead": "{label}: {count}",
   "board.count": "{count} Deals",
   "board.weighted": "gewichtet {value}",
   "board.mixedCurrencies": "mehrere Währungen — keine Gesamtsumme",
@@ -544,6 +545,7 @@ export const de = {
   "table.shownColumns": "Sichtbare Spalten",
   "table.compact": "Kompakt",
   "table.sort": "Sortieren",
+  "table.sortNamed": "Sortierung: {column}",
   "table.sortMenu": "Sortieren nach",
   "table.sortDefault": "Standardreihenfolge",
   "table.sortAscending": "aufsteigend",

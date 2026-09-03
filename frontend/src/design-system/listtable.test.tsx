@@ -47,6 +47,11 @@ function testRows(count: number): Row[] {
   }));
 }
 
+// The sort dial names the order in force ("Sort: Name"), so a lookup pinned to
+// the bare word only found it while the list was unsorted. Anchored, because a
+// column header's own control is named "Sort by <column>".
+const SORT_DIAL = /^Sort(:|$)/;
+
 const columns: readonly ListColumn<Row>[] = [
   {
     key: "name",
@@ -164,7 +169,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const menu = sortMenu();
     expect(menu.getByRole("button", { name: "Name" })).toBeTruthy();
     expect(menu.getByRole("button", { name: "Value" })).toBeTruthy();
@@ -193,7 +198,7 @@ describe("the sort menu", () => {
     );
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     expect(sortMenu().getByRole("button", { name: "Value" })).toBeTruthy();
   });
 
@@ -208,7 +213,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     await userEvent.click(sortMenu().getByRole("button", { name: "Name" }));
     expect(onChange).toHaveBeenCalledWith("name");
 
@@ -230,7 +235,7 @@ describe("the sort menu", () => {
       );
     }
     render(<Harness />);
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const entry = sortMenu().getByRole("button", { name: /^Name/ });
     expect(entry.getAttribute("aria-pressed")).toBe("true");
     expect(entry.textContent).toContain("ascending");
@@ -239,6 +244,63 @@ describe("the sort menu", () => {
     expect(
       sortMenu().getByRole("button", { name: /^Name/ }).textContent,
     ).toContain("descending");
+  });
+
+  // A sort arrives from three places a reader did not press — a saved view, a
+  // column header, an address they pasted — so the dial is the one control where
+  // all three are visible. Labelled only "Sort" it made them open it to find
+  // out.
+  it("names the order in force on the dial itself", async () => {
+    const { rerender } = render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: SORT_DIAL }).textContent).toBe(
+      "Sort",
+    );
+
+    rerender(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "-value", onChange: () => {} }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: SORT_DIAL }).textContent).toBe(
+      "Sort: Value",
+    );
+  });
+
+  // ONE order at a time, so the entry in force wears a checkmark rather than a
+  // tick box: a box is the shape of a set a reader adds to, and five of them
+  // over five orderings promised a combination this list cannot be in.
+  it("marks the order in force without offering a set to build", async () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    const menu = sortMenu();
+
+    expect(
+      menu.getByRole("button", { name: /^Name/ }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      menu.getByRole("button", { name: "Value" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(menu.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
   it("offers the server's own order, which is a state a saved view can ask for", async () => {
@@ -252,7 +314,7 @@ describe("the sort menu", () => {
         sort={{ value: "name", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const fallback = sortMenu().getByRole("button", { name: "Default order" });
     expect(fallback.getAttribute("aria-pressed")).toBe("false");
     await userEvent.click(fallback);
@@ -269,7 +331,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+    expect(screen.queryByRole("button", { name: SORT_DIAL })).toBeNull();
   });
 
   it("is not drawn without a sort control at all", () => {
@@ -281,7 +343,7 @@ describe("the sort menu", () => {
         unit="rows"
       />,
     );
-    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+    expect(screen.queryByRole("button", { name: SORT_DIAL })).toBeNull();
   });
 });
 

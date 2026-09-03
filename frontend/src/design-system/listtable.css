@@ -390,13 +390,30 @@
   background: var(--bgHover);
 }
 
-/* The sort direction rides the right edge of its entry, so the arrows line up
- * in a column of their own instead of trailing labels of different lengths. */
+/* The sort direction sits AGAINST its label: it qualifies that name — "Owner,
+ * ascending" — rather than being a column of its own. It used to ride the right
+ * edge, which read as a second attribute of the row and left the arrow a long
+ * way from the word it describes. */
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
-  margin-inline-start: auto;
   color: var(--textSecondary);
+}
+
+/* WHICH ORDER IS IN FORCE, on the right edge where a reader checks it. Always
+ * laid out and only its glyph appears, for the reason the tick box beside it
+ * carries: a mark that inserted itself would shift every label in the menu on
+ * selection. */
+.lt-mi-mark {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  flex: none;
+  color: var(--accentText);
+  visibility: hidden;
+}
+.lt-mi.on .lt-mi-mark {
+  visibility: visible;
 }
 
 /* The tick box is always laid out, and only its glyph appears when selected —
@@ -421,6 +438,18 @@
 }
 .lt-mi.on .lt-cb > svg {
   visibility: visible;
+}
+
+/* WHAT THIS LIST IS SHOWING, where its picker would stand — the pipeline on the
+ * deals board when an installation has only one of them. A control offering one
+ * option refuses every press, so it is not drawn; the name it carried still is,
+ * because losing the dial is not a reason to lose the fact. Sits on the tools
+ * row's own line, in the surrounding type, so it reads as the answer a picker
+ * would have given rather than as a label of its own. */
+.lt-scope {
+  align-self: center;
+  color: var(--textSecondary);
+  white-space: nowrap;
 }
 
 /* ---- the table ---- */
@@ -1078,6 +1107,11 @@
 .lt > .board {
   flex: 1;
   min-height: 0;
+  /* The board SCROLLS sideways; it never widens the page to fit its stages. A
+     flex item's floor is its min-content width unless it is told otherwise, so
+     without this the columns' own content decided how wide the surface was and
+     the shell scrolled horizontally at phone width. */
+  min-width: 0;
   align-items: stretch;
   /* The stages sit inside the surface rather than against its edges, on the
    * same rhythm the toolbar above them uses. */

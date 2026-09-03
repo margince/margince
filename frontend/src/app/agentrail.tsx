@@ -1139,14 +1139,13 @@ export function AgentRail({
   // What the screen's margins draw, published rather than re-derived: the run,
   // the switcher and the reads above are all local to this component, so a second
   // consumer calling the same hooks would get a second run and report on it.
-  // `waiting` is undefined until the approvals read answers, and an undefined
-  // count is not an empty queue — a contour drawn on a guess would be this
-  // surface inventing a fact.
+  // The unanswered queue is NOT part of it: it reaches a reader through this
+  // panel's own line, with its count, rather than as a ring around the window
+  // that stands for as long as the queue does.
   const reading = RUNNING.has(state);
-  const waiting = (signals.waiting ?? 0) > 0;
   useEffect(() => {
-    publishAgentEdge({ reading, waiting });
-  }, [reading, waiting]);
+    publishAgentEdge({ reading });
+  }, [reading]);
   // The last word belongs to the unmount: a reading left behind would outlive the
   // session that made it, and the signed-out screen would inherit a lit margin.
   useEffect(() => clearAgentEdge, []);

@@ -735,6 +735,13 @@ function SortMenu({
   onToggle: () => void;
 }>) {
   const t = useT();
+  // WHAT THE LIST IS ORDERED BY, on the control that changes it. A dial labelled
+  // only "Sort" leaves the reader to open it to find out — and a sort can arrive
+  // from three places they did not press: a saved view, a column header, the
+  // address they pasted. Naming it here is the one place all three are visible.
+  const active = options.find(
+    (option) => sortDirection(option.field, sort.value) !== null,
+  );
   return (
     <span className="lt-menu-wrap">
       <button
@@ -744,56 +751,92 @@ function SortMenu({
         onClick={onToggle}
       >
         <ArrowDownUp size={13} strokeWidth={1.5} aria-hidden="true" />
-        {t("table.sort")}
+        {active
+          ? t("table.sortNamed", { column: active.label })
+          : t("table.sort")}
       </button>
       <Menu open={open} head={t("table.sortMenu")} align="right">
         {options.map((option) => {
           const direction = sortDirection(option.field, sort.value);
           return (
-            <button
-              type="button"
+            <SortItem
               key={option.field}
-              className={`lt-mi${direction ? " on" : ""}`}
-              aria-pressed={direction !== null}
-              onClick={() => sort.onChange(nextSortValue(option, direction))}
-            >
-              <span className="lt-cb">
-                <Check size={10} strokeWidth={3} aria-hidden="true" />
-              </span>
-              {option.label}
-              {direction && (
-                <span className="lt-mi-dir">
-                  {direction === "asc" ? (
-                    <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
-                  ) : (
-                    <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
-                  )}
-                  {/* The arrow is the sighted reader's half of this. The
-                      direction has to be said as well, or a pressed entry
-                      announces only that it is the sort and not which way. */}
-                  <span className="sr-only">
-                    {direction === "asc"
-                      ? t("table.sortAscending")
-                      : t("table.sortDescending")}
-                  </span>
-                </span>
-              )}
-            </button>
+              label={option.label}
+              direction={direction}
+              onPick={() => sort.onChange(nextSortValue(option, direction))}
+            />
           );
         })}
-        <button
-          type="button"
-          className={`lt-mi${sort.value ? "" : " on"}`}
-          aria-pressed={!sort.value}
-          onClick={() => sort.onChange("")}
-        >
-          <span className="lt-cb">
-            <Check size={10} strokeWidth={3} aria-hidden="true" />
-          </span>
-          {t("table.sortDefault")}
-        </button>
+        {/* Offered because it is a state a reader can REACH — a saved view that
+            names no sort asks for the server's own order — and a state they can
+            reach is one they must be able to ask for. It has no direction to
+            flip, so it carries no arrow. */}
+        <SortItem
+          label={t("table.sortDefault")}
+          direction={sort.value ? null : "none"}
+          onPick={() => sort.onChange("")}
+        />
       </Menu>
     </span>
+  );
+}
+
+/**
+ * One attribute in the sort menu: its name, which way it is ordering, and
+ * whether it is the one in force.
+ *
+ * ONE ORDER AT A TIME, so the chosen entry wears a CHECKMARK rather than a tick
+ * box. A box is the shape of a set a reader adds to, and drawing five of them
+ * over five orderings promised a combination this list cannot be in — the
+ * server takes one field plus the house tie-breaker. The mark rides the right
+ * edge, where a reader checks which of the five it landed on; the direction
+ * arrow sits against the label, because it qualifies THAT name rather than
+ * being a second column of its own.
+ *
+ * The mark is always laid out and only its glyph appears, for the reason the
+ * tick box was: a checkmark that inserted itself would shift every label in the
+ * menu on selection.
+ */
+function SortItem({
+  label,
+  direction,
+  onPick,
+}: Readonly<{
+  label: string;
+  /** `"none"` is the server's own order: in force, with no direction to state. */
+  direction: "asc" | "desc" | "none" | null;
+  onPick: () => void;
+}>) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      className={`lt-mi${direction ? " on" : ""}`}
+      aria-pressed={direction !== null}
+      onClick={onPick}
+    >
+      {label}
+      {(direction === "asc" || direction === "desc") && (
+        <span className="lt-mi-dir">
+          {direction === "asc" ? (
+            <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
+          ) : (
+            <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
+          )}
+          {/* The arrow is the sighted reader's half of this. The direction has
+              to be said as well, or a pressed entry announces only that it is
+              the sort and not which way. */}
+          <span className="sr-only">
+            {direction === "asc"
+              ? t("table.sortAscending")
+              : t("table.sortDescending")}
+          </span>
+        </span>
+      )}
+      <span className="lt-mi-mark">
+        <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+      </span>
+    </button>
   );
 }
 

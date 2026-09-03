@@ -251,6 +251,7 @@ export const vi = {
   "explain.title": "Con số này được dựng thế nào",
   "explain.rate": "tỷ giá {rate} ngày {date}",
 
+  "board.colHead": "{label}: {count}",
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền tệ — không có tổng chung",
@@ -538,6 +539,7 @@ export const vi = {
   "table.shownColumns": "Cột hiển thị",
   "table.compact": "Thu gọn",
   "table.sort": "Sắp xếp",
+  "table.sortNamed": "Sắp xếp: {column}",
   "table.sortMenu": "Sắp xếp theo",
   "table.sortDefault": "Thứ tự mặc định",
   "table.sortAscending": "tăng dần",

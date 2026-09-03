@@ -32,6 +32,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // two rendered clauses and contributes no word of its own, so a locale has
   // nothing here to change.
   "brief.week.andCarry",
+  // A stage's own name and the count of what is in it, with a colon between.
+  // Both halves arrive already in the reader's language, so a locale has only
+  // the punctuation to change and every one of them writes it the same way.
+  "board.colHead",
   // The record's own name beside the numeral that names its reading. There is
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.

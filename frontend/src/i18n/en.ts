@@ -266,6 +266,7 @@ export const en = {
   "explain.title": "How this number is built",
   "explain.rate": "rate {rate} on {date}",
 
+  "board.colHead": "{label}: {count}",
   "board.count": "{count} deals",
   "board.weighted": "weighted {value}",
   "board.mixedCurrencies": "several currencies — no single total",
@@ -591,6 +592,7 @@ export const en = {
   "table.shownColumns": "Shown columns",
   "table.compact": "Compact",
   "table.sort": "Sort",
+  "table.sortNamed": "Sort: {column}",
   "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",

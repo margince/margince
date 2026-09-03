@@ -290,8 +290,23 @@ function BoardLayout<Record extends BoardRecord>({
             aria-label={column.label}
             {...columnDropHandlers?.(column)}
           >
+            {/* THE STAGE AND HOW MUCH IS IN IT, on one line and stuck to the
+                top of the column. A board is scrolled, and a reader halfway
+                down a long stage had nothing on screen saying which stage they
+                were in — the head is the only thing that says it, so it holds
+                its place. The count moved up here with it: it is the figure a
+                reader compares ACROSS the board, and under the money totals it
+                was the third figure on a two-line sub. */}
             <div className="board-col-head">
-              <span className="stage">{column.label}</span>
+              <span className="stage">
+                {t("board.colHead", {
+                  label: column.label,
+                  count: formatNumber(
+                    column.count ?? column.deals.length,
+                    locale,
+                  ),
+                })}
+              </span>
               {money && (
                 <span className="prob">
                   {formatNumber(money.probabilityPct, locale)}%
@@ -313,7 +328,10 @@ function BoardLayout<Record extends BoardRecord>({
                     )}
                   </span>
                 )}
-                <span>
+                {/* The count is in the head; what a screen reader needs here
+                    is the UNIT the head's bare figure leaves out, so the column
+                    announces "12 deals" rather than "Qualified: 12". */}
+                <span className="sr-only">
                   {countLabel
                     ? countLabel(column.count ?? column.deals.length)
                     : t("board.count", {
