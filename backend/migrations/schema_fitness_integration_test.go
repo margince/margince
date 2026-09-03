@@ -167,8 +167,28 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 		"No read reaches this FK today because no read on this path runs at all. When #2173 is fixed the ADR-0091-consistent repair DELETES that predicate " +
 		"rather than restoring the column, at which point this reason is void and nothing here would fail — gatekit checks the key, never the rationale — so " +
 		"#2173 carries a note to revisit this entry, and it must be re-derived against whatever replaces the predicate rather than carried over.",
-	"activity_link.activity_id":  "child row: written only inside LogActivity for the new activity",
-	"lead_score_history.lead_id": "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
+	// The send-basis pair (core 1788407500). Nothing INSERTS either table yet —
+	// the schema landed ahead of the code that records a basis — so no caller
+	// supplies these references at all. Every statement that names them today
+	// is privacy's, and each is keyed on the subject its own operation is
+	// already addressing and has already authorized:
+	//
+	//	erasure_consent.go / retentionactions.go   DELETE … WHERE person_id = $1
+	//	erasure_leadtwins.go                       DELETE … WHERE lead_id IN (the leads that statement just wiped)
+	//	sarsections.go                             SELECT … WHERE person_id = $1 OR lead_id = ANY($2)
+	//
+	// So the column is never a caller's way of naming a record: it is the
+	// subject the erasure, retention action or subject-access request is about.
+	// When a writer does land, the reference it takes from a request body is a
+	// read of that record and owes the usual EnsureLinkTarget — these reasons
+	// describe the tree as it is, not a permanent exemption.
+	"communication_basis.person_id":          "server-derived: only privacy's subject-addressed statements name it, keyed on the person being erased or retained; nothing inserts yet",
+	"communication_basis.lead_id":            "server-derived: same, keyed on the leads erasure_leadtwins just wiped",
+	"communication_basis.source_activity_id": "server-derived: the activity that evidenced a basis; no caller names it, and no writer sets it yet",
+	"communication_suppression.person_id":    "server-derived: same subject-addressed privacy statements as communication_basis.person_id, plus the SAR read of the subject's own rows",
+	"communication_suppression.lead_id":      "server-derived: same, keyed on the subject's lead twins",
+	"activity_link.activity_id":              "child row: written only inside LogActivity for the new activity",
+	"lead_score_history.lead_id":             "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
 	// comms_outbound is delivery machinery for one activity, not a
 	// standalone record (comms/doc.go): StageTx writes only inside the
 	// caller's own transaction, alongside the activity write it reports on
