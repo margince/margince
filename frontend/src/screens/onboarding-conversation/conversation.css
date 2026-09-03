@@ -985,12 +985,6 @@
   font-size: var(--fs-sm);
 }
 
-.ob-scene-foot-acts {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 /* The speaker decision: one radio card per voice the transcript separated,
    in the same card language the sources list already uses (bordered,
    elevated, a check for the picked state) rather than the legal-entity
@@ -1075,16 +1069,6 @@
   color: var(--textMeta);
   font-family: var(--f-body);
   font-size: var(--fs-meta);
-}
-
-/* The continue/retry actions inside a shared `.ob-triage-continue` bar
-   (conversation.css's pinned-foot pattern every scene's primary action now
-   uses): right-aligned whether or not the bar also carries status text. */
-.ob-voice-continue-acts {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
 }
 
 /* The result scene: the sample on the left, the reading on the right — two

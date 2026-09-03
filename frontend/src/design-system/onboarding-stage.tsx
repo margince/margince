@@ -380,13 +380,16 @@ const StageActionsSlot = createContext<HTMLElement | null>(null);
  * the reader looks for it. A submit button rendered here still submits its
  * form through the `form` attribute; nothing else about it changes.
  *
- * Nothing renders until the rail exists, which is one commit after the stage
- * mounts; the step's own fields are on screen meanwhile, so nothing is missed.
+ * Without a rail — a scene rendered on its own, in a test or on a surface that
+ * is not the stage — the actions render where they are written, so a step's
+ * way onward can never quietly vanish with the frame it expected. Inside the
+ * stage the rail exists one commit after the stage mounts, and the actions
+ * appear there on that commit.
  */
 export function StageActions({ children }: Readonly<{ children: ReactNode }>) {
   const slot = useContext(StageActionsSlot);
   if (slot === null) {
-    return null;
+    return children;
   }
   return createPortal(children, slot);
 }

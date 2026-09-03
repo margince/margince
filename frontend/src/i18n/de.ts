@@ -8009,6 +8009,11 @@ export const de = {
   "ob.deck.backToOpen": "Zurück zu den offenen Punkten",
   "ob.deck.backToRecord": "Zurück zum Eintrag",
   "ob.deck.confirm": "Profil bestätigen",
+  "ob.deck.stillNeeded": "Fehlt noch: {fields}",
+  "ob.deck.openLeft":
+    "Unbeantwortete Fragen: {count}. Der Eintrag wird ohne sie gespeichert.",
+  "ob.conv.invite.pickOne": "Wählen Sie eine der beiden, um weiterzugehen.",
+  "ob.conv.voice.speakerPick": "Wählen Sie einen Sprecher, um weiterzugehen.",
   "ob.deck.clear": "Nichts mehr zu klären. {count} Fakten stehen im Profil.",
   "ob.deck.eyebrow": "Alles andere kam belegt herein",
   "ob.deck.title": "Hier rät es nicht.",

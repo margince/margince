@@ -7908,6 +7908,11 @@ export const vi = {
   "ob.deck.backToOpen": "Quay lại các mục còn mở",
   "ob.deck.backToRecord": "Quay lại hồ sơ",
   "ob.deck.confirm": "Xác nhận hồ sơ",
+  "ob.deck.stillNeeded": "Còn thiếu: {fields}",
+  "ob.deck.openLeft":
+    "Câu hỏi chưa trả lời: {count}. Hồ sơ được lưu mà không có chúng.",
+  "ob.conv.invite.pickOne": "Chọn một trong hai để tiếp tục.",
+  "ob.conv.voice.speakerPick": "Chọn một người nói để tiếp tục.",
   "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
   "ob.deck.eyebrow": "Mọi thứ còn lại đã vào kèm nguồn",
   "ob.deck.title": "Nó không đoán những điều này.",

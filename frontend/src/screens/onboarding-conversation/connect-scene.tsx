@@ -11,6 +11,7 @@ import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../common";
 import { OvernightGrantChoice } from "../overnight-grant";
 import { ConnectDialog } from "./connect-dialog";
+import { WayOnward } from "./way-onward";
 
 // The connect act's work surface: two sections of real-width cards — the
 // required mailbox choice, and the optional network one beside it — each
@@ -378,12 +379,11 @@ export function ConnectScene({
           the action that leaves it belongs here too. Nothing left to gate on
           once mail is connected, so the bar carries the action alone. */}
       {onEnter && (
-        <div className="ob-triage-continue">
-          <p className="ob-triage-continue-status" role="status" />
-          <Button variant="primary" onClick={onEnter}>
-            {t("ob.enter.cta")}
-          </Button>
-        </div>
+        <WayOnward
+          label={t("ob.enter.cta")}
+          stillNeeded={(why) => why.join(" ")}
+          onGo={onEnter}
+        />
       )}
     </div>
   );

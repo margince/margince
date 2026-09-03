@@ -8095,6 +8095,11 @@ export const en = {
   "ob.deck.backToOpen": "Back to the open ones",
   "ob.deck.backToRecord": "Back to the record",
   "ob.deck.confirm": "Confirm the profile",
+  "ob.deck.stillNeeded": "Still needed: {fields}",
+  "ob.deck.openLeft":
+    "Questions left unanswered: {count}. The record is saved without them.",
+  "ob.conv.invite.pickOne": "Pick one of the two to continue.",
+  "ob.conv.voice.speakerPick": "Pick a speaker to continue.",
   "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",
   "ob.deck.eyebrow": "Everything else went in on evidence",
   "ob.deck.title": "It will not guess at these.",

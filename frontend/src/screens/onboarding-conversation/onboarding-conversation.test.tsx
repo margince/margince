@@ -424,7 +424,7 @@ describe("the conversational company act", () => {
         grounded("legal_name", "Gradion GmbH", "© 2026 Gradion GmbH"),
       ],
     } satisfies CompanySiteRead;
-    stubApi({
+    const calls = stubApi({
       read: thinRead,
       proposal: {
         ...proposalFor(thinRead),
@@ -439,10 +439,17 @@ describe("the conversational company act", () => {
     // order — REQUIRED FIRST is the deck's own rule (review-deck.tsx), so
     // reading the first three cards' own questions names exactly the same
     // blocking trio the nav used to list all at once.
-    const accept = (await screen.findByRole("button", {
-      name: "Confirm the profile",
-    })) as HTMLButtonElement;
-    expect(accept.disabled).toBe(true);
+    // Confirm presses whatever is open, and an early press names the three
+    // rather than going anywhere: nothing is posted.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Confirm the profile" }),
+    );
+    expect(
+      await screen.findByText(
+        "Still needed: Company name, What do you sell?, Ideal customer",
+      ),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/confirm", "POST")).toHaveLength(0);
     const blockingLabels: string[] = [];
     for (const _ of [0, 1, 2]) {
       await screen.findByRole("button", { name: "Next" });
@@ -479,7 +486,6 @@ describe("the conversational company act", () => {
     const accept = (await screen.findByRole("button", {
       name: "Confirm the profile",
     })) as HTMLButtonElement;
-    expect(accept.disabled).toBe(true);
 
     // The deck's own control carries the question as its accessible name.
     // Answering a card does not move the deck: the reader does, with the

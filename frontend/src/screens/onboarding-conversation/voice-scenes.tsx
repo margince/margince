@@ -13,6 +13,7 @@ import { ACCEPTED_CORPUS_ATTR, VOICE_MIN_WORDS } from "../voice-intake-core";
 import type { BuildStage, ConversationQuestion } from "./conversation-machine";
 import { buildCore } from "./presence";
 import type { CorpusManifestEntry } from "./use-voice-corpus";
+import { WayOnward } from "./way-onward";
 
 // The voice act's work surface, as scenes: collect the writing, decide who
 // is speaking when a transcript needs it, watch the model learn it, then
@@ -331,20 +332,26 @@ export function VoiceCollectScene({
                 min: formatNumber(VOICE_MIN_WORDS, locale),
               })}
         </p>
-        <div className="ob-scene-foot-acts">
-          <Button small variant="ghost" onClick={onSkip}>
-            {t("ob.conv.voice.skipped")}
-          </Button>
-          <Button
-            variant="primary"
-            className="ob-conv-build-chip"
-            disabled={!canBuild || startPending}
-            onClick={onBuild}
-          >
-            {t("ob.conv.voice.buildChip")}
-          </Button>
-        </div>
       </div>
+      <WayOnward
+        label={t("ob.conv.voice.buildChip")}
+        pending={startPending}
+        blockers={
+          canBuild
+            ? []
+            : [
+                t("ob.conv.voice.footFloor", {
+                  min: formatNumber(VOICE_MIN_WORDS, locale),
+                }),
+              ]
+        }
+        stillNeeded={(why) => why.join(" ")}
+        onGo={onBuild}
+      >
+        <Button variant="ghost" onClick={onSkip}>
+          {t("ob.conv.voice.skipped")}
+        </Button>
+      </WayOnward>
     </VoiceScene>
   );
 }
@@ -405,22 +412,19 @@ export function VoiceSpeakerScene({
       </div>
       <div className="ob-scene-foot">
         <p>{t("ob.conv.voice.speakerFoot")}</p>
-        <div className="ob-scene-foot-acts">
-          <Button
-            variant="primary"
-            disabled={picked === ""}
-            onClick={() => {
-              // The disabled attribute keeps the pointer out; this keeps a
-              // programmatic click from answering with a choice nobody made.
-              if (picked !== "") {
-                onAnswer(question.id, picked);
-              }
-            }}
-          >
-            {t("ob.conv.voice.speakerContinue")}
-          </Button>
-        </div>
       </div>
+      <WayOnward
+        label={t("ob.conv.voice.speakerContinue")}
+        blockers={picked === "" ? [t("ob.conv.voice.speakerPick")] : []}
+        stillNeeded={(why) => why.join(" ")}
+        onGo={() => {
+          // The rail refuses an early press; this keeps a programmatic call
+          // from answering with a choice nobody made.
+          if (picked !== "") {
+            onAnswer(question.id, picked);
+          }
+        }}
+      />
     </VoiceScene>
   );
 }
@@ -528,16 +532,18 @@ export function VoiceResultScene({
         </p>
       )}
       {data !== null && <VoiceResultBoard data={data} />}
-      <div className="ob-triage-continue">
-        <p className="ob-triage-continue-status" role="status">
-          {candidate ? t("ob.conv.voice.candidateNote") : ""}
-        </p>
-        <div className="ob-voice-continue-acts">
-          <Button small variant="primary" onClick={onContinue}>
-            {t("ob.conv.voice.resultContinue")}
-          </Button>
-        </div>
-      </div>
+      <WayOnward
+        label={t("ob.conv.voice.resultContinue")}
+        stillNeeded={(why) => why.join(" ")}
+        note={
+          candidate ? (
+            <p className="ob-stage-hint" role="status">
+              {t("ob.conv.voice.candidateNote")}
+            </p>
+          ) : undefined
+        }
+        onGo={onContinue}
+      />
     </VoiceScene>
   );
 }

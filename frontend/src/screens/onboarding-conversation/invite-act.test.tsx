@@ -46,8 +46,8 @@ afterEach(() => {
 });
 
 describe("InviteAct", () => {
-  it("asks the question as two answers, and holds Continue until one is picked", async () => {
-    renderInvite();
+  it("asks the question as two answers, and an early Continue asks for one", async () => {
+    const dispatch = renderInvite();
     expect(
       await screen.findByRole("heading", {
         name: "Will you be working in Margince yourself?",
@@ -59,7 +59,13 @@ describe("InviteAct", () => {
     expect(
       screen.getByRole("radio", { name: /No, I'm only setting it up/ }),
     ).not.toBeChecked();
-    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    // Continue presses either way; with nothing picked it names what is
+    // needed beside itself and moves nowhere.
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Pick one of the two to continue."),
+    ).toBeInTheDocument();
   });
 
   it("yes opens the personal steps", async () => {

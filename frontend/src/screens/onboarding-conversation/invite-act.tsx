@@ -4,7 +4,6 @@
 import { User, Users } from "lucide-react";
 import type { Dispatch } from "react";
 import { useState } from "react";
-import { Button } from "../../design-system/atoms";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { useT } from "../../i18n";
 import type {
@@ -12,6 +11,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
+import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
 // The invite: the company is confirmed, and the two steps left — training a
@@ -71,21 +71,17 @@ export function InviteAct({
         />
         <div className="ob-scene-foot">
           <p>{t("ob.conv.invite.foot")}</p>
-          <div className="ob-scene-foot-acts">
-            <Button
-              variant="primary"
-              disabled={answer === ""}
-              onClick={() =>
-                dispatch({
-                  type:
-                    answer === "yes" ? "INVITE_ACCEPTED" : "INVITE_DECLINED",
-                })
-              }
-            >
-              {t("ob.conv.invite.continue")}
-            </Button>
-          </div>
         </div>
+        <WayOnward
+          label={t("ob.conv.invite.continue")}
+          blockers={answer === "" ? [t("ob.conv.invite.pickOne")] : []}
+          stillNeeded={(why) => why.join(" ")}
+          onGo={() =>
+            dispatch({
+              type: answer === "yes" ? "INVITE_ACCEPTED" : "INVITE_DECLINED",
+            })
+          }
+        />
       </div>
     </ConversationWorkbench>
   );

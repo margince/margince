@@ -4,7 +4,6 @@
 import type { Dispatch } from "react";
 import { useState } from "react";
 import { navigate } from "../../app/router";
-import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { useMe } from "../common";
 import { EMPTY_DRAFT } from "../onboarding";
@@ -17,6 +16,7 @@ import type {
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
 import type { WizardPersistInput } from "./use-wizard-state";
+import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
 // The team act: a creator who will not work in Margince names the first person
@@ -109,22 +109,18 @@ export function TeamAct({ state, dispatch, persist }: TeamActProps) {
           <p className="ob-conv-notice" role="alert">
             {finishFailed ? t("ob.conv.team.persistFailed") : null}
           </p>
-          <div className="ob-scene-foot-acts">
-            {/* One way out, named for what it is: a skip while nobody has been
-                invited, a finish once somebody has. */}
-            <Button
-              variant={invited.length > 0 ? "primary" : "ghost"}
-              onClick={() => void finish()}
-              disabled={finishing}
-            >
-              {t(
-                invited.length > 0
-                  ? "ob.conv.team.finish"
-                  : "ob.conv.team.skip",
-              )}
-            </Button>
-          </div>
         </div>
+        {/* One way out, named for what it is: a skip while nobody has been
+            invited, a finish once somebody has. */}
+        <WayOnward
+          label={t(
+            invited.length > 0 ? "ob.conv.team.finish" : "ob.conv.team.skip",
+          )}
+          variant={invited.length > 0 ? "primary" : "ghost"}
+          pending={finishing}
+          stillNeeded={(why) => why.join(" ")}
+          onGo={() => void finish()}
+        />
       </div>
       {linkFor && (
         <PasswordLinkModal

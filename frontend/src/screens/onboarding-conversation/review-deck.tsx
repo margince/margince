@@ -6,6 +6,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import { fieldGuidance } from "./field-guidance";
+import { WayOnward } from "./way-onward";
 import "./review-deck.css";
 
 /**
@@ -81,7 +82,9 @@ export function ReviewDeck({
   onField,
   onDone,
   pending,
-  disabled,
+  blockers,
+  held,
+  openQuestions,
   digest,
   goTo,
 }: Readonly<{
@@ -100,7 +103,23 @@ export function ReviewDeck({
   onField: (field: CompanyFieldName, value: string) => void;
   onDone: () => void;
   pending: boolean;
-  disabled: boolean;
+  /**
+   * The required fields still empty, by the names the reader knows them by.
+   * Confirm presses anyway and names these when it is pressed early.
+   */
+  blockers: readonly string[];
+  /**
+   * A standing refusal from the server that an identical press cannot change
+   * — the notice beside the deck explains it and carries its own retry, so
+   * Confirm is the one button here that does go grey.
+   */
+  held: boolean;
+  /**
+   * Questions the read raised that nobody has answered. They do not block —
+   * the record is saved without them — but the rail says so, because a reader
+   * who saw a question go by should not find it silently gone.
+   */
+  openQuestions: number;
   /**
    * The record as it stands, shown beside the deck.
    *
@@ -156,6 +175,29 @@ export function ReviewDeck({
   // onto the last one: the deck is finished and says so.
   const card = asking === undefined ? undefined : cardOf(asking);
 
+  const wayOnward = (
+    <WayOnward
+      label={t("ob.deck.confirm")}
+      pendingLabel={t("ob.s1.saving")}
+      pending={pending}
+      blockers={blockers}
+      held={held}
+      stillNeeded={(fields) =>
+        t("ob.deck.stillNeeded", { fields: fields.join(", ") })
+      }
+      note={
+        openQuestions > 0 ? (
+          <p className="ob-stage-hint">
+            {t("ob.deck.openLeft", {
+              count: formatNumber(openQuestions, locale),
+            })}
+          </p>
+        ) : undefined
+      }
+      onGo={onDone}
+    />
+  );
+
   if (card === undefined) {
     return (
       <div className="rdeck">
@@ -170,10 +212,8 @@ export function ReviewDeck({
           total={order.current.length}
           settled={settled}
           locale={locale}
-          onDone={onDone}
-          pending={pending}
-          disabled={disabled}
         />
+        {wayOnward}
       </div>
     );
   }
@@ -207,10 +247,8 @@ export function ReviewDeck({
         total={cards.length}
         settled={settled}
         locale={locale}
-        onDone={onDone}
-        pending={pending}
-        disabled={disabled}
       />
+      {wayOnward}
     </div>
   );
 }
@@ -312,23 +350,18 @@ function DeckCardFace({
   );
 }
 
-// The tray: what is left, what went in without anybody, and the way onward.
+// The tray: what is left, and what went in without anybody. The way onward is
+// on the stage's rail, where it stays in view however long the deck runs.
 function DeckFoot({
   left,
   total,
   settled,
   locale,
-  onDone,
-  pending,
-  disabled,
 }: Readonly<{
   left: number;
   total: number;
   settled: number;
   locale: Locale;
-  onDone: () => void;
-  pending: boolean;
-  disabled: boolean;
 }>) {
   const t = useT();
   return (
@@ -342,9 +375,6 @@ function DeckFoot({
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>
-      <Button variant="primary" onClick={onDone} disabled={disabled || pending}>
-        {t(pending ? "ob.s1.saving" : "ob.deck.confirm")}
-      </Button>
     </div>
   );
 }

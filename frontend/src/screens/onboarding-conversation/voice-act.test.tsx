@@ -486,20 +486,19 @@ describe("the conversational voice act", () => {
 
     await uploadFile("one.md", "First document.");
     expect(await screen.findByText("500 of 800 words")).toBeTruthy();
-    const build = screen.getByRole("button", {
-      name: /Build my voice profile/,
-    }) as HTMLButtonElement;
-    expect(build.disabled).toBe(true);
+    // Below the floor the button still presses: the press names the floor
+    // on the rail and starts nothing.
+    await userEvent.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
+      "800",
+    );
 
     await uploadFile("two.md", "Second document.");
+    // At the floor the reason is gone with the block it named.
     await waitFor(() => {
-      expect(
-        (
-          screen.getByRole("button", {
-            name: /Build my voice profile/,
-          }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(false);
+      expect(document.querySelector(".ob-stage-note")).toBeNull();
     });
     expect(screen.queryByText("500 of 800 words")).toBeNull();
   });
@@ -760,7 +759,7 @@ describe("the voice act's surface/rail split", () => {
       />,
     );
 
-    const bar = document.querySelector(".ob-triage-continue");
+    const bar = document.querySelector(".ob-stage-acts");
     expect(bar).not.toBeNull();
     expect(
       within(bar as HTMLElement).getByRole("button", { name: "Continue" }),
@@ -785,10 +784,10 @@ describe("the voice act's surface/rail split", () => {
     );
 
     // Every section is its own bordered card, and the confirm action sits
-    // in the surface's own pinned bar beside them.
+    // on the stage's own rail beside them.
     const identity = await screen.findByText(/Direct, concrete/);
     expect(identity.closest(".ob-voice-result-card")).not.toBeNull();
-    const bar = document.querySelector(".ob-triage-continue");
+    const bar = document.querySelector(".ob-stage-acts");
     expect(bar).not.toBeNull();
     expect(
       within(bar as HTMLElement).getByRole("button", {

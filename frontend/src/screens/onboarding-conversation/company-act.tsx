@@ -64,6 +64,7 @@ import { deckCards, ReviewDeck } from "./review-deck";
 import { useClarifyAnswers } from "./use-clarify-answers";
 import { safeStartError, useCompanyRead } from "./use-company-read";
 import type { WizardPersistInput } from "./use-wizard-state";
+import { WayOnward } from "./way-onward";
 import { ConversationWorkbench, useConfiguredModel } from "./workbench";
 
 // The company act driver: the read lifecycle lives in useCompanyRead and
@@ -734,9 +735,19 @@ export function CompanyAct({
    */
   const confirmRefused =
     missing.length > 0 ||
-    openReviewQuestions.length > 0 ||
     !(state.phase === "co.review" || state.phase === "co.manual") ||
     confirmBlocked;
+  // What the rail names when Confirm is pressed early: the required fields
+  // still empty, by label. Open questions are NOT here — the server saves a
+  // record with a question unanswered, and a question the assistant could not
+  // settle must not hold the reader on this screen for good; the rail names
+  // them as left open instead. The server's own standing refusal is not here
+  // either: it holds the button (`confirmHeld`) and explains itself in the
+  // notice, with the retry that can actually change it.
+  const confirmBlockers = blocking.map((row) => row.label);
+  const confirmHeld =
+    confirmBlocked ||
+    !(state.phase === "co.review" || state.phase === "co.manual");
 
   const presence = presenceFor(state, { read, readBroken });
 
@@ -932,6 +943,9 @@ export function CompanyAct({
             setDraft((current) => changeDraftField(current, field, value))
           }
           onDone={() => confirm.mutate()}
+          blockers={confirmBlockers}
+          held={confirmHeld}
+          openQuestions={openReviewQuestions.length}
           // EVERY row, not just the outstanding ones: the article is what the
           // record says, and a version of it that showed only the unanswered
           // half would be the deck's own list again in prose.
@@ -950,7 +964,6 @@ export function CompanyAct({
             />
           )}
           pending={confirm.isPending}
-          disabled={confirmRefused}
           goTo={goToField ?? undefined}
         />
       ) : artifactMode === "profile" ? (
@@ -996,22 +1009,24 @@ export function CompanyAct({
               who changed nothing, and a second button saying the same thing
               beside an untouched record would be a choice with no difference. */}
           {draft.edited.size > 0 && (
-            <div className="pdigest-save">
-              <p className="pdigest-save-note">
-                {t("ob.digest.changed", {
-                  count: formatNumber(draft.edited.size, locale),
-                })}
-              </p>
-              <Button
-                variant="primary"
-                onClick={() => confirm.mutate()}
-                disabled={confirmRefused || confirm.isPending}
-              >
-                {t(
-                  confirm.isPending ? "ob.s1.saving" : "ob.digest.saveChanges",
-                )}
-              </Button>
-            </div>
+            <WayOnward
+              label={t("ob.digest.saveChanges")}
+              pendingLabel={t("ob.s1.saving")}
+              pending={confirm.isPending}
+              blockers={confirmBlockers}
+              held={confirmHeld}
+              stillNeeded={(fields) =>
+                t("ob.deck.stillNeeded", { fields: fields.join(", ") })
+              }
+              note={
+                <p className="ob-stage-hint">
+                  {t("ob.digest.changed", {
+                    count: formatNumber(draft.edited.size, locale),
+                  })}
+                </p>
+              }
+              onGo={() => confirm.mutate()}
+            />
           )}
         </div>
       ) : (

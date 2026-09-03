@@ -45,7 +45,9 @@ function Deck({ card }: Readonly<{ card: DeckCard }>) {
         onField={(_field, next) => setValue(next)}
         onDone={() => {}}
         pending={false}
-        disabled={false}
+        blockers={[]}
+        held={false}
+        openQuestions={0}
         digest={() => null}
       />
     </StoryProviders>

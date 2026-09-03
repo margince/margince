@@ -118,6 +118,7 @@ function collectScene(overrides: {
   fileRef?: RefObject<HTMLInputElement | null>;
   summary?: CorpusSummary | null;
   canBuild?: boolean;
+  onBuild?: () => void;
 }) {
   return withLocale(
     <VoiceCollectScene
@@ -126,7 +127,7 @@ function collectScene(overrides: {
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
-      onBuild={() => undefined}
+      onBuild={overrides.onBuild ?? (() => undefined)}
       onSkip={() => undefined}
       canBuild={overrides.canBuild ?? false}
       startPending={false}
@@ -217,13 +218,19 @@ describe("the collect scene's corpus floor meter", () => {
     );
   });
 
-  it("shows the same floor the Build action gates on, below and at it", () => {
-    // Below the floor: the scene's own canBuild (computed from the same
-    // VOICE_MIN_WORDS) disables Build, and the meter still reads "not yet".
-    collectScene({ summary: summaryOf(200), canBuild: false });
-    expect(
+  it("shows the same floor the Build action gates on, below and at it", async () => {
+    // Below the floor: Build presses, and the press names the floor the
+    // scene's own canBuild (computed from the same VOICE_MIN_WORDS) is read
+    // against, while the meter still reads "not yet".
+    const onBuild = vi.fn();
+    collectScene({ summary: summaryOf(200), canBuild: false, onBuild });
+    await userEvent.click(
       screen.getByRole("button", { name: "Build my voice profile" }),
-    ).toBeDisabled();
+    );
+    expect(onBuild).not.toHaveBeenCalled();
+    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
+      `${VOICE_MIN_WORDS}`,
+    );
     expect(
       document.querySelector(".ob-voice-meter-line")?.textContent,
     ).toContain(`of ${VOICE_MIN_WORDS} words`);
