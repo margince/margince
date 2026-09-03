@@ -21,6 +21,11 @@ package connector
 type MessageParticipant struct {
 	Email string
 	Role  string
+	// DisplayName is the name the transport gave this party, or "" when it
+	// gave none. A calendar invitation is the case that matters: it names
+	// every attendee in full, and a person minted from a bare address is
+	// otherwise stuck with the local part of their own email forever.
+	DisplayName string
 }
 
 // The roles a further participant may hold. The set is closed by the

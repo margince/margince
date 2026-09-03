@@ -95,6 +95,14 @@ func (s *Store) PromotePersonCohortTx(
 	if err != nil {
 		return CohortPromotion{}, err
 	}
+	// And after those, for the same ordering reason: the invitation that named
+	// this attendee in full is on a meeting they are only now resolved on. This
+	// is the second of the two namings — the meeting synced before they were a
+	// contact — and without it a person minted from a bare invitation address
+	// keeps the local part of their own email as their name forever.
+	if err := fillPersonNameFromAttendance(ctx, tx, canonical); err != nil {
+		return CohortPromotion{}, err
+	}
 	linked = append(linked, meetings...)
 	if len(linked) == 0 && len(promoted) == 0 {
 		// Nothing moved. A repair that found nothing is not an event in this

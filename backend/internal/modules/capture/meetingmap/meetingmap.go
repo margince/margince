@@ -65,7 +65,12 @@ type Event struct {
 // which each decoder answers in its own vendor's terms.
 type Actor struct {
 	Email string
-	Room  bool
+	// Name is what the invitation called this party, or "" when the provider
+	// named nobody. It is the only full name an attendee-only contact ever
+	// gets: a person minted from a bare invitation address is otherwise named
+	// by the local part of their own email.
+	Name string
+	Room bool
 }
 
 // Meeting is the classified result of reading one event against the connected
@@ -132,20 +137,22 @@ func meetingParties(ev Event, ownerLower string) []connector.MessageParticipant 
 	}
 
 	var out []connector.MessageParticipant
-	add := func(email, role string) {
+	add := func(email, name, role string) {
 		address := strings.ToLower(strings.TrimSpace(email))
 		if address == "" || seen[address] {
 			return
 		}
 		seen[address] = true
-		out = append(out, connector.MessageParticipant{Email: address, Role: role})
+		out = append(out, connector.MessageParticipant{
+			Email: address, Role: role, DisplayName: strings.TrimSpace(name),
+		})
 	}
-	add(ev.Organizer.Email, connector.ParticipantRoleOrganizer)
+	add(ev.Organizer.Email, ev.Organizer.Name, connector.ParticipantRoleOrganizer)
 	for _, a := range ev.Attendees {
 		if a.Room {
 			continue
 		}
-		add(a.Email, connector.ParticipantRoleAttendee)
+		add(a.Email, a.Name, connector.ParticipantRoleAttendee)
 	}
 
 	return connector.CapParticipants(out)
