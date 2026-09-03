@@ -1,5 +1,6 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
+import { calendarDay } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
@@ -416,18 +417,15 @@ function momentText(
 
 // Whether an instant falls on the reader's own calendar day.
 //
-// Compared in the VIEWER's zone rather than the browser's default, because the
-// whole row is drawn in that zone: a meeting at 23:30 in Berlin read from a
-// machine set to UTC is still tonight's meeting to the person reading it, and
-// asking `Date` directly would call it tomorrow's.
+// Through `calendarDay`, which already answers "which day is this, there" — a
+// second formatter spelled here would be a second answer to that question, and
+// the two would drift the first time either changed.
+//
+// Compared in the VIEWER's zone rather than the runner's, because the whole row
+// is drawn in that zone: a meeting at 23:30 in Berlin, read on a machine set to
+// UTC, is still tonight's meeting to the person reading it.
 function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
-  const day = new Intl.DateTimeFormat("en-CA", {
-    timeZone: zone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return day.format(new Date(utcIso)) === day.format(now);
+  return calendarDay(new Date(utcIso), zone) === calendarDay(now, zone);
 }
 
 // Where the row's suggested step leads.

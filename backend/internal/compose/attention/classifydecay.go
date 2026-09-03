@@ -75,9 +75,12 @@ func decayMatters(facts *crmcontracts.AttentionRelationshipFacts) bool {
 		*facts.Strength == crmcontracts.AttentionRelationshipFactsStrengthStrong
 }
 
-// sourceDecay is the lane's own name on the wire, spelled once here because
-// three places now match on it and a typo in any of them would simply stop
-// matching — a suppressor that silently suppresses nothing.
+// sourceDecay is the lane's own name on the wire.
+//
+// A constant rather than a literal at each match, because the failure mode of a
+// typo here is silence: a suppressor comparing against a misspelt source simply
+// never matches, so it suppresses nothing and every test that does not plant the
+// duplicate row still passes.
 const sourceDecay = crmcontracts.WorklistItemSource("relationship_decay")
 
 // dropDecayAlreadyWaiting removes the lapsed-relationship row for a person the
