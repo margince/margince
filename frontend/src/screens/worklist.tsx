@@ -310,17 +310,24 @@ function WorklistBody({
           same reader's question — a lead asking whether the day their team sees
           is the day their team has — and on the same tier for the same reason.
 
-          On the reader's OWN day only, exactly as the board above it is. The
-          endpoint takes no owner and derives its subject from the authenticated
-          principal, so under a drill-down this panel answered about the MANAGER
-          while standing on a page headed with somebody else's name: "412 hidden
-          from you" read as Lena's backlog when it was the reader's own, on the
-          one surface whose whole job is to say what a queue is hiding.
+          On the reader's OWN day only. The endpoint takes no owner and no
+          scope: it derives its subject from the authenticated principal, so
+          wherever the queue beside it is about somebody else, this panel is
+          still answering about the reader. "412 hidden from you" stood on a
+          page headed with a colleague's name and read as THEIR backlog — on
+          the one surface whose whole job is to say what a queue is hiding.
 
-          Answering it FOR Lena is a different feature needing a different
-          endpoint. Until that exists, saying nothing beats saying the wrong
-          person's number under her name. */}
-      {owner === "" && (
+          BOTH ways of leaving your own day are guarded, because there are two
+          and they are reached by different controls. `owner` is the drill-down
+          into a named colleague; `scope` is the picker beside it, and the team
+          board's own "show me the unowned pile" moves the scope while leaving
+          the owner empty. Guarding the drill-down alone left the same wrong
+          figure standing under the unassigned and team queues.
+
+          Answering it FOR a colleague is a different feature needing a
+          different endpoint. Until that exists, saying nothing beats saying the
+          wrong person's number under their name. */}
+      {owner === "" && scope === "mine" && (
         <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
       )}
       {/* A day cannot read as clear while something that would have filled it

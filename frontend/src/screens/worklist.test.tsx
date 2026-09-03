@@ -885,18 +885,46 @@ describe("the address opens a queue", () => {
     stub(day({ scope_options: ["mine", "team"] }));
     renderWorklist("en", "11111111-1111-4111-8111-111111111111");
 
+    // Waited on the panel's own NEIGHBOUR rather than on a stopwatch. The
+    // coach control renders on this same drill-down and sits immediately before
+    // the panel in the tree, so seeing it proves React reached the point where
+    // the panel would have rendered and asked. A pause of N milliseconds proves
+    // the same thing only on a machine fast enough, which is a test that passes
+    // for a reason unrelated to what it checks.
+    //
+    // The wait is load-bearing: asserting straight after the day's read reports
+    // silence from a component that has not run yet, and this case passed with
+    // the guard removed before the anchor was added.
+    await screen.findByRole("button", { name: "Leave a note" });
+
     // The panel is absent, and — the half that actually holds — it never ASKS.
     // The endpoint answers about the authenticated principal, so a request made
     // from a colleague's page is already the wrong question; the drawn panel is
     // only where the wrong answer would have shown up.
-    // Wait for the day itself to land, THEN give the panel its chance. The
-    // day's read resolving is not the moment the panel would have asked, so an
-    // assertion made right after it reports silence from a component that has
-    // not run yet — a test that passes with the guard removed, which is what
-    // this one did before the pause was added.
-    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
-    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByText("What the queue is not showing")).toBeNull();
+    expect(hiddenRequests()).toEqual([]);
+  });
+
+  // The OTHER way of leaving your own day, and the one the first guard missed.
+  //
+  // `owner` is the drill-down into a named colleague. The scope picker beside
+  // it — and the team board's own "show me the unowned pile" — moves the queue
+  // to somebody else's work while leaving the owner empty, so a guard on the
+  // drill-down alone left the reader's own figure standing under the unassigned
+  // and team queues. Two controls, one wrong answer.
+  it("draws no hidden-backlog panel on a queue that is not the reader's", async () => {
+    stub(
+      day({
+        scope: "unassigned",
+        scope_options: ["mine", "unassigned", "team"],
+      }),
+    );
+    renderWorklist("en", "unassigned");
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(screen.queryByText("What the queue is not showing")).toBeNull(),
+    );
     expect(hiddenRequests()).toEqual([]);
   });
 
