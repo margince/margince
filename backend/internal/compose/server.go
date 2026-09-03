@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -188,6 +189,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			ForecastDeals, ForecastPeriodAt,
 			func() time.Time { return time.Now().UTC() },
 		),
+		// The floor comes from the constant rather than a setting for now:
+		// one number, and moving it to installation settings is a migration
+		// plus a reader, which is its own change.
+		analyticsQueryHandlers: newAnalyticsQueryHandlers(
+			InstallationDB(pool), analyticsquery.DefaultFloor),
 		// The share routes run in the FORECAST store's transaction, whose InTx
 		// gates on forecast:read — so the whole surface, issuing included, is
 		// behind the grant that reads the thing being shared.
