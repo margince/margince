@@ -163,7 +163,7 @@ function WorklistHeader({
       {/* What the day is WORTH, above the controls that narrow it. The figures
           describe the whole day rather than the page or the filter, so they sit
           above both rather than beside the pills they would be confused with. */}
-      <WorklistReadings day={day} />
+      <WorklistReadings day={day} onFilter={onFilter} />
       {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
       {scopes.length > 1 && owner === "" && (

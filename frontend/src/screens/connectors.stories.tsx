@@ -238,7 +238,7 @@ export const AddConnectionFailed: Story = {
     await openAddDialog(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Connect Microsoft" }),
+      await body.findByRole("button", { name: "Connect Outlook" }),
     );
     await body.findByRole("alert");
   },

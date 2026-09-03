@@ -577,11 +577,24 @@
   display: none;
 }
 
+/* THE VALUE AND EVERYTHING THAT QUALIFIES IT, on one line.
+   The value, a warning about its shape, who vouched for it and the verbs that
+   change it are separate elements of unlike kinds — a mark, a badge, a chip, a
+   button — and inline with no rule between them they simply abutted: a fact
+   nobody has to confirm read as "1998Set by a person", because it is the one
+   row where no button follows the value to force a gap. The row owns the
+   spacing, so it holds for every combination of the four. */
+.co-fact-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 /* A fact whose value contradicts its field. It sits beside the value rather
    than replacing it: the reader needs to see what was extracted to judge it. */
 .co-fact-suspect {
   display: inline-block;
-  margin-inline-start: 0.4rem;
 }
 
 /* The strip itself withheld, rather than absent: one line where the readings

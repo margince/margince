@@ -248,7 +248,7 @@ function FactRow({
   return (
     <div className="co-field">
       <span className="t-label">{t(factFieldLabelKey(fact.field))}</span>
-      <div>
+      <div className="co-fact-line">
         <EvidenceMark
           value={fact.value}
           source={derivedSource(fact, locale, recordZone)}

@@ -7898,6 +7898,10 @@ export const de = {
   "worklist.readings.review": "Prüfung",
   "worklist.readings.review.detail":
     "Routinearbeit, die hinter einer Entscheidung wartet",
+  "worklist.readings.revenue.open": "Gefährdete Deals anzeigen",
+  "worklist.readings.replies.open": "Wartende anzeigen",
+  "worklist.readings.prospecting.open": "Leads anzeigen",
+  "worklist.readings.review.open": "Wartendes anzeigen",
   "worklist.readings.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.hidden.title": "Was die Liste nicht zeigt",

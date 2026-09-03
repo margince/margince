@@ -15,57 +15,74 @@
 // keeps a gate over exactly that split.
 
 import { StatCard } from "../design-system/atoms";
-import { StatStrip } from "../design-system/statstrip";
+import { ReadingsGrid } from "../design-system/readingsgrid";
 import { formatMoneyCompact, formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import type { Worklist } from "./worklist.queries";
+import type { Worklist, WorklistFilter } from "./worklist.queries";
 import "./worklist.css";
 
 /**
  * The four readings. Fixed at four for the reason the deal strip is fixed at
  * four: a row that sometimes drew a fifth would fold at a different width from
  * one click away.
+ *
+ * Each reading is a DOOR into the rows it was counted over, which is why these
+ * draw as a grid of cards rather than as one ruled plate: a strip is read
+ * across as a single comparison, and these are used one at a time — a rep reads
+ * "eleven customers waiting" and wants those eleven rows. The door narrows the
+ * queue below through the same filter the pills set, so the reading and the
+ * pill cannot disagree about what a cut contains.
  */
-export function WorklistReadings({ day }: Readonly<{ day: Worklist }>) {
+export function WorklistReadings({
+  day,
+  onFilter,
+}: Readonly<{ day: Worklist; onFilter: (next: WorklistFilter) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const readings = day.readings;
   // A source read to its bound makes every figure a floor, so the caveat sits
-  // under the whole strip rather than in one slot. The four are read across as
-  // one statement, and a caveat on one of them invites the reading where the
-  // other three are exact.
+  // under the whole row rather than in one slot. The four are read as one
+  // statement about the day, and a caveat on one of them invites the reading
+  // where the other three are exact.
   return (
-    <section
-      className="worklist-readings"
-      aria-label={t("worklist.readings.label")}
+    <ReadingsGrid
+      label={t("worklist.readings.label")}
+      testId="worklist-readings"
+      floor={
+        readings.more_available ? t("worklist.readings.truncated") : undefined
+      }
     >
-      <StatStrip
-        testId="worklist-readings"
-        floor={
-          readings.more_available ? t("worklist.readings.truncated") : undefined
-        }
-      >
-        <RevenueStat readings={readings} locale={locale} t={t} />
-        <CountStat
-          label={t("worklist.readings.replies")}
-          detail={t("worklist.readings.replies.detail")}
-          count={readings.buyer_replies}
-          locale={locale}
-        />
-        <CountStat
-          label={t("worklist.readings.prospecting")}
-          detail={t("worklist.readings.prospecting.detail")}
-          count={readings.prospecting}
-          locale={locale}
-        />
-        <CountStat
-          label={t("worklist.readings.review")}
-          detail={t("worklist.readings.review.detail")}
-          count={readings.review}
-          locale={locale}
-        />
-      </StatStrip>
-    </section>
+      <RevenueStat
+        readings={readings}
+        locale={locale}
+        t={t}
+        onOpen={() => onFilter("deals_at_risk")}
+      />
+      <CountStat
+        label={t("worklist.readings.replies")}
+        detail={t("worklist.readings.replies.detail")}
+        count={readings.buyer_replies}
+        locale={locale}
+        openLabel={t("worklist.readings.replies.open")}
+        onOpen={() => onFilter("customer_waiting")}
+      />
+      <CountStat
+        label={t("worklist.readings.prospecting")}
+        detail={t("worklist.readings.prospecting.detail")}
+        count={readings.prospecting}
+        locale={locale}
+        openLabel={t("worklist.readings.prospecting.open")}
+        onOpen={() => onFilter("leads")}
+      />
+      <CountStat
+        label={t("worklist.readings.review")}
+        detail={t("worklist.readings.review.detail")}
+        count={readings.review}
+        locale={locale}
+        openLabel={t("worklist.readings.review.open")}
+        onOpen={() => onFilter("decisions")}
+      />
+    </ReadingsGrid>
   );
 }
 
@@ -82,14 +99,19 @@ function RevenueStat({
   readings,
   locale,
   t,
+  onOpen,
 }: Readonly<{
   readings: Worklist["readings"];
   locale: Locale;
   t: Translator;
+  onOpen: () => void;
 }>) {
   const minor = readings.revenue_at_risk_minor;
   const currency = readings.revenue_currency;
   if (minor == null || !currency) {
+    // No door: the figure is absent because nothing at risk could be priced,
+    // and a labelled way into "the deals behind this" would promise rows this
+    // slot cannot say there are any of.
     return (
       <StatCard
         label={t("worklist.readings.revenue")}
@@ -104,31 +126,47 @@ function RevenueStat({
       value={formatMoneyCompact(minor, currency, locale)}
       detail={t("worklist.readings.revenue.detail")}
       // The reading is bad news whenever there is any of it: money drifting is
-      // the thing this strip exists to surface, and a rep who sees it in the
+      // the thing this row exists to surface, and a rep who sees it in the
       // page's ordinary tone reads it as a status rather than as work.
       tone={minor > 0 ? "warn" : undefined}
+      // A priced zero has no deals behind it to open.
+      openLabel={minor > 0 ? t("worklist.readings.revenue.open") : undefined}
+      onOpen={minor > 0 ? onOpen : undefined}
       numeric
     />
   );
 }
 
-// One tally, in the reader's own number formatting.
+// One tally, in the reader's own number formatting, with the way into the rows
+// it counted.
+//
+// A tally of NONE gets no door. `StatCard` draws one whenever both halves
+// arrive, so the decision is the caller's, and it is the same rule the label
+// pair already states: a labelled door with nothing behind it is worse than no
+// door, and a reader who takes one to an empty queue learns to stop taking
+// them.
 function CountStat({
   label,
   detail,
   count,
   locale,
+  openLabel,
+  onOpen,
 }: Readonly<{
   label: string;
   detail: string;
   count: number;
   locale: Locale;
+  openLabel: string;
+  onOpen: () => void;
 }>) {
   return (
     <StatCard
       label={label}
       value={formatNumber(count, locale)}
       detail={detail}
+      openLabel={count > 0 ? openLabel : undefined}
+      onOpen={count > 0 ? onOpen : undefined}
       numeric
     />
   );

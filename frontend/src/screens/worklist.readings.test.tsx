@@ -1,8 +1,10 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import type { WorklistFilter } from "./worklist.queries";
 import { WorklistReadings } from "./worklist.readings";
 
 // What the strip above the queue claims, and what it refuses to claim.
@@ -35,10 +37,13 @@ function day(readings: Partial<WorklistReadingsData> = {}): Worklist {
   };
 }
 
-function draw(readings: Partial<WorklistReadingsData> = {}) {
+function draw(
+  readings: Partial<WorklistReadingsData> = {},
+  onFilter: (next: WorklistFilter) => void = () => {},
+) {
   return render(
     <LocaleProvider initial="en">
-      <WorklistReadings day={day(readings)} />
+      <WorklistReadings day={day(readings)} onFilter={onFilter} />
     </LocaleProvider>,
   );
 }
@@ -97,9 +102,9 @@ describe("the worklist readings strip", () => {
     expect(screen.getByText(/floors, not totals/)).toBeTruthy();
   });
 
-  // The strip is one comparison, so it always draws its four slots — a reading
-  // that vanished at zero would make the row fold at a different width from one
-  // read to the next.
+  // The row is one set of readings about one day, so it always draws its four
+  // slots — a reading that vanished at zero would make the row fold at a
+  // different width from one read to the next.
   it("draws all four readings on a day with no work at all", () => {
     draw();
 
@@ -107,5 +112,53 @@ describe("the worklist readings strip", () => {
     expect(screen.getByText("Buyer replies")).toBeTruthy();
     expect(screen.getByText("Prospecting")).toBeTruthy();
     expect(screen.getByText("Review")).toBeTruthy();
+  });
+
+  // A reading is a door into the rows it was counted over, and the door sets
+  // the SAME cut the pill below it does. Naming the filter here is what stops
+  // "who is waiting" opening a queue that does not hold them.
+  it("opens each reading on the cut it was counted over", async () => {
+    const user = userEvent.setup();
+    const opened: WorklistFilter[] = [];
+    draw(
+      {
+        revenue_at_risk_minor: 384_500_00,
+        revenue_currency: "EUR",
+        buyer_replies: 14,
+        prospecting: 3,
+        review: 27,
+      },
+      (next) => opened.push(next),
+    );
+
+    for (const name of [
+      "Show the deals at risk",
+      "Show who is waiting",
+      "Show the leads",
+      "Show what is queued",
+    ]) {
+      await user.click(screen.getByRole("button", { name }));
+    }
+
+    expect(opened).toEqual([
+      "deals_at_risk",
+      "customer_waiting",
+      "leads",
+      "decisions",
+    ]);
+  });
+
+  // A door with nothing behind it is worse than no door: a reader who takes one
+  // to an empty queue learns to stop taking them.
+  it("offers no way in to a reading of none", () => {
+    draw({
+      revenue_at_risk_minor: 0,
+      revenue_currency: "EUR",
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+    });
+
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

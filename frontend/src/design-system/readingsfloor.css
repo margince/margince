@@ -1,0 +1,12 @@
+/* The row-wide caveat, under the row it qualifies.
+
+   It reads a step below the readings themselves: it is what the figures do NOT
+   cover, which a reader needs after the figures rather than instead of them.
+   The size is spelled here and nowhere else — it hung off `t-meta`, a class no
+   stylesheet declares, so the sentence drew at whatever size the screen around
+   it happened to set. */
+.readings-floor {
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+  margin: var(--space-2) 0 0;
+}

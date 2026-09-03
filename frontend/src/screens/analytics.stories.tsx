@@ -14,14 +14,15 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The Reports screen for the fe-uat render gate. All three report segments draw
-// into ONE surface — a titled card whose trailing action row carries "Explain
-// this number" — so each story below is that same card holding a different
-// report, which is exactly the drift these stories exist to catch: the screen
-// body had no render coverage while three segments grew three different looks.
+// The Analytics screen for the fe-uat render gate. The tabs choose a SECTION
+// and a section draws every report it holds, each into the same surface — a
+// titled card whose trailing action row carries "Explain this number". So a
+// story here is one section's worth of screen, which is exactly the drift these
+// stories exist to catch: the screen body had no render coverage while the
+// reports grew three different looks.
 //
-// Every read is stubbed off the same shapes reports.test.tsx exercises; the
-// segment stories click the picker in play() because the screen owns the
+// Every read is stubbed off the same shapes reports.test.tsx exercises. The
+// picker lives on the screen, so a story presses it rather than being handed a
 // selection, and fe-uat waits for the interaction to settle before capturing.
 
 const pipelines = {
@@ -54,7 +55,18 @@ const pipelines = {
   page: { next_cursor: null, has_more: false },
 };
 
+// The cell the result's own derivation handle is bound to: a report groups by
+// its own dimension, and the handle names one group of it. The screen forwards
+// every predicate on the handle, so a handle carrying another report's dimension
+// would ask for a slice this result never held.
+const DERIVATION_CELL: Record<string, [dimension: string, group: string]> = {
+  "deals-by-stage": ["stage_id", "pl-s1"],
+  forecast: ["forecast_category", "commit"],
+  "open-deals-per-company": ["organization_id", "BÄR Pharma GmbH"],
+};
+
 function run(report: string, rows: Record<string, unknown>[]) {
+  const [dimension, group] = DERIVATION_CELL[report];
   return jsonResponse({
     report,
     plan: {},
@@ -66,7 +78,7 @@ function run(report: string, rows: Record<string, unknown>[]) {
     timezone: "Europe/Berlin",
     base_currency: "EUR",
     fiscal_year_start_month: 1,
-    derivation_url: `/v1/reports/${report}/derivation?by=stage_id&agg=sum:amount_minor:raw_minor&stage_id=pl-s1`,
+    derivation_url: `/v1/reports/${report}/derivation?by=${dimension}&agg=sum:amount_minor:raw_minor&${dimension}=${encodeURIComponent(group)}`,
   });
 }
 
@@ -133,14 +145,20 @@ const companyRows = [
   },
 ];
 
+// The source rows behind the commit tile of the forecast, which is the cell the
+// handle above is bound to. They add up to that tile's €28,000.00 exactly,
+// because a drill-through that does not reconcile to the figure it explains is
+// the one thing this card must never show.
 const derivation = {
-  report: "deals-by-stage",
-  definition: "Sum of open-deal amounts, grouped by stage, in Qualify",
+  report: "forecast",
+  definition: "Sum of open-deal amounts in the commit category, in EUR",
   plan: {},
   columns: ["deal", "amount"],
   rows: [
-    { deal: "BÄR Pharma — Packaging QA", amount: "€123.43" },
-    { deal: "Brandt — Line QA Retrofit", amount: "€123.43" },
+    { deal: "BÄR Pharma — Packaging QA", amount: "€7,000.00" },
+    { deal: "Brandt — Line QA Retrofit", amount: "€7,000.00" },
+    { deal: "Halbach Werke — Filler upgrade", amount: "€7,000.00" },
+    { deal: "Ostmann Logistik — Label printer", amount: "€7,000.00" },
   ],
 };
 
@@ -151,7 +169,11 @@ const routes: RouteMap = {
   "POST /reports/forecast": () => run("forecast", forecastRows),
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
-  "GET /reports/deals-by-stage/derivation": () => jsonResponse(derivation),
+  // The derivation the FORECAST result's handle points at. The unrouted
+  // fallback is an empty list page, which carries neither `columns` nor `rows`
+  // — both required of a ReportDerivation — so a missing route here reaches the
+  // explain card as a 200 the screen has every right to trust.
+  "GET /reports/forecast/derivation": () => jsonResponse(derivation),
 };
 
 function screenStory() {
@@ -176,10 +198,6 @@ export default meta;
 
 type Story = StoryObj;
 
-// The default segment: the stage table inside the report card, the explain verb
-// in the card's own action row.
-export const DealsByStage: Story = { render: screenStory };
-
 // Five money figures read across as one comparison — the strip, under the
 // callout that says how to read the second figure in each slot.
 export const Forecast: Story = {
@@ -187,13 +205,19 @@ export const Forecast: Story = {
   play: clickButton("Forecast"),
 };
 
-export const OpenDealsPerCompany: Story = {
+// The pipeline section, which is BOTH of its reports: the stage table with its
+// unweighted and weighted columns, then open deals per company. One story
+// because it is one picture — the two cards fit the viewport together, and a
+// second story per report would be the same capture under a second name. What
+// to check is that the two cards read as one column: the same titled surface,
+// each with its own frame caption and its own explain verb.
+export const Pipeline: Story = {
   render: screenStory,
-  play: clickButton("Open deals per company"),
+  play: clickButton("Pipeline"),
 };
 
-// "Explain this number" open: the report card above, the derivation card below
-// it, both the same titled-card surface.
+// "Explain this number" open on the section the screen opens on: the report
+// card above, the derivation card below it, both the same titled-card surface.
 export const Explain: Story = {
   render: screenStory,
   play: clickButton("Explain this number"),
