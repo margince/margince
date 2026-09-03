@@ -118,17 +118,32 @@ describe("walking to the rest of the queue", () => {
   // The header describes the assembled DAY, the queue describes what is
   // loaded. Reading the figures off the latest page instead would make the
   // summary shrink as the reader pages further in.
+  //
+  // Each page's `summary` counts ITS OWN rows — the server computes it after
+  // the page cut — so these fixtures spell that rather than pretending a
+  // one-row page reports the whole day. The day's size comes from
+  // `counts[].considered`, which is taken before the cut.
   it("keeps the day's figures still while the rows grow", async () => {
+    const counts = [
+      {
+        category: "tasks" as const,
+        considered: 48,
+        shown: 1,
+        more_available: false,
+      },
+    ];
     stubWalk([
       day({
         queue: [row({ id: "a", title: "First thing" })],
-        summary: { urgent: 3, due: 9, lower_priority: 6, total: 48 },
+        summary: { urgent: 3, due: 9, in_play: 2, lower_priority: 6, total: 1 },
+        counts,
         next_cursor: "page-2",
       }),
       day({
         queue: [row({ id: "b", title: "Second thing" })],
-        // A later page's own figures, which must NOT reach the header.
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 48 },
+        // The later page's own figures, which must NOT reach the header.
+        summary: { urgent: 0, due: 0, in_play: 0, lower_priority: 0, total: 1 },
+        counts,
       }),
     ]);
     renderWorklist();
@@ -140,5 +155,78 @@ describe("walking to the rest of the queue", () => {
     await waitFor(() => {
       expect(screen.getByText(/3 urgent/)).toBeTruthy();
     });
+    // And the total is the DAY's candidates, not the page's row count — which
+    // is 1 on both of these pages.
+    expect(screen.getByText(/48 in all/)).toBeTruthy();
+  });
+
+  // A server that does not send `in_play` has not said there is none of it.
+  // Printing 0 for silence is the under-reporting this line exists to prevent.
+  it("says nothing about a middle band the server did not count", async () => {
+    stub(
+      day({
+        queue: [row({ id: "a", title: "Only thing" })],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+        counts: [
+          {
+            category: "tasks" as const,
+            considered: 1,
+            shown: 1,
+            more_available: false,
+          },
+        ],
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText(/1 urgent/);
+    expect(screen.queryByText(/in play/)).toBeNull();
+  });
+
+  // A refused SECOND page is not a refused day. The rows already loaded are
+  // still true, and replacing them with an error panel throws away the work
+  // the reader was in the middle of.
+  it("keeps the loaded rows when the next page fails", async () => {
+    let asked = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (!url.includes("/worklist")) {
+          return new Response(JSON.stringify({ data: [] }), { status: 200 });
+        }
+        asked += 1;
+        if (asked > 1) {
+          return new Response(JSON.stringify({ code: "unavailable" }), {
+            status: 503,
+            headers: { "content-type": "application/problem+json" },
+          });
+        }
+        return new Response(
+          JSON.stringify(
+            day({
+              queue: [row({ id: "a", title: "Already read" })],
+              summary: {
+                urgent: 0,
+                due: 1,
+                in_play: 0,
+                lower_priority: 0,
+                total: 1,
+              },
+              next_cursor: "page-2",
+            }),
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Already read");
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+
+    // The row survives, and the failure is stated where it happened.
+    await screen.findByText(/Could not load more/);
+    expect(screen.getByText("Already read")).toBeTruthy();
   });
 });

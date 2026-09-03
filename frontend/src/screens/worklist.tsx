@@ -78,6 +78,16 @@ function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
 }
 
+// How much work the day holds, as opposed to how much one response carried.
+//
+// `summary.total` counts the rows in ONE page — it is computed after the page
+// cut — so it is the wrong number to print beside a queue the reader can page
+// through: it would stay at 25 while the list grew past it. `counts[].
+// considered` is the figure taken before the cut, which is what "in all" means.
+function dayTotal(day: Worklist): number {
+  return day.counts.reduce((total, count) => total + count.considered, 0);
+}
+
 // Whether this row opens its band — the first banded row, or the first after a
 // row of a DIFFERENT band.
 //
@@ -110,6 +120,7 @@ function opensBand(queue: readonly WorklistItem[], index: number): boolean {
 // something to trust.
 function WorklistHeader({
   day,
+  loaded,
   scope,
   filter,
   onScope,
@@ -118,6 +129,8 @@ function WorklistHeader({
   onOwner,
 }: Readonly<{
   day: Worklist;
+  // How many rows are on screen, which grows as the reader pages.
+  loaded: number;
   scope: WorklistScope;
   filter: WorklistFilter;
   owner: string;
@@ -128,20 +141,29 @@ function WorklistHeader({
   const t = useT();
   const { locale } = useLocale();
   const scopes = day.scope_options;
-  const completeness = completenessText(day, filter, t, locale);
+  const completeness = completenessText(day, filter, t, locale, loaded);
   return (
     <div className="worklist-header">
       <p className="t-h2 worklist-lead">
-        {t("worklist.summary", {
-          urgent: formatNumber(day.summary.urgent, locale),
-          due: formatNumber(day.summary.due, locale),
-          // Optional in the contract, so a server that predates it reads as
-          // zero here. That is the honest answer for such a server: it counted
-          // no middle band, and inventing one would be worse than a zero.
-          inPlay: formatNumber(day.summary.in_play ?? 0, locale),
-          lower: formatNumber(day.summary.lower_priority, locale),
-          total: formatNumber(day.summary.total, locale),
-        })}
+        {t(
+          // `in_play` is optional, and a server that does not send it has not
+          // said there is none — it has said nothing. Printing 0 for silence
+          // is the under-reporting this line must never do, so the sentence
+          // without the figure is drawn instead.
+          day.summary.in_play === undefined
+            ? "worklist.summary.noMiddle"
+            : "worklist.summary",
+          {
+            urgent: formatNumber(day.summary.urgent, locale),
+            due: formatNumber(day.summary.due, locale),
+            inPlay: formatNumber(day.summary.in_play ?? 0, locale),
+            lower: formatNumber(day.summary.lower_priority, locale),
+            // The DAY's candidates, not this page's rows. `summary.total`
+            // counts what one response carried, so printing it beside a queue
+            // the reader has paged past would shrink as they read further in.
+            total: formatNumber(dayTotal(day), locale),
+          },
+        )}
       </p>
       {/* What the day is WORTH, above the controls that narrow it. The figures
           describe the whole day rather than the page or the filter, so they sit
@@ -211,6 +233,7 @@ function WorklistBody({
   onSelect,
   hasMore,
   loadingMore,
+  moreFailed,
   onMore,
 }: Readonly<{
   day: Worklist;
@@ -225,6 +248,7 @@ function WorklistBody({
   onSelect: (next: string) => void;
   hasMore: boolean;
   loadingMore: boolean;
+  moreFailed: boolean;
   onMore: () => void;
 }>) {
   const t = useT();
@@ -242,6 +266,7 @@ function WorklistBody({
     <>
       <WorklistHeader
         day={day}
+        loaded={queue.length}
         scope={scope}
         filter={filter}
         owner={owner}
@@ -367,6 +392,14 @@ function WorklistBody({
                   <Button onClick={onMore} pending={loadingMore}>
                     {t("worklist.more")}
                   </Button>
+                  {/* A refused page leaves the button looking exactly as an
+                      unpressed one does. Saying so is what tells the reader
+                      the backlog is still there and worth asking for again. */}
+                  {moreFailed && (
+                    <span className="co-part-error" role="alert">
+                      {t("worklist.more.failed")}
+                    </span>
+                  )}
                 </div>
               )}
             </Panel>
@@ -444,7 +477,13 @@ export function WorklistScreen({
       set(next);
     };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
-  const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
+  // A failed SHOW MORE is not a failed page. `isError` covers both, and
+  // treating them alike would replace a screen of rows the reader is working
+  // through with an error panel because one extra page did not arrive. The
+  // rows already loaded are still true, so the surface stays ready and the
+  // control below says the request failed.
+  const lostTheDay = day.isError && day.data === undefined;
+  const state = day.isPending ? "loading" : lostTheDay ? "failed" : "ready";
   // The FIRST page carries the day's own figures — summary, counts, reach,
   // scope options. Those describe the assembled day and do not change as the
   // reader pages, so they are read from page one rather than from the latest
@@ -487,6 +526,7 @@ export function WorklistScreen({
             onSelect={setSelectedId}
             hasMore={day.hasNextPage}
             loadingMore={day.isFetchingNextPage}
+            moreFailed={day.isError && day.data !== undefined}
             onMore={() => void day.fetchNextPage()}
           />
         )}
