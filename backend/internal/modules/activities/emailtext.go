@@ -14,12 +14,30 @@ import (
 // What a row shows is the sentence the sender wrote, and that is what this
 // file finds.
 //
-// This is the declared mirror of frontend/src/format/emailtext.ts. The two
+// This is a deliberate mirror of frontend/src/format/emailtext.ts. The two
 // exist because the row's preview is now composed by the server while the
 // drawer still folds the tail in the browser, and a preview that disagreed
 // with the message it opens would be a row lying about its own mail.
-// gates/frontendemailtext_test.go holds them to the same tables in both
-// directions, and emailtext_parity_test.go runs both over shared fixtures.
+//
+// Nothing yet FAILS when they drift: emailtext_test.go's table was checked by
+// hand against the TypeScript on the same twelve bodies, which proves they
+// agree today and not that they will tomorrow. The gate that reads both
+// tables and fails in either direction is owed (margince#3782), and until it
+// exists a change to either side has to be made to both by whoever makes it.
+//
+// Why not textlang.NewTextOnly, which also finds where a message ends: it
+// answers a different question and its answer is wrong for a row. Asked for
+// "Danke für das Angebot.\n\nViele Grüße\nAna" it returns the whole thing —
+// it cuts on the RFC 3676 sig-dash and on legal-footer leads, and knows no
+// sign-off vocabulary, no mobile-client boilerplate and not the From:/To:
+// preamble capture prepends. A preview built on it would print the sender's
+// closing and their signature block as though they were the message.
+//
+// The two also owe opposite guarantees. NewTextOnly feeds language detection,
+// where cutting too much is safe and a short remainder is fine; a preview must
+// never come back empty, because a body that is nothing but a greeting is a
+// real message and a row that renders it as blank has hidden the mail. That
+// floor is why this splitter falls back to the whole body twice.
 
 // preamblePattern is what the capture mail mapper prepends verbatim. Peeled
 // before any heuristic runs, or the `From:` line reads as an Outlook reply

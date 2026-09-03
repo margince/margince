@@ -254,6 +254,14 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 			a.Subject, a.Body, a.ThreadKey, a.AudienceReason = nil, nil, nil, nil
 		}
 		a.ContentState = &state
+		// Composed from the shared helper rather than spelled again here. The
+		// contract says an email row carries a summary exactly when kind=email,
+		// and this hand-written twin of the projection is the one read that
+		// could make that false — a person page whose mail rows came back
+		// summary-less would render every one of them degraded while the same
+		// rows off /activities rendered whole. Set AFTER the withholding above,
+		// so a withheld row's summary is the withheld one.
+		a.EmailSummary = activities.RowEmailSummary(a)
 		// Links say how the message is FILED, and a row can reach this page
 		// without being filed here: a contact who was CC'd or who attended is on
 		// the message through their participant row, while the filing belongs to

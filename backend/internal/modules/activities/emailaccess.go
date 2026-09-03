@@ -5,13 +5,14 @@ package activities
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -25,8 +26,9 @@ import (
 // readEmailAccess assembles who reads this message and what this caller may do
 // about it.
 //
-// change_mode is decided here, by the same test the write itself applies:
-// refuseCapturedAudienceWrite refuses a direct audience write on a message any
+// change_mode is decided by activityWasImported — the same helper the write
+// calls, not a second copy of its question. refuseCapturedAudienceWrite
+// refuses a direct audience write on a message any
 // mailbox brought in, because a captured message's audience is derived from
 // its importers rather than declared. The browser has been guessing this from
 // the "connector:" prefix on captured_by, which puts a backend ownership rule
@@ -53,14 +55,25 @@ func readEmailAccess(
 	// only with a message the caller may read, which is the branch this is in.
 	out.Explanation = activity.AudienceReason
 
-	var imported bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1)`,
-		id.UUID).Scan(&imported); err != nil {
-		return crmcontracts.EmailAccess{}, fmt.Errorf("activities: reading whether a message was imported: %w", err)
+	imported, err := activityWasImported(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.EmailAccess{}, err
 	}
 
-	writable := auth.EnsureActivityWritable(ctx, tx, id.UUID) == nil
+	// Denial and failure are different answers and must not collapse into one.
+	// A == nil test would report can_change:false on a transient database
+	// error, which reaches the reader as the Access control quietly not being
+	// there — indistinguishable from the product deciding they lack authority.
+	writable := false
+	switch err := auth.EnsureActivityWritable(ctx, tx, id.UUID); {
+	case err == nil:
+		writable = true
+	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
+		// Denied. Not an error to report: the caller may read this message and
+		// simply may not change who else does.
+	default:
+		return crmcontracts.EmailAccess{}, err
+	}
 	switch {
 	case imported:
 		// A captured message: the caller changes their own contribution to the

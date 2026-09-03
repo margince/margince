@@ -13631,12 +13631,16 @@ export interface components {
          *     badge can print. `team` never means the whole workspace: the linked record's own scope
          *     still decides who may discover the row at all.
          *
-         *     `still_held` is the honest half of a share — you released your hold and somebody else
-         *     has not. `withheld` is the only value that says the content is not this caller's, and
-         *     it never travels with a reason: why a message is private describes what it is about.
+         *     `withheld` is the only value that says the content is not this caller's, and it never
+         *     travels with a reason: why a message is private describes what it is about.
+         *
+         *     The captured-mail states a mailbox owner sees — held until classified, private by you,
+         *     shared but still held by another seat — are not here yet. They arrive with the thread
+         *     contribution editor that can act on them; a value no server can emit is one a client
+         *     would branch on and never reach.
          * @enum {string}
          */
-        EmailAccessStatus: "team" | "participants" | "selected" | "private_pending" | "private_by_you" | "still_held" | "withheld";
+        EmailAccessStatus: "team" | "participants" | "selected" | "withheld";
         /** @description One address on a message, resolved to a person or a seat when it is one. */
         EmailParty: {
             address: string;
@@ -13691,11 +13695,6 @@ export interface components {
              */
             change_scope?: "thread" | "message" | "none";
             /**
-             * @description After a share, how many other seats still hold this thread. A count and never a
-             *     name. Null when the question does not apply.
-             */
-            held_by_others?: number | null;
-            /**
              * @description Why the message is limited, when the caller may know. Always null while the content
              *     is withheld: the reason describes the message.
              */
@@ -13723,12 +13722,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description Whether this is correspondence or something not yet sent. A scheduled send and a
-             *     draft awaiting approval borrow the frame; their operational verbs stay with the
-             *     workflow that owns them.
+             * @description What kind of message this is. One value today: this read serves delivered
+             *     correspondence. A scheduled send and a draft awaiting approval will borrow the
+             *     frame when the reads that serve them land, and they are not listed until then.
              * @enum {string}
              */
-            lifecycle: "delivered" | "scheduled" | "approval_draft";
+            lifecycle: "delivered";
             /** Format: date-time */
             occurred_at: string;
             summary: components["schemas"]["EmailSummary"];

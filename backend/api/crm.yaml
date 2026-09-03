@@ -20280,15 +20280,19 @@ components:
       type: string
       x-email-presentation: exempt
       x-email-presentation-reason: A status word, not email content.
-      enum: [team, participants, selected, private_pending, private_by_you, still_held, withheld]
+      enum: [team, participants, selected, withheld]
       description: |
         What a reader is allowed to know about who else reads this message, in one word the
         badge can print. `team` never means the whole workspace: the linked record's own scope
         still decides who may discover the row at all.
 
-        `still_held` is the honest half of a share — you released your hold and somebody else
-        has not. `withheld` is the only value that says the content is not this caller's, and
-        it never travels with a reason: why a message is private describes what it is about.
+        `withheld` is the only value that says the content is not this caller's, and it never
+        travels with a reason: why a message is private describes what it is about.
+
+        The captured-mail states a mailbox owner sees — held until classified, private by you,
+        shared but still held by another seat — are not here yet. They arrive with the thread
+        contribution editor that can act on them; a value no server can emit is one a client
+        would branch on and never reach.
 
     EmailParty:
       type: object
@@ -20358,11 +20362,6 @@ components:
           type: string
           enum: [thread, message, none]
           description: What the editor must say it is about to change, in the words the user reads.
-        held_by_others:
-          type: [integer, 'null']
-          description: |
-            After a share, how many other seats still hold this thread. A count and never a
-            name. Null when the question does not apply.
         explanation:
           type: [string, 'null']
           description: |
@@ -20401,11 +20400,11 @@ components:
         id: { type: string, format: uuid }
         lifecycle:
           type: string
-          enum: [delivered, scheduled, approval_draft]
+          enum: [delivered]
           description: |
-            Whether this is correspondence or something not yet sent. A scheduled send and a
-            draft awaiting approval borrow the frame; their operational verbs stay with the
-            workflow that owns them.
+            What kind of message this is. One value today: this read serves delivered
+            correspondence. A scheduled send and a draft awaiting approval will borrow the
+            frame when the reads that serve them land, and they are not listed until then.
         occurred_at: { type: string, format: date-time }
         summary:
           $ref: '#/components/schemas/EmailSummary'

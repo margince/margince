@@ -4953,13 +4953,10 @@ func (e EmailAccessContentState) Valid() bool {
 
 // Defines values for EmailAccessStatus.
 const (
-	EmailAccessStatusParticipants   EmailAccessStatus = "participants"
-	EmailAccessStatusPrivateByYou   EmailAccessStatus = "private_by_you"
-	EmailAccessStatusPrivatePending EmailAccessStatus = "private_pending"
-	EmailAccessStatusSelected       EmailAccessStatus = "selected"
-	EmailAccessStatusStillHeld      EmailAccessStatus = "still_held"
-	EmailAccessStatusTeam           EmailAccessStatus = "team"
-	EmailAccessStatusWithheld       EmailAccessStatus = "withheld"
+	EmailAccessStatusParticipants EmailAccessStatus = "participants"
+	EmailAccessStatusSelected     EmailAccessStatus = "selected"
+	EmailAccessStatusTeam         EmailAccessStatus = "team"
+	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
 )
 
 // Valid indicates whether the value is a known member of the EmailAccessStatus enum.
@@ -4967,13 +4964,7 @@ func (e EmailAccessStatus) Valid() bool {
 	switch e {
 	case EmailAccessStatusParticipants:
 		return true
-	case EmailAccessStatusPrivateByYou:
-		return true
-	case EmailAccessStatusPrivatePending:
-		return true
 	case EmailAccessStatusSelected:
-		return true
-	case EmailAccessStatusStillHeld:
 		return true
 	case EmailAccessStatusTeam:
 		return true
@@ -4986,19 +4977,13 @@ func (e EmailAccessStatus) Valid() bool {
 
 // Defines values for EmailPresentationLifecycle.
 const (
-	EmailPresentationLifecycleApprovalDraft EmailPresentationLifecycle = "approval_draft"
-	EmailPresentationLifecycleDelivered     EmailPresentationLifecycle = "delivered"
-	EmailPresentationLifecycleScheduled     EmailPresentationLifecycle = "scheduled"
+	EmailPresentationLifecycleDelivered EmailPresentationLifecycle = "delivered"
 )
 
 // Valid indicates whether the value is a known member of the EmailPresentationLifecycle enum.
 func (e EmailPresentationLifecycle) Valid() bool {
 	switch e {
-	case EmailPresentationLifecycleApprovalDraft:
-		return true
 	case EmailPresentationLifecycleDelivered:
-		return true
-	case EmailPresentationLifecycleScheduled:
 		return true
 	default:
 		return false
@@ -20158,18 +20143,18 @@ type EmailAccess struct {
 	// badge can print. `team` never means the whole workspace: the linked record's own scope
 	// still decides who may discover the row at all.
 	//
-	// `still_held` is the honest half of a share — you released your hold and somebody else
-	// has not. `withheld` is the only value that says the content is not this caller's, and
-	// it never travels with a reason: why a message is private describes what it is about.
+	// `withheld` is the only value that says the content is not this caller's, and it never
+	// travels with a reason: why a message is private describes what it is about.
+	//
+	// The captured-mail states a mailbox owner sees — held until classified, private by you,
+	// shared but still held by another seat — are not here yet. They arrive with the thread
+	// contribution editor that can act on them; a value no server can emit is one a client
+	// would branch on and never reach.
 	DisplayStatus EmailAccessStatus `json:"display_status"`
 
 	// Explanation Why the message is limited, when the caller may know. Always null while the content
 	// is withheld: the reason describes the message.
 	Explanation *string `json:"explanation,omitempty"`
-
-	// HeldByOthers After a share, how many other seats still hold this thread. A count and never a
-	// name. Null when the question does not apply.
-	HeldByOthers *int `json:"held_by_others,omitempty"`
 
 	// SelectedMembers Who is named on a `selected` audience. Returned only to a caller who may both read
 	// the content and change it — a reader with no standing to edit the set has no
@@ -20193,9 +20178,13 @@ type EmailAccessContentState string
 // badge can print. `team` never means the whole workspace: the linked record's own scope
 // still decides who may discover the row at all.
 //
-// `still_held` is the honest half of a share — you released your hold and somebody else
-// has not. `withheld` is the only value that says the content is not this caller's, and
-// it never travels with a reason: why a message is private describes what it is about.
+// `withheld` is the only value that says the content is not this caller's, and it never
+// travels with a reason: why a message is private describes what it is about.
+//
+// The captured-mail states a mailbox owner sees — held until classified, private by you,
+// shared but still held by another seat — are not here yet. They arrive with the thread
+// contribution editor that can act on them; a value no server can emit is one a client
+// would branch on and never reach.
 type EmailAccessStatus string
 
 // EmailAttachmentSummary One file that came with the message. Metadata only; bytes are fetched separately.
@@ -20267,9 +20256,9 @@ type EmailPresentation struct {
 	From      []EmailParty       `json:"from"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Lifecycle Whether this is correspondence or something not yet sent. A scheduled send and a
-	// draft awaiting approval borrow the frame; their operational verbs stay with the
-	// workflow that owns them.
+	// Lifecycle What kind of message this is. One value today: this read serves delivered
+	// correspondence. A scheduled send and a draft awaiting approval will borrow the
+	// frame when the reads that serve them land, and they are not listed until then.
 	Lifecycle EmailPresentationLifecycle `json:"lifecycle"`
 
 	// Links What the message is filed against, named for a reader.
@@ -20297,9 +20286,9 @@ type EmailPresentation struct {
 	Version RowVersion `json:"version"`
 }
 
-// EmailPresentationLifecycle Whether this is correspondence or something not yet sent. A scheduled send and a
-// draft awaiting approval borrow the frame; their operational verbs stay with the
-// workflow that owns them.
+// EmailPresentationLifecycle What kind of message this is. One value today: this read serves delivered
+// correspondence. A scheduled send and a draft awaiting approval will borrow the
+// frame when the reads that serve them land, and they are not listed until then.
 type EmailPresentationLifecycle string
 
 // EmailSignature defines model for EmailSignature.
@@ -20335,9 +20324,13 @@ type EmailSummary struct {
 	// badge can print. `team` never means the whole workspace: the linked record's own scope
 	// still decides who may discover the row at all.
 	//
-	// `still_held` is the honest half of a share — you released your hold and somebody else
-	// has not. `withheld` is the only value that says the content is not this caller's, and
-	// it never travels with a reason: why a message is private describes what it is about.
+	// `withheld` is the only value that says the content is not this caller's, and it never
+	// travels with a reason: why a message is private describes what it is about.
+	//
+	// The captured-mail states a mailbox owner sees — held until classified, private by you,
+	// shared but still held by another seat — are not here yet. They arrive with the thread
+	// contribution editor that can act on them; a value no server can emit is one a client
+	// would branch on and never reach.
 	DisplayStatus EmailAccessStatus `json:"display_status"`
 
 	// Move Whose move it is, derived from what this reader can see of the thread. `none` when

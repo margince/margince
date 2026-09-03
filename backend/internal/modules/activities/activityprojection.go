@@ -171,18 +171,24 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// to draw one would be the N+1 this field exists to avoid. Attached from
 	// the row's own columns only — the counterparty and the attachment count
 	// need joins this scan does not have, and the detail read fills them in.
-	a.EmailSummary = rowEmailSummary(a)
+	a.EmailSummary = RowEmailSummary(a)
 	return a
 }
 
-// rowEmailSummary is the email row's fields, for the kind that has them.
+// RowEmailSummary is the email row's fields, for the kind that has them.
+//
+// Exported because compose/person360 assembles its own Activity from a
+// hand-written twin of this projection and cannot reach record(). That twin is
+// why this is exported rather than private: it has gone missing a column twice
+// before, and a summary it did not carry would make the contract's "present
+// exactly when kind=email" false on the person page alone.
 //
 // Present exactly when kind=email, so a reader branches on the field rather
 // than on the kind word: a call and a note are activities too, and neither has
 // an email's shape. A withheld row still gets a summary — the status says the
 // content is not this caller's, which is what keeps a withheld row visibly
 // withheld rather than absent.
-func rowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
+func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	if a.Kind != crmcontracts.ActivityKindEmail {
 		return nil
 	}

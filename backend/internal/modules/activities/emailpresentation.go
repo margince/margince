@@ -93,13 +93,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	out.Links = []crmcontracts.ActivityLink{}
 
 	if withheld {
-		// Markers and nothing said. No parties, no files, no thread, no
-		// reason: each of those describes the message this caller may not
-		// read, and an empty list is a different statement from a refused one
-		// only if the status says which.
-		out.Summary = withheldSummary(activity)
-		out.Access = withheldAccess()
-		return out, nil
+		return withheldPresentation(out, activity), nil
 	}
 
 	parties, err := readEmailParties(ctx, tx, id)
@@ -108,9 +102,13 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.From, out.To, out.Cc = parties.from, parties.to, parties.cc
 	// Blind recipients are disclosed only to the seat that sent or imported the
-	// message. Being allowed to read what was written is not standing to learn
-	// who was copied without the others knowing — the audience gate answers the
-	// first question and has no arm for the second.
+	// message. Being allowed to read what was written is not, in general,
+	// standing to learn who was copied without the others knowing.
+	//
+	// The one caller for whom this is the SAME question rather than a narrower
+	// one is an importing seat: a capture_import row already grants the whole
+	// audience arm, so it grants this too. That is the reach of the forged
+	// Message-ID path importrow.go documents, not a door opened here.
 	if sender, err := callerIsSenderSeat(ctx, tx, id); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	} else if sender {
@@ -142,10 +140,26 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Thread = &thread
 
-	// Both actions are the caller's because the content is: a reader inside the
-	// audience may answer the message and may correct what it is filed against.
-	out.CanReply, out.CanRelink = true, true
+	// Replying needs only the message: a reader inside the audience may answer
+	// it. Relinking is a WRITE — it changes what the message is filed against —
+	// so it follows the same writability the access block just decided, rather
+	// than being promised to every reader and refused on click.
+	out.CanReply = true
+	out.CanRelink = access.CanChange && access.ChangeMode == crmcontracts.EmailAccessChangeModeMessageAudience
 	return out, nil
+}
+
+// withheldPresentation is the whole answer for a caller who may know the
+// message exists and may not read it: markers, and nothing said.
+//
+// Its own function because it shares nothing with the available path below —
+// no parties, no files, no thread, no reason. Each of those describes the
+// message, and an empty list is a different statement from a refused one only
+// if the status says which.
+func withheldPresentation(out crmcontracts.EmailPresentation, activity crmcontracts.Activity) crmcontracts.EmailPresentation {
+	out.Summary = withheldSummary(activity)
+	out.Access = withheldAccess()
+	return out
 }
 
 // availableSummary is the row for a message this caller may read.
@@ -186,11 +200,13 @@ func availableSummary(
 	return summary
 }
 
-// moveOf says whose turn it is, from what this reader can see of the message
-// itself. An inbound message nobody has answered is the reader's move; one we
-// sent is theirs. Anything else makes no claim: a move nobody can derive
-// honestly is worse on a row than no move at all, because a rep works the row
-// that says they owe a reply.
+// moveOf says whose turn it is, from the message's DIRECTION alone.
+//
+// It does not ask whether anyone answered, so an inbound mail the rep replied
+// to a month ago still reads needs_reply. That is the limit of one row read by
+// itself: the answer lives on a later message, which this function is not
+// given. Named rather than dressed up, because a rep works their day from this
+// field — reading the thread is what would close it (margince#3784).
 func moveOf(activity crmcontracts.Activity) crmcontracts.EmailSummaryMove {
 	if activity.Direction == nil {
 		return crmcontracts.EmailSummaryMoveNone
@@ -292,10 +308,12 @@ func withheldAccess() crmcontracts.EmailAccess {
 // first. Bounded and paged: a thread has no ceiling, and a drawer that fetched
 // every message would make opening the newest one cost the whole history.
 //
-// It runs the same gated list every timeline runs, so a member the caller may
-// not read comes back withheld rather than missing — the drawer says a message
-// is there and not theirs, which is the honest shape of a conversation with a
-// limited message in it.
+// It runs the same gated list every timeline runs. Narrowing to a thread_key
+// upgrades that list to the CONTENT gate, so a member the caller may not read
+// is absent rather than withheld: the drawer shows the conversation this
+// reader is party to, not its true length. That is the existing behaviour of
+// a thread-narrowed list and not a choice made here, but it means the member
+// count is the reader's own and no one else's.
 func readThreadPage(
 	ctx context.Context,
 	tx pgx.Tx,
