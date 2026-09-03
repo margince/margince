@@ -298,27 +298,36 @@ cards stacked above a third list of things to do:
 
 ### Glance, then depth
 
-The overview that breathes is the one that shows less. The first Aurora
-sketch had air because a rep saw five readings, one verdict, three short
-lists and one suggestion, and nothing else until they went looking. The
-full six-zone overview shows everything at once and reads as a wall. So the
-overview has two depths, and the shallow one is the default:
+The overview that breathes is the one that shows less. A record's overview
+has two depths, and the shallow one is the default.
 
-- **The glance.** Five readings as roomy cards with one figure and one line
-  each. Then two columns. Left: the 360 reduced to the verdict word, one
-  sentence, the three dimensions, the spine and its sources, with "Read the
-  thread · N new" as the way down; then Deals, People and Next steps, each
-  capped at three with "All". Right: the one suggestion as a card, the ask
-  field, Recent capped at three, About as one paragraph and the tags. The
-  details panel starts folded.
-- **The depth.** The thread, the full needs list, Commercial, About and the
-  rest are one click away: the "All" and "Read the thread" links, and the
-  tabs. Nothing is lost; it is behind the first screen instead of on it.
+**The glance** is the whole first screen, and it is deliberately sparse:
 
-The test for the glance: a rep who has been away a week should read it in
-ten seconds and know where the account stands, what happened last, what
-they owe and what the agent proposes. Anything the ten seconds do not need
-goes to the depth.
+- The name at 44px in the display face, one line of facts with the live dot
+  ("In conversation · Hamburg · Freight forwarding · 240 employees · VAT"),
+  and three verbs. No badges beyond the standing, no second line.
+- **No tab row and no details panel.** History, People, Deals, Finance and
+  the profile are reached through the links in the panes ("All deals", "View
+  history", "Add") and the Details control in the top bar; the tab strip
+  belongs to the full overview.
+- **Five readings as roomy cards**, 160px tall, an uppercase label, one
+  figure at 30px in the mono face, one line of basis at the foot, and empty
+  space between them. The space is the point: a figure a rep can read from
+  across the desk.
+- **Left column, three panes, each capped at three rows**: Deals (name,
+  stage, days, owner; amount and its close chip), People (as chips with a
+  "+N"), Next steps (with the due chip).
+- **Right column**: the one suggestion as the agent's card (its label, a
+  headline in the display face, one paragraph, its sources, Accept / Edit /
+  Dismiss), the ask field, and Recent with three rows.
+- No zone numbers, no spine, no thread, no needs list. The 360 element, the
+  full needs list, Commercial and About are the full overview, one click
+  away, with the same panes.
+
+The test: a rep back from a week away reads the glance in ten seconds and
+knows where the account stands, what happened last, what they owe, and what
+the agent proposes. Whatever those ten seconds do not need goes to the depth.
+
 
 ### The order of the zones
 
