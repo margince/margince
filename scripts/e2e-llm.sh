@@ -218,6 +218,48 @@ run_once() {
     head -5 "$out.err" >&2
     return 1
   fi
+
+  # THE SERVER HAS TO BE CONNECTED, and the passport probe above does not
+  # establish it. That probe talks to the stack directly; this asks the CLI what
+  # it actually attached, which is a different question with its own answers.
+  #
+  # `disabled` is the one that cost a whole afternoon. The CLI keeps a per-project
+  # list of MCP servers an operator has turned off (`disabledMcpServers` in
+  # ~/.claude.json), it is keyed on the server's NAME, and --strict-mcp-config
+  # does NOT override it — that flag ignores other CONFIGURATIONS, not the
+  # disable list. So a stack that answers `initialize` with HTTP 200 and a
+  # freshly minted passport still reach an assistant with no tools, the model
+  # writes prose instead of calling anything, and the checker reports "the answer
+  # was not drawn from Margince" for every run of every scenario. Six use cases
+  # named as broken by one line of local configuration.
+  #
+  # Verified by renaming the very same server in the very same config: `margince`
+  # comes up disabled, `tlbudgetprobe` comes up connected with the whole catalog.
+  local status
+  status="$(python3 -c '
+import json, sys
+for line in open(sys.argv[1]):
+    try: event = json.loads(line)
+    except ValueError: continue
+    if event.get("type") == "system" and event.get("mcp_servers") is not None:
+        for server in event["mcp_servers"]:
+            if server.get("name") == "margince":
+                print(server.get("status", "absent"))
+                break
+        else:
+            print("absent")
+        break
+else:
+    print("no-system-line")
+' "$out")"
+  if [ "$status" != "connected" ]; then
+    echo "  the margince MCP server is '$status', not connected — the assistant was offered no" >&2
+    echo "  Margince tools at all, so every scenario would fail for a reason that is not the" >&2
+    echo "  product's. If it is 'disabled', this CLI has it turned off for this project:" >&2
+    echo "    claude mcp list      # and enable it, or /mcp in an interactive session" >&2
+    echo "  --strict-mcp-config does not override that list." >&2
+    return 1
+  fi
 }
 
 PASSED=0
