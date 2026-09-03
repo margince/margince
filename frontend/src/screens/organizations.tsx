@@ -65,7 +65,6 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
-import { CompanyFacts } from "./companyfacts";
 import { CompanyFinanceCard, hasFinance } from "./companyfinance";
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
@@ -1917,12 +1916,7 @@ function CompanyPage({
       // reader cannot act on, it is unbounded in length, and on an enriched
       // account it repeats the industry two lines above it. It reads in the
       // details grid, where the rest of the account's filed fields are.
-      pulse={
-        <>
-          <CompanyIdentityLine org={org} view={view} loading={loading} />
-          <CompanyFacts org={org} view={view} />
-        </>
-      }
+      pulse={<CompanyIdentityLine org={org} view={view} loading={loading} />}
       // The composer opens from a button rather than standing open above the
       // page: a whole form in the header's action strip pushed the account's
       // own story below the fold before a word of it was read.
@@ -2155,19 +2149,6 @@ function CompanyRecordBody({
         onClose={() => setPreparing(null)}
         projects={liveProjects(view?.projects)}
       />
-      {/* The deliveries this company is part of — as the client, a partner or a
-          subcontractor. On the OVERVIEW tab with Deals and Tasks, because all
-          three answer "what is in flight with this account" and a section on
-          every tab is a section nobody can locate: it appeared under Documents
-          and Profile, where it means nothing, and a reader scanning Overview
-          did not read it as belonging there. */}
-      {!overlay && tab === "overview" && (
-        <CompanyProjects
-          organizationId={org.id}
-          projects={view?.projects}
-          readOnly={readOnly}
-        />
-      )}
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
           commercial picture or the open work should not scroll past the
           day's brief to find either. */}
@@ -2471,6 +2452,16 @@ function CompanyOverviewStack({
               // the moment it mounts, which is itself a disclosure to a reader
               // who may not see deals.
               verbs={workVerbs({ view, org, readOnly })}
+            />
+            {/* The deliveries this company is part of — as the client, a
+      partner or a subcontractor — under the money they came from.
+      In the column rather than across the page: a pane spanning
+      both columns under a two-column glance read as a second page
+      starting. */}
+            <CompanyProjects
+              organizationId={org.id}
+              projects={view?.projects}
+              readOnly={readOnly}
             />
           </div>
           <div className="co-glance-col">

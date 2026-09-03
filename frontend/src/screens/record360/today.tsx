@@ -64,7 +64,13 @@ export function TodayPanel({
   // name is a reader unable to tell WHICH reading is missing.
   const head = (
     <PanelBody className="co-360-head">
-      <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+      {/* The count beside the name, the mock's `h3 small`: "1 overdue" is a
+          fact about the list's head, and as a footer band under the rows it
+          floated alone at the bottom of the pane. */}
+      <div className="co-360-headtext">
+        <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+        {footer}
+      </div>
       {onOpenTasks && (
         <Button small variant="ghost" onClick={onOpenTasks}>
           {t("co.suggest.viewTasks")}
@@ -96,7 +102,7 @@ export function TodayPanel({
   // an empty array is truthy.
   const rows = Children.toArray(children);
   return (
-    <Panel className="co-reading-today" footer={footer}>
+    <Panel className="co-reading-today">
       {head}
       {rows.length === 0 ? (
         // Not "nothing to do": the brief read everything it can read and found

@@ -626,7 +626,7 @@ function RecordHead({
       <Avatar
         name={name}
         src={avatarSrc}
-        size={wide ? "lg" : "md"}
+        size={wide ? "xl" : "md"}
         shape={markShape}
       />
       <div className="record-id">

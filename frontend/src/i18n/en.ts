@@ -1107,9 +1107,8 @@ export const en = {
   // The later of the two directions \u2014 which side wrote last moved to the
   // daily brief's own detail line, so the header states only that the
   // relationship is or is not live.
-  "co.pulse.lastExchange": "Last contact {when}, either way",
-  "co.pulse.neverTouched": "Never contacted",
   "co.pulse.owner": "Owner",
+  "co.pulse.sizeBand": "{band} employees",
   "co.pulse.strongestLead": "Way in",
   "co.pulse.strengthTail_one": "\u2014 the only contact here",
   "co.pulse.strengthTail_other": "\u2014 of {count} contacts here",

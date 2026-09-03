@@ -531,19 +531,20 @@ describe("company view — the verbs that change a section", () => {
     );
     renderCompany();
 
-    // Four surfaces read the same missing grant: the header's own fact strip
-    // (Open pipeline, In flight), the rail's Deals panel — which rides on the
-    // page's own mount and never unmounts across a tab switch — and the Deals
-    // tab body itself. The count is pinned EXACTLY rather than as "at least
-    // one": a floor would pass on a tab that rendered nothing while some other
-    // surface still spoke.
+    // Two surfaces read the same missing grant: the details column's Deals
+    // slice — which rides on the page's own mount and never unmounts across
+    // a tab switch — and the Deals tab body itself. The header's facts line
+    // carries no pipeline figure (the readings row under the tabs does, and
+    // it is not drawn on the Deals tab). The count is pinned EXACTLY rather
+    // than as "at least one": a floor would pass on a tab that rendered
+    // nothing while some other surface still spoke.
     await userEvent.click(
       await screen.findByRole("button", { name: /^Deals/ }),
     );
     await waitFor(() =>
       expect(
         screen.queryAllByText("Hidden — your role cannot read this"),
-      ).toHaveLength(4),
+      ).toHaveLength(2),
     );
     // And the empty state it did NOT draw: "no open deal" is a claim about
     // the account that this payload cannot support.

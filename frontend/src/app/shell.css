@@ -359,6 +359,11 @@
    column, and lands on top of the row it names. */
 .rail.collapsed {
   overflow: visible;
+  /* Above the work column it is a sibling of: the tooltips below hang past the
+     rail's right edge, and the column, painted later with its own stacking
+     context, covered them. A tooltip behind the page is one nobody reads. */
+  position: relative;
+  z-index: 2;
 }
 /* One padding for both states. It used to drop to 0 on collapse, which shifted
    every item sideways in a single frame — the jump. */
@@ -556,7 +561,7 @@
 /* A group is a section of the column, and the heading sits IN that space: the
    air above it belongs to the break, the air under it belongs to its rows. */
 .rail .navgroup + .navgroup {
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
 /* A quiet label over a group, not a heading competing with the rows under it:
    sentence case, one step down from the rows in size and weight, in the meta
@@ -611,11 +616,12 @@
   align-items: center;
   gap: var(--space-2);
   flex: 1;
-  /* 34px rows: the sidebar is a column of ten places read at a glance, and the
-     compact pitch is what keeps the foot's orb on screen on a laptop. Past the
-     24x24 floor of WCAG 2.2 2.5.8 (AA) at 46x34; the 44px targets of 2.5.5
-     (AAA) are the phone bar's, where a thumb is the pointer. */
-  min-height: 34px;
+  /* 38px rows, the mock's pitch: ten places read at a glance, each with room
+     to be pressed. Past the 24x24 floor of WCAG 2.2 2.5.8 (AA) at 46x38; the
+     44px targets of 2.5.5 (AAA) are the phone bar's, where a thumb is the
+     pointer. The foot's agent card is compact enough that the column still
+     fits a laptop at this pitch. */
+  min-height: 38px;
   /* 13 and not 14, with the transparent border below making up the difference:
      the active row is a PLATE with an edge, and a border that appears only when
      the row is current would shift its glyph and its label by a pixel on every
@@ -637,7 +643,9 @@
   background: transparent;
   color: var(--textContent);
   text-decoration: none;
-  font-size: var(--fs-body);
+  /* A step above the body size: the rail's labels are the mock's 14px, read
+     from further away than a paragraph. */
+  font-size: 14px;
 }
 /* Collapsed keeps the SAME row height as expanded, and the 13px padding plus the
    1px edge centres the 18px icon either way (1 + 13 + 18 + 13 + 1 = 46), so no
@@ -653,17 +661,19 @@
    pane's hairline as an EDGE, which is what makes it a surface with a boundary
    rather than a smudge, and quieter than hover's tint so the two states are
    never the same gesture read twice.
-   Still three signals, because a ground alone is colour-only (WCAG 1.4.1,
-   Level A): the edge, medium weight — not semibold, which shouted the row on
-   a column this quiet — and the accent on the glyph. The INK stays neutral:
-   the accent as 13.5px text measures under the 4.5:1 AA needs on the dark
-   theme, and weight does not rescue that below 18.66px. The glyph is where the
-   accent goes, and at 3:1 non-text (1.4.11) it clears. */
+   Four signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
+   the SOLID elevated ground — the pane's glass over the rail's glass was two
+   tints of one thing, and the current row did not stand out from its
+   neighbours — a real hairline edge, semibold weight, and the accent on the
+   glyph. The INK stays neutral: the accent as 14px text measures under the
+   4.5:1 AA needs on the dark theme, and weight does not rescue that below
+   18.66px. The glyph is where the accent goes, and at 3:1 non-text (1.4.11)
+   it clears. */
 .rail .navitem.active {
-  background: var(--pane);
-  border-color: var(--paneEdge);
+  background: var(--bgElevated);
+  border-color: var(--borderSubtle);
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
 }
 .rail .navitem.active svg {
   color: var(--accentText);

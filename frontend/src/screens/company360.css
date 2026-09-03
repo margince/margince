@@ -31,8 +31,10 @@
 .co-overview-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  /* The mock's rhythm between the readings, the 360 and the columns: one
+     rung wider than inside a column, so the three bands read as bands. */
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 /* ONE READING, IN PARTS. The same reading in the same order as the single
@@ -1591,6 +1593,20 @@
   gap: var(--space-2);
   padding-top: var(--space-6);
   padding-bottom: var(--space-2);
+}
+/* The head's name and the count beside it, on one baseline. */
+.co-360-headtext {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* When the row was written and by whom, closing the facts line: the date
+   and the provenance mark beside it, in the line's own ink. */
+.co-record-provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 /* Except the first, which follows the card's own band and would otherwise open

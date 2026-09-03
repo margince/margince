@@ -8,14 +8,17 @@
  * beside a short one. */
 .co-glance-cols {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-4);
+  /* 3:2, the mock's split: the left column carries the work, the right the
+     account's own description, and equal halves gave the description more
+     room than it fills. */
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-5);
   align-items: start;
 }
 .co-glance-col {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   min-width: 0;
 }
 /* One column as soon as two would squeeze a list to nothing. Measured against
@@ -83,6 +86,16 @@
 }
 .co-move-lead .co-move-by {
   color: var(--textSecondary);
+}
+/* The lead's evidence and its one verb on one line, from the left: the row
+   reads top to bottom as a claim, why, what it rests on, what to do, and a
+   verb pushed to the far edge broke that line into two corners. */
+.co-move-lead .co-move-do {
+  justify-content: flex-start;
+  margin-top: var(--space-2);
+}
+.co-move-lead .co-move-actions {
+  margin-left: 0;
 }
 
 /* People as chips: a face and a name, wrapping, with the remainder as one

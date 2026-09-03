@@ -121,19 +121,11 @@ export function CompanyWorkCard({
       )}
     </>
   );
+  // Bare, the groups stand under the pane's own head: a second head naming
+  // the work in flight, over a group already named Deals, was a pane that
+  // introduced itself twice.
   if (bare) {
-    // The count rides with the subhead rather than in a header band this
-    // card no longer owns, and the visit line moves to the whole card's
-    // footer — it is about the account, not about the work on it.
-    return (
-      <>
-        <PanelBody className="co-360-head">
-          <Eyebrow as="h3">{t("co.work.title")}</Eyebrow>
-          <WorkCount view={view} />
-        </PanelBody>
-        {body}
-      </>
-    );
+    return body;
   }
   return (
     <Panel
