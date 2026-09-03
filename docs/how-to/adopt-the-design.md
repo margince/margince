@@ -172,7 +172,7 @@ and the tightest e2e. Every later page copies its decisions. Files:
 
 | Zone (mock) | Built from | Data | States it must keep |
 |---|---|---|---|
-| Readings row (5) | `StateStrip` → `StatStrip` of `PipelineCard`, `MoneyStat`, conversation (from `pulse`), last touch, next (`view.next`) | `state_strip`, `useFinanceSummary` | `co.strip.notAssessed`; finance `notACustomer / noConnection / unmapped / syncing / withheld / staleFigure / errorFigure / nothingBilled / error / loading`; `co.strip.unpriced`, `pricedPartly`, `convertedAsOf`; `co.section.restricted`; a slot that cannot be read is absent or says so, never €0 or "—" without a reason |
+| Readings row (5) | `StateStrip` → `StatStrip` of `PipelineCard`, `MoneyStat`, conversation (from `pulse`), last touch, next (`view.next`); **each card carries an evidence chip** (`EvidenceMark` with the hover popover, opening `EvidenceModal` on click: the rows summed, the read date, the connection) **and is a link to its tab** (`companyTabRoute`); the chip stops the click | `state_strip`, `useFinanceSummary`, the citations already on the strip | `co.strip.notAssessed`; finance `notACustomer / noConnection / unmapped / syncing / withheld / staleFigure / errorFigure / nothingBilled / error / loading`; `co.strip.unpriced`, `pricedPartly`, `convertedAsOf`; `co.section.restricted`; a slot that cannot be read is absent or says so, never €0 or "—" without a reason |
 | The 360 | `TodayOnThisAccount` + `VerdictHead` (`HealthStat`/`AccountHealthStat` as the word and dims) + `RecordSpine` + the thread from `useChronologySlots` folded behind "Read the thread · N" | 360 sections, chronology | `today.quiet` (nothing to say draws a calm 360, not an empty pane); `today.failed`; `co.section.unavailable`; withheld sections drop their row and say so once; `since_last_visit` with a withheld baseline never becomes a claim; "Write it again" only when the reader may |
 | Deep-read offer | `DeepReadCard` **leads the column** instead of the 360 when `nothingOnFile(view)` | | the two honest scan phases; `SiteReadPanel` pages read/skipped and why; 422 no website; 501 seam unwired; `SiteReadDeferral` |
 | What needs you | one list: the moment as the lead row, `co.suggest.*` rows (`draftReply / openDeal / addTask` verbs; `add_task` has no surface, so dismiss only), tasks from `CompanyTasksTab`'s source, the next meeting (`onPrepareMeeting`) | 360 suggestions, tasks, meetings | `co.next.empty`; `co.suggest.more` on the cap; withheld suggestions remove the row, not the verb; `DecisionsChip` count stays in the menu |
@@ -378,6 +378,34 @@ One PR per record after its overview lands:
 - **Deal Documents / Files**, **Company Documents** with extraction staging,
   **Finance**, **Profile** with `ReferenceDisclosures`, **Partner**,
   **Meetings**, **Research** (never-run mark), **Data & tools**.
+
+## 8c. The Deal Room, both sides
+
+Two files, one board (`dealroomthreads.tsx` renders for both sides and takes
+the verbs as callbacks; that stays).
+
+- **Seller** (`dealroompage.tsx`, `dealroomaccess.tsx`, `dealroomdocuments.tsx`,
+  `dealroomconversation.tsx`): the record-page shell from Step 3 (head with
+  "Back to the deal", facts line, View as buyer · Room access · more), the
+  state banner as the `band2` row, Title and welcome as a pane with an Edit
+  verb over `RoomText`, the board with the four `DOCUMENT_GROUPS` as eyebrow
+  labels and a `dcard` per document, room-wide threads below, and on the
+  right `DealRoomAccess` (rows with capability, state, last seen, downloads,
+  the row menu: issue a new link, change capability, revoke; the one-time
+  link dialog with mailed/copied), what is shared, the lifecycle. Every
+  `room.*` and `roompage.*` key stays; `FINISHED_STATES` and `refusalFor` keep
+  removing the composer and the verbs.
+- **Buyer** (`buyerroom.tsx`, `buyerroom.css`): **not the app shell.** Keep
+  the rail-less route and the credential handling exactly; restyle the page
+  to the lit ground with the one glow, a 720px `buyer-column`, the eyebrow,
+  the display-face title, `buyer.contact` in every state, the welcome, the
+  board with Download per document, the composers only for `comment`, the
+  foot with Sign out, the fixed "Powered by Margince" mark (`Wordmark`).
+  The four states keep their copy (`buyer.deadTitle` + the link-request
+  form, `buyer.pausedTitle`, `buyer.expiredTitle`, `buyer.closedNote`) and the
+  preview banner. `buyer-column > * { flex: none }` stays (the page grows,
+  panels do not compress). Stories: `buyerroom.stories.tsx` for every state at
+  1024px and 390px; `buyerroom.test.tsx` unchanged in behaviour.
 
 ## 8a. Base responsiveness
 

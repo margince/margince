@@ -355,7 +355,13 @@ one present, none at full depth:
   the panes ("All deals", "Full history") open the same tabs.
 - **Five readings as roomy cards**, 138px tall, an uppercase label, one
   figure at 26px in the mono face (22px under 1400px), one line of basis at the foot, and empty
-  space between them. When the details panel is open they shrink to 21px
+  space between them. **Every reading is a claim, so every reading carries
+  its evidence**: an "evidence" chip at the right of the label that opens, on
+  hover or focus, the popover with what the figure rests on (the rows it sums,
+  the date it was read, the connection it came from). **Every reading is a
+  door**: the card opens the sub page that holds its rows (Open pipeline →
+  Deals, Invoiced → Finance, Conversation and Last touch → History, Next →
+  Tasks), and the evidence chip does not. When the details panel is open they shrink to 21px
   figures and never wrap.
 - **The 360 as the first pane**, full width, on the same hairline as every
   other pane: the record's name and "· 360" as the pane title, the agent's word
@@ -440,7 +446,11 @@ History (the filter strip, then the **rail timeline** below), People (the
 coverage band, **the committee map**, the roster as a table with list, board
 and map cuts),
 Deals (the commercial band, the deals table with won and lost), Tasks (tick,
-snooze, open), Finance (the readings, the invoice table, the provider), Documents
+snooze, open), Finance (five readings with their evidence; **invoiced by month** as bars,
+the **overdue share** as a meter with its legend, **payment behaviour** as a
+line of days late per settled invoice, oldest first; the recent invoices
+table; the provider and sync line; and the reasons finance cannot be read
+drawn as rows, never as a zero), Documents
 (contracts, then files with category and origin), Profile (the details form,
 what they do, the facts Margince read with confirm and correct, linked records,
 data and tools), Partner (the programme and its deals); on a contact History,
@@ -662,6 +672,40 @@ where a critical role is unheld. The deal keeps its small decorative
 committee picture beside the seat rows: our circle, their seats, 2px accent
 threads only to the engaged, hollow for the quiet, a dashed ghost per
 coverage gap.
+
+### The Deal Room, two surfaces on one board
+
+The Deal Room is the one thing in the product a person outside it reaches,
+so it is two pages that share one document board and nothing else.
+
+**The seller's side** is a page inside Margince, under the deal: "Back to
+the deal", the room's title, a facts line (its state and end date, invited
+and signed in, when a buyer last looked, the steward), and the verbs View
+as buyer · Room access · more. A state band under the head says the
+lifecycle in one sentence ("Live. Access ends on 31 Oct.") with Pause, Set
+an end date and Close beside it. Left: the title and welcome the buyer reads
+first (editable), the document board in its four groups (Commercial, Legal,
+Security & Privacy, Delivery & Operations) with a thread and a composer under
+each document, then the room-wide threads. Right: Room access (every
+participant with what they may do, view or comment, whether invited, active
+or revoked, when last seen, how many downloads, a row menu to issue a new
+one-time link, change the capability, revoke), what is shared and what is
+hidden, and the lifecycle.
+
+**The buyer's side is not a Margince screen.** It is a public page reached
+from a one-time link: no rail, no top bar, no seat, no pricing internals,
+nothing the link did not already name. One centred reading column of 720px
+on the lit ground with the top-left glow: the eyebrow "Deal Room", the
+room's title in the display face, "Your contact: {steward}" (present in every
+state, because a paused buyer needs it most), the welcome, then the same
+board with the same threads: Download on every document, a composer for
+those who may comment, and a room-wide thread with its composer. Sign out at
+the foot; "Powered by Margince" fixed at the bottom right is the only product
+mark. The page has four honest states of its own, each with its way back
+and its contact: a dead link (with the one form: the invitation's email and
+"Send me a new link"), paused, ended, and closed (read-only, the record
+stands). A seller previewing sees the same page with a banner and can never
+write.
 
 ### The pages that are not records
 
