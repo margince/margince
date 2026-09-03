@@ -23,23 +23,35 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // OpenDealPeople answers which of the given contacts sit on an open deal the
 // caller can see.
 //
-// It carries BOTH admissions, because they answer different questions and
-// neither implies the other. The edge grant asks whether this caller may read
-// stakeholder pairs at all — a seat is an edge, and knowing a deal does not
-// license learning who is on it. The deal row scope asks WHICH deals count:
-// without it the answer would leak the existence of a deal through a contact
-// the caller can read, which is the side door the edge gate alone leaves open.
+// It carries THREE admissions, because they answer three different questions
+// and none of them implies another.
+//
+// The deal OBJECT gate asks whether this caller may read deals at all. It is
+// first, and it is the one this read originally omitted: a caller holding the
+// edge grant and no deal grant was told which contacts carry an open deal, so
+// the existence of the deal leaked through a person they were entitled to read.
+// Row scope does not cover it — `deal` is an identity table, so the own/team arm
+// is TRUE for every seated actor and the clause narrows nothing on its own.
+//
+// The edge grant asks whether this caller may read stakeholder pairs. A seat is
+// an edge, and knowing a deal does not license learning who is on it.
+//
+// The deal row scope asks WHICH deals count, for the tables where it bites.
 //
 // A contact absent from the answer is one with no open deal OR one whose deal
 // this caller cannot see, and the caller cannot tell those apart. That is the
 // same answer every other row-scoped read gives, and it is the right one here:
 // the alternative discloses the deal by the shape of the refusal.
 func OpenDealPeople(ctx context.Context, tx pgx.Tx, people []ids.PersonID) (map[ids.UUID]bool, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	if len(people) == 0 {
 		return map[ids.UUID]bool{}, nil
 	}

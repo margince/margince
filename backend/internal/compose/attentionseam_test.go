@@ -184,8 +184,25 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	// it: the band scored off the EDGE the projection loaded, and the deal from
 	// the batched read. Both were already in the lane's hand and discarded, so
 	// every lapsed contact ranked alike.
-	if quiet[0].Strength.Bucket == "" {
-		t.Errorf("the lane scored no band for %q — the edge it loaded was discarded", quiet[0].Name)
+	//
+	// The band is asserted against the kernel's own answer for THIS edge, not
+	// against a nonempty string: a bucket that is merely set passes for every
+	// band including the wrong one, and the failure worth guarding is the lane
+	// scoring the wrong edge — which yields a perfectly well-formed band about
+	// somebody else's relationship.
+	wantBand := search.InteractionEdge{PersonID: oldest, LastAt: oldestSpoke}.
+		StrengthOf(readInstantForDecay)
+	if quiet[0].Strength != wantBand {
+		t.Errorf("the lane scored %+v for %q, want §4's own answer for that edge %+v",
+			quiet[0].Strength, quiet[0].Name, wantBand)
+	}
+	// And the SECOND row is scored from its OWN edge. One score copied across
+	// every row would satisfy the line above on its own.
+	wantSecond := search.InteractionEdge{PersonID: newer, LastAt: newerSpoke}.
+		StrengthOf(readInstantForDecay)
+	if quiet[1].Strength != wantSecond {
+		t.Errorf("the lane scored %+v for %q, want that contact's own edge %+v",
+			quiet[1].Strength, quiet[1].Name, wantSecond)
 	}
 	if !quiet[0].HasOpenDeal {
 		t.Errorf("the funded contact %q is not reported as carrying a deal", quiet[0].Name)

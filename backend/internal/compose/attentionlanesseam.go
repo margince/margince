@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -362,26 +363,36 @@ func (t attentionTasks) OpenForViewer(
 		if row.DueAt == nil {
 			continue
 		}
-		due := *row.DueAt
-		linkType, linkID := primaryLink(row)
-		task := attention.Task{
-			ID:       ids.UUID(row.Id),
-			Subject:  subjectOfActivity(row),
-			DueAt:    &due,
-			LinkType: linkType,
-			LinkID:   linkID,
-		}
-		// Who holds it, already on the row the store returned and dropped
-		// here. Two of this lane's three scopes put somebody else's task in
-		// front of the reader, and one of them exists precisely to surface the
-		// tasks nobody has taken.
-		if row.AssigneeId != nil {
-			assignee := ids.UUID(*row.AssigneeId)
-			task.AssigneeID = &assignee
-		}
-		open = append(open, task)
+		open = append(open, taskFromActivity(row))
 	}
 	return open, nil
+}
+
+// taskFromActivity carries one stored activity across the seam as a task.
+//
+// A function rather than a loop body so the crossing can be tested without a
+// store: every field here is one the activity already held and this seam once
+// dropped, and a copy that stops happening is invisible — the lane still
+// returns the right NUMBER of rows, each one just quietly missing a fact.
+func taskFromActivity(row crmcontracts.Activity) attention.Task {
+	due := *row.DueAt
+	linkType, linkID := primaryLink(row)
+	task := attention.Task{
+		ID:       ids.UUID(row.Id),
+		Subject:  subjectOfActivity(row),
+		DueAt:    &due,
+		LinkType: linkType,
+		LinkID:   linkID,
+	}
+	// Who holds it, already on the row the store returned and dropped here.
+	// Two of this lane's three scopes put somebody else's task in front of the
+	// reader, and one of them exists precisely to surface the tasks nobody has
+	// taken.
+	if row.AssigneeId != nil {
+		assignee := ids.UUID(*row.AssigneeId)
+		task.AssigneeID = &assignee
+	}
+	return task
 }
 
 // attentionOverdue counts overdue tasks per assignee for the team board.

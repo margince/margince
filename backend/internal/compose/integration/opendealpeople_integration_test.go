@@ -37,14 +37,25 @@ import (
 // fundedReaderPerms is everything the read asks for except the edge, which
 // withEdge adds — so two callers can differ in exactly one grant.
 func fundedReaderPerms(withEdge bool, scope principal.RowScope) principal.Permissions {
+	perms := fundedReaderPermsWithout("", scope)
+	if withEdge {
+		perms.Objects["relationship"] = principal.ObjectGrant{Read: true}
+	}
+	return perms
+}
+
+// fundedReaderPermsWithout builds the same reader MINUS one named object grant,
+// so a test can remove exactly one admission and attribute what changes to it.
+//
+// Passing "" removes nothing and yields the reader without the edge, which is
+// what fundedReaderPerms then adds back.
+func fundedReaderPermsWithout(dropped string, scope principal.RowScope) principal.Permissions {
 	objects := map[string]principal.ObjectGrant{
 		"deal":         {Read: true},
 		"person":       {Read: true},
 		"organization": {Read: true},
 	}
-	if withEdge {
-		objects["relationship"] = principal.ObjectGrant{Read: true}
-	}
+	delete(objects, dropped)
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects:  objects,
@@ -156,6 +167,27 @@ func TestOnlyContactsOnAnOpenDealTheReaderMaySeeAreReportedAsFunded(t *testing.T
 	if !bounded[seated.UUID] {
 		t.Errorf("a reader bounded to their own rows lost a deal that customer identity is " +
 			"workspace-readable for — the row-scope clause narrowed an identity table")
+	}
+
+	// The DEAL OBJECT grant, removed alone while the edge grant stays. The
+	// third admission, and the one this read originally omitted: a caller who
+	// may read stakeholder pairs but not deals was told which contacts carry an
+	// open one, so the deal's existence leaked through a person they were
+	// entitled to read.
+	//
+	// Row scope does not cover this and cannot: `deal` is an identity table, so
+	// the own/team arm is TRUE for every seated actor. That is exactly why the
+	// case above passes and this one has to be asserted separately — a suite
+	// that granted deal.read to every principal would have called the leak
+	// green.
+	noDeals := fundedReaderPermsWithout("deal", principal.RowScopeAll)
+	noDeals.Objects["relationship"] = principal.ObjectGrant{Read: true}
+	blind, err := openDealPeople(t, e, noDeals, candidates)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a caller with no deal grant got %v, want the deal refusal", err)
+	}
+	if blind[seated.UUID] {
+		t.Errorf("a caller who may not read deals is told one rests on this contact")
 	}
 }
 
