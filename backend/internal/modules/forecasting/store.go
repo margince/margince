@@ -87,22 +87,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return Call{}, err
 	}
-	if in.AmountMinor < 0 {
-		return Call{}, &values.ParseError{
-			Field: "amount_minor", Code: "out_of_range",
-			Message: "a called forecast is not a negative amount",
-		}
-	}
-	if !values.ValidCurrency(in.Currency) {
-		return Call{}, &values.ParseError{
-			Field: "currency", Code: "invalid",
-			Message: "a called amount names the currency it is in",
-		}
-	}
-	if err := checkScope(in.Scope); err != nil {
-		return Call{}, err
-	}
-	note, err := bounded("note", in.Note, noteBound)
+	note, err := checkCall(in)
 	if err != nil {
 		return Call{}, err
 	}
@@ -114,14 +99,22 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 	var out Call
 	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		previous, err := s.currentCallTx(ctx, tx, in.Period, in.Scope)
-		if err != nil {
+		switch {
+		case errors.Is(err, errNoStandingCall):
+			// The first call of a period supersedes nothing, which is a
+			// different fact from replacing nothing and is recorded as such.
+		case err != nil:
 			return err
+		default:
+			out.SupersedesID = &previous
 		}
-		out = Call{
-			PeriodStart: in.Period.StartDate, PeriodEnd: in.Period.EndDate,
-			Scope: in.Scope, AmountMinor: in.AmountMinor, Currency: in.Currency,
-			Note: note, AuthorID: author, SupersedesID: previous,
-		}
+		out.PeriodStart = in.Period.StartDate
+		out.PeriodEnd = in.Period.EndDate
+		out.Scope = in.Scope
+		out.AmountMinor = in.AmountMinor
+		out.Currency = in.Currency
+		out.Note = note
+		out.AuthorID = author
 		capturedBy, err := storekit.CapturedBy(ctx)
 		if err != nil {
 			return err
@@ -149,7 +142,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 		if err != nil {
 			return err
 		}
-		event := crmcontracts.PublicEventForecastCalled{
+		event := crmcontracts.PublicEventForecastRecorded{
 			CallId:       openapi_types.UUID(out.ID),
 			AuthorUserId: openapi_types.UUID(author),
 			PeriodStart:  openapi_types.Date{Time: out.PeriodStart},
@@ -157,8 +150,8 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 			AmountMinor:  out.AmountMinor,
 			Currency:     out.Currency,
 		}
-		if previous != nil {
-			superseded := openapi_types.UUID(*previous)
+		if out.SupersedesID != nil {
+			superseded := openapi_types.UUID(*out.SupersedesID)
 			event.SupersedesId = &superseded
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, author, event)
@@ -167,6 +160,28 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 		return Call{}, err
 	}
 	return out, nil
+}
+
+// checkCall refuses what the table's CHECKs would refuse, naming the field so
+// a caller gets an answer they can act on rather than a constraint violation.
+// It returns the trimmed note, which is the one input it normalizes.
+func checkCall(in NewCall) (string, error) {
+	if in.AmountMinor < 0 {
+		return "", &values.ParseError{
+			Field: "amount_minor", Code: "out_of_range",
+			Message: "a called forecast is not a negative amount",
+		}
+	}
+	if !values.ValidCurrency(in.Currency) {
+		return "", &values.ParseError{
+			Field: "currency", Code: "invalid",
+			Message: "a called amount names the currency it is in",
+		}
+	}
+	if err := checkScope(in.Scope); err != nil {
+		return "", err
+	}
+	return bounded("note", in.Note, noteBound)
 }
 
 // CurrentCall answers the standing call for a period and scope, or ErrNotFound
@@ -216,7 +231,7 @@ func (s *Store) CurrentCall(ctx context.Context, period Period, scope Scope) (Ca
 // and `scope_id = NULL` is never true: written with =, a workspace call would
 // find no predecessor and every call would look like the first one, silently
 // discarding the chain for the one scope every installation has.
-func (s *Store) currentCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (*ids.UUID, error) {
+func (s *Store) currentCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (ids.UUID, error) {
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM forecast_call
@@ -226,13 +241,20 @@ func (s *Store) currentCallTx(ctx context.Context, tx pgx.Tx, period Period, sco
 		LIMIT 1`,
 		period.StartDate, period.EndDate, scope.Kind, scope.ID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return ids.Nil, errNoStandingCall
 	}
 	if err != nil {
-		return nil, fmt.Errorf("forecasting: reading the standing call: %w", err)
+		return ids.Nil, fmt.Errorf("forecasting: reading the standing call: %w", err)
 	}
-	return &id, nil
+	return id, nil
 }
+
+// errNoStandingCall says this period and scope have never been called.
+//
+// A sentinel rather than a nil id with a nil error: the FIRST call of a period
+// is a real outcome, and returning nothing twice reads exactly like a lookup
+// that forgot to set its result.
+var errNoStandingCall = errors.New("forecasting: no standing call for this period and scope")
 
 // checkScope holds the rule the table's CHECK holds, so a caller gets a named
 // field back rather than a constraint violation.

@@ -53,6 +53,7 @@ type Period struct {
 // PeriodKind is the length of a forecasting window.
 type PeriodKind string
 
+// The two window lengths a forecast is read over.
 const (
 	PeriodQuarter PeriodKind = "quarter"
 	PeriodMonth   PeriodKind = "month"

@@ -22,13 +22,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"math"
 	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // numericValueOutOfRange is the SQLSTATE a ::bigint cast raises when the

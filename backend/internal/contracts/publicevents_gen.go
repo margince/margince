@@ -249,7 +249,7 @@ const (
 	DealUpdated                           SubscribableEventType = "deal.updated"
 	EmailSignatureChanged                 SubscribableEventType = "email_signature.changed"
 	EngagementReply                       SubscribableEventType = "engagement.reply"
-	ForecastCalled                        SubscribableEventType = "forecast.called"
+	ForecastRecorded                      SubscribableEventType = "forecast.recorded"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
 	IntroRequestClosed                    SubscribableEventType = "intro_request.closed"
@@ -406,7 +406,7 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case EngagementReply:
 		return true
-	case ForecastCalled:
+	case ForecastRecorded:
 		return true
 	case IncumbentConnected:
 		return true
@@ -1102,9 +1102,9 @@ type PublicEventEnvelope struct {
 	Version int `json:"version"`
 }
 
-// PublicEventForecastCalled Payload for forecast.called — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a person and that person is who it is attributable to.
+// PublicEventForecastRecorded Payload for forecast.recorded — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a person and that person is who it is attributable to.
 // A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
-type PublicEventForecastCalled struct {
+type PublicEventForecastRecorded struct {
 	AmountMinor  int64              `json:"amount_minor"`
 	AuthorUserId openapi_types.UUID `json:"author_user_id"`
 	CallId       openapi_types.UUID `json:"call_id"`
@@ -2158,9 +2158,9 @@ func (PublicEventEngagementReply) EventType() string { return "engagement.reply"
 
 func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
-func (PublicEventForecastCalled) EventType() string { return "forecast.called" }
+func (PublicEventForecastRecorded) EventType() string { return "forecast.recorded" }
 
-func (PublicEventForecastCalled) EntityType() string { return "user" }
+func (PublicEventForecastRecorded) EntityType() string { return "user" }
 
 func (PublicEventIncumbentConnected) EventType() string { return "incumbent.connected" }
 
@@ -2492,7 +2492,7 @@ var PublicEventVersions = map[string]int{
 	"deal_room.updated":                         1,
 	"email_signature.changed":                   1,
 	"engagement.reply":                          1,
-	"forecast.called":                           1,
+	"forecast.recorded":                         1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,
 	"intro_request.closed":                      1,

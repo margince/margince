@@ -331,7 +331,7 @@ var catalog = map[string]struct {
 	// forecast is about a pipeline, but a CALL is an assertion by a person and
 	// is attributable to them — a consumer asking "who said this number" is
 	// asking about a user, not about a deal.
-	"forecast.called": {identityStreamEntity, 1},
+	"forecast.recorded": {identityStreamEntity, 1},
 
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a

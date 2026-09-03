@@ -15,7 +15,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 

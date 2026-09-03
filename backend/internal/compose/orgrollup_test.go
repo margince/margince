@@ -4,12 +4,12 @@
 package compose
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"math"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestQuarterBounds(t *testing.T) {

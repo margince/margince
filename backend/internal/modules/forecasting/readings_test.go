@@ -18,11 +18,16 @@ func testPeriod(t *testing.T) Period {
 	return period
 }
 
-func day(t *testing.T, y int, m time.Month, d int) *time.Time {
+// day builds a local calendar day in the test zone. Every case here sits in
+// one year, so the year is fixed rather than repeated at each call site.
+func day(t *testing.T, m time.Month, d int) *time.Time {
 	t.Helper()
-	at := time.Date(y, m, d, 0, 0, 0, 0, berlin(t))
+	at := time.Date(testYear, m, d, 0, 0, 0, 0, berlin(t))
 	return &at
 }
+
+// testYear is the year every fixture below sits in.
+const testYear = 2026
 
 func minor(v int64) *int64 { return &v }
 
@@ -36,7 +41,7 @@ func healthyDeal(t *testing.T) Deal {
 		AmountMinor:       minor(100_000),
 		Currency:          "EUR",
 		BaseMinor:         minor(100_000),
-		ExpectedCloseDate: day(t, 2026, time.May, 20),
+		ExpectedCloseDate: day(t, time.May, 20),
 		Category:          CategoryCommit,
 		StageProbability:  50,
 	}
@@ -45,7 +50,7 @@ func healthyDeal(t *testing.T) Deal {
 func TestAProvisionalDateStaysOutOfTheEvidenceReading(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, 2026, time.May, 14)
+	asOf := *day(t, time.May, 14)
 
 	confirmed, err := Compute(period, asOf, []Deal{healthyDeal(t)})
 	if err != nil {
@@ -78,7 +83,7 @@ func TestAProvisionalDateStaysOutOfTheEvidenceReading(t *testing.T) {
 func TestAnUnpricedDealIsCountedAndContributesNothing(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, 2026, time.May, 14)
+	asOf := *day(t, time.May, 14)
 
 	unpriced := healthyDeal(t)
 	unpriced.AmountMinor = nil
@@ -111,7 +116,7 @@ func TestAnUnpricedDealIsCountedAndContributesNothing(t *testing.T) {
 func TestAMissingRateIsTypedRatherThanZero(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, 2026, time.May, 14)
+	asOf := *day(t, time.May, 14)
 
 	unconverted := healthyDeal(t)
 	unconverted.Currency = "VND"
@@ -138,11 +143,11 @@ func TestAMissingRateIsTypedRatherThanZero(t *testing.T) {
 func TestWonFollowsTheCloseInstantNotTheExpectedDate(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, 2026, time.May, 14)
+	asOf := *day(t, time.May, 14)
 
 	closedInside := healthyDeal(t)
 	closedInside.Won = true
-	closedInside.ClosedAt = day(t, 2026, time.May, 30)
+	closedInside.ClosedAt = day(t, time.May, 30)
 
 	got, err := Compute(period, asOf, []Deal{closedInside})
 	if err != nil {
@@ -159,7 +164,7 @@ func TestWonFollowsTheCloseInstantNotTheExpectedDate(t *testing.T) {
 
 	closedAfter := healthyDeal(t)
 	closedAfter.Won = true
-	closedAfter.ClosedAt = day(t, 2026, time.July, 2)
+	closedAfter.ClosedAt = day(t, time.July, 2)
 	after, err := Compute(period, asOf, []Deal{closedAfter})
 	if err != nil {
 		t.Fatalf("computing: %v", err)
@@ -172,10 +177,10 @@ func TestWonFollowsTheCloseInstantNotTheExpectedDate(t *testing.T) {
 func TestADealOutsideThePeriodIsInNoReading(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, 2026, time.May, 14)
+	asOf := *day(t, time.May, 14)
 
 	elsewhere := healthyDeal(t)
-	elsewhere.ExpectedCloseDate = day(t, 2026, time.September, 3)
+	elsewhere.ExpectedCloseDate = day(t, time.September, 3)
 
 	got, err := Compute(period, asOf, []Deal{elsewhere})
 	if err != nil {
@@ -194,13 +199,13 @@ func TestSlippedIsJudgedAgainstTodayNotThePeriodStart(t *testing.T) {
 	// and the case a comparison against the PERIOD start would wrongly call
 	// slipped for most of every quarter.
 	upcoming := healthyDeal(t)
-	upcoming.ExpectedCloseDate = day(t, 2026, time.May, 20)
-	if got := EffectiveCategory(*day(t, 2026, time.May, 14), upcoming); got != CategoryCommit {
+	upcoming.ExpectedCloseDate = day(t, time.May, 20)
+	if got := EffectiveCategory(*day(t, time.May, 14), upcoming); got != CategoryCommit {
 		t.Errorf("a deal expected next week reads as %q — it has not slipped", got)
 	}
 
 	// The same deal, read a month later, after its date went by.
-	if got := EffectiveCategory(*day(t, 2026, time.June, 14), upcoming); got != CategorySlipped {
+	if got := EffectiveCategory(*day(t, time.June, 14), upcoming); got != CategorySlipped {
 		t.Errorf("a deal whose date has passed reads as %q, want %q", got, CategorySlipped)
 	}
 }
@@ -214,7 +219,7 @@ func TestSlippedIsJudgedAgainstTodayNotThePeriodStart(t *testing.T) {
 func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, 2026, time.May, 14)
+	asOf := *day(t, time.May, 14)
 	rng := rand.New(rand.NewSource(20260903))
 
 	for run := range 200 {
@@ -238,7 +243,7 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 				deal.CloseProvisional = true
 			case 2:
 				deal.Won = true
-				deal.ClosedAt = day(t, 2026, time.May, 30)
+				deal.ClosedAt = day(t, time.May, 30)
 			}
 			population = append(population, deal)
 		}
