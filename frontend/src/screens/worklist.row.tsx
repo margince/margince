@@ -23,7 +23,7 @@ import {
   isUnprepared,
   itemTitle,
   moveHref,
-  moveOpensComposer,
+  moveLabel,
   phrasedReasons,
   reasonText,
   rowHref,
@@ -380,16 +380,12 @@ function RowVerbs({
           standing rather than on a screen they have to go and find. */}
       {move && (
         <a className="link-button" href={move}>
-          {/* THE LABEL MOVES WITH THE ROUTE. Where the address opens the
-              composer the verb is the act; where it only reaches the record it
-              says so, because a label promising a draft over a link that merely
-              navigates is the overstatement this row refused to make until the
-              route existed. */}
-          {t(
-            moveOpensComposer(item)
-              ? "worklist.verb.draft_reply_now"
-              : "worklist.verb.draft_reply",
-          )}
+          {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
+              address opens the composer the label is the act; where it only
+              reaches the record it says so. And it names the verb the SERVER
+              chose, so an opening outreach is not offered as a reply to a
+              conversation nobody has had. */}
+          {moveLabel(item, t)}
         </a>
       )}
       {verbs.map(({ action, destination }) => (

@@ -7995,6 +7995,11 @@ export const en = {
   // Where the composer actually opens, the verb is the ACT rather than the way
   // to it. The two labels are separate keys because the two clicks differ.
   "worklist.verb.draft_reply_now": "Draft the reply",
+  // A FIRST message rather than an answer to one. Separate keys because the two
+  // are different acts: a row saying "reply" over an opening outreach names a
+  // conversation that has not happened yet.
+  "worklist.verb.draft_email": "Open to write",
+  "worklist.verb.draft_email_now": "Draft the email",
   "worklist.deal.closes": "closes {date}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",

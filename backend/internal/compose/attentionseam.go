@@ -432,6 +432,15 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// The step a deal row suggests, decided ONCE by the deal's own status
+		// card and read here. The queue does not reason about next steps: it
+		// reads what that card already worked out, so the row and the deal page
+		// name the same move rather than arriving at two answers.
+		//
+		// Reads the card's cache and never assembles one — a page holds thirty
+		// rows and assembling costs a timeline, seats and possibly a model call
+		// each. A deal nobody has opened simply carries no step.
+		WithDealMoves(newDealStatusService(pool)).
 		// The base-currency conversion the ranked queue's money comparisons
 		// run in — the same engine every other money surface prices with.
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).

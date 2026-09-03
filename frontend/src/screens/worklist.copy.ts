@@ -369,8 +369,39 @@ export function dealFactsText(
 // The row keeps its link to the record beside this, where the message sits on
 // the timeline. A parameter naming an activity would promise a precision the
 // composer does not have.
+// The verbs this row can take a reader to.
+//
+// Both end at a person's composer. Which of the two the server chose still
+// matters to the LABEL — one answers a message, the other opens a fresh one —
+// but not to the address, because the composer picks its own transport and
+// threading from the person.
+//
+// The other verbs are absent, each for its own reason. `create_task` and
+// `open_meeting_brief` are PERFORMED rather than navigated: one posts a task
+// body, the other opens a drawer, and neither is a thing a link can do. `none`
+// names no step. `reconnect` leaves for a provider's consent screen, which is a
+// handoff rather than a destination. A row keeps its own verbs in every case,
+// so none of these leaves the reader with nothing.
+const NAVIGABLE_MOVES = new Set(["draft_reply", "draft_email"]);
+
+/**
+ * Whether a move has what its own verb needs.
+ *
+ * `draft_reply` answers a MESSAGE, and the contract says a client draws a
+ * control only where the operand its verb needs is present. One carrying no
+ * `activity_id` names nothing to answer — schema-valid, since the field is
+ * optional for the verbs that take no record, and undrawable all the same.
+ *
+ * `draft_email` needs none: an opening outreach is a first message to a person,
+ * and there is no earlier record for it to name.
+ */
+function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
+  return move.action !== "draft_reply" || move.activity_id !== undefined;
+}
+
 export function moveHref(item: WorklistItem): string | undefined {
-  if (item.move?.action !== "draft_reply") {
+  const move = item.move;
+  if (!move || !NAVIGABLE_MOVES.has(move.action) || !moveIsComplete(move)) {
     return undefined;
   }
   const record = subjectHref(item);
@@ -380,9 +411,40 @@ export function moveHref(item: WorklistItem): string | undefined {
   return `${record}?${COMPOSE_PARAM}=reply`;
 }
 
-/** Whether this row's move opens the composer, rather than only a record. */
+/**
+ * Whether this row's move opens the composer, rather than only a record.
+ *
+ * Asked of the SAME completeness rule moveHref uses, so the label and the link
+ * cannot disagree: a move this refuses to draw must not also be described as
+ * one that drafts.
+ */
 export function moveOpensComposer(item: WorklistItem): boolean {
-  return item.move?.action === "draft_reply" && item.subject?.type === "person";
+  const move = item.move;
+  return (
+    move !== undefined &&
+    NAVIGABLE_MOVES.has(move.action) &&
+    moveIsComplete(move) &&
+    item.subject?.type === "person"
+  );
+}
+
+// What the move's control says.
+//
+// THE LABEL FOLLOWS THE VERB THE SERVER CHOSE. One hardcoded label was right
+// while `draft_reply` was the only verb; with several it would promise a reply
+// over a link that opens a fresh message. It follows the ROUTE too: where the
+// composer opens, the verb is the act; where the link only reaches the record,
+// it says so.
+export function moveLabel(item: WorklistItem, t: T): string {
+  const opens = moveOpensComposer(item);
+  if (item.move?.action === "draft_email") {
+    return t(
+      opens ? "worklist.verb.draft_email_now" : "worklist.verb.draft_email",
+    );
+  }
+  return t(
+    opens ? "worklist.verb.draft_reply_now" : "worklist.verb.draft_reply",
+  );
 }
 
 // One item's headline.

@@ -107,6 +107,9 @@ type Service struct {
 	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
 	// carried only a deal id travels without the deal's figures.
 	dealFacts DealFacts
+	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
+	// problem and no step, which is what every deal row did before this seam.
+	dealMoves DealMoves
 	// fx is OPTIONAL in the same way, and money is one read's answer from it,
 	// written per read onto the request's own copy the way taskScope is.
 	// basemoney.go states what each means and why the copy matters.

@@ -11,6 +11,7 @@ import { translate } from "../i18n";
 import {
   comparisonText,
   moveHref,
+  moveLabel,
   moveOpensComposer,
   reasonText,
 } from "./worklist.copy";
@@ -133,6 +134,96 @@ describe("moveHref — the draft_reply move", () => {
     };
     expect(moveHref(noMove as unknown as WorklistItem)).toBeUndefined();
     expect(moveOpensComposer(noMove as unknown as WorklistItem)).toBe(false);
+  });
+});
+
+// The wider vocabulary.
+//
+// The move slot carried one verb while one lane produced one; the deal card
+// decides five, and the row now reads them. These are about the row refusing to
+// draw a control it cannot honour, and about the label naming the verb the
+// SERVER chose rather than the one that used to be the only option.
+
+// The shapes the server really sends, not a bare action. `draft_reply` always
+// names the message it answers — that is what makes it a reply — and the other
+// verbs name whatever their own operand is, or nothing.
+function movingRow(action: string, activityId?: string) {
+  const row = replyRow({ type: "person", id: "p-1" }) as unknown as {
+    move: unknown;
+  };
+  const move =
+    action === "draft_reply"
+      ? { action, activity_id: activityId ?? "a-1" }
+      : { action, ...(activityId ? { activity_id: activityId } : {}) };
+  return { ...row, move } as unknown as WorklistItem;
+}
+
+describe("the verbs the row can and cannot take a reader to", () => {
+  // A first outreach reaches the same composer a reply does — the composer
+  // picks its own transport from the person, so the address is the same.
+  it("opens the composer for a fresh message too", () => {
+    const item = movingRow("draft_email");
+    expect(moveHref(item)).toContain("compose=");
+    expect(moveOpensComposer(item)).toBe(true);
+  });
+
+  // THE distinction the wider vocabulary made necessary. One hardcoded label
+  // was right while draft_reply was the only verb; over an opening outreach it
+  // names a conversation nobody has had.
+  it("names a first message as writing, not as replying", () => {
+    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft the email");
+    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft the reply");
+  });
+
+  // And the label still follows the ROUTE. A deal has no composer, so the same
+  // verb reaching only the record must not claim to draft anything.
+  it("claims only to open where the composer cannot", () => {
+    const onADeal = {
+      ...(movingRow("draft_email") as unknown as { subject: unknown }),
+      subject: { type: "deal", id: "d-1" },
+    } as unknown as WorklistItem;
+    expect(moveLabel(onADeal, t)).toBe("Open to write");
+  });
+
+  // These are PERFORMED, not navigated: one posts a task body, one opens a
+  // drawer, and one leaves for a provider's consent screen. A link drawn for
+  // any of them would be pressable with nothing behind it — the exact defect
+  // the move slot's own comment warned about.
+  it("draws no link for a verb no address can perform", () => {
+    for (const action of [
+      "create_task",
+      "open_meeting_brief",
+      "reconnect",
+      "none",
+    ]) {
+      const item = movingRow(action);
+      expect(moveHref(item)).toBeUndefined();
+      expect(moveOpensComposer(item)).toBe(false);
+    }
+  });
+
+  // A reply that names no message. Schema-VALID — `activity_id` is optional, for
+  // the verbs that take no record — and undrawable all the same: there is
+  // nothing to answer, and the contract says a client draws a control only where
+  // the operand its verb needs is present.
+  it("draws no reply where the move names no message", () => {
+    const noMessage = {
+      ...(movingRow("draft_email") as unknown as { move: unknown }),
+      move: { action: "draft_reply" },
+    } as unknown as WorklistItem;
+    expect(moveHref(noMessage)).toBeUndefined();
+    // And the LABEL agrees. A move refused a link must not still be described
+    // as one that drafts, or the row says two things about one control.
+    expect(moveOpensComposer(noMessage)).toBe(false);
+  });
+
+  // The sibling that must NOT be refused: an opening outreach legitimately names
+  // no record, because there is no earlier message for it to name. Without this
+  // case the completeness rule could be "require an id from every mail verb" and
+  // the test above would still pass, while a first outreach lost its control.
+  it("still draws a first message that names no record", () => {
+    expect(moveHref(movingRow("draft_email"))).toContain("compose=");
+    expect(moveOpensComposer(movingRow("draft_email"))).toBe(true);
   });
 });
 

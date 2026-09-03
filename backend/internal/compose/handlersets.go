@@ -122,12 +122,10 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 		WithTeammates(newTeammatesSeam(pool))
 	s.meetingBriefHandlers = meetingbrief.NewHandlers(s.meetingBriefSvc, s.sorDispatch.isOverlay)
 	// The deal's status card reads the deal, its health, timeline, tasks and
-	// Deal Room through their own gates. It performs nothing: the click goes
-	// through the verb the move names, and the only row it writes is its own
-	// per-reader cache entry.
-	s.dealStatusSvc = dealstatus.NewService(
-		pool, s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now).
-		WithSeats(dealSeatReader(pool))
+	// Deal Room through their own gates. Built through the shared constructor
+	// because the worklist reads the move this same service decides — see
+	// newDealStatusService for why there is only one.
+	s.dealStatusSvc = newDealStatusService(pool)
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing

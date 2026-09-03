@@ -7922,6 +7922,9 @@ export const de = {
   "worklist.verb.draft_reply": "Zum Antworten öffnen",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
   "worklist.verb.draft_reply_now": "Antwort entwerfen",
+  // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
+  "worklist.verb.draft_email": "Zum Schreiben öffnen",
+  "worklist.verb.draft_email_now": "E-Mail entwerfen",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",
