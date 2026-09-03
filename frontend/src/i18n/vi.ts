@@ -1519,6 +1519,11 @@ export const vi = {
   "compose.audienceParticipants": "Chỉ người tham gia",
   "compose.audienceParticipantsHint":
     "Chỉ những người có trên tin nhắn này đọc được tiêu đề và nội dung. Người khác chỉ thấy rằng có một tin nhắn được trao đổi vào ngày đó.",
+  "compose.audienceSelected": "Những người được nêu tên",
+  "compose.audienceSelectedHint":
+    "chỉ những người và nhóm bạn nêu tên, cùng những ai đã có trong thư.",
+  "compose.audienceMembersLegend": "Ai được đọc",
+  "compose.audienceMembersLoading": "Đang đọc danh sách người…",
   "compose.audienceConfirm": "Lưu hiển thị",
   "compose.audienceNote":
     "Chỉ áp dụng cho tin nhắn này — không cho chuỗi hội thoại và không cho liên hệ.",
