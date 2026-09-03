@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -129,7 +130,13 @@ type DeliveryRequest struct {
 	// same From header the first attempt did.
 	FromName string
 	// Attachments is what this message carries, snapshotted at staging.
-	Attachments    []OutboundFile
+	Attachments []OutboundFile
+	// Authorization is the question the engine answers about this message, put
+	// once and answered in the same transaction that stages it. Carried on the
+	// request rather than rebuilt by the stager: the recipients, the anchor and
+	// the content are all known HERE, and a stager that re-derived them would
+	// be a second reading of the same message.
+	Authorization  commsauthz.Request
 	ConsentPurpose string
 	InReplyTo      string   // unbracketed; empty starts a conversation
 	References     []string // unbracketed ancestry, oldest first

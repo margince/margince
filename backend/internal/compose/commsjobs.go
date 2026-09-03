@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -300,98 +299,6 @@ func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, st
 		return false, "the sender holds a read-only seat; a read seat may not transmit staged messages", nil
 	}
 	return true, "", nil
-}
-
-// commsStager records an accepted send for transmission: the delivery row and
-// the job that will carry it, both on the caller's transaction. One commit, one
-// fact — a crash between them would either promise a send nothing queued or
-// queue one with no timeline entry behind it.
-type commsStager struct {
-	store  *comms.Store
-	runner *jobs.Runner
-}
-
-var (
-	_ activities.DeliveryStager        = commsStager{}
-	_ activities.ChannelDeliveryStager = commsStager{}
-)
-
-// DeliveryMachinery is the ONE delivery path in both the shapes a message can be
-// staged in. It is a single seam rather than two because there is a single
-// machinery behind it — one delivery table, one status machine, one retry ladder,
-// one dispatcher — and a role able to wire mail staging without channel staging
-// could serve a reply surface that accepts a message nothing will ever carry.
-type DeliveryMachinery interface {
-	activities.DeliveryStager
-	activities.ChannelDeliveryStager
-}
-
-// NewDeliveryStager builds the delivery machinery every send transport is
-// composed with (compose.WithDelivery). The runner is insert-only in the api
-// role; the worker role works what it inserts.
-//
-//nolint:ireturn // returns the DeliveryMachinery seam by design: the concrete type is unexported and every caller holds the interface
-func NewDeliveryStager(pool *pgxpool.Pool, runner *jobs.Runner) DeliveryMachinery {
-	return commsStager{store: comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), runner: runner}
-}
-
-func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.DeliveryRequest) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("comms: staging a delivery outside workspace context")
-	}
-	id, err := s.store.StageTx(ctx, tx, comms.StageInput{
-		ActivityID:      in.ActivityID,
-		Provider:        in.Provider,
-		MessageID:       in.MessageID,
-		Recipients:      in.Recipients,
-		Cc:              in.Cc,
-		Bcc:             in.Bcc,
-		Subject:         in.Subject,
-		Body:            in.Body,
-		HTMLBody:        in.HTMLBody,
-		FromName:        in.FromName,
-		Attachments:     commsFiles(in.Attachments),
-		ConsentPurpose:  in.ConsentPurpose,
-		InReplyTo:       in.InReplyTo,
-		References:      in.References,
-		ThreadKey:       in.ThreadKey,
-		ListUnsubscribe: in.ListUnsubscribe,
-	})
-	if err != nil {
-		return err
-	}
-	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
-		Workspace: ws, DeliveryID: id.String(),
-	}, sendInsertOpts())
-}
-
-// StageChannelTx is the same staging for a channel reply: the channel-shaped row
-// and the SAME transmit job, on the caller's transaction.
-//
-// One job kind carries both shapes deliberately. The worker loads the delivery
-// and dispatches it, and the dispatcher branches on the ROW's shape exactly once
-// (comms/sendseam.go) — a second job kind would be a second path to keep in step
-// with the first, and the channel is the one that would fall behind.
-func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activities.ChannelDeliveryRequest) error {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("comms: staging a channel delivery outside workspace context")
-	}
-	id, err := s.store.StageChannelTx(ctx, tx, comms.StageChannelInput{
-		ActivityID:     in.ActivityID,
-		Provider:       in.Provider,
-		Recipient:      in.Recipient,
-		Body:           in.Body,
-		Attachments:    commsFiles(in.Attachments),
-		ConsentPurpose: in.ConsentPurpose,
-	})
-	if err != nil {
-		return err
-	}
-	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
-		Workspace: ws, DeliveryID: id.String(),
-	}, sendInsertOpts())
 }
 
 // SendPacing is the deployment's outbound pacing: how many messages one
