@@ -1302,7 +1302,18 @@ export function AgentRail({
               read it, and absent again when nothing in the month carried a
               price. */}
           {spend.allowed && spend.minor !== undefined && (
-            <span className="arspend">{money}</span>
+            <span className="arspend">
+              {money}
+              {/* The scope beside the figure, in the slot the stylesheet
+                  already reserved for it (`.arspend > .arscope`, "the money,
+                  and the scope it was spent in, on one line"). It shipped
+                  without one, so the rail carried a bare currency amount naming
+                  nothing — and the button's own aria-label overrides the text
+                  inside it, so no reader got the word from anywhere. The
+                  expanded panel says "Cost this month"; this is the same fact
+                  in the space a rail has, from the same string. */}
+              <span className="arscope">{LABELS.spendScope}</span>
+            </span>
           )}
         </span>
         <ChevronRight

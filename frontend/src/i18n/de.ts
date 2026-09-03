@@ -2406,7 +2406,7 @@ export const de = {
   "home.honestShort":
     "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
   "home.overflow":
-    "{shown} von {count} qualifizierten Deals — ehrlich kurz, oben die besten.",
+    "Es werden die {shown} höchstplatzierten von {count} qualifizierten Deals gezeigt.",
   "home.narrativeNoPass":
     "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
@@ -2642,7 +2642,7 @@ export const de = {
   "home.deck.viewDeck": "Stapel",
   "home.deck.viewList": "Liste",
   "home.deck.keys":
-    "→ annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U zurücknehmen · Enter senden",
+    "Pfeiltasten stellen eine Entscheidung bereit: → annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U zurücknehmen · Enter sendet das Bereitgestellte",
   "home.deck.behind_one": "1 weitere Karte dahinter",
   "home.deck.behind_other": "{count} weitere Karten dahinter",
   "home.deck.staged_one": "1 Entscheidung vorbereitet",
@@ -3315,7 +3315,7 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
-  "brief.coverage.summary": "Einige Quellen haben mehr, als diese Seite zeigt",
+  "brief.coverage.summary": "Welche Quellen mehr hatten",
   "brief.coverage.bounded":
     "{shown} von mindestens {considered} gelesenen angezeigt",
   "delivery.morningLabel": "Ihr Tagesbriefing",
@@ -7707,6 +7707,7 @@ export const de = {
   "project.assignOwnerTitle": "Einer Kolleg:in zuweisen",
   "project.assignOwnerSearch": "Kolleg:innen suchen",
   "project.assignOwnerNoneSelected": "Erst eine Kolleg:in auswählen",
+  "project.assignOwnerConfirm": "Zuweisen",
   "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Ende",
@@ -7755,6 +7756,7 @@ export const de = {
   "project.stakeholders.empty":
     "Noch niemand ist an diesem Projekt beteiligt. Beteiligte sind Personen mit einer Rolle hier — Sponsor, Projektleitung, Champion.",
   "project.stakeholders.add": "Beteiligten hinzufügen",
+  "project.stakeholders.addConfirm": "Hinzufügen",
   "project.stakeholders.addHint":
     "Eine Rolle pro Person. Wer schon an diesem Projekt beteiligt ist, wechselt auf die hier gewählte Rolle.",
   "project.stakeholders.searchLabel": "Personen nach Namen suchen",
@@ -8105,6 +8107,7 @@ export const de = {
   "lead.standing.rests.captured": "Erfasst am {at}.",
   "lead.standing.rests.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.rests.engaged": "Engagement erfasst am {at}.",
+  "lead.readings.openStatus": "Leads mit diesem Status öffnen",
   "lead.readings.title": "Wo dieser Lead steht",
   "lead.readings.firstResponse": "Erste Antwort",
   "lead.readings.noClock": "kein Antwortziel gesetzt",

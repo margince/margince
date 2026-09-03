@@ -121,7 +121,14 @@ export type DecisionDeckLabels = Readonly<{
   viewDeck: string;
   viewList: string;
   /** The keyboard legend. Drawn, not hidden: a shortcut nobody is told about is
-   *  a shortcut for whoever wrote it. */
+   *  a shortcut for whoever wrote it.
+   *
+   *  It must say that the arrows STAGE. This deck is stage-then-commit — an
+   *  arrow moves a verdict into the tray and nothing leaves until `commit`
+   *  runs — so a legend reading "→ accept" beside "Enter send" invites the
+   *  reading where the arrow already sent it and Enter is a separate act. A
+   *  reader who believes that presses four arrows, walks away, and has sent
+   *  nothing. */
   keys: string;
   /** How many cards are still behind the live one. */
   behind: (count: number) => string;

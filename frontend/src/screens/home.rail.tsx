@@ -196,13 +196,34 @@ export function OvernightPanel() {
               label={t("home.digestSynced")}
               value={capture.messages_synced ?? 0}
             />
+            {/* The two counts that name a set of RECORDS, so they open it.
+                The door sorts newest-first rather than bounding by date:
+                `created_at` is a declared sort on both lists and neither
+                endpoint has a "created on this day" filter, so overnight's
+                rows land at the top of a longer list rather than being the
+                whole of it. That is a superset, which is the honest direction
+                to be wrong in — the reader sees the ones this figure counted
+                and more besides, not fewer. The messages-synced count above
+                has no list surface at all and keeps no door. */}
             <DigestCount
               label={t("home.digestPeople")}
               value={capture.people_created ?? 0}
+              onOpen={() =>
+                navigate(
+                  { screen: "contacts" },
+                  new Map([["sort", "-created_at"]]),
+                )
+              }
             />
             <DigestCount
               label={t("home.digestOrgs")}
               value={capture.organizations_created ?? 0}
+              onOpen={() =>
+                navigate(
+                  { screen: "companies" },
+                  new Map([["sort", "-created_at"]]),
+                )
+              }
             />
             <DigestCount
               label={t("home.digestDedupe")}

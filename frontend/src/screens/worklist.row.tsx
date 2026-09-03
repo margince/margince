@@ -76,6 +76,14 @@ export function WorklistRow({
   const href = rowHref(item);
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
+  // The named members, each ONCE. The contract asks for "a few members, named,
+  // so the group can be checked before it is answered", and a group of eight
+  // failures of one automation sends that automation's name eight times: the
+  // Worklist's top row read "Post-meeting recap draft · Post-meeting recap
+  // draft · Post-meeting recap draft", which tells a reader nothing about the
+  // group except that the list repeats. Order is kept — first appearance
+  // wins — because the server sends them in the order it thinks matters.
+  const sample = [...new Set(item.batch?.sample ?? [])];
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
   const because = phrasedReasons(item)
@@ -149,12 +157,10 @@ export function WorklistRow({
         {item.detail && item.source !== "sync_health" && (
           <p className="t-caption worklist-row-detail">{item.detail}</p>
         )}
-        {item.batch?.sample && item.batch.sample.length > 0 && (
+        {sample.length > 0 && (
           // A group nobody can see into is a group nobody trusts, and an
           // untrusted group is worse than the pile it replaced.
-          <p className="t-caption worklist-row-sample">
-            {item.batch.sample.join(" · ")}
-          </p>
+          <p className="t-caption worklist-row-sample">{sample.join(" · ")}</p>
         )}
         {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
         {because && <p className="t-caption worklist-row-because">{because}</p>}

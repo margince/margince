@@ -2382,7 +2382,7 @@ export const vi = {
   "home.honestShort":
     "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
   "home.overflow":
-    "{shown} trong {count} deal đạt ngưỡng — phần đầu ngắn gọn và trung thực.",
+    "Đang hiển thị {shown} deal được xếp hạng cao nhất trong {count} deal đạt ngưỡng.",
   "home.narrativeNoPass":
     "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
   "home.panel.weekly": "Tuần trước",
@@ -2618,7 +2618,7 @@ export const vi = {
   "home.deck.viewDeck": "Chồng thẻ",
   "home.deck.viewList": "Danh sách",
   "home.deck.keys":
-    "→ chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi",
+    "Mũi tên chuẩn bị một quyết định: → chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi những gì đã chuẩn bị",
   "home.deck.behind_one": "còn 1 thẻ phía sau",
   "home.deck.behind_other": "còn {count} thẻ phía sau",
   "home.deck.staged_one": "1 quyết định đã xếp",
@@ -3281,8 +3281,7 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
-  "brief.coverage.summary":
-    "Một số nguồn có nhiều hơn những gì trang này hiển thị",
+  "brief.coverage.summary": "Những nguồn nào còn nhiều hơn",
   "brief.coverage.bounded": "Hiển thị {shown} trên ít nhất {considered} đã đọc",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
@@ -7620,6 +7619,7 @@ export const vi = {
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
   "project.assignOwnerNoneSelected": "Hãy chọn một đồng nghiệp trước",
+  "project.assignOwnerConfirm": "Giao",
   "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
@@ -7667,6 +7667,7 @@ export const vi = {
   "project.stakeholders.empty":
     "Chưa ai có vai trò trong dự án này. Bên liên quan là người giữ một vai trò ở đây — nhà tài trợ, trưởng dự án, người ủng hộ.",
   "project.stakeholders.add": "Thêm bên liên quan",
+  "project.stakeholders.addConfirm": "Thêm",
   "project.stakeholders.addHint":
     "Mỗi người một vai trò. Chọn lại người đã có trong dự án sẽ đổi họ sang vai trò bạn chọn ở đây.",
   "project.stakeholders.searchLabel": "Tìm người theo tên",
@@ -8005,6 +8006,7 @@ export const vi = {
   "lead.standing.rests.captured": "Ghi nhận ngày {at}.",
   "lead.standing.rests.noResponse": "Chưa ghi nhận phản hồi đầu tiên.",
   "lead.standing.rests.engaged": "Ghi nhận tương tác ngày {at}.",
+  "lead.readings.openStatus": "Mở các lead ở trạng thái này",
   "lead.readings.title": "Vị thế của khách hàng tiềm năng này",
   "lead.readings.firstResponse": "Phản hồi đầu tiên",
   "lead.readings.noClock": "chưa đặt mục tiêu phản hồi",

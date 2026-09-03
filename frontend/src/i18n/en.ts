@@ -2450,7 +2450,7 @@ export const en = {
   "home.honestShort":
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":
-    "{shown} of {count} qualifying deals — the honest-short top slice.",
+    "Showing the {shown} highest-ranked of {count} qualifying deals.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
@@ -2691,7 +2691,7 @@ export const en = {
   "home.deck.viewDeck": "Deck",
   "home.deck.viewList": "List",
   "home.deck.keys":
-    "→ accept · ← reject · ↑ edit · ↓ later · U undo · Enter send",
+    "Arrows stage a decision: → accept · ← reject · ↑ edit · ↓ later · U undo · Enter sends the staged ones",
   "home.deck.behind_one": "1 more behind",
   "home.deck.behind_other": "{count} more behind",
   "home.deck.staged_one": "1 decision staged",
@@ -3364,7 +3364,7 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
-  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.summary": "Which sources had more",
   "brief.coverage.bounded": "{shown} shown of at least {considered} read",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
@@ -7790,6 +7790,10 @@ export const en = {
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
   "project.assignOwnerNoneSelected": "Pick a colleague first",
+  // The dialog's own confirm verb. The trigger and the title both read "Assign
+  // to a colleague"; the button says what pressing it does, and a button
+  // repeating the heading it sits under reads as chrome rather than a verb.
+  "project.assignOwnerConfirm": "Assign",
   "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
@@ -7837,6 +7841,7 @@ export const en = {
   "project.stakeholders.empty":
     "Nobody is seated on this project yet. A stakeholder is a person with a role here — a sponsor, a project lead, a champion.",
   "project.stakeholders.add": "Add stakeholder",
+  "project.stakeholders.addConfirm": "Add",
   "project.stakeholders.addHint":
     "One seat per person. Naming somebody already on this project moves them to the role you pick here.",
   "project.stakeholders.searchLabel": "Search people by name",
@@ -8178,6 +8183,7 @@ export const en = {
   "lead.standing.rests.captured": "Captured {at}.",
   "lead.standing.rests.noResponse": "No first response recorded.",
   "lead.standing.rests.engaged": "Engagement captured {at}.",
+  "lead.readings.openStatus": "Open leads in this status",
   "lead.readings.title": "Where this lead stands",
   "lead.readings.firstResponse": "First response",
   "lead.readings.noClock": "no response target set",

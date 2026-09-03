@@ -893,7 +893,13 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         onClose={() => setOpen(false)}
         title={t("offer.sendConfirm")}
         tier="confirm"
-        confirmLabel={t("deals.confirm")}
+        // The last control before an irreversible write says which write it
+        // is. A dialog opened from "Send" whose button reads "Confirm" makes
+        // the reader carry the verb in their head across the dialog boundary,
+        // and this screen's three dialogs are one press apart from each other:
+        // send, accept and reject all read "Confirm", so the button was the
+        // one thing on screen that could not tell them apart.
+        confirmLabel={t("offer.send")}
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
         error={errorMessage}
@@ -958,7 +964,7 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         open={open}
         onClose={() => setOpen(false)}
         title={t("offer.acceptConfirm")}
-        confirmLabel={t("deals.confirm")}
+        confirmLabel={t("offer.accept")}
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
         error={errorMessage}
@@ -1029,7 +1035,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         open={open}
         onClose={() => setOpen(false)}
         title={t("offer.rejectConfirm")}
-        confirmLabel={t("deals.confirm")}
+        confirmLabel={t("offer.reject")}
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
         error={errorMessage}
