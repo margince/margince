@@ -2353,7 +2353,7 @@ export const vi = {
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.asOf": "tính đến {at}",
-  "home.refreshing": "Đang xếp hạng…",
+  "home.generating": "Đang tổng hợp…",
   "home.generate": "Lấy tóm tắt hôm nay",
   "home.noneBody":
     "Tóm tắt buổi sáng xếp hạng những deal đáng dành giờ đầu tiên — khả năng thắng, doanh thu, thời điểm, đà tiến và độ thân thiết, mỗi yếu tố kèm bằng chứng của nó. Bản tóm tắt được dựng qua đêm nên sẽ sẵn sàng vào sáng mai, khi bạn đã có deal đang mở.",

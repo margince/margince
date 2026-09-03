@@ -2421,7 +2421,7 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refreshing": "Ranking…",
+  "home.generating": "Assembling…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
     "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. It is assembled overnight, so it is waiting for you tomorrow morning once you have open deals.",
