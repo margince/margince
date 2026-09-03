@@ -100,38 +100,54 @@ export function CompanyRail({
     return null;
   }
   return (
-    // A plain div: RecordView's own <aside> is the landmark around this, and a
+    // A plain div: the shell's own <aside> is the landmark around this, and a
     // second labelled region inside it would give a reader two names for one
-    // column.
+    // column. Inside it ONE pane of named sections (DESIGN.md §6): the
+    // account's fields, its deals, its people, the hold, its tags — each a
+    // disclosure with its own summary, so the column reads as one object with
+    // five slices rather than five cards a reader has to assemble.
     <div className="co-rail">
-      {/* Details lead the column: the account's own fields are the first
-          thing a reader orients by, and they draw from the page's already-
-          resolved record while the composite read below is still arriving. */}
-      <Panel
-        title={t("co.details.title")}
-        titleAction={
-          // "All fields", not "Profile": the Profile TAB carries that name a
-          // few pixels away, and two controls with one accessible name in one
-          // view is a dead end for anyone moving by name rather than by sight.
-          // It also reads as the sibling cards' "All N" does — this card shows
-          // a few of the account's fields, the tab shows every one.
-          <Button small variant="ghost" onClick={() => onTab("profile")}>
-            {t("co.rail.details.all")}
-          </Button>
-        }
-      >
-        <PanelBody>
-          <DetailsGrid organization={view?.organization ?? org} />
-        </PanelBody>
+      <Panel>
+        {/* Details lead the column: the account's own fields are the first
+            thing a reader orients by, and they draw from the page's already-
+            resolved record while the composite read below is still arriving. */}
+        <Disclosure
+          className="co-sect"
+          open
+          summary={<SectionSummary title={t("co.details.title")} />}
+        >
+          <PanelBody>
+            <DetailsGrid organization={view?.organization ?? org} />
+          </PanelBody>
+          <div className="co-card-actions">
+            {/* "All fields", not "Profile": the Profile TAB carries that name a
+                few pixels away, and two controls with one accessible name in
+                one view is a dead end for anyone moving by name rather than by
+                sight. */}
+            <Button small variant="ghost" onClick={() => onTab("profile")}>
+              {t("co.rail.details.all")}
+            </Button>
+          </div>
+        </Disclosure>
+        {/* Both summaries stand on EVERY tab, the open one included: the
+            column is the reader's anchor while they move between tabs, and
+            each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
+            tab is not a duplicate of it, a full copy would be. */}
+        <DealsSection view={view} loading={loading} onTab={onTab} />
+        <PeopleSection view={view} loading={loading} onTab={onTab} />
+        <CompanyHoldSection organization={view?.organization ?? org} />
+        <Disclosure
+          className="co-sect"
+          open
+          summary={<SectionSummary title={t("tags.panelTitle")} />}
+        >
+          <CompanyTagsSection
+            organization={view?.organization}
+            orgId={orgId}
+            bare
+          />
+        </Disclosure>
       </Panel>
-      {/* Both summaries stand on EVERY tab, the open one included: the rail
-          is the reader's anchor while they move between tabs, and each card
-          shows only the top RAIL_ROW_LIMIT rows — a summary beside a tab is
-          not a duplicate of it, a full copy would be. */}
-      <DealsSection view={view} loading={loading} onTab={onTab} />
-      <PeopleSection view={view} loading={loading} onTab={onTab} />
-      <CompanyHoldSection organization={view?.organization ?? org} />
-      <CompanyTagsSection organization={view?.organization} orgId={orgId} />
     </div>
   );
 }
@@ -157,7 +173,10 @@ function CompanyHoldSection({
     return null;
   }
   return (
-    <Panel title={t("hold.sectionTitle")}>
+    <Disclosure
+      className="co-sect"
+      summary={<SectionSummary title={t("hold.sectionTitle")} />}
+    >
       <PanelBody>
         {/* The row takes an ADDRESS and derives the domain from it, which is
             what every person page hands it. An account has only the domain, so
@@ -165,7 +184,7 @@ function CompanyHoldSection({
             row's own domain verb would compute. */}
         <CounterpartyHoldRow email={`x@${host}`} />
       </PanelBody>
-    </Panel>
+    </Disclosure>
   );
 }
 
@@ -225,16 +244,14 @@ function DealsSection({
       ((deals.won_lifetime?.amount_minor ?? 0) > 0 || deals.lost_count > 0),
   );
   return (
-    <Panel
-      title={t("co.rail.deals.title")}
-      titleAction={
-        answered ? (
-          <Button small variant="ghost" onClick={() => onTab("deals")}>
-            {rows.length > 0
-              ? t("co.rail.all", { count: formatNumber(rows.length, locale) })
-              : t("co.rail.add")}
-          </Button>
-        ) : undefined
+    <Disclosure
+      className="co-sect"
+      open
+      summary={
+        <SectionSummary
+          title={t("co.rail.deals.title")}
+          count={answered ? rows.length : undefined}
+        />
       }
     >
       {state === "ready" ? (
@@ -258,7 +275,16 @@ function DealsSection({
           )}
         </PanelBody>
       )}
-    </Panel>
+      {answered && (
+        <div className="co-card-actions">
+          <Button small variant="ghost" onClick={() => onTab("deals")}>
+            {rows.length > 0
+              ? t("co.rail.all", { count: formatNumber(rows.length, locale) })
+              : t("co.rail.add")}
+          </Button>
+        </div>
+      )}
+    </Disclosure>
   );
 }
 
@@ -397,18 +423,14 @@ function PeopleSection({
   );
   const answered = sectionAnswered(state);
   return (
-    <Panel
-      title={t("co.rail.people.title")}
-      titleAction={
-        answered ? (
-          <Button small variant="ghost" onClick={() => onTab("people")}>
-            {contacts.length > 0
-              ? t("co.rail.all", {
-                  count: formatNumber(contacts.length, locale),
-                })
-              : t("co.rail.add")}
-          </Button>
-        ) : undefined
+    <Disclosure
+      className="co-sect"
+      open
+      summary={
+        <SectionSummary
+          title={t("co.rail.people.title")}
+          count={answered ? contacts.length : undefined}
+        />
       }
     >
       {state === "ready" ? (
@@ -433,7 +455,18 @@ function PeopleSection({
           )}
         </PanelBody>
       )}
-    </Panel>
+      {answered && (
+        <div className="co-card-actions">
+          <Button small variant="ghost" onClick={() => onTab("people")}>
+            {contacts.length > 0
+              ? t("co.rail.all", {
+                  count: formatNumber(contacts.length, locale),
+                })
+              : t("co.rail.add")}
+          </Button>
+        </div>
+      )}
+    </Disclosure>
   );
 }
 

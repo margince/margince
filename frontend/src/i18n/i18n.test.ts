@@ -30,7 +30,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Two placeholders and a dash. Every word in the line comes from elsewhere —
   // the dimension's own label and the sentence the server wrote — so there is
   // nothing here for a locale to translate.
-  "co.strip.healthSummary.because",
   // The record's own name beside the numeral that names its reading. There is
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.

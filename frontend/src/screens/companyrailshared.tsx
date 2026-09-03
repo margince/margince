@@ -25,7 +25,10 @@ export function SectionSummary({
   const { locale } = useLocale();
   return (
     <span className="co-sect-summary">
-      {title}
+      {/* A heading, so the section is reachable by name in the outline: the
+          column is one pane of named slices, and each slice's name is a
+          heading under the pane rather than a card title of its own. */}
+      <h3 className="co-sect-title">{title}</h3>
       {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
     </span>
   );

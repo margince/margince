@@ -539,7 +539,7 @@ describe("CompanyRail", () => {
     // unrelated and legitimately shows its own "Add" for its own empty read.
     const peoplePanel = screen
       .getByRole("heading", { name: "Their key people" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     expect(
       peoplePanel &&
@@ -658,7 +658,7 @@ describe("CompanyRail", () => {
     });
     const dealsPanel = screen
       .getByRole("heading", { name: "Active deals" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(dealsPanel).not.toBeNull();
     if (!dealsPanel) {
       throw new Error("the deals panel has no wrapper");
@@ -728,7 +728,7 @@ describe("CompanyRail", () => {
     });
     const dealsPanel = screen
       .getByText("Active deals")
-      .closest("section, .panel");
+      .closest("details, .panel");
     if (!(dealsPanel instanceof HTMLElement)) {
       throw new Error("the deals panel has no wrapper");
     }
@@ -786,7 +786,7 @@ describe("CompanyRail", () => {
     });
     const dealsPanel = screen
       .getByText("Active deals")
-      .closest("section, .panel");
+      .closest("details, .panel");
     if (!(dealsPanel instanceof HTMLElement)) {
       throw new Error("the deals panel has no wrapper");
     }
@@ -828,7 +828,7 @@ describe("CompanyRail", () => {
     });
     const peoplePanel = screen
       .getByRole("heading", { name: "Their key people" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     if (!peoplePanel) {
       throw new Error("the people panel has no wrapper");
@@ -971,7 +971,7 @@ describe("CompanyRail", () => {
     // getByRole, which would find two.
     const dealsPanel = screen
       .getByRole("heading", { name: "Active deals" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(dealsPanel).not.toBeNull();
     expect(
       dealsPanel && within(dealsPanel).getByRole("button", { name: "Add" }),

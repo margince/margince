@@ -16,18 +16,21 @@ import {
   useClearVanishedChoice,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
-import { ReadingsGrid } from "../design-system/readingsgrid";
+import { StatStrip } from "../design-system/statstrip";
 import {
   omitted,
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
 import {
+  calendarDaysBetween,
   formatDate,
+  formatDateAbbrev,
   formatMoney,
   formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
+  formatTimeOfDay,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -43,11 +46,7 @@ import type { CompanyTab } from "./companytab";
 import "./company360.css";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { FactList } from "../design-system/factlist";
-import {
-  HEALTH_DIMENSION_LABEL,
-  HEALTH_RATING_LABEL,
-  useAccountStanding,
-} from "./companylookups";
+import { HEALTH_DIMENSION_LABEL, HEALTH_RATING_LABEL } from "./companylookups";
 import { EntityRef } from "./entityref";
 import { Citations, FoundMove, SentenceList, WrittenBy } from "./record360";
 import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
@@ -911,19 +910,11 @@ const WITHHELD_READING: MessageKey = "record.notShown";
 const UNASSESSED_READING: MessageKey = "co.strip.notAssessed";
 
 /**
- * StateStrip is the KPI row directly under the header: FIVE slots, always five,
- * and every lifecycle draws the account's own standing — stage, open pipeline,
- * relationship, health — because a customer needs those readings at least as
- * much as a prospect does. Being a customer is not a reason to stop reporting
- * whether the relationship is healthy or what deals are open with them. What
- * the lifecycle changes is the fifth reading: a prospect is asked when the deal
- * lands, a customer what the money says.
- *
- * The standing readings come first, the money readings after: what is true of
- * the account regardless of what it has paid is the frame the money sits in,
- * not the other way round. A row that led with money would ask a reader to
- * read the account's health off a number they have not been given the
- * context for yet.
+ * StateStrip is the readings row under the tab strip: FIVE doors, always
+ * five — open pipeline, invoiced, the conversation, the last touch, and what
+ * is next — each a reading of the tab it opens. The account's standing is not
+ * here: the verdict word and the three dimensions it is read from are the
+ * 360's, directly under this row, so a reading is said once.
  *
  * EVERY SLOT ALWAYS DRAWS, and says honestly that it has no reading when it has
  * none. A slot that vanishes leaves the reader unable to tell WHICH reading is
@@ -985,60 +976,162 @@ export function StateStrip({
   // is readable rather than guessable — and guessing is how a grant boundary
   // gets reported as an account nobody has assessed.
   const healthWithheld = view != null && omitted(view, "health");
+  const door = (tab: CompanyTab) => onOpenTab && (() => onOpenTab(tab));
   return (
-    // Four free-standing cards, not the StatStrip plate. A strip is read ACROSS
-    // as one comparison, which is what a row of unlike readings — a stage, a
-    // date, a sum of money — actually wanted. These four are not unlike: they
-    // are one verdict and the three dimensions it is computed from, and each is
-    // a door into the tab that holds the detail. Cards read one at a time,
-    // which is how a reader uses them.
-    //
-    // The region's name and the page rhythm are the SCREEN's to set; the tiles
-    // inside are the shared primitive's, unreached-into.
-    <ReadingsGrid label={t("co.strip.title")} testId="company-strip">
-      {/* The verdict first, then what it is made of. Stage and expected close
-          left the row with the plate: the lifecycle is read on the record's
-          own name badge and the close date on the deal that carries it, and
-          a reading in two places is one the reader has to reconcile. */}
-      <AccountHealthStat
-        health={view?.health}
-        orgId={orgId}
-        locale={locale}
-        withheld={healthWithheld}
-        t={t}
-      />
+    // The shared strip: five readings read ACROSS as one row of doors, each
+    // into the tab that holds its rows. The region's name is the SCREEN's to
+    // set; the cards inside are the shared primitive's, unreached-into.
+    <StatStrip label={t("co.strip.title")} testId="company-strip">
       <PipelineCard
         commercial={strip.commercial}
         dimension={view?.health?.commercial}
         locale={locale}
         recordZone={recordZone}
-        onOpen={onOpenTab && (() => onOpenTab("deals"))}
+        onOpen={door("deals")}
         t={t}
       />
-      {/* Money is a reading every account gets now, not only a customer: on
-            one we have never billed it says so, which is a fact about the
-            account, where an absent fourth card is a hole the reader has to
-            interpret. */}
+      {/* Money is a reading every account gets, not only a customer: on one we
+          have never billed it says so, which is a fact about the account,
+          where an absent card is a hole the reader has to interpret. */}
       <MoneyStat
         orgId={orgId}
         locale={locale}
         customer={customer}
         dimension={view?.health?.payment}
-        onOpen={onOpenTab && (() => onOpenTab("finance"))}
+        onOpen={door("finance")}
         t={t}
       />
-      {/* Whose move it is and the worst open signal both live in the daily
-            brief's context band (companytoday.tsx), off the same `engagement`
-            and `signal` fields — so these cards carry the account's STANDING
-            and the brief carries what is DATED. */}
+      {/* The conversation and the last touch both read off the account's
+          exchanges: one says whose move it is and how balanced the talk has
+          been, the other how long ago the last word fell. */}
       <HealthStat
         health={view?.health}
         locale={locale}
         withheld={healthWithheld}
-        onOpen={onOpenTab && (() => onOpenTab("people"))}
+        onOpen={door("timeline")}
         t={t}
       />
-    </ReadingsGrid>
+      <LastTouchStat
+        view={view}
+        locale={locale}
+        recordZone={recordZone}
+        onOpen={door("timeline")}
+        t={t}
+      />
+      <NextStat
+        view={view}
+        locale={locale}
+        recordZone={recordZone}
+        onOpen={door("tasks")}
+        t={t}
+      />
+    </StatStrip>
+  );
+}
+
+// The last word exchanged, as days since it fell, and who said it. Read off
+// the account's own timestamps rather than the health reading: those two
+// dates are the fact, and the reading is a judgement made from them.
+function LastTouchStat({
+  view,
+  locale,
+  recordZone,
+  onOpen,
+  t,
+}: Readonly<{
+  view?: Organization360;
+  locale: Locale;
+  recordZone: string;
+  onOpen?: () => void;
+  t: ReturnType<typeof useT>;
+}>) {
+  const door = { openLabel: t("co.strip.open.history"), onOpen };
+  if (!view || omitted(view, "last_touch")) {
+    return (
+      <StatCard
+        {...door}
+        label={t("co.strip.lastTouch")}
+        value={t(WITHHELD_READING)}
+      />
+    );
+  }
+  const inbound = view.last_inbound_at ?? undefined;
+  const outbound = view.last_outbound_at ?? undefined;
+  const theirs = Boolean(inbound && (!outbound || inbound > outbound));
+  const last = theirs ? inbound : outbound;
+  if (!last) {
+    return (
+      <StatCard
+        {...door}
+        label={t("co.strip.lastTouch")}
+        value={t("co.strip.lastTouch.never")}
+      />
+    );
+  }
+  const days = calendarDaysBetween(new Date(last), new Date(view.as_of));
+  return (
+    <StatCard
+      {...door}
+      label={t("co.strip.lastTouch")}
+      value={
+        days <= 0
+          ? t("co.strip.lastTouch.today")
+          : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
+      }
+      detail={join(
+        t(theirs ? "co.strip.lastTouch.theirs" : "co.strip.lastTouch.ours"),
+        formatDateAbbrev(last, locale, recordZone),
+      )}
+    />
+  );
+}
+
+// What is next on the calendar with this account: the meeting's day, its
+// subject and its hour. Nothing scheduled is a fact about the account and is
+// said as one; a withheld calendar is said as withheld.
+function NextStat({
+  view,
+  locale,
+  recordZone,
+  onOpen,
+  t,
+}: Readonly<{
+  view?: Organization360;
+  locale: Locale;
+  recordZone: string;
+  onOpen?: () => void;
+  t: ReturnType<typeof useT>;
+}>) {
+  const door = { openLabel: t("co.strip.open.tasks"), onOpen };
+  if (!view || omitted(view, "next_meeting")) {
+    return (
+      <StatCard
+        {...door}
+        label={t("co.strip.next")}
+        value={t(WITHHELD_READING)}
+      />
+    );
+  }
+  const meeting = view.next_meeting;
+  if (!meeting) {
+    return (
+      <StatCard
+        {...door}
+        label={t("co.strip.next")}
+        value={t("co.strip.next.none")}
+      />
+    );
+  }
+  return (
+    <StatCard
+      {...door}
+      label={t("co.strip.next")}
+      value={formatDateAbbrev(meeting.starts_at, locale, recordZone)}
+      detail={join(
+        meeting.subject,
+        formatTimeOfDay(meeting.starts_at, locale, recordZone),
+      )}
+    />
   );
 }
 
@@ -1470,7 +1563,7 @@ function HealthStat({
   // withheld reading and a priced one are the same reading, and only one
   // of them offering the tab would make the way out look like a property
   // of the figure.
-  const door = { openLabel: t("co.strip.open.people"), onOpen };
+  const door = { openLabel: t("co.strip.open.history"), onOpen };
   const dimension = health?.relationship;
   const basisProps = {
     basisLabel: dimension ? t("co.strip.basis.reading") : undefined,
@@ -1562,161 +1655,6 @@ function HealthStat({
 // and it is deliberately the same span the dormant engagement state uses.
 const HEALTH_QUIET_DAYS = 30;
 
-// AccountHealthStat leads the readings: the rated dimensions' worst verdict,
-// how many of the possible three were rated at all, and — behind a disclosure —
-// the three themselves with the sentence each was read from.
-//
-// The verdict and its constituents in ONE card rather than four: the three
-// cards beside this one answer "what is the deals/money/relationship picture",
-// which is a different question from "is this account healthy". Splitting the
-// verdict from what computes it is what left a reader holding a summary they
-// could not check.
-//
-// With nothing rated it says so and keeps its denominator. It must not borrow a
-// verdict `worstOf` itself declined to give, and it must not carry a tone: a
-// grey slot with no words reads as a reading that failed to load, where "not
-// assessed, 0 of 3 rated" says which reading is missing and how far off a
-// verdict the account is.
-// The sharpest thing wrong with the account, named and explained: "Payment —
-// three invoices are past due, the oldest by 18 days".
-//
-// ONE dimension, not all of them. A card is read at a glance, and three
-// sentences stacked in a caption is a paragraph the reader skips — the receipt
-// behind the card still lists every dimension with its own reason. A dimension
-// rated at risk with nothing written about it is skipped rather than named with
-// silence after it, which reads as a card that failed to finish its sentence.
-function worstReason(
-  dimensions: readonly {
-    key: "relationship" | "commercial" | "payment";
-    dimension?: { rating: string; reason?: string | null };
-  }[],
-  t: ReturnType<typeof useT>,
-): ReactNode {
-  const worst = dimensions.find(
-    (entry) => entry.dimension?.rating === "at_risk" && entry.dimension.reason,
-  );
-  if (!worst?.dimension?.reason) {
-    return null;
-  }
-  return (
-    <span>
-      {t("co.strip.healthSummary.because", {
-        dimension: t(HEALTH_DIMENSION_LABEL[worst.key]),
-        reason: worst.dimension.reason,
-      })}
-    </span>
-  );
-}
-
-function AccountHealthStat({
-  health,
-  locale,
-  orgId,
-  withheld,
-  t,
-}: Readonly<{
-  health?: Health;
-  locale: Locale;
-  orgId: string;
-  withheld: boolean;
-  t: ReturnType<typeof useT>;
-}>) {
-  const { overall, rated, payment } = useAccountStanding(orgId, health);
-  const dimensions = [
-    { key: "relationship", dimension: health?.relationship },
-    { key: "commercial", dimension: health?.commercial },
-    { key: "payment", dimension: payment },
-  ] as const;
-  // Only the dimensions that were actually rated. An unrated one is not a
-  // failing one, and listing it as a blank row would invite exactly that
-  // reading — `worstOf`'s denominator above already says how many are missing.
-  //
-  // `flatMap` rather than `filter` so the absent case is dropped where the type
-  // can see it: a filter leaves the caller holding an optional it then has to
-  // assert away, and an assertion is a claim the compiler stopped checking.
-  const basisFacts = dimensions.flatMap(({ key, dimension }) =>
-    dimension
-      ? [
-          {
-            key,
-            term: t(HEALTH_DIMENSION_LABEL[key]),
-            value: t(HEALTH_RATING_LABEL[dimension.rating]),
-            note: dimension.reason,
-          },
-        ]
-      : [],
-  );
-  if (!overall) {
-    return (
-      <StatCard
-        label={t("co.strip.healthSummary")}
-        value={t(withheld ? WITHHELD_READING : UNASSESSED_READING)}
-        detail={
-          withheld
-            ? undefined
-            : t("co.strip.healthSummary.of", {
-                rated: formatNumber(rated, locale),
-              })
-        }
-      />
-    );
-  }
-  // The denominator is always said, not only when something is failing:
-  // "3 of 3 rated" and "1 of 3 rated" are different claims about how much is
-  // known, and a figure that only speaks up when things are bad would let a
-  // thin reading pass for a complete one.
-  const failing = dimensions.filter(
-    (entry) => entry.dimension?.rating === "at_risk",
-  ).length;
-  return (
-    <StatCard
-      label={t("co.strip.healthSummary")}
-      value={t(HEALTH_RATING_LABEL[overall])}
-      tone={overall === "at_risk" ? "warn" : undefined}
-      dot={overall === "at_risk"}
-      // One segment per dimension, filled for the ones that are not at risk.
-      // The denominator is what was RATED, not the three that exist: a bar out
-      // of three on an account with one rating would draw two empty segments
-      // that read as two failures.
-      meter={{ filled: rated - failing, total: rated }}
-      // How much is failing, and WHY. The count alone made a reader open the
-      // receipt to learn the one thing the card exists to tell them; the
-      // server already writes a sentence per dimension, and the worst one is
-      // the answer to "why at risk".
-      detail={
-        <>
-          {/* The count line is dropped where it would only restate the verdict:
-              on the one rated dimension that IS the verdict, "1 of 1 at risk"
-              says what the word above it already said. Every other shape keeps
-              it — "1 of 3 at risk" and "3 of 3 at risk" are different accounts,
-              and "1 of 3 rated" is a thin reading saying so. */}
-          {!(failing === 1 && rated === 1) && (
-            <span>
-              {failing > 0
-                ? t("co.strip.healthSummary.failingOf", {
-                    failing: formatNumber(failing, locale),
-                    rated: formatNumber(rated, locale),
-                  })
-                : t("co.strip.healthSummary.of", {
-                    rated: formatNumber(rated, locale),
-                  })}
-            </span>
-          )}
-          {worstReason(dimensions, t)}
-        </>
-      }
-      basisLabel={
-        basisFacts.length > 0 ? t("co.strip.basis.health") : undefined
-      }
-      basis={
-        basisFacts.length > 0 ? <FactList facts={basisFacts} /> : undefined
-      }
-    />
-  );
-}
-
-// What performing a suggestion means. The server names it; this maps the name
-// to the words on the button.
 export type SuggestionAction = NonNullable<Suggestion["action"]>;
 
 const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {

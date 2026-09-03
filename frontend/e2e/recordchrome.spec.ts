@@ -123,8 +123,13 @@ test.describe("the record's context column", () => {
         "the context is on screen on arrival, in place of the record that was opened",
       ).toBeHidden();
 
+      // The switch stands with the record's verbs on the pages that keep it
+      // there, and at the end of the tab row on the pages that have taken the
+      // design's glance; either way it is the one pressed control with a
+      // glyph and no word.
       const switchToContext = page
-        .locator(".record-actions button[aria-label]")
+        .locator(".record-actions, .recordtabs-trailing")
+        .locator("button[aria-label]")
         .filter({ has: page.locator("svg") })
         .and(page.locator("[aria-pressed]"));
       await switchToContext.click();

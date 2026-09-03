@@ -1917,7 +1917,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await screen.findByText("Brandt Automotive GmbH");
 
     await waitFor(() =>
-      expect(container.querySelector(".co-panel-stack")).toBeTruthy(),
+      expect(container.querySelector(".co-overview-stack")).toBeTruthy(),
     );
     // The context is the PAGE's column, not one of the record's own: it sits
     // beside the work rather than inside it, which is what lets it run past
@@ -1946,7 +1946,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // "Worth doing next" is not asserted here — it is advice, and this
     // fixture's account has none to give; the suggestions suite above
     // exercises its own presence.
-    const stack = container.querySelector(".co-panel-stack");
+    const stack = container.querySelector(".co-overview-stack");
     expect(stack).toBeTruthy();
     expect(stack?.textContent).toContain("Commercial");
     // The money is a TAB, so the overview column must not also carry it: a
@@ -2035,10 +2035,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
 
-    const stack = container.querySelector(".co-panel-stack");
-    await waitFor(() =>
-      expect(stack?.textContent).toContain("What happened lately"),
-    );
+    // The thread is folded inside the 360 and names how much it holds: the
+    // one call counts, subject or not.
+    const fold = await screen.findByRole("button", {
+      name: "Read the thread · 1",
+    });
+    await userEvent.click(fold);
+    const stack = container.querySelector(".co-overview-stack");
     expect(stack?.textContent).not.toContain("Nothing logged with them yet");
   });
 

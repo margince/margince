@@ -28,7 +28,7 @@
    spaces itself differently depending on what it is stacked with. The
    overview's column and the documents tab's agreements-then-library pair are
    the same shape, so the name is the shape rather than the overview. */
-.co-panel-stack {
+.co-overview-stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -1155,6 +1155,12 @@
 
 /* The summary's own row: the section name, then whatever it carries (a count,
    Health's rating) pushed to the far end. */
+/* The slice's name inside the summary: a heading for the outline, set as the
+   summary's own text rather than as a title of its own. */
+.co-sect-title {
+  margin: 0;
+  font: inherit;
+}
 .co-sect-summary {
   display: flex;
   align-items: center;

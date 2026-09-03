@@ -296,11 +296,7 @@ function ThreadSubject({
 }: Readonly<{ row: HeldThread; onOpen: (activityId: string) => void }>) {
   const t = useT();
   const label = row.subject ?? t("heldThreads.blankSubject");
-  const plain = row.subject ? (
-    <>{label}</>
-  ) : (
-    <span className="t-meta">{label}</span>
-  );
+  const plain = row.subject ? label : <span className="t-meta">{label}</span>;
   if (!row.activity_id) {
     return plain;
   }
