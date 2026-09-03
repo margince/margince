@@ -89,3 +89,22 @@
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* The panel head's far end: the frozen mark, when it was written, and the way
+   to another week — on ONE line, because they are one statement about which
+   week this is and how settled it is. Without the row they stack under each
+   other and push the header to three times its height, which is the shape the
+   band's measured height was never drawn for. */
+.home-weekly-mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Quieter than the badge beside it: the badge is the claim, this is its
+   footnote, and a reader who wants the moment goes looking for it. */
+.home-weekly-written {
+  color: var(--textMeta);
+}

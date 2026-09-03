@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { StatCard } from "../design-system/atoms";
+import { Badge, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
@@ -11,6 +11,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
 import {
   formatDate,
+  formatDateTime,
   formatMoney,
   formatNumber,
   formatSignedNumber,
@@ -66,18 +67,48 @@ export function WeeklySection() {
               })
             : undefined
         }
+        // The mark and the way out of the week, in that order.
+        //
+        // FROZEN is the claim that separates this panel from every other on
+        // Home: the numbers under it were written when the week closed and can
+        // no longer move, so a rep who acts on Tuesday and re-reads on Thursday
+        // is not looking at a stale figure — they are looking at a record. The
+        // team weekly has said so since it shipped; the rep's, which is the one
+        // a rep actually opens, did not.
+        //
+        // Drawn only over a review that exists, so an empty or failed read does
+        // not certify a week nobody wrote.
         titleAction={
-          index.data && index.data.length > 1 ? (
-            <Select
-              aria-label={t("home.weekly.pickWeek")}
-              value={week ?? index.data[0]}
-              onChange={(next) => setWeek(next)}
-              options={index.data.map((start) => ({
-                value: start,
-                label: formatDate(start, locale, recordZone),
-              }))}
-            />
-          ) : undefined
+          <span className="home-weekly-mark">
+            {review.data && (
+              <>
+                <Badge quiet>{t("home.weekly.frozen")}</Badge>
+                {/* When it was written, which is what makes the badge a fact
+                    rather than a decoration — a reader can tell a week closed
+                    an hour ago from one closed on Monday. */}
+                <span className="t-caption home-weekly-written">
+                  {t("home.weekly.written", {
+                    at: formatDateTime(
+                      review.data.generated_at,
+                      locale,
+                      recordZone,
+                    ),
+                  })}
+                </span>
+              </>
+            )}
+            {index.data && index.data.length > 1 && (
+              <Select
+                aria-label={t("home.weekly.pickWeek")}
+                value={week ?? index.data[0]}
+                onChange={(next) => setWeek(next)}
+                options={index.data.map((start) => ({
+                  value: start,
+                  label: formatDate(start, locale, recordZone),
+                }))}
+              />
+            )}
+          </span>
         }
       >
         <PanelBody>
