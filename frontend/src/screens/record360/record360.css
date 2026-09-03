@@ -14,17 +14,19 @@
    tints apart still reads "blocked". Same reasoning the deal card's own
    standing pill carries, and deliberately the same shape. */
 .r360-standing {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-meta);
+  /* The standing is the word a reader takes the record in by, so it is the
+     loudest type on the pane: display face, in its own tone, left of the
+     sentence that says why. A word rather than a pill, because a pill reads
+     as a status somebody applied and this is the reading itself. */
+  font-family: var(--f-display);
+  font-size: 34px;
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-display);
   white-space: nowrap;
 }
 
 .r360-standing-calm {
-  background: var(--successBg);
   color: var(--success);
 }
 
@@ -32,22 +34,18 @@
    all-clear, and painting it green told a reader a word nobody could read was
    good news. */
 .r360-standing-unknown {
-  background: var(--bgHover);
   color: var(--textSecondary);
 }
 
 .r360-standing-accent {
-  background: var(--accentLight);
   color: var(--accentText);
 }
 
 .r360-standing-warn {
-  background: var(--warnBg);
   color: var(--warn);
 }
 
 .r360-standing-danger {
-  background: var(--dangerBg);
   color: var(--danger);
 }
 
@@ -60,15 +58,15 @@
    either side of it are both fixed, so anything the head cannot fit comes out
    of the sentence, and a sentence that wraps still reads. */
 .r360-because {
-  flex: 1 1 26rem;
+  flex: 1 1 22rem;
   min-width: 0;
   margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-display);
-  font-weight: var(--fw-medium);
-  line-height: 1.22;
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
+  /* The because-sentence is prose beside the word, not a second headline:
+     at reading size the word stays the one loud thing and the sentence is
+     what a reader goes on to. */
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--textContent);
   text-wrap: pretty;
 }
 

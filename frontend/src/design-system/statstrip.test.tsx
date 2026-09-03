@@ -15,55 +15,39 @@ function stripCss(): string {
 afterEach(cleanup);
 
 // A slot may be a control, and a strip of filters is what made that true. What
-// is held here is the consequence nobody looking at the markup would see: the
-// plate CLIPS. It is `overflow: hidden` with a corner radius, so anything a
-// slot paints at its own edge is trimmed by that clip, and a rectangular
-// selection ring lost its corners to the plate's curve and read as a broken box.
+// is held here is where the selected state LANDS: on the reading pane inside
+// the slot, as a wash and an edge, never as a ring around it. A ring around a
+// rounded pane is a second box drawn on a page whose language refuses one.
 //
 // Read from the sheet rather than from a rendered element: jsdom computes no
-// box-shadow and no radius, so a DOM assertion here could only ever prove the
+// background and no border, so a DOM assertion here could only ever prove the
 // class name it already asked for.
-describe("statstrip.css draws a selected slot without asking the plate for room", () => {
-  it("marks the pressed slot with a tint and an inset line, never a ring", () => {
-    const pressed = /\.stat-strip > \[aria-pressed="true"\]\s*\{([^}]*)\}/.exec(
-      stripCss(),
-    );
+describe("statstrip.css draws a selected slot on the pane inside it", () => {
+  it("marks the pressed slot's pane with the accent wash and edge, never a ring", () => {
+    const pressed =
+      /\.stat-strip > \[aria-pressed="true"\] > \.stat-card\s*\{([^}]*)\}/.exec(
+        stripCss(),
+      );
     expect(pressed).not.toBeNull();
     const body = pressed?.[1] ?? "";
-    // The tint says selected at a glance; the line is what separates it from
-    // `--bgHover` for a reader who is also pointing at it.
     expect(body).toMatch(/background:\s*var\(--accentLight\)/);
-    expect(body).toMatch(/inset 0 -2px 0 var\(--accent\)/);
-    // A ring is exactly what the clip breaks. `inset 0 0 0 <n>px` is its
-    // spelling, and it must not come back.
-    expect(body).not.toMatch(/inset 0 0 0/);
-  });
-
-  it("gives the corner slots the plate's own curve", () => {
-    const css = stripCss();
-    // Without this a fill painted in a corner slot squares off the plate's
-    // curve, which is visible the moment any slot is pressed or hovered. One
-    // pixel tighter than the plate's radius, because the plate's border takes
-    // that pixel.
-    expect(css).toMatch(
-      /\.stat-strip > \*:first-child\s*\{[^}]*border-start-start-radius:\s*calc\(var\(--r-md\) - 1px\)/,
-    );
-    expect(css).toMatch(
-      /\.stat-strip > \*:last-child\s*\{[^}]*border-start-end-radius:\s*calc\(var\(--r-md\) - 1px\)/,
-    );
+    expect(body).toMatch(/border-color:\s*var\(--accentMed\)/);
+    // A ring is a second box. `inset 0 0 0 <n>px` is its spelling, and it
+    // must not come back.
+    expect(stripCss()).not.toMatch(/inset 0 0 0/);
   });
 });
 
-// The dividers belong to the PLATE now, not to the slots. A slot that drew its
-// own left rule was only correct while the leading slot of every row sat at the
-// plate's edge for the clip to eat it — true when the slot count divides the
-// column count, and false the first time a record had four readings.
-describe("statstrip.css draws its rules from the plate", () => {
-  it("rules the gaps rather than the slots", () => {
+// The row draws NO plate: each slot is a reading pane of its own and the air
+// between them is the only divider. A background or a border on the row would
+// put five panes inside a sixth, which is the one thing the language refuses.
+describe("statstrip.css is a row of panes, not a plate of slots", () => {
+  it("separates the slots by the space scale and paints nothing itself", () => {
     const css = stripCss();
-    const plate = /\.stat-strip\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
-    expect(plate).toMatch(/gap:\s*1px/);
-    expect(plate).toMatch(/background:\s*var\(--borderSubtle\)/);
+    const row = /\.stat-strip\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(row).toMatch(/gap:\s*var\(--space-4\)/);
+    expect(row).not.toMatch(/background/);
+    expect(row).not.toMatch(/border/);
     // The old mechanism: a rule painted one pixel outside each slot. Its return
     // brings the orphaned seam back with it.
     expect(css).not.toMatch(/-1px 0 0 var\(--borderSubtle\)/);

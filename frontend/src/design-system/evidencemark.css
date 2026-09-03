@@ -39,12 +39,14 @@
   top: calc(100% + 6px);
   left: 0;
   min-width: 240px;
-  max-width: min(340px, 80vw);
+  max-width: min(300px, 80vw);
+  /* Solid ground and the one shadow a popover takes: it floats over the
+     pane, which a translucent surface over translucent ground cannot do. */
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: 10px 12px;
+  box-shadow: var(--shadow-pop);
+  padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -64,11 +66,15 @@
   color: var(--textMeta);
 }
 
-/* The quoted source text, set apart so it never reads as our own words. */
+/* The quoted source text, set apart so it never reads as our own words. The
+   rule is indigo because the quote is what the machine read, and a rule
+   rather than a box because a box inside a popover is a card inside a card. */
 .evmark-snippet {
-  border-left: 2px solid var(--borderStrong);
-  padding-left: 8px;
+  margin: 0;
+  border-left: 2px solid var(--aiMed);
+  padding-left: var(--space-2);
   font-size: 12.5px;
+  line-height: 1.5;
   color: var(--textContent);
 }
 
