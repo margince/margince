@@ -114,7 +114,9 @@ describe("a lapsed relationship says what it was worth", () => {
   // line above mean something: if every decay row claimed a deal, the claim
   // would be decoration rather than a fact.
   it("claims no deal when none rests on the contact", async () => {
-    draw([decayRow([{ kind: "quiet_days", value: { kind: "days", days: 63 } }])]);
+    draw([
+      decayRow([{ kind: "quiet_days", value: { kind: "days", days: 63 } }]),
+    ]);
 
     expect(await screen.findByText(/quiet for 63 days/)).toBeTruthy();
     expect(screen.queryByText(/an open deal rests on this/)).toBeNull();
