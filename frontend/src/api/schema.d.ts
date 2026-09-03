@@ -21116,7 +21116,7 @@ export interface components {
              *
              *     Five categories exist to serve the recipient — `security_notice`,
              *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-             *     `record_confirmation` — and are refused (422 `context_not_available`) from an
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
              *     ordinary send. They are reserved for the installation's own controller mail,
              *     which rides a registered template; a caller that could claim one could dress
              *     marketing as a security warning and reach somebody who has objected.
@@ -21337,7 +21337,7 @@ export interface components {
              *
              *     Five categories exist to serve the recipient — `security_notice`,
              *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-             *     `record_confirmation` — and are refused (422 `context_not_available`) from an
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
              *     ordinary send. They are reserved for the installation's own controller mail,
              *     which rides a registered template; a caller that could claim one could dress
              *     marketing as a security warning and reach somebody who has objected.
@@ -21426,7 +21426,7 @@ export interface components {
              *
              *     Five categories exist to serve the recipient — `security_notice`,
              *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-             *     `record_confirmation` — and are refused (422 `context_not_available`) from an
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
              *     ordinary send. They are reserved for the installation's own controller mail,
              *     which rides a registered template; a caller that could claim one could dress
              *     marketing as a security warning and reach somebody who has objected.

@@ -168,3 +168,33 @@ func asFieldFault(err error, target *interface {
 	}
 	return ok
 }
+
+// The contract bounds the operator reason and nothing in this stack validates a
+// request against the schema, so the bound is enforced in the decoder or
+// nowhere. The refusal names the reason field, not the category one — a caller
+// told to fix the wrong input fixes nothing.
+func TestAnOverlongOperatorReasonIsRefused(t *testing.T) {
+	long := strings.Repeat("x", maxOperatorReasonRunes+1)
+	_, err := sendContextFrom(nil, nil, &long, nil)
+	if err == nil {
+		t.Fatal("an unbounded operator reason was accepted")
+	}
+	var fault interface {
+		FieldFault() (string, string, string)
+	}
+	if !asFieldFault(err, &fault) {
+		t.Fatalf("refusal %v names no field", err)
+	}
+	if field, _, _ := fault.FieldFault(); field != operatorReasonField {
+		t.Errorf("refusal names field %q, want %q", field, operatorReasonField)
+	}
+}
+
+// A reason exactly at the bound is accepted: an off-by-one here refuses a
+// sentence the contract promises to take.
+func TestAReasonAtTheBoundIsAccepted(t *testing.T) {
+	atLimit := strings.Repeat("x", maxOperatorReasonRunes)
+	if _, err := sendContextFrom(nil, nil, &atLimit, nil); err != nil {
+		t.Errorf("a reason of exactly %d characters was refused: %v", maxOperatorReasonRunes, err)
+	}
+}

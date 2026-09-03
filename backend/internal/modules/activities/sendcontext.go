@@ -24,8 +24,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// contextField is the wire path a refusal about a claimed category points at.
-const contextField = "communication_context"
+// contextField is the wire path a refusal about a claimed category points at,
+// and operatorReasonField its twin for the sentence beside it.
+const (
+	contextField        = "communication_context"
+	operatorReasonField = "operator_reason"
+)
+
+// maxOperatorReasonRunes mirrors the contract's maxLength. Named rather than
+// inlined because the refusal message states it too, and two spellings of one
+// bound drift.
+const maxOperatorReasonRunes = 500
 
 // sendContext is the decoded claim.
 type sendContext struct {
@@ -54,6 +63,16 @@ func sendContextFrom(category *string, marketing, reason *string, evidence *crmc
 		marketing: deref(marketing),
 		reason:    deref(reason),
 		evidence:  evidenceFrom(evidence),
+	}
+	// The contract bounds the reason at 500 and nothing in this stack validates
+	// a request against the schema, so the bound is enforced here or nowhere. A
+	// sentence about one send is short; anything longer is a paste accident or
+	// an attempt to use the decision trail as storage.
+	if len([]rune(out.reason)) > maxOperatorReasonRunes {
+		return sendContext{}, &CommunicationContextError{
+			field:  operatorReasonField,
+			Reason: "an operator reason is at most 500 characters",
+		}
 	}
 	if category == nil || *category == "" {
 		return out, nil
@@ -105,13 +124,22 @@ func derefID(id *openapi_types.UUID) ids.UUID {
 // CommunicationContextError maps to 422: the caller named a category, and it is
 // not one they may name. The claimed value is never echoed back — the wire's own
 // field pointer says which input to change, and the message says why.
-type CommunicationContextError struct{ Reason string }
+type CommunicationContextError struct {
+	// field is the wire path the refusal points at, so a caller is told which
+	// of the four inputs to change rather than being handed the block's name.
+	field  string
+	Reason string
+}
 
 func (e *CommunicationContextError) Error() string { return e.Reason }
 
 // FieldFault names the offending field, on every surface.
 func (e *CommunicationContextError) FieldFault() (field, code, message string) {
-	return contextField, faultInvalid, e.Reason
+	named := e.field
+	if named == "" {
+		named = contextField
+	}
+	return named, faultInvalid, e.Reason
 }
 
 // replySendInput decodes a reply's whole body into the send input: the message

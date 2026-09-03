@@ -247,3 +247,39 @@ func TestASendCannotClaimAControllerCategory(t *testing.T) {
 		t.Errorf("%d deliveries staged behind a refused claim, want 0", n)
 	}
 }
+
+// The channel door's own copy of the category refusal.
+//
+// Its twin above covers the mail door. Both exist for the reason the two
+// suppression tests do: the channel reply is a second implementation of
+// sending, and a refusal proven on one door says nothing about the other. This
+// one was written after a mutation showed the channel handler's refusal could
+// be removed with the whole unit lane and the whole integration lane green —
+// no test anywhere posted a communication_context to this route.
+func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
+	c := setupChannelSend(t)
+	c.grantConsent(t, "transactional")
+
+	status, code, _ := c.sendReplyClaiming(t, "transactional", "Yes — shipping Monday.", "security_notice", nil)
+
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("a channel reply claiming security_notice → %d, want 422", status)
+	}
+	if code != "invalid" {
+		t.Errorf("refusal code = %q, want invalid", code)
+	}
+	c.assertNoOutboundEffect(t, "a refused category claim")
+}
+
+// And the ordinary claim still goes through on this door, so the refusal above
+// is a category check rather than the channel door rejecting the field itself.
+func TestAChannelSendMayClaimAnOrdinaryCategory(t *testing.T) {
+	c := setupChannelSend(t)
+	c.grantConsent(t, "transactional")
+
+	status, _, detail := c.sendReplyClaiming(t, "transactional", "Yes — shipping Monday.", "reply_to_inbound", nil)
+
+	if status != http.StatusAccepted {
+		t.Fatalf("a channel reply claiming reply_to_inbound → %d (%s), want 202", status, detail)
+	}
+}
