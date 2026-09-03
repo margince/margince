@@ -75,6 +75,13 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 		"judging them would report its own evidence as a finding. The file holds nothing but the gate, so " +
 		"skipping it whole costs no coverage — unlike a census whose probes sit beside real code, where the " +
 		"exemption belongs on the declaration",
+	"internal/compose/basecurrencysql.go": "the SAME fourth conversion as briefs/briefrank.go below, and the " +
+		"reason it is now spelled in two files rather than one is a Go import cycle: compose imports briefs, " +
+		"so briefs cannot call this. Both are held character-identical by TestOneSpellingOfADealsBaseValue, " +
+		"which fails in both directions. It answers the wider question the brief's copy answers — a CLOSED " +
+		"deal reads its frozen amount_minor_base rather than converting — and moving the pair into the " +
+		"engine means teaching the engine that frozen case, which is its own change. Recorded as a known " +
+		"copy rather than an unnoticed one",
 	"internal/compose/briefs/briefrank.go": "a FOURTH conversion, and the only ratified one that could reach " +
 		"the engine — it is in compose. It converts inside a larger ranking query and answers a wider " +
 		"question than the engine does: a CLOSED deal reads its frozen amount_minor_base, which is a stored " +

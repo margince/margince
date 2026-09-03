@@ -31,11 +31,9 @@ func (c *siteCrawler) ReadSeed(ctx context.Context, seedURL string) (crawlPage, 
 	if err != nil {
 		return crawlPage{}, err
 	}
-	return crawlPage{
-		URL: seed.URL, Kind: crmcontracts.SiteReadPageKindHome,
-		Text: seed.Page.Text, Bytes: seed.Page.Bytes, Fingerprint: seed.Page.Fingerprint,
-		UnresolvedForward: seed.UnresolvedForward,
-	}, nil
+	page := pageFrom(seed.URL, crmcontracts.SiteReadPageKindHome, seed.Page)
+	page.UnresolvedForward = seed.UnresolvedForward
+	return page, nil
 }
 
 // fetchPaced is one polite fetch: pacer slot in, fetch, slot out.

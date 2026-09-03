@@ -94,7 +94,7 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	// English ones they were laid out for, and a fixed width turns the column
 	// into a ragged edge in two of the three.
 	rows := [][2]string{
-		{words.WeeklyPromised, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue)},
+		{words.WeeklyTasksDelivered, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue)},
 		{
 			words.WeeklyDealsWon + " · " + words.WeeklyDealsLost + " · " + words.WeeklyMoved,
 			strconv.Itoa(c.DealsWon) + " · " + strconv.Itoa(c.DealsLost) + " · " + strconv.Itoa(c.DealsMoved),

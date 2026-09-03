@@ -188,6 +188,14 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			ForecastDeals, ForecastPeriodAt,
 			func() time.Time { return time.Now().UTC() },
 		),
+		// The share routes run in the FORECAST store's transaction, whose InTx
+		// gates on forecast:read — so the whole surface, issuing included, is
+		// behind the grant that reads the thing being shared.
+		analyticsShareHandlers: newAnalyticsShareHandlers(
+			NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
+			forecasting.NewStore(InstallationDB(pool)),
+			func() time.Time { return time.Now().UTC() },
+		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the

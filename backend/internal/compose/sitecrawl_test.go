@@ -65,6 +65,12 @@ type fakeSitePage struct {
 	// refresh is the meta-refresh target this page declares, which the real
 	// parser only reports for a same-site target it could resolve.
 	refresh string
+	// headText is what this page's <head> declares it is about, and scripts
+	// how many bundles it loads. Together they are what tells a
+	// client-rendered application shell from an empty document.
+	headText []string
+	scripts  int
+	modules  int
 }
 
 func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, error) {
@@ -101,6 +107,7 @@ func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, er
 	return webread.Page{
 		URL: rawURL, FinalURL: finalURL, Text: page.text, Links: page.links, Bytes: len(page.text),
 		OGImage: page.ogImage, Icons: page.icons, Refresh: page.refresh,
+		HeadText: page.headText, ExternalScripts: page.scripts, ModuleScripts: page.modules,
 	}, nil
 }
 

@@ -138,6 +138,16 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// updates — the distinction is the point of the type, because this is
 		// the one change somebody else is meant to act on.
 		"help_requested": true,
+		// A link that shows a forecast to somebody was created, and later
+		// closed. Both verbs carry their object for the reason
+		// password_link_issued does: this stream also carries calls, snapshots
+		// and assurance runs, and "issued" alone would not say which of them
+		// was issued. The pair is two types rather than one with a field
+		// because an access review asks for the WINDOW — when it opened and
+		// when it closed — and a single type carrying a state would make that
+		// question a scan of every event rather than a join of two.
+		"share_issued":  true,
+		"share_revoked": true,
 	}
 
 	for _, typ := range Types() {

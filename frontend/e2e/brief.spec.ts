@@ -344,6 +344,30 @@ test.describe("the Brief — page shape", () => {
     );
   });
 
+  // The weekly uses the FULL width, because it has no rail.
+  //
+  // Every rail panel answers a question about today, so none of them belongs
+  // beside a week that closed. A grid track does not collapse when its item is
+  // missing, so leaving the aside shape in place would draw the weekly at
+  // seventy per cent width against a third of nothing — a column that reads as
+  // a rail which failed to load. Measured rather than asserted on a class,
+  // because the defect is a width a reader sees.
+  test("gives the weekly the whole width", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openWeekly(page);
+    await expectShellRendered(page);
+
+    await expect(page.locator(".home-rail")).toHaveCount(0);
+    const main = await page.locator(".home-main").boundingBox();
+    const zones = await page.locator(".page-zones-main").boundingBox();
+    if (!main || !zones) {
+      throw new Error("the weekly drew no work column to measure");
+    }
+    // The work column fills its own grid area rather than leaving a third of
+    // it empty beside itself.
+    expect(main.width).toBeGreaterThan(zones.width * 0.9);
+  });
+
   // And the morning shows the morning's work — the weekly is a dial away, not
   // a section further down the same page.
   test("keeps the week off the morning", async ({ page }) => {

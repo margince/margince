@@ -56,6 +56,17 @@ type crawlPage struct {
 	// and could not be followed, and only the first is evidence of a parked
 	// domain.
 	UnresolvedForward bool
+	// HeadText is what the page's <head> says it is about — the meta
+	// description and the Open Graph pair. On a client-rendered site it is the
+	// only prose the server sends. Kept out of Text because stored evidence
+	// snippets are matched against Text.
+	HeadText []string
+	// ExternalScripts counts the page's <script src=…> tags and ModuleScripts
+	// how many of those are ES modules. The MODULE count is what tells an
+	// application shell from an empty document — a parked domain carries
+	// analytics and registrar scripts just as readily as a real site does.
+	ExternalScripts int
+	ModuleScripts   int
 }
 
 type crawlSkip struct {
@@ -375,12 +386,12 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 		pacer:   pacer,
 		seedURL: seedURL,
 		crawl: siteCrawl{
-			Pages:      []crawlPage{{URL: seedURL, Kind: crmcontracts.SiteReadPageKindHome, Text: seedPage.Text, Bytes: seedPage.Bytes, Fingerprint: seedPage.Fingerprint}},
+			Pages:      []crawlPage{pageFrom(seedURL, crmcontracts.SiteReadPageKindHome, seedPage)},
 			SeedAssets: declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons},
 			SeedURL:    seedURL,
 		},
 		visited:       visited,
-		seenText:      map[string]bool{seedPage.Text: true},
+		seenText:      map[string]bool{bodyIdentity(seedPage.Text, seedPage.HeadText): true},
 		canonicalDone: map[string]bool{localeCanonical(seedURL): true},
 		probeKindDone: map[crmcontracts.SiteReadPageKind]bool{},
 		totalBytes:    seedPage.Bytes,

@@ -1519,6 +1519,11 @@ export const vi = {
   "compose.audienceParticipants": "Chỉ người tham gia",
   "compose.audienceParticipantsHint":
     "Chỉ những người có trên tin nhắn này đọc được tiêu đề và nội dung. Người khác chỉ thấy rằng có một tin nhắn được trao đổi vào ngày đó.",
+  "compose.audienceSelected": "Những người được nêu tên",
+  "compose.audienceSelectedHint":
+    "chỉ những người và nhóm bạn nêu tên, cùng những ai đã có trong thư.",
+  "compose.audienceMembersLegend": "Ai được đọc",
+  "compose.audienceMembersLoading": "Đang đọc danh sách người…",
   "compose.audienceConfirm": "Lưu hiển thị",
   "compose.audienceNote":
     "Chỉ áp dụng cho tin nhắn này — không cho chuỗi hội thoại và không cho liên hệ.",
@@ -2421,12 +2426,12 @@ export const vi = {
     "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
   "teamweekly.reading.firstResponse": "Phản hồi đầu tiên",
   "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
-  "teamweekly.reading.commitments": "Cam kết đã giữ",
+  "teamweekly.reading.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.firstResponse": "Trả lời đúng hạn",
   "teamweekly.card.firstResponseBasis": "{breached} quá hạn",
   "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
   "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
-  "teamweekly.card.commitments": "Cam kết đã giữ",
+  "teamweekly.card.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
   "teamweekly.card.won": "Thắng",
   "teamweekly.card.wonBasis": "{lost} thua",
@@ -2443,7 +2448,7 @@ export const vi = {
   "teamweekly.coach.empty": "Tuần đó không có ai trong nhóm này.",
   "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
   "teamweekly.focus.leads_breached": "Lead không được trả lời",
-  "teamweekly.focus.commitments_missed": "Cam kết bị bỏ lỡ",
+  "teamweekly.focus.commitments_missed": "Cam kết kế hoạch bị bỏ lỡ",
   "teamweekly.focus.meetings_without_next_step":
     "Cuộc họp không có bước tiếp theo",
   "teamweekly.focus.strong_week": "Đáng để học theo",
@@ -2481,7 +2486,7 @@ export const vi = {
   "home.weekly.pickWeek": "Mở tuần khác",
   "home.weekly.none":
     "Chưa có bản đánh giá tuần — bản đầu tiên được viết vào thứ Hai sau tuần đầy đủ đầu tiên của bạn.",
-  "home.weekly.promised": "Đã hứa, đã xong",
+  "home.weekly.tasksDelivered": "Công việc đã hoàn thành",
   "home.weekly.ofDue": "{done} trên {due}",
   "home.weekly.dealsWon": "Thắng",
   "home.weekly.dealsLost": "Thua",
@@ -2495,7 +2500,7 @@ export const vi = {
   "home.weekly.sincePrior": "{delta} so với tuần trước",
   "home.weekly.leadsAnswered": "Lead được trả lời đúng hạn",
   "home.weekly.ofRouted": "{answered} trên {routed}",
-  "home.weekly.promisesKept": "Cam kết đã giữ",
+  "home.weekly.planCommitmentsKept": "Cam kết kế hoạch đã giữ",
   "home.weekly.meetingsHeld": "Cuộc họp có bước tiếp theo",
   "home.weekly.ofMeetings": "{withStep} trên {held}",
   "home.weekly.carriedOver": "Chuyển tiếp",
@@ -3115,6 +3120,30 @@ export const vi = {
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
+  "analytics.share.open": "Chia sẻ chế độ xem",
+  "analytics.share.title": "Chia sẻ chế độ xem này",
+  "analytics.share.kindLegend": "Liên kết hiển thị điều gì",
+  "analytics.share.liveLabel": "Chế độ xem trực tiếp",
+  "analytics.share.liveHelp":
+    "Được tính lại mỗi lần mở, giới hạn ở những gì người đọc được phép xem. Các con số thay đổi theo pipeline.",
+  "analytics.share.snapshotLabel": "Trạng thái đã đóng băng",
+  "analytics.share.snapshotHelp":
+    "Các con số như khi trạng thái được lưu lại. Chúng không thay đổi, nên liên kết nêu rõ thời điểm.",
+  "analytics.share.snapshotUnavailable":
+    "Chưa có trạng thái nào được đóng băng cho kỳ này.",
+  "analytics.share.expiryNote":
+    "Liên kết ngừng hoạt động sau 30 ngày. Bạn có thể đóng sớm hơn.",
+  "analytics.share.create": "Tạo liên kết",
+  "analytics.share.linkTitle": "Liên kết của bạn",
+  "analytics.share.linkWarning":
+    "Đây là lần duy nhất liên kết được hiển thị. Hãy sao chép ngay — không thể đọc lại.",
+  "analytics.share.leaveWarning":
+    "Rời đi mà không sao chép sẽ làm mất liên kết. Bạn sẽ phải tạo liên kết khác.",
+  "analytics.share.copy": "Sao chép liên kết",
+  "analytics.share.copied": "Đã sao chép",
+  "analytics.share.copyFailed":
+    "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
+  "analytics.share.done": "Xong",
   "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
   "review.title": "Cần kiểm tra gì trước cuộc gọi?",
   "review.ready": "Sẵn sàng",

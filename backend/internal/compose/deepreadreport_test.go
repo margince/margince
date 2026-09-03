@@ -19,17 +19,17 @@ func TestReadWarningsStateTheCauseTheLegalGateReported(t *testing.T) {
 		{Name: "Acme Pte. Ltd.", SourceURL: seedURL + "/impressum"},
 	}
 
-	incomplete := readWarnings(legalAbstentionOf(one, true).warning(), nil)
+	incomplete := readWarnings(legalAbstentionOf(one, true).warning(), nil, false)
 	if len(incomplete) != 1 || incomplete[0] != legalWarningCensusIncomplete {
 		t.Fatalf("a failed legal page must be reported as one, not as a multi-entity domain: %v", incomplete)
 	}
 
-	multiple := readWarnings(legalAbstentionOf(two, false).warning(), nil)
+	multiple := readWarnings(legalAbstentionOf(two, false).warning(), nil, false)
 	if len(multiple) != 1 || multiple[0] != legalWarningMultipleEntities {
 		t.Fatalf("a domain that publishes two entities must still say so: %v", multiple)
 	}
 
-	if settled := readWarnings(legalAbstentionOf(one, false).warning(), nil); len(settled) != 0 {
+	if settled := readWarnings(legalAbstentionOf(one, false).warning(), nil, false); len(settled) != 0 {
 		t.Fatalf("a settled census has nothing to caveat: %v", settled)
 	}
 }
@@ -41,7 +41,7 @@ func TestReadWarningsKeepTheExtractionCaveatAlongsideTheLegalOne(t *testing.T) {
 		{Name: "Acme GmbH", SourceURL: seedURL + "/impressum"},
 		{Name: "Acme Pte. Ltd.", SourceURL: seedURL + "/impressum"},
 	}
-	got := readWarnings(legalAbstentionOf(two, true).warning(), errors.New("lane died"))
+	got := readWarnings(legalAbstentionOf(two, true).warning(), errors.New("lane died"), false)
 	if len(got) != 2 || got[0] != legalWarningMultipleEntities {
 		t.Fatalf("both caveats must reach the dossier, legal first: %v", got)
 	}
