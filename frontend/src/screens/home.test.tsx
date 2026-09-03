@@ -328,14 +328,6 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
           // right value for them: the sentence is then absent, and the greeting
           // is what the assertion reads.
           day={undefined}
-          decisions={null}
-          brief={null}
-          overnight={null}
-          stalled={null}
-          onGoToDecisions={() => {}}
-          onGoToToday={() => {}}
-          onGoToDuplicates={() => {}}
-          onGoToWatch={() => {}}
         />
       </LocaleProvider>,
     );
@@ -371,23 +363,15 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
           day={undefined}
-          decisions={null}
-          brief={null}
-          overnight={null}
-          stalled={null}
-          onGoToDecisions={() => {}}
-          onGoToToday={() => {}}
-          onGoToDuplicates={() => {}}
-          onGoToWatch={() => {}}
         />
       </LocaleProvider>,
     );
     // Not one of them, and in particular not the "nothing is waiting" claim: an
     // unread queue is not an empty one.
-    expect(screen.queryByTestId("glance-decisions")).toBeNull();
-    expect(screen.queryByTestId("glance-ranked")).toBeNull();
-    expect(screen.queryByTestId("glance-captured")).toBeNull();
-    expect(screen.queryByTestId("glance-quiet")).toBeNull();
+    // The header never states a count. Every fact those lines carried is drawn
+    // by the section that owns it — the deck, the readings strip, the rail's
+    // panels — so an unread queue leaves the header saying only the greeting.
+    expect(screen.queryByTestId("glance-sentence")).toBeNull();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
   });
 });
@@ -466,7 +450,6 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     // from the queue this case leaves in flight.
     await screen.findByTestId("home-readings");
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
-    expect(screen.queryByTestId("glance-decisions")).toBeNull();
     // The wait belongs to the deck alone. Five independent reads exist so that
     // one of them being slow cannot blank the other four.
     expect(deckSection().querySelector("[aria-busy='true']")).toBeTruthy();
@@ -482,7 +465,6 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     render(<HomeScreen />);
 
     await screen.findByTestId("home-readings");
-    expect(screen.queryByTestId("glance-decisions")).toBeNull();
     // Not "nothing is waiting": a queue that could not be read is not an empty
     // one, and the deck says which of the two this is.
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
@@ -537,12 +519,25 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     });
     render(<HomeScreen />);
 
-    // The glance is where the decision counts are said now: the readings strip
-    // is drawn from the worklist answer and knows nothing about approvals.
+    // The DECK is where decisions are said now, and it draws the proposal
+    // itself rather than a count of them — a stronger claim than the line that
+    // used to sit above it, which could be right about a queue the section
+    // failed to render.
+    //
+    // ONE card, because a deck shows one: the second proposal is behind it and
+    // reached by deciding this one. What this case can still hold is that the
+    // queue arrived and the deck is drawing from it.
     await waitFor(() =>
-      expect(screen.getByTestId("glance-decisions").textContent).toContain("2"),
+      expect(
+        within(deckSection()).getByText("Send the Weber follow-up"),
+      ).toBeTruthy(),
     );
-    expect(screen.getByTestId("glance-expiring").textContent).toContain("1");
+    // The expiry the card states is its own countdown, in the reader's zone.
+    // The "how many stop waiting today" FIGURE has no surface any more: it
+    // existed only for the removed briefing line, and its same-day arithmetic
+    // (home.tsx expiringToday) went with it. Whether the deck should say that
+    // across the whole queue is a product question, filed rather than guessed.
+    expect(within(deckSection()).getByText(/expires/i)).toBeTruthy();
   });
 });
 
