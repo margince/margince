@@ -987,7 +987,9 @@ describe("focus", () => {
           .map((match) => match[1].trim())
           .filter((value) => !/^(none|0)$/.test(value))
           .filter((value) => !/var\(--focus-glow(-danger|-ai)?\)/.test(value))
-          .map((value) => `${relative(frontendRoot, file)}: box-shadow: ${value}`),
+          .map(
+            (value) => `${relative(frontendRoot, file)}: box-shadow: ${value}`,
+          ),
       );
     });
     expect(

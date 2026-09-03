@@ -2,7 +2,6 @@ import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { dealsFilteredBy } from "./dealsaddress";
 import { navigate, useRoute } from "../app/router";
 import {
   Button,
@@ -20,6 +19,7 @@ import { stable } from "../format/collate";
 import {
   formatDateTime,
   formatMoneyOrAbsent,
+  formatNumber,
   MONEY_ABSENT,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -33,6 +33,7 @@ import {
   throwProblem,
   useSorMode,
 } from "./common";
+import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
 import "./analytics.css";
 
@@ -122,9 +123,10 @@ function CountLink({
   href,
   title,
 }: Readonly<{ count: number; href: string; title: string }>) {
+  const { locale } = useLocale();
   return (
     <a className="link-button" href={href} title={title}>
-      {String(count)}
+      {formatNumber(count, locale)}
     </a>
   );
 }
@@ -424,7 +426,10 @@ function CompanyTable({
                 title={t("analytics.openCompanyDeals")}
               />
             ) : (
-              String(rowCount(row, "deal_count"))
+              // The same figure as the link branch above, in the same notation:
+              // whether a row can be opened is not a reason for its count to be
+              // written differently.
+              formatNumber(rowCount(row, "deal_count"), locale)
             ),
         },
         {

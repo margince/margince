@@ -8,7 +8,6 @@ import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
 import { type TimelineEntry, TimelineRow } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
-import { dealsFilteredBy } from "./dealsaddress";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
   liveProjects,
@@ -44,6 +43,7 @@ import {
   useViewerId,
 } from "./common";
 import type { CompanyTab } from "./companytab";
+import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { FactList } from "../design-system/factlist";

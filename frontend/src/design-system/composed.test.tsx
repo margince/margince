@@ -58,7 +58,10 @@ describe("DealCard + PipelineBoard", () => {
 
   it("draws the mask over a withheld company, never words for it", () => {
     const { container } = render(
-      <DealCard deal={{ ...deal, org: "", orgWithheld: true }} href="#/deals/d1" />,
+      <DealCard
+        deal={{ ...deal, org: "", orgWithheld: true }}
+        href="#/deals/d1"
+      />,
     );
     expect(screen.getByLabelText(MASK)).toBeTruthy();
     // No name and no mark beside it: a monogram cut from the word for
@@ -68,7 +71,9 @@ describe("DealCard + PipelineBoard", () => {
   });
 
   it("draws no company slot at all for a deal that names none", () => {
-    const { container } = render(<DealCard deal={{ ...deal, org: "" }} href="#/deals/d1" />);
+    const { container } = render(
+      <DealCard deal={{ ...deal, org: "" }} href="#/deals/d1" />,
+    );
     expect(screen.queryByLabelText(MASK)).toBeNull();
     expect(container.querySelector(".deal-org")).toBeNull();
   });
@@ -76,9 +81,13 @@ describe("DealCard + PipelineBoard", () => {
   it("a staged deal renders visibly distinct from a real one", () => {
     const { container } = render(
       <>
-        <DealCard deal={{ ...deal, id: "real", stalled: false }} href="#/deals/real" />
+        <DealCard
+          deal={{ ...deal, id: "real", stalled: false }}
+          href="#/deals/real"
+        />
         <DealCard
           deal={{ ...deal, id: "staged", stalled: false, staged: true }}
+          href="#/deals/staged"
         />
       </>,
     );
@@ -97,7 +106,9 @@ describe("DealCard + PipelineBoard", () => {
       currency: "EUR",
       deals: [deal],
     };
-    render(<PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(screen.getByText("40%")).toBeTruthy();
     expect(screen.getByText("1 deals")).toBeTruthy();
     expect(screen.getByText("€60,500.00")).toBeTruthy();
@@ -118,7 +129,9 @@ describe("DealCard + PipelineBoard", () => {
       deals: [deal],
       count: 137,
     };
-    render(<PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(screen.getByText("137 deals")).toBeTruthy();
     expect(screen.queryByText("1 deals")).toBeNull();
   });
@@ -140,7 +153,9 @@ describe("DealCard + PipelineBoard", () => {
       count: 29,
       sumHidden: true,
     };
-    render(<PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(
       screen.getByText("several currencies — no single total"),
     ).toBeTruthy();
@@ -179,7 +194,9 @@ describe("DealCard + PipelineBoard", () => {
       deals: [deal],
       count: 4,
     };
-    render(<PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(screen.getByText("4 deals")).toBeTruthy();
     expect(screen.getByText(`weighted ${MONEY_ABSENT}`)).toBeTruthy();
     expect(

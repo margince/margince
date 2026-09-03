@@ -23,8 +23,8 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
-import { Popover } from "./popover";
 import { useDialogFocus } from "./dialogfocus";
+import { Popover } from "./popover";
 import "./atoms.css";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
@@ -1306,7 +1306,6 @@ export function SegmentedControl<Option extends string>({
   // see. It draws attention; it never carries the meaning alone.
   marks?: Partial<Record<Option, boolean>>;
 }>) {
-  const { locale } = useLocale();
   return (
     <fieldset className="segmented" aria-label={label}>
       {options.map((option) => {

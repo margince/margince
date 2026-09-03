@@ -1,8 +1,8 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useDialogFocus } from "../design-system/dialogfocus";
 import { api } from "../api/client";
+import { useDialogFocus } from "../design-system/dialogfocus";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
