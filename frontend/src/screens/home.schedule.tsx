@@ -127,13 +127,16 @@ function Title({ item }: Readonly<{ item: WorklistItem }>) {
 /**
  * When a meeting starts, or nothing.
  *
- * `occurred_at` is when it is, and a meeting the server sent without one is
- * drawn without a time rather than with an invented one.
+ * The start is on `due_at`. The meeting lane puts it there deliberately — it is
+ * the deadline a reader is racing (attention/meeting.go) — and sets no
+ * `occurred_at` at all, because a meeting on today's schedule has not occurred
+ * yet. Reading the other field drew every row with a blank time.
+ *
+ * A row the server sent without one is still drawn without a time rather than
+ * with an invented one.
  */
 function whenOf(item: WorklistItem, locale: Locale, zone: string): string {
-  return item.occurred_at
-    ? formatTimeOfDay(item.occurred_at, locale, zone)
-    : "";
+  return item.due_at ? formatTimeOfDay(item.due_at, locale, zone) : "";
 }
 
 /** One source's rows, in the server's order. */

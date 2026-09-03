@@ -13765,6 +13765,17 @@ export interface components {
              */
             kind?: string;
             /**
+             * Format: uuid
+             * @description The message that opened this thread, where this caller may read it — what a
+             *     client opens to show the correspondence rather than only naming it.
+             *
+             *     Null when the message was erased while the hold stood (the ledger deliberately
+             *     outlives it) AND null when the content is not this caller's: it is read from the
+             *     joined activity row, which carries the content gate, rather than from the
+             *     ledger's own column. `has_message` says which of the two it is.
+             */
+            readonly activity_id?: string | null;
+            /**
              * @description The message this thread began with is still readable by you. False where it was erased
              *     while the verdict stood — which the ledger deliberately survives, because losing the
              *     verdict would re-open a thread a classifier already held — and false where its content
