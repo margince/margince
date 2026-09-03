@@ -87,6 +87,7 @@ import { CoverageBand } from "./companypeople/summary";
 import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
+import { wholeCount } from "./companyrailshared";
 import {
   COMPANY_TABS,
   type CompanyTab,
@@ -1263,11 +1264,8 @@ export function profileFieldLabel(
 // 360 and Profile carry none by design: neither is a list of things, so a
 // figure beside them would count something the reader cannot see under them.
 //
-// A PAGED section counts only when its page is the whole set. `PageInfo`
-// carries `has_more` and no total, so the rows in hand are a floor and not a
-// count — and "6" beside a tab holding sixty is not a smaller truth, it is a
-// wrong one. The badge is dropped instead: a reader who sees no number goes
-// and looks, which is the outcome a wrong number prevents.
+// A PAGED section counts only when its page is the whole set — `wholeCount`
+// spells that rule once for the badges here and the rail's own summaries.
 function companyTabCounts(
   view?: Organization360View,
 ): Partial<Record<CompanyTab, number>> {
@@ -1275,14 +1273,17 @@ function companyTabCounts(
     return {};
   }
   const counts: Partial<Record<CompanyTab, number>> = {};
-  if (view.people && !view.people.page.has_more) {
-    counts.people = view.people.data.length;
+  const people = wholeCount(view.people);
+  if (people != null) {
+    counts.people = people;
   }
-  if (view.deals && !view.deals.page.has_more) {
-    counts.deals = view.deals.data.length;
+  const deals = wholeCount(view.deals);
+  if (deals != null) {
+    counts.deals = deals;
   }
-  if (view.next_steps && !view.next_steps.page.has_more) {
-    counts.tasks = view.next_steps.data.length;
+  const tasks = wholeCount(view.next_steps);
+  if (tasks != null) {
+    counts.tasks = tasks;
   }
   return counts;
 }

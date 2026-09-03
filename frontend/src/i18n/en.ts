@@ -1452,6 +1452,8 @@ export const en = {
   "co.deals.noStage": "No stage",
   "co.rail.all": "All {count}",
   "co.rail.add": "Add",
+  "co.rail.allUncounted": "All",
+  "co.rail.more": "More",
   "co.rail.deals.title": "Active deals",
   "co.rail.deals.empty": "No deals on this account yet.",
   "co.rail.deals.emptyClosedOnly": "Nothing open — only closed history.",

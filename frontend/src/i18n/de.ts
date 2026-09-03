@@ -1399,6 +1399,8 @@ export const de = {
   "co.deals.noStage": "Keine Phase",
   "co.rail.all": "Alle {count}",
   "co.rail.add": "Hinzufügen",
+  "co.rail.allUncounted": "Alle",
+  "co.rail.more": "Mehr",
   "co.rail.deals.title": "Aktive Deals",
   "co.rail.deals.empty": "Für diesen Account gibt es noch keine Deals.",
   "co.rail.deals.emptyClosedOnly":

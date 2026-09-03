@@ -11,6 +11,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { CommercialPanel, recordNamesIn } from "../company360";
 import { CompanyContractState } from "../companycommercial";
+import { wholeCount } from "../companyrailshared";
 import { CompanyRecentList } from "../companyrecent";
 import type { CompanyTab } from "../companytab";
 import { CompanyWorkCard } from "../companywork";
@@ -162,6 +163,9 @@ export function PeopleChips({
   const t = useT();
   const { locale } = useLocale();
   const contacts = view?.people?.data ?? [];
+  // The page in hand is the roster only when it is whole; past the server's
+  // cut both the "All" verb and the remainder chip drop their figure.
+  const count = wholeCount(view?.people);
   const state = sectionState(
     view,
     "people",
@@ -177,7 +181,9 @@ export function PeopleChips({
       titleAction={
         state === "ready" && onOpenTab ? (
           <Button small variant="ghost" onClick={() => onOpenTab("people")}>
-            {t("co.rail.all", { count: formatNumber(contacts.length, locale) })}
+            {count != null
+              ? t("co.rail.all", { count: formatNumber(count, locale) })
+              : t("co.rail.allUncounted")}
           </Button>
         ) : undefined
       }
@@ -199,9 +205,11 @@ export function PeopleChips({
                 </a>
               </li>
             ))}
-            {rest > 0 && (
+            {(rest > 0 || count == null) && (
               <li className="co-person-chip co-person-more">
-                +{formatNumber(rest, locale)}
+                {count != null
+                  ? `+${formatNumber(rest, locale)}`
+                  : t("co.rail.more")}
               </li>
             )}
           </ul>

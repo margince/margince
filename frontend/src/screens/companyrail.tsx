@@ -25,7 +25,11 @@ import { problemCodeOf, throwProblem } from "./common";
 import { NewDealAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
-import { SectionSummary, sectionAnswered } from "./companyrailshared";
+import {
+  SectionSummary,
+  sectionAnswered,
+  wholeCount,
+} from "./companyrailshared";
 import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { roleOf } from "./provider-status";
@@ -228,6 +232,7 @@ function DealsSection({
   const { locale } = useLocale();
   const deals = view?.deals;
   const rows = rankedDeals(deals?.data ?? []);
+  const count = wholeCount(deals);
   const state = sectionState(
     view,
     "deals",
@@ -250,7 +255,7 @@ function DealsSection({
       summary={
         <SectionSummary
           title={t("co.rail.deals.title")}
-          count={answered ? rows.length : undefined}
+          count={answered ? count : undefined}
         />
       }
     >
@@ -270,17 +275,21 @@ function DealsSection({
           >
             {null}
           </SurfaceState>
-          {state === "empty" && !hasClosedHistory && view?.organization && (
-            <DealsCreateVerb organization={view.organization} />
+          {state === "empty" && view?.organization && (
+            <DealsEmptyVerb
+              organization={view.organization}
+              betweenCycles={hasClosedHistory}
+              onTab={onTab}
+            />
           )}
         </PanelBody>
       )}
-      {answered && (
+      {state === "ready" && (
         <div className="co-card-actions">
           <Button small variant="ghost" onClick={() => onTab("deals")}>
-            {rows.length > 0
-              ? t("co.rail.all", { count: formatNumber(rows.length, locale) })
-              : t("co.rail.add")}
+            {count != null
+              ? t("co.rail.all", { count: formatNumber(count, locale) })
+              : t("co.rail.allUncounted")}
           </Button>
         </div>
       )}
@@ -288,16 +297,33 @@ function DealsSection({
   );
 }
 
-// The create-deal verb, gated on writability the same way TagsSection's own
-// add-tag verb is: `useCompanyReadOnlyReason` needs a resolved
-// Organization, so this is its own component mounted only once one exists,
-// rather than a conditional hook call inside DealsSection itself.
-function DealsCreateVerb({
+// The ONE verb an empty pipeline carries. An account that never started gets
+// the create verb when the reader may write; one between cycles, or a reader
+// who may not write, gets the way to the Deals tab instead. Never both — two
+// verbs under one empty state is a choice the reader has no basis to make.
+// Gated on writability the same way TagsSection's own add-tag verb is:
+// `useCompanyReadOnlyReason` needs a resolved Organization, so this is its
+// own component mounted only once one exists, rather than a conditional
+// hook call inside DealsSection itself.
+function DealsEmptyVerb({
   organization,
-}: Readonly<{ organization: Organization }>) {
+  betweenCycles,
+  onTab,
+}: Readonly<{
+  organization: Organization;
+  betweenCycles: boolean;
+  onTab: (tab: "deals") => void;
+}>) {
+  const t = useT();
   const readOnlyReason = useCompanyReadOnlyReason(organization);
-  if (readOnlyReason) {
-    return null;
+  if (betweenCycles || readOnlyReason) {
+    return (
+      <div className="co-card-actions">
+        <Button small variant="ghost" onClick={() => onTab("deals")}>
+          {t("co.rail.add")}
+        </Button>
+      </div>
+    );
   }
   return (
     <div className="co-card-actions">
@@ -414,6 +440,7 @@ function PeopleSection({
   // and the copy that drifts, since only one of the two is what chose which
   // twenty-five arrived.
   const contacts = view?.people?.data ?? [];
+  const count = wholeCount(view?.people);
   const state = sectionState(
     view,
     "people",
@@ -429,7 +456,7 @@ function PeopleSection({
       summary={
         <SectionSummary
           title={t("co.rail.people.title")}
-          count={answered ? contacts.length : undefined}
+          count={answered ? count : undefined}
         />
       }
     >
@@ -446,6 +473,9 @@ function PeopleSection({
           <SurfaceState state={state} emptyLabel={t("co.rail.people.empty")}>
             {null}
           </SurfaceState>
+          {/* The empty state's one verb; the foot below stands only once
+              there are rows, so an empty roster never offers the same
+              tab twice under two names. */}
           {state === "empty" && (
             <div className="co-card-actions">
               <Button small variant="ghost" onClick={() => onTab("people")}>
@@ -455,14 +485,12 @@ function PeopleSection({
           )}
         </PanelBody>
       )}
-      {answered && (
+      {state === "ready" && (
         <div className="co-card-actions">
           <Button small variant="ghost" onClick={() => onTab("people")}>
-            {contacts.length > 0
-              ? t("co.rail.all", {
-                  count: formatNumber(contacts.length, locale),
-                })
-              : t("co.rail.add")}
+            {count != null
+              ? t("co.rail.all", { count: formatNumber(count, locale) })
+              : t("co.rail.allUncounted")}
           </Button>
         </div>
       )}

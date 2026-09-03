@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import type { SectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
@@ -32,6 +33,23 @@ export function SectionSummary({
       {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
     </span>
   );
+}
+
+// A paged section's rows are its count only when the page is the whole set.
+// `PageInfo` carries `has_more` and no total, so a cut page is a floor and not
+// a count — "25" beside sixty contacts is not a smaller truth but a wrong one.
+// Past the cut the count is absent, and a reader who sees no number goes and
+// looks, which is the outcome a wrong number prevents. The tab strip's badges
+// (companyTabCounts) and the rail's summaries and "All" verbs all read this
+// one rule.
+export function wholeCount(section?: {
+  data: readonly unknown[];
+  page: components["schemas"]["PageInfo"];
+}): number | undefined {
+  if (!section || section.page.has_more) {
+    return undefined;
+  }
+  return section.data.length;
 }
 
 // A section has answered, one way or the other, only once it is ready or

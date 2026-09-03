@@ -1394,6 +1394,8 @@ export const vi = {
   "co.deals.noStage": "Chưa có giai đoạn",
   "co.rail.all": "Tất cả {count}",
   "co.rail.add": "Thêm",
+  "co.rail.allUncounted": "Tất cả",
+  "co.rail.more": "Xem thêm",
   "co.rail.deals.title": "Deal đang mở",
   "co.rail.deals.empty": "Tài khoản này chưa có deal nào.",
   "co.rail.deals.emptyClosedOnly":
