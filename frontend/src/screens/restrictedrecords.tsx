@@ -199,11 +199,7 @@ export function RestrictedRecordsCard() {
         <PanelBody>
           <p className="settings-panel-sub">{t("restricted.sub")}</p>
           <QueryGate query={me}>
-            {() => (
-              <EmptyState>
-                <p className="t-small">{t("restricted.withheld")}</p>
-              </EmptyState>
-            )}
+            {() => <EmptyState>{t("restricted.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
       </Panel>

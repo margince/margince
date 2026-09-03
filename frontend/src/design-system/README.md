@@ -330,9 +330,11 @@ screen reader and a disabled button cannot be focused, so a reason living only
 in `title` reaches exactly nobody who needed it; `Button`'s `reasonId` points
 several refused controls at ONE sentence already on the page, for a surface
 where one fact refuses all of them. And `FieldGuard` covers a withheld VALUE
-rather than a withheld surface. What is left hand-rolls
-`<EmptyState><p className="t-small">{t(…)}</p></EmptyState>` as the card body,
-which is the shape to match where `SurfaceState` does not fit.
+rather than a withheld surface. What is left hands the sentence
+straight to `EmptyState` — `<EmptyState>{t(…)}</EmptyState>` — which is the
+shape to match where `SurfaceState` does not fit. No `t-small` inside it: the
+plate declares its own size, and thirty-one call sites that wrapped the
+sentence in one drew the same sentence a step smaller than the rest.
 
 `Switch` versus `Checkbox` follows from the same honesty: a `Checkbox` states an
 intent that something later submits, a `Switch` **is** the action. A control that

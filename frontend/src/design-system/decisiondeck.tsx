@@ -641,7 +641,11 @@ export function DecisionDeck({
       >
         {cleared && tally ? (
           <EmptyState title={labels.clearedTitle}>
-            <p className="t-body">{labels.cleared(tally.count)}</p>
+            {/* `.empty-body` is already the measured 14px paragraph, so the
+                sentence carries no size of its own. The timestamp below it
+                does, because it is a quieter SECOND line rather than the
+                sentence itself. */}
+            <p>{labels.cleared(tally.count)}</p>
             <p className="t-small ddeck-cleared-time">
               {labels.clearedTime(tally.at)}
             </p>

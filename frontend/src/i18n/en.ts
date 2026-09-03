@@ -278,6 +278,7 @@ export const en = {
   "deal.archived": "archived",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
+  "record.chronologyLoading": "Reading the change history…",
   // The same word the tab strip uses (`tab.timeline`): the heading over the
   // slot and the tab that opens it name one thing, and two words for it read
   // as two things.
@@ -1124,6 +1125,7 @@ export const en = {
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
+  "finance.loading": "Reading the invoices…",
   "finance.syncing":
     "Syncing with your accounting source. Figures appear once the first sweep lands.",
   "finance.noConnection":
@@ -2248,6 +2250,7 @@ export const en = {
   "deals.winReasonOther": "Something else",
   "deals.winReasonDetail": "What was it?",
   "deals.confirm": "Confirm",
+  "deals.loading": "Reading the deals…",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
@@ -2424,6 +2427,7 @@ export const en = {
   "decision.expired": "Expired",
   "decision.expiresIn": "expires in {countdown}",
   "decision.detail": "Approval detail",
+  "decision.detailLoading": "Reading this approval…",
   "decision.detailTechnical": "Technical details",
   "decision.detailAsked": "Asked",
   "decision.detailDecided": "Decided",
@@ -3220,6 +3224,7 @@ export const en = {
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
   "tasks.detail": "Task",
+  "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 

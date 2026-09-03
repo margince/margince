@@ -122,7 +122,11 @@ export function CompanyFinanceCard({
     return (
       <Panel title={title}>
         <PanelBody>
-          <SurfaceState state="loading" emptyLabel={t("finance.none")}>
+          <SurfaceState
+            state="loading"
+            emptyLabel={t("finance.none")}
+            loadingLabel={t("finance.loading")}
+          >
             {null}
           </SurfaceState>
         </PanelBody>

@@ -434,7 +434,18 @@ function OverlayDealsTable({
   // re-enables the Load-more button to retry.
   const pages = query.data?.pages ?? [];
   if (pages.length === 0) {
-    return <QueryStates query={query}>{null}</QueryStates>;
+    return (
+      <QueryStates
+        query={query}
+        pendingLabel={t("deals.loading")}
+        // A table's worth of rows. The default placeholder is three lines, and
+        // a list that arrives into a third of the room the placeholder held
+        // pushes the page down under the reader as it lands.
+        pendingLines={8}
+      >
+        {null}
+      </QueryStates>
+    );
   }
   const deals = pages.flatMap((p) => p.data);
   if (deals.length === 0) {

@@ -1117,3 +1117,47 @@ describe("the phone nav's clearance", scanBudget, () => {
     ).toEqual(["src/app/shell.css", "src/design-system/tokens.css"]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The empty plate's own type. `EmptyState` draws the sentence a surface shows
+// instead of content, and `.empty` sizes it — 13px for the one-liner, 14px in
+// `.empty-body` for the instructional variant's measured paragraph. Thirty-one
+// call sites wrapped that sentence in `<p className="t-small">` and drew it at
+// 12px instead, which is the same sentence at two sizes depending on which
+// screen a reader is on.
+//
+// Nothing made them wrong at the time: the primitive took `children` and any
+// node was as valid as any other. So the rule is stated here rather than in the
+// prop type, because what is being forbidden is a CLASS on a child and not a
+// shape TypeScript can describe.
+// ---------------------------------------------------------------------------
+
+describe("the empty plate", () => {
+  it("sizes its own sentence, and no call site restates that", () => {
+    const overrides = files
+      .filter((file) => file.endsWith(".tsx"))
+      .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
+      .flatMap((file) => {
+        const source = readFileSync(file, "utf8");
+        // The child immediately inside the opening tag, whitespace and
+        // newlines crossed. A type class further down the tree may be a
+        // deliberate second line — the deck's cleared-at timestamp is one —
+        // and only the element that IS the sentence is in scope here.
+        const hits = source.matchAll(
+          /<EmptyState[^>]*>\s*<(?:p|span|div|blockquote)\s[^>]*className="[^"]*\bt-(?:small|caption|meta|body)\b/g,
+        );
+        return [...hits].map(
+          () =>
+            `${relative(frontendRoot, file)}: ${
+              source.slice(0, source.indexOf("<EmptyState")).split("\n").length
+            }`,
+        );
+      });
+    expect(
+      overrides,
+      "hand the sentence to EmptyState directly — `<EmptyState>{t(…)}` — " +
+        "rather than wrapping it in a type class, which draws one surface's " +
+        "empty state a step smaller than every other surface's",
+    ).toEqual([]);
+  });
+});

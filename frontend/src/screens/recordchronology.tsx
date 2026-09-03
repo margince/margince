@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { EmptyState, Skeleton } from "../design-system/atoms";
+import { EmptyState, PendingBody } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
 import { FilterPills } from "../design-system/filterpills";
 import type { RecordTimeline } from "../design-system/recordtimeline";
@@ -471,7 +471,11 @@ export function chronologyNotice(
   t: ReturnType<typeof useT>,
 ): ReactNode {
   if (timeline.loading) {
-    return <Skeleton width="100%" height={48} />;
+    // What is being waited for, not a mute bar. This arm is only reached on
+    // the cuts where the change feed IS the section — a combined view that
+    // already has rows keeps them — so the reader is waiting on one named
+    // thing and the placeholder can say which.
+    return <PendingBody label={t("record.chronologyLoading")} />;
   }
   if (timeline.failed || !timeline.assembled) {
     return <EmptyState>{t("co.section.unavailable")}</EmptyState>;

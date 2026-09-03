@@ -48,11 +48,9 @@ export function AiHealthCard() {
               // so it says which it is rather than drawing an empty table a
               // reader would read as failure.
               <EmptyState>
-                <p className="t-small">
-                  {t("aiHealth.noCalls", {
-                    hours: formatNumber(health.window_hours, locale),
-                  })}
-                </p>
+                {t("aiHealth.noCalls", {
+                  hours: formatNumber(health.window_hours, locale),
+                })}
               </EmptyState>
             ) : (
               <RungTable rungs={health.rungs} hours={health.window_hours} />

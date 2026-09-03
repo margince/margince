@@ -745,7 +745,12 @@
   color: var(--textSecondary);
 }
 .section-header h2 {
-  font-size: 15px;
+  /* --fs-lead IS 15px: the same value the raw number held, now named. The
+     app's section titles and the token ramp's --fs-h2 (20px) disagree, and
+     that disagreement is a decision about the house scale rather than
+     something to settle inside one rule — so this names the size it draws
+     and does not change it. */
+  font-size: var(--fs-lead);
   font-weight: 600;
   color: var(--textPrimary);
 }
@@ -772,7 +777,7 @@
 /* A measure, not a width: a description that runs the whole width of a wide
    card is a line the eye loses its place in. */
 .section-header .sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   line-height: var(--lh-snug);
   max-width: 78ch;

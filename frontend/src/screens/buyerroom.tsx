@@ -196,9 +196,7 @@ export function BuyerRoomScreen() {
   if (credential && !token && !refusal) {
     return (
       <BuyerFrame>
-        <EmptyState>
-          <p className="t-small">{t("buyer.opening")}</p>
-        </EmptyState>
+        <EmptyState>{t("buyer.opening")}</EmptyState>
       </BuyerFrame>
     );
   }

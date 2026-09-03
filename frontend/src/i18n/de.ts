@@ -258,6 +258,7 @@ export const de = {
   "deal.staged": "vorgemerkt",
   "record.notShown": "Nicht angezeigt",
   "record.timelineLoading": "Verlauf dieses Datensatzes wird geladen…",
+  "record.chronologyLoading": "Änderungsverlauf wird gelesen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
   "record.save": "Speichern",
@@ -1070,6 +1071,7 @@ export const de = {
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
+  "finance.loading": "Rechnungen werden gelesen…",
   "finance.syncing":
     "Abgleich mit der Buchhaltungsquelle läuft. Zahlen erscheinen nach dem ersten Durchlauf.",
   "finance.noConnection":
@@ -2210,6 +2212,7 @@ export const de = {
   "deals.winReasonOther": "Etwas anderes",
   "deals.winReasonDetail": "Was war es?",
   "deals.confirm": "Bestätigen",
+  "deals.loading": "Deals werden gelesen…",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
@@ -2383,6 +2386,7 @@ export const de = {
   "decision.expired": "Abgelaufen",
   "decision.expiresIn": "läuft ab in {countdown}",
   "decision.detail": "Freigabe-Detail",
+  "decision.detailLoading": "Freigabe wird gelesen…",
   "decision.detailTechnical": "Technische Details",
   "decision.detailAsked": "Gefragt am",
   "decision.detailDecided": "Entschieden am",
@@ -3171,6 +3175,7 @@ export const de = {
   "tasks.complete": "Erledigt",
   "tasks.snooze": "1 Tag später",
   "tasks.detail": "Aufgabe",
+  "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 

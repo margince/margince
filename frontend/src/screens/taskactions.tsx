@@ -13,7 +13,7 @@ import {
   Button,
   Checkbox,
   Modal,
-  Skeleton,
+  PendingBody,
 } from "../design-system/atoms";
 import { formatDate, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -208,7 +208,7 @@ export function TaskDetailModal({
       <h2 id={titleId} className="t-h2 modal-title">
         {task?.subject ?? t("tasks.detail")}
       </h2>
-      {query.isPending && <Skeleton width="100%" height={48} />}
+      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
       {query.isError && (
         <p className="t-caption form-error">
           {problemMessageOf(query.error, t)}

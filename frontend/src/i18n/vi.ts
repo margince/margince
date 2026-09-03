@@ -263,6 +263,7 @@ export const vi = {
   "deal.archived": "đã lưu trữ",
   "record.notShown": "Không hiển thị",
   "record.timelineLoading": "Đang tải lịch sử của bản ghi này…",
+  "record.chronologyLoading": "Đang đọc lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
   "record.save": "Lưu",
@@ -1055,6 +1056,7 @@ export const vi = {
   "finance.title": "Tài chính",
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",
+  "finance.loading": "Đang đọc hoá đơn…",
   "finance.syncing":
     "Đang đồng bộ với nguồn kế toán. Số liệu sẽ hiện sau lần quét đầu tiên.",
   "finance.noConnection":
@@ -2193,6 +2195,7 @@ export const vi = {
   "deals.winReasonOther": "Trường hợp khác",
   "deals.winReasonDetail": "Cụ thể là gì?",
   "deals.confirm": "Xác nhận",
+  "deals.loading": "Đang đọc danh sách deal…",
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
@@ -2359,6 +2362,7 @@ export const vi = {
   "decision.expired": "Đã hết hạn",
   "decision.expiresIn": "hết hạn sau {countdown}",
   "decision.detail": "Chi tiết phê duyệt",
+  "decision.detailLoading": "Đang đọc phê duyệt này…",
   "decision.detailTechnical": "Chi tiết kỹ thuật",
   "decision.detailAsked": "Đã hỏi",
   "decision.detailDecided": "Đã quyết định",
@@ -3137,6 +3141,7 @@ export const vi = {
   "tasks.complete": "Đánh dấu xong",
   "tasks.snooze": "Hoãn 1 ngày",
   "tasks.detail": "Công việc",
+  "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",
   "tasks.logged": "Đã ghi nhận",
 
