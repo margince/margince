@@ -111,6 +111,23 @@ export const FirstWeek: Story = {
   render: panel(weekly(() => jsonResponse(firstWeek), [WEEK_START])),
 };
 
+// A week whose wins cannot be priced. One deal in a currency with no usable
+// rate makes the whole sum unanswerable — an open deal freezes no rate, and
+// nothing is converted at an invented rate of 1 — so the slot falls back to the
+// COUNT of deals won.
+//
+// The frame beside `NarratedWeek` is the point: "€96,500.00" and "3" are two
+// different claims about one week, and a reader has to be able to tell which
+// they are looking at without knowing the FX rules.
+export const WinsCouldNotBePriced: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ ...narratedWeek, pipeline: undefined }),
+      [WEEK_START, PRIOR_WEEK_START],
+    ),
+  ),
+};
+
 // The archive, open. The picker is the only door to a past week — the product
 // deliberately gives the retrospective no nav entry — so a header that drew no
 // picker for a rep with weeks behind them would strand every one of them.

@@ -300,9 +300,26 @@ export const firstWeek: WeeklyReview = {
   deals: [],
 };
 
+/**
+ * What the week did to the pipeline, converted and frozen.
+ *
+ * Its own value rather than folded into the week below, because ABSENT is a
+ * real state with its own frame: an open deal freezes no rate, so one
+ * unconvertible deal makes the whole figure unanswerable and the panel prints
+ * the count instead of a sum. A week that always carries money cannot show
+ * that the two are different sentences.
+ */
+export const weeklyPipeline: NonNullable<WeeklyReview["pipeline"]> = {
+  created_minor: 214_000_00,
+  won_minor: 96_500_00,
+  lost_minor: 31_000_00,
+  currency: "EUR",
+};
+
 /** The ordinary Monday: a sentence, a week before it, and three closed lines. */
 export const narratedWeek: WeeklyReview = {
   ...firstWeek,
+  pipeline: weeklyPipeline,
   narrative: "Weber signed on Thursday; two promises slipped into this week.",
   narrated_at: "2026-07-06T06:01:00Z",
   prior: {

@@ -11,9 +11,9 @@ import { translate } from "../i18n";
 import {
   comparisonText,
   itemTitle,
+  KNOWN_SOURCES,
   moveHref,
   moveLabel,
-  KNOWN_SOURCES,
   moveOpensComposer,
   reasonText,
   sourceName,

@@ -8137,8 +8137,7 @@ export const en = {
   // attention could not be read". Naming the fact first works for every entry
   // and needs no second vocabulary of source nouns.
   "worklist.source.failed": "A source could not be read: {source}",
-  "worklist.source.withheld":
-    "A source is hidden from your account: {source}",
+  "worklist.source.withheld": "A source is hidden from your account: {source}",
   "worklist.untitled.generic": "Something needs you",
   "worklist.batch.likely_automated": "{count} likely automated senders",
   "worklist.batch.company_match": "{count} addresses at companies you know",

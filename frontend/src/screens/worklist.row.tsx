@@ -38,6 +38,23 @@ import {
   worklistKey,
 } from "./worklist.queries";
 
+/**
+ * A grouped row's named members, each ONCE.
+ *
+ * The contract asks for "a few members, named, so the group can be checked
+ * before it is answered", and a group of eight failures of one automation sends
+ * that automation's name eight times: the Worklist's top row read
+ * "Post-meeting recap draft · Post-meeting recap draft · Post-meeting recap
+ * draft", which tells a reader nothing about the group except that the list
+ * repeats.
+ *
+ * Order is kept — first appearance wins — because the server sends them in the
+ * order it thinks matters.
+ */
+function namedMembers(item: WorklistItem): string[] {
+  return [...new Set(item.batch?.sample ?? [])];
+}
+
 export function WorklistRow({
   item,
   position,
@@ -76,14 +93,7 @@ export function WorklistRow({
   const href = rowHref(item);
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
-  // The named members, each ONCE. The contract asks for "a few members, named,
-  // so the group can be checked before it is answered", and a group of eight
-  // failures of one automation sends that automation's name eight times: the
-  // Worklist's top row read "Post-meeting recap draft · Post-meeting recap
-  // draft · Post-meeting recap draft", which tells a reader nothing about the
-  // group except that the list repeats. Order is kept — first appearance
-  // wins — because the server sends them in the order it thinks matters.
-  const sample = [...new Set(item.batch?.sample ?? [])];
+  const sample = namedMembers(item);
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
   const because = phrasedReasons(item)
