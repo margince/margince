@@ -169,6 +169,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// rather than a waiver: the census does not accept "registered and
 		// unproven" for a tool this sweep can simply invoke.
 		{"describe_query_vocabulary", `{}`},
+		// The vocabulary run_report's own plan is written against, for the same
+		// reason: no arguments, no seam this lane is missing, so the census gets
+		// a call rather than a waiver.
+		{"describe_report_vocabulary", `{}`},
 		{"read_record", `{"record_type":"deal","id":"` + deal.String() + `"}`},
 		// A ranked sweep that finds rows and one that finds none. The empty page
 		// is the one worth pinning: it still carries `coverage` and `notes`, and

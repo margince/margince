@@ -170,6 +170,18 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
 	agents.RegisterReportTool(registry, nativeOnlyReportRunner(sorMode, reportToolRunner(newReportEngine(pool))), reportToolCatalog())
+	// The vocabulary that plan is written in, as a TOOL and not only as the
+	// margince://schema/reports resource — same reason describe_query_vocabulary
+	// exists next to query_workspace, and one reason more: the Surface-B runner
+	// is offered no resource read at all, so for a scheduled agent this is the
+	// ONLY route to the names run_report refuses against.
+	//
+	// It takes the SAME overlay guard run_report does, and the query
+	// vocabulary's comment says why: a vocabulary looks answerable anywhere, and
+	// what decides it is not whether the names are true but whether the verb
+	// they describe can be called. Here it cannot.
+	agents.RegisterReportVocabularyTool(registry,
+		nativeOnlyReportVocabularyReader{mode: sorMode, inner: agents.NewReportVocabularyResource(reportToolCatalog())})
 	// The forecast, read through the same assembler the HTTP surface uses, so
 	// the two transports cannot disagree about what a quarter contains.
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))

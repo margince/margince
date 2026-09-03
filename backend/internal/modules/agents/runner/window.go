@@ -279,7 +279,7 @@ Rules:
 - The trigger is ` + triggerProvenance + `: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
-- `)
+` + surfaceSchemaRules + `- `)
 	b.WriteString(fence.Rule("captured external"))
 	// The rule governs the run's final summary, which is filed on a record the
 	// whole team reads. Empty when the caller passed none — the certification
@@ -294,6 +294,60 @@ Available tools:
 `)
 	b.WriteString(ToolListing(specs))
 	return b.String()
+}
+
+// surfaceSchemaRules states, ONCE, what CompactSchema stops printing per tool.
+//
+// Every sentence here is true of the whole surface, which is the test for
+// belonging in this block: the retry key has one definition spliced into every
+// mutating core tool, and the unknown-key refusal is enforced by the runtime
+// independently of any schema. A rule true of one tool belongs in that tool's
+// own description, where it is paid for once by the tool that needs it.
+//
+// The retry-key line is keyed on what the LISTING shows, not on what the tool
+// is. "Any mutating tool accepts one" would be false for an extension unit's
+// mutating tool, which is refused the argument outright (refuseUnkeyableCall) —
+// and before this change the sentence only ever appeared beside a tool that
+// carried the member, so no run could read a claim about a tool that refuses it.
+// A frame sentence has no such context, so it has to be true of the whole
+// surface on its own terms.
+//
+// It is paid once per run against what the compaction saves on every listing.
+// No figure is written here: both numbers are derived and published as
+// system_frame_tokens and catalog.tokens in docs/reference/agent-tool-budget.json,
+// and a hand-typed count in a change whose subject IS token counts is the first
+// thing to go stale.
+//
+// The retry key's meaning comes from mcp.ReservedIdempotencyKeyRule, which the
+// member's own schema description also reads. Two copies of one rule drift with
+// nothing failing, and every check on it matches the text.
+//
+// COMPLETE BULLET LINES, leading dash included, so the constant reads alone and
+// a new sentence needs punctuation in one place rather than two.
+//
+// One line per omission, and no more: the schema-equivalence gate asserts the
+// other direction too — the frame states nothing about a member the compaction
+// leaves in place.
+const surfaceSchemaRules = "- An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.\n" +
+	"- A tool that LISTS `" + mcp.ReservedIdempotencyKeyArg + "` accepts it as an optional string. " +
+	mcp.ReservedIdempotencyKeyRule + "\n"
+
+// SystemFrameTokens is what the system prompt costs BEFORE any tool is listed:
+// the output contract, the rules — surfaceSchemaRules included — and the prompt
+// fence, measured with the same ~4-bytes-per-token heuristic the window bounds
+// itself with.
+//
+// Exported for the same reason ToolListing and PromptTokenCeiling are: moving a
+// per-tool sentence into the frame trades (tools × sentence) for (1 × sentence),
+// and the catalog floor holds ToolListing alone. Without this number a frame
+// that grew a paragraph would spend it on every run of every agent with nothing
+// measuring it, so it is published beside the listing it buys.
+//
+// The language rule is excluded because it is the CALLER's, not the frame's:
+// the certification lane passes none, and an installation's own base language
+// sentence is not a cost this build can state once.
+func SystemFrameTokens() int {
+	return len(systemPrompt(nil, promptfence.New(), "")) / 4
 }
 
 // ToolListing renders the tool surface exactly as the system prompt carries it.
@@ -314,7 +368,7 @@ func ToolListing(specs []mcp.ToolSpec) string {
 		// alike, and the description is the half that choice is made on — so it
 		// goes first, rather than after the several hundred characters of JSON
 		// the model needs only once it has chosen.
-		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, string(spec.InputSchema))
+		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, CompactSchema(spec))
 	}
 	return b.String()
 }

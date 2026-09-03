@@ -177,6 +177,14 @@ var composedIntents = map[string]bool{
 	// principal may already read. Read-only, it returns no records, and it
 	// names nothing a caller could not reach by asking.
 	"describe_query_vocabulary": true,
+	// describe_report_vocabulary answers the document margince://schema/reports
+	// publishes, for a caller that reads no resources — and the Surface-B runner
+	// is one, since it is offered no resource step at all. It backs no REST
+	// operation: `runReport` runs a report, and there is no operation that
+	// answers what a report's plan may SAY. Read-only, it returns no records,
+	// and the vocabulary it names is the engine's own compile-time table, so it
+	// names nothing about a workspace at all.
+	"describe_report_vocabulary": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are

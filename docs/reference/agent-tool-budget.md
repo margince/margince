@@ -20,19 +20,25 @@ The window is 24576 tokens. An agent's listing may take 17408 of them (17/24). T
 served catalog is held to 21504 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
+Before any tool is listed the frame itself costs **353 tokens** — the output contract,
+the rules and the prompt fence. It is published here because a rule moved OUT of the
+per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence,
+and only the first half is held by a bound: the floor above measures the LISTING
+alone. A frame that grows a paragraph spends it on every run of every agent.
+
 ## The declared agents
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1688 | 6% | 15720 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14873 | 15 | 8 |
-| _whole served catalog, for scale_ | 69 | 21227 | 86% | — | — | — |
+| `morning_brief` | 5 | 1621 | 6% | 15787 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2453 | 9% | 14955 | 15 | 8 |
+| _whole served catalog, for scale_ | 70 | 19785 | 80% | — | — | — |
 
 ### `morning_brief`
 
 > Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
 
-Attaches 5 tools for 1688 tokens, leaving 15720 of its budget and 22888 tokens of the
+Attaches 5 tools for 1621 tokens, leaving 15787 of its budget and 22955 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -55,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2535 tokens, leaving 14873 of its budget and 22041 tokens of the
+Attaches 7 tools for 2453 tokens, leaving 14955 of its budget and 22123 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -123,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 270 tokens, mean 307, across 69 served tools.
+Median 262 tokens, mean 282, across 70 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -132,75 +138,76 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1274 | 3 scenarios |
-| `preview_import` | 708 | — |
-| `log_activity` | 673 | 1 scenario |
-| `update_record` | 603 | 4 scenarios |
-| `send_account_email` | 545 | — |
-| `resolve_entities` | 513 | — |
-| `list_records` | 501 | — |
-| `query_workspace` | 491 | 3 scenarios |
-| `advance_deal` | 474 | 1 scenario |
-| `send_email` | 471 | 1 scenario |
-| `annotate_brief` | 456 | — |
-| `progress_deal` | 435 | 3 scenarios |
-| `book_meeting` | 431 | — |
-| `create_record` | 429 | 1 scenario |
-| `enrich` | 424 | — |
-| `review_commitments` | 409 | — |
-| `search_records` | 392 | 6 scenarios |
-| `forecast_movement` | 358 | — |
-| `search_context` | 352 | — |
-| `forecast_readings` | 335 | — |
-| `prep_for_meeting` | 333 | — |
-| `merge_records` | 323 | — |
-| `draft_email` | 317 | — |
-| `send_message` | 314 | — |
-| `advance_project_phase` | 310 | — |
-| `relink_activity` | 308 | — |
-| `draft_follow_ups_for` | 304 | — |
-| `decide_approval` | 303 | — |
-| `promote_lead` | 301 | — |
-| `archive_record` | 292 | — |
-| `catch_me_up_on` | 287 | 3 scenarios |
-| `prepare_handoff` | 275 | 1 scenario |
-| `list_approvals` | 274 | — |
-| `describe_query_vocabulary` | 273 | — |
-| `check_availability` | 270 | — |
-| `decide_approval_bundle` | 266 | — |
-| `qualify_lead` | 261 | — |
-| `create_task` | 260 | — |
-| `forecast_input_checks` | 259 | — |
-| `apply_tag` | 258 | — |
-| `account_coverage` | 252 | 2 scenarios |
-| `relink_activities` | 237 | — |
-| `merge_tags` | 229 | — |
-| `read_record` | 229 | 2 scenarios |
-| `relink_thread` | 228 | — |
-| `update_tag` | 228 | — |
-| `disqualify_lead` | 221 | — |
-| `whats_slipping_this_week` | 218 | 2 scenarios |
-| `at_risk_relationships` | 215 | — |
-| `read_brief` | 213 | — |
-| `create_tag` | 206 | — |
-| `who_knows` | 201 | — |
-| `list_pipelines` | 198 | — |
-| `remove_tag` | 198 | — |
-| `intro_path_to` | 197 | 2 scenarios |
-| `list_channel_providers` | 181 | — |
-| `check_location_support` | 163 | — |
-| `read_project_360` | 163 | — |
-| `read_approval` | 160 | — |
-| `list_input_checks` | 153 | — |
-| `commit_import` | 149 | — |
-| `get_record_tags` | 149 | — |
-| `list_colleagues` | 148 | — |
-| `whoami` | 136 | — |
-| `data_coverage` | 116 | — |
-| `list_tags` | 102 | — |
-| `get_tag` | 94 | — |
-| `read_import_report` | 80 | — |
-| `read_import_run` | 75 | — |
+| `run_report` | 786 | 3 scenarios |
+| `preview_import` | 677 | — |
+| `log_activity` | 635 | 1 scenario |
+| `update_record` | 572 | 4 scenarios |
+| `send_account_email` | 507 | — |
+| `resolve_entities` | 498 | — |
+| `list_records` | 494 | — |
+| `query_workspace` | 484 | 3 scenarios |
+| `advance_deal` | 443 | 1 scenario |
+| `send_email` | 440 | 1 scenario |
+| `annotate_brief` | 418 | — |
+| `progress_deal` | 404 | 3 scenarios |
+| `review_commitments` | 401 | — |
+| `create_record` | 398 | 1 scenario |
+| `book_meeting` | 393 | — |
+| `enrich` | 393 | — |
+| `search_records` | 385 | 6 scenarios |
+| `forecast_movement` | 351 | — |
+| `describe_report_vocabulary` | 349 | — |
+| `search_context` | 345 | — |
+| `forecast_readings` | 327 | — |
+| `prep_for_meeting` | 326 | — |
+| `merge_records` | 292 | — |
+| `send_message` | 283 | — |
+| `catch_me_up_on` | 280 | 3 scenarios |
+| `advance_project_phase` | 279 | — |
+| `draft_email` | 279 | — |
+| `relink_activity` | 277 | — |
+| `draft_follow_ups_for` | 273 | — |
+| `decide_approval` | 272 | — |
+| `promote_lead` | 270 | — |
+| `list_approvals` | 267 | — |
+| `prepare_handoff` | 267 | 1 scenario |
+| `describe_query_vocabulary` | 266 | — |
+| `check_availability` | 263 | — |
+| `archive_record` | 261 | — |
+| `forecast_input_checks` | 252 | — |
+| `account_coverage` | 245 | 2 scenarios |
+| `decide_approval_bundle` | 235 | — |
+| `qualify_lead` | 230 | — |
+| `apply_tag` | 227 | — |
+| `create_task` | 222 | — |
+| `read_record` | 222 | 2 scenarios |
+| `whats_slipping_this_week` | 211 | 2 scenarios |
+| `at_risk_relationships` | 208 | — |
+| `read_brief` | 206 | — |
+| `relink_activities` | 206 | — |
+| `merge_tags` | 198 | — |
+| `relink_thread` | 197 | — |
+| `update_tag` | 197 | — |
+| `who_knows` | 194 | — |
+| `list_pipelines` | 191 | — |
+| `disqualify_lead` | 190 | — |
+| `intro_path_to` | 190 | 2 scenarios |
+| `create_tag` | 175 | — |
+| `list_channel_providers` | 174 | — |
+| `remove_tag` | 167 | — |
+| `check_location_support` | 156 | — |
+| `read_project_360` | 156 | — |
+| `read_approval` | 153 | — |
+| `list_input_checks` | 146 | — |
+| `get_record_tags` | 142 | — |
+| `list_colleagues` | 141 | — |
+| `whoami` | 128 | — |
+| `commit_import` | 118 | — |
+| `data_coverage` | 109 | — |
+| `list_tags` | 95 | — |
+| `get_tag` | 86 | — |
+| `read_import_report` | 73 | — |
+| `read_import_run` | 67 | — |
 
 ## Related
 
