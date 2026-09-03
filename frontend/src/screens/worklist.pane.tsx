@@ -90,11 +90,11 @@ function PersonFacts({
   const zone = viewerZone();
   return (
     <dl className="worklist-pane-facts">
-      <dt className="t-meta">{t("worklist.pane.lastInbound")}</dt>
+      <dt className="t-label">{t("worklist.pane.lastInbound")}</dt>
       <dd className="t-body">
         {spoken(view.last_inbound_at, t, locale, zone)}
       </dd>
-      <dt className="t-meta">{t("worklist.pane.lastOutbound")}</dt>
+      <dt className="t-label">{t("worklist.pane.lastOutbound")}</dt>
       <dd className="t-body">
         {spoken(view.last_outbound_at, t, locale, zone)}
       </dd>

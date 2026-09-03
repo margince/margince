@@ -339,6 +339,17 @@ at 14px. A sentence a card shows INSTEAD of content is card body text
 (`--fs-body`) in `--textSecondary`, and `SurfaceState`, `EmptyState` and the
 `.empty` plate all draw it that way.
 
+**A type class you ask for must exist.** `base.css` owns the scale — `t-display`,
+`t-h2`, `t-h3`, `t-label`, `t-caption`, `t-sub`, `t-body`, `t-small`, `t-mono`,
+`t-eyebrow`, `t-danger` — and asking for a name it does not carry is silent:
+CSS says nothing, so the element inherits and its type is decided by whatever
+happens to be around it. `t-h3` was named by `StatCard` and declared nowhere,
+which rendered every tile's reading at body size; `t-meta` was asked for at
+eleven sites and `t-muted` at one, and both meant what `t-caption` already
+spells, so both were replaced rather than declared — a fourth spelling of quiet
+grey 12px would have been the wrong fix. `typeclass-coverage.test.ts` fails the
+next one, and names the file and line that asked.
+
 `Switch` versus `Checkbox` follows from the same honesty: a `Checkbox` states an
 intent that something later submits, a `Switch` **is** the action. A control that
 writes when you flip it and announces itself as a checkbox has told the reader

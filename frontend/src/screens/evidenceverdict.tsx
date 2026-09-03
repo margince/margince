@@ -8,6 +8,7 @@ import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
+import "./evidenceverdict.css";
 
 // A human's verdict on a machine's claim: agree with it, or correct it.
 //
@@ -200,7 +201,7 @@ export function EvidenceVerdict({
   // than an unconfirmed one.
   if (claim.source === "human") {
     return (
-      <span className="evidence-verdict t-muted">
+      <span className="evidence-verdict t-caption">
         {claim.verifiedAt
           ? t("evidence.confirmedAt", {
               when: formatDateTime(claim.verifiedAt, locale, recordZone),

@@ -36,6 +36,17 @@ export const MODULE_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 // extensions/<unit>/frontend/node_modules/@margince/frontend, so a walk that
 // followed it would read the entire core tree as though the unit shipped it.
 export function filesUnder(dir: string, seen = new Set<string>()): string[] {
+  return filesMatching(dir, MODULE_FILE, seen);
+}
+
+// filesMatching is the walk itself, for a gate whose corpus is not modules —
+// the type-scale gate reads `.css` as well as `.tsx`, and a second walker for
+// it would be a second answer to node_modules and symlinks both.
+export function filesMatching(
+  dir: string,
+  pattern: RegExp,
+  seen = new Set<string>(),
+): string[] {
   if (!existsSync(dir)) return [];
   const here = realpathSync(dir);
   if (seen.has(here)) return [];
@@ -48,9 +59,11 @@ export function filesUnder(dir: string, seen = new Set<string>()): string[] {
     // never judged — the gate read past them in silence. A bundler follows the
     // link and ships what is behind it.
     if (isDirectory(entry, full)) {
-      return entry.name === "node_modules" ? [] : filesUnder(full, seen);
+      return entry.name === "node_modules"
+        ? []
+        : filesMatching(full, pattern, seen);
     }
-    return MODULE_FILE.test(entry.name) ? [full] : [];
+    return pattern.test(entry.name) ? [full] : [];
   });
 }
 
