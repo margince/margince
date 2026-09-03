@@ -357,13 +357,22 @@ func (t attentionTasks) OpenForViewer(
 		}
 		due := *row.DueAt
 		linkType, linkID := primaryLink(row)
-		open = append(open, attention.Task{
+		task := attention.Task{
 			ID:       ids.UUID(row.Id),
 			Subject:  subjectOfActivity(row),
 			DueAt:    &due,
 			LinkType: linkType,
 			LinkID:   linkID,
-		})
+		}
+		// Who holds it, already on the row the store returned and dropped
+		// here. Two of this lane's three scopes put somebody else's task in
+		// front of the reader, and one of them exists precisely to surface the
+		// tasks nobody has taken.
+		if row.AssigneeId != nil {
+			assignee := ids.UUID(*row.AssigneeId)
+			task.AssigneeID = &assignee
+		}
+		open = append(open, task)
 	}
 	return open, nil
 }

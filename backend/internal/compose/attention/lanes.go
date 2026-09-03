@@ -154,6 +154,13 @@ type Task struct {
 	// route to, which is a real state and not an error.
 	LinkType string
 	LinkID   ids.UUID
+	// AssigneeID is who the task belongs to, nil when nobody has taken it.
+	//
+	// The lane serves three scopes and only one of them is the reader's own
+	// queue: an unassigned sweep and a named colleague's queue both put tasks
+	// on the page that are not theirs. Without this the rows read identically,
+	// and the one nobody owns — the whole point of that scope — cannot say so.
+	AssigneeID *ids.UUID
 }
 
 // Receipts is what the system did on its own, most recent first.

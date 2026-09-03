@@ -243,6 +243,12 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
 	}
+	// Who holds it. Absent means nobody has taken it, which the unassigned
+	// scope exists to surface and which the row could not say before.
+	if task.AssigneeID != nil {
+		assignee := openapi_types.UUID(*task.AssigneeID)
+		item.AssigneeId = &assignee
+	}
 	return item
 }
 

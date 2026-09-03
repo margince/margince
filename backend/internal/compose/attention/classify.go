@@ -382,6 +382,12 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	} else if item.DueAt != nil {
 		row.Because = append(row.Because, reason("due_today", nil))
 	}
+	// Nobody has taken it. The same fact the lead lane states, and this lane
+	// has a whole scope devoted to surfacing it — a sweep of unowned work whose
+	// rows could not say that was what they were.
+	if item.AssigneeId == nil {
+		row.Because = append(row.Because, reason("unassigned", nil))
+	}
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -416,12 +422,13 @@ func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked
 // classifyDecay: a relationship going quiet. Nobody is waiting on the reader
 // for it, which is exactly why it goes unnoticed — and why it sits low rather
 // than not at all.
-// A lapsed relationship that still carries money, or that was a real
-// relationship before it went quiet, is agreed work rather than routine. The
-// same shape classifyWaiting uses for a stale wait, and for the same reason: a
-// lane where every row ranks alike is one a rep reads once. This is the row that
-// most needs telling apart — the rep's strongest contact going silent and a cc
-// drifting are not the same morning's work.
+//
+// How low depends on what the relationship was WORTH. One that still carries
+// money, or that was real before it went silent, is agreed work; a weak one
+// with nothing on it is routine. The same shape classifyWaiting uses for a
+// stale wait, and for the same reason: a lane where every row ranks alike is
+// one a rep reads once, and the rep's strongest contact going silent is not
+// the same morning's work as a cc drifting.
 func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelRoutine
 	if decayMatters(item.Relationship) {

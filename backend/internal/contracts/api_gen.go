@@ -16841,6 +16841,14 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
+	//
+	// The lane serves three scopes and only one is the reader's own queue: an
+	// unassigned sweep and a named colleague's queue both put work on the page that
+	// is not the reader's. Without this those rows read identically to their own,
+	// and the row nobody owns — the whole point of that scope — cannot say so.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
 	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
 	// stopped.
 	//

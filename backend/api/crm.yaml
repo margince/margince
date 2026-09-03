@@ -36893,6 +36893,16 @@ components:
           $ref: '#/components/schemas/AttentionPair'
         deal:
           $ref: '#/components/schemas/AttentionDealFacts'
+        assignee_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Who holds this task, null when nobody has taken it. Sent by `task`.
+
+            The lane serves three scopes and only one is the reader's own queue: an
+            unassigned sweep and a named colleague's queue both put work on the page that
+            is not the reader's. Without this those rows read identically to their own,
+            and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
