@@ -162,8 +162,12 @@ func insertTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, reps []Te
 // A reader who sees every row passes without the membership question, matching
 // how attention/scope.go resolves an owner: a management seat reaches every row
 // by definition, and asking membership of it would refuse a reader the
-// row-scope predicate then admits. That set includes the system principal, so
-// the weekly job can re-read the snapshot it just wrote.
+// row-scope predicate then admits.
+//
+// It is NOT what lets the weekly job re-read the snapshot it just wrote: that
+// job composes under a MEMBER's own authority rather than the system principal,
+// deliberately, so its re-read passes the membership question like any other
+// team-scoped reader. Its engine therefore needs the seam bound.
 //
 // An out-of-team lead gets ErrNotFound, not ErrPermissionDenied. A refusal that
 // distinguished "this team exists but is not yours" from "no such team" would
