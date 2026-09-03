@@ -221,39 +221,43 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 ```
 ┌────────┬───────────────────────────────────────────────────────────────┐
-│ sidebar│ crumb                                            Details · me  │
-│ (glass │                                                               │
+│ sidebar│ crumb        [ Search or run a command  ⌘K ]      Details · me │
+│ (glass ├───────────────────────────────────────────────────────────────┤
 │  over  │ mark  NAME (display)  badges                  verbs, right     │
 │  the   │       facts line                                               │
 │  glow) │ tabs ───────────────────────────────────────────────────────── │
-│ Search │ ┌ details pane (280) ┐ ┌ zone pane 2  Where it stands (cells) ┐│
-│ Home   │ │ Ask                │ └──────────────────────────────────────┘│
-│ RECORDS│ │ Details label value│ ┌ zone pane 3  What happened          ┐│
-│ …      │ │ People / Seats     │ └──────────────────────────────────────┘│
-│ WORK   │ │ Tags / Room / Docs │ ┌ zone pane 4  What needs you         ┐│
-│ ● agent│ └────────────────────┘ └──────────────────────────────────────┘│
+│ Home   │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
+│ RECORDS│ │ ● Margince read this record · {name} ││ │ Ask               ││
+│ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
+│ WORK   │ │ readings ┊ readings ┊ readings        ││ │ People / Seats    ││
+│ …      │ │ spine · · · gap · today · ahead       ││ │ Tags / Room / Docs││
+│ ● agent│ │ the thread, newest first              ││ └───────────────────┘│
+│        │ └───────────────────────────────────────┘│                      │
+│        │ ┌ What needs you ┐ ┌ Commercial ┐ ┌ About ┐                     │
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
 - **Sidebar**: 224px expanded, 52px collapsed, and collapsed is the default.
   Glass over the emerald glow, a hairline on its right. Workspace name and the
-  fold at the top, the search field with `⌘K`, the navigation in groups under
-  sentence-case labels, the agent's orb at the foot. Collapsed, labels become
-  tooltips and only the task and approval counts stay, as small badges.
-- **Top row**: 44px on the ground, no bar: the breadcrumb on the left, the
-  Details toggle and the reader's monogram on the right.
+  fold at the top, the navigation in groups under sentence-case labels, the
+  agent's orb at the foot. Collapsed, labels become tooltips and only the
+  task and approval counts stay, as small badges.
+- **Top bar**: 48px, glass, a hairline under it. The breadcrumb on the left,
+  the command field in the middle (`⌘K`), the Details toggle and the reader's
+  monogram on the right. It is the application's one bar and every screen
+  has it.
 - **Record head**: a 40px mark, the name in the display face with its badges
-  on the same line, one line of facts under it, the verbs on the right.
-- **Details pane**: 280px on the left of the reading, one pane, folds to
-  nothing. It holds Ask, the attributes as label and value rows (with the
-  evidence underline on a machine-read value and a lighter "Add …" on an
-  empty one), and the short lists that describe the record (people, seats,
-  tags, the Deal Room, documents).
-- **Directions set aside.** Aurora as first built (glass panes with glows and
-  gradients on every element) was too much; a plain white "one ground, one
-  line, one row" set was too little. This is the pair reconciled: Aurora's
-  atmosphere, the clean set's structure, and no more than one kind of
-  anything.
+  on the same line, one line of facts under it, the verbs on the right. All
+  verbs outlined; the filled verb is inside the needs list.
+- **Details panel**: 288px on the right of the reading, one pane, folds to
+  nothing from the Details toggle. It holds Ask, the attributes as label and
+  value rows (with the evidence underline on a machine-read value and a
+  lighter "Add …" on an empty one), and the short lists that describe the
+  record (people, seats, tags, the Deal Room, documents). It is where the
+  current product keeps its context column, so a rep's hand does not move.
+- **The glows**: the emerald light at the top-left is faint (`.06` in light,
+  `.10` in dark); the indigo one at the bottom-right a step stronger. They are
+  atmosphere, not a feature, and the eye should not find them.
 
 ## 7. How the tool feels, and how a page is structured
 
@@ -286,22 +290,39 @@ cards stacked above a third list of things to do:
 ### The order of the zones
 
 1. **Who.** Identity, the standing badges, one line of facts, the verbs.
-2. **Where it stands.** The readings, and on a deal or a lead the stage
-   stepper beside them.
-3. **What happened.** The timeline, headed by the spine. It sits this high on
-   every record because the 360 opens on what happened last: a rep who has
-   been away for a week reads the gap before anything else.
-4. **What needs you.** One list. The agent's read of the record is its lead
-   row; the agent's finds, staged approvals, the reply that is owed, overdue
-   and due tasks and the next meeting are the rows under it.
-5. **The money or the score.** Commercial on a company and a deal; the score
+2. **The 360.** One element, and the one place the page is allowed to look
+   like a feature: where the record stands and what happened, together. It
+   opens with the indigo tile and "Margince read this record · {name} · 360",
+   then the verdict word in the display face with its because-sentence and
+   its sources, then the readings as cells, then the stage stepper or the
+   ladder where the record has one, then the spine and the thread, newest
+   first, and a foot that says who wrote it. A two-pixel indigo-to-emerald
+   rule along its top edge and a faint indigo wash in one corner are its whole
+   ornament. Every claim in it is hoverable: a source chip opens the quote it
+   rests on and where the quote came from.
+3. **What needs you.** One list. The move the call names is its lead row; the
+   agent's finds, staged approvals, the reply that is owed, overdue and due
+   tasks and the next meeting are the rows under it.
+4. **The money or the score.** Commercial on a company and a deal; the score
    on a lead.
-6. **The slow-changing rest.** About on a company, understanding on a
-   contact, the buying committee on a deal, the details on a lead.
+5. **The slow-changing rest.** About on a company, understanding on a
+   contact, what the deal is and the buying committee on a deal.
 
-The context column is the same on every record: Ask at the top, then the
-panes that answer "who and what is this" (people or seats, details, tags,
-the Deal Room, documents, evidence).
+The details panel is the same on every record: Ask at the top, then the
+panes that answer "who and what is this".
+
+**Sub pages.** Every tab in the strip opens a real page, in the same panes:
+History (the filter strip, the chronology grouped by day, load more), People
+(the coverage band, the roster as a table with list, board and map cuts),
+Deals (the commercial band, the deals table with won and lost), Tasks (tick,
+snooze, open), Finance (the readings, the invoice table, the provider), Documents
+(contracts, then files with category and origin), Profile (the details form,
+what they do, the facts Margince read with confirm and correct, linked records,
+data and tools), Partner (the programme and its deals); on a contact History,
+Network (the best route, the ways in, what changed), Deals (the seats she
+holds), Meetings (next, with brief and room; past), Data & tools (the provider
+snapshot and what Margince read), Documents; on a deal Documents and History;
+on a lead History.
 
 ### The company record
 
@@ -523,7 +544,8 @@ looks now.
 | `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
 | `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 8px radius, the "Margince read this record" label at 11.5px 500 in `--aiText`, the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
-| `Spine` | Six stops on a `--line2` axis: a date at 11px, a 9px dot, a 12.5px 500 title, a 11.5px detail; the gap stop at 1.5× width with an amber dashed segment; today filled emerald; the future stop dashed. |
+| `Spine` | Six stops on a `--line2` axis inside the 360: a date at 11px, a 9px dot, a 12.5px 500 title, a 11.5px detail; the gap stop at 1.5× width with an amber dashed segment; today filled emerald; the future stop dashed. |
+| `EvidenceMark` / `Citations` | A **source chip**: `--bg3`, 11.5px, a note glyph and a short label ("email · 1 Sep"). On hover or focus it opens a popover with the quote it rests on, in a left-ruled indigo block, and the origin line under it. Every claim the agent makes carries them; they are how a reader checks the 360 without leaving it. |
 | `Stepper` | Steps as 24px pills on one line with a `›` between: done on `--accentBg`, the current one filled `--accent`, the rest outlined; the rule ("A terminal stage asks first") at the right in `--ink4`. |
 
 ## 9. Motion
