@@ -457,16 +457,19 @@
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: 9px;
-  padding: 2px 7px; /* ds:ignore 7 + the rail's 8px inset centres the 32px chip on the rows' own 18px glyph axis */
+  padding: 2px 7px 2px 3px; /* ds:ignore 3 + the rail's 8px inset centres the 40px chip on the rows' own 18px glyph axis */
   flex: 1;
   min-width: 0;
   overflow: hidden;
 }
 .rail .ws-chip {
-  width: 32px;
-  height: 32px;
+  /* The workspace's mark is the one picture in the chrome, and at 32px it read
+     as one more row glyph. 40px fills the strip's height less the head's own
+     inset, which is as large as the head can carry without moving the rows. */
+  width: 40px;
+  height: 40px;
   flex: none;
-  border-radius: 9px;
+  border-radius: 10px;
   /* Flat brand emerald, no gradient and no lift: the mark is the one filled
      thing in the chrome, and a lit, shadowed chip beside quiet rows was the
      loudest object on the screen. */
@@ -479,7 +482,7 @@
    stands here is a logo drawn for its own background, or the monogram Avatar
    tints from the record's identity, and either one on the brand emerald would
    be a second surface behind a finished mark. The avatar fills the slot so the
-   collapsed rail keeps centring the same 32px box on the rows' glyph axis. */
+   collapsed rail keeps centring the same 40px box on the rows' glyph axis. */
 .rail .ws-chip-company {
   background: none;
 }
@@ -518,7 +521,9 @@
   opacity: 0;
 }
 .rail .ws-name b {
-  font-size: 13px;
+  /* A step up from the rows: the workspace's name heads the column and reads
+     first, and at the rows' own size it was one more label among them. */
+  font-size: 15px;
   font-weight: var(--fw-semibold);
   color: var(--textPrimary);
   line-height: 1.25;
