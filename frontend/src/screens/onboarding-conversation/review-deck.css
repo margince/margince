@@ -59,7 +59,10 @@
   border: 1.5px dashed var(--aiMed);
   border-inline-start: 3px solid var(--ai);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  /* The sheet is the paper the question is written on, so it is the lightest
+     ground the theme has rather than the card grey. The only tint on it is the
+     band, which is tinted because of what it says and not to separate it. */
+  background: var(--bgElevated);
 }
 /* A card the flow will not continue without is marked as such on its own edge,
    not only in the tray's count: the reason a Continue refuses should be visible
@@ -113,6 +116,16 @@
   line-height: var(--lh-tight);
 }
 
+/* What the field is for, quieter than the evidence below it: the evidence is
+   a claim the site made and earns the reader's attention first, this is
+   background a reader only needs once they wonder what to type. */
+.rdeck-hint {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-normal);
+}
+
 .rdeck-evidence {
   margin: 0;
   color: var(--textSecondary);
@@ -130,6 +143,10 @@
   color: var(--textPrimary);
   font-family: var(--f-body);
   font-size: var(--fs-body);
+}
+.rdeck-card input::placeholder,
+.rdeck-card textarea::placeholder {
+  color: var(--textMeta);
 }
 .rdeck-card textarea {
   min-height: 6rem;
@@ -172,8 +189,10 @@
   display: flex;
   justify-content: flex-end;
   padding: var(--space-3) var(--space-5);
+  /* The rule alone separates the foot. It stands on the same sheet as the
+     question, because a second ground under one control reads as a second
+     card. */
   border-top: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
 }
 
 /* The tray: what is left, what went in without anybody, and the way onward. */

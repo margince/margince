@@ -344,10 +344,16 @@
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
   --fs-display: 30px; /* the title of a full-viewport moment */
-  /* Two fluid rungs, for the two surfaces that own a whole viewport and
-     therefore have room to answer to it: the gate and the handoff scene. */
+  /* Three fluid rungs, for the surfaces that own a whole viewport and therefore
+     have room to answer to it: the gate, the handoff scene, and the greeting.
+     The greeting's is a rung of its own rather than the hero one set larger,
+     because it is the one line in the product with nothing else competing for
+     the screen: no form beside it, no step above it, no ladder of rows below.
+     Reusing the hero rung there would either leave the greeting undersized or
+     drag every hero on a working surface up with it. */
   --fs-display-fluid: clamp(24px, 2.6vw, 32px);
   --fs-hero-fluid: clamp(30px, 6vw, 46px);
+  --fs-greeting-fluid: clamp(32px, 4.6vw, 54px);
 
   /* Four weights. Outfit and DM Sans are both variable, so 550/560/580/600/620/
      650 rendered as six genuinely different weights for one "emphasis" role —

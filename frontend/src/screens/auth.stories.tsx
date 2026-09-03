@@ -75,12 +75,17 @@ function AuthStory({
   // at the render boundary and leaves the wire alone.
   oidcProviders = [],
   locale = "en",
+  // Absent by default, matching the server: the welcome is the exception a
+  // story has to ask for, never something every other story here accidentally
+  // renders.
+  firstRun = false,
 }: Readonly<{
   profile: AssistantProfile;
   profileStatus?: number;
   notice?: "session-expired" | "signed-out";
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
   locale?: Locale;
+  firstRun?: boolean;
 }>) {
   installFetchStub({
     "GET /assistant/profile": () =>
@@ -89,10 +94,14 @@ function AuthStory({
         profileStatus,
       ),
     "GET /auth/capabilities": () =>
+      // `first_run` is not in `schema.d.ts` yet (see the same field in
+      // auth.tsx) — `jsonResponse` takes `unknown`, so the stub can already
+      // send the wire shape the backend is adding without a cast.
       jsonResponse({
         password: true,
         password_reset: true,
         oidc_providers: oidcProviders,
+        first_run: firstRun,
       }),
   });
   return (
@@ -104,6 +113,16 @@ function AuthStory({
 
 export const ConfiguredHybrid: Story = {
   render: () => <AuthStory profile={configured} />,
+};
+
+/**
+ * The installation's very first sign-in, `first_run` true (WelcomeSignIn):
+ * one centred column with the Core as the subject, the SAME sign-in form
+ * underneath it. Every other story on this page renders the ordinary
+ * two-region surface, because none of them sets this flag.
+ */
+export const FirstRunWelcome: Story = {
+  render: () => <AuthStory profile={configured} firstRun />,
 };
 
 /**

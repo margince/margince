@@ -174,6 +174,16 @@ export function CompanyAct({
 
   const [selectedFactKeys, setSelectedFactKeys] = useState<string[]>([]);
   const [artifactMode, setArtifactMode] = useState<ArtifactMode>("dossier");
+  // Which field the deck should open on next, set by the whole-record
+  // document's "Settle it" pill and read once by the deck it switches back
+  // to. Cleared whenever the reader reaches the document any other way, so a
+  // stale settle target from minutes ago cannot reach back into a deck the
+  // reader has since moved past on their own.
+  const [goToField, setGoToField] = useState<CompanyFieldName | null>(null);
+  const settleField = useCallback((field: CompanyFieldName) => {
+    setGoToField(field);
+    setArtifactMode("dossier");
+  }, []);
   // A confirm 409 that this driver has already resolved into a next step,
   // rather than a bare failure. The server gives each of its three refusals
   // its own code (crm.yaml, confirmCompanySiteRead), so each notice states
@@ -912,20 +922,27 @@ export function CompanyAct({
             setDraft((current) => changeDraftField(current, field, value))
           }
           onDone={() => confirm.mutate()}
-          onReadWhole={() => setArtifactMode("profile")}
+          onReadWhole={() => {
+            // A manual ask to read the whole record, not a settle — any
+            // earlier "Settle it" target is stale the moment the reader
+            // leaves the deck this way.
+            setGoToField(null);
+            setArtifactMode("profile");
+          }}
           // EVERY row, not just the outstanding ones: the article is what the
           // record says, and a version of it that showed only the unanswered
           // half would be the deck's own list again in prose.
           digest={(active) => <ProfileDigest rows={allRows} active={active} />}
           pending={confirm.isPending}
           disabled={confirmRefused}
+          goTo={goToField ?? undefined}
         />
       ) : artifactMode === "profile" ? (
-        // The whole record, read as the article it is. A reader who asks to see
-        // everything is READING, and the editing wall answered that ask with a
-        // hundred controls: the two are different acts and now have different
-        // doors.
-        <div className="ob-scene pdigest-page">
+        // The whole record, read as the two-column document it is. A reader
+        // who asks to see everything is READING, and the editing wall
+        // answered that ask with a hundred controls: the two are different
+        // acts and now have different doors.
+        <div className="ob-scene">
           {/* The way back to the deck. The whole record is somewhere a reader
               ASKED to go, so it needs a door out that is not the browser's back
               button: without one the deck's tray, and the count of what is
@@ -933,7 +950,21 @@ export function CompanyAct({
           <Button variant="ghost" onClick={() => setArtifactMode("dossier")}>
             {t("ob.deck.backToOpen")}
           </Button>
-          <ProfileDigest rows={allRows} />
+          {/* `read` rather than nothing: this is the door a reader asked for
+              to see the WHOLE record, and the crawl found far more than the
+              twenty-odd fields the deck ever asks about. The companion beside
+              the deck never gets this prop, on purpose — it answers "what did
+              my answer just land in", and the facts, people and legal
+              entities the deck never touches would bury that under the whole
+              archive. `onSettle` is the reverse door: pressing it on an
+              unanswered line switches the deck back on AND points it at that
+              field, through the same `goToField` the deck's own "Settle it"
+              route uses. */}
+          <ProfileDigest
+            rows={allRows}
+            read={read ?? undefined}
+            onSettle={settleField}
+          />
           {/* Editing is its own act, and the wall is where it happens: a field
               changed freely and a fact unticked are both things the server
               wants, and neither is something the article does. */}

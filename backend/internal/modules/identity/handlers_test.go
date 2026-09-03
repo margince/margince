@@ -152,3 +152,92 @@ func TestGetAuthCapabilitiesStopsReadingTheProviderPolicyUnderAFlood(t *testing.
 		t.Error("password sign-in was withheld from a throttled caller; it is the method that always remains")
 	}
 }
+
+// first_run is the anonymous probe's carry-through of the installation's own
+// setup state (compose derives it from the same steps GetInstallationSetup
+// reads); this module's job is only to put firstRunFn's answer on the wire.
+func TestGetAuthCapabilitiesReportsFirstRunWhenSetupIsIncomplete(t *testing.T) {
+	h := Handlers{}.WithFirstRunFn(func(context.Context) (bool, error) {
+		return true, nil
+	})
+	rec := httptest.NewRecorder()
+	h.GetAuthCapabilities(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil))
+
+	var body struct {
+		FirstRun bool `json:"first_run"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !body.FirstRun {
+		t.Error("first_run = false for an installation whose setup is incomplete, want true")
+	}
+}
+
+func TestGetAuthCapabilitiesReportsNoFirstRunWhenSetupIsComplete(t *testing.T) {
+	h := Handlers{}.WithFirstRunFn(func(context.Context) (bool, error) {
+		return false, nil
+	})
+	rec := httptest.NewRecorder()
+	h.GetAuthCapabilities(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil))
+
+	var body struct {
+		FirstRun bool `json:"first_run"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body.FirstRun {
+		t.Error("first_run = true for an installation whose setup is already complete, want false")
+	}
+}
+
+// A failed read must not turn an anonymous 200 into a 500, and must not
+// mislabel a login screen as a welcome screen: the login UI still has to
+// render, so the degraded answer is the one that offers ordinary sign-in.
+func TestGetAuthCapabilitiesFirstRunDegradesToFalseWhenTheSignalCannotBeRead(t *testing.T) {
+	h := Handlers{}.WithFirstRunFn(func(context.Context) (bool, error) {
+		return false, errors.New("the installation workspace is unreachable")
+	})
+	rec := httptest.NewRecorder()
+	h.GetAuthCapabilities(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("capabilities answered %d on a failed first-run read; the login screen must still render", rec.Code)
+	}
+	var body struct {
+		FirstRun bool `json:"first_run"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body.FirstRun {
+		t.Error("first_run = true on a failed read; a reader who cannot be told must get the ordinary sign-in screen, not the welcome one")
+	}
+}
+
+// The anonymous probe carries exactly the fields AuthCapabilities declares —
+// never a step name, a configured value, or anything about an account. This
+// pins the RESPONSE SHAPE itself, so a future field added anywhere in this
+// handler cannot widen what an anonymous caller learns without failing here.
+func TestGetAuthCapabilitiesDisclosesNothingBeyondItsFixedFields(t *testing.T) {
+	h := Handlers{}.WithFirstRunFn(func(context.Context) (bool, error) {
+		return true, nil
+	})
+	rec := httptest.NewRecorder()
+	h.GetAuthCapabilities(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil))
+
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	allowed := map[string]bool{
+		"password": true, "password_reset": true, "oidc_providers": true,
+		"first_run": true, "release_version": true,
+	}
+	for key := range body {
+		if !allowed[key] {
+			t.Errorf("capabilities response carries unexpected field %q; an anonymous caller must learn nothing beyond the login screen's fixed vocabulary", key)
+		}
+	}
+}

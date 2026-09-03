@@ -212,6 +212,12 @@ export function AuthScreen({
   const resetAvailable = previewedPasswordReset(
     capabilities.data?.password_reset === true,
   );
+  // True only while THIS installation has not finished its blocking setup —
+  // never inferred from anything the browser can see on its own. Absent,
+  // false, or a probe that never resolves all fall through to the ordinary
+  // presentation below: the welcome is the assertion, never the default a
+  // missing field decays into.
+  const firstRun = capabilities.data?.first_run === true;
 
   // This query is presentation-only and deliberately independent of auth:
   // profile latency or failure hides the live runtime line but can never
@@ -249,6 +255,10 @@ export function AuthScreen({
     <AuthExperience
       profile={assistantProfile.data}
       phase={view.kind === "login" ? authPhase : "quiet"}
+      // The welcome presentation of THIS frame, not a second one: it applies
+      // only to the login view of a first-run installation, so every other
+      // view and every non-first-run login render exactly as they do today.
+      welcome={view.kind === "login" && firstRun}
     >
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (

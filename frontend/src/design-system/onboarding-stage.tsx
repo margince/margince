@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { ThemeToggle } from "../app/theme-toggle";
+import { AmbientWaves } from "./ambient-waves";
 import { Eyebrow } from "./eyebrow";
 import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
@@ -292,6 +293,12 @@ export function OnboardingStage({
 }>) {
   return (
     <div className="ob-page">
+      {/* The ground the card stands on, the same one the sign-in surface has.
+          Setup is the other half of arriving: the reader has just come off that
+          screen and is still being introduced to the product. It sits BEHIND
+          the card, which is opaque, so it is only ever seen in the margin
+          around the room. */}
+      <AmbientWaves />
       <div
         className="ob-stage"
         data-lit={lit}

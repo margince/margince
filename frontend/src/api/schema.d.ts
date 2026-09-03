@@ -21888,6 +21888,8 @@ export interface components {
             password: boolean;
             /** @description The A74 reset flow can complete end to end (outbound email configured + healthy). */
             password_reset: boolean;
+            /** @description Whether this installation has yet to finish its setup, so an unconfigured one can be greeted rather than only asked for credentials. Deliberately readable without a session, which is the narrowest form of a fact `/installation/setup` reports in full to a human session: it says that setup is unfinished and nothing else. It names no account, no step, no configured value, and says nothing about any credential. */
+            first_run: boolean;
             /** @description Operational OIDC providers (empty until the OIDC flow ships). */
             oidc_providers: {
                 /** @description Stable provider key, e.g. `google`. */

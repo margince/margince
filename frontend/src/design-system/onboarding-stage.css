@@ -31,7 +31,21 @@
      centred track overflows equally in both directions and the top half is the
      half that cannot be scrolled back to. */
   align-content: safe center;
-  padding: var(--space-6) var(--space-6);
+  /* NO INSET. The page used to hold the card off the viewport by one --space-6
+     on all four sides, which framed the room as an object sitting on a ground.
+     The ground is the ribbons now, and a band of flat paper between them and
+     the card is the one part of the composition that reads as a border. The
+     card reaches the edge; what is left around it, top and bottom, is the
+     ground itself. */
+  /* The ground (`AmbientWaves`) is the first child at `z-index: -1`, which
+     paints it after this element's own background and before the card. Both
+     properties are needed: `relative` gives the canvas a box to fill, and
+     `isolate` opens the stacking context that keeps its negative index inside
+     this element instead of letting it escape behind the page. */
+  position: relative;
+  isolation: isolate;
+  /* What a machine without WebGL2 stands on, and what the ground fades up out
+     of on every other one. */
   background: var(--bgElevated);
 }
 @supports (min-height: 100dvh) {
@@ -66,7 +80,10 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
-  background: var(--bgCard);
+  /* The room is a white sheet. The card grey reads as a disabled surface under
+     a composition this quiet, and the drawing has the stage lighter than the
+     page it sits on rather than darker. */
+  background: var(--bgElevated);
 }
 
 /*
@@ -244,7 +261,20 @@
 .ob-stage-core {
   position: absolute;
   z-index: 1;
-  left: 13%;
+  /*
+   * A share of the room, but never so far left that the ball leaves it. 13% of
+   * a narrow stage is less than the orb's own reach, and it then hangs off the
+   * edge with a bite taken out of it.
+   *
+   * The floor is measured from the HALO, not from the sphere. `.core-glow` is
+   * 1.39x `--coreSize` (300px here), so its half-reach is 209px against the
+   * ball's own 150px, and a floor built on the ball left the light around it
+   * cut off by the card's `overflow: hidden` on a straight vertical line. That
+   * reads as a rendering fault rather than as an orb near an edge. Scaled the
+   * way the orb itself is, so the same rule holds for the hero and for the
+   * smaller one the work layout steps back to.
+   */
+  left: max(13%, calc(209px * var(--ob-core-scale, 1) + var(--space-6)));
   top: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%) scale(var(--ob-core-scale, 1));
@@ -398,7 +428,12 @@
 }
 
 /*
- * The Core's first light: a dot at the orb's own centre, crossing the room once.
+ * The Core's first light: a dot at the orb's own centre, crossing the room.
+ *
+ * TWICE, because once reads as a transition and twice reads as a pulse: the
+ * second crossing is what says the thing is alive rather than that a screen
+ * changed. It is a beat, so it stops after the second, and nothing on this
+ * surface animates forever.
  *
  * ANCHORED TO THE ORB, not to a percentage of the window, so it starts where the
  * ball actually is at every width and after the columns stack. Behind the orb
@@ -419,7 +454,7 @@
     color-mix(in srgb, var(--orbGlow) 78%, transparent),
     transparent 70%
   );
-  animation: ob-stage-flash 2400ms var(--ease-out) both;
+  animation: ob-stage-flash 2400ms var(--ease-out) 2 both;
 }
 @keyframes ob-stage-flash {
   0% {

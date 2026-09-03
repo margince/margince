@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
+import { fieldGuidance } from "./field-guidance";
 import "./review-deck.css";
 
 /**
@@ -83,6 +84,7 @@ export function ReviewDeck({
   pending,
   disabled,
   digest,
+  goTo,
 }: Readonly<{
   cards: readonly DeckCard[];
   /**
@@ -111,6 +113,14 @@ export function ReviewDeck({
    * rather than built here so the deck stays about asking.
    */
   digest: (active: CompanyFieldName | undefined) => ReactNode;
+  /**
+   * A field to jump the deck to, from outside it — the document's own
+   * "Settle it" pill. Read once per distinct value rather than clamped into
+   * `at` directly: the deck still owns its cursor, and a caller naming a
+   * field the deck has never asked about (already answered, never
+   * outstanding) is a no-op rather than a crash.
+   */
+  goTo?: CompanyFieldName;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -130,6 +140,20 @@ export function ReviewDeck({
       order.current.push(entry.field);
     }
   }
+  // Runs once on mount for a deck opened straight onto a field ("Settle it"
+  // switches the artifact mode back to the deck AND sets this in the same
+  // render, so the deck that mounts already carries it) and again whenever
+  // the caller names a DIFFERENT field — never on every render, or a reader
+  // who has since moved the cursor themselves would be dragged back to it.
+  useEffect(() => {
+    if (goTo === undefined) {
+      return;
+    }
+    const index = order.current.indexOf(goTo);
+    if (index >= 0) {
+      setAt(index);
+    }
+  }, [goTo]);
   const asking = order.current[at];
   // Past the end is the honest state once every card is met, not a clamp back
   // onto the last one: the deck is finished and says so.
@@ -217,6 +241,8 @@ function DeckCardFace({
 }>) {
   const t = useT();
   const controlId = useId();
+  const guidance = fieldGuidance(card.field);
+  const placeholder = guidance === undefined ? undefined : t(guidance.example);
   return (
     <div className="rdeck-card" data-required={card.required}>
       <div className="rdeck-head">
@@ -234,6 +260,13 @@ function DeckCardFace({
         <label className="rdeck-question" htmlFor={controlId}>
           {card.question}
         </label>
+        {/* What this field is for, so an empty card is still answerable.
+          Shown alongside evidence rather than instead of it: the evidence is
+          a claim the site made, this is what the field is for, and neither
+          sentence says the other. */}
+        {guidance === undefined ? null : (
+          <p className="rdeck-hint">{t(guidance.hint)}</p>
+        )}
         {card.evidence === undefined ? null : (
           <p className="rdeck-evidence">{card.evidence}</p>
         )}
@@ -241,12 +274,14 @@ function DeckCardFace({
           <textarea
             id={controlId}
             value={card.value}
+            placeholder={placeholder}
             onChange={(event) => onField(card.field, event.target.value)}
           />
         ) : (
           <input
             id={controlId}
             value={card.value}
+            placeholder={placeholder}
             onChange={(event) => onField(card.field, event.target.value)}
           />
         )}

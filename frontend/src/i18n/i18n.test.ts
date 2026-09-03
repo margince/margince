@@ -230,6 +230,17 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Other cases verified individually against the source.
   "shell.logoAria",
   "ob.conv.connect.scopeMicrosoft",
+
+  // Worked examples of a German commercial register entry, the shape the
+  // legal-notice read actually parses regardless of which locale a reader
+  // picked. A "translated" court name or register prefix would show an
+  // example that does not match what the product reads.
+  "ob.fieldEg.legal_name",
+  "ob.fieldEg.registered_address",
+  "ob.fieldEg.register_vat",
+  "ob.fieldEg.legal_form",
+  "ob.fieldEg.register_court",
+  "ob.fieldEg.register_number",
 ]);
 
 // Every invariant below derives from `catalogs`, so a locale added to the

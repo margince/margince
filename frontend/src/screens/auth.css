@@ -47,6 +47,15 @@
   /* The positioning context for the wordmark, which is placed against the PAGE
      at desktop widths rather than against the column it happens to live in. */
   position: relative;
+  /* And the stacking context the ground needs. `AmbientWaves` is the first
+     child and sits at `z-index: -1`, which paints it after this element's own
+     background and before everything it holds. Without `isolate` that negative
+     index escapes to the nearest ancestor that has a stacking context and the
+     canvas disappears behind the page. `position: relative` alone does not
+     open one. */
+  isolation: isolate;
+  /* What a machine without WebGL2 is left standing on, and what the ground
+     fades up out of on every other one. */
   background: var(--bgElevated);
 }
 @supports (min-height: 100dvh) {
@@ -114,7 +123,12 @@
   /* Air, and a lot of it: the form is one narrow measure and everything the eye
      does not need is empty space around it. */
   padding: var(--authPadBlock) var(--authPadInline);
-  background: var(--bgElevated);
+  /* NO ground of its own. It used to repaint --bgElevated, which is what the
+     surface underneath already is, so it said nothing then and hides the
+     ground now: an opaque half stops the ribbons dead at the hairline. The
+     form's side being plain is still true, and it is true because nothing is
+     added here rather than because something is painted over. */
+  background: none;
 }
 .auth-task-in {
   /* §6.2: 380 minimum, 400 preferred, 440 maximum. */
@@ -497,33 +511,16 @@
   /* The SAME padding as the task half. The two are one page divided by a
      hairline, and a different inset on each side of it reads as two pages. */
   padding: var(--authPadBlock) var(--authPadInline);
-  /* Four layers, matching the artifact's stack. The port had three and had the
-     first one backwards: the artifact's top-left wash is an opaque pale mint
-     that LIGHTENS toward white, and a translucent accent wash darkens instead.
-     Same footprint, opposite luminance, and it is why the whole column sat
-     heavier than the picture. --coreLight carries the lift, so it still follows
-     the palette into dark. */
-  background:
-    radial-gradient(
-      760px 580px at 34% 22%,
-      color-mix(in srgb, var(--coreLight) 40%, transparent) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      560px 480px at 4% 104%,
-      color-mix(in srgb, var(--coreLight) 22%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      520px 420px at 96% 8%,
-      color-mix(in srgb, var(--accent) 6%, transparent),
-      transparent 58%
-    ),
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--accent) 4%, var(--bgElevated)) 0%,
-      color-mix(in srgb, var(--accent) 7%, var(--bgElevated)) 100%
-    );
+  /* NO WASH OF ITS OWN, and this is where one used to be: four layers of pale
+     mint and accent, full-bleed, which is what made this half read as a side of
+     the page rather than an object on it. The ground (`AmbientWaves`, behind the
+     whole surface) does that job now, and it does it across both halves. A
+     second wash on one of them puts a different hue on each side of the
+     hairline, which is one page painted as two.
+     The separation the wash used to carry is now carried by the hairline alone,
+     which is what the file's opening note says it should be: full-bleed halves
+     and a single rule read as one decision. */
+  background: none;
 }
 /*
  * The Core is sized from THIS PANE rather than left at the primitive's default,
@@ -1037,4 +1034,278 @@
   .auth-promise-icon {
     forced-color-adjust: auto;
   }
+}
+
+/* ===== the first-run welcome ============================================= */
+/*
+ * The installation's very first sign-in (`AuthExperience`'s `welcome` prop,
+ * read here as `data-auth-welcome` on `.auth-surface`) is a PRESENTATION of
+ * this same frame, not a second one. It applies only when the caller passes
+ * `welcome` (login view, `first_run` true); every other view and every
+ * non-first-run login never carries the attribute and renders the two-region
+ * layout above exactly as before.
+ *
+ * ADR-0076 Decision 1 (task before identity in reading order) is untouched:
+ * the DOM does not change, only `order` does: the same property the ordinary
+ * two-column layout already uses to put the identity column on the left of a
+ * form that is first in the markup. Here it collapses the pair into ONE
+ * column instead of two, with the identity cluster (Core, then its copy)
+ * first and the form second, so the Core reads as the page's subject rather
+ * than a companion beside the form.
+ *
+ * Every selector below carries `[data-auth-welcome="true"]`, which is higher
+ * specificity (0,3,0 vs 0,1,0) than the two `max-width` breakpoints above, so
+ * this presentation holds at every width without restating them, including
+ * on a phone, where the ordinary layout drops the identity column entirely
+ * ("PHONE ONLY: the surface is the task", above). That is a deliberate
+ * override here: the Core is the one thing first run is FOR, so it stays on
+ * screen at every width instead of being the one region a phone reader loses.
+ */
+.auth-surface[data-auth-welcome="true"] {
+  /* A COLUMN, not a grid. The two-column surface sizes its tracks against a
+     definite height, and stacked that gave the greeting a track shorter than
+     the greeting: it overflowed its own row and printed across the form. A
+     flex column has no tracks to mis-size, so each region is exactly as tall
+     as what it holds. */
+  display: flex;
+  flex-direction: column;
+  /* ONE GROUND AND ONE COLUMN. Two regions that keep their own grounds and a
+     rule between them read as two screens stacked, which is what this was: a
+     greeting above a seam, and a sign-in below it. The welcome is a single
+     composition, so the seam goes and both regions sit centred on the one
+     ground the surface already paints. */
+  /* SAFE centring, the same reason `.ob-page` uses it: past the point where
+     the composition is taller than the window, a centred track overflows
+     equally in both directions and the top half is the half that cannot be
+     scrolled back to, which is where the orb lives. */
+  justify-content: safe center;
+  align-items: center;
+  gap: var(--space-6);
+  padding-block: var(--space-6);
+  overflow-y: auto;
+  /* Both halves of hosting the ground below. `relative` gives the canvas a box
+     to fill; `isolate` opens a stacking context so the canvas's negative index
+     stays inside this surface. Without the second, `z-index: -1` escapes to the
+     nearest ancestor that has one and the ground vanishes behind the page. */
+  position: relative;
+  isolation: isolate;
+}
+
+/*
+ * The light in the room, when there is no GPU to draw it.
+ *
+ * `AmbientWaves` paints this surface's real ground on a canvas behind
+ * everything (see the `isolation` note above). This gradient is what a machine
+ * without WebGL2 gets, and it is a still one on purpose: the canvas covers it
+ * completely when it exists, so animating it would be a full-viewport repaint
+ * nobody can see.
+ *
+ * ON THE SURFACE ITSELF rather than on a pseudo-element. A layer would have to
+ * sit either above the ground and over the words, or below the ground and out
+ * of sight, and raising the regions over it instead makes them positioned,
+ * which drops the wordmark placed against this surface into the middle of the
+ * form. A background has none of those problems: it is already behind
+ * everything the surface holds.
+ */
+.auth-surface[data-auth-welcome="true"] {
+  background:
+    radial-gradient(
+      34% 30% at 24% 26%,
+      color-mix(in srgb, var(--aiLight) 92%, transparent),
+      transparent 66%
+    ),
+    radial-gradient(
+      30% 28% at 76% 68%,
+      color-mix(in srgb, var(--accentLight) 88%, transparent),
+      transparent 64%
+    ),
+    radial-gradient(
+      30% 26% at 62% 8%,
+      color-mix(in srgb, var(--coreLight) 70%, transparent),
+      transparent 68%
+    ),
+    var(--bgElevated);
+}
+
+.auth-surface[data-auth-welcome="true"] .auth-task {
+  order: 2;
+  /* The form is the last thing in the composition, not a panel of its own. */
+  padding: 0;
+  background: none;
+  width: 100%;
+  max-width: 24rem;
+  flex: 0 0 auto;
+}
+.auth-surface[data-auth-welcome="true"] .auth-identity-col {
+  order: 1;
+  /* Overrides the rule that hides this column on a narrow surface: the Core is
+     the one thing first run is FOR, so it stays at every width. */
+  display: grid;
+  justify-items: center;
+  padding: 0;
+  background: none;
+  text-align: center;
+  border: 0;
+  /* The base rule declares TWO auto rows, the Core and the copy, because the
+     two-column composition has exactly those. Stacked, the runtime line is a
+     third child, which lands in an implicit row the fixed track never sized
+     and the column's own `overflow: hidden` then cut off over the form below.
+     Rows by content here, and nothing to clip. */
+  grid-template-rows: none;
+  /* `auto`, NOT `min-content`. Both size a row to its content, but min-content
+     sizes it to the height the item would have at its NARROWEST width, and
+     these items are centred, so they are narrower than the column. The copy
+     block was given a row one wrapped line taller than the copy, which printed
+     as dead air between the last sentence and the form under it. */
+  grid-auto-rows: auto;
+  align-content: start;
+  overflow: visible;
+  height: auto;
+  flex: 0 0 auto;
+  gap: var(--space-4);
+}
+/*
+ * The page says its name once.
+ *
+ * The greeting above IS this page's heading, so the form's own title repeats
+ * it a second time in a larger voice than the sentence it follows. It stays in
+ * the accessibility tree, where a form still wants its name, and leaves the
+ * composition.
+ */
+.auth-surface[data-auth-welcome="true"] .auth-card > h1,
+.auth-surface[data-auth-welcome="true"] .auth-card > .card-sub {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The subject of the whole page rather than of half of it, and small enough
+   that the form it introduces is still on screen under it. */
+.auth-surface[data-auth-welcome="true"] .auth-identity-col .core {
+  --coreSize: clamp(110px, 16vh, 168px);
+  --coreGlass: calc(var(--coreSize) * 0.94);
+  /* The one thing here that gets its own arrival rather than sharing the
+     copy's stagger: it is the subject, so it is what a reader meets first.
+     `auth-rise` is the fade-and-rise every row in this file already uses. */
+  animation: auth-rise 0.7s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+/* Intro-done and reduced-motion as their own rule rather than folded into the
+   shared list: `.core` is every Core mount in the product, and adding it there
+   would cancel an entrance on a screen this file has nothing to do with. */
+.auth-surface[data-auth-intro="done"][data-auth-welcome="true"]
+  .auth-identity-col
+  .core {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-surface[data-auth-welcome="true"] .auth-identity-col .core {
+    animation: none;
+  }
+}
+
+/* "The copy set large" (the brief) means the SAME closed list of sentence
+   kinds (ADR-0076 Decision 2) at display size, not new copy: the identity
+   region already owns what this screen says, and first run does not get a
+   second voice. A slightly wider measure goes with the larger type, so a
+   longer translation still gets room to wrap before it does. */
+.auth-surface[data-auth-welcome="true"] .auth-identity-copy {
+  max-width: 560px;
+}
+/* The runtime line is a status the ordinary screen carries. Here it stands
+   between the greeting and the field a reader came to fill, and what it
+   reports is on every screen behind this one. */
+.auth-surface[data-auth-welcome="true"] .auth-identity-foot {
+  display: none;
+}
+/*
+ * ... and the row it left behind goes with it.
+ *
+ * `.auth-identity` declares two explicit tracks and a gap between them. A
+ * `display: none` child is not a grid item, so the second track collapses to
+ * zero, but the GAP does not, and an empty 24px band sat between the last
+ * sentence and the form below it, reading as a mistake in the spacing rather
+ * than as air. One track, and nothing to leave a gap after.
+ */
+.auth-surface[data-auth-welcome="true"] .auth-identity {
+  grid-template-rows: auto;
+  row-gap: 0;
+}
+.auth-surface[data-auth-welcome="true"] .auth-kicker {
+  font-size: var(--fs-eyebrow);
+}
+.auth-surface[data-auth-welcome="true"] .auth-statement {
+  font-size: var(--fs-greeting-fluid);
+  /* Display type set at its own size rather than at the column's: the shared
+     leading is chosen for a line that wraps three times, and at this size it
+     opens a gap a reader reads as two separate lines. */
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+.auth-surface[data-auth-welcome="true"] .auth-purpose {
+  font-size: var(--fs-h2);
+  /* A measure short enough that this line wraps under the greeting rather than
+     running past it, and centred as a BOX, not only as text. `text-align`
+     centres the words inside the box; a narrowed block still sits at the start
+     of its container, which put this line visibly left of the greeting above
+     it and the handover below it. */
+  max-width: 30ch;
+  margin-inline: auto;
+}
+/*
+ * THE ONE SENTENCE THIS SCREEN DOES NOT SAY.
+ *
+ * The identity region's copy is a closed list of sentence kinds (ADR-0076
+ * Decision 2) and first run does not get a second voice, so the greeting is
+ * cut by hiding a sentence here, never by writing a new one, which would also
+ * mean three locales for a line that exists on one screen.
+ *
+ * What goes is the scope sentence: what the product will do all day. It is
+ * true, and it belongs on the ordinary sign-in where a returning reader has
+ * room for it. Here it is the fourth sentence in a row somebody reads while a
+ * form waits underneath, and this screen's whole job is the introduction and
+ * the field. It is not deleted: the reader meets it again at the first
+ * connector, which is where it becomes load-bearing.
+ *
+ * The PROMISE stays. It was cut with the scope in a first pass and put back,
+ * because the two are not the same kind of sentence: the scope describes a
+ * capability, and the promise is the one absolute this screen states about
+ * what the system will never do without being asked. A reader handing an
+ * installation their mail for the first time is exactly the reader that is
+ * addressed to.
+ *
+ * `display: none` and not the clipped-but-present treatment the form's heading
+ * gets: that heading is hidden because it is SAID TWICE and a form still needs
+ * its name in the accessibility tree. This one is said once, so leaving it
+ * audible would give a screen-reader reader a longer greeting than everyone
+ * else rather than the same one.
+ */
+.auth-surface[data-auth-welcome="true"] .auth-scope {
+  display: none;
+}
+/*
+ * The promise, centred line by line rather than as a left-set block.
+ *
+ * The two-column surface sets this sentence LEFT beside its badge, and gives
+ * its reason: centred lines next to a badge read as a caption that lost its
+ * picture. That reason depends on the sentence being the only centred-as-a-box
+ * thing in a column of left-set text. Here every line above it is centred, so
+ * the same treatment makes this the one paragraph that looks placed by
+ * mistake. A shorter measure keeps it to two lines, which is what stops
+ * centred text becoming a ragged stack.
+ */
+.auth-surface[data-auth-welcome="true"] .auth-promise {
+  /* The badge goes ABOVE the sentence rather than beside it. Beside it, the row
+     centres badge-plus-text as one unit, which puts the TEXT off the column's
+     centre line by half a badge, and every other line on this screen is on that
+     line. Stacked, both are on it. */
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  max-width: 34ch;
+  text-align: center;
+}
+.auth-surface[data-auth-welcome="true"] .auth-handover {
+  font-size: var(--fs-lead);
 }

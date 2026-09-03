@@ -30049,10 +30049,18 @@ components:
 
     AuthCapabilities:
       type: object
-      required: [password, password_reset, oidc_providers]
+      required: [password, password_reset, oidc_providers, first_run]
       properties:
         password: { type: boolean, description: Email + password login is enabled. }
         password_reset: { type: boolean, description: The A74 reset flow can complete end to end (outbound email configured + healthy). }
+        first_run:
+          type: boolean
+          description: >
+            Whether this installation has yet to finish its setup, so an unconfigured one can be
+            greeted rather than only asked for credentials. Deliberately readable without a session,
+            which is the narrowest form of a fact `/installation/setup` reports in full to a human
+            session: it says that setup is unfinished and nothing else. It names no account, no step,
+            no configured value, and says nothing about any credential.
         oidc_providers:
           type: array
           description: Operational OIDC providers (empty until the OIDC flow ships).

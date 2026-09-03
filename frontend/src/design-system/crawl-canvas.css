@@ -15,9 +15,16 @@
   display: block;
   width: 100%;
   /* A picture, not a panorama: past this the two rings sit so far apart that
-     the tree reads as unrelated dots at opposite ends of the room. */
-  max-width: 44rem;
-  height: 180px;
+     the tree reads as unrelated dots at opposite ends of the room. The cap was
+     44rem against a stage inset from the viewport on both sides; the stage now
+     reaches the edge, and the same cap left a third of the tile empty to the
+     right of the drawing. Raised with the height, so the picture keeps roughly
+     the proportion it was tuned at rather than stretching. */
+  max-width: 60rem;
+  height: 210px;
+  /* Any slack left over on a very wide window falls on both sides rather than
+     all of it on the right. */
+  margin-inline: auto;
 }
 
 /*

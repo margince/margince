@@ -3857,6 +3857,71 @@ export const de = {
   "ob.field.industry": "Branche",
   "ob.field.history": "Firmengeschichte",
 
+  "ob.fieldHint.display_name":
+    "Der Name, den Kunden tatsächlich für dich verwenden, nicht der rechtliche. Er erscheint überall in Margince.",
+  "ob.fieldHint.offer_summary":
+    "Ein bis zwei klare Sätze, was du verkaufst, damit Margince das Geschäft erklären kann, ohne noch einmal zu fragen.",
+  "ob.fieldHint.icp":
+    "Wer am meisten profitiert, nach Größe, Branche oder Situation, damit Ansprache gezielt statt allgemein bleibt.",
+  "ob.fieldHint.buying_center":
+    "Die Rollen, die prüfen oder freigeben, damit ein Vertriebler weiß, wen er sonst noch einbeziehen muss.",
+  "ob.fieldHint.value_proposition":
+    "Das Ergebnis, das der Kunde bekommt, nicht die Produktfunktion, klar genug für einen eigenständigen Satz im Pitch.",
+  "ob.fieldHint.usp":
+    "Der eine Unterschied, der eine Entscheidung wirklich verändert, keine Stärke, die jeder Wettbewerber auch beansprucht.",
+  "ob.fieldHint.customer_pains":
+    "Das Problem in den eigenen Worten des Kunden, so wie er es beschreiben würde, bevor er dich gefunden hat.",
+  "ob.fieldHint.desired_outcomes":
+    "Was der Kunde erreichen will, in geschäftlichen Begriffen statt in Produktbegriffen.",
+  "ob.fieldHint.buying_intents":
+    "Das Signal, das meist bedeutet, dass jemand kurz vor dem Kauf steht, etwa eine Neueinstellung oder eine Frist.",
+  "ob.fieldHint.common_objections":
+    "Der Einwand, der einen Kauf am häufigsten verzögert oder stoppt, damit ein Vertriebler früh vorbereitet ist.",
+  "ob.fieldHint.sales_motion":
+    "Der Weg vom ersten Gespräch bis zum unterschriebenen Vertrag, samt Testphase oder Einkaufsprozess.",
+  "ob.fieldHint.legal_name":
+    "Der Name, wie er im Register steht, inklusive Rechtsform, denn das gehört auf eine Rechnung.",
+  "ob.fieldHint.registered_address":
+    "Die Adresse aus dem Impressum, keine Postfach- oder Showroom-Adresse.",
+  "ob.fieldHint.register_vat":
+    "Beide Kennungen genau wie ausgegeben, denn sie stehen zusammen auf Rechnungen und Verträgen.",
+  "ob.fieldHint.legal_form":
+    "Die Rechtsform genau wie im Register geführt, denn davon hängt ab, wie das Unternehmen in Verträgen heißt.",
+  "ob.fieldHint.register_court":
+    "Das im Impressum genannte Gericht, das den Registereintrag führt.",
+  "ob.fieldHint.register_number":
+    "Nur der Registereintrag, ohne die USt-IdNr., die ihr eigenes Feld darüber hat.",
+  "ob.fieldHint.industry":
+    "Die Beschreibung, die deine eigenen Kunden sofort erkennen würden, kein interner Klassifizierungscode.",
+  "ob.fieldHint.history":
+    "Nur eintragen, wenn es verändert, wie das Unternehmen gelesen wird, etwa Gründungsjahr oder eine große Wende.",
+
+  "ob.fieldEg.display_name": "Northwind Robotics",
+  "ob.fieldEg.offer_summary":
+    "Cloud-Software für die Lagerverwaltung mittelgroßer Händler.",
+  "ob.fieldEg.icp": "Handelsketten mit 20 bis 200 Filialen.",
+  "ob.fieldEg.buying_center":
+    "Leitung Operations, mit Freigabe durch die Finanzabteilung.",
+  "ob.fieldEg.value_proposition":
+    "Halbiert Fehlbestände innerhalb eines Quartals.",
+  "ob.fieldEg.usp": "Einziger Anbieter mit Vor-Ort-Support am selben Tag.",
+  "ob.fieldEg.customer_pains":
+    "Wir merken zu spät, dass etwas ausverkauft ist.",
+  "ob.fieldEg.desired_outcomes": "Nie wieder eine Nachbestellfrist verpassen.",
+  "ob.fieldEg.buying_intents":
+    "Eröffnung eines neuen Lagers innerhalb von 90 Tagen.",
+  "ob.fieldEg.common_objections": "Sorge vor dem Umstieg vom alten System.",
+  "ob.fieldEg.sales_motion": "Demo, zweiwöchiger Test, dann ein Jahresvertrag.",
+  "ob.fieldEg.legal_name": "Northwind Robotics GmbH",
+  "ob.fieldEg.registered_address": "Musterstraße 12, 10115 Berlin",
+  "ob.fieldEg.register_vat": "DE123456789",
+  "ob.fieldEg.legal_form": "GmbH",
+  "ob.fieldEg.register_court": "Amtsgericht Charlottenburg",
+  "ob.fieldEg.register_number": "HRB 12345 B",
+  "ob.fieldEg.industry": "E-Commerce-Logistik",
+  "ob.fieldEg.history":
+    "Gegründet 2015, ausgegliedert aus einem Logistik-Startup.",
+
   "ob.s3.title": "Sieh, was du gebaut hast —",
   "ob.s3.titleEm": "ganz ohne Anbindung.",
   "ob.s3.sub":
@@ -4864,6 +4929,7 @@ export const de = {
   "auth.corePromise":
     "Und keine Sorge: Ich sende nie eine E-Mail oder Nachricht, ohne dich vorher zu fragen.",
   "auth.coreHandover": "Zuerst stelle ich sicher, dass du es wirklich bist …",
+  "auth.coreHandoverFirstRun": "Melde dich an, dann legen wir los.",
   "auth.coreConfigured": "Konfiguriert",
   "auth.coreUnconfigured": "KI nicht konfiguriert",
   // "auch ohne", nicht "weiterhin": "weiterhin" ist zeitlich und liest sich neben
@@ -7813,12 +7879,41 @@ export const de = {
   "ob.scan.tallyFacts": "Fakten gefunden",
   "ob.scan.tallyUncertain": "unsicher, kein Rateversuch",
   "ob.scan.tickerFact": "{field}: {value}",
-  "ob.digest.where": "Wo das landet",
+  "ob.digest.where": "Was Margince über dich weiß",
   "ob.digest.written": "{n} von {m} Zeilen geschrieben",
-  "ob.digest.sources": "Gelesen auf",
+  "ob.digest.companyLine":
+    "Firmenprofil, geschrieben aus {n} Seiten von {host}",
+  "ob.digest.citedCaption": "Zeilen, jede mit Quelle",
+  "ob.digest.openCaption": "noch offen",
+  "ob.digest.section.identity": "Identität",
+  "ob.digest.section.offer": "Was sie verkaufen",
+  "ob.digest.section.customer": "An wen sie verkaufen",
+  "ob.digest.section.sales": "Wie sie schreiben",
+  "ob.digest.facts": "Belege",
+  "ob.digest.people": "Personen",
+  "ob.digest.sources": "Quellen",
   "ob.digest.blank": "noch nicht geschrieben",
+  "ob.digest.notWritten": "nicht eingetragen",
+  "ob.digest.settle": "Jetzt klären",
   "ob.digest.deciding": "das entscheidest du gerade",
   "ob.digest.yours": "von dir",
+  "ob.digest.referenceNote":
+    "Ein späteres erneutes Lesen kann Änderungen an diesem Datensatz vorschlagen. Eine Zeile, die du schon bearbeitet hast, wird dabei nie überschrieben.",
+  "ob.digest.sidebarLabel": "Fakten zum Unternehmen",
+  "ob.digest.sidebar.legalName": "Rechtlicher Name",
+  "ob.digest.sidebar.founded": "Gegründet",
+  "ob.digest.sidebar.headquarters": "Hauptsitz",
+  "ob.digest.sidebar.offices": "Standorte",
+  "ob.digest.sidebar.employees": "Mitarbeitende",
+  "ob.digest.sidebar.certifications": "Zertifizierungen",
+  "ob.digest.pageKind.home": "Startseite",
+  "ob.digest.pageKind.impressum": "Impressum",
+  "ob.digest.pageKind.about": "Über-uns-Seite",
+  "ob.digest.pageKind.team": "Team-Seite",
+  "ob.digest.pageKind.services": "Leistungsseite",
+  "ob.digest.pageKind.products": "Produktseite",
+  "ob.digest.pageKind.contact": "Kontaktseite",
+  "ob.digest.pageKind.other": "Seite",
   "ob.deck.counter": "{n} von {m}",
   "ob.deck.left": "Noch {n} von {m}",
   "ob.deck.settled": "{count} Fakten kamen belegt herein, ohne dich",

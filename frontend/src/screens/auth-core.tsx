@@ -2,6 +2,7 @@ import { Check, ShieldCheck } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
 import { ThemeToggle } from "../app/theme-toggle";
+import { AmbientWaves } from "../design-system/ambient-waves";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
@@ -113,10 +114,25 @@ export function AuthExperience({
   children,
   profile,
   phase,
+  welcome = false,
 }: Readonly<{
   children: ReactNode;
   profile?: AssistantProfile;
   phase: AuthPhase;
+  /**
+   * The installation's very first sign-in: the same two regions, presented as
+   * one centred column with the Core as the page's subject rather than a
+   * companion beside the form. NOT `AuthPhase`: a first-run reader who
+   * mistypes their password still needs `phase="error"` while this stays
+   * true, so the two axes have to be able to vary independently. A data
+   * attribute on this same root, the way `data-auth-intro` already is,
+   * rather than a class this component would then also have to keep in sync.
+   *
+   * Callers assert it positively (`view.kind === "login" && firstRun`); it
+   * defaults to false, which is what every other view and every
+   * non-first-run login render.
+   */
+  welcome?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -127,7 +143,15 @@ export function AuthExperience({
       className="auth-surface"
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
+      data-auth-welcome={welcome}
     >
+      {/* The ground, on EVERY sign-in and behind everything on it. Signing in
+          is the one moment in the product that is a place rather than a task:
+          there is nothing on this surface to get through, and the reader is
+          arriving. It is `aria-hidden` and carries no copy, so the DOM order
+          the task/identity split depends on is untouched by it standing
+          first. */}
+      <AmbientWaves />
       {/* A div, NOT a <main>. The frame that hosts this surface already opens a
           <main> (App.tsx's RaillessFrame), and a nested main is invalid HTML that
           puts two "main" entries in a screen reader's landmark rotor — so the
@@ -138,7 +162,7 @@ export function AuthExperience({
         <div className="auth-task-in">{children}</div>
         <LegalFooter />
       </div>
-      <IdentityRegion profile={profile} phase={phase} />
+      <IdentityRegion profile={profile} phase={phase} welcome={welcome} />
     </div>
   );
 }
@@ -216,7 +240,12 @@ function LegalFooter() {
 export function IdentityRegion({
   profile,
   phase,
-}: Readonly<{ profile?: AssistantProfile; phase: AuthPhase }>) {
+  welcome,
+}: Readonly<{
+  profile?: AssistantProfile;
+  phase: AuthPhase;
+  welcome: boolean;
+}>) {
   const t = useT();
   const identityId = useId();
   return (
@@ -264,7 +293,14 @@ export function IdentityRegion({
             {t("auth.corePromise")}
           </p>
 
-          <p className="auth-handover">{t("auth.coreHandover")}</p>
+          {/* The one sentence first run says differently, and the reason is
+              what the words claim: "make sure it's really you" is a system
+              recognising somebody it has met, and on an installation being
+              opened for the first time it has met nobody. The first-run line
+              points at the same form without claiming that. */}
+          <p className="auth-handover">
+            {t(welcome ? "auth.coreHandoverFirstRun" : "auth.coreHandover")}
+          </p>
         </div>
 
         {/* Absent rather than guessed: a runtime line the frontend invented is

@@ -3817,6 +3817,70 @@ export const vi = {
   "ob.field.industry": "Ngành",
   "ob.field.history": "Lịch sử công ty",
 
+  "ob.fieldHint.display_name":
+    "Tên mà khách hàng thực sự gọi bạn, không phải tên pháp lý, vì đây là tên hiển thị khắp Margince.",
+  "ob.fieldHint.offer_summary":
+    "Một hai câu rõ ràng về thứ bạn bán, để Margince có thể giải thích việc kinh doanh mà không cần hỏi lại.",
+  "ob.fieldHint.icp":
+    "Ai hưởng lợi nhiều nhất, theo quy mô, ngành hay hoàn cảnh, để việc tiếp cận nhắm đúng thay vì chung chung.",
+  "ob.fieldHint.buying_center":
+    "Các vai trò đánh giá hoặc phê duyệt, để người bán biết cần mời thêm ai vào cuộc trò chuyện.",
+  "ob.fieldHint.value_proposition":
+    "Kết quả khách hàng nhận được, không phải tính năng sản phẩm, đủ rõ để đứng riêng trong một lời chào hàng.",
+  "ob.fieldHint.usp":
+    "Sự khác biệt duy nhất thực sự làm thay đổi quyết định, không phải điểm mạnh mà đối thủ nào cũng nhận là của mình.",
+  "ob.fieldHint.customer_pains":
+    "Vấn đề theo đúng lời khách hàng, cách họ nói trước khi tìm đến bạn.",
+  "ob.fieldHint.desired_outcomes":
+    "Điều khách hàng muốn đạt được, theo góc độ kinh doanh chứ không phải góc độ sản phẩm.",
+  "ob.fieldHint.buying_intents":
+    "Dấu hiệu thường cho thấy một khách hàng sắp mua, ví dụ một đợt tuyển dụng hay một hạn chót.",
+  "ob.fieldHint.common_objections":
+    "Mối lo thường làm chậm hoặc chặn một thương vụ nhất, để người bán chuẩn bị trước.",
+  "ob.fieldHint.sales_motion":
+    "Chặng đường từ lần trao đổi đầu tiên đến lúc ký hợp đồng, kể cả bước dùng thử hay đấu thầu.",
+  "ob.fieldHint.legal_name":
+    "Tên như trên giấy đăng ký, gồm cả loại hình pháp lý, vì đây là tên in trên hóa đơn.",
+  "ob.fieldHint.registered_address":
+    "Địa chỉ trong thông báo pháp lý, không phải địa chỉ nhận thư hay showroom.",
+  "ob.fieldHint.register_vat":
+    "Cả hai mã số đúng như được cấp, vì chúng xuất hiện cùng nhau trên hóa đơn và hợp đồng.",
+  "ob.fieldHint.legal_form":
+    "Loại hình như trên giấy đăng ký, quyết định cách công ty được ghi tên trong hợp đồng.",
+  "ob.fieldHint.register_court":
+    "Tòa án nêu trong thông báo pháp lý, nơi giữ hồ sơ đăng ký công ty.",
+  "ob.fieldHint.register_number":
+    "Chỉ riêng số đăng ký, không kèm mã số thuế, vì mã số thuế đã có ô riêng phía trên.",
+  "ob.fieldHint.industry":
+    "Cách mô tả mà chính khách hàng của bạn sẽ nhận ra ngay, không phải mã phân loại nội bộ.",
+  "ob.fieldHint.history":
+    "Chỉ điền khi nó thay đổi cách công ty được nhìn nhận, ví dụ năm thành lập hay một bước ngoặt lớn.",
+
+  "ob.fieldEg.display_name": "Rồng Việt Technologies",
+  "ob.fieldEg.offer_summary":
+    "Phần mềm quản lý kho trên nền tảng đám mây cho nhà bán lẻ vừa.",
+  "ob.fieldEg.icp": "Chuỗi bán lẻ có từ 20 đến 200 cửa hàng.",
+  "ob.fieldEg.buying_center":
+    "Trưởng phòng Vận hành, với sự phê duyệt của phòng Tài chính.",
+  "ob.fieldEg.value_proposition":
+    "Giảm một nửa tình trạng hết hàng trong một quý.",
+  "ob.fieldEg.usp": "Nhà cung cấp duy nhất hỗ trợ tận nơi trong ngày.",
+  "ob.fieldEg.customer_pains": "Chúng tôi hết hàng lúc nào không hay.",
+  "ob.fieldEg.desired_outcomes": "Không bao giờ lỡ hạn đặt hàng lại nữa.",
+  "ob.fieldEg.buying_intents":
+    "Sắp khai trương một kho hàng mới trong 90 ngày.",
+  "ob.fieldEg.common_objections": "Lo ngại việc chuyển đổi khỏi hệ thống cũ.",
+  "ob.fieldEg.sales_motion":
+    "Demo, dùng thử hai tuần, rồi ký hợp đồng theo năm.",
+  "ob.fieldEg.legal_name": "Northwind Robotics GmbH",
+  "ob.fieldEg.registered_address": "Musterstraße 12, 10115 Berlin",
+  "ob.fieldEg.register_vat": "DE123456789",
+  "ob.fieldEg.legal_form": "GmbH",
+  "ob.fieldEg.register_court": "Amtsgericht Charlottenburg",
+  "ob.fieldEg.register_number": "HRB 12345 B",
+  "ob.fieldEg.industry": "Logistics thương mại điện tử",
+  "ob.fieldEg.history": "Thành lập năm 2015, tách ra từ một startup logistics.",
+
   "ob.s3.title": "Hãy xem bạn đã dựng được gì —",
   "ob.s3.titleEm": "mà chưa kết nối gì cả.",
   "ob.s3.sub":
@@ -4813,6 +4877,7 @@ export const vi = {
   "auth.corePromise":
     "Và đừng lo: tôi sẽ không bao giờ gửi email hay tin nhắn mà chưa hỏi bạn trước.",
   "auth.coreHandover": "Trước tiên, hãy để tôi xác minh đúng là bạn…",
+  "auth.coreHandoverFirstRun": "Đăng nhập để chúng ta bắt đầu.",
   "auth.coreConfigured": "Đã cấu hình",
   "auth.coreUnconfigured": "AI chưa được cấu hình",
   "auth.coreStillWorks": "CRM vẫn hoạt động.",
@@ -7718,12 +7783,40 @@ export const vi = {
   "ob.scan.tallyFacts": "dữ kiện tìm được",
   "ob.scan.tallyUncertain": "điều nó sẽ không đoán",
   "ob.scan.tickerFact": "{field}: {value}",
-  "ob.digest.where": "Chỗ này sẽ vào đâu",
+  "ob.digest.where": "Những gì Margince biết về bạn",
   "ob.digest.written": "Đã ghi {n} / {m} dòng",
-  "ob.digest.sources": "Đọc từ",
+  "ob.digest.companyLine": "Hồ sơ công ty, viết từ {n} trang của {host}",
+  "ob.digest.citedCaption": "dòng, mỗi dòng có nguồn",
+  "ob.digest.openCaption": "còn để trống",
+  "ob.digest.section.identity": "Danh tính",
+  "ob.digest.section.offer": "Họ bán gì",
+  "ob.digest.section.customer": "Họ bán cho ai",
+  "ob.digest.section.sales": "Cách họ viết",
+  "ob.digest.facts": "Bằng chứng",
+  "ob.digest.people": "Con người",
+  "ob.digest.sources": "Nguồn tham khảo",
   "ob.digest.blank": "chưa ghi",
+  "ob.digest.notWritten": "chưa được ghi",
+  "ob.digest.settle": "Điền ngay",
   "ob.digest.deciding": "bạn đang quyết điều này",
   "ob.digest.yours": "của bạn",
+  "ob.digest.referenceNote":
+    "Một lần đọc lại sau này có thể đề xuất thay đổi cho hồ sơ này. Nó sẽ không bao giờ ghi đè lên dòng mà một người đã từng sửa.",
+  "ob.digest.sidebarLabel": "Thông tin về công ty",
+  "ob.digest.sidebar.legalName": "Tên pháp lý",
+  "ob.digest.sidebar.founded": "Thành lập",
+  "ob.digest.sidebar.headquarters": "Trụ sở chính",
+  "ob.digest.sidebar.offices": "Văn phòng",
+  "ob.digest.sidebar.employees": "Nhân sự",
+  "ob.digest.sidebar.certifications": "Chứng nhận",
+  "ob.digest.pageKind.home": "Trang chủ",
+  "ob.digest.pageKind.impressum": "Thông tin pháp lý",
+  "ob.digest.pageKind.about": "Trang giới thiệu",
+  "ob.digest.pageKind.team": "Trang đội ngũ",
+  "ob.digest.pageKind.services": "Trang dịch vụ",
+  "ob.digest.pageKind.products": "Trang sản phẩm",
+  "ob.digest.pageKind.contact": "Trang liên hệ",
+  "ob.digest.pageKind.other": "Trang",
   "ob.deck.counter": "{n} / {m}",
   "ob.deck.left": "Còn {n} / {m}",
   "ob.deck.settled": "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",

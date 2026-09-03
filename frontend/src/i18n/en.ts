@@ -3899,6 +3899,74 @@ export const en = {
   "ob.field.industry": "Industry",
   "ob.field.history": "Company history",
 
+  // What the answer should contain and why the CRM wants it. Shown on an
+  // empty deck card so the card is answerable without guessing; still shown
+  // once evidence exists, because the evidence states a claim and this states
+  // a purpose, and the two are not the same sentence.
+  "ob.fieldHint.display_name":
+    "The name customers actually call you by, not the legal one. It is what shows across Margince.",
+  "ob.fieldHint.offer_summary":
+    "One or two plain sentences on what you sell, so Margince can explain the business without asking again.",
+  "ob.fieldHint.icp":
+    "Who benefits most, by size, industry or situation, so outreach can be aimed rather than generic.",
+  "ob.fieldHint.buying_center":
+    "The roles who evaluate or sign off, so a rep knows who else belongs in the conversation.",
+  "ob.fieldHint.value_proposition":
+    "The outcome a customer gets, not the product feature, stated plainly enough to stand alone in a pitch.",
+  "ob.fieldHint.usp":
+    "The one difference that actually moves a decision, not a strength every competitor also claims.",
+  "ob.fieldHint.customer_pains":
+    "The problem in the customer's own words, the way they would say it before they found you.",
+  "ob.fieldHint.desired_outcomes":
+    "What the customer is trying to achieve, in business terms rather than product terms.",
+  "ob.fieldHint.buying_intents":
+    "The signal that usually means a prospect is close to buying, such as a hire or a deadline.",
+  "ob.fieldHint.common_objections":
+    "The concern that most often slows or stops a deal, so a rep can prepare for it early.",
+  "ob.fieldHint.sales_motion":
+    "The path from first conversation to signed deal, including any trial or procurement step.",
+  "ob.fieldHint.legal_name":
+    "The name as it appears on the register, legal form included, since this is what belongs on an invoice.",
+  "ob.fieldHint.registered_address":
+    "The address printed in the legal notice, not a mailing or showroom address.",
+  "ob.fieldHint.register_vat":
+    "Both identifiers exactly as issued, since they appear together on invoices and contracts.",
+  "ob.fieldHint.legal_form":
+    "The form as the register states it, which decides how the company is named on a contract.",
+  "ob.fieldHint.register_court":
+    "The court named in the legal notice that holds the company's register entry.",
+  "ob.fieldHint.register_number":
+    "The register entry alone, without the VAT ID, which has its own field above.",
+  "ob.fieldHint.industry":
+    "The description your own customers would recognize, not an internal classification code.",
+  "ob.fieldHint.history":
+    "Add it only if it changes how the company should be read, such as a founding year or a major pivot.",
+
+  // A worked example, not an instruction: what a filled-in answer looks like,
+  // never the label restated. The legal fields print a real German imprint's
+  // shape because that is the notice the read parses.
+  "ob.fieldEg.display_name": "Northwind Robotics",
+  "ob.fieldEg.offer_summary":
+    "Cloud inventory software for mid-size retailers.",
+  "ob.fieldEg.icp": "Retail chains with 20 to 200 stores.",
+  "ob.fieldEg.buying_center": "Head of Operations, with Finance approving.",
+  "ob.fieldEg.value_proposition":
+    "Cuts stock-out incidents by half within a quarter.",
+  "ob.fieldEg.usp": "Only vendor offering same-day, on-site support.",
+  "ob.fieldEg.customer_pains": "We keep running out of stock without noticing.",
+  "ob.fieldEg.desired_outcomes": "Never miss a reorder deadline again.",
+  "ob.fieldEg.buying_intents": "A new warehouse opening within 90 days.",
+  "ob.fieldEg.common_objections": "Worried about migrating off the old system.",
+  "ob.fieldEg.sales_motion": "Demo, a two-week pilot, then a yearly contract.",
+  "ob.fieldEg.legal_name": "Northwind Robotics GmbH",
+  "ob.fieldEg.registered_address": "Musterstraße 12, 10115 Berlin",
+  "ob.fieldEg.register_vat": "DE123456789",
+  "ob.fieldEg.legal_form": "GmbH",
+  "ob.fieldEg.register_court": "Amtsgericht Charlottenburg",
+  "ob.fieldEg.register_number": "HRB 12345 B",
+  "ob.fieldEg.industry": "E-commerce logistics",
+  "ob.fieldEg.history": "Founded 2015, spun off from a logistics startup.",
+
   "ob.s3.title": "Look what you've built —",
   "ob.s3.titleEm": "with nothing connected.",
   "ob.s3.sub":
@@ -4933,6 +5001,10 @@ export const en = {
   "auth.corePromise":
     "And don’t worry: I’ll never send an email or message without asking you first.",
   "auth.coreHandover": "First, let me make sure it’s really you…",
+  // The first-run reader is the one person this installation has never met, so
+  // the returning line's "make sure it's really you" claims a recognition that
+  // has not happened. This one points at the same form and claims nothing.
+  "auth.coreHandoverFirstRun": "Sign in and we’ll get started.",
   "auth.coreConfigured": "Configured",
   "auth.coreUnconfigured": "AI not configured",
   "auth.coreStillWorks": "The CRM still works.",
@@ -7890,12 +7962,40 @@ export const en = {
   // reader's language via factFieldLabelKey) and the value the page gave up.
   // Punctuation only, nothing here for a locale to translate.
   "ob.scan.tickerFact": "{field}: {value}",
-  "ob.digest.where": "Where this lands",
+  "ob.digest.where": "What Margince knows about you",
   "ob.digest.written": "{n} of {m} lines written",
-  "ob.digest.sources": "Read from",
+  "ob.digest.companyLine": "Company profile, written from {n} pages of {host}",
+  "ob.digest.citedCaption": "lines, each citing its page",
+  "ob.digest.openCaption": "still open",
+  "ob.digest.section.identity": "Identity",
+  "ob.digest.section.offer": "What they sell",
+  "ob.digest.section.customer": "Who they sell to",
+  "ob.digest.section.sales": "How they write",
+  "ob.digest.facts": "Proof",
+  "ob.digest.people": "People",
+  "ob.digest.sources": "References",
   "ob.digest.blank": "not written yet",
+  "ob.digest.notWritten": "not written down",
+  "ob.digest.settle": "Settle it",
   "ob.digest.deciding": "you are deciding this now",
   "ob.digest.yours": "yours",
+  "ob.digest.referenceNote":
+    "A later re-read may propose changes to this record. It will never overwrite a line a person has already touched.",
+  "ob.digest.sidebarLabel": "Facts about the company",
+  "ob.digest.sidebar.legalName": "Legal name",
+  "ob.digest.sidebar.founded": "Founded",
+  "ob.digest.sidebar.headquarters": "Headquarters",
+  "ob.digest.sidebar.offices": "Offices",
+  "ob.digest.sidebar.employees": "Employees",
+  "ob.digest.sidebar.certifications": "Certifications",
+  "ob.digest.pageKind.home": "Home page",
+  "ob.digest.pageKind.impressum": "Legal notice",
+  "ob.digest.pageKind.about": "About page",
+  "ob.digest.pageKind.team": "Team page",
+  "ob.digest.pageKind.services": "Services page",
+  "ob.digest.pageKind.products": "Products page",
+  "ob.digest.pageKind.contact": "Contact page",
+  "ob.digest.pageKind.other": "Page",
   "ob.deck.counter": "{n} of {m}",
   "ob.deck.left": "{n} of {m} left",
   "ob.deck.settled": "{count} facts went in on evidence, without you",

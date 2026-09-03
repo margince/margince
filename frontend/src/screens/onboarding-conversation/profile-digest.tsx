@@ -1,70 +1,104 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { components } from "../../api/schema";
+import { Avatar } from "../../design-system/atoms";
+import { Eyebrow } from "../../design-system/eyebrow";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
+import { ProfileArticle } from "./profile-digest-article";
+import { citationsOf, factsByCategory, hostOf } from "./profile-digest-data";
+import { DigestLine } from "./profile-digest-lines";
+import { ProfileSidebar } from "./profile-digest-sidebar";
 import "./profile-digest.css";
 
 /**
- * The profile as an article, beside the deck that is still writing it.
+ * The profile, in two faces the deck's flow needs at different moments.
  *
- * WHY IT SITS HERE AT ALL. The deck asks one thing at a time, which is the
- * right way to ask and a bad way to see: a reader answering the sixth card has
- * no idea what the first five did to the record. This is the record, read as
- * prose, with the line being decided right now marked in it. Answer a card and
- * you watch it land.
+ * WITHOUT `read`, this is the deck's own companion: a single narrow column of
+ * record lines, the field being decided marked in it, beside the deck that is
+ * still writing them. Answer a card and you watch the line it belongs to
+ * land — that is the whole reason it sits there, so it stays a plain list
+ * rather than growing the sections or the sidebar below.
  *
- * EVERY LINE CARRIES ITS SOURCE, numbered the way an encyclopedia numbers them:
- * the same page cited twice gets the same number, and the pages themselves are
- * listed once at the foot. That is not decoration. The whole claim of this
- * product is that nothing goes on a record without a page behind it, and a
- * profile that stated its facts without saying where they came from would be
- * asking to be trusted rather than showing its work.
+ * WITH `read`, this is the whole record, read as the two-column document a
+ * reader asked to see: a header naming the company and what stands open, the
+ * record grouped into sections down the left, and a sidebar of the facts a
+ * reader scans without opening a section on the right. `read` carries the
+ * crawl's own findings beyond the fields the deck ever asks about — the
+ * facts, the people, the legal entities — which is what the sections beyond
+ * the record's own four groups draw from.
  *
- * A LINE WITH NO SOURCE SAYS SO. Something typed by a person, or carried over
- * from a profile that already existed, has no page to cite and is marked as
- * yours rather than given a number it did not earn.
+ * EVERY LINE CARRIES ITS SOURCE, numbered the way an encyclopedia numbers
+ * them: the same page cited twice gets the same number, and the pages
+ * themselves are listed once at the foot. A line with no source says so
+ * instead of borrowing one — something typed by a person, or carried over
+ * from a profile that already existed, has no page to cite.
+ *
+ * AN UNANSWERED LINE IN THE DOCUMENT IS AN ACTION: `onSettle` takes the
+ * reader to that field's card in the deck. The companion never renders that
+ * action — the deck asking about the same field is already the surface it is
+ * beside, so a button pointed at the card behind it would aim at itself.
  */
 
-/** One page the profile cites, and the number it is cited by. */
-type Citation = Readonly<{ url: string; n: number }>;
+type Fact = components["schemas"]["CompanySiteReadFact"];
+type Person = components["schemas"]["CompanySiteReadPerson"];
+type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
+type Page = components["schemas"]["CompanySiteReadPage"];
 
-/**
- * Number the pages in the order the profile first cites them.
- *
- * BY URL, so a page backing four fields is one entry cited four times rather
- * than four entries for one page. First-cited order rather than the read's own
- * order, because the numbers are read down the article and a list that jumped
- * would look like pages were missing.
- */
-export function citationsOf(rows: readonly ReviewRow[]): Citation[] {
-  const seen = new Map<string, number>();
-  for (const row of rows) {
-    const url = row.evidence?.source;
-    if (url === undefined || url === "" || seen.has(url)) {
-      continue;
-    }
-    seen.set(url, seen.size + 1);
-  }
-  return [...seen].map(([url, n]) => ({ url, n }));
-}
-
-/** The path a page is known by here. The host is the same on every row. */
-export function pathOf(url: string): string {
-  try {
-    return new URL(url).pathname || "/";
-  } catch {
-    return url;
-  }
-}
+/** What the site read carries beyond the profile fields the deck asks about. */
+export type ProfileDigestRead = Readonly<{
+  root_url: string;
+  pages: readonly Page[];
+  facts: readonly Fact[];
+  people: readonly Person[];
+  legal_entities?: readonly LegalEntity[];
+}>;
 
 export function ProfileDigest({
   rows,
   active,
+  read,
+  onSettle,
 }: Readonly<{
   rows: readonly ReviewRow[];
-  /** The field the deck is asking about, marked in the article as it is decided. */
+  /** The field the deck is asking about, marked in the companion as it is
+   * decided. Meaningless in the document face, which has no single field in
+   * front of the reader at once. */
   active?: CompanyFieldName;
+  /** The rest of the crawl, and the document layout, shown only where a
+   * reader asked for the whole record. */
+  read?: ProfileDigestRead;
+  /** Where "Settle it" on an unanswered line goes. Only read in the document
+   * face — see the docblock above for why the companion never wires it. */
+  onSettle?: (field: CompanyFieldName) => void;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
+
+  if (read === undefined) {
+    return <DigestCompanion rows={rows} active={active} />;
+  }
+  return (
+    <DigestDocument
+      rows={rows}
+      read={read}
+      onSettle={onSettle}
+      t={t}
+      locale={locale}
+    />
+  );
+}
+
+// The companion: the record's own lines, in the record's own order, nothing
+// beyond it. Unchanged from before this file grew a document face — see the
+// top-level docblock for why it stays this plain.
+function DigestCompanion({
+  rows,
+  active,
+}: Readonly<{ rows: readonly ReviewRow[]; active?: CompanyFieldName }>) {
   const t = useT();
   const { locale } = useLocale();
   const cites = citationsOf(rows);
@@ -73,7 +107,7 @@ export function ProfileDigest({
 
   return (
     <aside className="pdigest">
-      <p className="pdigest-eyebrow t-eyebrow">{t("ob.digest.where")}</p>
+      <Eyebrow className="pdigest-eyebrow">{t("ob.digest.where")}</Eyebrow>
       <p className="pdigest-count">
         {t("ob.digest.written", {
           n: formatNumber(written, locale),
@@ -94,51 +128,118 @@ export function ProfileDigest({
           />
         ))}
       </div>
-      {cites.length === 0 ? null : (
-        <div className="pdigest-sources">
-          <p className="pdigest-eyebrow t-eyebrow">{t("ob.digest.sources")}</p>
-          <ol>
-            {cites.map((cite) => (
-              <li key={cite.url}>
-                <span className="pdigest-source-n">{cite.n}</span>
-                <span className="pdigest-source-path">{pathOf(cite.url)}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
     </aside>
   );
 }
 
-// One line of the article: what the record says, and the page that says it.
-function DigestLine({
-  row,
-  n,
-  active,
-}: Readonly<{ row: ReviewRow; n?: number; active: boolean }>) {
-  const t = useT();
-  const empty = row.value.trim() === "";
+// The document: header, article, sidebar — the whole record a reader asked
+// to see. `t`/`locale` arrive from the caller rather than being read again
+// here, since the header is the only part of this face that needs them
+// directly; the article and the sidebar read their own.
+function DigestDocument({
+  rows,
+  read,
+  onSettle,
+  t,
+  locale,
+}: Readonly<{
+  rows: readonly ReviewRow[];
+  read: ProfileDigestRead;
+  onSettle?: (field: CompanyFieldName) => void;
+  t: ReturnType<typeof useT>;
+  locale: Locale;
+}>) {
+  const factGroups = factsByCategory(read.facts);
+  const legalEntities = read.legal_entities ?? [];
+  const people = read.people;
+  // Rendering order, so a URL first seen backing a legal entity — the
+  // article's Identity section folds those in right after the record's own
+  // legal-identity lines — never gets bumped behind a fact or a person cited
+  // further down the page.
+  const extra = [
+    ...legalEntities.map((entity) => entity.source_url),
+    ...factGroups.flatMap((group) => group.facts.map((f) => f.evidence_url)),
+    ...people.map((p) => p.evidence_url),
+  ];
+  const cites = citationsOf(rows, extra);
+  const number = new Map(cites.map((cite) => [cite.url, cite.n]));
+  // Cited, not merely written: a row a person typed or carried in from an
+  // existing profile has a value and no page behind it, and counting it here
+  // would claim a citation the line itself does not print.
+  const citedCount = rows.filter(
+    (row) => row.evidence !== null && row.evidence.source !== "",
+  ).length;
+  // The same predicate the article's own unanswered rows render on, so the
+  // header's count and the dashed rows on the page can never disagree.
+  const openCount = rows.filter((row) => row.value.trim() === "").length;
+  const companyName =
+    rows.find((row) => row.field === "display_name")?.value.trim() ||
+    hostOf(read.root_url);
+  const host = hostOf(read.root_url);
+
   return (
-    <p className="pdigest-line" data-active={active} data-empty={empty}>
-      <span className="pdigest-label">{row.label}</span>{" "}
-      {empty ? (
-        <span className="pdigest-blank">
-          {active ? t("ob.digest.deciding") : t("ob.digest.blank")}
-        </span>
-      ) : (
-        <>
-          <span className="pdigest-value">{row.value}</span>
-          {n === undefined ? (
-            // Typed by a person, or carried in from a profile that already
-            // existed. It gets no number because there is no page to open, and
-            // saying so is the honest half of citing everything else.
-            <span className="pdigest-yours">{t("ob.digest.yours")}</span>
-          ) : (
-            <sup className="pdigest-ref">{n}</sup>
-          )}
-        </>
-      )}
-    </p>
+    <div className="pdigest-doc">
+      <header className="pdigest-hero">
+        <Eyebrow as="h2" className="pdigest-hero-eyebrow">
+          {t("ob.digest.where")}
+        </Eyebrow>
+        <div className="pdigest-hero-row">
+          <div className="pdigest-hero-identity">
+            <Avatar
+              shape="organization"
+              size="md"
+              name={companyName}
+              identity={read.root_url}
+            />
+            <div>
+              <p className="pdigest-hero-name">{companyName}</p>
+              <p className="pdigest-hero-sub">
+                {t("ob.digest.companyLine", {
+                  n: formatNumber(read.pages.length, locale),
+                  host,
+                })}
+              </p>
+            </div>
+          </div>
+          <div className="pdigest-hero-stats">
+            <div className="pdigest-figure">
+              <strong className="pdigest-figure-value">
+                {formatNumber(citedCount, locale)}
+              </strong>
+              <span className="pdigest-figure-caption t-caption">
+                {t("ob.digest.citedCaption")}
+              </span>
+            </div>
+            <div className="pdigest-figure" data-warn={openCount > 0}>
+              <strong className="pdigest-figure-value">
+                {formatNumber(openCount, locale)}
+              </strong>
+              <span className="pdigest-figure-caption t-caption">
+                {t("ob.digest.openCaption")}
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div className="pdigest-grid">
+        <ProfileArticle
+          rows={rows}
+          number={number}
+          pages={read.pages}
+          legalEntities={legalEntities}
+          factGroups={factGroups}
+          people={people}
+          cites={cites}
+          onSettle={onSettle}
+        />
+        <ProfileSidebar
+          rows={rows}
+          number={number}
+          facts={read.facts}
+          legalEntities={legalEntities}
+          rootUrl={read.root_url}
+        />
+      </div>
+    </div>
   );
 }

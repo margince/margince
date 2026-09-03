@@ -21,19 +21,17 @@ import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { isTechnicalFact } from "./companytechnical";
 import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";
-import { type FactGroup, factFieldLabelKey, listFacts } from "./factview";
+import {
+  factCategoryLabelKey,
+  type FactGroup,
+  factFieldLabelKey,
+  listFacts,
+} from "./factview";
 import "./company360.css";
 
 type OrganizationFact = components["schemas"]["OrganizationFact"];
 type FactCategory = OrganizationFact["category"];
 type FactField = OrganizationFact["field"];
-
-const FACT_CATEGORY_LABELS: Record<FactCategory, MessageKey> = {
-  company: "org.factCategory.company",
-  offering: "org.factCategory.offering",
-  market: "org.factCategory.market",
-  signal: "org.factCategory.signal",
-};
 
 type FactSuspectReason = NonNullable<OrganizationFact["suspect_reason"]>;
 
@@ -203,7 +201,7 @@ function FactCategoryBlock({
   return (
     <div className="co-facts-group">
       <div className="t-label co-facts-heading">
-        {t(FACT_CATEGORY_LABELS[group.category])}
+        {t(factCategoryLabelKey(group.category))}
       </div>
       {shown.map((fact) => (
         <FactRow

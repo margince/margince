@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -80,50 +82,111 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	if ws, ok := principal.WorkspaceID(ctx); ok {
 		ctx = bootCtx(ctx, ws, installationSetupReadActor)
 	}
-	aiReady, err := h.aiConfigured(ctx)
+	steps, err := h.steps(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.InstallationSetup{
+		Complete: stepsComplete(steps),
+		Steps:    steps,
+	})
+}
+
+// steps reads the setup sources once, in the fixed order the contract
+// promises a reader. GetInstallationSetup and firstRunAnswer both read
+// through here, so a step's configured bit is asked once no matter which
+// caller wants the answer.
+//
+// ORDER IS THE CONTRACT. `steps` is declared as "every setup step, in the
+// order a reader should complete them", and a client walks it in the order
+// it arrives. A client sorting these itself would be re-deciding a sequence
+// the server owns, so the sequence is pinned by
+// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
+//
+// ONLY THE MODEL BINDING BLOCKS, pinned by
+// TestOnlyTheModelBindingBlocksFirstRun. Without one the product cannot
+// perform the cold-start read that first run is, so there is nothing to let
+// a reader through to. A connector OAuth app buys mailbox capture and
+// nothing else: an installation signing in with passwords and no external
+// provider is fully usable without one.
+//
+// The app is configured from settings, where each vendor's card carries the
+// redirect URIs that vendor's console asks for. The step stays in the report
+// because that is what `blocking` is for: reporting it and calling it
+// optional is the answer. Dropping it would leave an installation that has no
+// app and one that has a working mail integration reporting the same thing to
+// a reader asking what is left to do.
+func (h installationSetupHandlers) steps(ctx context.Context) ([]crmcontracts.InstallationSetupStep, error) {
+	aiReady, err := h.aiConfigured(ctx)
+	if err != nil {
+		return nil, err
 	}
 	appReady, err := h.connectorAppConfigured(ctx)
 	if err != nil {
-		httperr.Write(w, r, err)
-		return
+		return nil, err
 	}
-
-	// ORDER IS THE CONTRACT. `steps` is declared as "every setup step, in the
-	// order a reader should complete them", and a client walks it in the order
-	// it arrives. A client sorting these itself would be re-deciding a sequence
-	// the server owns, so the sequence is pinned by
-	// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
-	//
-	// ONLY THE MODEL BINDING BLOCKS, pinned by
-	// TestOnlyTheModelBindingBlocksFirstRun. Without one the product cannot
-	// perform the cold-start read that first run is, so there is nothing to let
-	// a reader through to. A connector OAuth app buys mailbox capture and
-	// nothing else: an installation signing in with passwords and no external
-	// provider is fully usable without one.
-	//
-	// The app is configured from settings, where each vendor's card carries the
-	// redirect URIs that vendor's console asks for. The step stays in the report
-	// because that is what `blocking` is for: reporting it and calling it
-	// optional is the answer. Dropping it would leave an installation that has no
-	// app and one that has a working mail integration reporting the same thing to
-	// a reader asking what is left to do.
-	steps := []crmcontracts.InstallationSetupStep{
+	return []crmcontracts.InstallationSetupStep{
 		{Step: crmcontracts.AiModels, Configured: aiReady, Blocking: true},
 		{Step: crmcontracts.OauthApp, Configured: appReady, Blocking: false},
-	}
-	complete := true
+	}, nil
+}
+
+// stepsComplete is exactly "no blocking step is unconfigured" — the contract's
+// own definition of InstallationSetup.complete, kept in one place so a client
+// and a second server-side reading of it can never drift apart.
+func stepsComplete(steps []crmcontracts.InstallationSetupStep) bool {
 	for _, s := range steps {
 		if s.Blocking && !s.Configured {
-			complete = false
+			return false
 		}
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.InstallationSetup{
-		Complete: complete,
-		Steps:    steps,
-	})
+	return true
+}
+
+// firstRunAnswer resolves AuthCapabilities.first_run: !complete, read through
+// the SAME steps GetInstallationSetup reads, so the anonymous probe and a
+// signed-in reader's full report can never disagree about one installation.
+//
+// It reads s.installationSetupHandlers LAZILY (at request time, through the
+// closure), not a copy taken now — the same reason resolveOverlayIncumbent
+// reads s.vault lazily: WithKeyvault installs the underlying AI/connector
+// stores after this is wired, and WithGmailCapture/WithGraphCapture mutate
+// envConnectorApp on it later still, so a snapshot taken at wiring time would
+// read every one of those as unconfigured forever.
+//
+// svc is the ONE identity.Service New() builds for the whole process, passed
+// in rather than constructed again here, so this shares its singleton
+// workspace cache with every other reader of it.
+//
+// It resolves the singleton workspace itself, because the anonymous
+// capabilities probe carries no session and so no workspace of its own
+// (A107/ADR-0061: no tenant selector) — unlike GetInstallationSetup, which
+// takes the workspace the cookie session already bound.
+func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bool, error) {
+	return func(ctx context.Context) (bool, error) {
+		wsID, err := svc.InstallationWorkspace(ctx)
+		if errors.Is(err, identity.ErrNotBootstrapped) {
+			// No organization has been claimed yet (ADR-0105): the most "first
+			// run" an installation gets, and every other boot-time reader of
+			// this state treats it as "not yet" rather than as an error.
+			return true, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("resolving the installation for the first-run signal: %w", err)
+		}
+		readCtx := principal.WithCorrelationID(
+			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
+				Type: principal.PrincipalSystem,
+				ID:   installationSetupReadActor,
+			}), ids.NewV7(),
+		)
+		steps, err := s.steps(readCtx)
+		if err != nil {
+			return false, err
+		}
+		return !stepsComplete(steps), nil
+	}
 }
 
 // aiConfigured reports whether the installation can actually call a model.
