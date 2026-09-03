@@ -12,6 +12,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -164,5 +166,77 @@ func TestAVocabularyWriteAnswersTheWordWithoutInventingCounts(t *testing.T) {
 		if _, present := shape.Properties["tag_id"]; !present {
 			t.Errorf("%s does not answer the tag's id", name)
 		}
+	}
+}
+
+func TestMergeTagsPassesBothWordsThroughInTheRightRoles(t *testing.T) {
+	t.Parallel()
+	source, target := ids.NewV7(), ids.NewV7()
+	var merged mergeTagArgs
+	out, err := (mergeTags{tags: stubTags{merged: &merged}}).Handle(
+		context.Background(),
+		json.RawMessage(`{"tag_id":"`+source.String()+`","into_tag_id":"`+target.String()+`"}`))
+	if err != nil {
+		t.Fatalf("merging answered %v, want the fold performed", err)
+	}
+	// Both roles asserted, not just that two ids arrived: transposing them
+	// retires the word the workspace meant to keep, and no later act undoes it.
+	if merged.source != source {
+		t.Errorf("the seam was asked to retire %v, want the tag_id the caller named", merged.source)
+	}
+	if merged.target != target {
+		t.Errorf("the seam was asked to keep %v, want the into_tag_id the caller named", merged.target)
+	}
+	var result TagMergeResult
+	if err := json.Unmarshal(out, &result); err != nil {
+		t.Fatalf("the answer does not decode: %v", err)
+	}
+	if result.Moved != 12 || result.Collapsed != 3 {
+		t.Errorf("the answer reports %d moved and %d collapsed, want the two numbers the seam returned",
+			result.Moved, result.Collapsed)
+	}
+}
+
+// The summary is the whole of what a human is shown before they release a
+// merge, so it has to name BOTH words. A sentence naming one of them — or
+// naming the ids — asks somebody to approve an act they cannot see.
+func TestTheStagedMergeNamesBothWords(t *testing.T) {
+	t.Parallel()
+	source, target := ids.NewV7(), ids.NewV7()
+	tags := stubTags{names: map[ids.UUID]string{source: "automation", target: "workflow"}}
+	info, err := (mergeTags{tags: tags}).StageInfo(
+		context.Background(),
+		json.RawMessage(`{"tag_id":"`+source.String()+`","into_tag_id":"`+target.String()+`"}`))
+	if err != nil {
+		t.Fatalf("naming the subject answered %v, want the staged sentence", err)
+	}
+	if !strings.Contains(info.Summary, "automation") || !strings.Contains(info.Summary, "workflow") {
+		t.Errorf("the summary reads %q, want both words named", info.Summary)
+	}
+	// The SOURCE is the row the approval binds to: the target survives the act
+	// unchanged, so an approval pinned to it would name a row nothing moves.
+	if info.TargetID != source {
+		t.Errorf("the approval binds to %v, want the word being retired", info.TargetID)
+	}
+	if info.TargetType != tagRecordType {
+		t.Errorf("the approval binds to type %q, want a tag", info.TargetType)
+	}
+}
+
+// The store refuses a self-merge at the end of its own transaction. Refusing it
+// at staging is what stops a human's one-shot approval being spent reaching
+// that refusal — the card gone, nothing done.
+func TestAMergeIntoItselfIsRefusedBeforeAHumanIsAsked(t *testing.T) {
+	t.Parallel()
+	same := ids.NewV7()
+	_, err := (mergeTags{tags: stubTags{}}).StageInfo(
+		context.Background(),
+		json.RawMessage(`{"tag_id":"`+same.String()+`","into_tag_id":"`+same.String()+`"}`))
+	if err == nil {
+		t.Fatal("folding a tag into itself staged an approval, want a refusal before a human is asked")
+	}
+	var bad *BadArgsError
+	if !errors.As(err, &bad) {
+		t.Errorf("the refusal is %T, want a bad-arguments answer the caller can act on", err)
 	}
 }

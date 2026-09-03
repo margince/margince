@@ -113,6 +113,12 @@ var decisionGrants = map[string][]grantRequirement{
 	// the confirm-first control point sits with someone who could not do the
 	// thing they are releasing.
 	"disqualify_lead": {{tableLead, principal.ActionDelete}},
+	// A tag merge releases the source's NAME and no later act restores it, which
+	// is why it confirms where a record merge does not: mergePerson archives the
+	// source with `merged_into_id` and audit walks it back, and a tag keeps no
+	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
+	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
+	"merge_tags": {{targetTag, principal.ActionUpdate}},
 	// A phase transition writes the project row and one phase-history row in
 	// one transaction (deals/project_advance.go); the gated effect is the
 	// project move, so the approver needs the project's update grant.

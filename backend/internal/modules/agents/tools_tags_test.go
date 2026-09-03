@@ -28,6 +28,11 @@ type stubTags struct {
 	// the interface at all — which is a build failure a long way from here.
 	created *createTagArgs
 	edited  *editTagArgs
+	merged  *mergeTagArgs
+	// names answers GetTag per id, so a test about a verb naming TWO tags can
+	// tell the two apart. Empty falls back to knownTagName for every id, which
+	// is right for every verb that names one.
+	names map[ids.UUID]string
 }
 
 type createTagArgs struct {
@@ -38,6 +43,10 @@ type createTagArgs struct {
 type editTagArgs struct {
 	tagID ids.UUID
 	edit  TagEdit
+}
+
+type mergeTagArgs struct {
+	source, target ids.UUID
 }
 
 func (s stubTags) CreateTag(_ context.Context, name string, color *string) (Tag, error) {
@@ -107,10 +116,21 @@ func (s stubTags) FindTag(_ context.Context, name string) (ids.UUID, bool, error
 // and the counting itself is proved against a real database in the collections
 // integration suite, where the numbers can be wrong.
 func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
+	name := knownTagName
+	if given, ok := s.names[tagID]; ok {
+		name = given
+	}
 	return TagDetail{
-		Tag:    Tag{TagID: tagID, Name: knownTagName},
+		Tag:    Tag{TagID: tagID, Name: name},
 		People: 2, Companies: 1, Deals: 0,
 	}, nil
+}
+
+func (s stubTags) MergeTags(_ context.Context, source, target ids.UUID) (TagMergeResult, error) {
+	if s.merged != nil {
+		*s.merged = mergeTagArgs{source: source, target: target}
+	}
+	return TagMergeResult{Moved: 12, Collapsed: 3}, nil
 }
 
 // RecordTags answers a fixed assignment: these tests are about the tool's

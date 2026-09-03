@@ -50,6 +50,17 @@ var createTagCopy = toolCopy{
 		"which an ordinary seat does not hold.",
 }
 
+// merge_tags is the one tag verb a human releases. The copy says so plainly
+// and says what cannot be walked back, because a model that reads "merge" as
+// the reversible record merge will propose one casually.
+var mergeTagsCopy = toolCopy{
+	Purpose: "Fold a duplicate word into the one the workspace keeps, moving every record that " +
+		"carries it.",
+	Limits: "A HUMAN APPROVES THIS, and it is NOT UNDOABLE: the source is retired, its name is " +
+		"released, and no pointer home is kept — unlike a person or company merge. The " +
+		"TARGET is the word that survives. Needs the tag.update grant.",
+}
+
 var updateTagCopy = toolCopy{
 	Purpose: "Rename, recolour or describe a word that already exists. Fields left out are " +
 		"unchanged, so a recolour need not restate the name.",

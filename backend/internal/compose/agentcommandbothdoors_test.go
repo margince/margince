@@ -200,6 +200,22 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	"mergePerson":       mergeDoors("people", "person"),
 	"mergeOrganization": mergeDoors("organizations", "organization"),
 
+	// The tag merge does NOT reuse mergeDoors: that one is a record merge typed
+	// by record_type and resolved through the SoR provider, and this one folds a
+	// vocabulary word no provider serves. What the gate proves is the half they
+	// do share — both doors read the routed id as the SOURCE, the word that is
+	// retired — and the two spell it differently (`target_id` against
+	// `into_tag_id`), which is exactly where a transposition would hide.
+	"mergeTags": {
+		rest: func(primary, secondary ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPost, "/v1/tags/"+primary.String()+"/merge", primary,
+				`{"into_tag_id":"`+secondary.String()+`"}`)
+		},
+		args: func(primary, secondary ids.UUID) string {
+			return `{"tag_id":"` + primary.String() + `","into_tag_id":"` + secondary.String() + `"}`
+		},
+	},
+
 	"scrapeCompany":          enrichDoors("enrich", agents.EnrichDepthPage),
 	"deepReadCompany":        enrichDoors("deep-read", agents.EnrichDepthSite),
 	"technicalEnrichCompany": enrichDoors("technical-enrich", agents.EnrichDepthTechnical),
@@ -463,7 +479,30 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterImportTools(reg, bothDoorsImports{})
+	agents.RegisterTagTools(reg, bothDoorsTags{})
 	return reg
+}
+
+// bothDoorsTags answers the two words a merge names. The interface is embedded
+// rather than implemented: this gate resolves a SUBJECT, which reads tags and
+// nothing else, and a stub that spelled out sixteen unused methods would hide
+// that. A method the resolver does start calling panics loudly here rather than
+// answering a zero value the comparison would then pass on.
+//
+// The names are DERIVED from the id, so the two tags a merge names are tellable
+// apart in the summary: a fixed name for both would let a door that transposed
+// source and target render the identical sentence and compare equal.
+type bothDoorsTags struct{ agents.Tags }
+
+// RecordTagTypes and TaggableTypes are read at REGISTRATION, before any call —
+// they build the apply/remove schemas — so the stub answers them even though
+// this gate never exercises those two verbs.
+func (bothDoorsTags) RecordTagTypes() []string { return []string{"person"} }
+
+func (bothDoorsTags) TaggableTypes() []string { return []string{"person"} }
+
+func (bothDoorsTags) GetTag(_ context.Context, tagID ids.UUID) (agents.TagDetail, error) {
+	return agents.TagDetail{Tag: agents.Tag{TagID: tagID, Name: "tag-" + tagID.String()}}, nil
 }
 
 // bothDoorsImports answers a run in the one state a commit accepts, so the
@@ -665,7 +704,8 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 
 	req, body := fixture.rest(primary, secondary)
 	call, err := restCommands[op](pol,
-		restCommandDeps{records: channelAnchor{}, channels: channelKinds{}, imports: bothDoorsImports{}}, req, body)
+		restCommandDeps{records: channelAnchor{}, channels: channelKinds{}, imports: bothDoorsImports{},
+			tags: bothDoorsTags{}}, req, body)
 	if err != nil {
 		t.Fatalf("the REST door refused the request its own route declares: %v", err)
 	}
