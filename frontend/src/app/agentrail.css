@@ -175,13 +175,15 @@
      while the agent works, and a box that is one line tall for "Idle" and two for
      "Ingesting KoreaPartner Co., Ltd." moves the card, the badge and the figure
      under it every time a name is long. So the room for the second line is held
-     open whether or not it is used, and the text is centred in it. */
+     open whether or not it is used. The text sits at the TOP of that room, not
+     centred in it: centring put half a line of air between the ball and a
+     one-line reading, which read as distance from the thing it names. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   min-height: 2.6em;
   overflow: hidden;
-  align-content: center;
+  align-content: start;
 }
 /* What the TOOL is fetching, under the agent's line and plainly subordinate to
    it. The two are different subjects and both can be true at once, so the
