@@ -41,8 +41,21 @@ package gates
 // an oversight: auth.EnsureLinkTarget. It asks whether the caller may REFERENCE
 // a record — attach an activity, name a parent org, add a list member — and
 // whether "add" needs write authority on the thing added TO is a product
-// question UC-E11-08 E2 raises rather than settles. It is tracked as its own
-// issue rather than decided inside a security sweep.
+// question UC-E11-08 E2 raises rather than settles PER CALL SITE — a security
+// sweep is the wrong place to answer it for all of them at once, and members.go
+// (collections) is the worked counterexample: list membership is not rendered
+// as an attribute of the added record, so EnsureLinkTarget is the right gate
+// there, not a gap.
+//
+// One instance IS decided: applying a tag DOES need write authority on the
+// target (a tag steers a filter and an automation, so tagging changes the
+// record), fixed by moving ApplyTag/RemoveTag/EnsureTaggable in
+// internal/modules/collections/tags.go onto EnsureWritableLive — which is why
+// tags.go earns no waiver here, having left the excluded spelling behind
+// entirely. Every other EnsureLinkTarget site still carries the unresolved
+// question and this exclusion still hides it from the census by construction;
+// closing that per-site, or ruling the current behavior acceptable and saying
+// so here instead of "tracked as its own issue", is tracked separately.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the
 // census, and that is a correction rather than a flourish. A first draft left
