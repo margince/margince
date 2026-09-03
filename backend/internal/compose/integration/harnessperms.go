@@ -208,6 +208,12 @@ var (
 			// narrower than AccountRepPerms, which already carries both.
 			"tag":  {Create: true, Read: true, Update: true, Delete: true},
 			"list": {Create: true, Read: true, Update: true, Delete: true},
+			// forecast is create+read for admin in the real seed and nothing
+			// else: a reading is written by the nightly pass and never edited,
+			// which is what createRead means there. The same drift tag and list
+			// had, found the same way — three forecast tools were unreachable
+			// in the conformance lane for want of a grant production gives.
+			"forecast": {Create: true, Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}

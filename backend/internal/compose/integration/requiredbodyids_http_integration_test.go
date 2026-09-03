@@ -119,6 +119,15 @@ type requiredIDCase struct {
 	method, path      string
 	omitted, supplied AnyMap
 	field             string
+	// suppliedStatus overrides the 404 the supplied arm expects, for an
+	// endpoint that refuses BEFORE it resolves anything. Zero means 404, which
+	// is what every endpoint that performs the lookup answers.
+	//
+	// The arm still runs, and still checks the refusal names no field: the
+	// claim it protects is that a supplied id is not distinguishable from an
+	// invisible one, and an endpoint refusing every caller identically satisfies
+	// that more completely than one that looks. What it must not do is skip.
+	suppliedStatus int
 }
 
 // requiredIDCases is every body this suite drives, keyed by the field under
@@ -160,9 +169,17 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			supplied: AnyMap{"new_state": "granted", "purpose_id": absent},
 			field:    "purpose_id",
 		},
+		// Issuance refuses every caller with a conflict and resolves no purpose
+		// (#3807 removed the mint: an operator-held token let one person close
+		// both halves of a round trip whose whole value is that the subject
+		// closed it). So the supplied arm cannot reach a lookup to answer 404
+		// from — and the omitted arm still holds, which is the point of keeping
+		// the case: an endpoint that refuses for its own reasons must not become
+		// the one place a missing id goes unnamed.
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
+			suppliedStatus: http.StatusConflict,
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
@@ -219,12 +236,16 @@ func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
 					"guessing which key they forgot", problem.Details.Errors, tc.field)
 			}
 		})
-		t.Run(name+"/supplied but invisible stays a 404", func(t *testing.T) {
+		t.Run(name+"/supplied but invisible names no field", func(t *testing.T) {
+			want := tc.suppliedStatus
+			if want == 0 {
+				want = http.StatusNotFound
+			}
 			var problem problemBody
 			status := e.Call(t, tc.method, tc.path, tc.supplied, nil, &problem)
-			if status != http.StatusNotFound {
-				t.Fatalf("→ %d, want 404: a well-formed id that names nothing must not be distinguishable "+
-					"from one the caller may not see, or the status code enumerates rows: %+v", status, problem)
+			if status != want {
+				t.Fatalf("→ %d, want %d: a well-formed id that names nothing must not be distinguishable "+
+					"from one the caller may not see, or the status code enumerates rows: %+v", status, want, problem)
 			}
 			// And it must not name the field either: a 404 that said "purpose_id"
 			// would confirm the caller's id was structurally accepted and only
