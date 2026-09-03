@@ -2601,6 +2601,7 @@ export const en = {
   "home.weekly.queueWorked": "Morning queue",
   "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "home.weekly.sincePrior": "{delta} vs last week",
+  "home.weekly.wonVsPrior": "{value} · {delta} vs prior week",
   "home.weekly.leadsAnswered": "Leads answered in time",
   "home.weekly.ofRouted": "{answered} of {routed}",
   "home.weekly.planCommitmentsKept": "Plan commitments kept",
