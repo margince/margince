@@ -224,13 +224,7 @@ func classifyRequest(batch []unlabeledMessage) model.Request {
 func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) ([]classifyResult, error) {
 	req := classifyRequest(batch)
 	validate := classifyShapeValid(batch)
-	var resp model.Response
-	var err error
-	if structured, ok := c.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		resp, err = c.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, c.brain, req, validate)
 	if err != nil {
 		return nil, err
 	}

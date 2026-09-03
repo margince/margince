@@ -270,13 +270,7 @@ var errRefusedReading = errors.New("signal extract: the model's reading was refu
 func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extractedEvent, error) {
 	req := extractRequest(thread, identity.BaseLanguageForPrompt(ctx, x.pool))
 	validate := extractShapeValid(thread)
-	var resp model.Response
-	var err error
-	if structured, ok := x.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		resp, err = x.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, x.brain, req, validate)
 	if err != nil {
 		// The validator ran inside CompleteStructured and its policy is spent:
 		// three attempts, the last escalated, still refused. Re-reading the

@@ -16,6 +16,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // WritePlan produces the plan. lane may be nil, which is not an error: it is
@@ -40,7 +41,10 @@ func WritePlan(
 func writePlanWithModel(
 	ctx context.Context, lane Completer, in Input, floor Plan, lang string,
 ) (Plan, error) {
-	reply, err := lane.Complete(ctx, PlanRequest(planPromptOf(in, floor), lang))
+	reply, err := ai.Ask(ctx, lane, PlanRequest(planPromptOf(in, floor), lang), func(text string) error {
+		_, err := ParsePlan(text, in, floor)
+		return err
+	})
 	if err != nil {
 		return Plan{}, err
 	}

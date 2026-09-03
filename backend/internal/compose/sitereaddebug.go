@@ -225,16 +225,10 @@ func debugTriage(ctx context.Context, brain completer, seed crawlPage) DebugTria
 	// reason sentence comes back in a different language than a production run
 	// would have written it.
 	req := triageRequest(seed, string(textlang.English))
-	var resp model.Response
-	var err error
 	// The same validated call classifySeed makes. Without it a malformed reply
 	// is retried in production and downgraded to `unclear` here, so the report
 	// would show a verdict production never reached.
-	if structured, ok := brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, triageShapeValid)
-	} else {
-		resp, err = brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, brain, req, triageShapeValid)
 	if err != nil {
 		return DebugTriage{Kind: siteKindUnclear, Error: err.Error()}
 	}
@@ -270,16 +264,12 @@ func (b *recordingBrain) Complete(ctx context.Context, req model.Request) (model
 	return resp, err
 }
 
-// CompleteValidated keeps the structured-output pipeline reachable
-// through the decorator: without it the extractor's validatedBrain
-// type-assert would miss and silently downgrade every call.
+// CompleteValidated keeps the structured-output pipeline reachable through the
+// decorator: without it every caller's ai.Ask would miss on the recorder and
+// silently downgrade the call it wraps to a bare one.
 func (b *recordingBrain) CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error) {
-	structured, ok := b.inner.(validatedBrain)
-	if !ok {
-		return b.Complete(ctx, req)
-	}
 	start := time.Now()
-	resp, err := structured.CompleteValidated(ctx, req, validate)
+	resp, err := ai.Ask(ctx, b.inner, req, validate)
 	b.record(req, resp, err, time.Since(start))
 	return resp, err
 }

@@ -87,7 +87,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (89)
+## Census (90)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -179,6 +179,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
+| `validatedreplypath_test.go` | H2 | A model reply this tree can REFUSE must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 
 ## Reachability (16)

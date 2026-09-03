@@ -95,7 +95,10 @@ func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
-	resp, err := lane.Complete(ctx, DossierRequest(in, lang))
+	resp, err := ai.Ask(ctx, lane, DossierRequest(in, lang), func(text string) error {
+		_, err := ParseDossier(text, in)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

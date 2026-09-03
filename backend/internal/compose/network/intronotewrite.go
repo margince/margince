@@ -59,12 +59,12 @@ func writeIntroNote(
 
 // noteFromModel writes the note and checks what came back.
 //
-// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+// ai.Ask re-asks through the SAME parse the answer path runs, so a
 // reply this site would refuse goes back to the model with the reason.
 func noteFromModel(
 	ctx context.Context, lane Completer, facts noteFacts,
 ) (introNote, error) {
-	res, err := draftreply.Ask(ctx, lane, noteRequest(facts), func(text string) error {
+	res, err := ai.Ask(ctx, lane, noteRequest(facts), func(text string) error {
 		_, parseErr := parseIntroNote(text, facts)
 		return parseErr
 	})

@@ -81,23 +81,19 @@ type voiceBrain interface {
 	Complete(context.Context, model.Request) (model.Response, error)
 }
 
-// validatedVoiceBrain is the optional §5.2 structured-output seam a routed
-// brain also satisfies (compose routerBrain.CompleteValidated): validate →
-// retry with the validator's error fed back → escalate one tier. The builder
-// prefers it because a single stochastic slip — one hallucinated quote or a
-// malformed JSON body — must cost a retry, not the whole build.
-type validatedVoiceBrain interface {
-	CompleteValidated(context.Context, model.Request, Validator) (model.Response, error)
-}
-
 // completeVoiceInference runs the builder call and returns a response whose
-// text already passed validate. A Complete-only brain (the offline fake, unit
-// fixtures) keeps the single-shot path with the same validation applied.
+// text already passed validate.
+//
+// The dispatch is Ask's — a routed brain re-asks with the validator's error fed
+// back and may escalate a tier, because one stochastic slip (a hallucinated
+// quote, a malformed body) must cost a retry and not the whole build. The
+// validate here is what Ask does not do: a Complete-only brain (the offline
+// fake, unit fixtures) has no retry to offer, and this builder's callers STORE
+// what comes back, so nothing may reach a profile unread. On the re-asking path
+// it re-runs a pure check the policy already passed, which is a function call
+// against a model round-trip.
 func completeVoiceInference(ctx context.Context, brain voiceBrain, req model.Request, validate Validator) (model.Response, error) {
-	if validated, ok := brain.(validatedVoiceBrain); ok {
-		return validated.CompleteValidated(ctx, req, validate)
-	}
-	resp, err := brain.Complete(ctx, req)
+	resp, err := Ask(ctx, brain, req, validate)
 	if err != nil {
 		return model.Response{}, err
 	}

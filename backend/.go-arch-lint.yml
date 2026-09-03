@@ -74,7 +74,7 @@ components:
   contracts:   { in: internal/contracts }
   platform:    { in: internal/platform/** }
   identity:    { in: [internal/modules/identity, internal/modules/identity/**] }
-  ai:          { in: internal/modules/ai }
+  ai:          { in: [internal/modules/ai, internal/modules/ai/**] }
   search:      { in: internal/modules/search }
   capture:     { in: [internal/modules/capture, internal/modules/capture/**] }
   consent:     { in: internal/modules/consent }
@@ -137,7 +137,7 @@ deps:
     mayDependOn: [identity, contracts, platform]
     canUse: [pgx, oapi, xcrypto]
   ai:
-    mayDependOn: [contracts, platform]
+    mayDependOn: [ai, contracts, platform]
     # xtext: the voice send-outcome similarity metric is pinned over
     # NFC-normalized, case-folded text — both are Unicode transforms
     # golang.org/x/text owns and the stdlib does not.

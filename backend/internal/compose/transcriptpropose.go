@@ -248,13 +248,7 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 func (p *TranscriptProposer) ask(ctx context.Context, lines []string) ([]proposedStep, error) {
 	req := transcriptRequest(lines, identity.BaseLanguageForPrompt(ctx, p.pool))
 	validate := transcriptShapeValid(len(lines))
-	var resp model.Response
-	var err error
-	if structured, ok := p.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		resp, err = p.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {
 		if errors.Is(err, ai.ErrOutputRejected) {
 			return nil, fmt.Errorf("%w: %w", errRefusedTranscript, err)
