@@ -1,11 +1,10 @@
 /* ===== the top bar =====
  * The session's own strip: the sidebar control, the trail, the search, and the
- * person. It stands on the PAGE's ground (--bgTopbar is --bgPage with an alpha)
- * with one hairline under it, so the strip reads as the top of the room the
- * content is in rather than as a second panel meeting the sidebar at a corner.
- * The sidebar's own ground is a step darker on purpose (--bgSidebar), and the
- * two are deliberately not the same: an L of identical chrome around the content
- * makes the frame the loudest thing on the screen.
+ * person. It is the application's one bar and every screen has it (DESIGN.md
+ * §6); nothing that belongs to a record sits in it. It stands on the same glass
+ * as the sidebar with one hairline under it, so the two halves of the chrome
+ * are one pane wrapped around the content rather than two panels meeting at a
+ * corner.
  *
  * It never scrolls: it is the first row of the content column's flex box and
  * the scroller is its sibling, which is cheaper than `position: sticky` and
@@ -38,9 +37,9 @@
      overlay (50), which may both cover the strip. */
   position: relative;
   z-index: 20;
-  background: var(--bgTopbar);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--borderSubtle);
+  background: var(--pane);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--paneEdge);
 }
 /* Where you are, beside the control that widens the room you are in. */
 .topbar-lead {
@@ -97,7 +96,8 @@
   min-height: var(--control-h-sm);
   padding: 0 var(--space-2) 0 var(--space-3);
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
+  /* A field's corner: this control is drawn as the field it opens. */
+  border-radius: var(--r-control);
   background: var(--bgPage);
   color: var(--textMeta);
   font-size: var(--fs-sm);

@@ -41,10 +41,11 @@
 }
 
 /* App shell — a labeled sidebar collapsing to the canonical 64px rail, and the
- * content column beside it. The chrome is WHITE, not §2b's deep ink-green field:
- * the founder ruling of 2026-07-23 makes the product surface white, so rail icons
- * read as ordinary theme tokens rather than white-alpha on a dark ground. The
- * ink-green field keeps the marketing surfaces. */
+ * content column beside it. The chrome is GLASS over the lit ground (DESIGN.md
+ * §6), not §2b's deep ink-green field: the sidebar and the strip are the page's
+ * own pane with a blur behind it, so rail icons read as ordinary theme tokens
+ * rather than white-alpha on a dark ground. The ink-green field keeps the
+ * marketing surfaces. */
 
 /* The skip link (WCAG 2.4.1). Off-screen until it has focus, and moved with a
  * transform rather than hidden: `display: none`, `visibility: hidden` and a zero
@@ -107,7 +108,17 @@
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
   box-sizing: border-box;
-  background: var(--bgPage);
+  /* The lit ground (DESIGN.md §2): the page colour with the two corner lights
+     painted INTO it — the emerald one behind the sidebar at the top-left, the
+     indigo one at the bottom-right. A background rather than an element, so
+     nothing is stacked, scrolled or measured for it; and never animated, because
+     atmosphere that moves is a feature. Fixed radii and no repeat: each is a
+     pool of light in one corner, faint enough that the eye does not find it. */
+  background:
+    radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
+    radial-gradient(900px 620px at 100% 100%, var(--glowB), transparent 70%)
+    no-repeat,
+    var(--bgPage);
   /* `viewport-fit=cover` exposes the horizontal insets too, and this layout is
      the one that applies in landscape — where the notch sits over the sidebar's
      own edge, on top of the brand chip and the column of icons. */
@@ -135,7 +146,15 @@
   }
 }
 .app.railexpanded {
-  --railW: 252px;
+  --railW: 224px;
+}
+/* A settings route's second level is a narrower column than the destinations:
+   its rows are a section's entries rather than places to go, and 210px holds
+   the longest of them (DESIGN.md §6). Read off the sidebar's own `leveled`
+   class rather than the route, so the shell keeps one opinion about what a
+   level is (app/shell.tsx). */
+.app.railexpanded:has(> .rail.leveled) {
+  --railW: 210px;
 }
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
@@ -295,22 +314,24 @@
   min-width: 0;
 }
 /* ===== sidebar =====
- * The ground is the matte near-white surface in BOTH states. The collapsed
- * state matches the canonical rail's geometry — 64px, 44px targets, the
- * logomark chip, the 44px targets — but not its ink-green field: a
- * sidebar that changed colour on collapse would read as two shells.
+ * The ground is the pane — glass over the emerald light — in BOTH states. The
+ * collapsed state matches the canonical rail's geometry — 64px, the logomark
+ * chip, the same rows — but not its ink-green field: a sidebar that changed
+ * colour on collapse would read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
  * reader walked into), More at phone width, then the installation's entitlement
  * pinned to the foot. */
 .rail {
-  /* Its own ground, a shade off the white page: the application's left edge is
-     visible as a surface rather than only as a hairline. */
-  background: var(--bgSidebar);
+  /* Glass over the glow: the pane's translucent ground with the blur that lets
+     the emerald light behind it show through as a tint rather than as a shape.
+     The two glows are the chrome (DESIGN.md §2) — there is no coloured bar. */
+  background: var(--pane);
+  backdrop-filter: blur(20px);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
-  border-right: 1px solid var(--borderSubtle);
+  border-right: 1px solid var(--paneEdge);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -400,7 +421,7 @@
  * and every row below it is aligned to that, so a marker in the flow would move
  * the whole column. And it hangs off the HEAD's own corner, which is at the same
  * place in both rail states — the head narrows around the mark rather than
- * moving it — so one placement is on screen at 252px, at 64px, and in the phone
+ * moving it — so one placement is on screen at 224px, at 64px, and in the phone
  * sheet's head. */
 .rail .alphamark {
   position: absolute;
@@ -535,19 +556,13 @@
 .rail .navgroup + .navgroup {
   margin-top: var(--space-6);
 }
-/* 12px, semibold, sentence case. The uppercase mono kicker this used to be is
-   the older convention — Primer, Atlassian and shadcn all dropped it, and at
-   9.5px with 0.12em tracking it was the least legible text in the product. The
-   group is separated by space, not by a rule: a heading and a divider do the
-   same job, and stacking both says it twice. */
-/* A quiet label over a group, not a heading competing with the rows under it:
-   the rows are what the eye is looking for, so this is one step down in size and
-   weight and carries the rows' own left edge. */
+/* The eyebrow, which is the one uppercase thing in the product (DESIGN.md §2):
+   the heading carries `t-eyebrow` (app/navlevel.tsx) for its size, weight,
+   tracking and case, and this rule only places it. The group is separated by
+   space, not by a rule: a heading and a divider do the same job, and stacking
+   both says it twice. */
 .rail .navheading {
   position: relative;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   margin: 0 0 var(--space-2);
   padding: 0 14px; /* ds:ignore the nav rows' own inset, which this label stands on */
 }
@@ -590,7 +605,11 @@
   align-items: center;
   gap: var(--space-2);
   flex: 1;
-  min-height: 36px;
+  /* 34px rows: the sidebar is a column of ten places read at a glance, and the
+     compact pitch is what keeps the foot's orb on screen on a laptop. Past the
+     24x24 floor of WCAG 2.2 2.5.8 (AA) at 46x34; the 44px targets of 2.5.5
+     (AAA) are the phone bar's, where a thumb is the pointer. */
+  min-height: 34px;
   /* 13 and not 14, with the transparent border below making up the difference:
      the active row is a PLATE with an edge, and a border that appears only when
      the row is current would shift its glyph and its label by a pixel on every
@@ -617,35 +636,26 @@
 /* Collapsed keeps the SAME row height as expanded, and the 13px padding plus the
    1px edge centres the 18px icon either way (1 + 13 + 18 + 13 + 1 = 46), so no
    icon moves on either axis across the collapse, and none moves when a row
-   becomes the current one. Target size is therefore 46x36 at the floor — past
-   WCAG 2.2 2.5.8 (AA, 24x24), giving up the 44x44 of 2.5.5 (AAA) that
-   AC-shell-1c asks for in favour of the compact row rhythm the design direction
-   sets. */
-/* Hover moves DOWN off the sidebar's ground and the current row moves UP to the
-   elevated one, so the two states are never the same gesture read twice — which
-   is why this is --bgSidebarHover and not --bgHover: --bgHover is lighter than
-   the rail, so it would brighten toward the active plate rather than away from
-   it. */
+   becomes the current one. */
+/* A pointer resting on a row takes the page's own hover step — the glass is the
+   page's pane, so the page's ladder is the rail's ladder too. */
 .rail .navitem:hover {
-  background: var(--bgSidebarHover);
+  background: var(--bgHover);
   color: var(--textPrimary);
 }
-/* The current row is a PLATE: the elevated surface, lifted off the sidebar's own
-   recessed ground the same way a card is lifted off the page — the rail's ladder
-   and the content's are one ladder.
-   Still three signals, and for the reason it always was: the lift measures
-   1.21:1 light / 1.20:1 dark against the ground, which is a difference a reader
-   sees and not one that carries a state on its own (WCAG 1.4.1, Level A). So the
-   weight and the accent on the glyph stay, and the plate gains an EDGE —
-   --borderSubtle is what makes it a surface with a boundary rather than a pale
-   smudge, and it is the same hairline every card in the product draws.
-   The INK stays neutral: the accent as 13.5px text measures 3.9:1 on the dark
-   theme's plate, under the 4.5:1 AA needs, and weight does not rescue that below
-   18.66px. The glyph is where the accent goes, and at 3:1 non-text (1.4.11) it
-   clears. */
+/* The current row is a TINT on the glass (DESIGN.md §2: "a pill, a keycap, the
+   active sidebar row"), one step past hover so the two states are never the
+   same gesture read twice. A white plate — what this was on the recessed
+   sidebar — is invisible on a ground that is already white.
+   Still three signals, because a tint alone is colour-only (WCAG 1.4.1, Level
+   A): the weight, the accent on the glyph, and the pane's own hairline as an
+   EDGE, which is what makes it a surface with a boundary rather than a smudge.
+   The INK stays neutral: the accent as 13.5px text measures under the 4.5:1 AA
+   needs on the dark theme, and weight does not rescue that below 18.66px. The
+   glyph is where the accent goes, and at 3:1 non-text (1.4.11) it clears. */
 .rail .navitem.active {
-  background: var(--bgElevated);
-  border-color: var(--borderSubtle);
+  background: var(--bgCard);
+  border-color: var(--paneEdge);
   color: var(--textPrimary);
   font-weight: var(--fw-semibold);
 }
@@ -725,7 +735,7 @@
 /* ===== a navigation level =====
  * The panel shows ONE level at a time: on a section route the ten destinations
  * step aside for that section's entries, with the way back up above them. 64px
- * cannot carry two levels, and 252px carrying both reads as a list of twenty
+ * cannot carry two levels, and 224px carrying both reads as a list of twenty
  * places to go.
  *
  * The rows are the same `.navitem`s as the destinations, deliberately: every
@@ -1238,24 +1248,19 @@
     --phoneBarLip: calc(var(--space-1) + 1px);
     overflow: visible;
     /* Here the panel IS a floating object — it hovers over the content rather
-       than bounding it — so it takes the card chrome the flush sidebar gives
-       up: all four sides, a radius, a shadow to sit on, and the ELEVATED ground
-       instead of the sidebar's recessed one. That last part is the whole reason
-       the ground is restated here: --bgSidebar is a shade DARKER than the page
-       because a left edge should recede behind what it frames, and this bar is
-       not an edge — it is a card lying on top of the content, and a card that
-       reads darker than the page it covers reads as a hole in it. */
-    background: var(--bgElevated);
-    border: 1px solid var(--borderSubtle);
-    border-radius: var(--r-md);
+       than bounding it — so it takes the chrome the flush sidebar gives up: all
+       four sides, the pane's corner, and the one shadow a layer over the page
+       may cast. The ground stays the same glass, so the bar is visibly the
+       sidebar in its other shape rather than a second surface. */
+    border: 1px solid var(--paneEdge);
+    border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
   }
-  /* And so the current cell cannot be the elevated plate it is on the desktop
-     rail: the plate and the bar would be the same colour. The accent tint is
-     what marks it here — the same signal `.railmore.active` below already uses
-     for a destination that lives in the sheet, so the bar has ONE way of saying
-     "this one", whichever cell is carrying it. The weight and the accent glyph
-     from the desktop rule still apply, so the state keeps its three signals. */
+  /* The current cell takes the accent tint rather than the desktop row's grey
+     one — the same signal `.railmore.active` below already uses for a
+     destination that lives in the sheet, so the bar has ONE way of saying "this
+     one", whichever cell is carrying it. The weight and the accent glyph from
+     the desktop rule still apply, so the state keeps its three signals. */
   .rail .navitem.active {
     background: var(--accentLight);
     border-color: transparent;
@@ -1809,7 +1814,7 @@
    Stated here rather than in the phone block far earlier in this file, and that
    placement is the whole point: `.app:has(> .pageaside…)` and the phone block's
    own `.app` carry different specificities, so the wider rule above was winning
-   at phone width too. It put a 252px rail track back into a 390px grid and
+   at phone width too. It put a 224px rail track back into a 390px grid and
    placed the context column in the second track BESIDE a 138px work column —
    two unreadable columns where the page should be one. */
 @media (max-width: 700px) {

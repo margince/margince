@@ -281,7 +281,8 @@ scrolls inside itself.
   queues that used to badge (approvals, tasks) are lanes of the Worklist, which
   reports its counts on the page. Settings is not a row; it opens from the
   account menu and publishes its own second level (You / Admin settings) as a
-  210px column beside the rail. The agent's orb stays at the foot.
+  210px column on the same glass, which the sidebar becomes while a settings
+  route is open. The agent's orb stays at the foot.
 - **Top bar**: 48px, glass, a hairline under it. The breadcrumb on the left,
   the command field in the middle (`⌘K`), the reader's monogram on the right.
   It is the application's one bar and every screen has it. Nothing that
