@@ -10,16 +10,16 @@
   "totals": {
     "tools": 70,
     "resources": 10,
-    "tool_catalog_bytes": 197668,
+    "tool_catalog_bytes": 199450,
     "resource_catalog_bytes": 3915,
-    "approx_wire_tokens_total": 50395,
+    "approx_wire_tokens_total": 50841,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 47770,
-      "input_schema_bytes": 38885,
+      "input_schema_bytes": 40667,
       "output_schema_bytes": 95916,
-      "description_plus_input_schema_bytes": 86655
+      "description_plus_input_schema_bytes": 88437
     }
   },
   "tools": {
@@ -11739,6 +11739,21 @@
               },
               "type": "array"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
@@ -11777,6 +11792,15 @@
               "maxItems": 25,
               "minItems": 1,
               "type": "array"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
+              "type": "string"
             },
             "scheduled_at": {
               "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -11942,6 +11966,21 @@
               },
               "type": "array"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
@@ -11949,6 +11988,15 @@
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
+              "type": "string"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
               "type": "string"
             },
             "scheduled_at": {
@@ -12110,6 +12158,21 @@
               "minLength": 1,
               "type": "string"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipient must have granted",
               "type": "string"
@@ -12117,6 +12180,15 @@
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
+              "type": "string"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
               "type": "string"
             }
           },

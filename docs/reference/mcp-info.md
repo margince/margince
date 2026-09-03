@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 70 |
 | Resources | 10 |
-| Tool catalog | 193.0 KB |
+| Tool catalog | 194.8 KB |
 | Resource catalog | 3.8 KB |
-| Approx. wire tokens | 50395 |
+| Approx. wire tokens | 50841 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 93.7 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 46.7 KB | 24% | Yes, every step |
-| Input schemas | 38.0 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 46.7 KB | 23% | Yes, every step |
+| Input schemas | 39.7 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 14.7 KB | 7% | Partly |
-| **Description + input schema** | **84.6 KB** | **43%** | **the recurring cost** |
+| **Description + input schema** | **86.4 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -124,9 +124,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`run_report`](#run_report) | Run a report | yes |  | 4.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
-| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
-| [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
-| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
+| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.9 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 3.6 KB |
+| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.9 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
@@ -12633,6 +12633,21 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
       },
       "type": "array"
     },
+    "communication_context": {
+      "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+      "enum": [
+        "reply_to_inbound",
+        "requested_followup",
+        "precontract_quote",
+        "active_deal_followup",
+        "customer_service",
+        "account_notice",
+        "contract_notice",
+        "invoice_or_payment",
+        "marketing"
+      ],
+      "type": "string"
+    },
     "consent_purpose": {
       "description": "Purpose key the recipients must have granted",
       "type": "string"
@@ -12671,6 +12686,15 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
       "maxItems": 25,
       "minItems": 1,
       "type": "array"
+    },
+    "marketing_purpose": {
+      "description": "For marketing, the purpose key naming the topic",
+      "type": "string"
+    },
+    "operator_reason": {
+      "description": "Why this first message is being sent. Recorded; grants nothing.",
+      "maxLength": 500,
+      "type": "string"
     },
     "scheduled_at": {
       "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -12846,6 +12870,21 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
       },
       "type": "array"
     },
+    "communication_context": {
+      "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+      "enum": [
+        "reply_to_inbound",
+        "requested_followup",
+        "precontract_quote",
+        "active_deal_followup",
+        "customer_service",
+        "account_notice",
+        "contract_notice",
+        "invoice_or_payment",
+        "marketing"
+      ],
+      "type": "string"
+    },
     "consent_purpose": {
       "description": "Purpose key the recipients must have granted",
       "type": "string"
@@ -12853,6 +12892,15 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
+      "type": "string"
+    },
+    "marketing_purpose": {
+      "description": "For marketing, the purpose key naming the topic",
+      "type": "string"
+    },
+    "operator_reason": {
+      "description": "Why this first message is being sent. Recorded; grants nothing.",
+      "maxLength": 500,
       "type": "string"
     },
     "scheduled_at": {
@@ -13024,6 +13072,21 @@ Reply on a captured chat conversation — the channels this workspace has connec
       "minLength": 1,
       "type": "string"
     },
+    "communication_context": {
+      "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+      "enum": [
+        "reply_to_inbound",
+        "requested_followup",
+        "precontract_quote",
+        "active_deal_followup",
+        "customer_service",
+        "account_notice",
+        "contract_notice",
+        "invoice_or_payment",
+        "marketing"
+      ],
+      "type": "string"
+    },
     "consent_purpose": {
       "description": "Purpose key the recipient must have granted",
       "type": "string"
@@ -13031,6 +13094,15 @@ Reply on a captured chat conversation — the channels this workspace has connec
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
+      "type": "string"
+    },
+    "marketing_purpose": {
+      "description": "For marketing, the purpose key naming the topic",
+      "type": "string"
+    },
+    "operator_reason": {
+      "description": "Why this first message is being sent. Recorded; grants nothing.",
+      "maxLength": 500,
       "type": "string"
     }
   },

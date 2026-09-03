@@ -174,3 +174,61 @@ func accountSendInput(req crmcontracts.SendAccountEmailRequest) (SendEmailInput,
 		req.ConsentPurpose, req.DraftRef,
 	)), nil
 }
+
+// SendContextInput is what a NON-HTTP transport says about why it is writing.
+//
+// The MCP tool surface cannot reach the generated request types, and must not
+// grow a second validator — a door validating its own claims differently is
+// how one surface ends up able to say what another cannot. So the wire shape
+// is decoded here and the same refusals apply, whichever transport asked.
+type SendContextInput struct {
+	Context          string
+	MarketingPurpose string
+	OperatorReason   string
+	Evidence         commsauthz.Evidence
+}
+
+// ApplyContext validates a non-HTTP caller's claim and puts it on the send
+// input. The refusals are the ones sendContextFrom applies: an unknown
+// category, a category reserved for the installation's own notices, and an
+// operator reason longer than the contract allows.
+func ApplyContext(in SendEmailInput, claim SendContextInput) (SendEmailInput, error) {
+	decoded, err := decodeSendContext(claim)
+	if err != nil {
+		return SendEmailInput{}, err
+	}
+	return decoded.applyTo(in), nil
+}
+
+// ApplyChannelContext is the channel twin. The two inputs are different structs
+// and share this one validation for the reason the mail and channel doors share
+// everything else they can: a claim an agent may not make on one transport must
+// not become makeable by choosing the other.
+func ApplyChannelContext(in SendMessageInput, claim SendContextInput) (SendMessageInput, error) {
+	decoded, err := decodeSendContext(claim)
+	if err != nil {
+		return SendMessageInput{}, err
+	}
+	in.Context = decoded.category
+	in.MarketingPurpose = decoded.marketing
+	in.OperatorReason = decoded.reason
+	in.Evidence = decoded.evidence
+	return in, nil
+}
+
+// decodeSendContext runs the shared refusals over an already-typed claim.
+func decodeSendContext(claim SendContextInput) (sendContext, error) {
+	var category *string
+	if claim.Context != "" {
+		category = &claim.Context
+	}
+	decoded, err := sendContextFrom(category, &claim.MarketingPurpose, &claim.OperatorReason, nil)
+	if err != nil {
+		return sendContext{}, err
+	}
+	// Evidence arrives already typed on this path, so it is carried rather than
+	// re-flattened. Nothing about it is trusted here either: the engine reads
+	// each named record and asks whether it supports the category.
+	decoded.evidence = claim.Evidence
+	return decoded, nil
+}
