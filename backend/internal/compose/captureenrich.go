@@ -199,13 +199,7 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 		return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
 	}
 	req := signatureEnrichRequest(cand, lines)
-	var resp model.Response
-	var err error
-	if structured, ok := e.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, signatureShapeValid)
-	} else {
-		resp, err = e.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, e.brain, req, signatureShapeValid)
 	if err != nil {
 		return err
 	}

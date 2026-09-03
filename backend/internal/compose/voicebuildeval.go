@@ -278,7 +278,11 @@ func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.Vo
 		prompt := evalPromptFor(sample)
 		var bodies []string
 		for repeat := 0; repeat < voiceEvalRepeatsPerPrompt; repeat++ {
-			resp, err := brain.Complete(ctx, voiceEvalDraftRequest(personality, artifact, sample, repeat))
+			resp, err := ai.Ask(ctx, brain, voiceEvalDraftRequest(personality, artifact, sample, repeat),
+				func(text string) error {
+					_, err := readVoiceEvalDraft(text)
+					return err
+				})
 			if err != nil {
 				return voiceEvaluationResult{}, fmt.Errorf("voice evaluation draft: %w", err)
 			}
@@ -394,7 +398,10 @@ func readVoiceJudgeScores(text string, want int) ([]float64, error) {
 // in ONE call. A refused answer is not a failed call: the neutral scores stand
 // and the caller is told they are not a verdict.
 func judgeVoiceDrafts(ctx context.Context, brain completer, original string, bodies []string) ([]float64, bool, error) {
-	resp, err := brain.Complete(ctx, voiceEvalJudgeRequest(original, bodies))
+	resp, err := ai.Ask(ctx, brain, voiceEvalJudgeRequest(original, bodies), func(text string) error {
+		_, err := readVoiceJudgeScores(text, len(bodies))
+		return err
+	})
 	if err != nil {
 		return nil, false, fmt.Errorf("voice evaluation judge: %w", err)
 	}

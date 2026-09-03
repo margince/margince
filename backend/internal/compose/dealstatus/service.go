@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -246,7 +247,10 @@ func (s *Service) write(
 }
 
 func (s *Service) ask(ctx context.Context, in StatusInput, lang string) (WrittenStatus, error) {
-	resp, err := s.lane.Complete(ctx, StatusRequest(in, lang))
+	resp, err := ai.Ask(ctx, s.lane, StatusRequest(in, lang), func(text string) error {
+		_, err := ParseStatus(text, in)
+		return err
+	})
 	if err != nil {
 		return WrittenStatus{}, err
 	}

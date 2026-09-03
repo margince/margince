@@ -225,13 +225,7 @@ func onboardingActRequest(act, message string, history []model.Message, contextJ
 func (a *onboardingCompanyAssistant) answerAct(ctx context.Context, act, message string, history []model.Message, contextJSON json.RawMessage, locale string) (companyReadModelReply, error) {
 	req := onboardingActRequest(act, message, history, contextJSON, locale)
 	validate := func(text string) error { return validateOnboardingActReply(act, text) }
-	var response model.Response
-	var err error
-	if structured, ok := a.brain.(validatedBrain); ok {
-		response, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		response, err = a.brain.Complete(ctx, req)
-	}
+	response, err := ai.Ask(ctx, a.brain, req, validate)
 	if err != nil {
 		return companyReadModelReply{}, err
 	}

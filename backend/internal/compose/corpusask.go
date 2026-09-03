@@ -280,13 +280,7 @@ func askCorpusLane(
 	ctx context.Context, lane corpusAskLane, question string, passages []knowledge.Passage, lang string,
 ) ([]crmcontracts.KnowledgeClaim, error) {
 	req := CorpusAskRequest(question, passages, lang)
-	var resp model.Response
-	var err error
-	if structured, ok := lane.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, corpusReplyValid(passages))
-	} else {
-		resp, err = lane.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, lane, req, corpusReplyValid(passages))
 	if err != nil {
 		return nil, fmt.Errorf("the corpus ask lane: %w", err)
 	}
