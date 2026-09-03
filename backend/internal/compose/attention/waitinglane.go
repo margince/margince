@@ -92,7 +92,13 @@ func (h HiddenWork) Clear() bool {
 type WaitingCustomer struct {
 	// ActivityID is the message itself — what a reply would be drafted to.
 	ActivityID ids.UUID
-	Subject    string
+	// EmailSummary is the canonical email row, present exactly when this wait
+	// is an EMAIL the reader may read. The lane spans email and channel
+	// messages, and only an email has an email's shape — a chat drawn as one
+	// would carry a mail icon and an email's access badge over a message that
+	// never travelled on one.
+	EmailSummary *crmcontracts.EmailSummary
+	Subject      string
 	// Since is when they wrote. The wait is measured from it, and it is what
 	// the card says out loud.
 	Since time.Time

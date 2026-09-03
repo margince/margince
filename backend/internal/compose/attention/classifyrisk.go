@@ -37,6 +37,13 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		level = levelMaterialRisk
 	}
 	row := base(item, level, "deals_at_risk", consequence)
+	// The contract's own per-row figure, sent rather than left for a client to
+	// re-derive from `because`/`above_next` — set only once conversion actually
+	// ran and priced this item, so a raw amount (no FX seam bound) or an
+	// unpriced deal never claims to be a base-currency figure it is not.
+	if row.Deal != nil && money.converted() && known {
+		row.Deal.ExpectedMinorBase = &expected
+	}
 	// The reason carries the figure the verdict actually weighed, in the units
 	// it was weighed in — the base currency once conversion ran — so a reader
 	// comparing it against the summary's threshold compares like with like.
@@ -83,7 +90,7 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		Currency:    item.Deal.Currency,
 	}
 	// The close date rides on the lane item's own due moment, and the idle
-	// count on its detail. Both were already resolved; only this projection
+	// count on its own typed field. Both were already resolved; only this projection
 	// dropped them, so the card could state money and never say when the deal
 	// was meant to land.
 	if item.DueAt != nil {

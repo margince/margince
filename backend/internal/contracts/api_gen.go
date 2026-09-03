@@ -10083,11 +10083,13 @@ func (e RowTagColor) Valid() bool {
 
 // Defines values for RunReportRequestAggregatesFn.
 const (
-	RunReportRequestAggregatesFnAvg   RunReportRequestAggregatesFn = "avg"
-	RunReportRequestAggregatesFnCount RunReportRequestAggregatesFn = "count"
-	RunReportRequestAggregatesFnMax   RunReportRequestAggregatesFn = "max"
-	RunReportRequestAggregatesFnMin   RunReportRequestAggregatesFn = "min"
-	RunReportRequestAggregatesFnSum   RunReportRequestAggregatesFn = "sum"
+	RunReportRequestAggregatesFnAvg    RunReportRequestAggregatesFn = "avg"
+	RunReportRequestAggregatesFnCount  RunReportRequestAggregatesFn = "count"
+	RunReportRequestAggregatesFnMax    RunReportRequestAggregatesFn = "max"
+	RunReportRequestAggregatesFnMedian RunReportRequestAggregatesFn = "median"
+	RunReportRequestAggregatesFnMin    RunReportRequestAggregatesFn = "min"
+	RunReportRequestAggregatesFnP75    RunReportRequestAggregatesFn = "p75"
+	RunReportRequestAggregatesFnSum    RunReportRequestAggregatesFn = "sum"
 )
 
 // Valid indicates whether the value is a known member of the RunReportRequestAggregatesFn enum.
@@ -10099,7 +10101,11 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 		return true
 	case RunReportRequestAggregatesFnMax:
 		return true
+	case RunReportRequestAggregatesFnMedian:
+		return true
 	case RunReportRequestAggregatesFnMin:
+		return true
+	case RunReportRequestAggregatesFnP75:
 		return true
 	case RunReportRequestAggregatesFnSum:
 		return true
@@ -16227,8 +16233,9 @@ type Attention struct {
 	//
 	// The idle window here is DELIBERATELY shorter than the product-wide `stalled`
 	// threshold: a queue that only speaks once a deal meets the stalled bar is
-	// reporting a two-month-old fact rather than warning. `detail` names the window
-	// actually used, so the card never implies a patience the server did not apply.
+	// reporting a two-month-old fact rather than warning. `quiet_days` carries the
+	// window actually used, so the card never implies a patience the server did not
+	// apply.
 	//
 	// Absent — not empty — on an installation whose feed does not read deals.
 	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
@@ -16392,9 +16399,9 @@ type Attention struct {
 	//
 	// A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
 	// a contact carrying no open deal never reaches that lane, and those are exactly
-	// the relationships that lapse unnoticed. `detail` carries the silence in days,
-	// from the same §4 derivation the contact's own page shows, so the two surfaces
-	// cannot come to disagree about when somebody went quiet.
+	// the relationships that lapse unnoticed. `quiet_days` carries the silence, from
+	// the same §4 derivation the contact's own page shows, so the two surfaces cannot
+	// come to disagree about when somebody went quiet.
 	//
 	// Only relationships this reader actually had: a contact nobody here ever spoke
 	// to has not gone quiet, and a lane that said otherwise would report every
@@ -16567,6 +16574,22 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
+	// stopped.
+	//
+	// Minted by the LANE that mints the cause, because only that lane knows which of
+	// the records it read is the condition's name. It is deliberately not derived from
+	// a sampled member's title: the members of a group are alike, not identical, and
+	// one member's subject describes that member rather than the thing they share.
+	//
+	// ABSENT is a real answer, not a gap. A lane whose only candidate is a vocabulary
+	// key sends nothing rather than a plausible-looking one — the AI-work lane is that
+	// case, since its task kinds are generated enum keys, and a rep reading
+	// "site_triage failed 8 times" is being shown the vocabulary this field exists to
+	// replace. A group with no words is named by its kind alone, and a client never
+	// falls back to rendering `cause_ref`.
+	CauseLabel *string `json:"cause_label,omitempty"`
+
 	// CauseRef Which underlying CONDITION this row reports, for a surface that groups repeated
 	// failures of one thing into one row. Two failures of one broken automation carry
 	// the same value; a failure of a different rule carries a different one.
@@ -16575,6 +16598,11 @@ type AttentionItem struct {
 	// meaning. A row that reports no shared condition omits it. Present only on the
 	// system-health sources, where "the same thing broke again" is a question a reader
 	// has.
+	//
+	// `cause_label` is the half a reader sees. The two are separate because they must
+	// be able to disagree: a rule's NAME is mutable and not unique, so an identity
+	// built from it would merge two rules that happen to share a name and split one
+	// that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
 	CauseRef *string `json:"cause_ref,omitempty"`
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
@@ -16587,7 +16615,24 @@ type AttentionItem struct {
 	// reader's own language; a label composed server-side would not be.
 	Deal *AttentionDealFacts `json:"deal,omitempty"`
 
-	// Detail One supporting line: what changed, or what the evidence said.
+	// Detail One supporting line: what changed, or what the evidence said. PROSE, in a
+	// language a reader reads — a bounce reason, a park reason, the mailbox that
+	// stopped syncing, what an AI task was about.
+	//
+	// It is not a channel for anything else. Three producers used the field as one,
+	// each with its own reader parsing the value back out: two wrote a bare day count
+	// and one wrote internal marker words. So the field meant "a sentence" on twelve
+	// sources and something else on three, and a client drawing it faithfully printed
+	// a naked "90" under one title and "machine_sender" under another.
+	//
+	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
+	// the sentence in the reader's own language.
+	//
+	// ONE source is still an exception, and a client must know it: `sync_health` fills
+	// this field with its own vocabulary — the affected object classes, the failure
+	// class, or the budget band — for a client to write a sentence from. Those are
+	// words like `shed` and `deal, person`. A client that has not written that
+	// sentence draws nothing for that source rather than the value.
 	Detail *string `json:"detail,omitempty"`
 
 	// DueAt When this is due (tasks), or when it lapses (approvals).
@@ -16615,11 +16660,33 @@ type AttentionItem struct {
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
 
+	// QuietDays How many days a deal or a relationship has been idle, where the producing lane
+	// measures one. Sent by `deal_at_risk` and `relationship_decay`.
+	//
+	// Typed rather than written into `detail` because it is a number the queue READS
+	// and not only something it shows: it becomes the row's `quiet_days` reason, the
+	// deal card's own figure, and the age each row carries into the ordering. A number
+	// parsed back out of a sentence reads as zero the day somebody rewords the
+	// sentence, and every one of those uses would go quietly wrong together.
+	QuietDays *int `json:"quiet_days,omitempty"`
+
 	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
 	Rank *int `json:"rank,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
+
+	// Staged What the verdict engine already worked out about a staged contact decision, so a
+	// surface can group alike questions without reading the proposal a second time.
+	//
+	// Read from the payload the engine staged rather than re-derived, because a second
+	// opinion would put one decision in two groups across two reads.
+	//
+	// Typed because these are FLAGS a client tests, not words a reader sees. They used to
+	// ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+	// a reader doing a substring match to get them back — which made the supporting line
+	// undrawable on this source and would have shown a rep an internal token.
+	Staged *AttentionStagedFacts `json:"staged,omitempty"`
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
@@ -16698,6 +16765,24 @@ type AttentionPairSide struct {
 	// send none today. Zero would claim the side carries nothing, which is a
 	// different fact from not having asked.
 	RelatedCount *int `json:"related_count,omitempty"`
+}
+
+// AttentionStagedFacts What the verdict engine already worked out about a staged contact decision, so a
+// surface can group alike questions without reading the proposal a second time.
+//
+// Read from the payload the engine staged rather than re-derived, because a second
+// opinion would put one decision in two groups across two reads.
+//
+// Typed because these are FLAGS a client tests, not words a reader sees. They used to
+// ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+// a reader doing a substring match to get them back — which made the supporting line
+// undrawable on this source and would have shown a rep an internal token.
+type AttentionStagedFacts struct {
+	// KnownCompany The address's domain already names a company in this workspace.
+	KnownCompany *bool `json:"known_company,omitempty"`
+
+	// MachineSender The address is a sending system rather than a person.
+	MachineSender *bool `json:"machine_sender,omitempty"`
 }
 
 // AttentionSubject The record this item is about, named so a reader knows who it concerns before opening anything.
@@ -19766,6 +19851,15 @@ type DataCompleteness struct {
 
 	// Present Required inputs available and not stale.
 	Present int `json:"present"`
+}
+
+// DataCoverage How current the sources behind the forecast's numbers are.
+type DataCoverage struct {
+	AsOf  time.Time          `json:"as_of"`
+	RunId openapi_types.UUID `json:"run_id"`
+
+	// Sources The sources the run tried, and how far it reached into each. A source absent from this list is one the run did not attempt — different from one it attempted and could not read, which the state field says.
+	Sources []ForecastAssuranceSource `json:"sources"`
 }
 
 // DataSubjectRequest A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
@@ -28620,9 +28714,11 @@ type RowVersion = int64
 // reports"). Saved reports are not served; a UUID here is refused.
 type RunReportRequest struct {
 	Aggregates *[]struct {
-		As    *string                      `json:"as,omitempty"`
-		Field *string                      `json:"field,omitempty"`
-		Fn    RunReportRequestAggregatesFn `json:"fn"`
+		As    *string `json:"as,omitempty"`
+		Field *string `json:"field,omitempty"`
+
+		// Fn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
+		Fn RunReportRequestAggregatesFn `json:"fn"`
 	} `json:"aggregates,omitempty"`
 
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
@@ -28630,7 +28726,7 @@ type RunReportRequest struct {
 	GroupBy *[]string               `json:"group_by,omitempty"`
 }
 
-// RunReportRequestAggregatesFn defines model for RunReportRequest.Aggregates.Fn.
+// RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
 
 // SaveEmailSignatureRequest defines model for SaveEmailSignatureRequest.
@@ -31235,9 +31331,13 @@ type WorklistBatch struct {
 	// bound printed as a total is a wrong number rather than a bounded one.
 	AtLeast *bool `json:"at_least,omitempty"`
 
-	// Cause What the members have in common, for a `system_incident`: the rule's name,
-	// the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
-	// rather than only how often.
+	// Cause WHICH condition the members share, for a `system_incident` — the identity the
+	// group was formed on, carried so a client can tell two groups apart and find
+	// the same row again on a re-read.
+	//
+	// An opaque identity, never rendered. It is a `cause_ref` and reads like one
+	// (`automation_run:<uuid>`), so a client that put it on screen would show a rep
+	// "automation_run:01a0… failed 12 times". `label` is the half to draw.
 	Cause *string `json:"cause,omitempty"`
 
 	// Count How many decisions this row stands for.
@@ -31255,6 +31355,15 @@ type WorklistBatch struct {
 	// is broken, and repeating it eight times is aggregation failure rather than
 	// urgency.
 	Key WorklistBatchKey `json:"key"`
+
+	// Label What `cause` identifies, in words — the automation's name, the mailbox that
+	// stopped. This is what a row says.
+	//
+	// Absent where the lane that formed the group minted no name for the condition.
+	// A client then names the group by its kind alone and NEVER falls back to
+	// `cause`, because an identity on screen is worse than a vaguer sentence: the
+	// reader cannot act on it and cannot tell it from a bug.
+	Label *string `json:"label,omitempty"`
 
 	// Sample A few members, named, so the group can be checked before it is answered.
 	Sample *[]string `json:"sample,omitempty"`
@@ -31349,14 +31458,18 @@ type WorklistCount struct {
 type WorklistCountCategory string
 
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
-// `amount_minor × win_probability`, converted to the installation's base currency —
-// the only figure by which two deals in different currencies may be compared.
+// `amount_minor` converted to the installation's base currency — the only figure by
+// which two deals in different currencies may be compared. It does not yet weight by
+// `win_probability`: the pipeline this row comes from does not read a deal's stage
+// today, so the two fields are independent facts rather than one computed from the
+// other, and a reader must not multiply them together expecting the product to equal
+// a risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor       *int64              `json:"amount_minor,omitempty"`
 	Currency          *string             `json:"currency,omitempty"`
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
-	// ExpectedMinorBase Expected revenue in the base currency. Null when the amount or the rate is unknown.
+	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
 	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays         *int                `json:"quiet_days,omitempty"`
@@ -31410,6 +31523,13 @@ type WorklistItem struct {
 	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 	Category WorklistItemCategory `json:"category"`
 
+	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
+	// stopped. This is the half a reader sees; the identity beside it is not drawable.
+	//
+	// Present wherever the producing lane named the condition. A row whose lane named
+	// none is described by its kind alone.
+	CauseLabel *string `json:"cause_label,omitempty"`
+
 	// CauseRef Which underlying CONDITION this row reports, so a surface can group repeated
 	// failures of one thing into one row. Opaque identity, never rendered and never
 	// parsed. Absent on a row that reports no shared condition.
@@ -31421,11 +31541,25 @@ type WorklistItem struct {
 	Consequence WorklistItemConsequence `json:"consequence"`
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
-	// `amount_minor × win_probability`, converted to the installation's base currency —
-	// the only figure by which two deals in different currencies may be compared.
+	// `amount_minor` converted to the installation's base currency — the only figure by
+	// which two deals in different currencies may be compared. It does not yet weight by
+	// `win_probability`: the pipeline this row comes from does not read a deal's stage
+	// today, so the two fields are independent facts rather than one computed from the
+	// other, and a reader must not multiply them together expecting the product to equal
+	// a risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
-	// Detail One supporting line.
+	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
+	// stopped, what an AI task was about.
+	//
+	// Not a channel for anything else. A value the queue itself reads travels typed
+	// beside this field, never inside it: a figure parsed back out of a sentence reads
+	// as zero the day somebody rewords the sentence.
+	//
+	// ONE source is an exception a client must know: `sync_health` fills this with its
+	// own vocabulary — the affected object classes, the failure class, the budget band
+	// — for a client to write a sentence from. Those are words like `shed`. A client
+	// that has not written that sentence draws nothing for that source.
 	Detail *string `json:"detail,omitempty"`
 
 	// Dispositions The ways this row can be PUT DOWN, as the server declares them. A client
@@ -31439,6 +31573,9 @@ type WorklistItem struct {
 
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
@@ -45000,6 +45137,9 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
+	// How current the sources behind the numbers are.
+	// (GET /analytics/coverage)
+	GetDataCoverage(w http.ResponseWriter, r *http.Request)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -46812,6 +46952,12 @@ func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) 
 // AI usage + budget — the spend is never invisible.
 // (GET /ai/usage)
 func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How current the sources behind the numbers are.
+// (GET /analytics/coverage)
+func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -51735,6 +51881,28 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiUsage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDataCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDataCoverage(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74577,6 +74745,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)

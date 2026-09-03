@@ -260,6 +260,10 @@
   --dangerBg: rgba(239, 68, 68, 0.1);
 
   --r-sm: 8px;
+  /* The one radius for a control a hand operates — button, input, select
+     trigger. Between the chip's --r-sm and the pane's --r-md, because a control
+     as round as the pane it sits in reads as part of the pane. */
+  --r-control: 10px;
   --r-md: 14px;
   --r-lg: 18px; /* the pane */
   --r-full: 9999px;
@@ -272,10 +276,11 @@
      [Cancel][Save] pair was therefore never the same height, and a button beside
      a field never sat on the field's own line. The value is a floor rather than
      a fixed height, so a control whose label wraps grows instead of clipping —
-     nothing here assumes a one-line label. 40px also clears the 24px AA target
-     of WCAG 2.5.8 with room, and the small rung stays a deliberate step below it
-     for dense rows rather than drifting to whatever its padding produced. */
-  --control-h: 40px;
+     nothing here assumes a one-line label. 36px clears the 24px AA target of
+     WCAG 2.5.8 with room (the touch arm below raises it to 44), and the small
+     rung stays a deliberate step below it for dense rows rather than drifting
+     to whatever its padding produced. */
+  --control-h: 36px;
   --control-h-sm: 32px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
@@ -348,7 +353,7 @@
    * agree with — `--fs-eyebrow` says where it belongs, `--fs-10` only says how
    * big it is and invites the next 10.5px.
    */
-  --fs-eyebrow: 11px; /* uppercase kickers, section labels */
+  --fs-eyebrow: 10.5px; /* uppercase kickers, section labels */
   --fs-meta: 12px; /* counts, provenance, timestamps */
   --fs-sm: 13px; /* dense UI: chips, table cells, helper text */
   --fs-body: 13.5px; /* the default reading size */

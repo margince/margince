@@ -75,6 +75,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
 	activity := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"activity","fields":{"kind":"note","body":"to be relinked"}}`)
+	// The vocabulary half: coined here so update_tag below has a word to rename.
+	tag := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"conformance","color":"teal"}`)
 	// Records the confirm-first sweep consumes, each its own so one tool's write
 	// cannot decide whether the next tool's call is even legal.
 	promotable := createThroughTheToolSurface(ctx, t, registry,
@@ -220,6 +222,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"merge_records", `{"record_type":"person","source_id":"` + duplicate.String() +
 			`","target_id":"` + person.String() + `"}`},
 		{"advance_project_phase", `{"project_id":"` + project.String() + `","to_phase":"pursuing"}`},
+		// Renaming the word coined above. Both tag-vocabulary writes are reachable
+		// here: AdminPerms carries tag create/read/update/delete.
+		{"update_tag", `{"tag_id":"` + tag.String() + `","name":"conformance-renamed","color":"amber"}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
@@ -269,6 +274,18 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"granting it here would widen the authority every other tool in the sweep runs under, " +
 		"and the answer shape it would prove is the one remove_tag already shares",
 	"remove_tag": "same missing tag.read as apply_tag above",
+	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
+		"carry — measured, not assumed: the bare call comes back permission denied. Granting it " +
+		"here would widen the authority every other tool in the sweep runs under",
+	"forecast_input_checks": "same missing forecast.read as forecast_readings above",
+	"data_coverage": "needs a seat holding data_coverage.read, which this lane's seat does not " +
+		"carry — measured, not assumed: the bare call comes back permission denied. Its own object, " +
+		"not the forecast's, so it clears the lane on a grant of its own rather than with the three above",
+	"list_input_checks": "same missing forecast.read as forecast_readings above — it reads the " +
+		"exceptions behind that tool's summary off the same forecast surface, so it clears the " +
+		"lane exactly when the others do",
+	"forecast_movement": "same missing forecast.read as forecast_readings above, and it also " +
+		"requires a `from`/`to` window, so a bare call would not reach the handler either way",
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
@@ -323,7 +340,7 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	// every record the calls below read was made through it, and
 	// createThroughTheToolSurface holds each of those answers to its schema and
 	// its envelope on the way past.
-	invoked := map[string]bool{"create_record": true}
+	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
 	}
@@ -368,6 +385,39 @@ func createThroughTheToolSurface(ctx context.Context, t *testing.T, registry *ag
 		t.Fatalf("unreadable create_record answer %s: %v", out, err)
 	}
 	return created.Data.ID
+}
+
+// coinTagThroughTheToolSurface creates one tag through create_tag and returns
+// its id, holding that tool's own answer to its schema on the way.
+//
+// Mirrors createThroughTheToolSurface for the same reason: update_tag needs a
+// tag that exists, and the call list is assembled before any call runs, so the
+// id has to come from somewhere. Coining it through the tool rather than seeding
+// SQL means create_tag is exercised too — which is why the census pre-seeds it
+// as invoked, exactly as it does for create_record.
+func coinTagThroughTheToolSurface(ctx context.Context, t *testing.T, registry *agents.Registry, args string) ids.UUID {
+	t.Helper()
+	spec, registered := registry.Spec("create_tag")
+	if !registered {
+		t.Fatal("create_tag is not registered")
+	}
+	out, err := registry.Invoke(ctx, "create_tag", json.RawMessage(args))
+	if err != nil {
+		t.Fatalf("create_tag(%s): %v", args, err)
+	}
+	if defect := agents.ResultDefect(spec.OutputSchema, out); defect != "" {
+		t.Fatalf("create_tag answered %s, which does not keep its own schema: %s", out, defect)
+	}
+	assertEnvelopePopulated(t, "create_tag", out)
+	var created struct {
+		Data struct {
+			TagID ids.UUID `json:"tag_id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &created); err != nil {
+		t.Fatalf("unreadable create_tag answer %s: %v", out, err)
+	}
+	return created.Data.TagID
 }
 
 // A conformance suite that could not fail is the thing it exists to prevent, so

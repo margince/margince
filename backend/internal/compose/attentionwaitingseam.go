@@ -16,8 +16,10 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // attentionWaiting binds the who-is-waiting lane to the activities module's
@@ -84,10 +86,24 @@ func (w attentionWaiting) Unanswered(
 	// SURVIVORS against the scan bound would read a full scan whose survivors
 	// are few as a complete one. This is the only place both numbers exist.
 	cut := len(rows) >= activities.WaitingScanCap
-	out := make([]attention.WaitingCustomer, 0, len(rows))
-	for _, row := range keepWaitingCustomers(rows) {
+	kept := keepWaitingCustomers(rows)
+	summaries, err := w.emailRows(ctx, kept)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.WaitingCustomer, 0, len(kept))
+	for _, row := range kept {
+		// Nil when this wait is not an email, or is one whose content the
+		// reader may not read. A zero-valued struct would be a row claiming an
+		// empty subject and a `team` badge, which is a message rather than the
+		// absence of one.
+		var summary *crmcontracts.EmailSummary
+		if got, ok := summaries[row.ActivityID]; ok {
+			summary = &got
+		}
 		out = append(out, attention.WaitingCustomer{
 			ActivityID:     row.ActivityID,
+			EmailSummary:   summary,
 			Subject:        row.Subject,
 			Since:          row.OccurredAt,
 			PersonID:       row.PersonID,
@@ -138,4 +154,35 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 		kept = append(kept, row)
 	}
 	return kept
+}
+
+// emailRows reads the canonical email row behind each waiting message that is
+// one, in a single statement over the whole lane.
+//
+// The lane spans email and channel messages (the waiting query's own
+// `a.kind IN ('email', 'message')`), so the ids are filtered to email BEFORE
+// the read rather than after: a chat has no email row to fetch, and asking for
+// one would spend the statement's budget on rows that can only come back
+// absent.
+//
+// The reader carries its own content gate, so a summary reaches the lane only
+// for a message this caller may read. That is belt and braces here — a message
+// the reader may not read produces no waiting row at all — and it is the lock
+// that holds if the lane's own gate is ever loosened.
+func (w attentionWaiting) emailRows(
+	ctx context.Context, rows []activities.WaitingReply,
+) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+	var emailIDs []ids.UUID
+	for _, row := range rows {
+		if row.Kind == string(crmcontracts.ActivityKindEmail) {
+			emailIDs = append(emailIDs, row.ActivityID)
+		}
+	}
+	if len(emailIDs) == 0 {
+		// An empty map rather than a nil one, for the reason the reader itself
+		// gives: the caller reads this by key, and "no emails in this lane" is
+		// the same answer to that question as "no rows for you".
+		return map[ids.UUID]crmcontracts.EmailSummary{}, nil
+	}
+	return w.store.EmailSummariesByID(ctx, emailIDs)
 }

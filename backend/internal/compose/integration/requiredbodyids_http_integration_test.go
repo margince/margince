@@ -119,6 +119,22 @@ type requiredIDCase struct {
 	method, path      string
 	omitted, supplied AnyMap
 	field             string
+	// suppliedStatus is what the SUPPLIED-but-invisible case answers, 404 unless
+	// stated. An endpoint that resolves no id at all has no row to hide and
+	// cannot answer 404 honestly — it must still answer the SAME thing for every
+	// id, which is the property that stops a status enumerating rows, and it must
+	// still not name the field. Both are asserted below whatever this says, so a
+	// stated status narrows the expectation without dropping the case from the
+	// census.
+	suppliedStatus int
+}
+
+// wantSuppliedStatus is the case's own expectation, defaulted.
+func (c requiredIDCase) wantSuppliedStatus() int {
+	if c.suppliedStatus != 0 {
+		return c.suppliedStatus
+	}
+	return http.StatusNotFound
 }
 
 // requiredIDCases is every body this suite drives, keyed by the field under
@@ -163,6 +179,14 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
+			// This endpoint mints nothing and resolves nothing: it refuses every
+			// caller with a conflict, whatever purpose they name. So it has no row
+			// to hide and no 404 to give — and equally no way to enumerate, since
+			// a visible purpose, an invisible one and one that never existed all
+			// get the identical answer. The omitted half above is still held: a
+			// body-id probe runs ahead of the refusal precisely so this endpoint
+			// does not become the one place a missing id goes unnamed.
+			suppliedStatus: http.StatusConflict,
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
@@ -222,9 +246,10 @@ func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
 		t.Run(name+"/supplied but invisible stays a 404", func(t *testing.T) {
 			var problem problemBody
 			status := e.Call(t, tc.method, tc.path, tc.supplied, nil, &problem)
-			if status != http.StatusNotFound {
-				t.Fatalf("→ %d, want 404: a well-formed id that names nothing must not be distinguishable "+
-					"from one the caller may not see, or the status code enumerates rows: %+v", status, problem)
+			if status != tc.wantSuppliedStatus() {
+				t.Fatalf("→ %d, want %d: a well-formed id that names nothing must not be distinguishable "+
+					"from one the caller may not see, or the status code enumerates rows: %+v",
+					status, tc.wantSuppliedStatus(), problem)
 			}
 			// And it must not name the field either: a 404 that said "purpose_id"
 			// would confirm the caller's id was structurally accepted and only

@@ -69,6 +69,7 @@ const canonical: Record<string, string> = {
   "--danger": "#b91c1c",
   "--dangerBg": "rgba(239,68,68,.1)",
   "--r-sm": "8px",
+  "--r-control": "10px",
   "--r-md": "14px",
   "--r-lg": "18px",
   "--r-full": "9999px",

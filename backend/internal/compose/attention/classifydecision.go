@@ -11,7 +11,6 @@ package attention
 // decision holds up a person, or is the routine tidying that groups.
 
 import (
-	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -31,10 +30,10 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 	row := base(item, level, "decisions", consequence)
 	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
-	// The two facts a routine contact decision is grouped by. They ride on the
-	// wire item's `detail`, which the feed fills from the staged payload — the
-	// verdict engine already decided who the address belongs to, and deriving
-	// it again here would put one decision in two groups across two reads.
+	// The two facts a routine contact decision is grouped by, from the typed
+	// field the feed fills out of the staged payload — the verdict engine
+	// already decided who the address belongs to, and deriving it again here
+	// would put one decision in two groups across two reads.
 	facts := stagedFactsOf(item)
 	return ranked{
 		item:          row,
@@ -44,23 +43,25 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 }
 
-// The markers the feed stamps on a contact decision's detail, so the queue can
-// group it without reading the payload a second time. Two words rather than a
-// structure, because `detail` is one line on the wire and this is all it needs
-// to carry.
-const (
-	stagedMachineSender = "machine_sender"
-	stagedKnownCompany  = "known_company"
-)
-
-// stagedFactsOf reads those markers back.
+// stagedFactsOf reads what the feed already worked out about a contact
+// decision, so the queue groups it without reading the proposal a second time.
+//
+// From the TYPED field. These were two marker words written into `detail` and a
+// substring match to read them back, which cost this source its supporting line
+// entirely: a client drawing that field faithfully would have shown a rep
+// "machine_sender".
+//
+// An item carrying none is not "not a machine sender" — it is a decision of a
+// kind this question is never asked about. Both read false here, which is the
+// same answer for grouping and the safe direction: an ungrouped question is
+// still shown, where a wrongly grouped one disappears behind a fold.
 func stagedFactsOf(item crmcontracts.AttentionItem) StagedFacts {
-	if item.Detail == nil {
+	if item.Staged == nil {
 		return StagedFacts{}
 	}
 	return StagedFacts{
-		MachineSender: strings.Contains(*item.Detail, stagedMachineSender),
-		KnownCompany:  strings.Contains(*item.Detail, stagedKnownCompany),
+		MachineSender: item.Staged.MachineSender != nil && *item.Staged.MachineSender,
+		KnownCompany:  item.Staged.KnownCompany != nil && *item.Staged.KnownCompany,
 	}
 }
 

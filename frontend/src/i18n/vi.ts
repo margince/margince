@@ -2452,6 +2452,10 @@ export const vi = {
   "plan.none": "Bạn chưa lập kế hoạch cho tuần này.",
   "plan.start": "Lập kế hoạch tuần của tôi",
   "plan.add": "Thêm cam kết",
+  "plan.saveRefused_one":
+    "Không lưu được một cam kết. Mục này vẫn được tick — hãy thử lại.",
+  "plan.saveRefused_other":
+    "Không lưu được {count} cam kết. Các mục này vẫn được tick — hãy thử lại.",
   "plan.save_one": "Lưu {count} thay đổi",
   "plan.save_other": "Lưu {count} thay đổi",
   "plan.due": "hạn {day}",

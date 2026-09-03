@@ -28,6 +28,7 @@ import {
   reasonText,
   rowHref,
 } from "./worklist.copy";
+import { WaitingEmailLine } from "./worklist.emailtitle";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // The focus card, or nothing.
@@ -35,7 +36,14 @@ import { type WorklistItem, worklistKey } from "./worklist.queries";
 // Drawn only on a page the reader can act on. A day whose top row is a
 // duplicate-merge suggestion is not a day with a recommended action, and
 // promoting one would tell a rep that hygiene is their most important work.
-export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
+export function FocusCard({
+  item,
+  onOpenEmail,
+}: Readonly<{
+  item: WorklistItem;
+  // Opens a waiting email. Absent where the surface has no drawer.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -56,8 +64,13 @@ export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <Panel title={t("worklist.focus.title")}>
       <div className="worklist-focus">
+        {/* The one thing to do now, and where it is an email that is the
+            message itself — the card has the room for the canonical row, and
+            the whole point of this card is that a rep can act without opening
+            anything else first. */}
+        <WaitingEmailLine item={item} onOpen={onOpenEmail} />
         <p className="t-h2 worklist-focus-what">
-          {href ? (
+          {item.email_summary ? null : href ? (
             <a className="entity-link" href={href}>
               {itemTitle(item, t, locale)}
             </a>
