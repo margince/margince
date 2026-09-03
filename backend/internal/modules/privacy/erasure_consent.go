@@ -61,5 +61,36 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	if _, err := tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, personID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's confirm-page submissions: %w", err)
 	}
+
+	// The authorization record, and the one place here where DELETE would be
+	// the wrong verb.
+	//
+	// communication_decision says why each message to this person was
+	// permitted. That is the controller's own accountability record under
+	// Art. 5(2), and destroying it would erase the evidence that the sending
+	// was lawful — leaving the installation unable to answer for messages it
+	// has already sent. What must go is the part that identifies the subject:
+	// the address it went to, and the link back to the person row.
+	//
+	// So the address is tombstoned and the subject link cut, in place. The
+	// verdict, the category, the reason and the ruleset survive as an
+	// unattributed statistic about a send that happened.
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_decision
+		   SET recipient_address = 'erased+' || id || '@example.invalid',
+		       subject_id = NULL, subject_kind = NULL
+		 WHERE subject_id = $1`, personID); err != nil {
+		return fmt.Errorf("privacy: retiring the subject's authorization decisions: %w", err)
+	}
+
+	// A basis and a suppression are the opposite case: both exist only to say
+	// something about THIS person, so neither has a life after them. Deleted,
+	// like the address rows beside them.
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE person_id = $1`, personID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's communication bases: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE person_id = $1`, personID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's suppressions: %w", err)
+	}
 	return nil
 }

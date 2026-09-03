@@ -115,6 +115,7 @@ var erasureCascadeFiles = []string{
 	// Art. 17 transaction, each in its own file for the size reason the
 	// timeline has one.
 	"internal/modules/privacy/erasure_attachments.go",
+	"internal/modules/privacy/erasure_leadtwins.go",
 	"internal/modules/privacy/erasure_channels.go",
 	// The live capabilities over the subject's consent record — the
 	// preference-center token and the double-opt-in token. Split out of

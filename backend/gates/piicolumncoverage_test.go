@@ -57,6 +57,31 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// A decision's own vocabulary: what kind of message it was, what the engine
+	// and the old gate each answered, and which rollout mode was in force. Every
+	// value is drawn from a closed set this repository defines — none of it is
+	// anything the subject wrote or anything written about them, so the Art. 17
+	// redaction leaves it standing. What it DOES clear on this table is the
+	// recipient address and the subject link, which is the identifying half.
+	"communication_decision": {
+		"basis",
+		"legacy_verdict",
+		"mode",
+		"phase",
+		"reason_code",
+		"requested_category",
+		"resolved_category",
+		"suppression",
+		"verdict",
+		"actor",
+		// evidence holds RECORD IDS and nothing else — the activity, deal,
+		// invoice or consent-event a decision rested on. The records themselves
+		// are erased on their own terms by the statements that own them; a uuid
+		// pointing at a row that has been scrubbed reveals nothing, and clearing
+		// it here would destroy the controller's ability to say which evidence
+		// it relied on for a send it has already made.
+		"evidence",
+	},
 	"activity": {
 		"audience",
 		"audience_reason",
