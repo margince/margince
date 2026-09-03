@@ -1879,10 +1879,14 @@ function useBoardInteractions({
   advance: ReturnType<typeof useAdvanceDeal>;
   setPending: (pending: PendingAdvance) => void;
 }>) {
-  // Which card is in flight, and when the last drag ended — a drop and a click
-  // arrive as the same event pair, so the board tells them apart by time.
+  // Which card is in flight, and WHICH card a drag last ended on, with when —
+  // a drop and a click arrive as the same event pair, so the board tells them
+  // apart by time. The id travels with the timestamp because the window is
+  // board-wide otherwise: a reader who drops one card and reaches straight for
+  // another would have that second click swallowed, and a link that does
+  // nothing is indistinguishable from a broken one.
   const dragging = useRef<string | null>(null);
-  const lastDragEnd = useRef(0);
+  const lastDrop = useRef<{ dealId: string; at: number } | null>(null);
 
   const requestAdvance = (dealId: string, stageId: string) => {
     const toStage = stages.find((stage) => stage.id === stageId);
@@ -1908,8 +1912,9 @@ function useBoardInteractions({
   // is left is the one thing a link cannot know: the click that ends a drag is
   // not a click on the card, and following it would open a deal the reader was
   // only moving.
-  const openDeal = (_deal: BoardDeal, event: MouseEvent) => {
-    if (Date.now() - lastDragEnd.current <= 250) {
+  const openDeal = (deal: BoardDeal, event: MouseEvent) => {
+    const drop = lastDrop.current;
+    if (drop?.dealId === deal.id && Date.now() - drop.at <= 250) {
       event.preventDefault();
     }
   };
@@ -1936,8 +1941,8 @@ function useBoardInteractions({
       const dealId =
         event.dataTransfer.getData("text/plain") || dragging.current;
       dragging.current = null;
-      lastDragEnd.current = Date.now();
       if (dealId) {
+        lastDrop.current = { dealId, at: Date.now() };
         requestAdvance(dealId, column.stage);
       }
     },
