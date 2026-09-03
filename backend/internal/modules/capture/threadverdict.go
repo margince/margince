@@ -139,6 +139,9 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			      AND attempts < $3
+			      AND EXISTS (SELECT 1 FROM activity a
+			                   WHERE a.id = first_activity_id
+			                     AND a.restricted_at IS NULL)
 			    ORDER BY next_attempt_at
 			    LIMIT $1
 			    FOR UPDATE SKIP LOCKED)
@@ -237,6 +240,15 @@ func (s *ThreadVerdictStore) Defer(
 // moving them to `unsure` — which HOLDS, because a thread nothing could judge
 // is exactly the one not to publish on a guess.
 //
+// It also ends the threads that CANNOT be judged: a row whose first_activity_id
+// names nothing readable. The column is nullable and the foreign key is
+// ON DELETE SET NULL, so erasing the message a question was raised about leaves
+// the question standing with nothing to ask about; a message later put under a
+// statutory hold reads the same way, because the claim's own subject and body
+// lookups exclude a restricted row. Both used to be claimed anyway and judged
+// on an empty prompt. Retiring them costs the model call and holds the mail,
+// which is the safe direction for a thread nothing can read.
+//
 // A terminal state, reached by spending the attempts rather than by a second
 // spelling of "give up".
 func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string) (int64, error) {
@@ -247,8 +259,12 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 			   SET status = 'unsure', disposition_reason = NULLIF($1, ''),
 			       resolved_at = now(), next_attempt_at = NULL,
 			       claimed_until = NULL, claimed_by = NULL, updated_at = now()
-			 WHERE status = 'pending' AND attempts >= $2
-			   AND (claimed_until IS NULL OR claimed_until <= now())`,
+			 WHERE status = 'pending'
+			   AND (claimed_until IS NULL OR claimed_until <= now())
+			   AND (attempts >= $2 OR NOT EXISTS (
+			         SELECT 1 FROM activity a
+			          WHERE a.id = capture_thread_verdict.first_activity_id
+			            AND a.restricted_at IS NULL))`,
 			reason, ThreadVerdictMaxAttempts)
 		if err != nil {
 			return err
@@ -330,6 +346,17 @@ func openConfidentialityQuestionTx(
 		// A meeting or a channel message is not correspondence a
 		// confidentiality classifier was ever asked about.
 		return nil
+	}
+	// A message that INHERITED a pending verdict is the one the reopen is
+	// waiting for, whatever this mailbox's posture asks of it.
+	//
+	// The reopen clears first_activity_id so the classifier is not shown the
+	// text a previous answer was about. Something must then supply the message
+	// it IS about, and only this path has one in hand. Leaving it to the
+	// posture check below strands the row: a shared mailbox never reaches
+	// EnsureTx, the column stays NULL, and the claim has nothing to read.
+	if birth.verdictStatus == VerdictPending {
+		return (&ThreadVerdictStore{}).EnsureTx(ctx, tx, rec.ThreadKey, owner, id.UUID, time.Now())
 	}
 	// Checked on the posture rather than the derived audience, because `held`
 	// and `classified` collapse to the same audience and only the posture can

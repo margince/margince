@@ -135,9 +135,11 @@ func reopenClearedThreadTx(ctx context.Context, tx pgx.Tx, threadKey string) err
 	// triggered the re-ask. The unseen sender that caused the reopen would be
 	// judged by correspondence they were never part of.
 	//
-	// The next message on this thread supplies a new one: EnsureTx fills the
-	// column on the row it finds empty, and a claim skips a row that still has
-	// none rather than judging an empty prompt.
+	// The message that triggered this reopen supplies a new one: it inherits
+	// VerdictPending, and openConfidentialityQuestionTx fills the column with
+	// that message in this same transaction. A claim requires a readable
+	// activity, so a row that somehow reaches one without a pointer retires
+	// rather than being judged on an empty prompt.
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = 'pending', kind = NULL, confidence = NULL,

@@ -452,3 +452,114 @@ func personIsArchived(t *testing.T, e *integration.Env, id ids.PersonID) bool {
 	}
 	return archived
 }
+
+// TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing pins the
+// end of a question nothing can answer.
+//
+// first_activity_id is nullable and its foreign key is ON DELETE SET NULL, so
+// erasing the message a question was raised about leaves the question standing
+// with nothing to ask about. The claim used to take that row anyway: its
+// subject and body lookups return empty for a missing activity, so the model
+// was asked to judge a blank prompt and its answer was recorded as if it had
+// read the conversation.
+func TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedHeldThreadMail(t, e, "thread-erased", "kunde@example.test", "Angebot")
+	threadID := seedThreadQuestion(t, e, "thread-erased", activityID)
+
+	// The erasure the retention path performs, which SET NULLs the pointer.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `DELETE FROM activity WHERE id = $1`, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("erasing the message the question was about: %v", err)
+	}
+
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming due threads: %v", err)
+	}
+	for _, c := range claimed {
+		if c.ID == threadID {
+			t.Fatal("a thread whose message is gone was claimed, and would be judged on an empty prompt")
+		}
+	}
+
+	if _, err := store.RetireExhausted(e.Admin(), "unreadable"); err != nil {
+		t.Fatalf("retiring: %v", err)
+	}
+	if got := threadStatus(t, e, threadID); got != "unsure" {
+		t.Fatalf("thread status = %q, want unsure: a question nothing can answer must reach a terminal state", got)
+	}
+}
+
+// TestAThreadPointedAtRestrictedMailIsNotJudgedOnAnEmptyPrompt is the same
+// failure reached by the other route.
+//
+// The claim's own subject and body lookups exclude a restricted row, so a
+// message put under a statutory hold after its question opened leaves the
+// classifier reading nothing while the row still looks answerable.
+func TestAThreadPointedAtRestrictedMailIsNotJudgedOnAnEmptyPrompt(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedHeldThreadMail(t, e, "thread-restricted", "kunde@example.test", "Angebot")
+	threadID := seedThreadQuestion(t, e, "thread-restricted", activityID)
+
+	// A hold needs the evidence that qualified it: the database refuses a
+	// restriction that records no basis, which is the point of the trigger.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_retention_evidence
+			       (activity_id, basis, qualified_at, decided_by_name, reason)
+			VALUES ($1, 'controller_pin', now(), 'Datenschutz', 'litigation hold')`,
+			activityID); err != nil {
+			return err
+		}
+		// The whole shape a restriction takes: archived, with a reason and an
+		// end date. The schema refuses any partial version of it.
+		_, err := tx.Exec(context.Background(), `
+			UPDATE activity
+			   SET restricted_at = now(), archived_at = now(),
+			       restricted_reason = 'litigation hold',
+			       restricted_until = now() + interval '1 year',
+			       retention_class = 'commercial_correspondence', retention_class_at = now()
+			 WHERE id = $1`, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("placing the message under a hold: %v", err)
+	}
+
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming due threads: %v", err)
+	}
+	for _, c := range claimed {
+		if c.ID == threadID {
+			t.Fatal("a thread pointed at restricted mail was claimed, and its prompt would carry no text")
+		}
+	}
+}
+
+// TestAReadableThreadIsStillClaimed is the admit case for the two refusals
+// above: a filter that refused everything would pass both of them.
+func TestAReadableThreadIsStillClaimed(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedHeldThreadMail(t, e, "thread-readable", "kunde@example.test", "Angebot")
+	threadID := seedThreadQuestion(t, e, "thread-readable", activityID)
+
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming due threads: %v", err)
+	}
+	for _, c := range claimed {
+		if c.ID == threadID {
+			if c.Subject != "Angebot" {
+				t.Fatalf("claimed subject = %q, want the message's own", c.Subject)
+			}
+			return
+		}
+	}
+	t.Fatal("a thread whose message is readable was not claimed")
+}
