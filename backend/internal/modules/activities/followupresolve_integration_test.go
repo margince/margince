@@ -97,6 +97,52 @@ func (e *resolveEnv) seedTask(t *testing.T, source, capturedBy string) ids.UUID 
 	return id
 }
 
+// seedPerson writes a bare person row, the target a promotion carries the
+// lead's activities onto.
+func (e *resolveEnv) seedPerson(t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Resolve Person', $2, 'manual', $3)`, id, e.rep, "human:"+e.rep.String())
+	return id
+}
+
+// seedTaskLinkedToPerson writes one open task linked to a person — the shape
+// carryLeadActivities (people/promote.go) leaves a lead's follow-up task in,
+// inside the SAME transaction that promotes the lead: entity_type 'person',
+// person_id set, lead_id NULL. A resolver that still looks this task up by
+// the lead id finds nothing.
+func (e *resolveEnv) seedTaskLinkedToPerson(t *testing.T, source, capturedBy string, person ids.UUID) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by)
+		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3)`,
+		id, source, capturedBy)
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, id, person)
+	return id
+}
+
+// leadPromotedEvent is the real shape people.QualifyLead emits — the payload
+// names the person the lead became, which is the only place, once
+// carryLeadActivities has run, that a caller can still learn where the lead's
+// tasks went.
+func leadPromotedEvent(t *testing.T, lead, person ids.UUID) workflow.Event {
+	t.Helper()
+	payload, err := json.Marshal(map[string]string{
+		"promoted_person_id": person.String(), "dedupe_outcome": "created", "trigger": "human_qualify",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return workflow.Event{
+		ID:         ids.NewV7(),
+		Type:       "lead.promoted",
+		OccurredAt: time.Date(2026, 8, 28, 9, 0, 0, 0, time.UTC),
+		Entity:     datasource.EntityRef{Type: "lead", ID: lead},
+		Payload:    payload,
+	}
+}
+
 func (e *resolveEnv) isDone(t *testing.T, id ids.UUID) bool {
 	t.Helper()
 	var done bool
@@ -216,21 +262,52 @@ func TestACapturedTaskResolvesNothing(t *testing.T) {
 	}
 }
 
-func TestALeadLeavingTheOpenPoolCompletesItsSystemTasks(t *testing.T) {
+// A lead DISQUALIFIED leaves the open pool without moving anything: it never
+// becomes a person, so its follow-up task's link keeps its lead_id, and the
+// resolver's original lead-keyed lookup still finds it.
+func TestADisqualifiedLeadCompletesItsSystemTasks(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	systemTask := e.seedTask(t, "system", "system")
 
 	ctx := e.systemCtx()
-	h := handlerFor(t, store, "lead.promoted")
+	h := handlerFor(t, store, "lead.disqualified")
 	fire(ctx, t, h, workflow.Event{
 		ID:         ids.NewV7(),
-		Type:       "lead.promoted",
+		Type:       "lead.disqualified",
 		OccurredAt: time.Date(2026, 8, 28, 9, 0, 0, 0, time.UTC),
 		Entity:     datasource.EntityRef{Type: "lead", ID: e.lead},
 	})
 	if !e.isDone(t, systemTask) {
-		t.Error("the promoted lead's system follow-up is still open — a reminder chasing a closed loop")
+		t.Error("the disqualified lead's system follow-up is still open — a reminder chasing a closed loop")
+	}
+}
+
+// margince#3764: a lead PROMOTED is a different shape. carryLeadActivities
+// (people/promote.go) moves the follow-up task's link from the lead onto the
+// person it became — entity_type 'person', person_id set, lead_id NULL —
+// inside the SAME transaction that emits lead.promoted, so the resolver never
+// sees a lead-linked row for a genuinely promoted lead. It has to complete the
+// task through the person the event names instead.
+func TestAPromotedLeadCompletesItsSystemTasksCarriedToThePerson(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	systemTask := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	humanTask := e.seedTaskLinkedToPerson(t, "web", "human:"+e.rep.String(), person)
+
+	ctx := e.systemCtx()
+	h := handlerFor(t, store, "lead.promoted")
+	result := fire(ctx, t, h, leadPromotedEvent(t, e.lead, person))
+
+	if len(result.Applied) == 0 {
+		t.Fatal("a promoted lead resolved nothing — the follow-up loop stays open forever")
+	}
+	if !e.isDone(t, systemTask) {
+		t.Error("the promoted lead's system follow-up is still open — its task carried to the person, and the resolver looked it up by the lead id promotion just nulled")
+	}
+	if e.isDone(t, humanTask) {
+		t.Error("the HUMAN's task was completed — the system claimed work a person may not consider done")
 	}
 }
 

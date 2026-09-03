@@ -77,10 +77,14 @@ const systemCapturedByPattern = systemCapturedBy + ":%"
 func FollowUpWorkflows(store *Store) []workflow.Handler {
 	return []workflow.Handler{
 		followUpAutoResolve{store: store, name: "follow_up_auto_resolve", trigger: "activity.captured", leadsFromLinks: true},
-		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_promoted", trigger: "lead.promoted"},
+		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_promoted", trigger: leadPromotedTrigger},
 		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_disqualified", trigger: "lead.disqualified"},
 	}
 }
+
+// leadPromotedTrigger names the one trigger whose Apply also has to resolve
+// by PERSON rather than by lead — see the comment on Apply for why.
+const leadPromotedTrigger = "lead.promoted"
 
 // followUpAutoResolve is one trigger's arm of the auto-resolve invariant.
 // leadsFromLinks says the fired entity is an ACTIVITY whose linked leads
@@ -151,10 +155,38 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		}
 		completed += done
 	}
+	// margince#3764: a PROMOTED lead is a different shape from a disqualified
+	// one. carryLeadActivities (people/promote.go) moves the follow-up task's
+	// link from the lead onto the person it became, inside the SAME
+	// transaction that emits this event — so the lead-keyed completion above
+	// never finds it once a lead has genuinely promoted; only the payload
+	// still names where the task went.
+	if w.trigger == leadPromotedTrigger {
+		personID, err := promotedPersonID(ev.Payload)
+		if err != nil {
+			return workflow.RunResult{}, fmt.Errorf("decoding the promoted person: %w", err)
+		}
+		done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, personID)
+		if err != nil {
+			return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on person %s: %w", personID, err)
+		}
+		completed += done
+	}
 	if completed == 0 {
 		return workflow.RunResult{}, nil
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
+}
+
+// promotedPersonID reads the person a lead.promoted payload names — the only
+// place, once carryLeadActivities has run, that still says where its tasks
+// went.
+func promotedPersonID(payload json.RawMessage) (ids.PersonID, error) {
+	var body crmcontracts.PublicEventLeadPromoted
+	if err := json.Unmarshal(payload, &body); err != nil {
+		return ids.PersonID{}, fmt.Errorf("activities: decoding lead.promoted's payload: %w", err)
+	}
+	return ids.From[ids.PersonKind](ids.UUID(body.PromotedPersonId)), nil
 }
 
 func (w followUpAutoResolve) IdempotencyKey(ev workflow.Event) string {
@@ -213,19 +245,36 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // leaves a call that takes no read gate of its own; each completion's
 // write is gated inside UpdateActivity.
 func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
+	return s.completeOpenSystemTasksLinkedBy(ctx, "l.lead_id = $1", leadID.UUID)
+}
+
+// CompleteOpenSystemTasksForPerson is CompleteOpenSystemTasksForLead's
+// sibling for a lead that PROMOTED: carryLeadActivities (people/promote.go)
+// re-points a follow-up task's link from the lead onto the person it became,
+// in the same transaction that emits lead.promoted, so a lead id can no
+// longer find it — only the person id it was carried to can.
+func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID ids.PersonID) (int, error) {
+	return s.completeOpenSystemTasksLinkedBy(ctx, "l.person_id = $1", personID.UUID)
+}
+
+// completeOpenSystemTasksLinkedBy is the one query and completion loop both
+// callers above share, differing only in which activity_link column names
+// the subject. `linkClause` is always a caller-supplied compile-time literal
+// ("l.lead_id = $1" / "l.person_id = $1"), never a value off a request body.
+func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, linkClause string, linkValue ids.UUID) (int, error) {
 	type openTask struct {
 		id      ids.ActivityID
 		version int64
 	}
 	var open []openTask
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
+		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
-			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
+			WHERE %s AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), systemSource,
+			ORDER BY a.id`, linkClause), linkValue, string(crmcontracts.ActivityKindTask), systemSource,
 			systemCapturedBy, systemCapturedByPattern)
 		if err != nil {
 			return err
