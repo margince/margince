@@ -26,6 +26,12 @@
 
 .ob-page {
   min-height: 100vh;
+  /* The shell's scroller is a column flexbox, and a flex item with an explicit
+     min-height loses the content floor an automatic one keeps: it shrinks to
+     exactly that min-height, so a room taller than the window was pressed to one
+     viewport and the board clipped at both ends behind the band and the foot.
+     Not shrinking is the rule that lets the scroller do its one job. */
+  flex-shrink: 0;
   display: grid;
   /* SAFE centring: past the point where the card is taller than the window, a
      centred track overflows equally in both directions and the top half is the
