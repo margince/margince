@@ -4,7 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../screens/story-utils";
 import { Card } from "./atoms";
+import { EmailDetail } from "./emaildetail";
 import { EmailEntry } from "./emailentry";
 import { EmailReference } from "./emailreference";
 import { Panel, PanelBody } from "./panel";
@@ -153,4 +159,51 @@ export const Reference: StoryObj = {
       <EmailReference subject={null} occurredAt="28 Aug" />
     </div>
   ),
+};
+
+/**
+ * The drawer a row opens: the message whole, its recipients, and the sign-off
+ * folded behind a control rather than dropped.
+ */
+export const Detail: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
+        () =>
+          jsonResponse({
+            id: BASE.activity_id,
+            lifecycle: "delivered",
+            occurred_at: BASE.occurred_at,
+            summary: BASE,
+            body: "Können wir Dienstag kurz sprechen? Die Laufzeit passt uns.\n\nViele Grüße\nAna Sommer\nBrandt Automotive",
+            from: [
+              { address: "ana@brandt.example", display_name: "Ana Sommer" },
+            ],
+            to: [{ address: "lars@margince.example", display_name: "Lars J." }],
+            cc: [],
+            bcc: [],
+            bcc_withheld: true,
+            attachments: [],
+            links: [],
+            access: {
+              content_state: "available",
+              display_status: "team",
+              can_change: false,
+              change_mode: "none",
+            },
+            can_reply: true,
+            can_relink: false,
+            version: 3,
+          }),
+    });
+    return (
+      <StoryProviders>
+        <EmailDetail
+          activityId={BASE.activity_id}
+          onClose={() => {}}
+          formatWhen={() => "1 Sep 09:12"}
+        />
+      </StoryProviders>
+    );
+  },
 };
