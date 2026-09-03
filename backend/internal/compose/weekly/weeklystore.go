@@ -195,20 +195,27 @@ type WeekPlan interface {
 	CloseWeek(ctx context.Context, now time.Time) (due, kept int, err error)
 }
 
-// NewEngine binds the engine to the installation pool.
-func NewEngine(pool *pgxpool.Pool) *Engine { return &Engine{pool: pool} }
+// NewEngine binds the engine to the installation pool and to the membership
+// question its team reads are gated on.
+//
+// TeamMembers is an ARGUMENT rather than a With… option, unlike WeekPlan beside
+// it, and the asymmetry is deliberate: an absent plan degrades honestly — the
+// review counts no commitments and says so — while an absent membership seam
+// refuses every team read. A caller that forgets an option gets a broken
+// snapshot job at the second tick of the week; a caller that forgets an
+// argument does not compile.
+//
+// Nil is still handled where the gate reads it, because a test may pass one to
+// assert the refusal, and a gate that trusted the constructor would be a gate
+// with a hole in it the day someone adds a second construction path.
+func NewEngine(pool *pgxpool.Pool, teams TeamMembers) *Engine {
+	return &Engine{pool: pool, teams: teams}
+}
 
 // WithPlan binds the week-ahead, so a closed review carries what the plan came
 // to. Absent, the review's commitment counts stay zero.
 func (e *Engine) WithPlan(plan WeekPlan) *Engine {
 	e.plan = plan
-	return e
-}
-
-// WithTeamMembers binds the membership question the team snapshot is gated on.
-// Absent, every team read is refused.
-func (e *Engine) WithTeamMembers(teams TeamMembers) *Engine {
-	e.teams = teams
 	return e
 }
 

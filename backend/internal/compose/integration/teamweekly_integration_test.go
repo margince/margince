@@ -46,7 +46,7 @@ func setupTeamWeekly(t *testing.T) *teamEnv {
 		// every team read, so a suite built on one would prove nothing about
 		// which reader is admitted — and the real identity service, not a stub,
 		// because the question here is what team_membership says.
-		engine:  weekly.NewEngine(e.Pool).WithTeamMembers(identity.NewService(e.Pool)),
+		engine:  weekly.NewEngine(e.Pool, identity.NewService(e.Pool)),
 		leadCtx: e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
 		repCtx:  ownScoped(e, e.Rep2),
 	}
@@ -204,7 +204,7 @@ func TestAnUnboundMembershipSeamRefusesTheTeamWeek(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	unwired := weekly.NewEngine(e.Pool)
+	unwired := weekly.NewEngine(e.Pool, nil)
 	lead := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
 
 	if _, err := unwired.LatestTeamReview(lead, e.Team1, nil); !errors.Is(err, apperrors.ErrNotFound) {
