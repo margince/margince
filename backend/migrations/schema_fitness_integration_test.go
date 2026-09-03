@@ -187,8 +187,14 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"communication_basis.source_activity_id": "server-derived: the activity that evidenced a basis; no caller names it, and no writer sets it yet",
 	"communication_suppression.person_id":    "server-derived: same subject-addressed privacy statements as communication_basis.person_id, plus the SAR read of the subject's own rows",
 	"communication_suppression.lead_id":      "server-derived: same, keyed on the subject's lead twins",
-	"activity_link.activity_id":              "child row: written only inside LogActivity for the new activity",
-	"lead_score_history.lead_id":             "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
+	"person_acquisition_evidence.person_id": "child row: why one contact exists, written by recordAcquisition " +
+		"inside createPerson's own transaction for the person that transaction just created (people/acquisition.go, " +
+		"reached from people/resolvecreate.go) — so the id is never a caller's reference to a record. Merge re-points " +
+		"it to the surviving person inside the merge's own gated path (people/mergerelink.go), and the only other " +
+		"statements are privacy's subject-addressed ones: erasure and the retention action delete WHERE person_id, " +
+		"and the subject-access read selects the subject's own rows",
+	"activity_link.activity_id":  "child row: written only inside LogActivity for the new activity",
+	"lead_score_history.lead_id": "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
 	// comms_outbound is delivery machinery for one activity, not a
 	// standalone record (comms/doc.go): StageTx writes only inside the
 	// caller's own transaction, alongside the activity write it reports on
