@@ -223,7 +223,8 @@ func (s *MirrorStore) assertFence(ctx context.Context, tx pgx.Tx) error {
 // read is visible to it.
 func assertMirrorUnfrozen(ctx context.Context, tx pgx.Tx) error {
 	var frozen bool
-	if err := tx.QueryRow(ctx,
+	if err := tx.QueryRow(
+		ctx,
 		`SELECT EXISTS (SELECT 1 FROM overlay_sync_state WHERE mirror_frozen_at IS NOT NULL)`,
 	).Scan(&frozen); err != nil {
 		return fmt.Errorf("overlay: checking the flip freeze before a fenced write: %w", err)

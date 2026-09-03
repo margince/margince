@@ -91,21 +91,19 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 // deliberatelyNotLiveness ratifies the half-spellings that are not answering
 // the workforce question at all.
 //
-// overlay's user-map eligibility is `NOT is_agent AND archived_at IS NULL`, and
-// it is a different set on purpose: it decides whom an admin may GRANT a mirror
-// mapping to, not who still works here. It is already held as its own
-// three-site invariant, named in selectUserMapTargetSQL's comment.
+// overlay's user-map eligibility USED to be `NOT is_agent AND archived_at IS
+// NULL` and is no longer: #2592 tightened it to the same pair this file names,
+// which overlay's own mappableSeatSQL now renders because a module cannot import
+// identity (ADR-0054 §3). Its two files are ratified below as spellings rather
+// than as divergences.
 //
-// What the difference costs, stated rather than waved away: a DEACTIVATED seat
-// is not archived, so all three overlay sites still offer it a mapping — and
-// listUserMapSQL's own comment justifies excluding archived users as "a seat
-// that no longer logs in", which is just as true of a deactivated one. Whether
-// overlay wants the tighter set is overlay's call and moves three statements at
-// once, so it is issue margince/margince#2592 rather than a change made here on
-// a guess.
+// The reason it was a divergence and stopped being one is worth keeping: a
+// DEACTIVATED seat is not archived, so all three overlay sites went on offering
+// it a mapping — while listUserMapSQL's own comment justified excluding archived
+// users as "a seat that no longer logs in", which is exactly as true of a
+// deactivated one. The predicate disagreed with its own stated reason, which is
+// what made it a defect rather than a preference.
 var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
-	"internal/modules/overlay/usermapadmin.go":                                 "overlay mapping eligibility is NOT is_agent AND archived_at IS NULL, a different set held as its own three-site invariant; see issue 2592",
-	"internal/modules/overlay/usermapseed.go":                                  "overlay mapping eligibility is NOT is_agent AND archived_at IS NULL, a different set held as its own three-site invariant; see issue 2592",
 	"internal/modules/identity/roster.go":                                      "listUsersAllQuery is the ADMIN roster and says so: every non-archived member REGARDLESS of status, because a deactivated member has to be visible to reactivate",
 	"internal/modules/identity/reset.go":                                       "OperatorResetPassword is the operator CLI's lockout path, never exposed over HTTP; it must reach an account whose status is not active, which is what administrator lockout means. Login itself calls the helper (lockout.go)",
 	"internal/compose/integration/agentaccess/oauth_grant_integration_test.go": "the fixture deactivates every seat that CAN still act, to prove revocation binds mid-session; the archived half would narrow nothing, because every seat in it was created by the harness moments earlier and none is archived",

@@ -97,7 +97,8 @@ func (l *WriteLedger) OpenEntries(ctx context.Context, objectClass, externalID s
 			return err
 		}
 		for prop, val := range props {
-			if _, err := tx.Exec(ctx, `
+			if _, err := tx.Exec(
+				ctx, `
 				INSERT INTO overlay_write_ledger
 					(object_class, external_id, property, value_hash, value_canonical)
 				VALUES ($1, $2, $3, $4, $5)

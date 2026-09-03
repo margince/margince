@@ -120,7 +120,8 @@ func (s *Service) FlipChecks(ctx context.Context) (FlipChecks, error) {
 
 		var pending, stale int
 		var lastSynced *time.Time
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			SELECT count(*) FILTER (WHERE sync_state = $1),
 			       count(*) FILTER (WHERE sync_state = $2 OR `+staleProjectionSQL+`),
 			       count(*), max(last_synced_at)
@@ -194,7 +195,8 @@ func (s *Service) SealFlipSnapshot(ctx context.Context) (FlipSnapshot, error) {
 	// against a DIFFERENT freeze would skip rows it never imported.
 	candidate := "snap-" + time.Now().UTC().Format("2006-01-02T15:04:05Z") + "-" + ids.NewV7().String()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			INSERT INTO overlay_sync_state (next_sweep_at, flip_snapshot_id, mirror_frozen_at, updated_at)
 			VALUES (now(), $1, now(), now())
 			ON CONFLICT ((true)) DO UPDATE SET
@@ -269,7 +271,8 @@ func (s *Service) UnsealFlipSnapshot(ctx context.Context) error {
 		// pre-update snapshot the CTE holds.
 		var priorID string
 		var priorFrozen time.Time
-		err := tx.QueryRow(ctx, `
+		err := tx.QueryRow(
+			ctx, `
 			WITH prior AS (
 			  SELECT flip_snapshot_id, mirror_frozen_at FROM overlay_sync_state
 			  WHERE mirror_frozen_at IS NOT NULL
