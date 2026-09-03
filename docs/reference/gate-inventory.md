@@ -87,7 +87,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (91)
+## Census (92)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -173,6 +173,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
+| `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has ONE reader, and it answers one question. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |

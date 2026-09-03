@@ -10518,20 +10518,15 @@ func (e SearchResultType) Valid() bool {
 
 // Defines values for SendAccountEmailRequestCommunicationContext.
 const (
-	SendAccountEmailRequestCommunicationContextAccountNotice       SendAccountEmailRequestCommunicationContext = "account_notice"
-	SendAccountEmailRequestCommunicationContextActiveDealFollowup  SendAccountEmailRequestCommunicationContext = "active_deal_followup"
-	SendAccountEmailRequestCommunicationContextConsentConfirmation SendAccountEmailRequestCommunicationContext = "consent_confirmation"
-	SendAccountEmailRequestCommunicationContextContractNotice      SendAccountEmailRequestCommunicationContext = "contract_notice"
-	SendAccountEmailRequestCommunicationContextCustomerService     SendAccountEmailRequestCommunicationContext = "customer_service"
-	SendAccountEmailRequestCommunicationContextInvoiceOrPayment    SendAccountEmailRequestCommunicationContext = "invoice_or_payment"
-	SendAccountEmailRequestCommunicationContextMarketing           SendAccountEmailRequestCommunicationContext = "marketing"
-	SendAccountEmailRequestCommunicationContextOptoutConfirmation  SendAccountEmailRequestCommunicationContext = "optout_confirmation"
-	SendAccountEmailRequestCommunicationContextPrecontractQuote    SendAccountEmailRequestCommunicationContext = "precontract_quote"
-	SendAccountEmailRequestCommunicationContextPrivacyNotice       SendAccountEmailRequestCommunicationContext = "privacy_notice"
-	SendAccountEmailRequestCommunicationContextRecordConfirmation  SendAccountEmailRequestCommunicationContext = "record_confirmation"
-	SendAccountEmailRequestCommunicationContextReplyToInbound      SendAccountEmailRequestCommunicationContext = "reply_to_inbound"
-	SendAccountEmailRequestCommunicationContextRequestedFollowup   SendAccountEmailRequestCommunicationContext = "requested_followup"
-	SendAccountEmailRequestCommunicationContextSecurityNotice      SendAccountEmailRequestCommunicationContext = "security_notice"
+	SendAccountEmailRequestCommunicationContextAccountNotice      SendAccountEmailRequestCommunicationContext = "account_notice"
+	SendAccountEmailRequestCommunicationContextActiveDealFollowup SendAccountEmailRequestCommunicationContext = "active_deal_followup"
+	SendAccountEmailRequestCommunicationContextContractNotice     SendAccountEmailRequestCommunicationContext = "contract_notice"
+	SendAccountEmailRequestCommunicationContextCustomerService    SendAccountEmailRequestCommunicationContext = "customer_service"
+	SendAccountEmailRequestCommunicationContextInvoiceOrPayment   SendAccountEmailRequestCommunicationContext = "invoice_or_payment"
+	SendAccountEmailRequestCommunicationContextMarketing          SendAccountEmailRequestCommunicationContext = "marketing"
+	SendAccountEmailRequestCommunicationContextPrecontractQuote   SendAccountEmailRequestCommunicationContext = "precontract_quote"
+	SendAccountEmailRequestCommunicationContextReplyToInbound     SendAccountEmailRequestCommunicationContext = "reply_to_inbound"
+	SendAccountEmailRequestCommunicationContextRequestedFollowup  SendAccountEmailRequestCommunicationContext = "requested_followup"
 )
 
 // Valid indicates whether the value is a known member of the SendAccountEmailRequestCommunicationContext enum.
@@ -10541,8 +10536,6 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 		return true
 	case SendAccountEmailRequestCommunicationContextActiveDealFollowup:
 		return true
-	case SendAccountEmailRequestCommunicationContextConsentConfirmation:
-		return true
 	case SendAccountEmailRequestCommunicationContextContractNotice:
 		return true
 	case SendAccountEmailRequestCommunicationContextCustomerService:
@@ -10551,19 +10544,11 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 		return true
 	case SendAccountEmailRequestCommunicationContextMarketing:
 		return true
-	case SendAccountEmailRequestCommunicationContextOptoutConfirmation:
-		return true
 	case SendAccountEmailRequestCommunicationContextPrecontractQuote:
-		return true
-	case SendAccountEmailRequestCommunicationContextPrivacyNotice:
-		return true
-	case SendAccountEmailRequestCommunicationContextRecordConfirmation:
 		return true
 	case SendAccountEmailRequestCommunicationContextReplyToInbound:
 		return true
 	case SendAccountEmailRequestCommunicationContextRequestedFollowup:
-		return true
-	case SendAccountEmailRequestCommunicationContextSecurityNotice:
 		return true
 	default:
 		return false
@@ -10572,20 +10557,15 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 
 // Defines values for SendEmailRequestCommunicationContext.
 const (
-	SendEmailRequestCommunicationContextAccountNotice       SendEmailRequestCommunicationContext = "account_notice"
-	SendEmailRequestCommunicationContextActiveDealFollowup  SendEmailRequestCommunicationContext = "active_deal_followup"
-	SendEmailRequestCommunicationContextConsentConfirmation SendEmailRequestCommunicationContext = "consent_confirmation"
-	SendEmailRequestCommunicationContextContractNotice      SendEmailRequestCommunicationContext = "contract_notice"
-	SendEmailRequestCommunicationContextCustomerService     SendEmailRequestCommunicationContext = "customer_service"
-	SendEmailRequestCommunicationContextInvoiceOrPayment    SendEmailRequestCommunicationContext = "invoice_or_payment"
-	SendEmailRequestCommunicationContextMarketing           SendEmailRequestCommunicationContext = "marketing"
-	SendEmailRequestCommunicationContextOptoutConfirmation  SendEmailRequestCommunicationContext = "optout_confirmation"
-	SendEmailRequestCommunicationContextPrecontractQuote    SendEmailRequestCommunicationContext = "precontract_quote"
-	SendEmailRequestCommunicationContextPrivacyNotice       SendEmailRequestCommunicationContext = "privacy_notice"
-	SendEmailRequestCommunicationContextRecordConfirmation  SendEmailRequestCommunicationContext = "record_confirmation"
-	SendEmailRequestCommunicationContextReplyToInbound      SendEmailRequestCommunicationContext = "reply_to_inbound"
-	SendEmailRequestCommunicationContextRequestedFollowup   SendEmailRequestCommunicationContext = "requested_followup"
-	SendEmailRequestCommunicationContextSecurityNotice      SendEmailRequestCommunicationContext = "security_notice"
+	SendEmailRequestCommunicationContextAccountNotice      SendEmailRequestCommunicationContext = "account_notice"
+	SendEmailRequestCommunicationContextActiveDealFollowup SendEmailRequestCommunicationContext = "active_deal_followup"
+	SendEmailRequestCommunicationContextContractNotice     SendEmailRequestCommunicationContext = "contract_notice"
+	SendEmailRequestCommunicationContextCustomerService    SendEmailRequestCommunicationContext = "customer_service"
+	SendEmailRequestCommunicationContextInvoiceOrPayment   SendEmailRequestCommunicationContext = "invoice_or_payment"
+	SendEmailRequestCommunicationContextMarketing          SendEmailRequestCommunicationContext = "marketing"
+	SendEmailRequestCommunicationContextPrecontractQuote   SendEmailRequestCommunicationContext = "precontract_quote"
+	SendEmailRequestCommunicationContextReplyToInbound     SendEmailRequestCommunicationContext = "reply_to_inbound"
+	SendEmailRequestCommunicationContextRequestedFollowup  SendEmailRequestCommunicationContext = "requested_followup"
 )
 
 // Valid indicates whether the value is a known member of the SendEmailRequestCommunicationContext enum.
@@ -10595,8 +10575,6 @@ func (e SendEmailRequestCommunicationContext) Valid() bool {
 		return true
 	case SendEmailRequestCommunicationContextActiveDealFollowup:
 		return true
-	case SendEmailRequestCommunicationContextConsentConfirmation:
-		return true
 	case SendEmailRequestCommunicationContextContractNotice:
 		return true
 	case SendEmailRequestCommunicationContextCustomerService:
@@ -10605,19 +10583,11 @@ func (e SendEmailRequestCommunicationContext) Valid() bool {
 		return true
 	case SendEmailRequestCommunicationContextMarketing:
 		return true
-	case SendEmailRequestCommunicationContextOptoutConfirmation:
-		return true
 	case SendEmailRequestCommunicationContextPrecontractQuote:
-		return true
-	case SendEmailRequestCommunicationContextPrivacyNotice:
-		return true
-	case SendEmailRequestCommunicationContextRecordConfirmation:
 		return true
 	case SendEmailRequestCommunicationContextReplyToInbound:
 		return true
 	case SendEmailRequestCommunicationContextRequestedFollowup:
-		return true
-	case SendEmailRequestCommunicationContextSecurityNotice:
 		return true
 	default:
 		return false
@@ -10626,20 +10596,15 @@ func (e SendEmailRequestCommunicationContext) Valid() bool {
 
 // Defines values for SendMessageRequestCommunicationContext.
 const (
-	SendMessageRequestCommunicationContextAccountNotice       SendMessageRequestCommunicationContext = "account_notice"
-	SendMessageRequestCommunicationContextActiveDealFollowup  SendMessageRequestCommunicationContext = "active_deal_followup"
-	SendMessageRequestCommunicationContextConsentConfirmation SendMessageRequestCommunicationContext = "consent_confirmation"
-	SendMessageRequestCommunicationContextContractNotice      SendMessageRequestCommunicationContext = "contract_notice"
-	SendMessageRequestCommunicationContextCustomerService     SendMessageRequestCommunicationContext = "customer_service"
-	SendMessageRequestCommunicationContextInvoiceOrPayment    SendMessageRequestCommunicationContext = "invoice_or_payment"
-	SendMessageRequestCommunicationContextMarketing           SendMessageRequestCommunicationContext = "marketing"
-	SendMessageRequestCommunicationContextOptoutConfirmation  SendMessageRequestCommunicationContext = "optout_confirmation"
-	SendMessageRequestCommunicationContextPrecontractQuote    SendMessageRequestCommunicationContext = "precontract_quote"
-	SendMessageRequestCommunicationContextPrivacyNotice       SendMessageRequestCommunicationContext = "privacy_notice"
-	SendMessageRequestCommunicationContextRecordConfirmation  SendMessageRequestCommunicationContext = "record_confirmation"
-	SendMessageRequestCommunicationContextReplyToInbound      SendMessageRequestCommunicationContext = "reply_to_inbound"
-	SendMessageRequestCommunicationContextRequestedFollowup   SendMessageRequestCommunicationContext = "requested_followup"
-	SendMessageRequestCommunicationContextSecurityNotice      SendMessageRequestCommunicationContext = "security_notice"
+	SendMessageRequestCommunicationContextAccountNotice      SendMessageRequestCommunicationContext = "account_notice"
+	SendMessageRequestCommunicationContextActiveDealFollowup SendMessageRequestCommunicationContext = "active_deal_followup"
+	SendMessageRequestCommunicationContextContractNotice     SendMessageRequestCommunicationContext = "contract_notice"
+	SendMessageRequestCommunicationContextCustomerService    SendMessageRequestCommunicationContext = "customer_service"
+	SendMessageRequestCommunicationContextInvoiceOrPayment   SendMessageRequestCommunicationContext = "invoice_or_payment"
+	SendMessageRequestCommunicationContextMarketing          SendMessageRequestCommunicationContext = "marketing"
+	SendMessageRequestCommunicationContextPrecontractQuote   SendMessageRequestCommunicationContext = "precontract_quote"
+	SendMessageRequestCommunicationContextReplyToInbound     SendMessageRequestCommunicationContext = "reply_to_inbound"
+	SendMessageRequestCommunicationContextRequestedFollowup  SendMessageRequestCommunicationContext = "requested_followup"
 )
 
 // Valid indicates whether the value is a known member of the SendMessageRequestCommunicationContext enum.
@@ -10649,8 +10614,6 @@ func (e SendMessageRequestCommunicationContext) Valid() bool {
 		return true
 	case SendMessageRequestCommunicationContextActiveDealFollowup:
 		return true
-	case SendMessageRequestCommunicationContextConsentConfirmation:
-		return true
 	case SendMessageRequestCommunicationContextContractNotice:
 		return true
 	case SendMessageRequestCommunicationContextCustomerService:
@@ -10659,19 +10622,11 @@ func (e SendMessageRequestCommunicationContext) Valid() bool {
 		return true
 	case SendMessageRequestCommunicationContextMarketing:
 		return true
-	case SendMessageRequestCommunicationContextOptoutConfirmation:
-		return true
 	case SendMessageRequestCommunicationContextPrecontractQuote:
-		return true
-	case SendMessageRequestCommunicationContextPrivacyNotice:
-		return true
-	case SendMessageRequestCommunicationContextRecordConfirmation:
 		return true
 	case SendMessageRequestCommunicationContextReplyToInbound:
 		return true
 	case SendMessageRequestCommunicationContextRequestedFollowup:
-		return true
-	case SendMessageRequestCommunicationContextSecurityNotice:
 		return true
 	default:
 		return false
@@ -29551,12 +29506,13 @@ type SendAccountEmailRequest struct {
 	// therefore honest and is the ordinary case for a reply; naming one matters when
 	// there is no anchor to derive from.
 	//
-	// Five categories exist to serve the recipient — `security_notice`,
+	// Five categories are absent from this list on purpose — `security_notice`,
 	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-	// `record_confirmation` — and are refused (422 `invalid`) from an
-	// ordinary send. They are reserved for the installation's own controller mail,
-	// which rides a registered template; a caller that could claim one could dress
-	// marketing as a security warning and reach somebody who has objected.
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
 	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
@@ -29635,12 +29591,13 @@ type SendAccountEmailRequest struct {
 // therefore honest and is the ordinary case for a reply; naming one matters when
 // there is no anchor to derive from.
 //
-// Five categories exist to serve the recipient — `security_notice`,
+// Five categories are absent from this list on purpose — `security_notice`,
 // `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-// `record_confirmation` — and are refused (422 `invalid`) from an
-// ordinary send. They are reserved for the installation's own controller mail,
-// which rides a registered template; a caller that could claim one could dress
-// marketing as a security warning and reach somebody who has objected.
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
 type SendAccountEmailRequestCommunicationContext string
 
 // SendEmailRequest defines model for SendEmailRequest.
@@ -29714,12 +29671,13 @@ type SendEmailRequest struct {
 	// therefore honest and is the ordinary case for a reply; naming one matters when
 	// there is no anchor to derive from.
 	//
-	// Five categories exist to serve the recipient — `security_notice`,
+	// Five categories are absent from this list on purpose — `security_notice`,
 	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-	// `record_confirmation` — and are refused (422 `invalid`) from an
-	// ordinary send. They are reserved for the installation's own controller mail,
-	// which rides a registered template; a caller that could claim one could dress
-	// marketing as a security warning and reach somebody who has objected.
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
@@ -29790,12 +29748,13 @@ type SendEmailRequest struct {
 // therefore honest and is the ordinary case for a reply; naming one matters when
 // there is no anchor to derive from.
 //
-// Five categories exist to serve the recipient — `security_notice`,
+// Five categories are absent from this list on purpose — `security_notice`,
 // `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-// `record_confirmation` — and are refused (422 `invalid`) from an
-// ordinary send. They are reserved for the installation's own controller mail,
-// which rides a registered template; a caller that could claim one could dress
-// marketing as a security warning and reach somebody who has objected.
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
 type SendEmailRequestCommunicationContext string
 
 // SendMessageRequest One channel reply. It carries no subject and no addressee list, and that absence is the
@@ -29838,12 +29797,13 @@ type SendMessageRequest struct {
 	// therefore honest and is the ordinary case for a reply; naming one matters when
 	// there is no anchor to derive from.
 	//
-	// Five categories exist to serve the recipient — `security_notice`,
+	// Five categories are absent from this list on purpose — `security_notice`,
 	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-	// `record_confirmation` — and are refused (422 `invalid`) from an
-	// ordinary send. They are reserved for the installation's own controller mail,
-	// which rides a registered template; a caller that could claim one could dress
-	// marketing as a security warning and reach somebody who has objected.
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
 
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
@@ -29876,12 +29836,13 @@ type SendMessageRequest struct {
 // therefore honest and is the ordinary case for a reply; naming one matters when
 // there is no anchor to derive from.
 //
-// Five categories exist to serve the recipient — `security_notice`,
+// Five categories are absent from this list on purpose — `security_notice`,
 // `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-// `record_confirmation` — and are refused (422 `invalid`) from an
-// ordinary send. They are reserved for the installation's own controller mail,
-// which rides a registered template; a caller that could claim one could dress
-// marketing as a security warning and reach somebody who has objected.
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
 // SetActivityAudienceRequest defines model for SetActivityAudienceRequest.

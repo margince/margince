@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // sendAccepted is what a send answers with: the delivery path took it. It is
@@ -197,13 +198,22 @@ func (c commsAdapter) send(
 	if err != nil {
 		return agents.SendEmailResult{}, err
 	}
-	out, err := c.store.SendOrSchedule(ctx, origin, activities.SendEmailInput{
+	// Through the SAME validator the HTTP door runs. An agent may propose a
+	// category and name evidence; the categories reserved for the
+	// installation's own notices are refused here exactly as they are there,
+	// because a claim one transport may not make must not become makeable by
+	// choosing the other.
+	input, err := activities.ApplyContext(activities.SendEmailInput{
 		Recipients:     append(append([]string{}, in.To...), in.Cc...),
 		Cc:             append([]string{}, in.Cc...),
 		Subject:        in.Subject,
 		Body:           in.Body,
 		ConsentPurpose: in.ConsentPurpose,
-	}, sched, c.gate, c.stager, c.timer)
+	}, sendContextOf(in.SendContextArgs))
+	if err != nil {
+		return agents.SendEmailResult{}, err
+	}
+	out, err := c.store.SendOrSchedule(ctx, origin, input, sched, c.gate, c.stager, c.timer)
 	if err != nil {
 		return agents.SendEmailResult{}, err
 	}
@@ -244,14 +254,51 @@ func agentSchedule(in agents.SendEmailArgs) (*activities.SendSchedule, error) {
 // resolution and the RBAC check cannot differ by transport. The recipient is
 // absent from the arguments by design: the store resolves it from the anchor.
 func (c commsAdapter) SendMessage(ctx context.Context, anchor ids.UUID, in agents.SendMessageArgs) (agents.SendMessageResult, error) {
-	sent, err := c.store.SendMessage(ctx, ids.From[ids.ActivityKind](anchor), activities.SendMessageInput{
+	input, err := activities.ApplyChannelContext(activities.SendMessageInput{
 		Body:           in.Body,
 		ConsentPurpose: in.ConsentPurpose,
-	}, c.gate, c.channelStager)
+	}, sendContextOf(in.SendContextArgs))
+	if err != nil {
+		return agents.SendMessageResult{}, err
+	}
+	sent, err := c.store.SendMessage(ctx, ids.From[ids.ActivityKind](anchor), input, c.gate, c.channelStager)
 	if err != nil {
 		return agents.SendMessageResult{}, err
 	}
 	return agents.SendMessageResult{ActivityID: ids.UUID(sent.Id), Status: sendAccepted}, nil
+}
+
+// sendContextOf turns the tool surface's wire shape into the module's, so the
+// two send doors hand the validator one type between them.
+func sendContextOf(in agents.SendContextArgs) activities.SendContextInput {
+	return activities.SendContextInput{
+		Context:          in.CommunicationContext,
+		MarketingPurpose: in.MarketingPurpose,
+		OperatorReason:   in.OperatorReason,
+		Evidence:         evidenceOf(in.Evidence),
+	}
+}
+
+// evidenceOf flattens the optional evidence block. An unnamed record stays
+// zero, which is what the engine reads as "the caller named none".
+func evidenceOf(in *agents.SendEvidence) commsauthz.Evidence {
+	if in == nil {
+		return commsauthz.Evidence{}
+	}
+	id := func(p *ids.UUID) ids.UUID {
+		if p == nil {
+			return ids.UUID{}
+		}
+		return *p
+	}
+	return commsauthz.Evidence{
+		ActivityID:     id(in.ActivityID),
+		DealID:         id(in.DealID),
+		InvoiceID:      id(in.InvoiceID),
+		ContractID:     id(in.ContractID),
+		ConsentEventID: id(in.ConsentEventID),
+		BasisID:        id(in.BasisID),
+	}
 }
 
 // IsChannelKind delegates to activities.IsChannelKind — the same test the

@@ -21134,15 +21134,16 @@ export interface components {
              *     therefore honest and is the ordinary case for a reply; naming one matters when
              *     there is no anchor to derive from.
              *
-             *     Five categories exist to serve the recipient — `security_notice`,
+             *     Five categories are absent from this list on purpose — `security_notice`,
              *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-             *     `record_confirmation` — and are refused (422 `invalid`) from an
-             *     ordinary send. They are reserved for the installation's own controller mail,
-             *     which rides a registered template; a caller that could claim one could dress
-             *     marketing as a security warning and reach somebody who has objected.
+             *     `record_confirmation`. They serve the recipient, which is why a hard
+             *     suppression does not stop them, and they are reserved for the installation's
+             *     own controller mail behind a registered template. A caller that could claim
+             *     one could dress marketing as a security warning and reach somebody who has
+             *     objected, so naming one here is refused (422 `invalid`).
              * @enum {string|null}
              */
-            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing" | null;
             /**
              * @description For a marketing send, the consent purpose key naming the topic it is for.
              *     Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -21355,15 +21356,16 @@ export interface components {
              *     therefore honest and is the ordinary case for a reply; naming one matters when
              *     there is no anchor to derive from.
              *
-             *     Five categories exist to serve the recipient — `security_notice`,
+             *     Five categories are absent from this list on purpose — `security_notice`,
              *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-             *     `record_confirmation` — and are refused (422 `invalid`) from an
-             *     ordinary send. They are reserved for the installation's own controller mail,
-             *     which rides a registered template; a caller that could claim one could dress
-             *     marketing as a security warning and reach somebody who has objected.
+             *     `record_confirmation`. They serve the recipient, which is why a hard
+             *     suppression does not stop them, and they are reserved for the installation's
+             *     own controller mail behind a registered template. A caller that could claim
+             *     one could dress marketing as a security warning and reach somebody who has
+             *     objected, so naming one here is refused (422 `invalid`).
              * @enum {string|null}
              */
-            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing" | null;
             /**
              * @description For a marketing send, the consent purpose key naming the topic it is for.
              *     Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -21444,15 +21446,16 @@ export interface components {
              *     therefore honest and is the ordinary case for a reply; naming one matters when
              *     there is no anchor to derive from.
              *
-             *     Five categories exist to serve the recipient — `security_notice`,
+             *     Five categories are absent from this list on purpose — `security_notice`,
              *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-             *     `record_confirmation` — and are refused (422 `invalid`) from an
-             *     ordinary send. They are reserved for the installation's own controller mail,
-             *     which rides a registered template; a caller that could claim one could dress
-             *     marketing as a security warning and reach somebody who has objected.
+             *     `record_confirmation`. They serve the recipient, which is why a hard
+             *     suppression does not stop them, and they are reserved for the installation's
+             *     own controller mail behind a registered template. A caller that could claim
+             *     one could dress marketing as a security warning and reach somebody who has
+             *     objected, so naming one here is refused (422 `invalid`).
              * @enum {string|null}
              */
-            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing" | null;
             /**
              * @description For a marketing send, the consent purpose key naming the topic it is for.
              *     Marketing consent is purpose-specific: a grant for one topic authorizes that

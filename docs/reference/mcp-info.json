@@ -10,16 +10,16 @@
   "totals": {
     "tools": 70,
     "resources": 10,
-    "tool_catalog_bytes": 197668,
+    "tool_catalog_bytes": 200824,
     "resource_catalog_bytes": 3915,
-    "approx_wire_tokens_total": 50395,
+    "approx_wire_tokens_total": 51184,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 47770,
-      "input_schema_bytes": 38885,
+      "input_schema_bytes": 42041,
       "output_schema_bytes": 95916,
-      "description_plus_input_schema_bytes": 86655
+      "description_plus_input_schema_bytes": 89811
     }
   },
   "tools": {
@@ -11739,9 +11739,55 @@
               },
               "type": "array"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
+            },
+            "evidence": {
+              "additionalProperties": false,
+              "description": "Records supporting this send, by id. Checked, never trusted.",
+              "properties": {
+                "activity_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "basis_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "consent_event_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "contract_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "deal_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invoice_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
             },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
@@ -11777,6 +11823,15 @@
               "maxItems": 25,
               "minItems": 1,
               "type": "array"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
+              "type": "string"
             },
             "scheduled_at": {
               "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -11942,13 +11997,68 @@
               },
               "type": "array"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
             },
+            "evidence": {
+              "additionalProperties": false,
+              "description": "Records supporting this send, by id. Checked, never trusted.",
+              "properties": {
+                "activity_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "basis_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "consent_event_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "contract_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "deal_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invoice_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
+              "type": "string"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
               "type": "string"
             },
             "scheduled_at": {
@@ -12110,13 +12220,68 @@
               "minLength": 1,
               "type": "string"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipient must have granted",
               "type": "string"
             },
+            "evidence": {
+              "additionalProperties": false,
+              "description": "Records supporting this send, by id. Checked, never trusted.",
+              "properties": {
+                "activity_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "basis_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "consent_event_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "contract_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "deal_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invoice_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
+              "type": "string"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
               "type": "string"
             }
           },
