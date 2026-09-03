@@ -256,3 +256,42 @@ func TestTheLabelColumnIsSizedToTheLabelsItHas(t *testing.T) {
 func countLeadingSpaces(s string) int {
 	return len(s) - len(strings.TrimLeft(s, " "))
 }
+
+// The link opens the WEEK, not the morning.
+//
+// The app is one hash-routed page, so the view a link means lives after the
+// '#'. This message sent the reader to the bare origin, which opens the Brief
+// on its default view — so a Monday summary of last week landed them on today's
+// queue, with nothing on either page saying they had been sent to the wrong one.
+//
+// Asserted as the WHOLE closing address rather than as a substring: the origin
+// alone appears in both the right answer and the wrong one, which is why the
+// test above passed either way.
+func TestTheWeeklyLinkOpensTheWeek(t *testing.T) {
+	body := MailBody(mailFixture(), "https://crm.example.test", english)
+
+	const want = "https://crm.example.test/#/home?view=weekly"
+	if !strings.Contains(body, want) {
+		t.Errorf("the weekly message does not link to %q:\n%s", want, body)
+	}
+}
+
+// A trailing slash on the configured origin does not become a double one.
+func TestTheWeeklyLinkSurvivesATrailingSlash(t *testing.T) {
+	body := MailBody(mailFixture(), "https://crm.example.test/", english)
+
+	if strings.Contains(body, "test//#/") {
+		t.Errorf("the weekly link doubled the separator:\n%s", body)
+	}
+}
+
+// No origin, no line. An installation that has not been told its own public
+// address cannot produce a working link, and a label over an empty indent reads
+// as one that failed to render.
+func TestTheWeeklyOmitsTheLinkLineWithNoOrigin(t *testing.T) {
+	body := MailBody(mailFixture(), "", english)
+
+	if strings.Contains(body, english.WeeklyFullWeek) {
+		t.Errorf("the weekly wrote its link label with no address under it:\n%s", body)
+	}
+}

@@ -109,9 +109,9 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 
 	writeDealLines(&b, review.Deals, words)
 
-	if homeURL != "" {
-		b.WriteString("\n" + words.WeeklyFullWeek + "\n  " + homeURL + "\n")
-	}
+	// The WEEKLY view, not the bare origin: this message is about a week, and
+	// the page it opened without the fragment was showing this morning.
+	mailcopy.Link(&b, homeURL, mailcopy.BriefWeeklyFragment, words.WeeklyFullWeek)
 	return b.String()
 }
 
