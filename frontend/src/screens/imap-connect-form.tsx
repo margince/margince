@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -68,6 +68,7 @@ export function ImapMailboxForm({
   onConnected,
   onPendingChange,
   small = false,
+  renderActions = (actions) => actions,
 }: Readonly<{
   /** What backing out is called on this surface: Cancel in a dialog, Not
    * now on a step that does not block. */
@@ -82,6 +83,12 @@ export function ImapMailboxForm({
   onPendingChange?: (pending: boolean) => void;
   /** The dialog's compact buttons; a step in a room keeps the room's size. */
   small?: boolean;
+  /**
+   * Where the two buttons go. Inline under the fields by default; a surface
+   * with a rail of its own (the first-run stage) places them there. Connect
+   * calls the same submit Enter does, so it works wherever it is rendered.
+   */
+  renderActions?: (actions: ReactNode) => ReactNode;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -91,6 +98,11 @@ export function ImapMailboxForm({
   const [secret, setSecret] = useState("");
   const [mailbox, setMailbox] = useState(DEFAULT_MAILBOX);
   const [maxMessages, setMaxMessages] = useState(DEFAULT_MAX_MESSAGES);
+  // Whether Connect has been pressed with something still missing. The button
+  // is always pressable; the press is what turns the missing fields red and
+  // names them beside it, so a reader learns what is needed by trying rather
+  // than by guessing why a button is grey.
+  const [attempted, setAttempted] = useState(false);
 
   const connect = useMutation({
     mutationFn: async (request: ImapConnectRequest) => {
@@ -125,37 +137,82 @@ export function ImapMailboxForm({
 
   const parsedPort = port.trim() === "" ? 993 : Number(port);
   const parsedMax = maxMessages.trim() === "" ? 50 : Number(maxMessages);
+  // The fields without which nothing can be dialled, by label, in the order
+  // they stand on the form: what the rail names once Connect is pressed.
+  const missing = [
+    [host.trim() === "", t("connectors.imapHost")],
+    [username.trim() === "", t("connectors.imapUsername")],
+    [secret === "", t("connectors.imapSecret")],
+  ]
+    .filter((need): need is [true, string] => need[0] === true)
+    .map(([, label]) => label);
   const ready =
-    host.trim() !== "" &&
-    username.trim() !== "" &&
-    secret !== "" &&
+    missing.length === 0 &&
     Number.isInteger(parsedPort) &&
     parsedPort >= 1 &&
     parsedPort <= 65535 &&
     Number.isInteger(parsedMax) &&
     parsedMax >= 1 &&
     parsedMax <= 200;
+  const needed = (absent: boolean) =>
+    attempted && absent ? t("connectors.imapNeeded") : undefined;
 
   const errorMessage = connect.isError
     ? imapErrorMessage(connect.error, t)
     : null;
+
+  // One submit for Enter in a field and for the Connect button, wherever the
+  // button stands: pressable whatever is filled in, and the press is what
+  // marks the missing fields and names them beside it.
+  const submit = () => {
+    if (!ready) {
+      setAttempted(true);
+      return;
+    }
+    connect.mutate({
+      host: host.trim(),
+      port: parsedPort,
+      username: username.trim(),
+      secret,
+      mailbox: mailbox.trim() || DEFAULT_MAILBOX,
+      max_messages: parsedMax,
+    });
+  };
+
+  const actions = (
+    <>
+      {attempted && missing.length > 0 && (
+        <p className="ob-stage-note" role="alert">
+          {t("connectors.imapStillNeeded", { fields: missing.join(", ") })}
+        </p>
+      )}
+      <Button
+        small={small}
+        type="button"
+        onClick={onDismiss}
+        disabled={connect.isPending}
+      >
+        {dismissLabel}
+      </Button>
+      <Button
+        small={small}
+        variant="primary"
+        type="button"
+        onClick={submit}
+        pending={connect.isPending}
+        busyLabel={t("create.saving")}
+      >
+        {t("connectors.imapSubmitCta")}
+      </Button>
+    </>
+  );
 
   return (
     <form
       className="imap-mailbox-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!ready) {
-          return;
-        }
-        connect.mutate({
-          host: host.trim(),
-          port: parsedPort,
-          username: username.trim(),
-          secret,
-          mailbox: mailbox.trim() || DEFAULT_MAILBOX,
-          max_messages: parsedMax,
-        });
+        submit();
       }}
     >
       {/* Before the fields, not after: a person connecting a mailbox from
@@ -164,7 +221,11 @@ export function ImapMailboxForm({
       <div className="imap-mailbox-span">
         <CaptureNotice />
       </div>
-      <Field label={t("connectors.imapHost")} required>
+      <Field
+        label={t("connectors.imapHost")}
+        required
+        error={needed(host.trim() === "")}
+      >
         {(control) => (
           <TextInput
             {...control}
@@ -185,7 +246,11 @@ export function ImapMailboxForm({
           />
         )}
       </Field>
-      <Field label={t("connectors.imapUsername")} required>
+      <Field
+        label={t("connectors.imapUsername")}
+        required
+        error={needed(username.trim() === "")}
+      >
         {(control) => (
           <TextInput
             {...control}
@@ -196,7 +261,11 @@ export function ImapMailboxForm({
           />
         )}
       </Field>
-      <Field label={t("connectors.imapSecret")} required>
+      <Field
+        label={t("connectors.imapSecret")}
+        required
+        error={needed(secret === "")}
+      >
         {(control) => (
           <TextInput
             {...control}
@@ -238,26 +307,9 @@ export function ImapMailboxForm({
           </Callout>
         </div>
       )}
-      <div className="actions imap-mailbox-span">
-        <Button
-          small={small}
-          type="button"
-          onClick={onDismiss}
-          disabled={connect.isPending}
-        >
-          {dismissLabel}
-        </Button>
-        <Button
-          small={small}
-          variant="primary"
-          type="submit"
-          disabled={!connect.isPending && !ready}
-          pending={connect.isPending}
-          busyLabel={t("create.saving")}
-        >
-          {t("connectors.imapSubmitCta")}
-        </Button>
-      </div>
+      {renderActions(
+        <div className="actions imap-mailbox-span">{actions}</div>,
+      )}
     </form>
   );
 }

@@ -4349,6 +4349,8 @@ export const de = {
   "connectors.imapSecretHint":
     "Verwende ein App-Passwort. Wir versiegeln es im Credential-Vault und lesen deine Mails nach Zeitplan, bis du trennst — beim Trennen wird es gelöscht.",
   "connectors.imapSubmitCta": "Verbinden",
+  "connectors.imapNeeded": "Nötig zum Verbinden",
+  "connectors.imapStillNeeded": "Fehlt noch: {fields}",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail und App-Passwort.",
   "connectors.imapUnreachable": "Der Mailserver konnte nicht erreicht werden.",
@@ -8064,6 +8066,8 @@ export const de = {
   "firstRun.platform.imapNote":
     "Für die ganze Installation wird nichts eingerichtet. Verbinden Sie Ihr eigenes Postfach jetzt oder später; jedes weitere Postfach wird unter Einstellungen → Integrationen mit eigenem App-Passwort verbunden.",
   "firstRun.platform.skip": "Jetzt nicht",
+  "firstRun.needed": "Nötig, um weiterzugehen",
+  "firstRun.stillNeeded": "Fehlt noch: {fields}",
   "firstRun.platform.foot":
     "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
   "firstRun.microsoft.note":

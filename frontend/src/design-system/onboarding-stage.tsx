@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
+import { createPortal } from "react-dom";
 import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "./ambient-waves";
 import { Eyebrow } from "./eyebrow";
@@ -291,6 +292,9 @@ export function OnboardingStage({
   sub?: string;
   children: ReactNode;
 }>) {
+  // The rail's action cell, handed to whichever step is on the board so it
+  // can put its own way onward there — see StageActions.
+  const [actsSlot, setActsSlot] = useState<HTMLElement | null>(null);
   return (
     <div className="ob-page">
       {/* The ground the card stands on, the same one the sign-in surface has.
@@ -343,20 +347,46 @@ export function OnboardingStage({
               {title}
             </h1>
             {sub === undefined ? null : <p className="ob-stage-sub">{sub}</p>}
-            {children}
+            <StageActionsSlot.Provider value={actsSlot}>
+              {children}
+            </StageActionsSlot.Provider>
           </div>
         </div>
-        {hint === undefined && actions === undefined ? null : (
-          <div className="ob-stage-foot">
-            {hint === undefined ? null : (
-              <p className="ob-stage-hint">{hint}</p>
-            )}
-            {actions === undefined ? null : (
-              <div className="ob-stage-acts">{actions}</div>
-            )}
+        {/* Always in the tree, because a step fills the action cell from
+            inside the board (StageActions) and a cell that is only rendered
+            once something asks for it is a cell nothing can ask for. The
+            stylesheet hides a foot with nothing on it. */}
+        <div className="ob-stage-foot">
+          {hint === undefined ? null : <p className="ob-stage-hint">{hint}</p>}
+          <div className="ob-stage-acts" ref={setActsSlot}>
+            {actions}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
+}
+
+const StageActionsSlot = createContext<HTMLElement | null>(null);
+
+/**
+ * A step's way onward, placed on the stage's bottom rail from inside the board.
+ *
+ * The rail is the one part of the room that stays in view while a long board
+ * scrolls, so the button belongs there — but the step owns the button's state
+ * and the stage renders the rail, and lifting every step's readiness into the
+ * screen that mounts the stage would make one component hold every step's
+ * form. A portal lets the step keep its state and still put the control where
+ * the reader looks for it. A submit button rendered here still submits its
+ * form through the `form` attribute; nothing else about it changes.
+ *
+ * Nothing renders until the rail exists, which is one commit after the stage
+ * mounts; the step's own fields are on screen meanwhile, so nothing is missed.
+ */
+export function StageActions({ children }: Readonly<{ children: ReactNode }>) {
+  const slot = useContext(StageActionsSlot);
+  if (slot === null) {
+    return null;
+  }
+  return createPortal(children, slot);
 }

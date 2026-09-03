@@ -8,7 +8,10 @@ import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
 import { OffsiteLink } from "../design-system/offsitelink";
-import { OnboardingStage } from "../design-system/onboarding-stage";
+import {
+  OnboardingStage,
+  StageActions,
+} from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Select } from "../design-system/select";
@@ -320,8 +323,17 @@ function AiStep({
   };
 
   const busy = saveKey.isPending || bind.isPending;
-  const ready =
-    apiKey.trim() !== "" && chatModel.trim() !== "" && embedModel.trim() !== "";
+  // What the binding cannot do without, by the label the field wears, so the
+  // rail names the same thing the field marks once Continue is pressed early.
+  const missing = [
+    [apiKey.trim() === "", t("firstRun.ai.key")],
+    [chatModel.trim() === "", t("firstRun.ai.chatModel")],
+    [embedModel.trim() === "", t("firstRun.ai.embedModel")],
+  ]
+    .filter((need): need is [true, string] => need[0] === true)
+    .map(([, label]) => label);
+  const ready = missing.length === 0;
+  const [attempted, setAttempted] = useState(false);
   const failure = saveKey.error ?? bind.error;
 
   // The KEY first, then the binding. A binding whose vendor has no key is an
@@ -336,6 +348,13 @@ function AiStep({
   // reload restoring exactly that, so the only way on was to re-paste a key the
   // server already held.
   const submit = () => {
+    // Pressable whatever is filled in: the press is what turns the missing
+    // fields red and names them on the rail, rather than a grey button leaving
+    // the reader to work out why.
+    if (!ready) {
+      setAttempted(true);
+      return;
+    }
     saveKey.reset();
     bind.reset();
     saveKey.mutate(
@@ -368,21 +387,17 @@ function AiStep({
 
   return (
     <StepForm busy={busy} onBusy={onBusy}>
-      {/* The verb goes in the card's own action strip rather than as the last
-          thing in the stack of questions: a button that shares the fields'
-          spacing reads as one more field. */}
-      <Panel
-        footer={
-          <Button
-            variant="primary"
-            pending={busy}
-            disabled={!ready}
-            onClick={submit}
-          >
-            {t("firstRun.continue")}
-          </Button>
-        }
-      >
+      {/* The verb goes on the stage's rail rather than as the last thing in
+          the stack of questions: a button that shares the fields' spacing reads
+          as one more field, and one at the end of a long board is one the
+          reader has scrolled away from. */}
+      <StageActions>
+        <StepNeeds attempted={attempted} missing={missing} />
+        <Button variant="primary" pending={busy} onClick={submit}>
+          {t("firstRun.continue")}
+        </Button>
+      </StageActions>
+      <Panel>
         <PanelBody>
           {failure && (
             <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
@@ -409,7 +424,15 @@ function AiStep({
               />
             )}
           </Field>
-          <Field label={t("firstRun.ai.key")} hint={t("firstRun.ai.keyHint")}>
+          <Field
+            label={t("firstRun.ai.key")}
+            hint={t("firstRun.ai.keyHint")}
+            error={
+              attempted && apiKey.trim() === ""
+                ? t("firstRun.needed")
+                : undefined
+            }
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -602,7 +625,16 @@ function VendorAppFields({
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [tenant, setTenant] = useState("");
-  const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
+  const missing = [
+    [clientId.trim() === "", t("oauthApp.clientId")],
+    [clientSecret.trim() === "", t("oauthApp.clientSecret")],
+  ]
+    .filter((need): need is [true, string] => need[0] === true)
+    .map(([, label]) => label);
+  const ready = missing.length === 0;
+  const [attempted, setAttempted] = useState(false);
+  const needed = (absent: boolean) =>
+    attempted && absent ? t("firstRun.needed") : undefined;
   useEffect(() => {
     onBusy(save.isPending);
     return () => onBusy(false);
@@ -627,7 +659,10 @@ function VendorAppFields({
       {save.error && (
         <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
       )}
-      <Field label={t("oauthApp.clientId")}>
+      <Field
+        label={t("oauthApp.clientId")}
+        error={needed(clientId.trim() === "")}
+      >
         {(control) => (
           <TextInput
             {...control}
@@ -639,7 +674,10 @@ function VendorAppFields({
           />
         )}
       </Field>
-      <Field label={t("oauthApp.clientSecret")}>
+      <Field
+        label={t("oauthApp.clientSecret")}
+        error={needed(clientSecret.trim() === "")}
+      >
         {(control) => (
           <TextInput
             {...control}
@@ -665,15 +703,19 @@ function VendorAppFields({
           )}
         </Field>
       )}
-      <div className="ob-fr-actions">
+      <StageActions>
+        <StepNeeds attempted={attempted} missing={missing} />
         <Button variant="ghost" onClick={onDecline} disabled={save.isPending}>
           {t("firstRun.platform.skip")}
         </Button>
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={!ready}
           onClick={() => {
+            if (!ready) {
+              setAttempted(true);
+              return;
+            }
             save.reset();
             save.mutate(
               {
@@ -696,8 +738,29 @@ function VendorAppFields({
         >
           {t("firstRun.continue")}
         </Button>
-      </div>
+      </StageActions>
     </>
+  );
+}
+
+/**
+ * What still stands between the reader and the next step, beside the button
+ * they pressed. Nothing until Continue has been pressed with something missing:
+ * a form that lists its own gaps before anyone has typed is a form scolding a
+ * reader for arriving.
+ */
+function StepNeeds({
+  attempted,
+  missing,
+}: Readonly<{ attempted: boolean; missing: readonly string[] }>) {
+  const t = useT();
+  if (!attempted || missing.length === 0) {
+    return null;
+  }
+  return (
+    <p className="ob-stage-note" role="alert">
+      {t("firstRun.stillNeeded", { fields: missing.join(", ") })}
+    </p>
   );
 }
 
@@ -752,6 +815,9 @@ function PlatformStep({
                 onDismiss={onDecline}
                 onConnected={onDecline}
                 onPendingChange={onBusy}
+                renderActions={(actions) => (
+                  <StageActions>{actions}</StageActions>
+                )}
               />
             </>
           ) : (

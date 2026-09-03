@@ -4303,6 +4303,8 @@ export const vi = {
   "connectors.imapSecretHint":
     "Hãy dùng mật khẩu riêng cho ứng dụng. Chúng tôi niêm phong mật khẩu vào kho khoá và đọc thư của bạn theo lịch cho đến khi bạn ngắt kết nối — ngắt kết nối là xoá luôn.",
   "connectors.imapSubmitCta": "Kết nối",
+  "connectors.imapNeeded": "Cần có để kết nối",
+  "connectors.imapStillNeeded": "Còn thiếu: {fields}",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Hãy kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable": "Không liên lạc được với máy chủ thư.",
@@ -7962,6 +7964,8 @@ export const vi = {
   "firstRun.platform.imapNote":
     "Không có gì thiết lập cho cả bản cài đặt. Kết nối hộp thư của chính bạn ngay bây giờ hoặc để sau; mọi hộp thư khác được kết nối ở Cài đặt → Tích hợp, với mật khẩu ứng dụng riêng.",
   "firstRun.platform.skip": "Để sau",
+  "firstRun.needed": "Cần có để tiếp tục",
+  "firstRun.stillNeeded": "Còn thiếu: {fields}",
   "firstRun.platform.foot":
     "Câu trả lời ở đây có thể đổi sau ở Cài đặt → Quản trị.",
   "firstRun.microsoft.note":

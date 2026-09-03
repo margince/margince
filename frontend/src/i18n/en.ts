@@ -4399,6 +4399,8 @@ export const en = {
   "connectors.imapSecretHint":
     "Use an app-specific password. We seal it in the credential vault and read your mail on a schedule until you disconnect — disconnecting deletes it.",
   "connectors.imapSubmitCta": "Connect",
+  "connectors.imapNeeded": "Needed to connect",
+  "connectors.imapStillNeeded": "Still needed: {fields}",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable": "The mail server could not be reached.",
@@ -8133,6 +8135,8 @@ export const en = {
   "firstRun.platform.imapNote":
     "Nothing is set up for the whole installation. Connect your own mailbox now, or later; every other mailbox is connected under Settings → Integrations, with its own app-password.",
   "firstRun.platform.skip": "Not now",
+  "firstRun.needed": "Needed to continue",
+  "firstRun.stillNeeded": "Still needed: {fields}",
   "firstRun.platform.foot":
     "Whatever you answer here can be changed later under Settings → Admin.",
   "firstRun.microsoft.note":

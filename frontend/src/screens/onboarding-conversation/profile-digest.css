@@ -382,10 +382,12 @@
   font: inherit;
   text-align: start;
 }
-.pdigest-editable:hover,
+.pdigest-editable:hover {
+  background: var(--bgCard);
+}
 .pdigest-editable:focus-visible {
   background: var(--bgCard);
-  outline: 1px solid var(--borderStrong);
+  outline: var(--focus-ring);
 }
 .pdigest-edit-control {
   display: block;

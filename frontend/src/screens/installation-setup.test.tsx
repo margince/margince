@@ -372,6 +372,33 @@ describe("the first-run setup gate", () => {
     expect(routing.embeddings.base_url).toBe("https://openrouter.ai/api");
   });
 
+  // Continue is always pressable. Pressing it early is how a reader learns
+  // what is missing: the field turns red and the rail names it, and nothing is
+  // written — a grey button would have said only that something is wrong.
+  it("names what is still needed when Continue is pressed early", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Still needed: API key")).toBeTruthy();
+    expect(screen.getAllByText("Needed to continue").length).toBe(1);
+    expect(writes.length).toBe(0);
+    // Typing the key clears the note; the press then goes through.
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    expect(screen.queryByText("Still needed: API key")).toBeNull();
+  });
+
+  it("names both halves of the app when Continue is pressed with neither", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(true, false));
+    await screen.findByRole("radio", { name: /Google Workspace/ });
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      screen.getByText("Still needed: Client ID, Client secret"),
+    ).toBeTruthy();
+    expect(writes.length).toBe(0);
+  });
+
   // The key is the reader's only copy. Clearing it after the FIRST write left a
   // failed binding with an empty field, a disabled Continue, a step still
   // unconfigured and a reload that restored exactly that — the only way on was

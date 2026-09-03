@@ -37,12 +37,14 @@
      centred track overflows equally in both directions and the top half is the
      half that cannot be scrolled back to. */
   align-content: safe center;
-  /* NO INSET. The page used to hold the card off the viewport by one --space-6
-     on all four sides, which framed the room as an object sitting on a ground.
-     The ground is the ribbons now, and a band of flat paper between them and
-     the card is the one part of the composition that reads as a border. The
-     card reaches the edge; what is left around it, top and bottom, is the
-     ground itself. */
+  /* The ground shows around the room on every screen, not only on a wide one.
+     Without an inset a laptop saw the card fill the window edge to edge and the
+     ribbons never appeared at all, so the composition the ground exists for
+     was the one thing a laptop never got. Scaled with the viewport so a small
+     window gives up little of itself to margin and a large one shows the
+     ground generously. */
+  padding: clamp(var(--space-3), 2.5vh, var(--space-8))
+    clamp(var(--space-3), 3vw, var(--space-10));
   /* The ground (`AmbientWaves`) is the first child at `z-index: -1`, which
      paints it after this element's own background and before the card. Both
      properties are needed: `relative` gives the canvas a box to fill, and
@@ -68,7 +70,7 @@
      the scene needs height to place the Core in, and a card that grows with the
      window turns the same question into a different composition on every
      screen. */
-  --ob-stage-min: clamp(620px, 80vh, 900px);
+  --ob-stage-min: clamp(560px, 72vh, 860px);
   /* How far the board keeps off the left edge, which is what reserves the
      Core's place. The Core is positioned rather than columned, so this is the
      only thing standing between the two. */
@@ -411,14 +413,32 @@
  * sits outside the board and does not arrive with it.
  */
 .ob-stage-foot {
-  position: relative;
+  /* Held to the bottom of the window while a long board scrolls, so the way
+     onward is in view from wherever the reader is on the board; it settles
+     back onto the card's own edge once that edge is on screen. Opaque, because
+     the board passes underneath it. */
+  position: sticky;
+  bottom: 0;
   z-index: 3;
   display: flex;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--borderSubtle);
-  background: color-mix(in srgb, var(--bgCard) 40%, transparent);
+  background: var(--bgElevated);
+}
+/* A foot with nothing on it — no hint, and no step has put an action in the
+   cell — draws no bar. */
+.ob-stage-foot:not(:has(> .ob-stage-hint)):has(> .ob-stage-acts:empty) {
+  display: none;
+}
+/* What still stands between the reader and the next step, said beside the
+   button that was pressed: the fields themselves carry the same words, and the
+   rail repeats them because the rail is where the press happened. */
+.ob-stage-note {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-sm);
 }
 .ob-stage-hint {
   margin: 0;
