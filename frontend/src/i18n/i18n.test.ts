@@ -252,9 +252,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.fieldEg.register_court",
   "ob.fieldEg.register_number",
 
-  // Brand names, and the console Google itself names in English.
+  // Brand names, a protocol's acronym, and the console Google itself names
+  // in English.
   "firstRun.platform.google",
   "firstRun.platform.microsoft",
+  "firstRun.platform.imap",
   "firstRun.google.helpConsole",
 ]);
 

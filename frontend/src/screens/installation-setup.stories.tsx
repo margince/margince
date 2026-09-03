@@ -296,14 +296,12 @@ export const OnMicrosoft: Story = {
   },
 };
 
-// Neither platform: IMAP mailboxes carrying their own credentials, entered on
-// the mailbox rather than here, so Continue is the only control left.
-export const OnNeither: Story = {
+// IMAP: mailboxes carrying their own credentials, entered on the mailbox
+// rather than here, so Continue is the only control left.
+export const OnImap: Story = {
   ...ChoosingThePlatform,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("radio", { name: /Neither/ }),
-    );
+    await userEvent.click(await canvas.findByRole("radio", { name: /IMAP/ }));
   },
 };

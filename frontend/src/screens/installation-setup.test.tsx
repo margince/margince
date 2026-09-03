@@ -200,6 +200,9 @@ describe("the first-run setup gate", () => {
     await user.click(
       await screen.findByRole("radio", { name: /Microsoft 365/ }),
     );
+    // The same app signs people in, but from the environment: the screen
+    // says so rather than letting the saved pair imply it.
+    expect(screen.getByText(/MARGINCE_MICROSOFT_SIGNIN_TENANT/)).toBeTruthy();
     await user.type(screen.getByLabelText("Client ID"), "entra-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -215,15 +218,46 @@ describe("the first-run setup gate", () => {
 
   // The regression this screen was once built wrong for: an installation with
   // no app must still reach the company form. The step does not block, so
-  // "not now" — or "neither", which has nothing to enter — lets the reader
-  // through, and the answer is remembered so the question is asked once.
-  it("lets a reader through on Neither, and remembers it", async () => {
-    const { container } = mount(setupReport(true, false));
+  // "not now" — or IMAP, which stores nothing installation-wide — lets the
+  // reader through, and the answer is remembered so the question is asked once.
+  it("lets a reader through on IMAP with Not now, and remembers it", async () => {
+    const { container, writes } = mount(setupReport(true, false));
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("radio", { name: /Neither/ }));
-    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(await screen.findByRole("radio", { name: /IMAP/ }));
+    await user.click(screen.getByRole("button", { name: "Not now" }));
     await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(writes.length).toBe(0);
     expect(outstandingStep(setupReport(true, false), true)).toBeUndefined();
+  });
+
+  // IMAP has no installation-wide app, so the one thing the answer can do is
+  // connect the mailbox of the person on screen: the same standing connect
+  // Settings makes, and the step is done once the server confirms it.
+  it("connects the reader's own mailbox on IMAP, through the standing connect", async () => {
+    const { container, writes } = mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /IMAP/ }));
+    await user.type(screen.getByLabelText("IMAP server *"), "mail.example.org");
+    await user.type(
+      screen.getByLabelText("Email address *"),
+      "lars@example.org",
+    );
+    await user.type(screen.getByLabelText("App password *"), "app-password");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(
+      writes.map((w) => w.url.endsWith("/connectors/imap/connect")),
+    ).toEqual([true]);
+    expect(writes[0]?.body).toEqual({
+      imap: {
+        host: "mail.example.org",
+        port: 993,
+        username: "lars@example.org",
+        secret: "app-password",
+        mailbox: "INBOX",
+        max_messages: 50,
+      },
+    });
   });
 
   it("lets a reader past the app step with Not now", async () => {

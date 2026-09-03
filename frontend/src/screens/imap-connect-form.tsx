@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -12,11 +12,15 @@ import { CaptureNotice } from "./capture-notice";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
 
 // The IMAP connect flavor (RC-8/Task 6): the credential providers' first-
-// connect and reconnect both happen through this one form, in Settings —
-// there is no OAuth redirect to bounce through, so the standing connect
-// (Task 1's `{imap:{...}}` shape) IS the whole act. The typed client only,
-// hitting the same standing `/connectors/imap/connect` onboarding's
-// ImapConnectPanel (onboarding-connect-panels.tsx) posts to.
+// connect and reconnect both happen through this one form — there is no OAuth
+// redirect to bounce through, so the standing connect (Task 1's `{imap:{...}}`
+// shape) IS the whole act. The typed client only, hitting the same standing
+// `/connectors/imap/connect` onboarding's ImapConnectPanel
+// (onboarding-connect-panels.tsx) posts to.
+//
+// Two surfaces render the form: Settings, in a dialog, and the first-run
+// platform step, inline. ImapMailboxForm is the one form; ImapConnectForm is
+// the dialog around it.
 
 type ImapConnectRequest = {
   host: string;
@@ -51,20 +55,39 @@ export function imapErrorMessage(
   return problemMessageOf(error, t);
 }
 
-export function ImapConnectForm({
-  open,
-  onClose,
+/**
+ * The mailbox form itself: fields, the standing connect, and the two actions.
+ *
+ * Mounted fresh by each surface: a dialog mounts it on open, so no attempt's
+ * values — least of all the secret — survive into the next one.
+ */
+export function ImapMailboxForm({
+  dismissLabel,
+  onDismiss,
   onConnected,
+  onPendingChange,
+  actionsClassName,
+  small = false,
 }: Readonly<{
-  open: boolean;
-  onClose: () => void;
+  /** What backing out is called on this surface: Cancel in a dialog, Not
+   * now on a step that does not block. */
+  dismissLabel: string;
+  onDismiss: () => void;
   // Called after the server has confirmed the connection — never before.
   // The caller's own row list (GET /connectors, invalidated below) is what
   // actually proves it; this callback just closes the caller's affordance.
   onConnected?: () => void;
+  /** Reports the in-flight connect, so a surface that owns other controls
+   * can hold them while the credentials are being proven. */
+  onPendingChange?: (pending: boolean) => void;
+  /** The surface's own row for the two buttons: `actions` inside a dialog,
+   * the step's row on the first run. Styled by the surface, since the form
+   * does not know which one it is standing in. */
+  actionsClassName: string;
+  /** The dialog's compact buttons; a step in a room keeps the room's size. */
+  small?: boolean;
 }>) {
   const t = useT();
-  const headingId = useId();
   const queryClient = useQueryClient();
   const [host, setHost] = useState("");
   const [port, setPort] = useState(DEFAULT_PORT);
@@ -72,21 +95,6 @@ export function ImapConnectForm({
   const [secret, setSecret] = useState("");
   const [mailbox, setMailbox] = useState(DEFAULT_MAILBOX);
   const [maxMessages, setMaxMessages] = useState(DEFAULT_MAX_MESSAGES);
-
-  // A fresh open never carries a previous attempt's values — least of all
-  // the secret, which is never retained across opens either.
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    if (open && !wasOpen.current) {
-      setHost("");
-      setPort(DEFAULT_PORT);
-      setUsername("");
-      setSecret("");
-      setMailbox(DEFAULT_MAILBOX);
-      setMaxMessages(DEFAULT_MAX_MESSAGES);
-    }
-    wasOpen.current = open;
-  }, [open]);
 
   const connect = useMutation({
     mutationFn: async (request: ImapConnectRequest) => {
@@ -114,6 +122,10 @@ export function ImapConnectForm({
       setSecret("");
     },
   });
+  useEffect(() => {
+    onPendingChange?.(connect.isPending);
+    return () => onPendingChange?.(false);
+  }, [connect.isPending, onPendingChange]);
 
   const parsedPort = port.trim() === "" ? 993 : Number(port);
   const parsedMax = maxMessages.trim() === "" ? 50 : Number(maxMessages);
@@ -133,6 +145,134 @@ export function ImapConnectForm({
     : null;
 
   return (
+    <form
+      className="form-stack"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!ready) {
+          return;
+        }
+        connect.mutate({
+          host: host.trim(),
+          port: parsedPort,
+          username: username.trim(),
+          secret,
+          mailbox: mailbox.trim() || DEFAULT_MAILBOX,
+          max_messages: parsedMax,
+        });
+      }}
+    >
+      {/* Before the fields, not after: a person connecting a mailbox from
+          Settings is told the same thing onboarding tells them, and reading
+          it after typing a password is reading it too late. */}
+      <CaptureNotice />
+      <Field label={t("connectors.imapHost")} required>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={host}
+            onChange={(event) => setHost(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field label={t("connectors.imapPort")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            type="number"
+            min={1}
+            max={65535}
+            value={port}
+            onChange={(event) => setPort(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field label={t("connectors.imapUsername")} required>
+        {(control) => (
+          <TextInput
+            {...control}
+            type="email"
+            autoComplete="email"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field label={t("connectors.imapSecret")} required>
+        {(control) => (
+          <TextInput
+            {...control}
+            type="password"
+            autoComplete="off"
+            value={secret}
+            onChange={(event) => setSecret(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field label={t("connectors.imapMailbox")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={mailbox}
+            onChange={(event) => setMailbox(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field label={t("connectors.imapMaxMessages")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            type="number"
+            min={1}
+            max={200}
+            value={maxMessages}
+            onChange={(event) => setMaxMessages(event.target.value)}
+          />
+        )}
+      </Field>
+      <p className="t-caption">{t("connectors.imapSecretHint")}</p>
+      {errorMessage && (
+        <Callout tone="danger" live="alert">
+          {errorMessage}
+        </Callout>
+      )}
+      <div className={actionsClassName}>
+        <Button
+          small={small}
+          type="button"
+          onClick={onDismiss}
+          disabled={connect.isPending}
+        >
+          {dismissLabel}
+        </Button>
+        <Button
+          small={small}
+          variant="primary"
+          type="submit"
+          disabled={!connect.isPending && !ready}
+          pending={connect.isPending}
+          busyLabel={t("create.saving")}
+        >
+          {t("connectors.imapSubmitCta")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** The Settings dialog: ImapMailboxForm under a heading, mounted per open. */
+export function ImapConnectForm({
+  open,
+  onClose,
+  onConnected,
+}: Readonly<{
+  open: boolean;
+  onClose: () => void;
+  onConnected?: () => void;
+}>) {
+  const t = useT();
+  const headingId = useId();
+  return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
       <h2
         id={headingId}
@@ -141,118 +281,15 @@ export function ImapConnectForm({
       >
         {t("connectors.imapModalTitle")}
       </h2>
-      <form
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!ready) {
-            return;
-          }
-          connect.mutate({
-            host: host.trim(),
-            port: parsedPort,
-            username: username.trim(),
-            secret,
-            mailbox: mailbox.trim() || DEFAULT_MAILBOX,
-            max_messages: parsedMax,
-          });
-        }}
-      >
-        {/* Before the fields, not after: a person connecting a mailbox from
-            Settings is told the same thing onboarding tells them, and reading
-            it after typing a password is reading it too late. */}
-        <CaptureNotice />
-        <Field label={t("connectors.imapHost")} required>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={host}
-              onChange={(event) => setHost(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("connectors.imapPort")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="number"
-              min={1}
-              max={65535}
-              value={port}
-              onChange={(event) => setPort(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("connectors.imapUsername")} required>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="email"
-              autoComplete="email"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("connectors.imapSecret")} required>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="password"
-              autoComplete="off"
-              value={secret}
-              onChange={(event) => setSecret(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("connectors.imapMailbox")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={mailbox}
-              onChange={(event) => setMailbox(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("connectors.imapMaxMessages")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="number"
-              min={1}
-              max={200}
-              value={maxMessages}
-              onChange={(event) => setMaxMessages(event.target.value)}
-            />
-          )}
-        </Field>
-        <p className="t-caption">{t("connectors.imapSecretHint")}</p>
-        {errorMessage && (
-          <Callout tone="danger" live="alert">
-            {errorMessage}
-          </Callout>
-        )}
-        <div className="actions">
-          <Button
-            small
-            type="button"
-            onClick={onClose}
-            disabled={connect.isPending}
-          >
-            {t("create.cancel")}
-          </Button>
-          <Button
-            small
-            variant="primary"
-            type="submit"
-            disabled={!connect.isPending && !ready}
-            pending={connect.isPending}
-            busyLabel={t("create.saving")}
-          >
-            {t("connectors.imapSubmitCta")}
-          </Button>
-        </div>
-      </form>
+      {open && (
+        <ImapMailboxForm
+          small
+          actionsClassName="actions"
+          dismissLabel={t("create.cancel")}
+          onDismiss={onClose}
+          onConnected={onConnected}
+        />
+      )}
     </Modal>
   );
 }

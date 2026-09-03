@@ -8038,10 +8038,10 @@ export const de = {
     "Mail, Kalender und Anmeldung über eine eigene Google-App.",
   "firstRun.platform.microsoft": "Microsoft 365",
   "firstRun.platform.microsoftWhat":
-    "Mail und Kalender über Microsoft Graph. Anmeldung per E-Mail und Passwort.",
-  "firstRun.platform.other": "Keins von beiden",
-  "firstRun.platform.otherWhat":
-    "Jedes Postfach verbindet sich per IMAP. Anmeldung per E-Mail und Passwort.",
+    "Mail, Kalender und Anmeldung über eine eigene Entra-App.",
+  "firstRun.platform.imap": "IMAP",
+  "firstRun.platform.imapWhat":
+    "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Anmeldung per E-Mail und Passwort.",
   "firstRun.google.helpSignIn":
     "Für die Google-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
@@ -8056,13 +8056,15 @@ export const de = {
   "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
   "firstRun.google.helpDocs":
     "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
-  "firstRun.platform.otherNote":
-    "Hier ist nichts einzutragen. Jedes Postfach wird unter Einstellungen → Integrationen mit eigenen Zugangsdaten eingerichtet.",
+  "firstRun.platform.imapNote":
+    "Für die ganze Installation wird nichts eingerichtet. Verbinden Sie Ihr eigenes Postfach jetzt oder später; jedes weitere Postfach wird unter Einstellungen → Integrationen mit eigenem App-Passwort verbunden.",
   "firstRun.platform.skip": "Jetzt nicht",
   "firstRun.platform.foot":
     "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
   "firstRun.microsoft.note":
-    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs unten und fügen Sie hier Client-ID und Secret ein. Pinnen Sie sie auf Ihr Verzeichnis, wenn sich nur Ihre Organisation darüber anmelden soll.",
+    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs unten und fügen Sie hier Client-ID und Secret ein. Pinnen Sie sie auf Ihr Verzeichnis, wenn nur Postfächer Ihrer Organisation darüber verbunden werden sollen.",
+  "firstRun.microsoft.helpSignIn":
+    "Für die Microsoft-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GRAPH_CLIENT_ID und MARGINCE_GRAPH_CLIENT_SECRET, trägt die Verzeichnis-ID in MARGINCE_MICROSOFT_SIGNIN_TENANT ein und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",

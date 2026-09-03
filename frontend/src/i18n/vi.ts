@@ -7937,10 +7937,10 @@ export const vi = {
     "Thư, lịch và đăng nhập qua một app Google của chính bạn.",
   "firstRun.platform.microsoft": "Microsoft 365",
   "firstRun.platform.microsoftWhat":
-    "Thư và lịch qua Microsoft Graph. Đăng nhập bằng email và mật khẩu.",
-  "firstRun.platform.other": "Không dùng cả hai",
-  "firstRun.platform.otherWhat":
-    "Mỗi hộp thư kết nối qua IMAP. Đăng nhập bằng email và mật khẩu.",
+    "Thư, lịch và đăng nhập qua một app Entra của chính bạn.",
+  "firstRun.platform.imap": "IMAP",
+  "firstRun.platform.imapWhat":
+    "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
   "firstRun.google.helpSignIn":
     "Để đăng nhập bằng Google, người vận hành server cũng export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
@@ -7955,13 +7955,15 @@ export const vi = {
   "firstRun.google.helpConsole": "Google Cloud credentials console",
   "firstRun.google.helpDocs":
     "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
-  "firstRun.platform.otherNote":
-    "Không có gì để nhập ở đây. Mỗi hộp thư được thiết lập ở Cài đặt → Tích hợp, với thông tin đăng nhập riêng.",
+  "firstRun.platform.imapNote":
+    "Không có gì thiết lập cho cả bản cài đặt. Kết nối hộp thư của chính bạn ngay bây giờ hoặc để sau; mọi hộp thư khác được kết nối ở Cài đặt → Tích hợp, với mật khẩu ứng dụng riêng.",
   "firstRun.platform.skip": "Để sau",
   "firstRun.platform.foot":
     "Câu trả lời ở đây có thể đổi sau ở Cài đặt → Quản trị.",
   "firstRun.microsoft.note":
-    "Đăng ký một app trong Microsoft Entra với các redirect URI bên dưới, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn nếu chỉ tổ chức của bạn được đăng nhập qua đó.",
+    "Đăng ký một app trong Microsoft Entra với các redirect URI bên dưới, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn nếu chỉ hộp thư của tổ chức bạn được kết nối qua đó.",
+  "firstRun.microsoft.helpSignIn":
+    "Để đăng nhập bằng Microsoft, người vận hành server cũng export đúng cặp đó thành MARGINCE_GRAPH_CLIENT_ID và MARGINCE_GRAPH_CLIENT_SECRET, ghi ID thư mục vào MARGINCE_MICROSOFT_SIGNIN_TENANT rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",

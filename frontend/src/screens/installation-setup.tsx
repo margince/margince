@@ -24,6 +24,7 @@ import {
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
+import { ImapMailboxForm } from "./imap-connect-form";
 import {
   RedirectUris,
   useOAuthApp,
@@ -502,7 +503,7 @@ function AiStep({
  * console entry. Two questions would ask somebody to state one fact twice and
  * then keep the two answers agreeing.
  */
-const PLATFORMS = ["google", "microsoft", "other"] as const;
+const PLATFORMS = ["google", "microsoft", "imap"] as const;
 type Platform = (typeof PLATFORMS)[number];
 
 // Typed by `Platform` in both directions: an answer with no copy fails, and
@@ -518,9 +519,9 @@ const PLATFORM_COPY: Readonly<
     label: "firstRun.platform.microsoft",
     what: "firstRun.platform.microsoftWhat",
   },
-  other: {
-    label: "firstRun.platform.other",
-    what: "firstRun.platform.otherWhat",
+  imap: {
+    label: "firstRun.platform.imap",
+    what: "firstRun.platform.imapWhat",
   },
 };
 
@@ -604,6 +605,12 @@ function VendorAppFields({
             uris={app.data?.redirect_uris}
             sub={t(vendorCopy.microsoft.redirectSub)}
           />
+          {/* Sign-in reads the pair from the environment, exactly as Google's
+              does, and the directory list besides: the tenant field above
+              narrows who may connect a mailbox, never who may sign in. */}
+          <p className="ob-fr-help-note">
+            {t("firstRun.microsoft.helpSignIn")}
+          </p>
         </>
       )}
       {save.error && (
@@ -685,8 +692,8 @@ function VendorAppFields({
 
 /**
  * The platform step: which vendor's app mailboxes and calendars connect
- * through, asked once, of the person running the cold start. Neither vendor
- * is an answer too — IMAP mailboxes carry their own credentials — and so is
+ * through, asked once, of the person running the cold start. IMAP is an
+ * answer too — each mailbox carries its own credentials — and so is
  * "not now": the step does not block, and Settings keeps the same form.
  */
 function PlatformStep({
@@ -705,8 +712,9 @@ function PlatformStep({
         <PanelBody>
           {/* Plates rather than a radio column: the answers are two vendors
               and a protocol, and an admin picks the platform their company
-              already runs by recognising it. `other` gets the component's own
-              fallback mark, a key rather than an invented logo. */}
+              already runs by recognising it. `imap` is a protocol, not a vendor,
+              so it gets the component's own fallback mark rather than an
+              invented logo. */}
           <ChoiceList<Platform>
             legend={t("firstRun.platform.legend")}
             hideLegend
@@ -720,16 +728,21 @@ function PlatformStep({
               mark: <ProviderMark providerKey={id} />,
             }))}
           />
-          {platform === "other" ? (
+          {platform === "imap" ? (
             <>
               <p className="ob-fr-help-note">
-                {t("firstRun.platform.otherNote")}
+                {t("firstRun.platform.imapNote")}
               </p>
-              <div className="ob-fr-actions">
-                <Button variant="primary" onClick={onDecline}>
-                  {t("firstRun.continue")}
-                </Button>
-              </div>
+              {/* The same standing connect Settings makes, for the person on
+                  screen. There is no installation-wide IMAP app to store, so a
+                  confirmed mailbox and "not now" both answer the question. */}
+              <ImapMailboxForm
+                actionsClassName="ob-fr-actions"
+                dismissLabel={t("firstRun.platform.skip")}
+                onDismiss={onDecline}
+                onConnected={onDecline}
+                onPendingChange={onBusy}
+              />
             </>
           ) : (
             <VendorAppFields

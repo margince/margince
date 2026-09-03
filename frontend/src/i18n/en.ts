@@ -8108,10 +8108,10 @@ export const en = {
     "Mail, calendar and sign-in through one Google app you own.",
   "firstRun.platform.microsoft": "Microsoft 365",
   "firstRun.platform.microsoftWhat":
-    "Mail and calendar through Microsoft Graph. Sign-in is email and password.",
-  "firstRun.platform.other": "Neither",
-  "firstRun.platform.otherWhat":
-    "Each mailbox connects over IMAP. Sign-in is email and password.",
+    "Mail, calendar and sign-in through one Entra app you own.",
+  "firstRun.platform.imap": "IMAP",
+  "firstRun.platform.imapWhat":
+    "Each mailbox connects with its own IMAP app-password. Sign-in is email and password.",
   "firstRun.google.helpSignIn":
     "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
   "firstRun.google.helpToggle": "Where do I get these?",
@@ -8126,13 +8126,15 @@ export const en = {
   "firstRun.google.helpConsole": "Google Cloud credentials console",
   "firstRun.google.helpDocs":
     "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
-  "firstRun.platform.otherNote":
-    "Nothing to fill in here. Each mailbox is set up under Settings → Integrations, with its own credentials.",
+  "firstRun.platform.imapNote":
+    "Nothing is set up for the whole installation. Connect your own mailbox now, or later; every other mailbox is connected under Settings → Integrations, with its own app-password.",
   "firstRun.platform.skip": "Not now",
   "firstRun.platform.foot":
     "Whatever you answer here can be changed later under Settings → Admin.",
   "firstRun.microsoft.note":
-    "Register an app in Microsoft Entra with the redirect URIs below, then paste its client id and secret here. Pin it to your directory if only your organization should sign in through it.",
+    "Register an app in Microsoft Entra with the redirect URIs below, then paste its client id and secret here. Pin it to your directory if only your organization's mailboxes should connect through it.",
+  "firstRun.microsoft.helpSignIn":
+    "For Microsoft sign-in, whoever runs the server also exports the same pair as MARGINCE_GRAPH_CLIENT_ID and MARGINCE_GRAPH_CLIENT_SECRET, names your directory id in MARGINCE_MICROSOFT_SIGNIN_TENANT, and restarts it. Sign-in reads them at startup, not from what is saved here.",
   "firstRun.ai.rankedHint":
     "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
   "firstRun.ai.rankedUnavailable":
