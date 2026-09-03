@@ -23,7 +23,9 @@ import (
 func TestTheVoiceJudgeReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	lane := &aitest.ReAsking{
-		First:  "The second one reads more like them.",
+		// Valid JSON, refused by readVoiceJudgeScores alone: one score for two
+		// drafts is a cardinality only this site knows about.
+		First:  `{"scores":[0.4]}`,
 		Second: `{"scores":[0.4,0.9]}`,
 	}
 	scores, valid, err := judgeVoiceDrafts(t.Context(), lane, "the held-out original",
@@ -62,7 +64,9 @@ func (b *reAskingEvalBrain) CompleteValidated(
 ) (model.Response, error) {
 	b.validated++
 	if b.validated == 1 {
-		if b.refusedDraft = validate("Here is a draft in their voice."); b.refusedDraft != nil {
+		// Valid JSON, refused by readVoiceEvalDraft alone: an empty body is a
+		// rule of this site's, not of JSON.
+		if b.refusedDraft = validate(`{"subject":"Re: the work","body":""}`); b.refusedDraft != nil {
 			return b.Complete(ctx, req)
 		}
 	}

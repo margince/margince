@@ -16,7 +16,9 @@ import (
 func TestTheBuyingRoleReadReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	lane := &aitest.ReAsking{
-		First: "Sofia looks like the economic buyer here.",
+		// Valid JSON, refused by proposeroles.Parse alone: the site requires a
+		// proposals key and this reply carries a different one.
+		First: `{"roles":[]}`,
 		Second: `{"proposals":[{"person_id":"p-1","role":"economic_buyer",` +
 			`"evidence_snippet":"I sign off on this budget.","source_id":"m-1","confidence":0.8}]}`,
 	}

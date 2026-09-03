@@ -21,7 +21,9 @@ func TestTheGrowthFitAssessmentReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	in := sevenOfSeven()
 	lane := &aitest.ReAsking{
-		First:  "Strong fit, I'd say — they look like a good match.",
+		// Valid JSON in this site's envelope, refused by ParseGrowthFit alone:
+		// "excellent" is not a band the contract declares.
+		First:  `{"band":"excellent","positive_factors":[]}`,
 		Second: citing("strong", in),
 	}
 	assessment, err := assessWithModel(t.Context(), lane, in, false, at, string(textlang.English))
@@ -43,7 +45,9 @@ func TestTheDossierWriterReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	in := sevenOfSeven()
 	lane := &aitest.ReAsking{
-		First:  "Here is what I found about them.",
+		// Valid JSON, refused by ParseDossier alone: sections is an object where
+		// the site reads a list.
+		First:  `{"sections":{"kind":"summary"}}`,
 		Second: describing("summary", "They build load-shifting software for industrial sites.", in),
 	}
 	sections, err := writeWithModel(t.Context(), lane, in, string(textlang.English))

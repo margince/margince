@@ -86,7 +86,7 @@ func TestARefusableModelReplyIsAskedThroughTheValidatedLane(t *testing.T) {
 		for _, site := range modelReplySites(src.File) {
 			plain++
 			reader, refuses := site.refusingReader(t, packages, src)
-			if !refuses || site.validated {
+			if !refuses {
 				continue
 			}
 			// Keyed by path AND function: writeWithModel is the spelling in
@@ -158,12 +158,11 @@ func askCallsIn(file *ast.File) int {
 // reply lands in, whether the function also reaches the validated lane, and the
 // calls it hands the reply's text to.
 type replySite struct {
-	name      string
-	reply     string
-	validated bool
-	readers   []*ast.CallExpr
-	returns   bool
-	file      *ast.File
+	name    string
+	reply   string
+	readers []*ast.CallExpr
+	returns bool
+	file    *ast.File
 }
 
 // modelReplySites finds every function in one file that takes a model reply.
@@ -186,12 +185,11 @@ func modelReplySites(file *ast.File) []replySite {
 				continue
 			}
 			sites = append(sites, replySite{
-				name:      qualifiedFuncName(fn),
-				reply:     reply,
-				validated: callsSelector(fn.Body, laneCompleteValidated),
-				readers:   readers,
-				returns:   returns && resultsCarryError(fn.Type),
-				file:      file,
+				name:    qualifiedFuncName(fn),
+				reply:   reply,
+				readers: readers,
+				returns: returns && resultsCarryError(fn.Type),
+				file:    file,
 			})
 		}
 	}
@@ -244,13 +242,16 @@ func readersOfReply(body *ast.BlockStmt, reply string) ([]*ast.CallExpr, bool) {
 	})
 	ast.Inspect(body, func(n ast.Node) bool {
 		ret, isReturn := n.(*ast.ReturnStmt)
-		if !isReturn {
+		// EXACTLY one result, so this is a forward of the callee's whole tuple
+		// — error included — and not merely a return that happens to mention
+		// the reply. `return strings.TrimSpace(resp.Text), nil` is a prose site
+		// supplying its own nil, and reading its caller's error result as a
+		// refusal would demand a retry from a lane that accepts everything.
+		if !isReturn || len(ret.Results) != 1 {
 			return true
 		}
-		for _, result := range ret.Results {
-			if call, isCall := result.(*ast.CallExpr); isCall && readsReplyText(call, reply) {
-				returned = true
-			}
+		if call, isCall := ret.Results[0].(*ast.CallExpr); isCall && readsReplyText(call, reply) {
+			returned = true
 		}
 		return true
 	})
@@ -414,19 +415,6 @@ func isSelectorCall(expr ast.Expr, method string) bool {
 	return isSel && sel.Sel.Name == method
 }
 
-// callsSelector reports whether a body calls a named method anywhere.
-func callsSelector(body *ast.BlockStmt, method string) bool {
-	found := false
-	ast.Inspect(body, func(n ast.Node) bool {
-		expr, isExpr := n.(ast.Expr)
-		if isExpr && isSelectorCall(expr, method) {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
 // The walk above, tested against source it is handed rather than against the
 // tree.
 //
@@ -519,6 +507,56 @@ func ParseRows(text string) ([]Row, error) { return nil, nil }
 	if site != nil {
 		t.Errorf("a CompleteValidated call was read as a bare reply site (%s), so adopting the validated "+
 			"path would not clear a finding", site.name)
+	}
+}
+
+// A prose site can return the reply through a call and still supply its own nil
+// error. Reading its caller's error result as a refusal would demand a retry
+// from a lane that accepts everything it is handed.
+func TestTheWalkLeavesAProseSiteThatReturnsThroughACallAlone(t *testing.T) {
+	t.Parallel()
+	_, refuses := judgeSource(t, `package site
+
+func summarize(ctx context.Context, lane Completer) (string, error) {
+	resp, err := lane.Complete(ctx, SummaryRequest())
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(resp.Text), nil
+}
+`)
+	if refuses {
+		t.Error("a prose site returning its reply through a call was reported as refusing it, so the gate " +
+			"would demand a retry for a lane that accepts everything")
+	}
+}
+
+// A validated call elsewhere in the same function ratifies nothing: the bare
+// reply beside it still has no retry, and reading the function as a whole would
+// let one adopted call hide any number of unadopted ones.
+func TestAValidatedCallDoesNotRatifyABareOneBesideIt(t *testing.T) {
+	t.Parallel()
+	reader, refuses := judgeSource(t, `package site
+
+func extract(ctx context.Context, brain Brain) ([]Row, error) {
+	if _, err := brain.CompleteValidated(ctx, warmup, shapeValid); err != nil {
+		return nil, err
+	}
+	resp, err := brain.Complete(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRows(resp.Text)
+}
+
+func ParseRows(text string) ([]Row, error) { return nil, nil }
+`)
+	if !refuses {
+		t.Fatal("a bare reply was read as validated because an unrelated CompleteValidated call sat in the " +
+			"same function, so one adopted call would hide every unadopted one beside it")
+	}
+	if reader != "ParseRows" {
+		t.Errorf("the refusing reader was named %q, want ParseRows", reader)
 	}
 }
 

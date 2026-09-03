@@ -21,7 +21,9 @@ func TestTheStatusWriterReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	in := inputWithTimeline()
 	lane := &aitest.ReAsking{
-		First: "The deal looks like it is drifting.",
+		// Valid JSON, refused by ParseStatus alone: story is a string where the
+		// site reads a list of evidenced lines.
+		First: `{"story":"The offer was never sent."}`,
 		Second: reply(draft{
 			story:      []map[string]any{line("The offer was promised on the call and never sent.", "act-1")},
 			blocker:    []map[string]any{line("Nothing has moved in twelve days.", "act-2")},

@@ -25,7 +25,9 @@ const groundedBriefReply = `{"sections":[
 func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	lane := &aitest.ReAsking{
-		First:  "I'm afraid I can't do that.",
+		// Valid JSON, refused by ParseBriefSections alone: sections is an object
+		// where the site reads a list.
+		First:  `{"sections":{"kind":"snapshot"}}`,
 		Second: groundedBriefReply,
 	}
 	sections, err := writeWithModel(t.Context(), lane, briefOrgID, inputFixture(), string(textlang.English))
@@ -46,7 +48,9 @@ func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 func TestTheQuestionAnswererReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	lane := &aitest.ReAsking{
-		First: "Here is what I know about them.",
+		// Valid JSON, refused by ParseBrief alone: sentences is a string where
+		// the site reads a list.
+		First: `{"sentences":"They sell managed hosting."}`,
 		Second: `{"sentences":[{"text":"They sell managed hosting.","evidence":[` +
 			`{"entity_type":"organization","entity_id":"` + askOrgID + `"}]}]}`,
 	}

@@ -28,7 +28,9 @@ func (f pageServing) Fetch(context.Context, string) (webread.Doc, error) {
 func TestTheFxExtractorReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	lane := &aitest.ReAsking{
-		First:  "EUR/USD is about 1.09 today.",
+		// Valid JSON, refused by parseFxExtraction alone: pairs is an object
+		// where the site reads a list.
+		First:  `{"pairs":{"from_currency":"USD"}}`,
 		Second: `{"pairs":[{"from_currency":"USD","to_currency":"EUR","rate":"0.92","evidence":"USD 1 = EUR 0.92"}]}`,
 	}
 	refresh := fxRefresh{fetcher: pageServing{text: "USD 1 = EUR 0.92"}, brain: lane, url: "https://example.test/fx"}
@@ -51,7 +53,9 @@ func TestTheFxExtractorReAsksThroughItsOwnParse(t *testing.T) {
 func TestTheModelPricingExtractorReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	lane := &aitest.ReAsking{
-		First: "Sonnet is $3 in and $15 out per million tokens.",
+		// Valid JSON, refused by parseRateExtraction alone: models is an object
+		// where the site reads a list.
+		First: `{"models":{"model_id":"claude-sonnet-5"}}`,
 		Second: `{"models":[{"provider":"anthropic","model_id":"claude-sonnet-5",` +
 			`"input_per_mtok":"3.00","output_per_mtok":"15.00","evidence":"$3 / $15 per MTok","confidence":"0.95"}]}`,
 	}

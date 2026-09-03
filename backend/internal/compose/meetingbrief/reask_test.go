@@ -21,7 +21,9 @@ import (
 func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 	in := fullInput()
 	lane := &aitest.ReAsking{
-		First: "Here is the brief you asked for.",
+		// Valid JSON, refused by ParseBriefSections alone: sections is an object
+		// where the site reads a list.
+		First: `{"sections":{"kind":"goal"}}`,
 		Second: `{"sections":[{"kind":"goal","sentences":[
 			{"text":"Get them to name a date.","nature":"recommendation",
 			 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`,
@@ -44,7 +46,9 @@ func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 func TestThePlanWriterReAsksThroughItsOwnParse(t *testing.T) {
 	in := fullInput()
 	lane := &aitest.ReAsking{
-		First: "I would open on the security pack.",
+		// Valid JSON, refused by ParsePlan alone: opening is a string where the
+		// site reads an evidenced sentence.
+		First: `{"opening":"Open on the security pack."}`,
 		Second: `{"opening":{"text":"Open on the security pack.","nature":"recommendation",
 			"evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}}`,
 	}

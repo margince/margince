@@ -19,7 +19,9 @@ func TestTheReOrderReAsksThroughItsOwnParse(t *testing.T) {
 	t.Parallel()
 	first, second := ids.NewV7(), ids.NewV7()
 	lane := &aitest.ReAsking{
-		First:  "here you go: the best ones first",
+		// Valid JSON in the site's own envelope; ParseRankOrder refuses it
+		// because "second" is not an id. A bare shape check would accept it.
+		First:  `{"order":["second","first"]}`,
 		Second: `{"order":["` + second.String() + `","` + first.String() + `"]}`,
 	}
 	ranker := briefL2Ranker{brain: lane, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
