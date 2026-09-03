@@ -154,8 +154,9 @@ and the tightest e2e. Every later page copies its decisions. Files:
 
 ### 3.1 Head
 
-- Verbs, unchanged in substance: **Write email (primary) · Log activity ·
-  Add task · more**. The `more` menu keeps its seven items in order (Edit,
+- Verbs, unchanged in substance: **Write email · Log activity · Add task ·
+  more**, all outlined (`Button` ghost); the page's one primary is inside
+  What needs you. The `more` menu keeps its seven items in order (Edit,
   Merge, Partner set-up, Share, Full history, Decisions, Archive) with the
   refusal caption first. The `PageAsideToggle` leaves `actions` for the tab
   strip's trailing slot.
@@ -219,8 +220,8 @@ Files: `personpage.tsx`, `person360.tsx`, `personrail.tsx`, `personstrip.tsx`,
 `persontoday.tsx`, `personcards.tsx`, `personmemory.tsx`,
 `personcorrections.tsx`, `personnetwork/`.
 
-- **Head.** Verbs: **Write email (primary) · Call · Add task · more**. The
-  primary keeps `primaryTransportAction`'s routing and refusal
+- **Head.** Verbs: **Write email · Call · Add task · more**, all outlined.
+  Write email keeps `primaryTransportAction`'s routing and refusal
   (`writeRefusal`: reachability first, then consent; an unanswered guard
   refuses nothing) but its label is the base word unless the transport is
   the only one. Call and Meetings stay as icon verbs or move into `more`.
@@ -264,8 +265,8 @@ Files: `personpage.tsx`, `person360.tsx`, `personrail.tsx`, `personstrip.tsx`,
 Files: `deals.tsx` (over the cap: the page moves to `screens/deal/`),
 `deal360/*`, `dealstatus.tsx`, `dealroom.tsx`, `dealfiles.tsx`.
 
-- **Head.** Verbs: **Write email (primary, from `DealEmailAside`) · Log
-  activity · Edit deal · more** (Archive, Share, Reopen when won/lost). The
+- **Head.** Verbs: **Write email (from `DealEmailAside`) · Log activity ·
+  Edit deal · more**, all outlined (Archive, Share, Reopen when won/lost). The
   `controls` slot goes: worth, stage, owner, close, forecast, partner join the
   facts line, masked fields still **named** (`FieldGuard mode="masked"`).
   `dealPulse` becomes the live dot ("Your move"). Edit keeps

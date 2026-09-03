@@ -291,10 +291,12 @@ scrolls inside itself.
   a company shows Write email · Log activity · Add task · more on every
   company; a contact Write email · Call · Add task · more; a deal Write email
   · Log activity · Edit deal · more; a lead Qualify · Write email · Edit ·
-  Disqualify · more; a project Log activity · Edit project · more. The
-  filled one is the transport (Write email; Qualify on a lead). The move the
-  call names ("Confirm the rate", "Reply on her thread") is the filled verb
-  inside What needs you, where its reason sits beside it. The **more** button
+  Disqualify · more; a project Log activity · Edit project · more. **None
+  of them is filled.** The head's verbs are all outlined, so the page has one
+  filled verb and it is the move the call names ("Confirm the rate", "Reply
+  on her thread") inside What needs you, where its reason sits beside it.
+  The one exception is a lead, whose Qualify is filled because qualifying is
+  the record's whole purpose. The **more** button
   (an outlined 36px square with the ellipsis) holds Archive, Share, Merge and
   the rest. The
   **Details** control sits at the right end of the tab row, in the page.
@@ -769,8 +771,8 @@ inventory. The structure above holds; these are the facts it now carries.
   lists (two visible, not sortable), a tag on the board card, and a "Tags ·
   Any tag" filter chip. Leads are not tagged.
 - **The email verb is an outlined button on every record**, in the same
-  place, with the same word. In the head the filled verb is the transport;
-  in the needs list it is the move the call names,
+  place, with the same word. The head's verbs are outlined; the filled verb
+  is inside the needs list and it is the move the call names,
   inside the needs list. Qualify stays filled on a lead, because it is the
   lead's whole point.
 - **The timeline thread has a failed state** ("The thread could not be read",
