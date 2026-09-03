@@ -11,7 +11,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { CommercialPanel, recordNamesIn } from "../company360";
 import { CompanyContractState } from "../companycommercial";
-import { wholeCount } from "../companyrailshared";
+import { peopleSlice } from "../companyrailshared";
 import { CompanyRecentList } from "../companyrecent";
 import type { CompanyTab } from "../companytab";
 import { CompanyWorkCard } from "../companywork";
@@ -162,17 +162,9 @@ export function PeopleChips({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const contacts = view?.people?.data ?? [];
-  // The page in hand is the roster only when it is whole; past the server's
-  // cut both the "All" verb and the remainder chip drop their figure.
-  const count = wholeCount(view?.people);
-  const state = sectionState(
-    view,
-    "people",
-    Boolean(view?.people),
-    contacts.length,
-    loading,
-  );
+  // Past the server's cut `count` is absent, and both the "All" verb and the
+  // remainder chip drop their figure with it.
+  const { contacts, count, state } = peopleSlice(view, loading);
   const shown = contacts.slice(0, CHIP_LIMIT);
   const rest = contacts.length - shown.length;
   return (

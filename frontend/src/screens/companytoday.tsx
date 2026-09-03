@@ -88,16 +88,9 @@ export type TodayReading =
       notice?: ReactNode;
     };
 
-export function useTodayReading({
-  orgId,
-  view,
-  loading,
-  failed,
-  onPrepareMeeting,
-  onDraftTo,
-  onOpenRecord,
-  onPerform,
-}: Readonly<{
+// What a reading is computed from: the account's composite read and the
+// verbs the surface above can perform on what it says.
+type TodayReadingInputs = Readonly<{
   orgId: string;
   view?: Organization360;
   loading: boolean;
@@ -114,7 +107,18 @@ export function useTodayReading({
   // Performing a suggestion's own action. The composer, the deal and the
   // task form all live above this brief.
   onPerform?: (action: SuggestionAction) => void;
-}>): TodayReading {
+}>;
+
+export function useTodayReading({
+  orgId,
+  view,
+  loading,
+  failed,
+  onPrepareMeeting,
+  onDraftTo,
+  onOpenRecord,
+  onPerform,
+}: TodayReadingInputs): TodayReading {
   const t = useT();
   const { locale } = useLocale();
   // Called before the loading/failed branches below, like every other hook
@@ -301,42 +305,22 @@ export function NeedsList({
  * grid of its own: the two panes in the order the page draws them.
  */
 export function TodayOnThisAccount({
-  orgId,
-  view,
-  loading,
-  failed,
-  onPrepareMeeting,
-  onDraftTo,
-  onOpenRecord,
-  onPerform,
   onOpenTasks,
   spine,
-}: Readonly<{
-  orgId: string;
-  view?: Organization360;
-  loading: boolean;
-  failed: boolean;
-  onPrepareMeeting?: (activityId: string) => void;
-  onDraftTo?: (personId: string) => void;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  onPerform?: (action: SuggestionAction) => void;
-  onOpenTasks?: () => void;
-  // The account's story as a thread, under the call it was read from.
-  spine?: ReactNode;
-}>) {
-  const reading = useTodayReading({
-    orgId,
-    view,
-    loading,
-    failed,
-    onPrepareMeeting,
-    onDraftTo,
-    onOpenRecord,
-    onPerform,
-  });
+  ...inputs
+}: TodayReadingInputs &
+  Readonly<{
+    onOpenTasks?: () => void;
+    // The account's story as a thread, under the call it was read from.
+    spine?: ReactNode;
+  }>) {
+  const reading = useTodayReading(inputs);
   return (
     <>
-      <Company360Call reading={reading} name={view?.organization?.display_name}>
+      <Company360Call
+        reading={reading}
+        name={inputs.view?.organization?.display_name}
+      >
         {spine}
       </Company360Call>
       <NeedsList reading={reading} onOpenTasks={onOpenTasks} />

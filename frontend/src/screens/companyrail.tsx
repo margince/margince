@@ -26,6 +26,7 @@ import { NewDealAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import {
+  peopleSlice,
   SectionSummary,
   sectionAnswered,
   wholeCount,
@@ -439,15 +440,7 @@ function PeopleSection({
   // twenty-five, so re-sorting here would be a second spelling of that rule —
   // and the copy that drifts, since only one of the two is what chose which
   // twenty-five arrived.
-  const contacts = view?.people?.data ?? [];
-  const count = wholeCount(view?.people);
-  const state = sectionState(
-    view,
-    "people",
-    Boolean(view?.people),
-    contacts.length,
-    loading,
-  );
+  const { contacts, count, state } = peopleSlice(view, loading);
   const answered = sectionAnswered(state);
   return (
     <Disclosure

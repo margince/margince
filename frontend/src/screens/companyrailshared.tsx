@@ -3,7 +3,7 @@
 
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
-import type { SectionState } from "../design-system/surfacestate";
+import { type SectionState, sectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 
@@ -50,6 +50,31 @@ export function wholeCount(section?: {
     return undefined;
   }
   return section.data.length;
+}
+
+type Organization360 = components["schemas"]["Organization360"];
+type People = NonNullable<Organization360["people"]>;
+
+// The people section as every surface reads it: the contacts in the server's
+// own rank, the count only while the page is whole, and whether the section
+// has answered at all. The details column's slice and the glance's chips both
+// draw this one reading rather than each taking it again.
+export function peopleSlice(
+  view: Organization360 | undefined,
+  loading: boolean,
+): { contacts: People["data"]; count?: number; state: SectionState } {
+  const contacts = view?.people?.data ?? [];
+  return {
+    contacts,
+    count: wholeCount(view?.people),
+    state: sectionState(
+      view,
+      "people",
+      Boolean(view?.people),
+      contacts.length,
+      loading,
+    ),
+  };
 }
 
 // A section has answered, one way or the other, only once it is ready or
