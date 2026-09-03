@@ -55,31 +55,27 @@ func TestTheRetryKeysDescriptionIsOmittedAndTheMemberKept(t *testing.T) {
 	if strings.Contains(compacted, "Same key, same result") {
 		t.Errorf("the retry key's description is still rendered per tool:\n%s", compacted)
 	}
+	// Maps rather than nested structs: JSON Schema's own keywords are camelCase
+	// (`maxLength` here, `additionalProperties` next door) and no snake_case tag
+	// can spell them, which the repo's tag linter is right to insist on for a
+	// wire type.
 	var parsed struct {
-		Properties struct {
-			RetryKey struct {
-				Type        string `json:"type"`
-				MaxLength   int    `json:"maxLength"`
-				Description string `json:"description"`
-			} `json:"idempotency_key"`
-			RecordID struct {
-				Description string `json:"description"`
-			} `json:"record_id"`
-		} `json:"properties"`
-		Required []string `json:"required"`
+		Properties map[string]map[string]json.RawMessage `json:"properties"`
+		Required   []string                              `json:"required"`
 	}
 	if err := json.Unmarshal([]byte(compacted), &parsed); err != nil {
 		t.Fatalf("the compacted schema is not valid JSON: %v\n%s", err, compacted)
 	}
-	if parsed.Properties.RetryKey.Type != "string" || parsed.Properties.RetryKey.MaxLength != 255 {
+	retryKey := parsed.Properties[mcp.ReservedIdempotencyKeyArg]
+	if string(retryKey["type"]) != `"string"` || string(retryKey["maxLength"]) != "255" {
 		t.Errorf("the retry key lost its type or its bound, so a caller cannot tell what to send:\n%s", compacted)
 	}
-	if parsed.Properties.RetryKey.Description != "" {
-		t.Errorf("the retry key still carries a description: %q", parsed.Properties.RetryKey.Description)
+	if description, described := retryKey["description"]; described {
+		t.Errorf("the retry key still carries a description: %s", description)
 	}
 	// A TOOL's own argument keeps its description. This is the whole difference
 	// between compacting what the surface owns and compacting text.
-	if parsed.Properties.RecordID.Description == "" {
+	if _, described := parsed.Properties["record_id"]["description"]; !described {
 		t.Error("a tool's own argument lost its description, which is per-tool meaning and not a surface fact")
 	}
 	if len(parsed.Required) != 1 || parsed.Required[0] != "record_id" {

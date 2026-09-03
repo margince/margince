@@ -120,17 +120,26 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 // The sentence NAMES the document and does not order a read. A binding told to
 // "read this first" obeyed on goals with no report in them and lost first-step
 // accuracy; TestNoToolOrdersTheModelToReadADocument holds the phrasing.
+//
+// AND IT SAYS THE DOCUMENT IS NOT A PREREQUISITE, which is a second obligation
+// the first pass missed. Naming a document beside an argument READS as an order
+// even with no imperative in it: the certification lane's first run of this
+// shape had a binding open describe_report_vocabulary on all three runs of a
+// goal whose answer is one default report call — spending its whole turn on the
+// vocabulary and answering nothing. So the plain call is stated FIRST and
+// explicitly needs nothing, and the vocabulary is scoped to narrowing.
 func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	if len(catalog) == 0 {
 		return "No prebuilt report is available on this installation."
 	}
 	var b strings.Builder
-	b.WriteString("The prebuilt report to run. Send `report` alone to get its default answer. ")
-	b.WriteString("Each report's `group_by`, `filters` and `aggregates` accept ONLY that report's ")
-	b.WriteString("own names, published at ")
+	b.WriteString("The prebuilt report to run. Send `report` ALONE for its default answer — that ")
+	b.WriteString("call needs no other argument and nothing read first. ")
+	b.WriteString("To narrow it instead, each report's `group_by`, `filters` and `aggregates` accept ")
+	b.WriteString("ONLY that report's own names, published at ")
 	b.WriteString(ReportVocabularyURI)
-	b.WriteString(" and answered by describe_report_vocabulary. A name outside them is refused ")
-	b.WriteString("by name, with that argument's accepted list.")
+	b.WriteString(" and answered by describe_report_vocabulary; a name outside them is refused by ")
+	b.WriteString("name, with that argument's accepted list.")
 	return b.String()
 }
 

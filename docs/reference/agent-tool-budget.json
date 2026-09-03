@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 70,
     "system_frame_tokens": 351,
-    "tokens": 19429,
+    "tokens": 19506,
     "median_tool_tokens": 262,
-    "mean_tool_tokens": 277
+    "mean_tool_tokens": 278
   },
   "agents": [
     {
@@ -83,6 +83,10 @@
       "tokens": 572
     },
     {
+      "name": "run_report",
+      "tokens": 507
+    },
+    {
       "name": "send_account_email",
       "tokens": 507
     },
@@ -93,10 +97,6 @@
     {
       "name": "list_records",
       "tokens": 494
-    },
-    {
-      "name": "run_report",
-      "tokens": 487
     },
     {
       "name": "query_workspace",
@@ -143,6 +143,10 @@
       "tokens": 351
     },
     {
+      "name": "describe_report_vocabulary",
+      "tokens": 349
+    },
+    {
       "name": "search_context",
       "tokens": 345
     },
@@ -153,10 +157,6 @@
     {
       "name": "prep_for_meeting",
       "tokens": 326
-    },
-    {
-      "name": "describe_report_vocabulary",
-      "tokens": 292
     },
     {
       "name": "merge_records",

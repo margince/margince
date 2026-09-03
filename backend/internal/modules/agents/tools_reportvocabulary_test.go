@@ -167,6 +167,29 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 			t.Errorf("it orders a read (%q): %s", imperative, described)
 		}
 	}
+	// AND it says the document is not needed for the plain call. Naming a
+	// document beside an argument reads as an order even with no imperative in
+	// it: the first certification run of this shape had a binding open the door
+	// on all three runs of a goal one default report call answers, spending the
+	// whole turn on the vocabulary and answering nothing.
+	//
+	// So the plain call comes FIRST in the sentence and says what it needs. The
+	// order is asserted, not just the presence: a caller reading only the start
+	// of a long description has to reach the cheap call before the document.
+	plain := strings.Index(described, "ALONE")
+	pointer := strings.Index(described, ReportVocabularyURI)
+	if plain < 0 {
+		t.Errorf("the description never says a report can be called with `report` alone, which is "+
+			"the call a caller should make first: %s", described)
+	}
+	if plain > pointer {
+		t.Errorf("the description names the vocabulary before it says the plain call needs nothing, "+
+			"so a reader meets the prerequisite before the shortcut: %s", described)
+	}
+	if !strings.Contains(described, "nothing read first") {
+		t.Errorf("it does not say the default call needs nothing read first, so naming the document "+
+			"beside the argument reads as a prerequisite: %s", described)
+	}
 	// And the recital itself is GONE. This is the saving: a description that
 	// still listed one report's names would be the same second copy in a
 	// shorter font.

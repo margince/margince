@@ -10,16 +10,16 @@
   "totals": {
     "tools": 70,
     "resources": 10,
-    "tool_catalog_bytes": 196245,
+    "tool_catalog_bytes": 196553,
     "resource_catalog_bytes": 3915,
-    "approx_wire_tokens_total": 50040,
+    "approx_wire_tokens_total": 50117,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 47542,
-      "input_schema_bytes": 37690,
+      "description_bytes": 47770,
+      "input_schema_bytes": 37770,
       "output_schema_bytes": 95916,
-      "description_plus_input_schema_bytes": 85232
+      "description_plus_input_schema_bytes": 85540
     }
   },
   "tools": {
@@ -3177,7 +3177,7 @@
           "readOnlyHint": true,
           "title": "Describe the report vocabulary"
         },
-        "description": "Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. The names are the same for every caller: nothing here is narrowed by what you may read, because a report's vocabulary is the engine's and not a workspace's. Call run_report once you know the names, with no plan first to see the report's own default answer. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. It is NOT a prerequisite: run_report with `report` alone answers that report's default question and needs nothing from here, so reach for this only when a plan has to name a grouping, a filter or a measure. The names are the same for every caller, because a report's vocabulary is the engine's and not a workspace's. Call run_report directly when the report's default answer is the answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted list. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
@@ -11192,7 +11192,7 @@
               "type": "array"
             },
             "report": {
-              "description": "The prebuilt report to run. Send `report` alone to get its default answer. Each report's `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary. A name outside them is refused by name, with that argument's accepted list.",
+              "description": "The prebuilt report to run. Send `report` ALONE for its default answer — that call needs no other argument and nothing read first. To narrow it instead, each report's `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list.",
               "enum": [
                 "activities-by-kind",
                 "deals-by-stage",

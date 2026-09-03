@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 70 |
 | Resources | 10 |
-| Tool catalog | 191.6 KB |
+| Tool catalog | 191.9 KB |
 | Resource catalog | 3.8 KB |
-| Approx. wire tokens | 50040 |
+| Approx. wire tokens | 50117 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 93.7 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 46.4 KB | 24% | Yes, every step |
-| Input schemas | 36.8 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 46.7 KB | 24% | Yes, every step |
+| Input schemas | 36.9 KB | 19% | Yes, every step |
 | _Names, annotations, punctuation_ | 14.7 KB | 7% | Partly |
-| **Description + input schema** | **83.2 KB** | **43%** | **the recurring cost** |
+| **Description + input schema** | **83.5 KB** | **43%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -81,7 +81,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
-| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.2 KB |
+| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 1.9 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
@@ -121,7 +121,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 3.2 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 3.3 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
@@ -3658,7 +3658,7 @@ Answer what a query plan may SAY in this workspace: the record types that can be
 
 **Describe the report vocabulary**
 
-Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. The names are the same for every caller: nothing here is narrowed by what you may read, because a report's vocabulary is the engine's and not a workspace's. Call run_report once you know the names, with no plan first to see the report's own default answer. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope "read".)
+Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. It is NOT a prerequisite: run_report with `report` alone answers that report's default question and needs nothing from here, so reach for this only when a plan has to name a grouping, a filter or a measure. The names are the same for every caller, because a report's vocabulary is the engine's and not a workspace's. Call run_report directly when the report's default answer is the answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted list. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -12056,7 +12056,7 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` alone to get its default answer. Each report's `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary. A name outside them is refused by name, with that argument's accepted list.",
+      "description": "The prebuilt report to run. Send `report` ALONE for its default answer — that call needs no other argument and nothing read first. To narrow it instead, each report's `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
