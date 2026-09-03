@@ -251,7 +251,6 @@ export const vi = {
   "explain.title": "Con số này được dựng thế nào",
   "explain.rate": "tỷ giá {rate} ngày {date}",
 
-  "board.colHead": "{label}: {count}",
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền tệ — không có tổng chung",

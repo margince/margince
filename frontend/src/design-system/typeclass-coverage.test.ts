@@ -45,15 +45,22 @@ function asked(): Map<string, string[]> {
   const sites = new Map<string, string[]>();
   for (const file of filesMatching(root, /\.tsx$/)) {
     const source = readFileSync(file, "utf8");
-    // Both spellings a className takes: a plain string, and a template
-    // literal that composes one. The literal's `${...}` holes are split on
-    // with the whitespace, so a computed half contributes no token rather
-    // than a half-token that matches nothing.
+    // Every spelling a className takes: a plain string, a string inside an
+    // expression container (`className={"t-label"}`, either quote), and a
+    // template literal that composes one. The literal's `${...}` holes are
+    // split on with the whitespace, so a computed half contributes no token
+    // rather than a half-token that matches nothing.
+    //
+    // The expression-container forms were missing, and that is the one way this
+    // gate must not break: a component spelling an undeclared class as
+    // `className={"t-meta"}` was simply not read, and a scan that cannot see a
+    // defect reports PASS over it.
     for (const match of source.matchAll(
-      /className=(?:"([^"]*)"|\{`([^`]*)`\})/g,
+      /className=(?:"([^"]*)"|\{\s*"([^"]*)"\s*\}|\{\s*'([^']*)'\s*\}|\{`([^`]*)`\})/g,
     )) {
       const line = source.slice(0, match.index).split("\n").length;
-      for (const token of (match[1] ?? match[2] ?? "").split(/[\s{}$`]+/)) {
+      const text = match[1] ?? match[2] ?? match[3] ?? match[4] ?? "";
+      for (const token of text.split(/[\s{}$`]+/)) {
         if (TYPE_CLASS.test(token)) {
           sites.set(token, [
             ...(sites.get(token) ?? []),

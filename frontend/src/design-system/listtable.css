@@ -470,6 +470,35 @@
   white-space: nowrap;
 }
 
+/* THE VIEW RAIL SCROLLS from the width the header stops holding its row — the
+   same 1100px at which the verbs fold into one menu (app/viewport.ts
+   NARROW_MAX_WIDTH), not the phone breakpoint. It used to be the phone block's
+   alone, so between the two the rail kept its full intrinsic width on a row
+   that does not wrap: the lead queue's eight tabs pushed the count and the
+   actions menu off the line, and there was nothing to scroll them back.
+
+   One row that continues sideways, never two rows that wrap — the same rule
+   the record page's tab strip keeps, and for the same reason: wrapped tabs read
+   as two rows of navigation rather than one row with more in it. `min-width: 0`
+   is what lets it shrink below its content; without it a flex item refuses to.
+   The scrollbar is hidden because the row is short and a bar under it would
+   read as a rule. */
+@media (max-width: 1100px) {
+  .lt-views {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lt-views::-webkit-scrollbar {
+    display: none;
+  }
+  .lt-vtab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
 /* ---- the table ---- */
 
 /* The body scrolls under a stuck header, so a long list keeps its column names.
@@ -1085,24 +1114,11 @@
 
      It takes the room LEFT on its line rather than a line of its own: the
      primary action stays beside it, which is what keeps a three-view list
-     (contacts, deals) at the height it already had. `min-width: 0` is what
-     lets it shrink below its content — without it a flex item refuses to, and
-     the rail pushes the action off the line instead of scrolling. The
-     scrollbar is hidden because the row is short and a bar under it would
-     read as a rule. */
-  .lt-views {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .lt-views::-webkit-scrollbar {
-    display: none;
-  }
-  .lt-vtab {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
+     (contacts, deals) at the height it already had.
+
+     The rules that do it are in the 1100px block above, which covers this
+     width too — they were spelled here first, and a second copy at the phone
+     breakpoint is two authors of one behaviour. */
 
   .lt-search {
     flex: 1 1 100%;

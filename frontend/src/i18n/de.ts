@@ -246,7 +246,6 @@ export const de = {
   "explain.title": "So setzt sich die Zahl zusammen",
   "explain.rate": "Kurs {rate} am {date}",
 
-  "board.colHead": "{label}: {count}",
   "board.count": "{count} Deals",
   "board.weighted": "gewichtet {value}",
   "board.mixedCurrencies": "mehrere Währungen — keine Gesamtsumme",

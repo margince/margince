@@ -298,14 +298,16 @@ function BoardLayout<Record extends BoardRecord>({
                 reader compares ACROSS the board, and under the money totals it
                 was the third figure on a two-line sub. */}
             <div className="board-col-head">
-              <span className="stage">
-                {t("board.colHead", {
-                  label: column.label,
-                  count: formatNumber(
-                    column.count ?? column.deals.length,
-                    locale,
-                  ),
-                })}
+              <span className="stage">{column.label}</span>
+              {/* TWO SPANS, not one composed string. The name is data of
+                  unbounded length and truncates; the count is three characters
+                  and must not. Written as "{label}: {count}" into the truncating
+                  span, a long stage name ellipsised the figure away — which is
+                  the one thing this head was rearranged to keep on screen.
+                  Hidden from a screen reader, which is told "12 deals" below
+                  with the unit this bare figure leaves out. */}
+              <span className="board-col-count" aria-hidden="true">
+                {formatNumber(column.count ?? column.deals.length, locale)}
               </span>
               {money && (
                 <span className="prob">

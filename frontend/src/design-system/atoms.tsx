@@ -1760,9 +1760,25 @@ function isSetting(item: Element): boolean {
 // it belongs to wherever that button has moved to.
 export function OverflowMenu({
   label,
+  keepMounted = false,
   children,
 }: Readonly<{
   label: string;
+  /**
+   * Mount the children immediately rather than on the first open.
+   *
+   * The default defers them, and that is right for a menu drawn PER ROW: a
+   * roster of two hundred rows would otherwise mount two hundred sets of verbs
+   * and every dialog behind them before the reader has pressed anything.
+   *
+   * It is wrong for a control whose job starts at MOUNT. `CreateAction` reads
+   * `startOpen` once, in `useState`, because that is what "this address means
+   * open the form" has to hang on — so folded into a deferred menu, the create
+   * dialog `#/deals/new` asks for never opened, and pressing the menu opened it
+   * as a surprise instead. A list header carries one menu per page and a
+   * handful of buttons in it, so mounting them costs nothing there.
+   */
+  keepMounted?: boolean;
   children: ReactNode;
 }>) {
   const [open, setOpen] = useState(false);
@@ -1874,10 +1890,11 @@ export function OverflowMenu({
       >
         <MoreHorizontal aria-hidden="true" />
       </Button>
-      {/* Hidden, never unmounted. The items own their own dialogs, so
-          unmounting them on close would throw away the dialog the click just
+      {/* Hidden, never unmounted once mounted. The items own their own dialogs,
+          so unmounting them on close would throw away the dialog the click just
           opened. `hidden` also takes them out of the tab order, so a closed
-          menu is closed for a keyboard reader too. */}
+          menu is closed for a keyboard reader too. WHEN they first mount is
+          `keepMounted`'s question, and it is a real one — see the prop. */}
       {createPortal(
         // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it observes that one of the caller's controls inside it was pressed
         // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path IS this handler; Enter and Space on a button dispatch a click that bubbles here
@@ -1906,7 +1923,7 @@ export function OverflowMenu({
             }
           }}
         >
-          {everOpened && children}
+          {(keepMounted || everOpened) && children}
         </div>,
         document.body,
       )}

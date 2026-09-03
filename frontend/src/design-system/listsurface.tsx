@@ -279,10 +279,16 @@ export function ListSurface({
  *
  * The SAME nodes move into the menu; nothing is rendered twice. That is what
  * `OverflowMenu` is for — it takes the caller's own controls as children and
- * keeps them mounted while it is closed, so a verb that opens a dialog still
- * has somewhere to hand focus back to. A second, hidden copy of every verb
- * would give a screen reader two controls of one name and mount every dialog
- * twice.
+ * never unmounts them once they are up, so a verb that opens a dialog still has
+ * somewhere to hand focus back to. A second, hidden copy of every verb would
+ * give a screen reader two controls of one name and mount every dialog twice.
+ *
+ * `keepMounted`, and it is load-bearing rather than a hint: the menu otherwise
+ * defers its children to the first open, and a header verb that reads its
+ * opening state once at mount is then dead — `#/deals/new` opened no create
+ * dialog at all below this width, and pressing the menu opened one nobody had
+ * asked for. One menu per page and a handful of buttons in it, so there is
+ * nothing to defer here anyway.
  *
  * It reads the VIEWPORT rather than the header's own box: a container query
  * cannot move an element into a menu, and measuring the row would mean laying
@@ -297,7 +303,11 @@ function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
   if (!narrow) {
     return children;
   }
-  return <OverflowMenu label={t("list.headActions")}>{children}</OverflowMenu>;
+  return (
+    <OverflowMenu label={t("list.headActions")} keepMounted>
+      {children}
+    </OverflowMenu>
+  );
 }
 
 /**

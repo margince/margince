@@ -13,7 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import {
@@ -957,6 +957,57 @@ describe("the page's name in the header", () => {
       />,
     );
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  });
+});
+
+// A header whose verbs have folded into one menu still has to BEHAVE like the
+// row of verbs it replaced. The menu defers its children to the first open by
+// default, which is right per row and wrong here: a verb that reads its own
+// opening state once, at mount, is dead until somebody presses the menu — and
+// `#/deals/new` is exactly that, an address whose whole meaning is "the create
+// form is open". It opened nothing below this width, and pressing the menu then
+// opened a form nobody had asked for.
+function MountReporter({ onMount }: Readonly<{ onMount: () => void }>) {
+  // A verb that does its work at MOUNT, which is the shape `CreateAction`'s
+  // `startOpen` has: read once in `useState`, so a late mount reads it late.
+  useEffect(() => {
+    onMount();
+  }, [onMount]);
+  return <button type="button">New thing</button>;
+}
+
+describe("a folded header's verbs are live", () => {
+  function stubNarrowViewport() {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: /max-width:\s*1100px/.test(query),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  }
+
+  it("mounts the action without the menu being opened", async () => {
+    stubNarrowViewport();
+    const mounted = vi.fn();
+    render(
+      <ListTable
+        title="Deals"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        action={<MountReporter onMount={mounted} />}
+      />,
+    );
+    // The fold happened: the verbs are behind one menu rather than in the row.
+    expect(
+      await screen.findByRole("button", { name: "More actions" }),
+    ).toBeTruthy();
+    // And the verb is mounted anyway. Asserted on the MOUNT rather than on the
+    // button being visible, because `hidden` is exactly what the fold does to
+    // it — visible is the wrong question and would pass on a dead control.
+    expect(mounted).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 });
 

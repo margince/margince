@@ -57,15 +57,24 @@
   font-weight: 600;
   color: var(--textPrimary);
   flex: 1;
-  /* A STAGE NAME IS DATA of unbounded length, and this line now carries the
-     count after it. Without `min-width: 0` a flex item cannot shrink below its
-     longest word, so the name set the column's min-content width, the column
-     set the board's, and the board — a flex item with no floor of its own —
-     pushed the whole page sideways rather than scrolling. It truncates. */
+  /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
+     count. Without `min-width: 0` a flex item cannot shrink below its longest
+     word, so the name set the column's min-content width, the column set the
+     board's, and the board — a flex item with no floor of its own — pushed the
+     whole page sideways rather than scrolling. The NAME is what gives way. */
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* HOW MUCH IS IN THE STAGE, and it never truncates: it is the figure a reader
+   compares across the board, three characters wide against a name that can be
+   any length. `flex: none` is what keeps the name's ellipsis from eating it. */
+.board-col-head .board-col-count {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--textPrimary);
 }
 .board-col-head .prob {
   font-family: var(--f-mono);
