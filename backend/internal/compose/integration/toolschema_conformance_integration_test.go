@@ -301,6 +301,9 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"get_record_tags": "same missing tag.read as apply_tag above. Its answer shape IS held, " +
 		"against a real database, by the record-tags integration suite — including the withheld " +
 		"case, which is the one a schema alone could not prove",
+	"data_coverage": "answers about the same nightly RUN forecast_input_checks does — how much of " +
+		"the pipeline that pass could see — so with no run recorded it answers not-found, which is " +
+		"the correct answer to a question nobody has asked yet and not a result shape to hold",
 	"forecast_input_checks": "answers about last night's input-check RUN, and this lane composes " +
 		"no nightly pass — so with no run recorded the tool answers not-found, which is the " +
 		"correct answer to a question nobody has asked yet and not a result shape to hold. " +
