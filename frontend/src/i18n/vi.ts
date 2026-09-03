@@ -7839,6 +7839,9 @@ export const vi = {
   "worklist.verb.draft_reply": "Mở để trả lời",
   // Nơi trình soạn thảo thực sự mở ra, động từ là HÀNH ĐỘNG.
   "worklist.verb.draft_reply_now": "Soạn câu trả lời",
+  // Một thư ĐẦU TIÊN, không phải câu trả lời cho thư đã có.
+  "worklist.verb.draft_email": "Mở để viết",
+  "worklist.verb.draft_email_now": "Soạn email",
   "worklist.deal.closes": "chốt {date}",
   "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",

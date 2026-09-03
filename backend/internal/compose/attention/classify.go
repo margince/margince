@@ -291,9 +291,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// already carry. The product knew the buyer had written and knew nobody had
 	// answered; naming the step is the difference between a page that reports
 	// and a page a rep can work from.
+	answers := openapi_types.UUID(waiting.ActivityID)
 	row.Move = &crmcontracts.WorklistMove{
-		Action:     "draft_reply",
-		ActivityId: openapi_types.UUID(waiting.ActivityID),
+		Action:     crmcontracts.WorklistMoveActionDraftReply,
+		ActivityId: &answers,
 	}
 	// Both ages travel: the true one for everything a reader is shown, the
 	// bounded one for the order. A rep reading "waiting 180 days" is being told

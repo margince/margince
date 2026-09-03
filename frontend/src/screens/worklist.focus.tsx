@@ -24,7 +24,7 @@ import {
   dealFactsText,
   itemTitle,
   moveHref,
-  moveOpensComposer,
+  moveLabel,
   reasonText,
   rowHref,
 } from "./worklist.copy";
@@ -136,13 +136,10 @@ function FocusVerb({
   if (move) {
     return (
       <a className="btn btn-primary" href={move}>
-        {/* The row makes this distinction and the card used to drop it, so the
-            same address was described two ways on one screen. */}
-        {t(
-          moveOpensComposer(item)
-            ? "worklist.verb.draft_reply_now"
-            : "worklist.verb.draft_reply",
-        )}
+        {/* The same spelling the row uses. The card once dropped the
+            composer-versus-record distinction, so one address was described two
+            ways on one screen; one function now answers for both. */}
+        {moveLabel(item, t)}
       </a>
     );
   }

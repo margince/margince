@@ -12756,13 +12756,28 @@ func (e WorklistItemSource) Valid() bool {
 
 // Defines values for WorklistMoveAction.
 const (
-	DraftReply WorklistMoveAction = "draft_reply"
+	WorklistMoveActionCreateTask       WorklistMoveAction = "create_task"
+	WorklistMoveActionDraftEmail       WorklistMoveAction = "draft_email"
+	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
+	WorklistMoveActionNone             WorklistMoveAction = "none"
+	WorklistMoveActionOpenMeetingBrief WorklistMoveAction = "open_meeting_brief"
+	WorklistMoveActionReconnect        WorklistMoveAction = "reconnect"
 )
 
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
-	case DraftReply:
+	case WorklistMoveActionCreateTask:
+		return true
+	case WorklistMoveActionDraftEmail:
+		return true
+	case WorklistMoveActionDraftReply:
+		return true
+	case WorklistMoveActionNone:
+		return true
+	case WorklistMoveActionOpenMeetingBrief:
+		return true
+	case WorklistMoveActionReconnect:
 		return true
 	default:
 		return false
@@ -14265,19 +14280,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	All  ListPeopleParamsTagMode = "all"
-	Any  ListPeopleParamsTagMode = "any"
-	None ListPeopleParamsTagMode = "none"
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case All:
+	case ListPeopleParamsTagModeAll:
 		return true
-	case Any:
+	case ListPeopleParamsTagModeAny:
 		return true
-	case None:
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
@@ -31119,6 +31134,18 @@ type WorklistItem struct {
 	// It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
 	// the deal page's own next-step card does, and a row offering a move is not the
 	// product taking one.
+	//
+	// The verbs are `DealStatusCardMove`'s, because that is what decides a deal's next
+	// step from records. A queue row reasoning its way to a second answer is how two
+	// screens end up disagreeing about one deal.
+	//
+	// It differs from that vocabulary in two places, both deliberate. `draft_reply` is
+	// added because the card spells BOTH mail moves `draft_email` — its own surface
+	// draws neither as a button, so the difference never had to reach a label — while a
+	// row does draw them, and answering a waiting buyer outside their own thread is the
+	// failure this distinction exists to prevent. `reconnect` is added because a source
+	// that stopped answering is not a deal's problem at all, so the card has no word
+	// for it.
 	Move *WorklistMove `json:"move,omitempty"`
 
 	// OccurredAt When the thing being reported happened.
@@ -31213,27 +31240,71 @@ type WorklistItemSource string
 // It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
 // the deal page's own next-step card does, and a row offering a move is not the
 // product taking one.
+//
+// The verbs are `DealStatusCardMove`'s, because that is what decides a deal's next
+// step from records. A queue row reasoning its way to a second answer is how two
+// screens end up disagreeing about one deal.
+//
+// It differs from that vocabulary in two places, both deliberate. `draft_reply` is
+// added because the card spells BOTH mail moves `draft_email` — its own surface
+// draws neither as a button, so the difference never had to reach a label — while a
+// row does draw them, and answering a waiting buyer outside their own thread is the
+// failure this distinction exists to prevent. `reconnect` is added because a source
+// that stopped answering is not a deal's problem at all, so the card has no word
+// for it.
 type WorklistMove struct {
 	// Action `draft_reply` answers the message in `activity_id` — offered only where the
 	// reader may READ that message, because there is no replying to words they
-	// cannot see.
+	// cannot see. It survives beside `draft_email` because the two reach different
+	// composers: collapsing them would answer a waiting buyer with a fresh message
+	// and no thread behind it.
 	//
-	// One value, and the message is required with it: a move naming no message is
-	// not a move, and a contract that allowed one would let a client draw a control
-	// with nothing behind it. A row with no step to suggest sends no `move` at all.
+	// `draft_email` opens a new message, `create_task` agrees a next step,
+	// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+	// sends the reader to reauthorize a source that stopped answering.
+	//
+	// `none` is a producer's answer that there is nothing to do — a closed deal has
+	// no next step. It is a member of this enum so a producer that computes one has
+	// a word for it, but NO row carries it: a step of "nothing" and no step at all
+	// read the same to a reader, so the producers drop it and send no `move`. A
+	// client that meets one anyway draws nothing, which is the same outcome.
 	Action WorklistMoveAction `json:"action"`
 
-	// ActivityId The message a reply would answer, for `draft_reply`.
-	ActivityId openapi_types.UUID `json:"activity_id"`
+	// ActivityId The record the verb acts on, where the verb acts on one: the message for
+	// `draft_reply` and `draft_email`, the meeting for `open_meeting_brief`.
+	//
+	// OPTIONAL, because not every verb has an operand of this shape. `create_task`
+	// acts on a subject and its links rather than on an existing record, and
+	// `reconnect` acts on a source. A client draws a control only where the operand
+	// its verb needs is present — a `draft_reply` carrying no message names nothing
+	// to answer and is not drawable.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// Arguments What the verb's own endpoint needs, in that endpoint's spelling — the subject
+	// and links for `create_task`, the provider for `reconnect`.
+	//
+	// Free-form because the operand differs per verb, and this schema is not the
+	// place to restate five request bodies. The producer fills what the verb it
+	// chose requires; a client that does not recognize a verb draws nothing and so
+	// never reads these.
+	Arguments *map[string]interface{} `json:"arguments,omitempty"`
 }
 
 // WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the
 // reader may READ that message, because there is no replying to words they
-// cannot see.
+// cannot see. It survives beside `draft_email` because the two reach different
+// composers: collapsing them would answer a waiting buyer with a fresh message
+// and no thread behind it.
 //
-// One value, and the message is required with it: a move naming no message is
-// not a move, and a contract that allowed one would let a client draw a control
-// with nothing behind it. A row with no step to suggest sends no `move` at all.
+// `draft_email` opens a new message, `create_task` agrees a next step,
+// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+// sends the reader to reauthorize a source that stopped answering.
+//
+// `none` is a producer's answer that there is nothing to do — a closed deal has
+// no next step. It is a member of this enum so a producer that computes one has
+// a word for it, but NO row carries it: a step of "nothing" and no step at all
+// read the same to a reader, so the producers drop it and send no `move`. A
+// client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
 
 // WorklistReach What one source contributed, in numbers that say what they counted.

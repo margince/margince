@@ -139,6 +139,13 @@ func (s *Service) Worklist(
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
+	// The step each deal row suggests, read for the CUT page rather than the
+	// whole ranking: a move is drawn and never ranked, so reading one for a row
+	// this caller will not receive spends a query on nothing. dealmoves.go
+	// states why this reads a cache and never assembles.
+	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	return out, nil
 }
 

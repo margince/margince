@@ -778,7 +778,7 @@ func TestAWaitingRowNamesTheMessageAReplyWouldAnswer(t *testing.T) {
 	if move.Action != "draft_reply" {
 		t.Fatalf("the move is %q, wanted the reply", move.Action)
 	}
-	if ids.UUID(move.ActivityId) != message {
+	if move.ActivityId == nil || ids.UUID(*move.ActivityId) != message {
 		t.Fatal("the move names the wrong message, so a reply would answer the wrong thing")
 	}
 }

@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (62)
+## Parity (63)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -37,6 +37,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
+| `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
