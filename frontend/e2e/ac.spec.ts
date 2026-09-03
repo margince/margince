@@ -1458,6 +1458,30 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "contacts (folded header)");
   });
 
+  // An address whose whole meaning is "the create form is open", at the width
+  // where the verb that opens it has folded into a menu.
+  //
+  // Not an axe case — a FUNCTIONAL one, and it sits here because this is the
+  // only block that drives the folded arrangement. `CreateAction` reads its
+  // opening state once, at mount, and the menu used to defer its children to
+  // the first press: so this route opened nothing at all below 1100px, and
+  // pressing the menu then opened a form nobody had asked for. Invisible in a
+  // screenshot and green in every other lane.
+  test("#/deals/new opens the create form with the verbs folded", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/#/deals/new");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    // The dialog, without anything being pressed. The heading rather than the
+    // button: the button is what the ROUTE stands in for, and asserting on it
+    // would pass over a form that never opened.
+    await expect(
+      page.getByRole("dialog").getByRole("heading", { name: "Neuer Deal" }),
+    ).toBeVisible();
+  });
+
   for (const view of ADDRESSED_VIEWS) {
     test(`no AA violations on #/${view}`, async ({ page }) => {
       await page.goto(`/#/${view}`);
