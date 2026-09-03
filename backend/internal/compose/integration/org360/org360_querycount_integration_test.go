@@ -207,7 +207,12 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// cost the budget had been blind to rather than a cost just added. One
 	// statement for the account's own chips, flat in the size of the
 	// account like every section above.
-	const budget = 44
+	// 45 since an email says how many files came with it (#3897): one
+	// count of the timeline page's attachments, keyed by activity id over
+	// the whole page rather than asked per row. Flat in the size of the
+	// account like every section above — a page of twenty emails costs the
+	// same one statement as a page of two.
+	const budget = 45
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}
