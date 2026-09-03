@@ -9,9 +9,11 @@ import {
   Search,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useNarrowViewport } from "../app/viewport";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { OverflowMenu } from "./atoms";
 import "./listtable.css";
 
 // The value list's own search box debounces on the same rhythm as the list
@@ -223,7 +225,7 @@ export function ListSurface({
             count that only arrives with the rows would otherwise let the action
             start at the left and jump across once they land. */}
         <span className="lt-count">{count}</span>
-        {action}
+        <HeadActions>{action}</HeadActions>
       </div>
 
       {caption && <p className="lt-caption">{caption}</p>}
@@ -246,6 +248,40 @@ export function ListSurface({
 
       {footer}
     </div>
+  );
+}
+
+/**
+ * A list header's verbs, folded into ONE menu once the row stops holding them.
+ *
+ * The header is view tabs, a count sentence and the verbs, and the sentence is
+ * the part that grows: "1–25 of 200 contacts loaded so far, sorted by Created"
+ * does not wrap and does not shrink, so below about a laptop's width it ran
+ * straight through the buttons and the three verbs on the contacts list drew on
+ * top of each other. Widths do not fix that — the sentence is a translated
+ * string and German runs a third longer again.
+ *
+ * The SAME nodes move into the menu; nothing is rendered twice. That is what
+ * `OverflowMenu` is for — it takes the caller's own controls as children and
+ * keeps them mounted while it is closed, so a verb that opens a dialog still
+ * has somewhere to hand focus back to. A second, hidden copy of every verb
+ * would give a screen reader two controls of one name and mount every dialog
+ * twice.
+ *
+ * It reads the VIEWPORT rather than the header's own box: a container query
+ * cannot move an element into a menu, and measuring the row would mean laying
+ * it out overflowing first and then reflowing it, which a reader sees.
+ */
+function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  const narrow = useNarrowViewport();
+  if (!children) {
+    return null;
+  }
+  return narrow ? (
+    <OverflowMenu label={t("list.headActions")}>{children}</OverflowMenu>
+  ) : (
+    <>{children}</>
   );
 }
 

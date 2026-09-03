@@ -181,7 +181,6 @@ export const de = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
   "shell.poweredBy": "Betrieben mit Margince",
-  "shell.alpha": "Alpha",
   "shell.searchEverything": "Alles durchsuchen…",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.license.none": "Keine Lizenz",
@@ -523,6 +522,7 @@ export const de = {
   "state.partial": "Nur ein Teil der Liste",
   "state.partialCount": "{count} weitere nicht angezeigt",
 
+  "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
   "list.loadMore": "Mehr laden",

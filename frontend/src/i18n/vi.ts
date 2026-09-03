@@ -187,7 +187,6 @@ export const vi = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
   "shell.poweredBy": "Vận hành bởi Margince",
-  "shell.alpha": "Alpha",
   "shell.searchEverything": "Tìm kiếm mọi thứ…",
   "shell.breadcrumbAria": "Đường dẫn",
   "shell.license.none": "Chưa có giấy phép",
@@ -519,6 +518,7 @@ export const vi = {
   "state.partial": "Chỉ hiển thị một phần danh sách",
   "state.partialCount": "Còn {count} mục chưa hiển thị",
 
+  "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
   "list.showArchived": "Hiện mục lưu trữ",
   "list.loadMore": "Tải thêm",

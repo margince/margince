@@ -1421,6 +1421,32 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     });
   }
 
+  // A list header FOLDS its verbs into one overflow menu below 1100px
+  // (design-system/listsurface.tsx), which is a different arrangement rather
+  // than the same one narrower: the buttons are inside a disclosure, so the
+  // trigger owes a name and the panel owes a relationship to it. The wide sweep
+  // above cannot see any of that.
+  test("no AA violations on a list header folded into its menu", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/#/contacts");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await settleAnimations(page);
+    // Opened, because a closed disclosure hides the controls this exists to
+    // check — `OverflowMenu` keeps them mounted and `hidden`, and axe skips a
+    // hidden subtree exactly as a reader does.
+    //
+    // German, like every other name this suite reaches for: the app under test
+    // runs in it.
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    await expect(
+      page.getByRole("button", { name: "Neuer Kontakt" }),
+    ).toBeVisible();
+    await expectNoAaViolations(page, "contacts (folded header)");
+  });
+
   for (const view of ADDRESSED_VIEWS) {
     test(`no AA violations on #/${view}`, async ({ page }) => {
       await page.goto(`/#/${view}`);

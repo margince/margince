@@ -39,6 +39,10 @@
 }
 
 .lt-vtab {
+  /* A saved view's name is what a reader identifies it by, so the tab keeps its
+     width: squeezed by the header's other content it lost the end of every
+     name, and two views truncated to the same prefix are one tab drawn twice. */
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: var(--textSecondary);
