@@ -1281,14 +1281,36 @@ function TimelineGroupRow({
             <MoveFlag entry={newest} />
           </span>
         )}
-        <span className="tl-title">{newest.title}</span>
-        {/* The newest message's own words, while the thread is closed: what
-            the conversation is ABOUT, without opening it. Expanded, the
-            members carry their bodies themselves and a preview above them
-            would say the newest one twice. Never for a withheld entry — a
-            summary row must not show a reader words the row itself refuses. */}
-        {!open && newest.body && !newest.withheld && (
-          <TimelineText text={newest.body} email={newest.kind === "email"} />
+        {/* What the conversation is, while it is closed.
+
+            A thread of emails stands for its newest message, and that message
+            is drawn by the SAME component a lone one is — subject, who, the
+            preview the server composed, the access badge. Writing the summary
+            by hand here was the defect: a company timeline of grouped
+            conversations showed old-style rows beside canonical ones on the
+            same page, because a group never reached EmailEntry.
+            Expanded, the members draw themselves below and a summary above
+            them would say the newest one twice. */}
+        {open ? (
+          <span className="tl-title">{newest.title}</span>
+        ) : newest.kind === "email" && newest.emailSummary ? (
+          <EmailEntry
+            summary={newest.emailSummary}
+            timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
+            onOpen={newest.onOpenEmail}
+          />
+        ) : (
+          <>
+            <span className="tl-title">{newest.title}</span>
+            {/* Never for a withheld entry — a summary row must not show a
+                reader words the row itself refuses. */}
+            {newest.body && !newest.withheld && (
+              <TimelineText
+                text={newest.body}
+                email={newest.kind === "email"}
+              />
+            )}
+          </>
         )}
         <span className="tl-meta">
           <span className="tl-group-count">

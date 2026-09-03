@@ -200,10 +200,41 @@ describe("EmailDetail", () => {
       />,
     );
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
-    // The sender's own words, with the sign-off folded away rather than lost.
+    // The sender's own words, and then their sign-off, SHOWN.
+    //
+    // This message ends "Viele Grüße / Ana" and has no quoted history under it
+    // at all. The assertion here used to require the "Show quoted history"
+    // control over exactly that body — the test encoded the defect, so the one
+    // reader who could have caught it agreed with it instead. A sign-off is the
+    // sender still speaking; only an older message underneath gets folded.
     await screen.findByText("Können wir Dienstag sprechen?");
-    expect(screen.getByText("Show quoted history")).toBeInTheDocument();
+    expect(screen.queryByText("Show quoted history")).not.toBeInTheDocument();
+    expect(screen.getByText(/Viele Grüße/)).toBeInTheDocument();
     expect(screen.getByText(/Ana Sommer/)).toBeInTheDocument();
+  });
+
+  it("folds an older message under this one, and says that is what it is", async () => {
+    // The other side of the pair above. Without this case, deleting the fold
+    // entirely would pass — a drawer that never folds anything satisfies "no
+    // control over a sign-off" perfectly, and the quoted reply this product
+    // does have to hide would be printed in full.
+    vi.stubGlobal(
+      "fetch",
+      jsonOnce({
+        ...PRESENTATION,
+        body: "Ja, gerne.\n\nAm 1. September schrieb Ana:\n> Passt Dienstag?",
+      }),
+    );
+    wrap(
+      <EmailDetail
+        activityId={READABLE.activity_id}
+        onClose={() => {}}
+        formatWhen={() => "1 Sep 09:12"}
+      />,
+    );
+    await screen.findByText("Ja, gerne.");
+    expect(screen.getByText("Show quoted history")).toBeInTheDocument();
+    expect(screen.getByText(/Passt Dienstag\?/)).toBeInTheDocument();
   });
 
   it("asks again on every open, and keeps nothing to repaint", async () => {

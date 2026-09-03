@@ -45,6 +45,17 @@
   overflow-wrap: anywhere;
 }
 
+/* The sender's sign-off: their own words, so it reads as part of the message
+ * rather than as metadata. Quieter than the sentence above and separated from
+ * it, but SHOWN — it used to sit behind a control promising quoted history,
+ * which is not what a sign-off is. */
+.emaildetail__signoff {
+  margin: var(--space-3) 0 0;
+  color: var(--textSecondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .emaildetail__quoted > summary {
   color: var(--accent);
   cursor: pointer;

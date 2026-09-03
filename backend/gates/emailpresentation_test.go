@@ -317,10 +317,19 @@ func TestAnEmailIsDrawnOnlyByTheCanonicalComponents(t *testing.T) {
 	}
 }
 
-// rendersCanonically is a file that mounts one of the canonical components.
+// rendersCanonically asks whether EVERY function in the file that reads an
+// email also mounts a canonical component.
 //
-// Matched as a JSX opening tag rather than as the bare word, so that naming a
-// component in a comment or importing it and never mounting it does not
+// The unit is the function, not the file, and the difference is a shipped bug.
+// An earlier version read the whole file: `composed.tsx` mounts EmailEntry in
+// TimelineRow, which discharged the file, and TimelineGroupRow beside it went
+// on writing its own subject-and-preview markup for the newest message of a
+// conversation. A company timeline of grouped threads therefore showed
+// old-style rows next to canonical ones on the same page while this census
+// reported clean. One compliant renderer must not vouch for its neighbours.
+//
+// A component is matched as a JSX opening tag rather than as the bare word, so
+// that naming one in a comment, or importing it and never mounting it, does not
 // discharge the obligation.
 func rendersCanonically(t *testing.T, consumer string) bool {
 	t.Helper()
@@ -328,7 +337,54 @@ func rendersCanonically(t *testing.T, consumer string) bool {
 	if err != nil {
 		t.Fatalf("reading %s: %v", consumer, err)
 	}
-	text := string(source)
+	drew := false
+	for _, body := range topLevelFunctions(string(source)) {
+		// Only a function that DRAWS is asked to draw canonically. One that
+		// reads a message into a value — a mapper building a row model, a
+		// function returning a title string — renders nothing, and the same
+		// three-way distinction the file-level rule made (renderer, passthrough,
+		// description) has to survive being asked per function or every mapper
+		// in the tree fails at once.
+		if !emailAccess.MatchString(body) || !returnsMarkup(body) {
+			continue
+		}
+		if !mountsCanonical(body) {
+			return false
+		}
+		drew = true
+	}
+	// A file whose email reading sits OUTSIDE any drawing function — a module
+	// constant, a type field, a mapper — is judged whole, the way it was before.
+	// There is no renderer to attribute it to, and refusing it would fail every
+	// file that names the type in a prop declaration and hands it on.
+	if !drew {
+		return mountsCanonical(string(source))
+	}
+	return true
+}
+
+// returnsMarkup is a function that produces JSX rather than a value. That is
+// what separates a component from the mapper beside it in the same file: a
+// mapper reads a message into a row model or a title string and draws nothing,
+// so asking it to mount EmailEntry would fail every correct file in the tree.
+//
+// The tag must OPEN a line, or follow `(` or `return`. A bare `<Name` also
+// matches TypeScript generics — `PipelineBoard<Record extends BoardRecord>`,
+// `Person360["conversation_memory"]` — and reading those as markup put three
+// mappers in front of a rule about rendering.
+var jsxTag = regexp.MustCompile(`(?m)(^\s*|\(\s*|return\s+)<[A-Za-z][A-Za-z0-9.]*[\s/>]`)
+
+func returnsMarkup(body string) bool {
+	return jsxTag.MatchString(body)
+}
+
+// The carrier fields as they appear in TypeScript source, both spellings. Held
+// as one pattern rather than rebuilt per file: this is the same rule
+// consumersOf applies, asked of one function's body instead of a whole tree.
+var emailAccess = regexp.MustCompile(
+	`\b(email_summary|emailSummary|email_reference|emailReference)\b`)
+
+func mountsCanonical(text string) bool {
 	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail"} {
 		if strings.Contains(text, "<"+component) {
 			return true
@@ -336,6 +392,51 @@ func rendersCanonically(t *testing.T, consumer string) bool {
 	}
 	return false
 }
+
+// topLevelFunctions cuts a TypeScript source into its top-level function
+// bodies: each declaration at column zero, up to the next one.
+//
+// Deliberately crude, and crude in the safe direction. A helper nested inside a
+// component stays part of its parent's body, so a function that draws an email
+// through a local sub-render still counts as drawing it. What this must never
+// do is split too FINELY and report a mount and its reader as two separate
+// functions, because that fails a clean file — the direction a census is
+// allowed to be wrong in is never silence.
+func topLevelFunctions(source string) []string {
+	var bodies []string
+	var current []string
+	started := false
+	flush := func() {
+		if started {
+			bodies = append(bodies, strings.Join(current, "\n"))
+		}
+		current, started = nil, false
+	}
+	for _, line := range strings.Split(source, "\n") {
+		if topLevelDeclaration.MatchString(line) {
+			// A body ends at the next top-level declaration of ANY kind, not
+			// only the next function. Ending it only at the next `function` let
+			// a `type` block between two components ride along inside the one
+			// above it, so a field DECLARED as an email — `emailSummary?:
+			// EmailSummary` — read as a component's use of one.
+			flush()
+			started = topLevelFunction.MatchString(line)
+		}
+		if started {
+			current = append(current, line)
+		}
+	}
+	flush()
+	return bodies
+}
+
+var (
+	topLevelFunction = regexp.MustCompile(`^(export\s+)?(default\s+)?(async\s+)?function\s`)
+	// Everything that begins a top-level thing: a function, a type, an
+	// interface, a const, a class.
+	topLevelDeclaration = regexp.MustCompile(
+		`^(export\s+)?(default\s+)?(async\s+)?(function|type|interface|const|let|var|class|enum)\s`)
+)
 
 // And the other direction: each canonical renderer still consumes one.
 //
