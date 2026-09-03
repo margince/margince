@@ -925,7 +925,7 @@ export function StatCard({
     .join(" ");
   return (
     <section className={alert ? "stat-card stat-card-alert" : "stat-card"}>
-      <span className="stat-card-label t-caption">
+      <span className="stat-card-label t-eyebrow">
         {label}
         {source && <span className="stat-card-source">{source}</span>}
       </span>

@@ -182,6 +182,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterMovementTool(r, nil)
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
+	RegisterCoverageTool(r, nil)
 	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,

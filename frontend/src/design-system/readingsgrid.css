@@ -22,12 +22,9 @@
   align-items: stretch;
 }
 
-/* Room around a reading's four short lines — what it is, the figure, what the
-   figure is drawn from, and a bar. The figure is what a reader compares across
-   the row, and set flush to the card's edge with the label pressed onto it the
-   four cards read as one dense strip rather than four readings. Scoped to the
-   grid: the same StatCard inside a StatStrip IS the dense strip, on purpose. */
+/* Room between a reading's lines — what it is, the figure, what the figure is
+   drawn from. The card's own padding is the pane's; the grid only opens the
+   lines up, so four readings read as four and not as one dense strip. */
 .readings-grid > .stat-card {
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
 }
