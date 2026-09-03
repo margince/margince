@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 70,
     "system_frame_tokens": 351,
-    "tokens": 19506,
+    "tokens": 19783,
     "median_tool_tokens": 262,
-    "mean_tool_tokens": 278
+    "mean_tool_tokens": 282
   },
   "agents": [
     {
@@ -71,6 +71,10 @@
   ],
   "tool_cost": [
     {
+      "name": "run_report",
+      "tokens": 785
+    },
+    {
       "name": "preview_import",
       "tokens": 677
     },
@@ -81,10 +85,6 @@
     {
       "name": "update_record",
       "tokens": 572
-    },
-    {
-      "name": "run_report",
-      "tokens": 507
     },
     {
       "name": "send_account_email",

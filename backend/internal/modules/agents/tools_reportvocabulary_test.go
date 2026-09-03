@@ -190,10 +190,39 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 		t.Errorf("it does not say the default call needs nothing read first, so naming the document "+
 			"beside the argument reads as a prerequisite: %s", described)
 	}
-	// And the recital itself is GONE. This is the saving: a description that
-	// still listed one report's names would be the same second copy in a
-	// shorter font.
-	for _, recited := range []string{"stage_id", "owner_id", "amount_minor"} {
+	// EACH REPORT'S DEFAULT SURVIVES, and this is the half the first pass got
+	// wrong. The certification lane found it: with only the enum of keys, every
+	// run of "how much open pipeline in each stage" opened the vocabulary door
+	// instead of the report — because `deals-by-stage` answers that goal with no
+	// plan at all and a bare key does not say so.
+	for _, entry := range twoReportCatalog() {
+		if entry.Defaults == "" {
+			continue
+		}
+		if !strings.Contains(described, entry.Defaults) {
+			t.Errorf("%s: the description does not say what the report answers by default, which is "+
+				"what decides whether it is the right report AND whether a plan is needed at all: %s",
+				entry.Report, described)
+		}
+	}
+	// A report with NO default stays silent rather than rendering a key with an
+	// empty clause after it, which reads as a report that answers nothing.
+	silent := []ReportCatalogEntry{{Report: "answers-nothing", GroupBy: []string{"phase"}}}
+	if bare := describeReportCatalog(silent); strings.Contains(bare, "answers-nothing: .") {
+		t.Errorf("a report with no default rendered an empty clause: %s", bare)
+	}
+	// And the three VOCABULARIES are gone. That is the saving, and it is the
+	// half a caller only needs when narrowing: a description still listing one
+	// report's names would be the same second copy in a shorter font.
+	//
+	// `pipeline_id` and `stage_id` are deliberately NOT in this list even though
+	// they are vocabulary names. They appear in the provenance sentence — "a
+	// pipeline_id or stage_id in a plan comes from list_pipelines" — which is
+	// where a caller learns the ids are obtainable at all, and
+	// TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines requires it as
+	// long as the schema names them. A residue check that swept them up would be
+	// demanding the removal of the one sentence another gate demands.
+	for _, recited := range []string{"owner_id", "phase", "days"} {
 		if strings.Contains(described, recited) {
 			t.Errorf("the description still recites the vocabulary name %q, so the tokens the "+
 				"move bought are still being spent: %s", recited, described)

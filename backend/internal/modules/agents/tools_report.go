@@ -12,6 +12,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -103,44 +104,93 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 	return `{"enum":[` + strings.Join(keys, ",") + `],` + described + `}`
 }
 
-// describeReportCatalog names where the three plan vocabularies are, rather
-// than reciting them.
+// describeReportCatalog says what each report ANSWERS, and names where the
+// three plan vocabularies are rather than reciting them.
 //
-// It used to recite them: every report's group_by, filters, aggregates, default
-// and note, rendered into this one property. That was 3.4KB — 6% of the served
-// catalog in a single tool, held by every client for a whole session and
-// re-sent by every Surface-B run on every step, to answer a question one call
-// asks once. The recital moved to margince://schema/reports, with
-// describe_report_vocabulary as the door for a caller that reads no resources.
+// It used to recite everything: every report's group_by, filters, aggregates,
+// default and note, in this one property. That was 3.4KB — 6% of the served
+// catalog in a single tool, held by every client for a whole session and re-sent
+// by every Surface-B run on every step.
 //
-// What is NOT deferred is the enum: `report` stays closed to the catalog's own
-// keys, because that is what decides whether a call is well-formed and it
-// answers the first of a caller's two questions at zero round trips.
+// WHERE THE LINE FALLS is the whole of this function, and it was MEASURED
+// rather than reasoned. The first pass deferred the DEFAULTS along with the
+// vocabularies, leaving an enum of bare report keys. The certification lane
+// answered that immediately and twice: on the goal "how much open pipeline do we
+// have in each stage", every run reached for the vocabulary door instead of the
+// report — 2/3 to 0/3 — and it was RIGHT to. `deals-by-stage` answers exactly
+// that goal with no plan at all, and a bare key does not say so. The recital's
+// `default:` line was carrying the selection signal; nothing else on this
+// surface does.
 //
-// The sentence NAMES the document and does not order a read. A binding told to
-// "read this first" obeyed on goals with no report in them and lost first-step
-// accuracy; TestNoToolOrdersTheModelToReadADocument holds the phrasing.
+// So the split is by QUESTION, not by size:
 //
-// AND IT SAYS THE DOCUMENT IS NOT A PREREQUISITE, which is a second obligation
-// the first pass missed. Naming a document beside an argument READS as an order
-// even with no imperative in it: the certification lane's first run of this
-// shape had a binding open describe_report_vocabulary on all three runs of a
-// goal whose answer is one default report call — spending its whole turn on the
-// vocabulary and answering nothing. So the plain call is stated FIRST and
-// explicitly needs nothing, and the vocabulary is scoped to narrowing.
+//   - Which report answers my goal, and do I need a plan at all? Answered here,
+//     by each key and its default, at zero round trips. It is the cheap half —
+//     ~180 tokens for nine reports — and it is what a caller needs FIRST.
+//   - What may a plan SAY? The three closed name lists, which only a caller who
+//     is narrowing needs at all. That is the 3.4KB, and it is the document's.
+//
+// The sentence NAMES the document and does not order a read
+// (TestNoToolOrdersTheModelToReadADocument), and it says the document is NOT a
+// prerequisite: naming one beside an argument reads as an order even with no
+// imperative in it, so the default call is stated first and says outright that
+// it needs nothing read.
 func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	if len(catalog) == 0 {
 		return "No prebuilt report is available on this installation."
 	}
 	var b strings.Builder
-	b.WriteString("The prebuilt report to run. Send `report` ALONE for its default answer — that ")
-	b.WriteString("call needs no other argument and nothing read first. ")
-	b.WriteString("To narrow it instead, each report's `group_by`, `filters` and `aggregates` accept ")
-	b.WriteString("ONLY that report's own names, published at ")
+	b.WriteString("The prebuilt report to run. Send `report` ALONE for the default answer listed ")
+	b.WriteString("below — that call takes no other argument and needs nothing read first. ")
+	writeReportDefaults(&b, catalog)
+	b.WriteString("To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY ")
+	b.WriteString("that report's own names, published at ")
 	b.WriteString(ReportVocabularyURI)
 	b.WriteString(" and answered by describe_report_vocabulary; a name outside them is refused by ")
 	b.WriteString("name, with that argument's accepted list.")
+	writePipelineSource(&b, catalog)
 	return b.String()
+}
+
+// writePipelineSource closes the obligation the defaults above open: several
+// reports group by `pipeline_id` and `stage_id`, and naming an id a caller
+// cannot obtain is a correct refusal that dead-ends.
+//
+// It sits HERE and not only in the document because the obligation follows the
+// NAMES: TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines reads the
+// input schema, and restoring the defaults put those ids back into it. When the
+// first pass deferred the defaults, the ids left the schema and this sentence
+// went with them — correctly. They are back, so it is.
+//
+// Keyed on the vocabularies actually rendered, so a catalog without those keys
+// does not carry advice about them.
+func writePipelineSource(b *strings.Builder, catalog []ReportCatalogEntry) {
+	for _, entry := range catalog {
+		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
+			if slices.Contains(names, "pipeline_id") || slices.Contains(names, "stage_id") {
+				b.WriteString(" A `pipeline_id` or `stage_id` in a plan comes from list_pipelines.")
+				return
+			}
+		}
+	}
+}
+
+// writeReportDefaults renders what each report answers with no plan — the one
+// thing a caller cannot infer from a report's key.
+//
+// Keyed on the entries that HAVE a default, so a report with none stays silent
+// rather than rendering a key with an empty clause after it, which would read as
+// a report that answers nothing.
+func writeReportDefaults(b *strings.Builder, catalog []ReportCatalogEntry) {
+	for _, entry := range catalog {
+		if entry.Defaults == "" {
+			continue
+		}
+		b.WriteString(entry.Report)
+		b.WriteString(": ")
+		b.WriteString(entry.Defaults)
+		b.WriteString(". ")
+	}
 }
 
 func (t runReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
