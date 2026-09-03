@@ -28262,8 +28262,12 @@ export interface components {
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
-         *     `amount_minor × win_probability`, converted to the installation's base currency —
-         *     the only figure by which two deals in different currencies may be compared.
+         *     `amount_minor` converted to the installation's base currency — the only figure by
+         *     which two deals in different currencies may be compared. It does not yet weight by
+         *     `win_probability`: the pipeline this row comes from does not read a deal's stage
+         *     today, so the two fields are independent facts rather than one computed from the
+         *     other, and a reader must not multiply them together expecting the product to equal
+         *     a risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
             /** Format: uuid */
@@ -28276,7 +28280,7 @@ export interface components {
             win_probability?: number | null;
             /**
              * Format: int64
-             * @description Expected revenue in the base currency. Null when the amount or the rate is unknown.
+             * @description The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
              */
             expected_minor_base?: number | null;
             /** Format: date */
