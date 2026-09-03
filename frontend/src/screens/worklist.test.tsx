@@ -563,6 +563,97 @@ describe("what the ranked queue tells a reader", () => {
   });
 });
 
+// The lead lane, on the screen.
+//
+// The lane, its dedupe and its bounds are proved in Go. What none of that can
+// see is the half of the same invariant that lives here: a source, a category
+// and three reason kinds each have to be REGISTERED in worklist.copy.ts before
+// a word of them reaches a reader. An unregistered one does not error — it
+// renders a fallback, or silently drops the figure it was carrying — so the
+// backend can be entirely correct while the row says nothing.
+describe("a lead still owed its first reply", () => {
+  function leadRow(over: Partial<WorklistItem> = {}): WorklistItem {
+    return row({
+      id: "lead-row",
+      source: "lead_response",
+      category: "leads",
+      level: 1,
+      title: "Weber GmbH",
+      subject: { type: "lead", id: "11111111-2222-4333-8444-555555555555" },
+      consequence: "buyer_waits",
+      ...over,
+    });
+  }
+
+  it("says why it is here, in the reader's own words", async () => {
+    stub(
+      day({
+        queue: [
+          leadRow({
+            because: [
+              { kind: "response_overdue" },
+              { kind: "waiting_days", value: { kind: "days", days: 2 } },
+            ],
+          }),
+        ],
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Weber GmbH");
+    // The category badge, and the reason — both from the catalog, so an
+    // unregistered kind renders its raw key here and fails visibly.
+    expect(screen.getByText(en["worklist.category.leads"])).toBeTruthy();
+    expect(
+      screen.getByText(new RegExp(en["worklist.because.response_overdue"])),
+    ).toBeTruthy();
+  });
+
+  // A lead with no name of its own still gets a sentence rather than a blank.
+  it("names the kind of thing it is when the lead has no name", async () => {
+    stub(day({ queue: [leadRow({ title: undefined })] }));
+    renderWorklist();
+
+    expect(
+      await screen.findByText(en["worklist.untitled.lead_response"]),
+    ).toBeTruthy();
+  });
+
+  // The row's way out is the LEAD's own record, through the shared entity
+  // registry — never a path spelled a second time in this file.
+  it("opens the lead record it is about", async () => {
+    stub(day({ queue: [leadRow()] }));
+    renderWorklist();
+
+    const link = await screen.findByRole("link", { name: "Weber GmbH" });
+    expect(link.getAttribute("href")).toBe(
+      "#/leads/11111111-2222-4333-8444-555555555555",
+    );
+  });
+
+  // And the queue can be narrowed to them, which is the strip card's
+  // destination as well as a pill of its own.
+  it("can be narrowed to on its own", async () => {
+    const user = userEvent.setup();
+    stub(day({ queue: [leadRow()] }));
+    renderWorklist();
+
+    await screen.findByText("Weber GmbH");
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.filter.leads"] }),
+    );
+
+    await waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const urls = calls.map((call) => {
+        const target = call[0];
+        return target instanceof Request ? target.url : String(target);
+      });
+      expect(urls.some((url) => url.includes("filter=leads"))).toBe(true);
+    });
+  });
+});
+
 // An introduction ask is the one row whose `decide` leads somewhere.
 //
 // It has no inline card — the four answers are the colleague's own, given on

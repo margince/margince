@@ -386,6 +386,11 @@ type DealFigures struct {
 	AmountMinor       *int64
 	Currency          string
 	ExpectedCloseDate *time.Time
+	// CloseOverdue is the SAME calendar-date, workspace-zone verdict
+	// deals.CloseIsOverdue gives the at-risk lane's identical deal. Meaningless
+	// where ExpectedCloseDate is nil — a deal with no close date is not late by
+	// one, it has none to be late by.
+	CloseOverdue bool
 }
 
 // Meetings is today's booked meetings that have not happened yet.

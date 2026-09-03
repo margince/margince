@@ -2525,6 +2525,10 @@ export const en = {
   "plan.none": "You have not planned this week yet.",
   "plan.start": "Plan my week",
   "plan.add": "Add commitment",
+  "plan.saveRefused_one":
+    "One commitment could not be saved. It is still ticked — try again.",
+  "plan.saveRefused_other":
+    "{count} commitments could not be saved. They are still ticked — try again.",
   "plan.save_one": "Save {count} change",
   "plan.save_other": "Save {count} changes",
   "plan.due": "due {day}",

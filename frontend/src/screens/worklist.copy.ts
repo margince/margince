@@ -465,10 +465,16 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
       ? `${formatNumber(item.batch.count, locale)}+`
       : formatNumber(item.batch.count, locale);
     // An incident names WHAT is broken; a hygiene group names its kind.
+    //
+    // From `label`, never from `cause`. The cause is the identity the group was
+    // formed on and reads like one — interpolating it printed
+    // "automation_run:01a0…-… failed 12 times" at a rep, which names nothing
+    // they can act on and cannot be told from a bug. A group whose lane minted
+    // no name falls back to the generic phrase rather than to the identity.
     if (item.batch.key === "system_incident") {
       return t("worklist.batch.system_incident", {
         count,
-        cause: item.batch.cause ?? t("worklist.batch.unnamedCause"),
+        cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
       });
     }
     return t(`worklist.batch.${item.batch.key}` as const, { count });

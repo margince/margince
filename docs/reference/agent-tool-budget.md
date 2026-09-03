@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1688 | 7% | 15312 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14465 | 15 | 8 |
-| _whole served catalog, for scale_ | 67 | 20926 | 87% | — | — | — |
+| _whole served catalog, for scale_ | 68 | 20998 | 87% | — | — | — |
 
 ### `morning_brief`
 
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 273 tokens, mean 311, across 67 served tools.
+Median 271 tokens, mean 308, across 68 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -132,7 +132,7 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1213 | 3 scenarios |
+| `run_report` | 1274 | 3 scenarios |
 | `preview_import` | 708 | — |
 | `log_activity` | 673 | 1 scenario |
 | `update_record` | 603 | 4 scenarios |
@@ -143,7 +143,6 @@ a term in an addition.
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
 | `annotate_brief` | 456 | — |
-| `forecast_readings` | 441 | — |
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 431 | — |
 | `create_record` | 429 | 1 scenario |
@@ -152,6 +151,7 @@ a term in an addition.
 | `search_records` | 392 | 6 scenarios |
 | `forecast_movement` | 358 | — |
 | `search_context` | 352 | — |
+| `forecast_readings` | 335 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |
 | `draft_email` | 317 | — |
@@ -195,6 +195,7 @@ a term in an addition.
 | `get_record_tags` | 149 | — |
 | `list_colleagues` | 148 | — |
 | `whoami` | 136 | — |
+| `data_coverage` | 116 | — |
 | `list_tags` | 102 | — |
 | `get_tag` | 94 | — |
 | `read_import_report` | 80 | — |

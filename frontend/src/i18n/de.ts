@@ -2476,6 +2476,10 @@ export const de = {
   "plan.none": "Du hast diese Woche noch nicht geplant.",
   "plan.start": "Meine Woche planen",
   "plan.add": "Vorhaben hinzufügen",
+  "plan.saveRefused_one":
+    "Eine Zusage konnte nicht gespeichert werden. Sie ist weiterhin angehakt — bitte erneut versuchen.",
+  "plan.saveRefused_other":
+    "{count} Zusagen konnten nicht gespeichert werden. Sie sind weiterhin angehakt — bitte erneut versuchen.",
   "plan.save_one": "{count} Änderung speichern",
   "plan.save_other": "{count} Änderungen speichern",
   "plan.due": "bis {day}",
