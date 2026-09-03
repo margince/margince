@@ -41,8 +41,15 @@ package gates
 // an oversight: auth.EnsureLinkTarget. It asks whether the caller may REFERENCE
 // a record — attach an activity, name a parent org, add a list member — and
 // whether "add" needs write authority on the thing added TO is a product
-// question UC-E11-08 E2 raises rather than settles. It is tracked as its own
-// issue rather than decided inside a security sweep.
+// question UC-E11-08 E2 raises rather than settles, decided per call site
+// rather than all at once by this gate. internal/modules/collections shows
+// both answers: applying a tag DOES need it, so tags.go probes the target with
+// EnsureWritableLive; adding a list member does NOT
+// (internal/modules/collections/members.go says why). The excluded spelling
+// still reads green here either way — this gate cannot tell tags.go's fix from
+// a revert of it, which collections/tagauthz_integration_test.go holds
+// instead. Every other EnsureLinkTarget site remains unjudged, invisible to
+// this census by construction, tracked at #3797.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the
 // census, and that is a correction rather than a flourish. A first draft left
