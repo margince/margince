@@ -1303,6 +1303,81 @@ public.comms_outbound_bounced_idx CREATE INDEX comms_outbound_bounced_idx ON pub
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
+public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_basis.captured_by text NOT NULL gen=- def=-
+public.communication_basis.communication_basis_kind CHECK ((kind = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text])))
+public.communication_basis.communication_basis_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_basis.communication_basis_one_subject CHECK (((person_id IS NULL) <> (lead_id IS NULL)))
+public.communication_basis.communication_basis_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.communication_basis.communication_basis_pkey PRIMARY KEY (id)
+public.communication_basis.communication_basis_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.communication_basis.communication_basis_window CHECK (((valid_until IS NULL) OR (valid_until > valid_from)))
+public.communication_basis.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_basis.kind text NOT NULL gen=- def=-
+public.communication_basis.lead_id uuid gen=- def=-
+public.communication_basis.note text gen=- def=-
+public.communication_basis.person_id uuid gen=- def=-
+public.communication_basis.revoked_at timestamp with time zone gen=- def=-
+public.communication_basis.source_activity_id uuid gen=- def=-
+public.communication_basis.thread_key text gen=- def=-
+public.communication_basis.valid_from timestamp with time zone NOT NULL gen=- def=now()
+public.communication_basis.valid_until timestamp with time zone gen=- def=-
+public.communication_basis_live_lead CREATE INDEX communication_basis_live_lead ON public.communication_basis USING btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL))
+public.communication_basis_live_person CREATE INDEX communication_basis_live_person ON public.communication_basis USING btree (person_id, kind) WHERE ((person_id IS NOT NULL) AND (revoked_at IS NULL))
+public.communication_basis_pkey CREATE UNIQUE INDEX communication_basis_pkey ON public.communication_basis USING btree (id)
+public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_decision.actor text NOT NULL gen=- def=-
+public.communication_decision.attempt integer NOT NULL gen=- def=0
+public.communication_decision.basis text gen=- def=-
+public.communication_decision.communication_decision_basis CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'consent'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text]))))
+public.communication_decision.communication_decision_category CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
+public.communication_decision.communication_decision_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE CASCADE
+public.communication_decision.communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text])))
+public.communication_decision.communication_decision_phase CHECK ((phase = ANY (ARRAY['staging'::text, 'transmit'::text])))
+public.communication_decision.communication_decision_pkey PRIMARY KEY (id)
+public.communication_decision.communication_decision_subject_kind CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['person'::text, 'lead'::text]))))
+public.communication_decision.communication_decision_subject_shape CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))
+public.communication_decision.communication_decision_verdict CHECK ((verdict = ANY (ARRAY['allow'::text, 'deny'::text, 'review'::text])))
+public.communication_decision.content_fingerprint bytea gen=- def=-
+public.communication_decision.decided_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_decision.decision_set_id uuid NOT NULL gen=- def=-
+public.communication_decision.delivery_id uuid NOT NULL gen=- def=-
+public.communication_decision.evidence jsonb NOT NULL gen=- def='{}'::jsonb
+public.communication_decision.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_decision.legacy_verdict text gen=- def=-
+public.communication_decision.mode text NOT NULL gen=- def=-
+public.communication_decision.phase text NOT NULL gen=- def=-
+public.communication_decision.reason_code text NOT NULL gen=- def=-
+public.communication_decision.recipient_address text NOT NULL gen=- def=-
+public.communication_decision.requested_category text gen=- def=-
+public.communication_decision.resolved_category text NOT NULL gen=- def=-
+public.communication_decision.subject_id uuid gen=- def=-
+public.communication_decision.subject_kind text gen=- def=-
+public.communication_decision.suppression text gen=- def=-
+public.communication_decision.verdict text NOT NULL gen=- def=-
+public.communication_decision_by_subject CREATE INDEX communication_decision_by_subject ON public.communication_decision USING btree (subject_id) WHERE (subject_id IS NOT NULL)
+public.communication_decision_disagreements CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))
+public.communication_decision_one_per_attempt CREATE UNIQUE INDEX communication_decision_one_per_attempt ON public.communication_decision USING btree (delivery_id, recipient_address, phase, attempt)
+public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
+public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_suppression.address text gen=- def=-
+public.communication_suppression.captured_by text NOT NULL gen=- def=-
+public.communication_suppression.communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text])))
+public.communication_suppression.communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_suppression.communication_suppression_names_a_target CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL)))
+public.communication_suppression.communication_suppression_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.communication_suppression.communication_suppression_pkey PRIMARY KEY (id)
+public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_suppression.kind text NOT NULL gen=- def=-
+public.communication_suppression.lead_id uuid gen=- def=-
+public.communication_suppression.person_id uuid gen=- def=-
+public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_suppression.revoked_at timestamp with time zone gen=- def=-
+public.communication_suppression.source text NOT NULL gen=- def=-
+public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
+public.communication_suppression_live_person CREATE INDEX communication_suppression_live_person ON public.communication_suppression USING btree (person_id) WHERE ((person_id IS NOT NULL) AND (revoked_at IS NULL))
+public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
 public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE

@@ -23,6 +23,7 @@ func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads 
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, personID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarCommunicationSections(pkg, personID, leads)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
 
@@ -183,6 +184,41 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM person_confirm_submission
 		   WHERE person_id = $1`, nil},
+	}
+}
+
+// sarCommunicationSections gather the outbound record: why each message was
+// permitted, the non-consent basis behind it, and what the subject asked to
+// stop.
+//
+// This is the part of the package that answers "what did you do with my data
+// and why" for every message actually sent. The decision rows carry ids and a
+// verdict, never the message: the content fingerprint is deliberately not read
+// back, because it identifies a body the export already discloses elsewhere and
+// hashing it again tells the subject nothing.
+// The lead arm is not optional here. A subject captured as a lead and promoted
+// later has decisions, bases and suppressions carrying the LEAD id — the lead
+// row survives an erasure as an anonymized shell, so those rows are still the
+// subject's own history. A person-keyed section would silently withhold the
+// earliest part of their record, which is the half they are least likely to
+// know about and most likely to be asking after.
+func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []ids.UUID) []sarSection {
+	subjects := append([]any{}, personID)
+	return []sarSection{
+		{
+			&pkg.CommunicationDecisions, `SELECT phase, requested_category, resolved_category, verdict,
+		          reason_code, basis, suppression, mode, decided_at
+		   FROM communication_decision
+		   WHERE subject_id = $1 OR (subject_kind = 'lead' AND subject_id = ANY($2))`,
+			append(subjects, leads),
+		},
+		{&pkg.CommunicationBases, `SELECT kind, thread_key, valid_from, valid_until, note,
+		          captured_at, revoked_at
+		   FROM communication_basis
+		   WHERE person_id = $1 OR lead_id = ANY($2)`, append(subjects, leads)},
+		{&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at
+		   FROM communication_suppression
+		   WHERE person_id = $1 OR lead_id = ANY($2)`, append(subjects, leads)},
 	}
 }
 

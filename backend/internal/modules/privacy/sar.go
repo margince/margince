@@ -56,8 +56,15 @@ type SARPackage struct {
 	// package the subject authored rather than the workspace, which is exactly
 	// why an export that omitted it would be answering the wrong question.
 	ConfirmSubmissions []map[string]any `json:"confirm_submissions"`
-	RawCapture         []map[string]any `json:"raw_capture"`
-	FieldOrigins       []map[string]any `json:"field_origins"`
+	// Why each message to this subject was permitted, what non-consent basis
+	// stood behind it, and every objection or restriction they recorded.
+	// Art. 15(1)(a)-(c): the purposes of the processing and its lawful ground,
+	// answered per message rather than in the abstract.
+	CommunicationDecisions   []map[string]any `json:"communication_decisions"`
+	CommunicationBases       []map[string]any `json:"communication_bases"`
+	CommunicationSuppression []map[string]any `json:"communication_suppression"`
+	RawCapture               []map[string]any `json:"raw_capture"`
+	FieldOrigins             []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
 	// Art. 15(1)(g) makes the source itself disclosable, and the snippet IS

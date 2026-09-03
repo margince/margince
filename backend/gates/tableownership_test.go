@@ -230,6 +230,9 @@ var tableOwners = map[string]string{
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
+	"communication_decision":         "internal/modules/consent",
+	"communication_basis":            "internal/modules/consent",
+	"communication_suppression":      "internal/modules/consent",
 	"consent_qualifying_event":       "internal/modules/consent",
 	"consent_existing_customer_flag": "internal/modules/consent",
 	"data_subject_request":           "internal/modules/consent",
