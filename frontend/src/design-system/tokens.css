@@ -321,7 +321,7 @@
    * line a reader identifies a record by, a quiet grotesk for everything read,
    * and a mono with tabular figures for every number, so figures align in a
    * column and never look like words. */
-  --f-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --f-display: "Outfit", system-ui, sans-serif;
   --f-body: "Geist", system-ui, sans-serif;
   --f-mono: "Geist Mono", ui-monospace, monospace;
 
