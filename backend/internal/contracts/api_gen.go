@@ -28792,8 +28792,11 @@ type SearchResponse struct {
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
 	// CarriedBy For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
-	CarriedBy *int               `json:"carried_by,omitempty"`
-	Id        openapi_types.UUID `json:"id"`
+	CarriedBy *int `json:"carried_by,omitempty"`
+
+	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
+	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
 
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
