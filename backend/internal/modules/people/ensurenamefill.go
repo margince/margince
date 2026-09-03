@@ -29,6 +29,51 @@ const (
 	columnLastName  = "last_name"
 )
 
+// displayNameSetByHumanTx answers whether a person typed this contact's display
+// name, either when the record was made or at any time since.
+//
+// Two questions, because a name can be typed at two moments and only one of them
+// leaves an update behind.
+//
+// WHO MINTED THE ROW: person.captured_by, whose prefix is the principal type
+// that created it — human, connector or agent. A contact somebody added by hand,
+// imported from a vCard or typed into quick capture carries `human:`, and the
+// name it was born with is that person's. Everything a connector or an agent
+// minted carries the machine, and those are the rows this fill exists to
+// improve. captured_by is stamped once at create and never moves, which is
+// exactly right for a question about the create and wrong for anything else.
+//
+// WHO CHANGED IT SINCE: a human audit row whose action is 'update' and whose
+// image names full_name. It has to be an update rather than any human row,
+// because a capture runs under the SEAT whose mailbox it is — a rep's sync acts
+// on their behalf, so the create it writes reads actor_type 'human' too, while
+// the name on it came from a mail header rather than from that person typing.
+// Counting those would read every connector-minted contact as human-named and
+// refuse to improve any of them, which is this whole function inverted.
+//
+// field_provenance is the mechanism this eventually belongs in, and it is
+// already wired for other fields — but no writer has ever stamped a name column,
+// so it is empty for every contact that exists today. A guard reading it would
+// report "no human" for a name a person typed last week.
+//
+// Whatever they set it to. Somebody who set the display name expressed an intent
+// about that field, and one who set it back to what it already said expressed
+// the same intent as one who changed it.
+func displayNameSetByHumanTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (bool, error) {
+	var byHuman bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM person
+		                WHERE id = $2 AND captured_by LIKE 'human:%')
+		    OR EXISTS (SELECT 1 FROM audit_log
+		                WHERE entity_type = $1 AND entity_id = $2
+		                  AND actor_type = 'human' AND action = 'update'
+		                  AND (after ? $3 OR before ? $3))`,
+		entityPerson, personID.UUID, fieldFullName).Scan(&byHuman); err != nil {
+		return false, fmt.Errorf("people: reading who named person %s: %w", personID, err)
+	}
+	return byHuman, nil
+}
+
 // fillMissingPersonName completes a person the ladder landed on by exact
 // address, and completes ONLY what is missing.
 //
@@ -71,18 +116,24 @@ func completePersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	// named. The predicate is also the concurrency guard: a writer who filled
 	// either half between the dedupe read and this write keeps it, because
 	// Postgres re-checks the predicate after waiting on their lock.
-	// full_name moves WITH the split columns, and only when it is still the
-	// shorter thing the parser refused to split. A record displaying "Lars"
-	// while its columns say Lars Jankowfsky is a fill that reported success and
-	// changed nothing a human can see — the defect this predicate closes.
-	// A full_name a person typed is longer or different, and is left alone.
+	// full_name moves WITH the split columns unless a person set it. When we
+	// learn somebody's name we display it — that is the whole rule, and the only
+	// thing that outranks it is a human having typed a name already.
 	//
-	// The row is LOCKED before it is read, so the value recorded as the before
-	// is the same one the CASE re-evaluates against. Read without the lock — as
-	// a sub-select in RETURNING — a human editing full_name between the two
-	// leaves this write recording their value as the after of a change it never
-	// made, which plants a machine claim on the field human precedence is
-	// arbitrated by.
+	// It used to move only where full_name still equalled one of the two parts
+	// exactly. That reached a record displaying "Lars" beside columns saying Lars
+	// Jankowfsky, and nothing else: the display names that actually go stale are
+	// the ones a calendar organizer typed into their own address book — "Bw" for
+	// Björn Welter, "Juan" for Judith Andresen, "Chris" for Christoph Erler.
+	// None of them share a character with the name we later learned, so no test
+	// on the SHAPE of the string can find them. Who wrote it is the question, and
+	// the audit log answers it.
+	//
+	// The row is LOCKED before it is read, so the value recorded as the before is
+	// the same one the write replaces. Read without the lock — as a sub-select in
+	// RETURNING — a human editing full_name between the two leaves this write
+	// recording their value as the after of a change it never made, which plants
+	// a machine claim on the field human precedence is arbitrated by.
 	var previousFullName string
 	err := tx.QueryRow(ctx,
 		`SELECT full_name FROM person WHERE id = $1 FOR UPDATE`, personID).Scan(&previousFullName)
@@ -94,17 +145,20 @@ func completePersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	if err != nil {
 		return false, fmt.Errorf("people: reading the name person %s carries: %w", personID, err)
 	}
+	humanNamed, err := displayNameSetByHumanTx(ctx, tx, personID)
+	if err != nil {
+		return false, err
+	}
 	var fullName string
 	err = tx.QueryRow(ctx, `
 		UPDATE person
 		   SET first_name = $2,
 		       last_name  = $3,
-		       full_name  = CASE WHEN full_name = $2 OR full_name = $3
-		                         THEN $4 ELSE full_name END
+		       full_name  = CASE WHEN $5 THEN full_name ELSE $4 END
 		 WHERE id = $1
 		   AND first_name IS NULL AND last_name IS NULL
 		RETURNING full_name`,
-		personID, parsed.First, parsed.Last, parsed.Full).Scan(&fullName)
+		personID, parsed.First, parsed.Last, parsed.Full, humanNamed).Scan(&fullName)
 	// No row is the guard doing its job, not a failure: the row already
 	// carried a name, and it is not this call's to replace.
 	if errors.Is(err, pgx.ErrNoRows) {
