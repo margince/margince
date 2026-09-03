@@ -8645,7 +8645,7 @@ export interface paths {
          *     The token is never returned. It is only ever mailed — returning it would defeat the
          *     mailbox-as-evidence property above, and this link IS how a double-opt-in purpose gets
          *     confirmed now that no operator-held token exists.
-         *     A fresh request supersedes any unspent earlier link for the same person.
+         *     A fresh request supersedes any unspent earlier link of the SAME KIND for this person — a record-confirmation request does not expire a pending subscription-confirmation link, because they ask different questions and arrive in different mails.
          *
          *     `provider_accepted` reports whether the relay took the message, and `sendable` says whether
          *     this installation can send at all. Both, because they are different facts and a reader's next
@@ -10747,6 +10747,48 @@ export interface paths {
         get: operations["getForecastAssurance"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a finding from the nightly input check.
+         * @description Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
+         *     say the record moved. `reassign` says it is somebody else's. `remind_later` says
+         *     not now — and it leaves the finding OPEN, because "not now" is an answer about
+         *     when rather than about whether, and a deferred finding that read as resolved would
+         *     never come back.
+         *
+         *     `value_correct` and `not_relevant` are different in kind: they HIDE the finding
+         *     from Forecast, the Brief, the Worklist and readiness — the screens a revenue
+         *     commitment is made from. So both must name a reason, and both carry an expiry
+         *     capped server-side at 90 days. A value that was correct in May is a claim about
+         *     May, and an uncapped suppression outlives the fact it rested on.
+         *
+         *     An expiry beyond the ceiling is REFUSED rather than silently shortened: a caller
+         *     who asked for a year and got ninety days without being told would believe the
+         *     finding stays hidden through the next two quarters.
+         *
+         *     The actor is the authenticated principal, never the body. `condition_cleared` is
+         *     the check's own answer and a person naming it is refused — it says the condition
+         *     stopped being true, which only something that looked can say.
+         *
+         *     404 when the finding is not there or is already answered. Telling a caller that
+         *     one exists but is resolved says it exists, about a deal they may not be able to
+         *     open.
+         */
+        post: operations["resolveInputCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22372,6 +22414,27 @@ export interface components {
             current_call?: components["schemas"]["ForecastCall"];
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
+        };
+        ResolveInputCheck: {
+            /**
+             * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+             * @enum {string}
+             */
+            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign";
+            /** @description Required for `value_correct` and `not_relevant`. Those hide the finding, and the next person to see the number is owed the reason it is not flagged. */
+            reason?: string;
+            /** @description What was looked at, for an answer that rests on something. */
+            evidence_ref?: string;
+            /**
+             * Format: date-time
+             * @description Required for `remind_later`, and must be in the future. A deferral with no date is a dismissal wearing a different word.
+             */
+            remind_at?: string;
+            /**
+             * Format: date-time
+             * @description When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
+             */
+            expires_at?: string;
         };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
@@ -35174,7 +35237,11 @@ export interface operations {
                      * @enum {string}
                      */
                     marketing_choice?: "granted" | "withdrawn";
-                    /** @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant. */
+                    /**
+                     * @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+                     *     grant. Bounded because it is stored on the proof row and read back through the subject
+                     *     access export — the same bound is enforced server-side, and the two are one rule.'
+                     */
                     marketing_wording?: string;
                 };
             };
@@ -45739,6 +45806,34 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    resolveInputCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveInputCheck"];
+            };
+        };
+        responses: {
+            /** @description The answer was recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getForecastMovement: {

@@ -94,6 +94,7 @@ components:
         - user_delivery.changed
         - forecast.created
         - forecast.assurance_created
+        - forecast.exception_resolved
         - forecast.snapshot_created
         - weekly_plan.updated
         - weekly_plan.help_requested
@@ -1897,6 +1898,46 @@ components:
             How many deals the run considered. A consumer comparing this against the
             previous run's count sees a pass that covered less of the pipeline.
         eligible_signals: { type: integer }
+      additionalProperties: false
+    PublicEventForecastExceptionResolved:
+      type: object
+      x-event-type: forecast.exception_resolved
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for forecast.exception_resolved — somebody answered a finding from the
+        nightly input check. The entity is the AUTHOR, because an answer is attributable
+        to whoever gave it.
+
+        `outcome` says what KIND of answer it was, and consumers must not treat the six
+        alike. `value_correct` and `not_relevant` HIDE the finding from the screens a
+        revenue commitment is made from, so a surface counting open findings has to drop
+        them; `remind_later` leaves the finding open and it comes back.
+
+        The reason does not ride along. It is prose a person wrote for another person,
+        and a subscriber acting on it is acting on something the author may edit.
+      required: [exception_id, outcome, actor_user_id]
+      properties:
+        exception_id: { type: string, format: uuid }
+        outcome:
+          type: string
+          enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later,
+                 reassign, condition_cleared]
+          x-enum-varnames:
+            - ResolvedFixedRecord
+            - ResolvedAddedEvidence
+            - ResolvedValueCorrect
+            - ResolvedNotRelevant
+            - ResolvedRemindLater
+            - ResolvedReassign
+            - ResolvedConditionCleared
+        actor_user_id: { type: string, format: uuid }
+        expires_at:
+          type: string
+          format: date-time
+          description: >-
+            When a suppressing answer stops holding. Present only for the two outcomes
+            that hide a finding — a consumer that re-surfaces findings needs the date.
       additionalProperties: false
     PublicEventForecastSnapshotCreated:
       type: object
