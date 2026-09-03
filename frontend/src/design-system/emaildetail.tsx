@@ -133,7 +133,9 @@ function EmailBody({
           <p>{parts.trimmed}</p>
         </details>
       )}
-      <p className="emaildetail__when">{formatWhen(presentation.occurred_at)}</p>
+      <p className="emaildetail__when">
+        {formatWhen(presentation.occurred_at)}
+      </p>
     </div>
   );
 }

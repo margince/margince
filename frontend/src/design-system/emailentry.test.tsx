@@ -103,7 +103,9 @@ describe("EmailEntry", () => {
     wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
     expect(screen.getByText(/Ana Sommer \+2/)).toBeInTheDocument();
     expect(screen.getByText("Angebot Q4")).toBeInTheDocument();
-    expect(screen.getByText("Können wir Dienstag sprechen?")).toBeInTheDocument();
+    expect(
+      screen.getByText("Können wir Dienstag sprechen?"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Needs reply")).toBeInTheDocument();
     // The count is the file's own, not a guess from the body.
     expect(screen.getByText("2")).toBeInTheDocument();
@@ -185,7 +187,12 @@ describe("EmailDetail", () => {
   it("says blind recipients exist without naming them", async () => {
     vi.stubGlobal(
       "fetch",
-      jsonOnce({ ...PRESENTATION, body: "Kurz.", from: [], bcc_withheld: true }),
+      jsonOnce({
+        ...PRESENTATION,
+        body: "Kurz.",
+        from: [],
+        bcc_withheld: true,
+      }),
     );
     wrap(
       <EmailDetail
