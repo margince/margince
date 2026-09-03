@@ -13296,6 +13296,13 @@ export interface components {
              *     The label spells both calendar years a non-January year spans — `FY2026/27` — so
              *     a reader can tell which twelve months a bucket covers without knowing the
              *     convention. A January year is not a span and keeps the plain `2026`.
+             *
+             *     One thing it does NOT carry, and a client storing report filters should know it:
+             *     a SAVED report view holds the bucket's text, so a view saved under one fiscal
+             *     start names a different span after the start moves — or no span at all, since a
+             *     calendar year maps onto parts of two fiscal years. The report still runs and
+             *     still looks right. Whether such a view is re-pointed, invalidated or merely
+             *     warned about is undecided: margince/margince#2569.
              */
             fiscal_year_start_month: number;
             /**
@@ -13354,6 +13361,11 @@ export interface components {
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
              *     once and re-means no stored row.
+             *
+             *     It does not re-point a SAVED report view, which holds the bucket's TEXT and so
+             *     names a different span afterwards. Sending this field is enough to leave those
+             *     views filtering on a span nobody asked for; nothing here reports how many.
+             *     margince/margince#2569.
              */
             fiscal_year_start_month?: number;
             /**

@@ -158,7 +158,9 @@ var BaseLanguage = settings.Define[string](
 // saved under one fiscal start names a different span after it moves. Tracked
 // as its own decision — re-point, invalidate, or warn — rather than settled
 // here, because none of the three is obviously right and the label cannot fix
-// it either way.
+// it either way: margince/margince#2569. Named rather than described, so a
+// reader can see whether it is still open instead of trusting a comment's
+// account of a gap.
 //
 // What the label DOES fix is the reader's half: spelling both years means the
 // answer they get is unambiguous about which twelve months it covers, even when
