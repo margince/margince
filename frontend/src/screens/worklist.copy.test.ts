@@ -169,3 +169,32 @@ describe("reasonText — day-count plural", () => {
     expect(reasonText(many, t, "en", zone)).toBe("quiet for 14 days");
   });
 });
+
+// The lead's deadline is a MOMENT, and the sentence has to put it somewhere.
+//
+// Both halves of this live on opposite sides of the wire: the backend attaches
+// the date (attention/lead.go leadStanding), and VALUED_REASONS here decides
+// whether it reaches a sentence at all. A value can travel for a reason whose
+// copy has nowhere to put it, and that combination renders the plain phrase
+// while the figure is silently dropped — so the two are one change, and this is
+// the half that fails if only the backend lands.
+describe("reasonText — the lead's own deadline", () => {
+  it("names when the reply is due", () => {
+    const reason: WorklistReason = {
+      kind: "response_due_soon",
+      value: { kind: "date", date: "2026-09-03T14:30:00Z" },
+    };
+    const got = reasonText(reason, t, "en", zone);
+    expect(got).not.toBeNull();
+    // The formatted moment, not the raw ISO string: valueText renders it in the
+    // reader's locale and zone, and asserting the literal would pin a format
+    // this file does not own.
+    expect(got).not.toBe("reply due soon");
+    expect(got).toContain("reply due by");
+  });
+
+  it("falls back to the plain phrase when no deadline travelled", () => {
+    const reason: WorklistReason = { kind: "response_due_soon" };
+    expect(reasonText(reason, t, "en", zone)).toBe("reply due soon");
+  });
+});

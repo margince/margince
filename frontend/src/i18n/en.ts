@@ -7903,6 +7903,7 @@ export const en = {
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
+  "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
   "worklist.above.pin": "Above the next because you pinned it.",
