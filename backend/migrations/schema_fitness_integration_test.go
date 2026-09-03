@@ -157,6 +157,30 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"conversation_claim.person_id":          "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(person, update), then auth.EnsureWritableLive on the person inside the write's own transaction — a claim may only be recorded against a person the caller could already change",
 	"conversation_claim.source_activity_id": "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
 	"conversation_claim.task_activity_id":   "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
+	// The send-authorization record's two capability tables (core 1788407500)
+	// are SCHEMA ONLY: nothing in the tree inserts a row into either. What
+	// exists today READS them — consent's liveSuppression, which its own
+	// comment names as the only reader that applies a suppression — and
+	// REMOVES them, on privacy's erasure and retention paths, which null the
+	// subject link or delete the row and never create a reference. So the five
+	// entries below are the obligation on whoever writes the first row rather
+	// than a record of a gate already taken, and each names the sibling whose
+	// shape that writer has to match.
+	//
+	// The subject columns are one fact spelled twice, because the CHECKs make
+	// them alternatives: communication_basis_one_subject admits a person XOR a
+	// lead, and communication_suppression_names_a_target admits either, or
+	// neither when the row is scoped to a bare address. An address is a fact
+	// about a MAILBOX and names no row-scoped record, so it is outside this
+	// gate rather than exempted by it.
+	"communication_basis.person_id": "PENDING WRITER: the obligation on whoever writes it — a basis recorded from a path that already holds the subject (a captured inbound, an inquiry) carries that path's gate, as consent_qualifying_event.person_id does; a basis whose subject a CALLER names takes auth.EnsureVisibleLive on that person in the insert's own transaction, as lead_manual_signal.lead_id does, because recording why writing to somebody is lawful would otherwise confirm they exist",
+	"communication_basis.lead_id":   "PENDING WRITER: the lead arm of the entry above, under the same obligation — the CHECK makes the two exclusive, so a writer fills exactly one and the arm it fills carries that arm's probe",
+	// LIVE rather than merely visible, for the reason conversation_claim's
+	// evidence column is: a basis that outlived its evidence would keep
+	// authorizing sends on the strength of a message nobody can now open.
+	"communication_basis.source_activity_id": "PENDING WRITER: the obligation is conversation_claim.source_activity_id's — auth.EnsureActivityContentVisibleLive on the cited message, in the same transaction as the insert, so a basis can never rest on a thread the writer's caller may not read",
+	"communication_suppression.person_id":    "PENDING WRITER: the subject arm of a suppression, under communication_basis.person_id's obligation — with one difference worth writing down rather than rediscovering: a hard bounce arrives from a provider and not from a caller, and a system writer that names no principal takes no row-scope probe because there is no scope to probe. It is the CALLER-named row this binds",
+	"communication_suppression.lead_id":      "PENDING WRITER: the lead arm of the entry above; the target CHECK admits a row naming only an address, so a writer may fill neither subject column and the probe binds only the arm it fills",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
 	"organization_geocode_state.organization_id": "child row: the sidecar for an organization's own coordinate lookup, and no caller ever names the organization it keys on. " +
