@@ -15901,6 +15901,62 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No run has completed yet. A fresh installation has not been checked.
+  /forecast/assurance/exceptions/{id}/resolve:
+    post:
+      tags: [Reports]
+      operationId: resolveInputCheck
+      summary: Answer a finding from the nightly input check.
+      description: |
+        Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
+        say the record moved. `reassign` says it is somebody else's. `remind_later` says
+        not now — and it leaves the finding OPEN, because "not now" is an answer about
+        when rather than about whether, and a deferred finding that read as resolved would
+        never come back.
+
+        `value_correct` and `not_relevant` are different in kind: they HIDE the finding
+        from Forecast, the Brief, the Worklist and readiness — the screens a revenue
+        commitment is made from. So both must name a reason, and both carry an expiry
+        capped server-side at 90 days. A value that was correct in May is a claim about
+        May, and an uncapped suppression outlives the fact it rested on.
+
+        An expiry beyond the ceiling is REFUSED rather than silently shortened: a caller
+        who asked for a year and got ninety days without being told would believe the
+        finding stays hidden through the next two quarters.
+
+        The actor is the authenticated principal, never the body. `condition_cleared` is
+        the check's own answer and a person naming it is refused — it says the condition
+        stopped being true, which only something that looked can say.
+
+        404 when the finding is not there or is already answered. Telling a caller that
+        one exists but is resolved says it exists, about a deal they may not be able to
+        open.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      # Human-only, for now and on purpose. A confirm-first route staging
+      # against a concrete record must declare the record_type its approval is
+      # row-scoped by — otherwise the approval it mints could be released by
+      # somebody who cannot see the deal the finding is about.
+      #
+      # The {id} here is an EXCEPTION, which is not a record type the RBAC
+      # vocabulary knows. Adding one means a new RBAC object, its backfill and
+      # its seed-parity fixtures — the review surface's own work, not this
+      # endpoint's. The tool lands with the object it needs, not ahead of it.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResolveInputCheck' }
+      responses:
+        '204':
+          description: The answer was recorded.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/movement:
     get:
       tags: [Reports]
@@ -30690,6 +30746,39 @@ components:
             count: a count of what somebody may not read is itself a statement about how
             much of it there is, so the reader is told the figure is partial and not by
             how much.
+      additionalProperties: false
+    ResolveInputCheck:
+      type: object
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later, reassign]
+          description: >-
+            What kind of answer this is. `condition_cleared` is absent on purpose: it is
+            the check's own, and a person naming it would be saying the condition stopped
+            being true without anything having looked.
+        reason:
+          type: string
+          maxLength: 2000
+          description: >-
+            Required for `value_correct` and `not_relevant`. Those hide the finding, and
+            the next person to see the number is owed the reason it is not flagged.
+        evidence_ref:
+          type: string
+          description: What was looked at, for an answer that rests on something.
+        remind_at:
+          type: string
+          format: date-time
+          description: >-
+            Required for `remind_later`, and must be in the future. A deferral with no
+            date is a dismissal wearing a different word.
+        expires_at:
+          type: string
+          format: date-time
+          description: >-
+            When a suppressing answer stops holding. Omitted, it is the 90-day ceiling;
+            beyond the ceiling it is refused rather than shortened.
       additionalProperties: false
     ForecastAssurance:
       type: object

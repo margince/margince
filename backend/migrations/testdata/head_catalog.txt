@@ -741,10 +741,12 @@ public.assurance_exception_pkey CREATE UNIQUE INDEX assurance_exception_pkey ON 
 public.assurance_resolution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_resolution.actor_id uuid NOT NULL gen=- def=-
 public.assurance_resolution.assurance_resolution_actor_fkey FOREIGN KEY (actor_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.assurance_resolution.assurance_resolution_deferral_returns CHECK (((outcome <> 'remind_later'::text) OR (remind_at IS NOT NULL)))
 public.assurance_resolution.assurance_resolution_exception_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
 public.assurance_resolution.assurance_resolution_expiry_after_creation CHECK (((expires_at IS NULL) OR (expires_at > created_at)))
-public.assurance_resolution.assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['value_correct'::text, 'record_corrected'::text, 'not_material'::text, 'condition_cleared'::text, 'deferred'::text, 'not_mine'::text])))
+public.assurance_resolution.assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['fixed_record'::text, 'added_evidence'::text, 'value_correct'::text, 'not_relevant'::text, 'remind_later'::text, 'reassign'::text, 'condition_cleared'::text])))
 public.assurance_resolution.assurance_resolution_pkey PRIMARY KEY (id)
+public.assurance_resolution.assurance_resolution_suppression_expires CHECK (((outcome <> ALL (ARRAY['value_correct'::text, 'not_relevant'::text])) OR (expires_at IS NOT NULL)))
 public.assurance_resolution.captured_by text NOT NULL gen=- def=-
 public.assurance_resolution.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_resolution.evidence_ref text gen=- def=-
