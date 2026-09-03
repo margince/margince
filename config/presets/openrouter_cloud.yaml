@@ -58,6 +58,15 @@ seeds:
           # bound for its quality.
           quantizations: [fp16, bf16, fp32]
           require_parameters: true
+    # KNOWN GAP: this preset cannot serve document_extract, which sends a PDF.
+    # On the OpenAI-compatible wire the carriage is the operator's `input:`
+    # declaration, and that vocabulary is text and image only — there is no way
+    # to declare application/pdf, so the adapter refuses the attachment rather
+    # than dropping it. A full certification run under this preset therefore
+    # fails that one task, loudly and correctly. Bind document_extract's tier to
+    # a provider whose wire carries PDFs (gemini does, and is what the committed
+    # record for that task uses) if a deployment needs it.
+    #
     # The embed lane takes no `routing:` — the parser refuses one. An embedding
     # is a single forward pass, so it has no latency tail to bound, and no embed
     # model is served at fp4-versus-bf16 stakes.

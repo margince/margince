@@ -212,7 +212,7 @@ func TestOpenAICompatCompleteFallsBackToReasoningWhenTheAnswerNeverStarted(t *te
 func TestOpenAICompatCompletePrefersTheAnswerOverTheThinking(t *testing.T) {
 	c := &openAICompatClient{
 		http: &http.Client{}, defaultModel: "m",
-		baseURL: newJSONServer(t, `{"model":"m","choices":[{"message":
+		baseURL: newJSONServer(t, `{"model":"m","choices":[{"finish_reason":"stop","message":
 			{"content":"the answer","reasoning":"first I should think"}}]}`),
 	}
 	resp, err := c.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
@@ -267,5 +267,36 @@ func TestOpenAICompatNeverReportsMoreReasoningThanOutput(t *testing.T) {
 	if answer := resp.OutputTokens - resp.ReasoningTokens; answer < 0 {
 		t.Errorf("output %d minus reasoning %d = %d; a caller grading the answer alone reads a negative budget as always under cap",
 			resp.OutputTokens, resp.ReasoningTokens, answer)
+	}
+}
+
+// Every remote string on the error path is redacted and bounded, the `type`
+// discriminator included.
+//
+// The type is the one that looks safe and is not: it reads like a short enum an
+// API author picked, and on a broker it is a string an upstream chose, so it can
+// be long or carry the request back. A secret in it would otherwise reach this
+// installation's logs through the one field nothing checked.
+func TestOpenAICompatErrorRedactsTheTypeAsWellAsTheMessage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"type":"invalid_request password=typesecretpw","message":"refused: password=messagesecretpw"}`))
+	}))
+	defer srv.Close()
+	c := &openAICompatClient{http: &http.Client{}, baseURL: srv.URL, apiKey: "k", defaultModel: "m"}
+	_, err := c.Complete(context.Background(), model.Request{
+		Messages: []model.Message{{Role: "user", Content: "hi"}},
+	})
+	if err == nil {
+		t.Fatal("a 400 must surface as an error")
+	}
+	// Both fields carry a shape the stripper recognises. It is not a general
+	// secret detector — a bare vendor token it has no pattern for would pass —
+	// so what is asserted here is that BOTH remote fields are routed through it,
+	// which is the part this path is responsible for.
+	for _, secret := range []string{"typesecretpw", "messagesecretpw"} {
+		if strings.Contains(err.Error(), secret) {
+			t.Errorf("the error carries %q from a remote field: %v", secret, err)
+		}
 	}
 }

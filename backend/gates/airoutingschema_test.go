@@ -173,6 +173,19 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		"an unknown quantization": {tiered(broker + ", routing: {quantizations: [fp5]}"), false},
 		"an unknown effort":       {tiered(broker + ", routing: {reasoning_effort: lots}"), false},
 		"an unknown preference":   {tiered(broker + ", routing: {sort_by: price}"), false},
+		// Shapes the schema declares (minItems, uniqueItems) that the parser has
+		// to refuse too — an editor and a runtime that authorize different
+		// configs is exactly the drift this test exists to catch.
+		"a written-but-empty allowlist": {tiered(broker + ", routing: {only: []}"), false},
+		"a repeated quantization":       {tiered(broker + ", routing: {quantizations: [bf16, bf16]}"), false},
+		// The host is case-insensitive in URLs and IsOpenRouterHost lowercases
+		// it, so the schema's pattern must not be the stricter half.
+		"an uppercase broker host": {tiered(
+			"provider: openai_compatible, model: m, base_url: 'https://OPENROUTER.AI/api', routing: {sort: throughput}"), true},
+		// A threshold json cannot encode: it would boot and then fail every call.
+		"a non-finite latency ceiling": {tiered(broker + ", routing: {preferred_max_latency_p90: .nan}"), false},
+		// An explicit false is a real choice, not an empty block.
+		"require_parameters written false": {tiered(broker + ", routing: {require_parameters: false}"), true},
 		// 0 is LEGAL and means unset. Once this binding has round-tripped through
 		// the settings store as JSON a written 0 and an absent key are the same
 		// value, so neither half can refuse one without refusing the other — the

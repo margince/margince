@@ -18,5 +18,10 @@ because the choice decides where this installation's text goes.
 of `margince.dev.yaml` so it can be named and reused. The dev overlay still
 carries its own copy — that file is the dev posture and has to stand alone.
 
+`openrouter_cloud.yaml` cannot serve `document_extract`: that task sends a PDF,
+and the OpenAI-compatible wire's declarable carriage is text and image only. A
+full certification run under it fails that one task by design — bind its tier to
+a provider whose wire carries PDFs if you need it.
+
 On the OpenRouter preset's `routing:` block, and the measurements behind its
 defaults: [docs/reference/openrouter.md](../../docs/reference/openrouter.md).

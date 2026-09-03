@@ -5,6 +5,7 @@ package ai
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"slices"
 	"strings"
@@ -55,7 +56,13 @@ type OpenRouterRouting struct {
 	// response_format, so this is belt-and-braces for a structured-output call
 	// rather than the thing that makes one work — but it turns a preference the
 	// broker may weigh into a guarantee it must honour.
-	RequireParameters bool `yaml:"require_parameters" json:"require_parameters"`
+	// A pointer for the same reason AllowFallbacks is one: false is a real
+	// choice and must not read as unset. A plain bool loses it twice over —
+	// omitempty drops it from the wire, and providerBlockEmpty would call a
+	// block containing only `require_parameters: false` empty and emit no
+	// provider object at all, so the operator's "do NOT require these" would
+	// silently become the broker's own default.
+	RequireParameters *bool `yaml:"require_parameters" json:"require_parameters"`
 	// AllowFallbacks, when non-nil, overrides the broker's default of switching
 	// hosts on failure. A pointer because false is a real choice and the zero
 	// value must not be mistaken for it: turning fallbacks off trades
@@ -90,7 +97,7 @@ func (r *OpenRouterRouting) providerBlockEmpty() bool {
 		return true
 	}
 	return len(r.Only) == 0 && len(r.Ignore) == 0 && len(r.Quantizations) == 0 &&
-		r.Sort == "" && !r.RequireParameters && r.AllowFallbacks == nil &&
+		r.Sort == "" && r.RequireParameters == nil && r.AllowFallbacks == nil &&
 		r.PreferredMaxLatencyP90 == 0
 }
 
@@ -113,7 +120,7 @@ type openAICompatProviderWire struct {
 	Ignore              []string                       `json:"ignore,omitempty"`
 	Quantizations       []string                       `json:"quantizations,omitempty"`
 	Sort                string                         `json:"sort,omitempty"`
-	RequireParameters   bool                           `json:"require_parameters,omitempty"`
+	RequireParameters   *bool                          `json:"require_parameters,omitempty"`
 	AllowFallbacks      *bool                          `json:"allow_fallbacks,omitempty"`
 	PreferredMaxLatency *openAICompatLatencyPercentile `json:"preferred_max_latency,omitempty"`
 }
@@ -176,6 +183,13 @@ func IsOpenRouterHost(baseURL string) bool {
 	if err != nil {
 		return false
 	}
+	// The scheme is checked, not just the host: "//openrouter.ai/api" parses
+	// with the right hostname and is not something the HTTP client can send on,
+	// so treating it as the broker would apply the default to a binding that
+	// cannot make a request at all. Shares the predicate with isFetchableURL.
+	if !sendableHTTPScheme(parsed) {
+		return false
+	}
 	host := strings.ToLower(parsed.Hostname())
 	return host == openRouterHost || strings.HasSuffix(host, "."+openRouterHost)
 }
@@ -216,10 +230,11 @@ func IsOpenRouterHost(baseURL string) bool {
 // not in a drafting default. allow_fallbacks is left unset so the broker's own
 // true stands: pinning the sort is not a reason to stop failing over.
 func DefaultOpenRouterRouting() *OpenRouterRouting {
+	requireParameters := true
 	return &OpenRouterRouting{
 		Sort:              SortThroughput,
 		Quantizations:     []string{"fp16", "bf16"},
-		RequireParameters: true,
+		RequireParameters: &requireParameters,
 	}
 }
 
@@ -249,18 +264,32 @@ var (
 	reasoningEfforts = []string{"max", "xhigh", "high", "medium", "low", "minimal", "none"}
 )
 
-// validate refuses a preference the broker would silently ignore.
+// Validate refuses a preference the broker would silently ignore.
+//
+// Exported because the config file is not the only door: the certification
+// lane takes these preferences from an environment variable, and a run that
+// accepted a misspelt value would report the untuned baseline under a tuned
+// run's name. One check, both doors.
 //
 // Silence is the whole reason this exists: an unknown sort or quantization is
 // dropped rather than rejected upstream, so a deployment would run with the
 // price-weighted default while its config file said otherwise — and the only
 // symptom would be the latency this default exists to remove.
-func (r *OpenRouterRouting) validate() error {
+func (r *OpenRouterRouting) Validate() error {
 	if r == nil {
 		return nil
 	}
 	if r.Sort != "" && !slices.Contains(sortOrders, r.Sort) {
 		return fmt.Errorf("ai: routing config: sort %q is not one of %s", r.Sort, strings.Join(sortOrders, " | "))
+	}
+	// The generated schema declares these arrays minItems:1 and uniqueItems, so
+	// the parser has to refuse the same shapes — an editor and a runtime that
+	// authorize different configs is the drift the parity gate exists to catch,
+	// and the weaker half is the one that decides what actually runs.
+	for name, list := range map[string][]string{"only": r.Only, "ignore": r.Ignore, "quantizations": r.Quantizations} {
+		if err := refuseEmptyOrRepeated(name, list); err != nil {
+			return err
+		}
 	}
 	for _, q := range r.Quantizations {
 		if !slices.Contains(quantizationLevels, q) {
@@ -270,8 +299,102 @@ func (r *OpenRouterRouting) validate() error {
 	if r.ReasoningEffort != "" && !slices.Contains(reasoningEfforts, r.ReasoningEffort) {
 		return fmt.Errorf("ai: routing config: reasoning_effort %q is not one of %s", r.ReasoningEffort, strings.Join(reasoningEfforts, " | "))
 	}
+	// NaN and the infinities are rejected alongside a negative, because they
+	// fail LATER and worse: yaml accepts .nan and .inf, validation would pass
+	// them, and then every request fails at encode time — json cannot represent
+	// a non-finite number — so a config that booted would break each call.
+	if math.IsNaN(r.PreferredMaxLatencyP90) || math.IsInf(r.PreferredMaxLatencyP90, 0) {
+		return fmt.Errorf("ai: routing config: preferred_max_latency_p90 must be a finite number of seconds, got %g", r.PreferredMaxLatencyP90)
+	}
 	if r.PreferredMaxLatencyP90 < 0 {
 		return fmt.Errorf("ai: routing config: preferred_max_latency_p90 %g is negative", r.PreferredMaxLatencyP90)
+	}
+	return nil
+}
+
+// --- routing-config integration ------------------------------------------
+//
+// These three live beside the preferences rather than in routing.go because they
+// are about THIS type: what a binding inherits when it declares nothing, which
+// bindings the preferences can reach at all, and what the parser refuses.
+// routing.go calls them. Keeping them here means a change to the field set and
+// a change to the rules governing it are one file rather than two.
+
+// applyUpstreamDefaults gives every broker binding that declared no upstream
+// preferences the product default, which is reliability over price.
+//
+// Only a binding whose base_url names the broker: these are its parameters, and
+// a direct vendor on the same OpenAI wire would be sent fields it never asked
+// for. Only an ABSENT declaration, never an empty one — `routing: {}` is an
+// operator saying "the broker's own routing, please", and overwriting that with
+// a default would make the opt-out unwritable.
+//
+// The embeddings lane is left alone deliberately. Its calls are one forward
+// pass each, so the tail this default exists to remove is not a thing that
+// happens there, and no embedding model is served at fp4-versus-bf16 stakes.
+func (cfg *RoutingConfig) applyUpstreamDefaults() {
+	for tier, binding := range cfg.Tiers {
+		if binding.Routing != nil || !upstreamPreferencesApply(binding) {
+			continue
+		}
+		binding.Routing = DefaultOpenRouterRouting()
+		cfg.Tiers[tier] = binding
+	}
+}
+
+// upstreamPreferencesApply reports whether a binding is the broker case that
+// upstream-selection preferences describe.
+func upstreamPreferencesApply(binding ProviderConfig) bool {
+	return binding.Provider == providerOpenAICompatible && IsOpenRouterHost(binding.BaseURL)
+}
+
+// validateUpstreamPreferences refuses a `routing:` block on a binding that
+// cannot honour it, and refuses a value the broker would silently ignore.
+//
+// Refused rather than dropped, because dropping is what the broker itself does
+// with an unknown preference: a deployment would then run price-weighted while
+// its config file said `sort: throughput`, and the only symptom would be the
+// latency the setting was written to remove. An operator who wrote the block
+// gets told which of the two reasons it cannot apply — the provider or the host
+// — because those are different edits.
+func validateUpstreamPreferences(tier string, binding ProviderConfig) error {
+	if binding.Routing == nil {
+		return nil
+	}
+	if binding.Provider != providerOpenAICompatible {
+		return fmt.Errorf("ai: routing config: tier %s: `routing` is upstream selection for a broker and provider %s serves one model from one host; remove the block",
+			tier, binding.Provider)
+	}
+	if !IsOpenRouterHost(binding.BaseURL) {
+		return fmt.Errorf("ai: routing config: tier %s: `routing` names OpenRouter's own upstream-selection fields and base_url %q is not an OpenRouter host; remove the block, or point the binding at the broker",
+			tier, binding.BaseURL)
+	}
+	if err := binding.Routing.Validate(); err != nil {
+		return fmt.Errorf("%w (tier %s)", err, tier)
+	}
+	return nil
+}
+
+// refuseEmptyOrRepeated holds a preference list to the shape the schema
+// declares: written means non-empty, and each entry said once.
+//
+// A written-but-empty list is the mistake worth naming rather than ignoring —
+// `only: []` reads as "no host may serve this" and is treated by the broker as
+// no preference at all, which is the opposite. A repeat is harmless to the
+// broker and means the operator believes something about the second one.
+func refuseEmptyOrRepeated(field string, list []string) error {
+	if list == nil {
+		return nil
+	}
+	if len(list) == 0 {
+		return fmt.Errorf("ai: routing config: `%s` is written with no entries; omit the field to state no preference", field)
+	}
+	seen := make(map[string]bool, len(list))
+	for _, entry := range list {
+		if seen[entry] {
+			return fmt.Errorf("ai: routing config: `%s` names %q twice", field, entry)
+		}
+		seen[entry] = true
 	}
 	return nil
 }

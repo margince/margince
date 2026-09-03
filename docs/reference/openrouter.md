@@ -159,10 +159,18 @@ bound a tail.**
 | `only` / `ignore` | allow/blocklist by slug | **hard** |
 | `quantizations` | serving precision | **hard** |
 | `require_parameters` | hosts supporting every parameter sent | **hard** |
-| `max_price` | `{prompt, completion}` $/M; *blocks the request* if nothing qualifies | **hard** |
+| `max_price` † | `{prompt, completion}` $/M; *blocks the request* if nothing qualifies | **hard** |
 | `sort` | `throughput` \| `price` \| `latency`; **disables load balancing** | reorders |
 | `preferred_max_latency_p90` | percentile cutoff, rolling 5-min window | **soft** |
 | `allow_fallbacks` | host switching on failure; default true | — |
+
+† **`max_price` is not settable in this tree.** The table is the broker's field
+set, and this row is the one `OpenRouterRouting` has no member for — the routing
+config is parsed with `KnownFields(true)`, so an operator who copies it into a
+`routing:` block gets a parse error at boot rather than a price ceiling. It is
+unimplemented deliberately: §5 measured its p99 at **387 seconds**, and a field
+that dangerous is better absent than merely discouraged. Adding it would mean a
+struct member, a schema property and a parity case.
 
 Not academic. In the A/B, the arm that set **only** the soft latency
 preference (`preferred_max_latency_p90: 8`) was the **worst arm measured**:
@@ -188,7 +196,8 @@ controls:
 | `only: [cerebras, groq]` | 2,609 | 3,513 | 3,857 | 0.971 | Groq ×14, Cerebras ×6 |
 | `sort` + `max_price` | 2,702 | **141,484** | **386,985** | 1.068 | Groq ×11, Cerebras ×9 |
 
-**`max_price` is excluded from the default.** Its p99 was **387 seconds**, the
+**`max_price` is excluded from the default, and from the tree** (§4's
+footnote). Its p99 was **387 seconds**, the
 worst arm of either round: a price ceiling cannot exclude what the sort then
 prefers.
 

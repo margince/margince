@@ -5,6 +5,7 @@ package ai
 
 import (
 	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 )
@@ -159,7 +160,8 @@ func TestTheUpstreamDefaultReachesTheBrokerAndNobodyElse(t *testing.T) {
 				if got == nil {
 					t.Fatal("the broker binding inherited no preferences")
 				}
-				if got.Sort != SortThroughput || !got.RequireParameters || len(got.Quantizations) == 0 {
+				if got.Sort != SortThroughput || got.RequireParameters == nil || !*got.RequireParameters ||
+					len(got.Quantizations) == 0 {
 					t.Errorf("inherited %+v, want reliability over price", got)
 				}
 				return
@@ -213,7 +215,7 @@ func TestAPreferenceTheBrokerWouldIgnoreIsRefused(t *testing.T) {
 		"the accepted vocabulary":    {DefaultOpenRouterRouting(), ""},
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := tc.routing.validate()
+			err := tc.routing.Validate()
 			if tc.wantErr == "" {
 				if err != nil {
 					t.Fatalf("the default must validate: %v", err)
@@ -264,6 +266,68 @@ func TestARoutingBlockIsRefusedWhereItCannotApply(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tc.wantErr) {
 				t.Errorf("error %q does not say why it cannot apply", err)
+			}
+		})
+	}
+}
+
+// An explicit require_parameters:false must survive to the wire.
+//
+// It is the one preference where a plain bool loses the operator's answer
+// twice: omitempty drops false, and a block containing only that value would
+// look empty and emit no provider object at all — so "do NOT restrict to hosts
+// supporting every parameter" would silently become the broker's own default.
+func TestAnExplicitRequireParametersFalseReachesTheWire(t *testing.T) {
+	no := false
+	routing := &OpenRouterRouting{RequireParameters: &no}
+	if routing.IsEmpty() {
+		t.Fatal("a block that says require_parameters:false is not an empty block")
+	}
+	body, err := json.Marshal(routing.providerWire())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"require_parameters":false`) {
+		t.Errorf("wire = %s, want an explicit require_parameters:false", body)
+	}
+}
+
+// A host the HTTP client cannot send to is not the broker, however it is
+// spelled. "//openrouter.ai/api" parses with the right hostname and no scheme.
+func TestOnlyASendableOpenRouterURLCountsAsTheBroker(t *testing.T) {
+	for url, want := range map[string]bool{
+		"https://openrouter.ai/api":       true,
+		"http://openrouter.ai":            true,
+		"https://gateway.openrouter.ai":   true,
+		"https://OPENROUTER.AI/api":       true,
+		"//openrouter.ai/api":             false,
+		"openrouter.ai/api":               false,
+		"ftp://openrouter.ai":             false,
+		"https://openrouter.ai.evil.test": false,
+		"https://api.mistral.ai":          false,
+	} {
+		if got := IsOpenRouterHost(url); got != want {
+			t.Errorf("IsOpenRouterHost(%q) = %v, want %v", url, got, want)
+		}
+	}
+}
+
+// A non-finite threshold fails at ENCODE time, on every request, long after the
+// config booted — json cannot represent NaN or an infinity. Rejecting it at
+// parse turns a per-call failure into a startup one.
+func TestANonFiniteLatencyThresholdIsRefused(t *testing.T) {
+	for name, value := range map[string]float64{
+		"not a number":      math.NaN(),
+		"positive infinity": math.Inf(1),
+		"negative infinity": math.Inf(-1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := (&OpenRouterRouting{PreferredMaxLatencyP90: value}).Validate()
+			if err == nil {
+				t.Fatalf("accepted %g, which no request could then encode", value)
+			}
+			if !strings.Contains(err.Error(), "finite") {
+				t.Errorf("error %q does not say what is wrong with it", err)
 			}
 		})
 	}

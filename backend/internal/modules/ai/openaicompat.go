@@ -148,7 +148,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 	}
 	choice := out.Choices[0]
 	return model.Response{
-		Text:            completionText(choice.Message.Content, choice.Message.Reasoning),
+		Text:            completionText(choice.Message.Content, choice.Message.Reasoning, choice.FinishReason),
 		InputTokens:     out.Usage.PromptTokens,
 		OutputTokens:    out.Usage.CompletionTokens,
 		ReasoningTokens: reasoningWithin(out.Usage.CompletionTokens, out.Usage.CompletionTokensDetails.ReasoningTokens),
@@ -203,12 +203,26 @@ func reasoningWithin(completion, reasoning int) int {
 	return reasoning
 }
 
-func completionText(content, reasoning string) string {
+func completionText(content, reasoning, finishReason string) string {
 	if content != "" {
 		return content
 	}
-	return reasoning
+	// Only when the BUDGET ran out. Empty content has several other causes on
+	// this wire — a tool call, a refusal, a content filter — and in every one
+	// of them the thinking is not a partial answer but a different thing
+	// entirely, so handing it back as the answer would dress a refusal up as a
+	// reply. Those keep their empty text, which is what the caller's own schema
+	// check is there to reject.
+	if finishReason == finishReasonLength {
+		return reasoning
+	}
+	return ""
 }
+
+// finishReasonLength is the stop reason that means the output budget bound
+// before the model was done — the one case where the thinking is all that got
+// generated and is worth handing back.
+const finishReasonLength = "length"
 
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
 func (c *openAICompatClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
@@ -243,8 +257,23 @@ func isFetchableURL(uri string) bool {
 	if err != nil {
 		return false
 	}
-	scheme := strings.ToLower(parsed.Scheme)
-	return (scheme == "https" || scheme == "http") && parsed.Host != ""
+	return sendableHTTPScheme(parsed) && parsed.Host != ""
+}
+
+// sendableHTTPScheme reports whether a parsed URL carries a scheme this
+// package's HTTP client can actually send on.
+//
+// One spelling, two callers: this and IsOpenRouterHost. Both ask the same
+// question for the same reason — a URL without http(s) is not something a
+// request can go out over, whatever else is right about it — and two copies
+// would be two places to forget a scheme.
+func sendableHTTPScheme(parsed *url.URL) bool {
+	switch strings.ToLower(parsed.Scheme) {
+	case "http", "https":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *openAICompatClient) Caps() model.Capabilities {
@@ -402,93 +431,6 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 		return nil, openAICompatError(resp)
 	}
 	return resp.Body, nil
-}
-
-// openAICompatError surfaces the vendor's structured error message only —
-// never the raw response body, which may be unstructured HTML/text — so a logged
-// failure can't echo the request or leak provider internals (the anthropic /
-// openai pattern). Three structured shapes exist on this generic wire: OpenAI's
-// nested {"error":{type,message}}, vLLM's top-level {"object":"error", type,
-// message}, and a broker's {"error":{message,metadata:{raw,provider_name}}};
-// a body that can't be read falls back to the HTTP status.
-//
-// The broker shape is the reason metadata is read at all. A gateway in front of
-// several vendors answers with its OWN message — OpenRouter says "Provider
-// returned error" for everything — and puts the upstream vendor's sentence in
-// metadata.raw. Reading only the outer message produced log lines that named
-// no cause and a build failure the operator could do nothing with.
-func openAICompatError(resp *http.Response) error {
-	var apiErr struct {
-		Type    string `json:"type"`
-		Message string `json:"message"`
-		Error   struct {
-			Type     string `json:"type"`
-			Message  string `json:"message"`
-			Metadata struct {
-				Raw          string `json:"raw"`
-				ProviderName string `json:"provider_name"`
-				LimitSource  string `json:"limit_source"`
-			} `json:"metadata"`
-		} `json:"error"`
-	}
-	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil {
-		if detail := compatErrorDetail(apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
-			return providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
-				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Error.Type, detail, resp.StatusCode))
-		}
-		if apiErr.Message != "" {
-			return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Type, apiErr.Message, resp.StatusCode))
-		}
-	}
-	return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode))
-}
-
-// compatErrorDetail is the sentence worth logging out of a broker's answer.
-//
-// The upstream vendor's own words win when there are any: a broker's outer
-// message is written about ITS call to the vendor, not about the request, so
-// it is the same string whatever went wrong. The vendor is named alongside,
-// because "rate-limited upstream" means nothing without saying whose limit.
-//
-// Both are text a REMOTE party chose, so neither is logged as it arrived.
-// An upstream that echoes a prompt, a URL with a token in it, or its own
-// internals would otherwise write all of it into this installation's logs
-// through a path nothing else guards. Redacted through the same stripper the
-// model payloads use, and capped: a vendor's cause is one sentence, and
-// anything longer is a body that lost its way into a message field.
-func compatErrorDetail(message, upstreamRaw, providerName string) string {
-	upstreamRaw = strings.TrimSpace(upstreamRaw)
-	if upstreamRaw == "" {
-		return safeProviderText(message)
-	}
-	if providerName == "" {
-		return safeProviderText(upstreamRaw)
-	}
-	return safeProviderText(providerName + ": " + upstreamRaw)
-}
-
-// providerTextMax bounds one logged vendor sentence.
-const providerTextMax = 300
-
-// safeProviderText redacts and bounds text a remote provider chose.
-func safeProviderText(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return ""
-	}
-	stripped, _, err := NewSecretStripper().Strip(context.Background(), []byte(text))
-	if err != nil {
-		// The stripper could not vouch for it, so none of it is logged: a
-		// vendor sentence is worth having, never at the price of writing an
-		// unexamined remote string into the log.
-		return "(provider detail withheld)"
-	}
-	text = strings.Join(strings.Fields(string(stripped)), " ")
-	if len(text) > providerTextMax {
-		return text[:providerTextMax] + "…"
-	}
-	return text
 }
 
 // openAICompatStream reads the OpenAI-compatible SSE stream: `data: {...}`

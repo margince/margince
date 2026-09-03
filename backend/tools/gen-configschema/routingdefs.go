@@ -80,7 +80,7 @@ const routingDefsTemplate = `{
         "then": {
           "properties": {
             "provider": { "const": "openai_compatible" },
-            "base_url": { "pattern": "^https?://([^/]*\\.)?openrouter\\.ai(:[0-9]+)?(/|$)" }
+            "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
           },
           "required": ["provider", "base_url"]
         }
