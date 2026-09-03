@@ -327,6 +327,12 @@ var catalog = map[string]struct {
 	"weekly_plan.updated":        {identityStreamEntity, 1},
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
 
+	// A call rides the identity stream because its entity is the AUTHOR. A
+	// forecast is about a pipeline, but a CALL is an assertion by a person and
+	// is attributable to them — a consumer asking "who said this number" is
+	// asking about a user, not about a deal.
+	"forecast.created": {identityStreamEntity, 1},
+
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a
 	// consumer ranking that contact's open work already reads.

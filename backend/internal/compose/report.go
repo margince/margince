@@ -67,10 +67,13 @@ const (
 	// 47% is 4230000000000000016.45, which ÷100 renders as …16.5 and round()
 	// then lifts to …17, one minor unit above the exactly-rounded …16.
 	//
-	// The account roll-up computes the same figure in Go (weightedValue, in
-	// orgrollup.go), over converted per-deal amounts it holds in memory with no
+	// Every Go caller computes the same figure through deals.WeightedValue —
+	// the account roll-up over per-deal amounts it holds in memory, and a
+	// forecast snapshot over the deals it freezes — neither of which has an
 	// aggregate to fold them into. Neither side can become the other: an
 	// aggregate cannot call into Go, and Go cannot make Postgres round for it.
+	// So there are TWO spellings and not three, and the Go one has a single
+	// home.
 	// They are a declared mirror, held in both directions by
 	// TestTheTwoSpellingsOfWeightedValueAgree and
 	// TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit
