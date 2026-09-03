@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/openrouter_cloud.yaml — every lane through the OpenRouter broker.
+#
+# One credential (OPENAI_COMPATIBLE_API_KEY) reaches many vendors, which is the
+# reason to use a broker and also the reason this file spends most of its lines
+# on `routing:`. A broker fronts MANY inference hosts per model — gpt-oss-120b
+# had 21 when this was written — and its own default picks among them weighted by
+# the inverse square of price. One model id then arrives at fp4 on one call and
+# bf16 on the next, with latency to match.
+#
+# Not loaded automatically — see README.md. Copy the `seeds` block into your own
+# config/margince.yaml, or:
+#
+#     make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
+#       JUDGE=openai_compatible:mistralai/mistral-large-2512 \
+#       JUDGE_BASE_URL=https://openrouter.ai/api
+#
+# The measurements behind every `routing:` value here, and what was tried and
+# rejected: docs/reference/openrouter.md.
+version: 1
+
+seeds:
+  ai_routing:
+    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    tiers:
+      # base_url is the host root with NO version segment — the adapter appends
+      # /v1. openai_compatible fails closed without one.
+      #
+      # Every tier below omits `routing:`, which means it inherits the product
+      # default: sort: throughput, quantizations: [fp16, bf16],
+      # require_parameters: true — reliability over price. Write `routing: {}` on
+      # a tier to opt out and take the broker's own price-weighted routing
+      # instead; write the block out to say something else.
+      local_small:
+        provider: openai_compatible
+        model: openai/gpt-oss-120b
+        base_url: https://openrouter.ai/api
+      cheap_cloud:
+        provider: openai_compatible
+        model: openai/gpt-oss-120b
+        base_url: https://openrouter.ai/api
+      premium:
+        provider: openai_compatible
+        model: mistralai/mistral-large-2512
+        base_url: https://openrouter.ai/api
+        # Two endpoints, both first-party Mistral, so there is no lottery to
+        # lose here and nothing for a sort to choose between. Stated rather than
+        # inherited so a reader is not left wondering why this tier looks
+        # different: the default would be harmless and would also be noise.
+        routing: {}
+      frontier:
+        provider: openai_compatible
+        model: anthropic/claude-sonnet-4.6
+        base_url: https://openrouter.ai/api
+        routing:
+          # A frontier answer is worth waiting for, so this tier does not sort
+          # for speed. What it does refuse is a quantized serving of a model
+          # bound for its quality.
+          quantizations: [fp16, bf16, fp32]
+          require_parameters: true
+    # The embed lane takes no `routing:` — the parser refuses one. An embedding
+    # is a single forward pass, so it has no latency tail to bound, and no embed
+    # model is served at fp4-versus-bf16 stakes.
+    embeddings:
+      provider: openai_compatible
+      model: mistralai/mistral-embed
+      base_url: https://openrouter.ai/api
+      dimensions: 1024

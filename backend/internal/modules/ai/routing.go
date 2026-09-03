@@ -198,11 +198,44 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	} else if d == 0 {
 		cfg.Embeddings.Dimensions = defaultEmbedDimensions
 	}
+	// Before validate() and before the digest: the default is part of the
+	// BINDING, so a config that inherited it and one that wrote it out by hand
+	// must hash the same. Defaulting after the digest would make the two
+	// different configs to every cache key and trace that reads it.
+	cfg.applyUpstreamDefaults()
 	if err := cfg.validate(); err != nil {
 		return RoutingConfig{}, err
 	}
 	cfg.sourceHash = cfg.bindingDigest()
 	return cfg, nil
+}
+
+// applyUpstreamDefaults gives every broker binding that declared no upstream
+// preferences the product default, which is reliability over price.
+//
+// Only a binding whose base_url names the broker: these are its parameters, and
+// a direct vendor on the same OpenAI wire would be sent fields it never asked
+// for. Only an ABSENT declaration, never an empty one — `routing: {}` is an
+// operator saying "the broker's own routing, please", and overwriting that with
+// a default would make the opt-out unwritable.
+//
+// The embeddings lane is left alone deliberately. Its calls are one forward
+// pass each, so the tail this default exists to remove is not a thing that
+// happens there, and no embedding model is served at fp4-versus-bf16 stakes.
+func (cfg *RoutingConfig) applyUpstreamDefaults() {
+	for tier, binding := range cfg.Tiers {
+		if binding.Routing != nil || !upstreamPreferencesApply(binding) {
+			continue
+		}
+		binding.Routing = DefaultOpenRouterRouting()
+		cfg.Tiers[tier] = binding
+	}
+}
+
+// upstreamPreferencesApply reports whether a binding is the broker case that
+// upstream-selection preferences describe.
+func upstreamPreferencesApply(binding ProviderConfig) bool {
+	return binding.Provider == providerOpenAICompatible && IsOpenRouterHost(binding.BaseURL)
 }
 
 // FromStored finalizes a binding read back from the settings store and binds
@@ -296,6 +329,9 @@ func (cfg RoutingConfig) validate() error {
 		if err := ValidateTierBinding(cfg.Profile, tier, binding); err != nil {
 			return err
 		}
+		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
+			return err
+		}
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
@@ -306,6 +342,9 @@ func (cfg RoutingConfig) validate() error {
 	// — refuse it here, where the parser is the gate. The generated schema omits
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
+	if cfg.Embeddings.Routing != nil {
+		return fmt.Errorf("ai: routing config: the embeddings lane takes no `routing` — upstream selection bounds a completion's tail, and an embedding is one forward pass; declare it on the chat tier that needs it")
+	}
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
 	}
@@ -454,4 +493,31 @@ func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, er
 		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
 	}
 	return clients, embedder, nil
+}
+
+// validateUpstreamPreferences refuses a `routing:` block on a binding that
+// cannot honour it, and refuses a value the broker would silently ignore.
+//
+// Refused rather than dropped, because dropping is what the broker itself does
+// with an unknown preference: a deployment would then run price-weighted while
+// its config file said `sort: throughput`, and the only symptom would be the
+// latency the setting was written to remove. An operator who wrote the block
+// gets told which of the two reasons it cannot apply — the provider or the host
+// — because those are different edits.
+func validateUpstreamPreferences(tier string, binding ProviderConfig) error {
+	if binding.Routing == nil {
+		return nil
+	}
+	if binding.Provider != providerOpenAICompatible {
+		return fmt.Errorf("ai: routing config: tier %s: `routing` is upstream selection for a broker and provider %s serves one model from one host; remove the block",
+			tier, binding.Provider)
+	}
+	if !IsOpenRouterHost(binding.BaseURL) {
+		return fmt.Errorf("ai: routing config: tier %s: `routing` names OpenRouter's own upstream-selection fields and base_url %q is not an OpenRouter host; remove the block, or point the binding at the broker",
+			tier, binding.BaseURL)
+	}
+	if err := binding.Routing.validate(); err != nil {
+		return fmt.Errorf("%w (tier %s)", err, tier)
+	}
+	return nil
 }

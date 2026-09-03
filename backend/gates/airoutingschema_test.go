@@ -134,3 +134,80 @@ func TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration(t *testing.T) {
 		})
 	}
 }
+
+// The `routing:` block's acceptance matrix, asserted against the editor's
+// authority and the runtime's together.
+//
+// Same rule as `input:` above — the two may differ in the MESSAGE and never in
+// the ANSWER. It matters more here than for most fields because the block's
+// legality depends on TWO other keys (provider and base_url), and a schema that
+// green-lit it on a direct vendor would send an operator to write something the
+// parser refuses at boot.
+//
+// Held by: TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration (backend/gates/airoutingschema_test.go) — this test.
+func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.T) {
+	t.Parallel()
+	sch := compiledRoutingSchema(t)
+
+	const broker = "provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'"
+	tiered := func(binding string) string {
+		return "profile: eu_hosted\ntiers:\n  premium: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+	}
+	for name, tc := range map[string]struct {
+		yaml  string
+		legal bool
+	}{
+		// Omitted entirely: the common case, and the one that inherits the default.
+		"no declaration at all": {tiered(broker), true},
+		// The explicit opt-out. Legal, and distinct from the line above.
+		"an empty declaration": {tiered(broker + ", routing: {}"), true},
+		"the product default": {tiered(broker +
+			", routing: {sort: throughput, quantizations: [fp16, bf16], require_parameters: true}"), true},
+		"a slug allowlist":  {tiered(broker + ", routing: {only: [cerebras]}"), true},
+		"an effort cap":     {tiered(broker + ", routing: {reasoning_effort: low}"), true},
+		"a latency ceiling": {tiered(broker + ", routing: {preferred_max_latency_p90: 8}"), true},
+		"fallbacks off":     {tiered(broker + ", routing: {allow_fallbacks: false}"), true},
+
+		// Values the broker would silently drop, so both halves must refuse them.
+		"an unknown sort":         {tiered(broker + ", routing: {sort: cheapest}"), false},
+		"an unknown quantization": {tiered(broker + ", routing: {quantizations: [fp5]}"), false},
+		"an unknown effort":       {tiered(broker + ", routing: {reasoning_effort: lots}"), false},
+		"an unknown preference":   {tiered(broker + ", routing: {sort_by: price}"), false},
+		// 0 is LEGAL and means unset. Once this binding has round-tripped through
+		// the settings store as JSON a written 0 and an absent key are the same
+		// value, so neither half can refuse one without refusing the other — the
+		// same limit `input:` runs into one field over.
+		"a zero latency ceiling": {tiered(broker + ", routing: {preferred_max_latency_p90: 0}"), true},
+
+		// The block cannot be honoured here: a native vendor fronts one host.
+		"a block on a native vendor": {
+			tiered("provider: gemini, model: m, routing: {sort: throughput}"), false,
+		},
+		// Nor here: these are OpenRouter's own fields.
+		"a block on the wire pointed elsewhere": {
+			tiered("provider: openai_compatible, model: m, base_url: 'https://api.mistral.ai', routing: {sort: throughput}"), false,
+		},
+		// The embeddings lane has no tail to bound.
+		"a block on the embeddings lane": {
+			"profile: eu_hosted\ntiers:\n  premium: {" + broker + "}\n" +
+				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {sort: throughput}}\n", false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var doc any
+			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+				t.Fatalf("test yaml is not yaml: %v", err)
+			}
+			schemaAccepts := sch.Validate(doc) == nil
+			_, parseErr := ai.ParseRouting([]byte(tc.yaml))
+			parserAccepts := parseErr == nil
+
+			if schemaAccepts != tc.legal {
+				t.Errorf("the EDITOR accepts=%v, want %v — an operator is told the wrong thing hours before boot", schemaAccepts, tc.legal)
+			}
+			if parserAccepts != tc.legal {
+				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
+			}
+		})
+	}
+}

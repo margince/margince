@@ -3,6 +3,13 @@
 
 package ai
 
+import (
+	"fmt"
+	"net/url"
+	"slices"
+	"strings"
+)
+
 // OpenRouterRouting is the upstream-selection preferences for a broker on the
 // OpenAI wire.
 //
@@ -18,10 +25,11 @@ package ai
 // These preferences are how a deployment says which trade it wants. They are
 // deliberately NOT yaml-visible yet: the field set that matters is being
 // measured before it becomes a surface an operator can depend on.
-// The json tags are the ENV VAR's spelling, not a config file's: MARGINCE_AICERT_UPSTREAM
-// carries one of these as JSON and refuses unknown keys, so an operator types
-// `reasoning_effort` rather than Go's ReasoningEffort. Without the tags the
-// refusal would reject exactly the snake_case names the reference documents.
+// The yaml and json spellings are deliberately the same string: an operator
+// writes `reasoning_effort` in the routing config, the settings store round-trips
+// the identical key as JSON, and MARGINCE_AICERT_UPSTREAM takes one of these as
+// JSON too. One name per field across all three, so a preference cannot mean a
+// different thing depending on which door it came through.
 type OpenRouterRouting struct {
 	// Only and Ignore are an allowlist and a blocklist of upstream slugs. Both
 	// are HARD filters — an excluded host is removed from the candidate set,
@@ -30,55 +38,72 @@ type OpenRouterRouting struct {
 	//
 	// A base slug matches every variant and region of a host; a full slug
 	// ("deepinfra/turbo") pins one endpoint.
-	Only   []string `json:"only"`
-	Ignore []string `json:"ignore"`
+	Only   []string `yaml:"only" json:"only"`
+	Ignore []string `yaml:"ignore" json:"ignore"`
 	// Quantizations restricts serving precision (bf16, fp16, fp8, fp4, int8 …).
 	// Also a hard filter, and the one that decides whether repeated calls are
 	// COMPARABLE: two answers from the same model id at different precision are
 	// two different models for every purpose except billing.
-	Quantizations []string `json:"quantizations"`
+	Quantizations []string `yaml:"quantizations" json:"quantizations"`
 	// Sort orders candidates by "price", "throughput" or "latency". It reorders
 	// rather than filters, and setting it disables the broker's load balancing
 	// entirely — so it buys a consistent preference at the cost of spreading
 	// load, which is a trade to make deliberately.
-	Sort string `json:"sort"`
+	Sort string `yaml:"sort" json:"sort"`
 	// RequireParameters keeps the request away from hosts that do not support
 	// every parameter it carries. Soft preferences already apply for tools and
 	// response_format, so this is belt-and-braces for a structured-output call
 	// rather than the thing that makes one work — but it turns a preference the
 	// broker may weigh into a guarantee it must honour.
-	RequireParameters bool `json:"require_parameters"`
+	RequireParameters bool `yaml:"require_parameters" json:"require_parameters"`
 	// AllowFallbacks, when non-nil, overrides the broker's default of switching
 	// hosts on failure. A pointer because false is a real choice and the zero
 	// value must not be mistaken for it: turning fallbacks off trades
 	// availability for the certainty of being served by one host, which only a
 	// compliance rule or a measurement run should ask for.
-	AllowFallbacks *bool `json:"allow_fallbacks"`
+	AllowFallbacks *bool `yaml:"allow_fallbacks" json:"allow_fallbacks"`
 	// PreferredMaxLatencyP90 deprioritizes hosts whose 90th-percentile latency
 	// over a rolling five-minute window exceeds this many seconds. SOFT: a host
 	// past the threshold is moved down the list, never removed, so this alone
 	// cannot bound the tail — pair it with Only or Quantizations when the tail
 	// is what matters. 0 leaves it unset.
-	PreferredMaxLatencyP90 float64 `json:"preferred_max_latency_p90"`
+	PreferredMaxLatencyP90 float64 `yaml:"preferred_max_latency_p90" json:"preferred_max_latency_p90"`
 	// ReasoningEffort caps a reasoning model's thinking budget ("none",
 	// "minimal", "low", "medium", "high", "xhigh", "max"). Unset means each
 	// host applies its OWN default, which is why it belongs here: thinking is
 	// charged to the same output budget as the answer, so an uncontrolled
 	// default varies cost, latency and — when it exhausts the budget before the
 	// answer starts — whether there is an answer at all.
-	ReasoningEffort string `json:"reasoning_effort"`
+	ReasoningEffort string `yaml:"reasoning_effort" json:"reasoning_effort"`
 }
 
-// empty reports whether these preferences would add nothing to a request, so
-// the wire carries no `provider` object at all rather than an object of
-// defaults that would disable load balancing by accident.
-func (r *OpenRouterRouting) empty() bool {
+// providerBlockEmpty reports whether these preferences would add nothing to the
+// request's `provider` object, so the wire carries no such object at all rather
+// than an object of defaults that would disable load balancing by accident.
+//
+// Not the same question as IsEmpty: ReasoningEffort is a preference and is
+// deliberately not counted here, because it travels in its own `reasoning`
+// block. A binding that caps thinking and says nothing about upstream selection
+// must send the second block and not the first.
+func (r *OpenRouterRouting) providerBlockEmpty() bool {
 	if r == nil {
 		return true
 	}
 	return len(r.Only) == 0 && len(r.Ignore) == 0 && len(r.Quantizations) == 0 &&
 		r.Sort == "" && !r.RequireParameters && r.AllowFallbacks == nil &&
 		r.PreferredMaxLatencyP90 == 0
+}
+
+// IsEmpty reports whether an operator wrote a declaration that asks for
+// nothing — `routing: {}`, the explicit opt-out that takes the broker's own
+// price-weighted routing.
+//
+// A method rather than a comparison against the zero value because the struct
+// holds slices and so is not comparable, and because the answer is a product
+// question ("did they opt out?") that should have one spelling rather than
+// being re-derived field by field at each call site.
+func (r *OpenRouterRouting) IsEmpty() bool {
+	return r.providerBlockEmpty() && (r == nil || r.ReasoningEffort == "")
 }
 
 // openAICompatProviderWire is the broker's `provider` object. Every field is
@@ -107,7 +132,7 @@ type openAICompatReasoningWire struct {
 // providerWire renders the `provider` object, or nil when these preferences
 // would say nothing.
 func (r *OpenRouterRouting) providerWire() *openAICompatProviderWire {
-	if r.empty() {
+	if r.providerBlockEmpty() {
 		return nil
 	}
 	wire := &openAICompatProviderWire{
@@ -127,4 +152,126 @@ func (r *OpenRouterRouting) reasoningWire() *openAICompatReasoningWire {
 		return nil
 	}
 	return &openAICompatReasoningWire{Effort: r.ReasoningEffort}
+}
+
+// openRouterHost is the broker these preferences belong to.
+//
+// They are its parameters, not a general OpenAI-wire feature: `provider` and
+// `quantizations` are fields it invented, and no vendor is obliged to ignore an
+// unknown top-level key politely. The openai_compatible binding also serves
+// direct vendors — a Mistral or a Together endpoint named by base_url — so the
+// preferences are keyed on the HOST rather than on the provider name, and a
+// binding pointed somewhere else neither receives them nor may declare them.
+const openRouterHost = "openrouter.ai"
+
+// IsOpenRouterHost reports whether baseURL names the broker whose
+// upstream-selection preferences OpenRouterRouting describes.
+//
+// Parsed rather than substring-matched: a substring test would accept
+// "openrouter.ai.evil.test" as the broker and send it a config it never asked
+// for, and would miss a legitimate "https://OPENROUTER.AI" that URLs are
+// case-insensitive in.
+func IsOpenRouterHost(baseURL string) bool {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	return host == openRouterHost || strings.HasSuffix(host, "."+openRouterHost)
+}
+
+// DefaultOpenRouterRouting is what a broker binding gets when it declares no
+// preferences of its own: reliability first, price second.
+//
+// The broker's own default is the opposite — it skips hosts that failed in the
+// last 30 seconds and then weights by the INVERSE SQUARE of price, so the
+// cheapest eligible host wins most calls. For a model served by 21 hosts that
+// makes latency and answer quality a per-request lottery. Measured on this
+// tree's certification corpus on 2026-09-02, unpinned against these three
+// preferences, gpt-oss-120b on draft_reply: p50 19.0s → 1.1s, p90 38.0s → 2.0s,
+// p99 304.2s → 3.7s, hosts reached 8 → 1, and the repeats of 8 of 9 scenarios
+// stopped being split across different hosts. cold_start moved the same way.
+// The full measurement is docs/reference/openrouter.md.
+//
+// Why these three and not the faster ones the same experiment found:
+//
+//   - sort: throughput is the lever. It is what collapses the tail; the other
+//     two change almost nothing while it is set.
+//   - quantizations pins SERVING PRECISION, which is what makes repeated calls
+//     comparable at all — two answers from one model id at fp4 and at bf16 are
+//     two different models for every purpose except billing. It buys nothing
+//     measurable today and exists for the day the fastest host drops out, when
+//     the sort would otherwise fall to an fp4 host and answer quality would
+//     shift with nothing to show it.
+//   - require_parameters keeps a structured-output request away from a host that
+//     cannot honour response_format. A soft preference already covers this most
+//     of the time; this makes it a rule.
+//
+// Deliberately absent: max_price, whose measured p99 was 387 seconds because a
+// price ceiling cannot exclude what the sort then prefers;
+// preferred_max_latency, which only reorders and cannot bound a tail; only/
+// ignore, which pin by slug and throw away the failover breadth that survives
+// here; and reasoning_effort, which halves latency and cost and costs a fifth
+// of the certification score, so it belongs on a task that wants throughput and
+// not in a drafting default. allow_fallbacks is left unset so the broker's own
+// true stands: pinning the sort is not a reason to stop failing over.
+func DefaultOpenRouterRouting() *OpenRouterRouting {
+	return &OpenRouterRouting{
+		Sort:              SortThroughput,
+		Quantizations:     []string{"fp16", "bf16"},
+		RequireParameters: true,
+	}
+}
+
+// The sort orders the broker accepts. Named because two of them are traps a
+// config could otherwise reach for: price is what the unpinned default already
+// effectively does, and latency measured worse than throughput here (it reached
+// Groq where throughput reached Cerebras).
+const (
+	SortThroughput = "throughput"
+	SortPrice      = "price"
+	SortLatency    = "latency"
+)
+
+// sortOrders and quantizationLevels are the accepted vocabularies, checked at
+// parse time so a typo fails at boot rather than being dropped in silence by a
+// broker that treats an unknown value as no value.
+var (
+	sortOrders = []string{SortThroughput, SortPrice, SortLatency}
+	// The broker's published levels. `unknown` is one of them and is accepted:
+	// several hosts genuinely report it, and refusing it would make a filter
+	// that admits them unwritable.
+	quantizationLevels = []string{
+		"int4", "int8", "fp4", "mxfp4", "nvfp4", "fp6", "fp8", "mxfp8",
+		"fp16", "bf16", "fp32", "unknown",
+	}
+	// The effort levels the broker accepts, hardest first.
+	reasoningEfforts = []string{"max", "xhigh", "high", "medium", "low", "minimal", "none"}
+)
+
+// validate refuses a preference the broker would silently ignore.
+//
+// Silence is the whole reason this exists: an unknown sort or quantization is
+// dropped rather than rejected upstream, so a deployment would run with the
+// price-weighted default while its config file said otherwise — and the only
+// symptom would be the latency this default exists to remove.
+func (r *OpenRouterRouting) validate() error {
+	if r == nil {
+		return nil
+	}
+	if r.Sort != "" && !slices.Contains(sortOrders, r.Sort) {
+		return fmt.Errorf("ai: routing config: sort %q is not one of %s", r.Sort, strings.Join(sortOrders, " | "))
+	}
+	for _, q := range r.Quantizations {
+		if !slices.Contains(quantizationLevels, q) {
+			return fmt.Errorf("ai: routing config: quantization %q is not one of %s", q, strings.Join(quantizationLevels, " | "))
+		}
+	}
+	if r.ReasoningEffort != "" && !slices.Contains(reasoningEfforts, r.ReasoningEffort) {
+		return fmt.Errorf("ai: routing config: reasoning_effort %q is not one of %s", r.ReasoningEffort, strings.Join(reasoningEfforts, " | "))
+	}
+	if r.PreferredMaxLatencyP90 < 0 {
+		return fmt.Errorf("ai: routing config: preferred_max_latency_p90 %g is negative", r.PreferredMaxLatencyP90)
+	}
+	return nil
 }

@@ -31,17 +31,26 @@ type ProviderConfig struct {
 	// Nil — the common case — means the provider's own answer: text-only on the
 	// two OpenAI-wire providers, whatever the wire carries on the rest.
 	Input []string `yaml:"input" json:"input,omitempty"`
-	// Routing is the broker's upstream-selection preferences, and applies only
-	// to openai_compatible — the one binding that may sit in front of many
-	// inference hosts rather than one.
+	// Routing is the broker's upstream-selection preferences. It applies only to
+	// an openai_compatible binding pointed at OpenRouter — the one case where a
+	// binding sits in front of many inference hosts rather than one — and the
+	// parser refuses it anywhere else rather than sending a vendor fields it
+	// never asked for.
 	//
-	// Untagged for both yaml and json on purpose. The preferences are real and
-	// the adapter sends them, but which ones a deployment should carry is being
-	// MEASURED before it becomes an operator-facing surface: a config field is
-	// a promise to keep supporting that exact field set, and a promise made
-	// before the measurement is a promise made on a guess. The cert lane
-	// populates it programmatically until then.
-	Routing *OpenRouterRouting `yaml:"-" json:"-"`
+	// Three states, and the difference between the last two is the point:
+	//
+	//   absent      → the product default (DefaultOpenRouterRouting), which is
+	//                 reliability over price
+	//   routing: {} → explicitly no preferences: the broker's own price-weighted
+	//                 routing, which is what this binding did before the default
+	//                 existed
+	//   routing: {…} → exactly what is written
+	//
+	// A pointer rather than a value so those three stay distinguishable, and
+	// distinguishable through the settings store too: an omitted key and a
+	// written `{}` are different JSON, so the round trip preserves the operator's
+	// choice instead of quietly re-defaulting an opt-out on the next read.
+	Routing *OpenRouterRouting `yaml:"routing" json:"routing,omitempty"`
 }
 
 // Provider defaults. The Anthropic URL is the vendor's public API; a
