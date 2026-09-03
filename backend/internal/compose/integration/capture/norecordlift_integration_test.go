@@ -71,3 +71,45 @@ func TestASuppressedSendersHoldSurvivesBeingFiled(t *testing.T) {
 			"the hold is about who sent it, and a link says nothing about that", got, reason)
 	}
 }
+
+// The reason the two holds are separate words rather than one word read two
+// ways: a MEETING can carry a judged hold too.
+//
+// The sink admits a record by its counterparty SHAPE, never by its kind
+// (capture.Sink.Upsert), so a meeting-shaped record arriving with a mail
+// counterparty reaches the same ladder mail does — the private-thread branch
+// and the suppression registry included. Such a meeting is held for a real
+// reason about a real person, and telling it apart from a structurally
+// counterparty-less one by KIND would open exactly that message the moment
+// anything filed it.
+//
+// This drives the recompute against a row stamped the way that ladder stamps
+// one, which is the state the two paths differ on.
+func TestAJudgedHoldSurvivesBeingFiledWhateverTheKind(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+
+	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "judged-meeting@docusign.net", ""))
+	activityID := oneActivityID(t, e)
+
+	// The same row, wearing the kind a calendar connector writes. The hold on
+	// it was placed by a judgement about its sender, and that is what the
+	// reason records.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("restating the activity as a meeting: %v", err)
+	}
+	filedUnder := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by)
+		VALUES ($1, 'Someone', 'manual', 'human:x')`)
+	fileUnder(t, e, activityID, filedUnder)
+
+	recompute(t, e, activityID)
+	got, reason := audienceOf(t, e, activityID)
+	if got != "participants" || reason != activities.ReasonNoRecord {
+		t.Fatalf("a judged hold on a meeting-kind row opened when it was filed: audience %q reason %q — "+
+			"the kind says nothing about whether somebody was judged", got, reason)
+	}
+}

@@ -60,13 +60,19 @@ const (
 	// verdict for the same reason a counterparty hold does — a person marked
 	// this message, and a classifier disagreeing does not unmark it.
 	ReasonConfidentialMarker = "explicitly_confidential"
-	// ReasonNoRecord: the message is filed under no record, so nobody outside
-	// the people on it has a reason to read it. Written by the capture ladder
-	// rather than derived here, and carried through every recompute — with one
-	// exception, which is a MEETING that has since been filed under a record.
-	// noRecordHoldStands says why that one is not a judgement about a sender
-	// the way every other no-record outcome is.
+	// ReasonNoRecord: the message is filed under no record because something
+	// JUDGED its sender — a suppression rule, a settled verdict, a thread the
+	// owner's own. Written by the capture ladder rather than derived here, and
+	// carried through every recompute: a link arriving later says nothing about
+	// a judgement that was never about the filing.
 	ReasonNoRecord = "no_record"
+	// ReasonNoCounterparty: the message named nobody a record could be created
+	// FOR. The calendar case — attendance is a list, so the mapper leaves the
+	// counterparty unset and the ladder concludes it named nobody. No judgement
+	// was made about anyone, so this hold means only "nothing has filed it
+	// yet", and it stops being true the moment something does. That is the one
+	// row-carried hold a link lifts, and noRecordHoldStands is where it does.
+	ReasonNoCounterparty = "no_counterparty"
 )
 
 // audienceRank orders the audiences from most open to most closed. The
@@ -194,7 +200,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// only record of the durable hold, and the message opens the moment that
 	// mailbox's verdict clears.
 	held, why := rowCarriedHold(stored, storedReason)
-	if held && why == ReasonNoRecord {
+	if held && why == ReasonNoCounterparty {
 		stands, err := noRecordHoldStands(ctx, tx, activityID)
 		if err != nil {
 			return err
@@ -289,53 +295,42 @@ func rowCarriedHold(stored string, storedReason *string) (bool, string) {
 		return false, ""
 	}
 	switch why := deref(storedReason); why {
-	case ReasonNoRecord, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker:
+	case ReasonNoRecord, ReasonNoCounterparty, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker:
 		return true, why
 	}
 	return false, ""
 }
 
-// noRecordHoldStands answers whether a `no_record` hold is still the truth.
+// noRecordHoldStands answers whether a "named nobody" hold is still the truth.
 //
-// It is one question about ONE kind, and the narrowness is the whole design.
-// `no_record` reads like "this row has no link", and it is not: the capture
-// ladder writes it only on a TERMINAL no-record outcome (capture's
-// limitLinkLessAudience), which covers a suppressed newsletter, a role mailbox,
-// a sender a prior `noise` verdict settled, and a thread judged the mailbox
-// owner's private life. Every one of those is a decision about the SENDER, and
-// a link can arrive on such a row long afterwards — a project attribution, a
-// hand relink, a cohort promotion. Lifting on the presence of a link would
-// republish a mailbox owner's private correspondence to the whole workspace,
-// which is the exact disclosure the hold exists to prevent.
+// It asks ONE question — has anything filed this row yet — and it is asked only
+// of ReasonNoCounterparty, which is the hold capture writes when a record named
+// nobody a contact could be created FOR. A calendar meeting is that case:
+// attendance is a list, the mapper leaves the counterparty unset, and the
+// limiter holds a row whose only defect is that nothing had filed it.
 //
-// A MEETING reached that ladder for a different reason, and not a judgement at
-// all: attendance is a list, so the calendar mapper leaves the counterparty
-// unset, the tiered gate concludes "captured, named nobody", and the limiter
-// holds a record whose only defect is that nothing had filed it yet. When the
-// cohort repair later files it under the person who attended, the premise is
-// simply gone — and until this probe existed the row stayed held forever, so
-// the meeting on a colleague's page was invisible to everyone but its
-// attendees while the invitation EMAILS beside it were workspace-readable.
+// It is deliberately NOT asked of ReasonNoRecord. That reason records a
+// judgement about a SENDER — a suppression rule, a settled verdict, a thread
+// the mailbox owner's own — and a link arriving afterwards says nothing about
+// it. The two were one reason until this probe needed to tell them apart, and
+// telling them apart by KIND was the mistake worth naming: a meeting-shaped
+// record can carry a mail counterparty (the sink admits by counterparty shape,
+// never by kind), reach the private-thread or suppression branch, and be held
+// for a real reason. Inferring "structural" from kind would have opened exactly
+// that message.
 //
 // Answering false only removes the row-carried hold; the derivation over the
 // import rows still decides, and a seat's own posture or verdict still holds
 // the row if one asks for it.
 func noRecordHoldStands(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (bool, error) {
-	var filedMeeting bool
+	var filed bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		    SELECT 1 FROM activity a
-		     WHERE a.id = $1 AND a.kind = $2
-		       AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id))`,
-		activityID, kindMeeting).Scan(&filedMeeting); err != nil {
-		return false, fmt.Errorf("activities: asking whether %s is a filed meeting: %w", activityID, err)
+		SELECT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1)`,
+		activityID).Scan(&filed); err != nil {
+		return false, fmt.Errorf("activities: asking whether %s is filed anywhere: %w", activityID, err)
 	}
-	return !filedMeeting, nil
+	return !filed, nil
 }
-
-// kindMeeting is the activity kind a calendar connector writes, and the one
-// kind whose no-record hold is liftable — see noRecordHoldStands.
-const kindMeeting = "meeting"
 
 // contributionOf answers what ONE importing seat's row asks of the audience.
 //

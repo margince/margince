@@ -175,9 +175,9 @@ func TestACapturedMeetingWithNoKnownAttendeeStaysHeld(t *testing.T) {
 	if len(linked) != 0 {
 		t.Fatalf("meeting filed under %v, want nothing — no attendee has a record, and an invite does not create one", linked)
 	}
-	if audience != "participants" || reason == nil || *reason != "no_record" {
-		t.Errorf("meeting born audience=%q reason=%v, want participants/no_record — a meeting filed under nothing is still held to the people on it",
-			audience, reason)
+	if audience != "participants" || reason == nil || *reason != activities.ReasonNoCounterparty {
+		t.Errorf("meeting born audience=%q reason=%v, want participants/%s — a meeting filed under nothing is still held to the people on it",
+			audience, reason, activities.ReasonNoCounterparty)
 	}
 	var persons int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -216,7 +216,7 @@ func TestAMeetingFiledLaterStopsBeingHeld(t *testing.T) {
 
 	activity := syncOneGcalMeeting(t, e)
 	if _, _, audience, reason := meetingFiling(t, e, activity); audience != "participants" ||
-		reason == nil || *reason != "no_record" {
+		reason == nil || *reason != activities.ReasonNoCounterparty {
 		t.Fatalf("the meeting was not born held: audience=%q reason=%v", audience, reason)
 	}
 

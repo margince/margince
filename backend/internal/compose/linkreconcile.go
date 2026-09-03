@@ -148,8 +148,8 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 // empty and never delays the repair above it.
 const liftFiledMeetingHoldsPerTick = 200
 
-// liftFiledMeetingHolds re-derives the audience of meetings that are filed under
-// a record and still carry the capture limiter's no-record hold.
+// liftFiledMeetingHolds re-derives the audience of records that are filed under
+// something and still carry the limiter's "named nobody" hold.
 //
 // These are the rows this change would otherwise leave behind. A meeting
 // captured before its attendee was a contact was held to its participants, the
@@ -157,6 +157,9 @@ const liftFiledMeetingHoldsPerTick = 200
 // question — so the meeting on a colleague's page stayed invisible to everyone
 // but the people on the invitation, while the invitation EMAILS beside it were
 // workspace-readable.
+//
+// ReasonNoCounterparty only. A judged sender's hold (ReasonNoRecord) is not
+// this pass's to touch however the row is filed.
 //
 // It drains permanently: the recompute rewrites the reason on every row it
 // selects, so a row worked once cannot match again, and afterwards the same
@@ -167,14 +170,18 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (int, e
 		rows, err := tx.Query(ctx, `
 			SELECT a.id
 			  FROM activity a
-			 WHERE a.kind = 'meeting'
-			   AND a.audience = 'participants'
+			 WHERE a.audience = 'participants'
 			   AND a.audience_reason = $1
 			   AND a.restricted_at IS NULL
 			   AND a.archived_at IS NULL
 			   AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
+			   -- A row with no import rows is not a captured row, and the
+			   -- recompute leaves it alone. Selecting one would return it every
+			   -- tick, and a full page of them would starve the rows this can
+			   -- actually repair.
+			   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)
 			 ORDER BY a.occurred_at DESC, a.id
-			 LIMIT $2`, activities.ReasonNoRecord, liftFiledMeetingHoldsPerTick)
+			 LIMIT $2`, activities.ReasonNoCounterparty, liftFiledMeetingHoldsPerTick)
 		if err != nil {
 			return fmt.Errorf("selecting the filed meetings still held: %w", err)
 		}

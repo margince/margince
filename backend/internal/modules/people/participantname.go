@@ -20,9 +20,11 @@ package people
 // human typed.
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -159,11 +161,18 @@ func fillPersonNameFromAttendance(ctx context.Context, tx pgx.Tx, personID ids.P
 // cohorts, and every fixture is nil until it says otherwise. The ids are the
 // ones the caller actually linked — never a scan — so a pass that filed nothing
 // costs nothing.
+// Ordered by id, and that is a LOCK order rather than tidiness. The link insert
+// above took a key-share lock on each activity through the foreign key, and the
+// recompute upgrades the same rows to FOR UPDATE — so two promotions running for
+// two attendees of the same meetings would deadlock if they upgraded in
+// different orders. Sorting makes that order the same for every caller.
 func (s *Store) rederiveAudiences(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
 	if s.recomputeAudience == nil {
 		return nil
 	}
-	for _, id := range activityIDs {
+	ordered := slices.Clone(activityIDs)
+	slices.SortFunc(ordered, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
+	for _, id := range ordered {
 		if err := s.recomputeAudience(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
 			return fmt.Errorf("people: re-deriving the audience of %s after filing it: %w", id, err)
 		}
