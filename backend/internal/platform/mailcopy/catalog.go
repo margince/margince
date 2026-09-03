@@ -131,6 +131,17 @@ func weeklyLines(line writeLine) {
 		"You decided",
 		"Von dir entschieden",
 		"Bạn đã quyết")
+	weeklyDecisionLines(line)
+}
+
+// weeklyDecisionLines is the retrospective's second half: what the reader did
+// with their queue, and how each thing turned out.
+//
+// Split from weeklyLines, which had grown past the function ceiling. The seam
+// is the one the mail itself has — the top of the message reports the week's
+// numbers, and from here down it reports the reader's own decisions — so the
+// two are edited for different reasons and read as two blocks on the page.
+func weeklyDecisionLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyYes },
 		"yes",
 		"ja",

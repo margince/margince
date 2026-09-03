@@ -44,6 +44,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -60,7 +61,16 @@ type CohortPromoteGen struct {
 
 // NewCohortPromoteGen builds the repair consumer over the people store.
 func NewCohortPromoteGen(pool *pgxpool.Pool, store *people.Store, log *slog.Logger) *CohortPromoteGen {
-	return &CohortPromoteGen{pool: pool, store: store, log: log}
+	// The audience derivation is applied HERE rather than asked of the caller.
+	// This consumer's whole job is the cohort repair, and that repair files
+	// captured meetings under the people it resolves; a caller handing over a
+	// bare store would leave every meeting it filed held to its participants
+	// forever, and nothing about the call would look wrong.
+	return &CohortPromoteGen{
+		pool:  pool,
+		store: store.WithAudienceRecompute(activities.RecomputeAudienceTx),
+		log:   log,
+	}
 }
 
 // HandleEvent routes one envelope to a repair pass. An event this consumer does

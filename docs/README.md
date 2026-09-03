@@ -102,6 +102,7 @@ budget rather than keeping its own list of which pages are generated.
 - [gate-patterns.md](reference/gate-patterns.md) — the eight shapes a fitness gate comes in, how strong each can be, and how each one silently passes. Read it before writing a gate: [principles/derive-the-obligation.md](principles/derive-the-obligation.md) is the method, this is the menu.
 - [gate-inventory.md](reference/gate-inventory.md) — every gate in `backend/`, grouped by shape, with what it holds. Generated from the `//gate:kind` line each gate declares in its own file, never hand-edited.
 - [configuration.md](reference/configuration.md) — every binary flag and environment variable.
+- [openrouter.md](reference/openrouter.md) — the broker's upstream selection: why a model id served by 21 hosts makes latency and answer quality a per-request lottery, the `routing:` default this product ships against that (reliability over price, the inverse of the broker's own), which preferences are hard filters and which only reorder, and the 2026-09-02 measurements behind each choice — including the one that was 17× faster and would have cost a fifth of the certification score.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 

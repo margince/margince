@@ -832,6 +832,72 @@ func (e AiUsageBudgetBand) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsFilterOp.
+const (
+	AnalyticsOpEq        AnalyticsFilterOp = "eq"
+	AnalyticsOpGt        AnalyticsFilterOp = "gt"
+	AnalyticsOpGte       AnalyticsFilterOp = "gte"
+	AnalyticsOpIsNotNull AnalyticsFilterOp = "is_not_null"
+	AnalyticsOpIsNull    AnalyticsFilterOp = "is_null"
+	AnalyticsOpLt        AnalyticsFilterOp = "lt"
+	AnalyticsOpLte       AnalyticsFilterOp = "lte"
+	AnalyticsOpNe        AnalyticsFilterOp = "ne"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsFilterOp enum.
+func (e AnalyticsFilterOp) Valid() bool {
+	switch e {
+	case AnalyticsOpEq:
+		return true
+	case AnalyticsOpGt:
+		return true
+	case AnalyticsOpGte:
+		return true
+	case AnalyticsOpIsNotNull:
+		return true
+	case AnalyticsOpIsNull:
+		return true
+	case AnalyticsOpLt:
+		return true
+	case AnalyticsOpLte:
+		return true
+	case AnalyticsOpNe:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsMeasureFn.
+const (
+	AnalyticsAvg           AnalyticsMeasureFn = "avg"
+	AnalyticsCount         AnalyticsMeasureFn = "count"
+	AnalyticsCountDistinct AnalyticsMeasureFn = "count_distinct"
+	AnalyticsMax           AnalyticsMeasureFn = "max"
+	AnalyticsMin           AnalyticsMeasureFn = "min"
+	AnalyticsSum           AnalyticsMeasureFn = "sum"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsMeasureFn enum.
+func (e AnalyticsMeasureFn) Valid() bool {
+	switch e {
+	case AnalyticsAvg:
+		return true
+	case AnalyticsCount:
+		return true
+	case AnalyticsCountDistinct:
+		return true
+	case AnalyticsMax:
+		return true
+	case AnalyticsMin:
+		return true
+	case AnalyticsSum:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyTagRequestEntityType.
 const (
 	ApplyTagRequestEntityTypeDeal         ApplyTagRequestEntityType = "deal"
@@ -1471,6 +1537,30 @@ func (e AttentionPairEvidenceSignal) Valid() bool {
 	case ExactConflict:
 		return true
 	case OneSided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionRelationshipFactsStrength.
+const (
+	AttentionRelationshipFactsStrengthModerate AttentionRelationshipFactsStrength = "moderate"
+	AttentionRelationshipFactsStrengthNone     AttentionRelationshipFactsStrength = "none"
+	AttentionRelationshipFactsStrengthStrong   AttentionRelationshipFactsStrength = "strong"
+	AttentionRelationshipFactsStrengthWeak     AttentionRelationshipFactsStrength = "weak"
+)
+
+// Valid indicates whether the value is a known member of the AttentionRelationshipFactsStrength enum.
+func (e AttentionRelationshipFactsStrength) Valid() bool {
+	switch e {
+	case AttentionRelationshipFactsStrengthModerate:
+		return true
+	case AttentionRelationshipFactsStrengthNone:
+		return true
+	case AttentionRelationshipFactsStrengthStrong:
+		return true
+	case AttentionRelationshipFactsStrengthWeak:
 		return true
 	default:
 		return false
@@ -11115,22 +11205,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber TagDetailColor = "amber"
+	TagDetailColorRose  TagDetailColor = "rose"
+	TagDetailColorSlate TagDetailColor = "slate"
+	TagDetailColorTeal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
 	default:
 		return false
@@ -15956,6 +16046,110 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
+// AnalyticsAnswer defines model for AnalyticsAnswer.
+type AnalyticsAnswer struct {
+	// Columns What each value in a row means, in order.
+	Columns []string `json:"columns"`
+
+	// Rows One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// SchemaVersion The vocabulary this was asked in.
+	SchemaVersion string `json:"schema_version"`
+
+	// TotalSafe Whether a total over these rows may be shown. False once anything is withheld, because the total minus the shown groups is the withheld remainder.
+	TotalSafe bool `json:"total_safe"`
+
+	// Withheld Whether anything was kept back. A boolean and never a count: a count of what somebody may not see states how much of it there is.
+	Withheld bool `json:"withheld"`
+}
+
+// AnalyticsEntity defines model for AnalyticsEntity.
+type AnalyticsEntity struct {
+	// GroupBy The fields this population can be grouped by.
+	GroupBy []string `json:"group_by"`
+
+	// Measures The fields this population can be aggregated over.
+	Measures []string `json:"measures"`
+
+	// Name The population, by name.
+	Name string `json:"name"`
+}
+
+// AnalyticsExplainRequest One cell of an answer, named by the question and its group keys.
+type AnalyticsExplainRequest struct {
+	// Group The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
+
+	// Query One question, in the vocabulary the schema returned.
+	Query AnalyticsQuery `json:"query"`
+}
+
+// AnalyticsExplanation defines model for AnalyticsExplanation.
+type AnalyticsExplanation struct {
+	Columns []string `json:"columns"`
+
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.
+	Truncated bool `json:"truncated"`
+
+	// Withheld The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all.
+	Withheld bool `json:"withheld"`
+}
+
+// AnalyticsFilter defines model for AnalyticsFilter.
+type AnalyticsFilter struct {
+	Field string            `json:"field"`
+	Op    AnalyticsFilterOp `json:"op"`
+
+	// Value The value to compare against, bound as a parameter. Omitted exactly for `is_null` and `is_not_null`; given to either, the query is refused rather than having it silently dropped.
+	Value interface{} `json:"value,omitempty"`
+}
+
+// AnalyticsFilterOp defines model for AnalyticsFilter.Op.
+type AnalyticsFilterOp string
+
+// AnalyticsMeasure defines model for AnalyticsMeasure.
+type AnalyticsMeasure struct {
+	// As The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL.
+	As *string `json:"as,omitempty"`
+
+	// Field What to aggregate. Required for every fn but `count`.
+	Field *string `json:"field,omitempty"`
+
+	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+	Fn AnalyticsMeasureFn `json:"fn"`
+}
+
+// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+type AnalyticsMeasureFn string
+
+// AnalyticsQuery One question, in the vocabulary the schema returned.
+type AnalyticsQuery struct {
+	// Entity The population, by name.
+	Entity  string             `json:"entity"`
+	Filters *[]AnalyticsFilter `json:"filters,omitempty"`
+
+	// GroupBy The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one.
+	GroupBy *[]string `json:"group_by,omitempty"`
+
+	// Limit How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record.
+	Limit *int `json:"limit,omitempty"`
+
+	// Measures What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question.
+	Measures []AnalyticsMeasure `json:"measures"`
+}
+
+// AnalyticsSchema The populations and fields one caller may ask about.
+type AnalyticsSchema struct {
+	Entities []AnalyticsEntity `json:"entities"`
+
+	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
+	Version string `json:"version"`
+}
+
 // AnnotateBriefItem One finding about one queued deal.
 type AnnotateBriefItem struct {
 	// CitedEvidence What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
@@ -16670,6 +16864,14 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
+	//
+	// The lane serves three scopes and only one is the reader's own queue: an
+	// unassigned sweep and a named colleague's queue both put work on the page that
+	// is not the reader's. Without this those rows read identically to their own,
+	// and the row nobody owns — the whole point of that scope — cannot say so.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
 	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
 	// stopped.
 	//
@@ -16769,6 +16971,19 @@ type AttentionItem struct {
 	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
 	Rank *int `json:"rank,omitempty"`
 
+	// Relationship What the lapsed relationship behind a `relationship_decay` item was WORTH before
+	// it went quiet. Sent only for `source: relationship_decay`.
+	//
+	// Without it every lapsed contact reads alike, and the rep's strongest relationship
+	// going quiet is the row that most deserves to be told apart from a cc who has
+	// drifted. Both facts were already in the lane's hand and discarded: the band is
+	// scored from the edge the lane loads, and the deal is one batched read over the
+	// candidates it already narrowed to.
+	//
+	// The band travels rather than the raw score, because a number between 0 and 100
+	// invites a client to draw a precision the §4 arithmetic does not claim.
+	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
 
@@ -16862,6 +17077,34 @@ type AttentionPairSide struct {
 	// different fact from not having asked.
 	RelatedCount *int `json:"related_count,omitempty"`
 }
+
+// AttentionRelationshipFacts What the lapsed relationship behind a `relationship_decay` item was WORTH before
+// it went quiet. Sent only for `source: relationship_decay`.
+//
+// Without it every lapsed contact reads alike, and the rep's strongest relationship
+// going quiet is the row that most deserves to be told apart from a cc who has
+// drifted. Both facts were already in the lane's hand and discarded: the band is
+// scored from the edge the lane loads, and the deal is one batched read over the
+// candidates it already narrowed to.
+//
+// The band travels rather than the raw score, because a number between 0 and 100
+// invites a client to draw a precision the §4 arithmetic does not claim.
+type AttentionRelationshipFacts struct {
+	// HasOpenDeal Whether money this reader can see still rests on this contact. Absent is not
+	// "no": a contact with an open deal the reader may not see reads the same as one
+	// with none, which is the answer every row-scoped read gives.
+	HasOpenDeal *bool `json:"has_open_deal,omitempty"`
+
+	// Strength The relationship's band at the read instant, from the same §4 scoring the
+	// contact's own page shows — computed on read rather than stored, so the two
+	// surfaces cannot come to disagree about who this person is.
+	Strength *AttentionRelationshipFactsStrength `json:"strength,omitempty"`
+}
+
+// AttentionRelationshipFactsStrength The relationship's band at the read instant, from the same §4 scoring the
+// contact's own page shows — computed on read rather than stored, so the two
+// surfaces cannot come to disagree about who this person is.
+type AttentionRelationshipFactsStrength string
 
 // AttentionStagedFacts What the verdict engine already worked out about a staged contact decision, so a
 // surface can group alike questions without reading the proposal a second time.
@@ -36877,6 +37120,12 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
 
+// ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
+type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
+
+// RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
+type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
+
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
 
@@ -45339,6 +45588,15 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// The records one cell of an analytics answer was computed from.
+	// (POST /analytics/explain)
+	ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request)
+	// Answer a question nobody wrote a report for.
+	// (POST /analytics/query)
+	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// What questions this caller may ask, and in what words.
+	// (GET /analytics/schema)
+	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -47172,6 +47430,24 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
 func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records one cell of an analytics answer was computed from.
+// (POST /analytics/explain)
+func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a question nobody wrote a report for.
+// (POST /analytics/query)
+func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What questions this caller may ask, and in what words.
+// (GET /analytics/schema)
+func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52147,6 +52423,72 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainAnalyticsCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainAnalyticsCell(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RunAnalyticsQuery operation middleware
+func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RunAnalyticsQuery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAnalyticsSchema operation middleware
+func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnalyticsSchema(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75150,6 +75492,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/explain", wrapper.ExplainAnalyticsCell)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)

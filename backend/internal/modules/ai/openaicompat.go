@@ -40,6 +40,11 @@ type openAICompatClient struct {
 	// One field, two uses — Caps() advertises it and sendChat enforces it — so a
 	// binding cannot advertise a media type its own wire then refuses.
 	attachmentMIMEs []string
+	// routing carries the broker's upstream-selection preferences, nil when the
+	// binding names none (and always nil on the local vLLM wire, which fronts
+	// one host). Held on the client rather than read per request because it is
+	// a property of the BINDING an operator configured, not of any one call.
+	routing *OpenRouterRouting
 }
 
 // openAICompatSchemaName labels the structured-output schema; OpenAI's
@@ -59,6 +64,12 @@ type openAICompatChatWire struct {
 	// output (vLLM guided decoding); set only when the request asks for a
 	// schema, so ordinary free-text calls are unchanged.
 	ResponseFormat *openAICompatResponseFormat `json:"response_format,omitempty"`
+	// Provider and Reasoning are broker controls, omitted entirely when the
+	// binding names no preference — an absent object leaves the broker's own
+	// behaviour untouched, while an object of zero values would silently turn
+	// off its load balancing.
+	Provider  *openAICompatProviderWire  `json:"provider,omitempty"`
+	Reasoning *openAICompatReasoningWire `json:"reasoning,omitempty"`
 }
 
 // openAICompatResponseFormat / openAICompatJSONSchema mirror the OpenAI
@@ -81,15 +92,43 @@ type openAICompatChatResponse struct {
 	// actually generated the completion (unlike the native adapters' own
 	// served-identity fields) — the router's servedSource map tags it "echo"
 	// accordingly, never "response".
-	Model   string `json:"model"`
-	Choices []struct {
-		Message struct {
+	Model string `json:"model"`
+	// Provider is the UPSTREAM that served, which a broker on this wire names
+	// independently of the echoed Model above. A gateway fronting many
+	// inference hosts picks one per request — the same model id can be served
+	// by hosts differing in quantization, output ceiling and tail latency — so
+	// without this field a call cannot be attributed to what actually ran, and
+	// a slow or degraded upstream is indistinguishable from a slow model.
+	//
+	// Absent on a single-vendor OpenAI-wire host (a vLLM deployment), which
+	// leaves it empty: there, the host we called is the host that served.
+	Provider string `json:"provider"`
+	Choices  []struct {
+		// FinishReason is the normalized stop reason. The wire also carries the
+		// upstream's own unmapped string beside it; that is not decoded here
+		// because nothing reads it yet, and a decoded field no caller consumes
+		// is a claim that it is used.
+		FinishReason string `json:"finish_reason"`
+		Message      struct {
 			Content string `json:"content"`
+			// Reasoning is a reasoning model's thinking text, which this wire
+			// carries BESIDE Content rather than inside it. It matters to a
+			// non-reasoning caller for one reason: when the output budget is
+			// spent before the answer begins, Content arrives null and all the
+			// generated tokens are here. Reading Content alone then returns
+			// empty text for a call that was billed in full.
+			Reasoning string `json:"reasoning"`
 		} `json:"message"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
+		// CompletionTokensDetails itemizes reasoning spend inside
+		// CompletionTokens (never additive to it — the port's contract for
+		// Response.ReasoningTokens). Left 0 by a host that reports no breakdown.
+		CompletionTokensDetails struct {
+			ReasoningTokens int `json:"reasoning_tokens"`
+		} `json:"completion_tokens_details"`
 	} `json:"usage"`
 }
 
@@ -107,13 +146,83 @@ func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (m
 	if len(out.Choices) == 0 {
 		return model.Response{}, fmt.Errorf("ai: openai-compat: response has no choices")
 	}
+	choice := out.Choices[0]
 	return model.Response{
-		Text:         out.Choices[0].Message.Content,
-		InputTokens:  out.Usage.PromptTokens,
-		OutputTokens: out.Usage.CompletionTokens,
-		ServedModel:  out.Model,
+		Text:            completionText(choice.Message.Content, choice.Message.Reasoning, choice.FinishReason),
+		InputTokens:     out.Usage.PromptTokens,
+		OutputTokens:    out.Usage.CompletionTokens,
+		ReasoningTokens: reasoningWithin(out.Usage.CompletionTokens, out.Usage.CompletionTokensDetails.ReasoningTokens),
+		ServedModel:     out.Model,
+		ServedProvider:  out.Provider,
+		FinishReason:    choice.FinishReason,
 	}, nil
 }
+
+// completionText is the answer text, falling back to a reasoning model's
+// thinking when the answer itself is empty.
+//
+// The fallback exists because this wire's two text fields are not
+// alternatives — they are sequential. A reasoning model emits thinking first
+// and the answer after it, both charged to the same output budget, so a budget
+// that runs out mid-thought yields a response with every generated token in
+// Reasoning and Content null. Returning Content alone hands the caller an
+// empty string for a call that was generated and billed in full, with no error
+// to retry on and nothing in the trace to explain it.
+//
+// The thinking is not as good as the answer, and it is not pretended to be:
+// the caller's own schema validation will reject it, which is the honest
+// outcome. What changes is that the rejection carries the text that was paid
+// for, and FinishReason beside it says the budget was the cause.
+// reasoningWithin bounds a reported reasoning count by the completion it is a
+// breakdown of, because on this wire the two counts do not always agree.
+//
+// The port defines ReasoningTokens as a subset of OutputTokens, never additive
+// to it, and a broker's upstreams honour that unevenly. Measured against
+// gpt-oss-120b on one structured-output request: DeepInfra reported 817
+// reasoning tokens against 787 completion, Parasail 1117 against 1069, AkashML
+// 1234 against 1121 — while total_tokens stayed prompt+completion on all three,
+// so the excess is the upstream's two counters disagreeing rather than a
+// different accounting basis. Capping the same request's output at 40 tokens
+// showed the real relationship: completion came back at exactly the cap with
+// reasoning just under it and no content at all, which is a subset.
+//
+// Left unbounded the excess does not merely misreport, it disables a check.
+// aicert's checkCaps grades a run's answer as TokensOut minus ReasoningTokens,
+// so a reasoning count above the completion makes that difference negative and
+// the max_tokens cap can never be exceeded — a ceiling that silently always
+// passes, which is worse than no ceiling because it still looks like one.
+//
+// (Some upstreams under-report instead: BaseTen returned 0 reasoning tokens on
+// a response whose reasoning text was plainly there. Nothing can be recovered
+// from a count that was never sent, so 0 stays 0 — this bounds the value, it
+// does not invent one.)
+func reasoningWithin(completion, reasoning int) int {
+	if reasoning > completion {
+		return completion
+	}
+	return reasoning
+}
+
+func completionText(content, reasoning, finishReason string) string {
+	if content != "" {
+		return content
+	}
+	// Only when the BUDGET ran out. Empty content has several other causes on
+	// this wire — a tool call, a refusal, a content filter — and in every one
+	// of them the thinking is not a partial answer but a different thing
+	// entirely, so handing it back as the answer would dress a refusal up as a
+	// reply. Those keep their empty text, which is what the caller's own schema
+	// check is there to reject.
+	if finishReason == finishReasonLength {
+		return reasoning
+	}
+	return ""
+}
+
+// finishReasonLength is the stop reason that means the output budget bound
+// before the model was done — the one case where the thinking is all that got
+// generated and is worth handing back.
+const finishReasonLength = "length"
 
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
 func (c *openAICompatClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
@@ -148,8 +257,23 @@ func isFetchableURL(uri string) bool {
 	if err != nil {
 		return false
 	}
-	scheme := strings.ToLower(parsed.Scheme)
-	return (scheme == "https" || scheme == "http") && parsed.Host != ""
+	return sendableHTTPScheme(parsed) && parsed.Host != ""
+}
+
+// sendableHTTPScheme reports whether a parsed URL carries a scheme this
+// package's HTTP client can actually send on.
+//
+// One spelling, two callers: this and IsOpenRouterHost. Both ask the same
+// question for the same reason — a URL without http(s) is not something a
+// request can go out over, whatever else is right about it — and two copies
+// would be two places to forget a scheme.
+func sendableHTTPScheme(parsed *url.URL) bool {
+	switch strings.ToLower(parsed.Scheme) {
+	case "http", "https":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *openAICompatClient) Caps() model.Capabilities {
@@ -254,7 +378,10 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	if err := c.refuseUnsupportedAttachments(req.Attachments); err != nil {
 		return nil, err
 	}
-	wire := openAICompatChatWire{Model: req.Model, Stream: stream, MaxTokens: req.MaxTokens}
+	wire := openAICompatChatWire{
+		Model: req.Model, Stream: stream, MaxTokens: req.MaxTokens,
+		Provider: c.routing.providerWire(), Reasoning: c.routing.reasoningWire(),
+	}
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
 	}
@@ -304,93 +431,6 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 		return nil, openAICompatError(resp)
 	}
 	return resp.Body, nil
-}
-
-// openAICompatError surfaces the vendor's structured error message only —
-// never the raw response body, which may be unstructured HTML/text — so a logged
-// failure can't echo the request or leak provider internals (the anthropic /
-// openai pattern). Three structured shapes exist on this generic wire: OpenAI's
-// nested {"error":{type,message}}, vLLM's top-level {"object":"error", type,
-// message}, and a broker's {"error":{message,metadata:{raw,provider_name}}};
-// a body that can't be read falls back to the HTTP status.
-//
-// The broker shape is the reason metadata is read at all. A gateway in front of
-// several vendors answers with its OWN message — OpenRouter says "Provider
-// returned error" for everything — and puts the upstream vendor's sentence in
-// metadata.raw. Reading only the outer message produced log lines that named
-// no cause and a build failure the operator could do nothing with.
-func openAICompatError(resp *http.Response) error {
-	var apiErr struct {
-		Type    string `json:"type"`
-		Message string `json:"message"`
-		Error   struct {
-			Type     string `json:"type"`
-			Message  string `json:"message"`
-			Metadata struct {
-				Raw          string `json:"raw"`
-				ProviderName string `json:"provider_name"`
-				LimitSource  string `json:"limit_source"`
-			} `json:"metadata"`
-		} `json:"error"`
-	}
-	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil {
-		if detail := compatErrorDetail(apiErr.Error.Message, apiErr.Error.Metadata.Raw, apiErr.Error.Metadata.ProviderName); detail != "" {
-			return providerRefusal(resp, apiErr.Error.Metadata.LimitSource,
-				fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Error.Type, detail, resp.StatusCode))
-		}
-		if apiErr.Message != "" {
-			return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Type, apiErr.Message, resp.StatusCode))
-		}
-	}
-	return providerRefusal(resp, "", fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode))
-}
-
-// compatErrorDetail is the sentence worth logging out of a broker's answer.
-//
-// The upstream vendor's own words win when there are any: a broker's outer
-// message is written about ITS call to the vendor, not about the request, so
-// it is the same string whatever went wrong. The vendor is named alongside,
-// because "rate-limited upstream" means nothing without saying whose limit.
-//
-// Both are text a REMOTE party chose, so neither is logged as it arrived.
-// An upstream that echoes a prompt, a URL with a token in it, or its own
-// internals would otherwise write all of it into this installation's logs
-// through a path nothing else guards. Redacted through the same stripper the
-// model payloads use, and capped: a vendor's cause is one sentence, and
-// anything longer is a body that lost its way into a message field.
-func compatErrorDetail(message, upstreamRaw, providerName string) string {
-	upstreamRaw = strings.TrimSpace(upstreamRaw)
-	if upstreamRaw == "" {
-		return safeProviderText(message)
-	}
-	if providerName == "" {
-		return safeProviderText(upstreamRaw)
-	}
-	return safeProviderText(providerName + ": " + upstreamRaw)
-}
-
-// providerTextMax bounds one logged vendor sentence.
-const providerTextMax = 300
-
-// safeProviderText redacts and bounds text a remote provider chose.
-func safeProviderText(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return ""
-	}
-	stripped, _, err := NewSecretStripper().Strip(context.Background(), []byte(text))
-	if err != nil {
-		// The stripper could not vouch for it, so none of it is logged: a
-		// vendor sentence is worth having, never at the price of writing an
-		// unexamined remote string into the log.
-		return "(provider detail withheld)"
-	}
-	text = strings.Join(strings.Fields(string(stripped)), " ")
-	if len(text) > providerTextMax {
-		return text[:providerTextMax] + "…"
-	}
-	return text
 }
 
 // openAICompatStream reads the OpenAI-compatible SSE stream: `data: {...}`

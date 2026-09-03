@@ -187,6 +187,18 @@ func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
 
+func (stubs) ExplainAnalyticsCell(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ExplainAnalyticsCell")
+}
+
+func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
+}
+
+func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
+}
+
 func (stubs) ApproveApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, bundleId crmcontracts.BundleId) {
 	httperr.NotImplemented(w, r, "ApproveApprovalBundle")
 }

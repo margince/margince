@@ -338,9 +338,22 @@ func voiceEvalJudgeRequest(original string, bodies []string) model.Request {
 		fmt.Fprintf(&payload, "Draft %d:\n%s\n", i+1, fence.Wrap(body))
 	}
 	return model.Request{
-		System:         voiceEvalJudgeSystemFor(fence),
-		Messages:       []model.Message{{Role: chatRoleUser, Content: payload.String()}},
-		MaxTokens:      300,
+		System:   voiceEvalJudgeSystemFor(fence),
+		Messages: []model.Message{{Role: chatRoleUser, Content: payload.String()}},
+		// The shared reasoning-headroom ceiling, not a cap sized for the answer.
+		// A scores array is a few dozen tokens and 300 was ample for it — but a
+		// reasoning model spends output tokens THINKING before the answer starts,
+		// charged to this same budget, and measured against gpt-oss-120b it spent
+		// 297 of 300 on that and returned three tokens of answer with
+		// finish_reason "length" on every repeat. That is the exact failure
+		// ai.ReasoningOutputMaxTokens documents, so this lane uses it rather than
+		// keeping a second, smaller answer.
+		//
+		// The draft request above keeps its own 1200 deliberately: that number
+		// bounds how long a DRAFT may be, which is part of what this eval
+		// measures against a held-out sample, so it is a property of the
+		// experiment rather than headroom the model needs.
+		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: voiceEvalJudgeSchema,
 		SecretStripper: ai.NewSecretStripper(),
 	}

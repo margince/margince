@@ -166,7 +166,8 @@ ground, which is lit, and the surface, which is one translucent pane per zone.
 
 ### Dark
 
-The same room with the lights down: `--bg #0a100e`, the glows brighter
+The same room with the lights down: `--bg #0c1311` (a hair above the mock's
+`#0a100e`, so the sidebar's hover step still fits under the page), the glows brighter
 (`.10` / `.20`) because they are the only light, panes at
 `rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text

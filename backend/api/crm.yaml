@@ -16250,6 +16250,121 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /analytics/schema:
+    get:
+      tags: [Reports]
+      operationId: getAnalyticsSchema
+      summary: What questions this caller may ask, and in what words.
+      description: |
+        The vocabulary a generic analytics question is written in: the populations, the
+        fields each can be grouped by, and the fields each can measure.
+
+        DERIVED from the report catalog and narrowed by the caller's own grants. A field
+        somebody may not read is ABSENT here rather than listed and refused later — a
+        refusal that says "you may not read that" tells them the column exists.
+
+        `version` changes when the vocabulary does, including when one seat's grants change.
+        A query planned against an older version is refused rather than run, because a plan
+        naming a field that has since moved would render SQL against a column that is gone.
+      # NOT an agent tool, and the reason is measured rather than a preference.
+      # The served catalog already renders ~87% of the certification lane's
+      # prompt window; a second analytics tool pushes it over, and what that
+      # gate protects is every corpus scenario silently reasoning over a prompt
+      # larger than this build claims to send.
+      #
+      # An agent gets this vocabulary through run_analytics_query's own
+      # refusals instead: naming a field that is absent is answered with the
+      # fields that exist, which is the same information at the moment it is
+      # needed. The route stays for the app, which pays no token budget.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsSchema' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/query:
+    post:
+      tags: [Reports]
+      operationId: runAnalyticsQuery
+      summary: Answer a question nobody wrote a report for.
+      description: |
+        A typed query over the vocabulary `/analytics/schema` returns. The caller names a
+        population, what to group by, what to measure and how to narrow — never SQL, and
+        never a field that is not in their own schema.
+
+        THE ANSWER IS COMPUTED BY THE DATABASE. Nothing here asks a model to add up a
+        column: a model's total is plausible and wrong in a way nobody can see, and the
+        value of a figure on a revenue screen is that it traces to rows.
+
+        A group covering fewer records than the installation's floor is WITHHELD, and so is
+        enough of the remainder that the withheld group cannot be recovered by subtracting
+        the rest from the total. `total_safe` says whether a total may be shown at all;
+        `withheld` says something was kept back and never how much.
+
+        Refusals are typed and each carries the smallest thing that would have worked:
+        the fields that exist, the measure that applies, the grouping that clears the floor.
+      # NOT an agent tool yet, and the reason is a measured constraint. The
+      # served catalog already renders ~87% of the certification lane's prompt
+      # window; this tool's description, trimmed to just its safety rules,
+      # still puts it over. Cutting further would drop the instructions that
+      # make an agent-reachable analytics surface safe — that the database
+      # computes the numbers, and that a withheld group is never speculated
+      # about — which is the wrong thing to spend for room.
+      #
+      # The HTTP route ships and the app uses it. Making room in the catalog is
+      # a decision about the whole tool surface rather than about this feature.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsQuery' }
+      responses:
+        '200':
+          description: The answer, as this caller may read it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/explain:
+    post:
+      tags: [Reports]
+      operationId: explainAnalyticsCell
+      summary: The records one cell of an analytics answer was computed from.
+      description: |
+        A number is worth having only if somebody can open it, and opening it means the
+        ROWS rather than a restatement of the formula.
+
+        The request carries the QUESTION unchanged plus the cell's own group keys. The
+        question rather than a handle, because an explanation of a different query than the
+        one that produced the number is not an explanation and nothing downstream could
+        tell.
+
+        The explanation reads the identical row set the answer read: same population, same
+        filters, same authority narrowings. It never out-sees the number it explains.
+
+        A cell the privacy floor withheld answers `withheld` with no rows. Handing over
+        those records one at a time is the same disclosure at a slower pace.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsExplainRequest' }
+      responses:
+        '200':
+          description: The records behind the cell, as this caller may read them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/current:
     get:
       tags: [Brief]
@@ -31316,6 +31431,184 @@ components:
             Whether anything was kept back from this reader. A boolean and never a count:
             a count of what somebody may not see states how much of it there is.
       additionalProperties: false
+    AnalyticsSchema:
+      type: object
+      description: The populations and fields one caller may ask about.
+      required: [version, entities]
+      properties:
+        version:
+          type: string
+          description: >-
+            Changes when this caller's vocabulary changes. A query planned against an
+            older version is refused rather than run.
+        entities:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsEntity' }
+      additionalProperties: false
+    AnalyticsEntity:
+      type: object
+      required: [name, group_by, measures]
+      properties:
+        name: { type: string, description: "The population, by name." }
+        group_by:
+          type: array
+          items: { type: string }
+          description: The fields this population can be grouped by.
+        measures:
+          type: array
+          items: { type: string }
+          description: The fields this population can be aggregated over.
+      additionalProperties: false
+    AnalyticsQuery:
+      type: object
+      description: One question, in the vocabulary the schema returned.
+      required: [entity, measures]
+      properties:
+        entity: { type: string, description: "The population, by name." }
+        group_by:
+          type: array
+          items: { type: string }
+          description: >-
+            The dimensions. Omitted is a single-row answer over the whole population,
+            which is a real question rather than a missing one.
+        measures:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AnalyticsMeasure' }
+          description: >-
+            What to compute. At least one — a query with none asks for group keys and
+            nothing beside them, which is a list rather than an analytic question.
+        filters:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsFilter' }
+        limit:
+          type: integer
+          description: >-
+            How many groups at most. Omitted takes the default; a grouping by a
+            high-cardinality field would otherwise return a row per record.
+      additionalProperties: false
+    AnalyticsMeasure:
+      type: object
+      required: [fn]
+      properties:
+        fn:
+          type: string
+          enum: [count, count_distinct, sum, avg, min, max]
+          x-enum-varnames:
+            - AnalyticsCount
+            - AnalyticsCountDistinct
+            - AnalyticsSum
+            - AnalyticsAvg
+            - AnalyticsMin
+            - AnalyticsMax
+          description: >-
+            The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts
+            values and skips nulls. The two differ on an unpriced deal, so naming the wrong
+            one reports a column's coverage as its population.
+        field:
+          type: string
+          description: What to aggregate. Required for every fn but `count`.
+        as:
+          type: string
+          description: >-
+            The caller's name for the result column. It never reaches the statement —
+            results map by position — so it cannot carry anything into SQL.
+      additionalProperties: false
+    AnalyticsFilter:
+      type: object
+      required: [field, op]
+      properties:
+        field: { type: string }
+        op:
+          type: string
+          enum: [eq, ne, lt, lte, gt, gte, is_null, is_not_null]
+          x-enum-varnames:
+            - AnalyticsOpEq
+            - AnalyticsOpNe
+            - AnalyticsOpLt
+            - AnalyticsOpLte
+            - AnalyticsOpGt
+            - AnalyticsOpGte
+            - AnalyticsOpIsNull
+            - AnalyticsOpIsNotNull
+        value:
+          description: >-
+            The value to compare against, bound as a parameter. Omitted exactly for
+            `is_null` and `is_not_null`; given to either, the query is refused rather
+            than having it silently dropped.
+      additionalProperties: false
+    AnalyticsAnswer:
+      type: object
+      required: [columns, rows, withheld, total_safe, schema_version]
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+          description: What each value in a row means, in order.
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            One object per group. A row the floor withheld keeps its group keys, carries
+            null for every measure, and is marked `_withheld` — dropping it entirely would
+            make the answer's row count a signal of its own.
+        withheld:
+          type: boolean
+          description: >-
+            Whether anything was kept back. A boolean and never a count: a count of what
+            somebody may not see states how much of it there is.
+        total_safe:
+          type: boolean
+          description: >-
+            Whether a total over these rows may be shown. False once anything is withheld,
+            because the total minus the shown groups is the withheld remainder.
+        schema_version:
+          type: string
+          description: The vocabulary this was asked in.
+      additionalProperties: false
+    AnalyticsExplainRequest:
+      type: object
+      description: One cell of an answer, named by the question and its group keys.
+      required: [query]
+      properties:
+        query: { $ref: '#/components/schemas/AnalyticsQuery' }
+        group:
+          type: array
+          items: {}
+          description: >-
+            The cell's group key values, one per grouping in the question and in the same
+            order. Omitted for an ungrouped answer, which has one cell. A null entry means
+            the group whose value is unset, which resolves to the records that have nothing
+            there rather than to none.
+      additionalProperties: false
+    AnalyticsExplanation:
+      type: object
+      required: [columns, rows, withheld, truncated]
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            The records, each carrying its id, the dimensions that put it in this group,
+            and the fields the measures were computed over.
+        withheld:
+          type: boolean
+          description: >-
+            The cell itself was withheld, so there is nothing to open. Different from an
+            empty list, which would mean the group had no records at all.
+        truncated:
+          type: boolean
+          description: >-
+            The cell covers more records than were returned. A reader who adds up the rows
+            and finds less than the cell needs to know why.
+      additionalProperties: false
     WeeklyPlan:
       type: object
       additionalProperties: false
@@ -36628,6 +36921,8 @@ components:
             deal card's own figure, and the age each row carries into the ordering. A number
             parsed back out of a sentence reads as zero the day somebody rewords the
             sentence, and every one of those uses would go quietly wrong together.
+        relationship:
+          $ref: '#/components/schemas/AttentionRelationshipFacts'
         cause_ref:
           type: string
           description: |
@@ -36673,6 +36968,16 @@ components:
           $ref: '#/components/schemas/AttentionPair'
         deal:
           $ref: '#/components/schemas/AttentionDealFacts'
+        assignee_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Who holds this task, null when nobody has taken it. Sent by `task`.
+
+            The lane serves three scopes and only one is the reader's own queue: an
+            unassigned sweep and a named colleague's queue both put work on the page that
+            is not the reader's. Without this those rows read identically to their own,
+            and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
@@ -36748,6 +37053,35 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
+
+    AttentionRelationshipFacts:
+      type: object
+      description: |
+        What the lapsed relationship behind a `relationship_decay` item was WORTH before
+        it went quiet. Sent only for `source: relationship_decay`.
+
+        Without it every lapsed contact reads alike, and the rep's strongest relationship
+        going quiet is the row that most deserves to be told apart from a cc who has
+        drifted. Both facts were already in the lane's hand and discarded: the band is
+        scored from the edge the lane loads, and the deal is one batched read over the
+        candidates it already narrowed to.
+
+        The band travels rather than the raw score, because a number between 0 and 100
+        invites a client to draw a precision the §4 arithmetic does not claim.
+      properties:
+        strength:
+          type: string
+          enum: [none, weak, moderate, strong]
+          description: |
+            The relationship's band at the read instant, from the same §4 scoring the
+            contact's own page shows — computed on read rather than stored, so the two
+            surfaces cannot come to disagree about who this person is.
+        has_open_deal:
+          type: boolean
+          description: |
+            Whether money this reader can see still rests on this contact. Absent is not
+            "no": a contact with an open deal the reader may not see reads the same as one
+            with none, which is the answer every row-scoped read gives.
 
     AttentionPairEvidence:
       type: object

@@ -11,37 +11,24 @@
  */
 :root {
   /*
-   * The GROUNDS carry the brand hue at a whisper: every light rung below sits
-   * on --accent's own hue, at --accent's own chroma multiplied by 0.08, at the
-   * LIGHTNESS the neutral rung already had. Two halves, and both are load-
-   * bearing. Taking the hue is what stops the application reading as a grey
-   * chassis with a green sticker on it — the dark theme has always been tinted
-   * (its grounds are ink-green, and so is --bgRail in BOTH themes), so a
-   * neutral-grey light theme was the product disagreeing with itself between
-   * two settings of one switch. Holding the lightness is what keeps the tint
-   * from becoming a colour: the ladder's steps, every contrast ratio a reader
-   * depends on, and the neutrality of anything laid ON these grounds — a
-   * screenshot pasted into a record, a monogram fill, another company's logo —
-   * are all functions of lightness, and none of them moves.
-   *
-   * 0.08 rather than more because the failure mode in the other direction is
-   * real: a page mixed far enough toward the accent stops being a ground and
-   * starts being a surface with an opinion, and every neutral above it inherits
-   * the opinion. 0.08 is also the floor that DOES something — --borderSubtle
-   * already sat at 0.05 of the accent's chroma while every ground beside it was
-   * cool grey, which is how the two families came to disagree in the first place.
+   * The GROUNDS are the design's paper (DESIGN.md §3): a near-neutral page
+   * one hair off white, with the lit corners (--glowA / --glowB, app/shell.css)
+   * carrying whatever colour the chrome has. The grounds themselves stay
+   * neutral so that anything laid ON them — a screenshot pasted into a record,
+   * a monogram fill, another company's logo — reads as itself, and so that the
+   * two themes are one room with the lights up or down rather than two tints.
    *
    * A ladder, darkest first, from the recessed chrome up to the surface a card
    * floats on. Each rung is one visible step off its neighbours, and the ORDER
    * is the part that carries meaning — tokens.test.ts asserts the ordering in
    * both themes rather than trusting six plausible values to stay in sequence:
    *
-   *   --bgSidebarHover #dbe2de  a pointer resting on a rail row
-   *   --bgSidebar      #e5ebe8  the application's left edge, BELOW the page
-   *   --bgCard         #e6ece9  a well inside a card: a chip, an inset row
-   *   --bgHover        #e9efec  a pointer resting on a row on the page
-   *   --bgPage         #f4f8f6  the reading ground
-   *   --bgElevated     #fafffd  a card, a panel, a menu, and the ACTIVE rail row
+   *   --bgSidebarHover #dde1de  a pointer resting on a rail row
+   *   --bgSidebar      #e6eae7  the application's left edge, BELOW the page
+   *   --bgCard         #eaedeb  a well inside a card: a chip, an inset row
+   *   --bgHover        #edf0ee  a pointer resting on a row on the page
+   *   --bgPage         #f1f5f2  the reading ground
+   *   --bgElevated     #fbfcfb  a card, a panel, a menu, and the ACTIVE rail row
    *
    * The dark theme is NOT this list mirrored. On a dark ground every surface
    * lifts toward the light, so the ladder runs the other way and only the
@@ -51,13 +38,13 @@
    * a card is therefore separated by its own lightness rather than by the
    * shadow alone. That is what lets --shadow-card be as slight as it now is.
    */
-  --bgPage: #f4f8f6;
-  --bgElevated: #fafffd;
+  --bgPage: #f1f5f2;
+  --bgElevated: #fbfcfb;
   /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
-  --bgCard: #e6ece9;
-  --bgHover: #e9efec;
+  --bgCard: #eaedeb;
+  --bgHover: #edf0ee;
   /* The sidebar's own ground, DARKER than the page rather than lighter: the
    * application's left edge is visible without a second border, and chrome that
    * recedes is chrome that stops competing with what it frames. A token rather
@@ -65,11 +52,11 @@
    * when card grounds are re-tuned. The rail's own hover is --bgSidebarHover
    * below, because --bgHover is LIGHTER than this ground and a hover that
    * brightens the row it is on collides with the active row's plate. */
-  --bgSidebar: #e5ebe8;
+  --bgSidebar: #e6eae7;
   /* A pointer resting on a rail row: one step DOWN from --bgSidebar (1.10:1),
    * the same direction --bgHover moves off --bgPage. The active row moves the
    * other way — up to --bgElevated — so the two states cannot be confused. */
-  --bgSidebarHover: #dbe2de;
+  --bgSidebarHover: #dde1de;
   /* The top strip, which the content scrolls UNDER: the page's own ground,
    * translucent, with an 8px blur behind it (app/topbar.css). Stated as an
    * alpha colour rather than a solid because the blur is only visible where the
@@ -506,31 +493,29 @@
  * deliberately not theme tokens).
  */
 [data-theme="dark"] {
-  --bgPage: #0e1b16;
-  --bgElevated: #142420;
-  --bgCard: #1a2c26;
-  --bgHover: #1f332c;
+  --bgPage: #0c1311;
+  --bgElevated: #161d1a;
+  --bgCard: #1a211e;
+  --bgHover: #1f2623;
   /* The same RELATION the light theme states, mirrored rather than copied: the
      sidebar is one step off the page in the direction away from the elevated
      surface, so the chrome recedes in both themes. Dark is where that means
-     DARKER than the page — the light theme's #e9e9ec against #f5f5f6 measures
-     1.11:1, and this pair measures 1.09:1, which is the same step a reader
-     sees. It used to be the elevated ground, which put the frame in FRONT of
-     what it frames. */
-  --bgSidebar: #06100d;
+     DARKER than the page: near-black under a page that is itself one hair
+     above the design's #0a100e, which is what leaves room for the hover step
+     between them. */
+  --bgSidebar: #030504;
   /* Up off the sidebar, not down: on a dark ground the room only has one
-     direction to go, so hover lifts (1.06:1) and the active row lifts further,
-     all the way to --bgElevated (1.20:1 off the rail). What has to hold is the
-     GAP between hover and that plate — they are the pair a reader decodes — and
-     here it is 1.13:1. It was #0f1d18, which read 1.08:1 against the plate: an
-     ordering that was correct and a difference nobody could see. */
-  --bgSidebarHover: #0c1814;
+     direction to go, so hover lifts off the sidebar (1.06:1) and the active
+     row lifts further, all the way to --bgElevated (1.12:1 off hover). What
+     has to hold is the GAP between hover and that plate — they are the pair a
+     reader decodes — and tokens.test.ts holds both steps as floors. */
+  --bgSidebarHover: #0a100e;
   /* The page's own ground, translucent — the light theme's rule, in this
      theme's page colour. It used to be the ELEVATED ground, which made the
      strip read as a card laid over the top of the window. */
   --bgTopbar: rgba(14, 27, 22, 0.9);
-  --pane: rgba(20, 36, 32, 0.72);
-  --paneEdge: rgba(255, 255, 255, 0.08);
+  --pane: rgba(255, 255, 255, 0.045);
+  --paneEdge: rgba(255, 255, 255, 0.09);
   --glowA: rgba(24, 190, 120, 0.1);
   --glowB: rgba(91, 97, 214, 0.2);
 
@@ -594,7 +579,7 @@
      control boundary, held to the same 1.4.11 floor. */
   --borderControl: #5f7a6e;
 
-  /* Themed, because the light hairline is a 4% black — invisible on #0e1b16.
+  /* Themed, because the light hairline is a 4% black — invisible on the near-black page.
      Any card whose separation depends on it simply lost its edge in dark, and
      the login surface's brand pane is exactly that case: its fill sits within
      a couple of ΔE of the pane behind it. The GEOMETRY is the light theme's
@@ -646,15 +631,15 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bgPage: #0e1b16;
-    --bgElevated: #142420;
-    --bgCard: #1a2c26;
-    --bgHover: #1f332c;
-    --bgSidebar: #06100d;
-    --bgSidebarHover: #0c1814;
+    --bgPage: #0c1311;
+    --bgElevated: #161d1a;
+    --bgCard: #1a211e;
+    --bgHover: #1f2623;
+    --bgSidebar: #030504;
+    --bgSidebarHover: #0a100e;
     --bgTopbar: rgba(14, 27, 22, 0.9);
-    --pane: rgba(20, 36, 32, 0.72);
-    --paneEdge: rgba(255, 255, 255, 0.08);
+    --pane: rgba(255, 255, 255, 0.045);
+    --paneEdge: rgba(255, 255, 255, 0.09);
     --glowA: rgba(24, 190, 120, 0.1);
     --glowB: rgba(91, 97, 214, 0.2);
 
