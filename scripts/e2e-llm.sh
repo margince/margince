@@ -140,6 +140,25 @@ seed_everything
 COOKIES="$WORK/cookies"
 MCP_CONFIG="$WORK/mcp.json"
 
+# MCP_SERVER is the name this lane registers its throwaway server under, and it
+# is deliberately NOT `margince`.
+#
+# The CLI keeps a per-project list of MCP servers an operator has turned off
+# (`disabledMcpServers` in ~/.claude.json) and it is keyed on the server's NAME.
+# `margince` is exactly the name a Margince developer gives their own hand-wired
+# server — this machine had `margince`, `margince-local-dev`, `margince-staging`
+# and `margince-uat` — so the lane's ephemeral fixture inherited whatever
+# enable/disable state the operator had left on a server of the same name. It
+# came up `disabled`, the assistant was handed zero tools, the model wrote prose
+# shaped like tool calls, and the checker reported every scenario as "the answer
+# was not drawn from Margince".
+#
+# --strict-mcp-config does not help: it ignores other CONFIGURATIONS, not the
+# disable list. And the server cannot be re-enabled from the /mcp dialog either,
+# because it is injected at runtime and so is never a CONFIGURED server — only
+# its disable entry persists. A distinctive name is what decouples the two.
+MCP_SERVER=margince_e2e_llm
+
 # mint_passport signs in and writes the MCP config.
 #
 # It is a FUNCTION and not a one-time step because dev-fresh drops and
@@ -165,9 +184,10 @@ except Exception: print("")')"
   [ -n "$PASSPORT" ] || { echo "could not mint a passport" >&2; exit 1; }
 
   python3 -c 'import json,sys
-cfg = {"mcpServers": {"margince": {"type": "http", "url": sys.argv[1] + "/mcp",
+cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
        "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
-open(sys.argv[3], "w").write(json.dumps(cfg))' "$APP_BASE" "$PASSPORT" "$MCP_CONFIG"
+open(sys.argv[3], "w").write(json.dumps(cfg))' \
+    "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
 
   # A config the CLI cannot connect with produces an assistant with no tools,
   # which reads downstream as a model that chose not to call anything. Fail
@@ -205,7 +225,7 @@ run_once() {
   claude -p "$(cat "$prompt_file")" \
     --model "$E2E_LLM_MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
-    --allowedTools "mcp__margince__*" --tools "" \
+    --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
     --permission-mode dontAsk \
     --output-format stream-json --verbose \
     --max-turns 20 \
@@ -223,27 +243,21 @@ run_once() {
   # establish it. That probe talks to the stack directly; this asks the CLI what
   # it actually attached, which is a different question with its own answers.
   #
-  # `disabled` is the one that cost a whole afternoon. The CLI keeps a per-project
-  # list of MCP servers an operator has turned off (`disabledMcpServers` in
-  # ~/.claude.json), it is keyed on the server's NAME, and --strict-mcp-config
-  # does NOT override it — that flag ignores other CONFIGURATIONS, not the
-  # disable list. So a stack that answers `initialize` with HTTP 200 and a
-  # freshly minted passport still reach an assistant with no tools, the model
-  # writes prose instead of calling anything, and the checker reports "the answer
-  # was not drawn from Margince" for every run of every scenario. Six use cases
-  # named as broken by one line of local configuration.
-  #
-  # Verified by renaming the very same server in the very same config: `margince`
-  # comes up disabled, `tlbudgetprobe` comes up connected with the whole catalog.
+  # `disabled` is the one that cost an afternoon, and MCP_SERVER's comment above
+  # says why it happened and how the name now prevents it. The guard stays
+  # regardless: the next cause of an unattached server will be a different one,
+  # and what makes this expensive is not the cause but that the lane reports it
+  # as the product failing.
   local status
   status="$(python3 -c '
 import json, sys
+want = sys.argv[2]
 for line in open(sys.argv[1]):
     try: event = json.loads(line)
     except ValueError: continue
     if event.get("type") == "system" and event.get("mcp_servers") is not None:
         for server in event["mcp_servers"]:
-            if server.get("name") == "margince":
+            if server.get("name") == want:
                 print(server.get("status", "absent"))
                 break
         else:
@@ -251,13 +265,13 @@ for line in open(sys.argv[1]):
         break
 else:
     print("no-system-line")
-' "$out")"
+' "$out" "$MCP_SERVER")"
   if [ "$status" != "connected" ]; then
-    echo "  the margince MCP server is '$status', not connected — the assistant was offered no" >&2
-    echo "  Margince tools at all, so every scenario would fail for a reason that is not the" >&2
-    echo "  product's. If it is 'disabled', this CLI has it turned off for this project:" >&2
-    echo "    claude mcp list      # and enable it, or /mcp in an interactive session" >&2
-    echo "  --strict-mcp-config does not override that list." >&2
+    echo "  the $MCP_SERVER MCP server is '$status', not connected — the assistant was offered" >&2
+    echo "  no Margince tools at all, so every scenario would fail for a reason that is not the" >&2
+    echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
+    echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
+    echo "  not override; anything else points at the stack or the passport." >&2
     return 1
   fi
 }
