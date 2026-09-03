@@ -382,12 +382,14 @@ export const ShareDialogLinkShownOnce: Story = {
   ),
   beforeEach: () => installFetchStub(shareRoutes),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Share view" }),
+      await within(canvasElement).findByRole("button", { name: "Share view" }),
     );
+    // The DIALOG is portalled to the body, so it is not under the canvas the
+    // trigger is in. Looked for there, the confirm verb simply was not found
+    // and the story captured a closed dialog.
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Create link" }),
+      await within(document.body).findByRole("button", { name: "Create link" }),
     );
   },
 };
