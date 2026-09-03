@@ -218,6 +218,9 @@ type bindingTotals struct {
 	byStatus             map[string]int
 	byVerdict            map[string]int
 	runs, passed         int
+	// slowestP95 is the highest p95 of any site folded in, never a mean of
+	// them: averaging percentiles produces a figure nothing measured.
+	slowestP95 int64
 }
 
 // writeAICertBindings is the certification table per provider and model — one
@@ -230,13 +233,19 @@ func writeAICertBindings(page *strings.Builder, rows []aicert.ReadinessRow) {
 	page.WriteString("been run against — not how many exist — and the three state columns split\n")
 	page.WriteString("those sites by whether the measurement still describes what this build sends.\n")
 	page.WriteString("The band columns count the same sites by the verdict each reached.\n\n")
-	page.WriteString("| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | `certified` | `supported_degraded` | `not_supported` |\n")
-	page.WriteString("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	page.WriteString("SLOWEST p95 is the highest p95 any one record folded here recorded, not a\n")
+	page.WriteString("percentile over the binding's calls. Percentiles do not average: a mean of\n")
+	page.WriteString("per-record p95s would be a number nothing measured and nobody would feel,\n")
+	page.WriteString("while the worst record's own figure is a real measurement and is what a\n")
+	page.WriteString("deployment notices first. Each record's own p50 and p95 are in the site\n")
+	page.WriteString("tables below.\n\n")
+	page.WriteString("| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |\n")
+	page.WriteString("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, b := range totals {
-		fmt.Fprintf(page, "| `%s` | `%s` | `%s` | %d | %d | %d | %d | %d | %d | %s | %d | %d | %d |\n",
+		fmt.Fprintf(page, "| `%s` | `%s` | `%s` | %d | %d | %d | %d | %d | %d | %s | %s | %d | %d | %d |\n",
 			b.provider, b.model, b.env, len(b.sites),
 			b.byStatus[aicert.StatusCurrent], b.byStatus[aicert.StatusPartial], b.byStatus[aicert.StatusStale],
-			b.runs, b.passed, reliability(b.passed, b.runs),
+			b.runs, b.passed, reliability(b.passed, b.runs), latencyMS(b.slowestP95),
 			b.byVerdict[aicert.VerdictCertified], b.byVerdict[aicert.VerdictSupportedDegraded],
 			b.byVerdict[aicert.VerdictNotSupported])
 	}
@@ -265,6 +274,9 @@ func foldBindings(rows []aicert.ReadinessRow) []bindingTotals {
 		b.byVerdict[row.Tally.Verdict]++
 		b.runs += row.Tally.Runs
 		b.passed += row.Tally.Passed
+		if row.Record.LatencyP95 > b.slowestP95 {
+			b.slowestP95 = row.Record.LatencyP95
+		}
 	}
 	out := make([]bindingTotals, 0, len(byKey))
 	for _, b := range byKey {
@@ -439,16 +451,31 @@ func writeAICertSiteRecords(page *strings.Builder, rows []aicert.ReadinessRow) {
 		return
 	}
 	fmt.Fprintf(page, "Records (%d):\n\n", len(rows))
-	page.WriteString("| Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
-	page.WriteString("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|\n")
+	page.WriteString("p50 and p95 are the RECORD's own latency — the whole run that produced it,\n")
+	page.WriteString("across every site it measured, because that is the granularity a record\n")
+	page.WriteString("keeps. They are not this one site's figures, and a record covering several\n")
+	page.WriteString("sites repeats the same pair on each of their rows.\n\n")
+	page.WriteString("| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
+	page.WriteString("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, row := range rows {
 		t := row.Tally
-		fmt.Fprintf(page, "| `%s` | `%s` | %s | `%s` | %d | %d | %s | %d | %d | %d | %d |\n",
+		fmt.Fprintf(page, "| `%s` | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
 			row.Binding(), row.Status(), row.Coverage(), t.Verdict,
 			t.Runs, t.Passed, reliability(t.Passed, t.Runs),
+			latencyMS(row.Record.LatencyP50), latencyMS(row.Record.LatencyP95),
 			t.ReportedAccepted, t.ReportedWrongAnswer, t.ReportedInvalid, t.ReportedAbstained)
 	}
 	page.WriteString("\n")
+}
+
+// latencyMS renders a measured latency, or a dash when there is none. A record
+// with no measurement has no latency, and printing 0ms for it would read as the
+// fastest binding on the page rather than as the absence of a number.
+func latencyMS(ms int64) string {
+	if ms <= 0 {
+		return aicert.Unmeasured
+	}
+	return strconv.FormatInt(ms, 10) + "ms"
 }
 
 // reliability renders a pass rate, or a dash when there is nothing to divide.

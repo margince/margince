@@ -161,6 +161,33 @@ func buildReportWhere(ctx context.Context, spec reportSpec, req reportRequest, a
 		}
 		where = append(where, fmt.Sprintf("%s = $%d", expr, arg(value)))
 	}
+	scoped, err := specScopeClauses(ctx, spec, arg)
+	if err != nil {
+		return nil, err
+	}
+	where = append(where, scoped...)
+	refs, err := referenceScopeClauses(ctx, spec, arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, refs...), nil
+}
+
+// specScopeClauses is the ROW-SCOPE half of a population's narrowing: the
+// entity's own scope, or the activity content walk for a spec that reads
+// message bodies. The masks and reference scopes are the other two halves;
+// specNarrowings below composes all three.
+//
+// Extracted so the generic analytics path and the report engine ask ONE
+// question. They did not, and the difference was not academic: the analytics
+// path shipped without the activity content clause, which is what enforces
+// `restricted_at`, the link-reachability walk and the audience a human set on
+// a thread — and the audience arm does not yield to row_scope=all, so an admin
+// read private mail through a count.
+//
+// Two writers of one invariant either share a helper or say why they do not.
+// This is the helper.
+func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) ([]string, error) {
 	var scope string
 	var err error
 	if spec.activityWalk {
@@ -171,14 +198,43 @@ func buildReportWhere(ctx context.Context, spec reportSpec, req reportRequest, a
 	if err != nil {
 		return nil, err
 	}
+	var out []string
 	if scope != "" {
-		where = append(where, scope)
+		out = append(out, scope)
 	}
+	return out, nil
+}
+
+// specNarrowings is EVERY row-level narrowing a spec's population carries: the
+// scope clauses above, the field-mask exclusions, and the reference scopes.
+//
+// Held by: TestEveryPopulationsNarrowingsAreComposedInOnePlace
+// (backend/gates/analyticsscope_test.go), which fails when a function taking a
+// reportSpec reaches for one of the three directly instead.
+//
+// The report engine does not call this one. It needs the mask clauses in hand
+// separately, because it also COUNTS the rows they withheld for
+// excluded_by_permission — so it composes the three itself, and the gate
+// TestEveryPopulationsNarrowingsAreComposedInOnePlace ratifies it by name.
+// Every other path takes the whole set from here.
+func specNarrowings(ctx context.Context, spec reportSpec, arg func(any) int) ([]string, error) {
+	out, err := specScopeClauses(ctx, spec, arg)
+	if err != nil {
+		return nil, err
+	}
+	// An aggregate over a masked column would disclose it through the total,
+	// so the row leaves the population entirely.
+	masks, _, err := maskExclusionClauses(ctx, spec, arg)
+	if err != nil {
+		return nil, err
+	}
+	// And the records the population POINTS AT: grouping by a reference column
+	// would otherwise name ids the caller's ordinary read of the same row masks.
 	refs, err := referenceScopeClauses(ctx, spec, arg)
 	if err != nil {
 		return nil, err
 	}
-	return append(where, refs...), nil
+	return append(append(out, masks...), refs...), nil
 }
 
 // referenceScopeClauses narrows a report to the rows whose REFERENCED records

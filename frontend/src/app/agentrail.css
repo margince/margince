@@ -16,7 +16,7 @@
  * lives in that line, and the light the orb spills on the rail floor has no edge
  * to stop it.
  *
- * The panel is taken out of the flow, sideways: a 252px column cannot carry five
+ * The panel is taken out of the flow, sideways: a 224px column cannot carry five
  * sections, and a panel that pushed the rail wider would move every destination
  * above it.
  */
@@ -403,15 +403,17 @@
     border: 1px solid var(--borderSubtle);
     border-radius: 50%;
     /* The bar's ground, not the page's: the well is the bar rising, and a
-       different fill would read as an object resting on it. The tone the orb
-       spills sits over that ground rather than replacing it. */
+       different fill would read as an object resting on it. Solid where the bar
+       is glass, because a translucent circle over the content it floats above
+       would show the page through the one object in the bar that is lit. The
+       tone the orb spills sits over that ground rather than replacing it. */
     background:
       radial-gradient(
         70% 70% at 50% 42%,
         color-mix(in srgb, var(--arTone) 14%, transparent),
         transparent 72%
       ),
-      var(--bgSidebar);
+      var(--bgElevated);
     box-shadow: var(--shadow-pop);
   }
   /* Outside the shape rather than inset: this control has an edge of its own
@@ -485,15 +487,12 @@
      insets it would put a white margin around the one part of this surface that
      is meant to look like glass. */
   border: 1px solid var(--borderSubtle);
-  border-radius: 20px; /* ds:ignore the flyout's own corner, softer than a card's so the glass reads as one piece */
+  /* The pane's corner: the flyout is one more pane, opened beside the rail. */
+  border-radius: var(--r-lg);
   background: var(--bgElevated);
-  backdrop-filter: blur(30px) saturate(180%);
-  /* Three shadows: the hairline that seats it, the near shade it sits in, and
-     the far one that lifts it off the page. */
-  box-shadow:
-    inset 0 1px 0 var(--bgCard),
-    0 2px 8px -4px var(--overlayScrim),
-    var(--shadow-pop);
+  backdrop-filter: blur(20px);
+  /* The one shadow a layer over the page may cast (DESIGN.md §5). */
+  box-shadow: var(--shadow-pop);
   /* Over the page, under the phone sheet and its scrim (29/30, shell.css): a
      panel that stayed lit over a dimmed page would read as the one thing still
      live while the sheet was open. */
@@ -588,7 +587,7 @@
   gap: 2px var(--space-3); /* ds:ignore two lines of one heading, not spaced content */
   padding: var(--space-3);
   overflow: hidden;
-  border-radius: 19px 19px 0 0; /* ds:ignore sits inside the panel's own 20px corner */
+  border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;
   background: linear-gradient(
     165deg,
     color-mix(in srgb, var(--arTone) 7%, var(--bgElevated)),

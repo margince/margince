@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -72,10 +73,15 @@ type ChannelDeliveryStager interface {
 // workspace's bot transmits, but the human is still the sender the seat gate
 // re-reads at transmission.
 type ChannelDeliveryRequest struct {
-	ActivityID ids.ActivityID
-	Provider   string
-	Recipient  connector.ChannelIdentity
-	Body       string
+	// Authorization is the same question the mail path asks, about a channel
+	// recipient. Carried rather than rebuilt: a channel reply resolves its
+	// recipient server-side from the conversation, so this is the only place
+	// that knows who it is.
+	Authorization commsauthz.Request
+	ActivityID    ids.ActivityID
+	Provider      string
+	Recipient     connector.ChannelIdentity
+	Body          string
 	// Attachments is what this message carries, snapshotted at staging — the
 	// same type and the same meaning as DeliveryRequest.Attachments, because a
 	// second spelling of the snapshot is a second set of fields that can
@@ -446,5 +452,12 @@ func (m outboundChannelMessage) delivery(activityID ids.ActivityID) ChannelDeliv
 		Body:           m.in.Body,
 		Attachments:    m.files,
 		ConsentPurpose: m.in.ConsentPurpose,
+		// The recipient the conversation resolved to, which a caller never
+		// named and cannot substitute.
+		Authorization: commsauthz.Request{
+			Recipients:       []connector.Recipient{{Channel: &m.conversation.recipient}},
+			LegacyPurposeKey: m.in.ConsentPurpose,
+			Body:             m.in.Body,
+		},
 	}
 }

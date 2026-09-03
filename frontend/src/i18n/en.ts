@@ -2567,6 +2567,8 @@ export const en = {
   "plan.new.save": "Add",
   "plan.new.cancel": "Cancel",
 
+  "home.weekly.frozen": "Frozen",
+  "home.weekly.written": "written {at}",
   "home.weekly.pickWeek": "Open another week",
   "home.weekly.none":
     "No weekly review yet — the first one is written on the Monday after your first full week.",

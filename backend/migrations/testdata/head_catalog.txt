@@ -154,6 +154,7 @@ public.activity_participant.activity_participant_role_check CHECK ((role = ANY (
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.person_id uuid gen=- def=-
 public.activity_participant.role text NOT NULL gen=- def=-
@@ -442,6 +443,7 @@ public.ai_call.context_tokens_estimate bigint NOT NULL gen=- def=0
 public.ai_call.correlation_id uuid gen=- def=-
 public.ai_call.degraded boolean NOT NULL gen=- def=false
 public.ai_call.error_sentinel text gen=- def=-
+public.ai_call.finish_reason text NOT NULL gen=- def=''::text
 public.ai_call.id uuid NOT NULL gen=- def=uuidv7()
 public.ai_call.is_terminal boolean NOT NULL gen=- def=true
 public.ai_call.kind text NOT NULL gen=- def='completion'::text
@@ -454,6 +456,7 @@ public.ai_call.reasoning_tokens bigint NOT NULL gen=- def=0
 public.ai_call.request_fingerprint text NOT NULL gen=- def=-
 public.ai_call.served_identity_source text NOT NULL gen=- def='configured'::text
 public.ai_call.served_model text NOT NULL gen=- def=''::text
+public.ai_call.served_provider text NOT NULL gen=- def=''::text
 public.ai_call.task text NOT NULL gen=- def=-
 public.ai_call.tier text NOT NULL gen=- def=''::text
 public.ai_call.tokens_in bigint NOT NULL gen=- def=0

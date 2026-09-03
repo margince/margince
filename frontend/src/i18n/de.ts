@@ -2518,6 +2518,8 @@ export const de = {
   "plan.new.save": "Hinzufügen",
   "plan.new.cancel": "Abbrechen",
 
+  "home.weekly.frozen": "Eingefroren",
+  "home.weekly.written": "geschrieben {at}",
   "home.weekly.pickWeek": "Andere Woche öffnen",
   "home.weekly.none":
     "Noch kein Wochenrückblick — der erste wird am Montag nach deiner ersten vollen Woche geschrieben.",

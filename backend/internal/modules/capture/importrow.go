@@ -77,6 +77,24 @@ func (s *Sink) WithAudienceRecompute(recompute AudienceRecomputer) *Sink {
 	return &c
 }
 
+// ParticipantNamer completes the names of the people an activity's participant
+// rows resolved to, from the name the transport gave them. The people module
+// owns the person table and so owns that write; compose injects it, because
+// capture never imports a sibling — the same shape AudienceRecomputer travels
+// on, and for the same reason.
+//
+// Nil is a Sink that stamps participants and names nobody from them, which is
+// what every fixture is until it says otherwise.
+type ParticipantNamer func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error
+
+// WithParticipantNamer returns a copy that names a resolved attendee from the
+// invitation that named them.
+func (s *Sink) WithParticipantNamer(name ParticipantNamer) *Sink {
+	c := *s
+	c.nameParticipants = name
+	return &c
+}
+
 // recordThisImport writes the acting seat's import row, makes them a
 // participant, and re-derives the audience over the contributors that now
 // includes them.

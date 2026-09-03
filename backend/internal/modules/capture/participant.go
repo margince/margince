@@ -105,6 +105,69 @@ func stampCaptureParticipants(
 	return nil
 }
 
+// RecordAttendeeNames settles the display_name of every participant row on one
+// activity from what the invitation said, and marks the rest as unnamed.
+//
+// It lives here because capture owns no table either — activities does — but
+// this is the module that already writes activity_participant, and a second
+// spelling of that write in compose would be a second place for the column set
+// to drift. The recovery pass in compose reads stored originals and calls this,
+// exactly as it calls StampFurtherParticipants for the rows themselves.
+//
+// EVERY name-less row on the activity is settled, named or not. A row left NULL
+// because the invitation did not name its attendee would be offered to the
+// recovery pass again on its next tick, and the pass would never drain.
+func RecordAttendeeNames(
+	ctx context.Context,
+	tx pgx.Tx,
+	activityID ids.ActivityID,
+	participants []connector.MessageParticipant,
+) error {
+	addresses := make([]string, 0, len(participants))
+	names := make([]string, 0, len(participants))
+	for _, p := range participants {
+		address := strings.ToLower(strings.TrimSpace(p.Email))
+		name := strings.TrimSpace(p.DisplayName)
+		if address == "" || name == "" {
+			continue
+		}
+		addresses = append(addresses, address)
+		names = append(names, name)
+	}
+	if len(addresses) > 0 {
+		if _, err := tx.Exec(ctx, `
+			UPDATE activity_participant ap
+			   SET display_name = inp.display_name
+			  FROM unnest($2::text[], $3::text[]) AS inp(address, display_name)
+			 WHERE ap.activity_id = $1
+			   AND ap.address = inp.address
+			   AND ap.display_name IS NULL`,
+			activityID, addresses, names); err != nil {
+			return fmt.Errorf("capture: recording the name an invitation gave: %w", err)
+		}
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity_participant SET display_name = ''
+		 WHERE activity_id = $1 AND display_name IS NULL`, activityID); err != nil {
+		return fmt.Errorf("capture: settling the attendees an invitation did not name: %w", err)
+	}
+	return nil
+}
+
+// namesSomebody reports whether any of these parties arrived carrying a name.
+//
+// It is what keeps the naming pass off every ordinary mail capture: mail brings
+// no display name through this path, so without the guard every message would
+// buy a query that can only answer "nobody".
+func namesSomebody(participants []connector.MessageParticipant) bool {
+	for _, p := range participants {
+		if strings.TrimSpace(p.DisplayName) != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // StampFurtherParticipants records everyone in the interaction who is neither
 // the mailbox owner nor the counterparty: the CCs on a thread, the organizer
 // and attendees of a meeting.
@@ -139,6 +202,10 @@ func StampFurtherParticipants(
 	}
 	addresses := make([]string, 0, len(participants))
 	roles := make([]string, 0, len(participants))
+	// Names are coalesced to '' rather than left null: '' says the stamp ran
+	// and this transport named nobody, while NULL is reserved for rows written
+	// before the column existed, which is what the recovery pass selects on.
+	names := make([]string, 0, len(participants))
 	for _, p := range participants {
 		address := strings.ToLower(strings.TrimSpace(p.Email))
 		if address == "" {
@@ -146,6 +213,7 @@ func StampFurtherParticipants(
 		}
 		addresses = append(addresses, address)
 		roles = append(roles, p.Role)
+		names = append(names, strings.TrimSpace(p.DisplayName))
 	}
 	if len(addresses) == 0 {
 		return nil
@@ -171,9 +239,9 @@ func StampFurtherParticipants(
 	// counterparty promotion does — the row records which address was actually
 	// written to, and a person may hold several.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, person_id, address, role)
-		SELECT $1, u.id, pe.person_id, inp.address, inp.role
-		  FROM unnest($2::text[], $3::text[]) AS inp(address, role)
+		INSERT INTO activity_participant (activity_id, user_id, person_id, address, role, display_name)
+		SELECT $1, u.id, pe.person_id, inp.address, inp.role, inp.display_name
+		  FROM unnest($2::text[], $3::text[], $5::text[]) AS inp(address, role, display_name)
 		  LEFT JOIN app_user u
 		         ON $4 AND lower(u.email) = inp.address
 		  LEFT JOIN LATERAL (
@@ -183,7 +251,7 @@ func StampFurtherParticipants(
 		        ORDER BY p.person_id
 		        LIMIT 1) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, ourHeaderIsTrusted); err != nil {
+		activityID, addresses, roles, ourHeaderIsTrusted, names); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
 	return nil

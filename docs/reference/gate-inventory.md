@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (66)
+## Parity (67)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -32,6 +32,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
 | `coachingroles_test.go` | H2 | The seats that may coach are seats that exist. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and this gate is what makes widening seven of them a failure instead of a silent half-job. |
+| `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
 | `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts exactly the record types the search module can search, and the contract has to say the same set. |
@@ -86,7 +87,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (87)
+## Census (89)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -97,6 +98,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
+| `analyticsscope_test.go` | H2 | Every path that renders a report spec's population applies that spec's row narrowings. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
 | `audiencereaders_test.go` | H2 | A message's AUDIENCE says who may read its content. |
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a COMMITTED audience change. |
@@ -172,6 +174,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has ONE reader, and it answers one question. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
+| `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
