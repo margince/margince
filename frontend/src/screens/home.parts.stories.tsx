@@ -123,6 +123,38 @@ const GLANCE_DAY = {
   summary: { total: 2, urgent: 1 },
 } as unknown as Parameters<typeof HomeGlance>[0]["day"];
 
+// A week that closed with a result and a debt — the two things the weekly's
+// opening sentence is built from.
+const GLANCE_WEEK = {
+  local_week_start: "2026-06-29",
+  generated_at: "2026-07-06T03:00:00Z",
+  counts: {
+    tasks_due: 6,
+    tasks_done: 4,
+    tasks_carried_over: 2,
+    deals_moved: 3,
+    deals_won: 2,
+    deals_lost: 0,
+    proposals_accepted: 1,
+    proposals_rejected: 0,
+    brief_items_acted: 5,
+    brief_items_dismissed: 1,
+    commitments_due: 4,
+    commitments_kept: 2,
+    leads_routed: 7,
+    leads_answered_in_target: 6,
+    leads_breached: 1,
+    meetings_held: 5,
+    meetings_with_next_step: 4,
+  },
+  pipeline: {
+    won_minor: 4200000,
+    created_minor: 0,
+    lost_minor: 0,
+    currency: "EUR",
+  },
+} as unknown as Parameters<typeof HomeGlance>[0]["week"];
+
 // The header the Brief opens with: eyebrow, greeting, and ONE composed sentence
 // about the day — not a column of counts. Each fact the old briefing lines
 // stated has a better home on the page now: the decisions deck draws its own
@@ -133,6 +165,7 @@ export const Glance: Story = {
     <HomeGlance
       view="morning"
       day={GLANCE_DAY}
+      week={null}
       firstName="Lena"
       now={NOW_DATE}
     />,
@@ -147,19 +180,37 @@ export const GlanceUnnamed: Story = {
     <HomeGlance
       view="morning"
       day={GLANCE_DAY}
+      week={null}
       firstName={null}
       now={NOW_DATE}
     />,
   ),
 };
 
-// The weekly says its own thing under its own heading: no composed sentence,
-// because that one is built from the ranked queue and describes THIS morning.
+// The weekly says its own thing under its own heading, composed from the counts
+// the week was frozen with rather than from the ranked queue — which describes
+// THIS morning and would read as the wrong week entirely.
 export const GlanceWeekly: Story = {
   render: part(
     <HomeGlance
       view="weekly"
       day={GLANCE_DAY}
+      week={GLANCE_WEEK}
+      firstName="Lena"
+      now={NOW_DATE}
+    />,
+  ),
+};
+
+// A week nobody has written yet. The heading names the view and says nothing
+// about it, because there is nothing yet to say — never a quiet-week claim,
+// which would tell a rep their week was calm on no evidence.
+export const GlanceWeeklyUnread: Story = {
+  render: part(
+    <HomeGlance
+      view="weekly"
+      day={GLANCE_DAY}
+      week={undefined}
       firstName="Lena"
       now={NOW_DATE}
     />,

@@ -2398,6 +2398,16 @@ export const vi = {
   "brief.sentence.manyWithCost":
     "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
 
+  // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
+  "brief.week.won": "Bạn đã chốt {count} giao dịch.",
+  "brief.week.moved": "Bạn đã đẩy {count} giao dịch tiến lên.",
+  "brief.week.met": "Bạn đã có {count} cuộc họp.",
+  "brief.week.carryPromises": "{count} cam kết còn dang dở.",
+  "brief.week.carryTasks": "{count} công việc còn dang dở.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet":
+    "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
+
   "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
   "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
   "brief.donext.clear": "Hiện không có gì đang chờ bạn.",

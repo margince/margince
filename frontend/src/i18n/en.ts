@@ -2471,6 +2471,16 @@ export const en = {
   "brief.sentence.manyWithCost":
     "First: {lead} — {consequence} Then {rest} more.",
 
+  // The weekly Brief's opening sentence, composed from the counts the week was
+  // frozen with. Result first, then what carried — the outcome before the debt.
+  "brief.week.won": "You closed {count} deals.",
+  "brief.week.moved": "You moved {count} deals forward.",
+  "brief.week.met": "You held {count} meetings.",
+  "brief.week.carryPromises": "{count} promises carried over.",
+  "brief.week.carryTasks": "{count} tasks carried over.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
+
   "brief.donext.sub": "One order, from your worklist.",
   "brief.donext.loading": "Reading what waits on you",
   "brief.donext.clear": "Nothing is waiting on you right now.",
