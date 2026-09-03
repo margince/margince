@@ -257,3 +257,52 @@ func withoutEvidence(c Contribution) Contribution {
 }
 
 var _ = time.Now
+
+// Every bucket a classification can produce must be in the drawing order, or
+// its money is silently dropped when the buckets are assembled — the totals
+// would then disagree with the deltas that produced them, and the identity
+// would fail only for the inputs that reach the missing name.
+//
+// Derived from the constants rather than written as a list: a bucket added to
+// the classifier and forgotten here would otherwise be exactly the case this
+// cannot see.
+func TestEveryBucketNameIsDrawn(t *testing.T) {
+	t.Parallel()
+	drawn := map[string]bool{}
+	for _, name := range bucketOrder {
+		drawn[name] = true
+	}
+	for _, name := range []string{
+		BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
+		BucketStageWeight, BucketWon, BucketLost, BucketArchived, BucketFx,
+		BucketDefinition, BucketModel,
+	} {
+		if !drawn[name] {
+			t.Errorf("bucket %q exists and is never drawn — a deal classified into it "+
+				"contributes to no bar, and the buckets stop reaching the closing total", name)
+		}
+	}
+	if len(bucketOrder) != len(drawn) {
+		t.Errorf("bucketOrder lists %d names and %d are distinct — a repeated name draws twice",
+			len(bucketOrder), len(drawn))
+	}
+}
+
+// A deal won in the opening and open again in the closing. Reopening is real —
+// a deal marked won by mistake, or a renewal reversed — and it must not fall
+// through the outcome chain into the model bucket, which would report a
+// business event as a scoring change.
+func TestAReopenedDealIsNotReportedAsAModelChange(t *testing.T) {
+	t.Parallel()
+	was := open("d1", 10_000)
+	was.InOpen, was.InEvidence, was.InBestCase = false, false, false
+	was.InWon = true
+
+	m := Classify(ReadingOpen, side(DefinitionVersion, was), side(DefinitionVersion, open("d1", 10_000)))
+	delta := bucketOf(t, m, "d1")
+	if delta.Bucket == BucketModel {
+		t.Errorf("a deal that reopened landed in %q — reopening is something the business "+
+			"did, and the model bucket exists to hold what it did NOT do", delta.Bucket)
+	}
+	reconciles(t, m)
+}
