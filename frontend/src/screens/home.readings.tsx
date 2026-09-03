@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -12,8 +13,13 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { WORKLIST_FILTER_PARAM } from "./worklist";
 import { isUnprepared } from "./worklist.copy";
-import type { Worklist, WorklistItem } from "./worklist.queries";
+import type {
+  Worklist,
+  WorklistFilter,
+  WorklistItem,
+} from "./worklist.queries";
 
 // The day's readings, on one plate.
 //
@@ -38,6 +44,17 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 const MEETINGS = "meetings";
 const LEADS = "leads";
 
+// Open the worklist on the lane a reading counted.
+//
+// Each figure in this strip IS one of the queue's filter pills counted, so the
+// reading's door is that lane. It goes in the QUERY rather than the path because
+// `#/worklist/<owner>` is already an address the team board navigates to, and
+// `routeIdentity` ignores the query half — so this narrows the view without
+// remounting the screen, and leaves an address somebody can paste.
+function openLane(filter: WorklistFilter): void {
+  navigate({ screen: "worklist" }, new Map([[WORKLIST_FILTER_PARAM, filter]]));
+}
+
 export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -61,12 +78,15 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // zero already reads as "none"; a line under it repeating that says
           // the same thing twice and drops the one fact it could add.
           detail={t("home.readings.waitingBasis")}
+          openLabel={t("home.readings.openLane")}
+          onOpen={() => openLane("customer_waiting")}
         />
         <MeetingsStat
           meetings={meetings.meetings}
           unready={meetings.unready}
           locale={locale}
           t={t}
+          onOpen={() => openLane("meetings")}
         />
         <Untracked
           label={t("home.readings.promises")}
@@ -77,6 +97,7 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           soonest={soonest}
           locale={locale}
           t={t}
+          onOpen={() => openLane("leads")}
         />
         <Untracked
           label={t("home.readings.quota")}
@@ -98,7 +119,9 @@ function MeetingsStat({
   unready,
   locale,
   t,
+  onOpen,
 }: Readonly<{
+  onOpen: () => void;
   meetings: number;
   // Null when the page carries fewer meetings than it counted, so no honest
   // readiness figure exists — NOT the same as zero unprepared.
@@ -114,6 +137,8 @@ function MeetingsStat({
       value={formatNumber(meetings, locale)}
       tone={unready !== null && unready > 0 ? "warn" : undefined}
       detail={meetingsDetail(meetings, unready, locale, t, plural)}
+      openLabel={t("home.readings.openLane")}
+      onOpen={onOpen}
     />
   );
 }
@@ -151,7 +176,9 @@ function LeadsStat({
   soonest,
   locale,
   t,
+  onOpen,
 }: Readonly<{
+  onOpen: () => void;
   leads: number;
   // Null when no honest nearest deadline exists — either nothing on the page
   // names one, or the leads read was cut short and an unshown lead could be
@@ -173,6 +200,8 @@ function LeadsStat({
               value: formatDateTime(soonest, locale, viewerZone()),
             })
       }
+      openLabel={t("home.readings.openLane")}
+      onOpen={onOpen}
     />
   );
 }

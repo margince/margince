@@ -284,7 +284,10 @@ export const BoardInSurface: StoryObj = {
         },
       ]}
     >
-      <PipelineBoard columns={boardColumns} />
+      <PipelineBoard
+        columns={boardColumns}
+        cardHref={(d) => `#/deals/${d.id}`}
+      />
     </ListSurface>
   ),
 };
@@ -346,7 +349,12 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithAbsentMoney: StoryObj = {
-  render: () => <PipelineBoard columns={absentMoneyColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={absentMoneyColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };
 
 // A company has three readings on a card, and the whole point of the middle one
@@ -375,5 +383,10 @@ const withheldCompanyColumns: BoardMoneyColumn[] = [
 ];
 
 export const BoardWithWithheldCompany: StoryObj = {
-  render: () => <PipelineBoard columns={withheldCompanyColumns} />,
+  render: () => (
+    <PipelineBoard
+      columns={withheldCompanyColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+    />
+  ),
 };

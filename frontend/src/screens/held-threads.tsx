@@ -65,9 +65,7 @@ export function HeldThreadsCard() {
               // Nothing held is a READING, not an absent list: "my mailbox is
               // withholding nothing right now" is exactly what an owner opens
               // this card to confirm.
-              <EmptyState>
-                <p className="t-small">{t("heldThreads.empty")}</p>
-              </EmptyState>
+              <EmptyState>{t("heldThreads.empty")}</EmptyState>
             ) : (
               <>
                 <BacklogCallout rows={list.data} />

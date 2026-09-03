@@ -280,6 +280,68 @@ describe("AnalyticsScreen", () => {
     await waitFor(() => expect(screen.getByText("o1")).toBeTruthy());
   });
 
+  // A count is a promise about a set, and the link beside it is that promise
+  // kept. `/deals` reads no `currency` dial, so a row grouped by currency can
+  // only be addressed when its key has no second currency row to be confused
+  // with — these two hold both directions of that, because a gate that only
+  // proves the link appears would pass a version that always draws it.
+  describe("a count opens exactly the deals it counted", () => {
+    const openPipelineTab = async () =>
+      userEvent.click(await screen.findByRole("button", { name: "Pipeline" }));
+
+    it("addresses a company trading in one currency, and says the deals are open", async () => {
+      vi.stubGlobal(
+        "fetch",
+        reportsStub({
+          companyRows: [
+            {
+              organization_id: "o1",
+              raw_minor: 250000,
+              deal_count: 4,
+              currency: "EUR",
+            },
+          ],
+        }),
+      );
+      render(<AnalyticsScreen />);
+      await openPipelineTab();
+      const door = await screen.findByRole("link", { name: "4" });
+      expect(door.getAttribute("href")).toContain("organization_id=o1");
+      expect(door.getAttribute("href")).toContain("status=open");
+    });
+
+    it("draws the count plainly when the company has two currency rows", async () => {
+      vi.stubGlobal(
+        "fetch",
+        reportsStub({
+          companyRows: [
+            {
+              organization_id: "o1",
+              raw_minor: 250000,
+              deal_count: 4,
+              currency: "EUR",
+            },
+            {
+              organization_id: "o1",
+              raw_minor: 900000,
+              deal_count: 3,
+              currency: "VND",
+            },
+          ],
+        }),
+      );
+      render(<AnalyticsScreen />);
+      await openPipelineTab();
+      // Both figures are on screen; neither is a door, because a link narrowed
+      // to the company alone would open all seven deals beside a figure that
+      // counted four.
+      await waitFor(() => expect(screen.getByText("4")).toBeTruthy());
+      expect(screen.getByText("3")).toBeTruthy();
+      expect(screen.queryByRole("link", { name: "4" })).toBeNull();
+      expect(screen.queryByRole("link", { name: "3" })).toBeNull();
+    });
+  });
+
   it("explain fetches the derivation and renders source rows, not raw JSON", async () => {
     const derivationUrls: string[] = [];
     vi.stubGlobal(

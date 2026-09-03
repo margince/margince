@@ -131,7 +131,7 @@ export function ApprovalDetailModal({
         {t("decision.detail")}
       </h2>
       {open && (
-        <QueryGate query={detail}>
+        <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
           {(approval) => (
             <ApprovalDetailBody
               approval={approval}

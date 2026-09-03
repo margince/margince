@@ -9,6 +9,7 @@ import {
   type ComponentProps,
   type Dispatch,
   type DragEvent,
+  type MouseEvent,
   type ReactNode,
   type SetStateAction,
   useId,
@@ -23,7 +24,7 @@ import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -433,7 +434,18 @@ function OverlayDealsTable({
   // re-enables the Load-more button to retry.
   const pages = query.data?.pages ?? [];
   if (pages.length === 0) {
-    return <QueryStates query={query}>{null}</QueryStates>;
+    return (
+      <QueryStates
+        query={query}
+        pendingLabel={t("deals.loading")}
+        // A table's worth of rows. The default placeholder is three lines, and
+        // a list that arrives into a third of the room the placeholder held
+        // pushes the page down under the reader as it lands.
+        pendingLines={8}
+      >
+        {null}
+      </QueryStates>
+    );
   }
   const deals = pages.flatMap((p) => p.data);
   if (deals.length === 0) {
@@ -1826,6 +1838,9 @@ function DealBoardBody({
             ) : (
               <>
                 <PipelineBoard
+                  cardHref={(deal) =>
+                    routeHash({ screen: "deals", id: deal.id })
+                  }
                   columns={buildColumns(
                     effectivePipeline.stages ?? [],
                     loadedDeals,
@@ -1864,10 +1879,14 @@ function useBoardInteractions({
   advance: ReturnType<typeof useAdvanceDeal>;
   setPending: (pending: PendingAdvance) => void;
 }>) {
-  // Which card is in flight, and when the last drag ended — a drop and a click
-  // arrive as the same event pair, so the board tells them apart by time.
+  // Which card is in flight, and WHICH card a drag last ended on, with when —
+  // a drop and a click arrive as the same event pair, so the board tells them
+  // apart by time. The id travels with the timestamp because the window is
+  // board-wide otherwise: a reader who drops one card and reaches straight for
+  // another would have that second click swallowed, and a link that does
+  // nothing is indistinguishable from a broken one.
   const dragging = useRef<string | null>(null);
-  const lastDragEnd = useRef(0);
+  const lastDrop = useRef<{ dealId: string; at: number } | null>(null);
 
   const requestAdvance = (dealId: string, stageId: string) => {
     const toStage = stages.find((stage) => stage.id === stageId);
@@ -1889,9 +1908,14 @@ function useBoardInteractions({
 
   // Board interactions are hoisted here so the render-prop tree below doesn't
   // nest their event callbacks past the readable depth.
-  const openDeal = (deal: BoardDeal) => {
-    if (Date.now() - lastDragEnd.current > 250) {
-      navigate({ screen: "deals", id: deal.id });
+  // The card is a LINK now, so this no longer navigates — the href does. What
+  // is left is the one thing a link cannot know: the click that ends a drag is
+  // not a click on the card, and following it would open a deal the reader was
+  // only moving.
+  const openDeal = (deal: BoardDeal, event: MouseEvent) => {
+    const drop = lastDrop.current;
+    if (drop?.dealId === deal.id && Date.now() - drop.at <= 250) {
+      event.preventDefault();
     }
   };
 
@@ -1917,8 +1941,8 @@ function useBoardInteractions({
       const dealId =
         event.dataTransfer.getData("text/plain") || dragging.current;
       dragging.current = null;
-      lastDragEnd.current = Date.now();
       if (dealId) {
+        lastDrop.current = { dealId, at: Date.now() };
         requestAdvance(dealId, column.stage);
       }
     },

@@ -157,7 +157,7 @@ describe("the stakeholders on a project", () => {
         name: "Delivery lead",
       }),
     );
-    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await user.click(dialog.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(writes.length).toBe(1));
     expect(writes[0].method).toBe("PUT");
@@ -281,7 +281,7 @@ describe("the stakeholders on a project", () => {
     );
     settleSearch();
     await user.click(await dialog.findByRole("button", { name: "Mai Trần" }));
-    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await user.click(dialog.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(writes.length).toBe(1));
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -292,7 +292,7 @@ describe("the stakeholders on a project", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await user.click(screen.getByTestId("add-project-stakeholder"));
     expect(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }),
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Add" }),
     ).toBeDisabled();
   });
 

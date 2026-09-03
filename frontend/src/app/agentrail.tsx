@@ -1101,6 +1101,27 @@ function barLine(
   return LABELS.idle;
 }
 
+/**
+ * What the one button on this rail is called, spend included.
+ *
+ * A function rather than an expression in the component because the component
+ * is already at the complexity ceiling, and because the two conditions that
+ * decide whether there IS a figure — this seat may read it, and something in
+ * the month carried a price — have to be asked the same way here as they are
+ * for the box below. Two spellings of "is there a spend" is how the name and
+ * the contents come to disagree.
+ */
+function railHitLabel(
+  open: boolean,
+  spend: Readonly<{ allowed: boolean; minor?: number }>,
+  money: string,
+): string {
+  const name = open ? LABELS.collapse : LABELS.expand;
+  return spend.allowed && spend.minor !== undefined
+    ? `${name}. ${LABELS.spend}: ${money}`
+    : name;
+}
+
 export function AgentRail({
   route,
   bar,
@@ -1177,6 +1198,7 @@ export function AgentRail({
     spend.minor === undefined
       ? ""
       : formatMoney(spend.minor, spend.currency, locale);
+  const hitLabel = railHitLabel(open, spend, money);
   // Above the early return with every other hook: a screen this section draws
   // nothing on is still a render it has to make the same calls in.
   // The newest settled run, for the rotation; the newest live one, for the bar.
@@ -1257,7 +1279,15 @@ export function AgentRail({
         className="arhit"
         ref={trigger}
         aria-expanded={open}
-        aria-label={open ? LABELS.collapse : LABELS.expand}
+        // The spend joins the NAME, not only the box.
+        //
+        // An `aria-label` replaces everything inside the button, so the figure
+        // and its scope are drawn for a sighted reader and reach a screen
+        // reader from nowhere at all — and on the collapsed rail the
+        // stylesheet hides `.arwords` too, so there is no second route to it.
+        // A figure somebody is accountable for cannot be the half of this
+        // control that only some readers get.
+        aria-label={hitLabel}
         // Opening the panel is what acknowledges a broken run: it is the
         // reader turning to the agent's report, so it is the moment the fault
         // stops needing to be held. Until then the orb holds it, however many
@@ -1302,7 +1332,18 @@ export function AgentRail({
               read it, and absent again when nothing in the month carried a
               price. */}
           {spend.allowed && spend.minor !== undefined && (
-            <span className="arspend">{money}</span>
+            <span className="arspend">
+              {money}
+              {/* The scope beside the figure, in the slot the stylesheet
+                  already reserved for it (`.arspend > .arscope`, "the money,
+                  and the scope it was spent in, on one line"). It shipped
+                  without one, so the rail carried a bare currency amount naming
+                  nothing — and the button's own aria-label overrides the text
+                  inside it, so no reader got the word from anywhere. The
+                  expanded panel says "Cost this month"; this is the same fact
+                  in the space a rail has, from the same string. */}
+              <span className="arscope">{LABELS.spendScope}</span>
+            </span>
           )}
         </span>
         <ChevronRight

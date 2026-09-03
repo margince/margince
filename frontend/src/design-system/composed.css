@@ -67,6 +67,12 @@
 }
 
 .deal-card {
+  /* An anchor now rather than a button (composed.tsx says why), so it takes the
+     two things the platform gives a link and this card must not have: the UA's
+     own ink and an underline. `a:not([class])` in base.css does not reach a
+     classed anchor, so they are stated here. */
+  color: inherit;
+  text-decoration: none;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);

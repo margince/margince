@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
 import { ShareViewButton } from "./analytics.share";
@@ -163,12 +163,25 @@ function screenStory() {
   );
 }
 
+// Press each named button in turn, waiting for it to exist first.
+//
+// VARIADIC rather than one name, because the screen's two sections are a tab
+// apart: the report cards live under Pipeline and the Forecast tab is the
+// default, so anything inside a report card takes two presses to reach.
+//
+// The NAME stays `clickButton` deliberately. Widening it to take several was a
+// rename first, and the rename cost a red pipeline: this file gains stories on
+// main while a branch is open, a new one arrived calling the old name, and the
+// merge compiled a call to a symbol neither side had broken by itself. A
+// signature can widen without every existing caller having to move.
 const clickButton =
-  (name: string) =>
+  (...names: readonly string[]) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    await userEvent.click(
-      await within(canvasElement).findByRole("button", { name }),
-    );
+    for (const name of names) {
+      await userEvent.click(
+        await within(canvasElement).findByRole("button", { name }),
+      );
+    }
   };
 
 const meta: Meta = { title: "Records/Reports" };
@@ -187,16 +200,21 @@ export const Forecast: Story = {
   play: clickButton("Forecast"),
 };
 
+// The company table, which is a CARD in the Pipeline section rather than a
+// segment of its own — there is no per-report picker, so the tab is the whole
+// selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Open deals per company"),
+  play: clickButton("Pipeline"),
 };
 
 // "Explain this number" open: the report card above, the derivation card below
 // it, both the same titled-card surface.
 export const Explain: Story = {
   render: screenStory,
-  play: clickButton("Explain this number"),
+  // Pipeline first: the explain verb belongs to a report card's action row, and
+  // the Forecast section the screen opens on draws no report cards at all.
+  play: clickButton("Pipeline", "Explain this number"),
 };
 
 // The three absences a slot has to tell apart, side by side, because they are
@@ -322,8 +340,13 @@ export const ShareDialogLinkShownOnce: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Share view" }),
     );
+    // `screen`, not `canvas`, for anything inside the dialog: Modal portals to
+    // document.body, so the dialog is a sibling of the canvas rather than a
+    // descendant of it, and a canvas-scoped query for its confirm waits out its
+    // full budget for a button that is on screen the whole time. The TRIGGER
+    // stays canvas-scoped, because that one really is in the story's own tree.
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Create link" }),
+      await screen.findByRole("button", { name: "Create link" }),
     );
   },
 };

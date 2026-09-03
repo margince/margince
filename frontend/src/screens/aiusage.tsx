@@ -357,11 +357,7 @@ export function AiUsageCard() {
         <PanelBody>
           <p className="settings-panel-sub">{t("aiusage.sub")}</p>
           <QueryGate query={me}>
-            {() => (
-              <EmptyState>
-                <p className="t-small">{t("aiusage.withheld")}</p>
-              </EmptyState>
-            )}
+            {() => <EmptyState>{t("aiusage.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
       </Panel>
