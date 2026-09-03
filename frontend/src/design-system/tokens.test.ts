@@ -73,7 +73,7 @@ const canonical: Record<string, string> = {
   "--r-md": "14px",
   "--r-lg": "18px",
   "--r-full": "9999px",
-  "--f-display": '"Bricolage Grotesque",system-ui,sans-serif',
+  "--f-display": '"Outfit",system-ui,sans-serif',
   "--f-body": '"Geist",system-ui,sans-serif',
   "--f-mono": '"Geist Mono",ui-monospace,monospace',
 };

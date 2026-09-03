@@ -27,7 +27,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 |---|---|---|
 | `tokens.test.ts` | Pins ~40 token values (`canonical`), the surface-luminance ladders in both themes, AA contrast of six inks on five grounds, chip composites, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and absent from dark, the dark `@media` arm byte-equal to `[data-theme="dark"]`, `brand.css` derivation-only | Change `tokens.css` and the `canonical` table in one commit; keep both ladders monotone; re-run the contrast math on the new grounds; keep the two dark arms identical; keep `--bgRail` declared (the rail stops using it, the pin stays) |
 | `check-ds-purity.sh` + `conformance.test.ts` | No colour literal outside `tokens.css` (one exemption: `provider-mark.tsx`) | Every new colour is a token; glows and panes included |
-| `check-font-lock.sh` + `conformance.test.ts` | Exactly three families: Bricolage Grotesque, Geist, Geist Mono (before Step 1, the previous three) | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
+| `check-font-lock.sh` + `conformance.test.ts` | Exactly three families: Outfit, Geist, Geist Mono (Outfit kept by decision after the mock's display face was tried in Step 1) | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
 | `check-ds-spacing.sh` | No new raw px in padding/margin/gap under `screens/` and `app/` | Screen sheets use `--space-*`; design-system sheets may keep optical px |
 | `check-space-tokens.sh` | Every `var(--x)` is declared somewhere | Rename a token only with all its consumers |
 | `onecard.test.ts` | No second rule declares `.card`'s full chrome | When `Panel` becomes the pane, `.card` must not end up identical to it |
@@ -68,9 +68,10 @@ least risky once the tokens hold.
 4. **Rail tokens.** The design has no dark rail. `--bgRail` and the
    `--rail*` family stay declared (pinned) and stop being consumed by
    `shell.css`; note in `tokens.css` that they are retired.
-5. **Fonts.** Bricolage Grotesque (display, 600), Geist (body, 400/500/600),
-   Geist Mono (figures, 400/500). Four places, one PR. Keep `--f-display`,
-   `--f-body`, `--f-mono` as the names.
+5. **Fonts.** Outfit (display, 600), Geist (body, 400/500/600), Geist Mono
+   (figures, 400/500). The mock's display face was tried in Step 1 and Outfit
+   kept by decision; a family change is four places in one PR. Keep
+   `--f-display`, `--f-body`, `--f-mono` as the names.
 6. **Type scale.** Make `base.css`'s `.t-*` classes read `--fs-*` instead of
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in

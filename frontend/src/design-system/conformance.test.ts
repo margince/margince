@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
 // new file is enrolled the moment it exists:
-//  - exactly three type families (Bricolage Grotesque / Geist / Geist Mono, §2) — any
+//  - exactly three type families (Outfit / Geist / Geist Mono, §2) — any
 //    other font-family fails the build;
 //  - every colour reads from a token — literal colours live only in tokens.css.
 
@@ -52,7 +52,7 @@ const files = sourceFiles(join(frontendRoot, "src"))
   .concat(extensionFrontends());
 
 const allowedFamilies = new Set([
-  "Bricolage Grotesque",
+  "Outfit",
   "Geist",
   "Geist Mono",
   // stack fallbacks named in the §2 token definitions
