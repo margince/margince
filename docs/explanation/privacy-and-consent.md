@@ -16,7 +16,10 @@ outbound surface consults *before anything leaves the workspace*:
 - The question is always **per purpose**: a `marketing` grant never authorizes a `profiling` use.
 - **Default-deny in every direction** — an unknown purpose, an address that resolves to no subject,
   state `unknown`, and state `withdrawn` all block. A double-opt-in purpose additionally requires the
-  confirmed round-trip on the proof log (a granted-but-unconfirmed row does not send).
+  confirmed round-trip on the proof log (a granted-but-unconfirmed row does not send). That round
+  trip is completed **only by the data subject**, by spending a single-use link mailed to their own
+  live primary address — there is no operator-held token, because a token an operator can read and
+  hand back proves nothing about the mailbox it was supposed to reach.
 - A refusal answers `ErrConsentNotGranted` and names only the address — it discloses nothing new.
 
 The gate is spelled once (`consent.NewGate`) and **injected into the send path** (activities) at the

@@ -91,14 +91,11 @@ func TestAnArchivedSubjectTakesAWithdrawalButNotAGrant(t *testing.T) {
 			PersonID: e.person, PurposeID: e.newsletter,
 		}, "person_id", e.person.UUID)
 
-		// The slower route to the same grant. A double opt-in exists so the
-		// subject can CONFIRM a grant, so issuing its token for an archived
-		// person is the same lawful-basis claim arriving by post — and it is a
-		// separate entry point that reaches person_consent without going
-		// through Record at all.
-		if _, err := e.store.IssueDoubleOptIn(e.ctx, e.person, e.doiNews, false); !errors.Is(err, apperrors.ErrNotFound) {
-			t.Fatalf("issuing a double opt-in for an archived subject: got %v, want not found", err)
-		}
+		// The slower route to the same grant used to be double-opt-in issuance,
+		// which reached person_consent without going through Record. There is
+		// no such route now — issuance refuses at the handler and mints
+		// nothing — so the only thing left to hold is that the table stayed
+		// empty for this subject.
 		var tokens int
 		if err := e.owner.QueryRow(context.Background(),
 			`SELECT count(*) FROM consent_doi_token WHERE person_id = $1`, e.person).Scan(&tokens); err != nil {

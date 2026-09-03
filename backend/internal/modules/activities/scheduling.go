@@ -401,10 +401,9 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 			return
 		}
 		if err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
-			PurposeID:        purposeID,
-			PolicyVersion:    req.Consent.PolicyVersion,
-			Wording:          req.Consent.Wording,
-			DoubleOptInToken: req.Consent.DoubleOptInToken,
+			PurposeID:     purposeID,
+			PolicyVersion: req.Consent.PolicyVersion,
+			Wording:       req.Consent.Wording,
 		}); err != nil {
 			writeStoreErr(w, r, err)
 			return

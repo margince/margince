@@ -53,6 +53,14 @@ func publicConfirm(limits publicConfirmLimiters) func(http.Handler) http.Handler
 				next.ServeHTTP(w, r)
 				return
 			}
+			// Set before any refusal below, for the preference edge's reason
+			// and with more at stake: every response on this prefix is derived
+			// from a bearer token that lives in somebody's mailbox, and a GET
+			// here discloses that person's record rather than a list of
+			// switches. A shared cache holding any of them is a leak, so the
+			// rate-limited and not-found answers are as uncacheable as the
+			// successful one.
+			w.Header().Set("Cache-Control", "no-store")
 			token := strings.SplitN(strings.TrimPrefix(r.URL.Path, publicConfirmPrefix), "/", 2)[0]
 			if token == "" {
 				httperr.Write(w, r, apperrors.ErrNotFound)

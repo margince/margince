@@ -729,9 +729,8 @@ export const vi = {
   "person.consent": "Chấp thuận",
   "consent.grant": "Cấp chấp thuận",
   "consent.withdraw": "Rút lại",
-  "consent.doubleOptIn": "Phát hành xác nhận kép",
-  "consent.doiIssued": "Token dùng một lần (chỉ hiện một lần):",
-  "consent.doiExpires": "Hết hạn",
+  "consent.doiBySubject":
+    "M\u1ee5c \u0111\u00edch n\u00e0y do ch\u00ednh li\u00ean h\u1ec7 x\u00e1c nh\u1eadn, qua li\u00ean k\u1ebft g\u1eedi t\u1edbi \u0111\u1ecba ch\u1ec9 c\u1ee7a h\u1ecd. H\u00e3y d\u00f9ng \u201c\u0110\u1ec1 ngh\u1ecb h\u1ecd x\u00e1c nh\u1eadn th\u00f4ng tin\u201d b\u00ean d\u01b0\u1edbi.",
   "consent.askToConfirm": "Đề nghị họ xác nhận thông tin",
   "consent.askToConfirmWhat":
     "Gửi cho liên hệ này một liên kết riêng để họ xem bạn đang lưu gì về họ, sửa lại nếu sai, và cho biết họ có muốn nhận tin từ bạn không. Liên kết chỉ đến địa chỉ đã lưu của họ; bạn không thể gửi đi nơi khác.",
@@ -749,9 +748,6 @@ export const vi = {
   "consent.proofEmpty":
     "Chưa ghi nhận quyết định chấp thuận nào cho mục đích này. Nhật ký trống là trung thực, không phải thiếu sót.",
   "consent.sourceUnknown": "không ghi nhận nguồn",
-  "consent.tokenLabel": "Token xác nhận",
-  "consent.tokenHint":
-    "Mục đích này cần xác nhận kép: hãy dán token dùng một lần để sự chấp thuận có hiệu lực.",
   "consent.actorHuman": "Người",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "Hệ thống",

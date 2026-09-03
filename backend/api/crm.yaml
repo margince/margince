@@ -12690,16 +12690,17 @@ paths:
       operationId: issueDoubleOptIn
       security: [ { cookieAuth: [] } ]   # human session only
       x-agent-access: human-only
-      summary: Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
+      summary: Double-opt-in issuance — not available until the confirmation mail is durable.
       description: |
-        Issues the token that `recordConsent` later redeems (feedback/11 — the contract previously
-        defined only redemption). Mints a **single-use, 72h-TTL** double-opt-in token for `purpose_id`
-        and, when `deliver=true`, queues the confirmation message through the outbound surface for
-        delivery to the data subject. Only the token's **SHA-256 hash is stored** (`consent_doi_token`,
-        data-model §3.4); the plaintext is returned **once** here (and in the delivered message) and
-        never again. A new issuance **supersedes** any unredeemed prior token for the same
-        `(person, purpose)`. Requires the purpose to have `requires_double_opt_in=true` (else `422`).
-        🟢 — an internal issuance; the confirmation send rides the outbound/consent gate like any message.
+        Answers `409` and mints nothing. A double opt-in is only evidence when the data subject
+        completes it from their own mailbox, and this installation has no durable path to deliver
+        that link yet. The earlier behaviour returned the plaintext token to the operator, who could
+        paste it straight back into `recordConsent` — a round trip in which the subject's mailbox
+        never participated, recorded as though it had.
+
+        Marketing opt-in meanwhile is captured through the confirm-details link
+        (`requestDetailsConfirmation`), which mails a single-use link to the person's own live
+        primary address and records their answer when they submit it.
       requestBody:
         required: true
         content:
@@ -12709,21 +12710,8 @@ paths:
               required: [purpose_id]
               properties:
                 purpose_id: { type: string, format: uuid }
-                deliver:
-                  type: boolean
-                  default: true
-                  description: When true, queues the confirmation message; false mints only (for a capture surface that delivers its own — feedback/14 booking/forms).
       responses:
-        '201':
-          description: Token issued (plaintext shown once); confirmation queued when deliver=true.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [token, expires_at]
-                properties:
-                  token: { type: string, description: The single-use DOI token — shown once; redeem via recordConsent.double_opt_in_token. }
-                  expires_at: { type: string, format: date-time }
+        '409': { $ref: '#/components/responses/Conflict' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -12748,12 +12736,13 @@ paths:
         consent that looks defensible against a mailbox the subject never held. A contact with no
         live address is a 422 rather than a silent no-op.
 
-        The token is never returned. Unlike the double-opt-in token, which a rep pastes back in, this
-        one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
+        The token is never returned. It is only ever mailed — returning it would defeat the
+        mailbox-as-evidence property above, and this link IS how a double-opt-in purpose gets
+        confirmed now that no operator-held token exists.
         A fresh request supersedes any unspent earlier link for the same person.
 
-        `delivered` reports whether the mail actually left, and `sendable` says whether this
-        installation can send at all. Both, because they are different facts and a reader's next
+        `provider_accepted` reports whether the relay took the message, and `sendable` says whether
+        this installation can send at all. Both, because they are different facts and a reader's next
         move differs: configure a relay, or try again. An installation with no relay still mints
         the token and answers 201, because the write happened and reporting it as a failure would
         invite a second request that mints another token and supersedes the first.
@@ -32759,18 +32748,19 @@ components:
         A confirm link that now exists, and what became of the attempt to deliver it. Three
         outcomes rather than two, because a reader's next move differs: it went, this
         installation cannot send at all, or the send was tried and failed.
-      required: [delivered_to, expires_at, delivered, sendable]
+      required: [delivered_to, expires_at, provider_accepted, sendable]
       properties:
         delivered_to:
           type: string
           description: The address the link was posted to — the person's own live primary email.
         expires_at: { type: string, format: date-time }
-        delivered:
+        provider_accepted:
           type: boolean
           description: |
             Whether the relay accepted the message. False while `sendable` is true means the send
             was attempted and failed, which is a different fact from an installation that cannot
-            send at all.
+            send at all. It is deliberately not called `delivered`: a relay returns before any
+            mailbox has seen the message, and a later bounce cannot travel back to change this.
         sendable:
           type: boolean
           description: |
@@ -33489,7 +33479,6 @@ components:
         new_state: { type: string, enum: [granted, withdrawn] }
         lawful_basis: { type: [string, 'null'] }
         source: { type: [string, 'null'] }
-        double_opt_in_token: { type: [string, 'null'], description: Required to make a grant effective when the purpose has requires_double_opt_in=true. }
 
     RecordClaim:
       type: object
@@ -33592,7 +33581,6 @@ components:
         purpose_id: { type: string, format: uuid }
         policy_version: { type: string, description: Version id of the consent wording shown to the subject. }
         wording: { type: [string, 'null'], description: 'The exact wording shown, stored with the consent event for demonstrability.' }
-        double_opt_in_token: { type: [string, 'null'], description: Present when the surface delivered its own DOI confirmation (issueDoubleOptIn with deliver=false). }
 
     PreferenceCenter:
       type: object

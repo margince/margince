@@ -9,7 +9,6 @@ import {
   Card,
   EmptyState,
   Skeleton,
-  TextInput,
 } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -26,7 +25,7 @@ import { stable } from "../format/collate";
 // alone and silently dropped the append-only trail. requires_double_opt_in
 // lives on ConsentPurpose, not on the person's per-purpose state, so this
 // section also reads GET /consent-purposes and joins on purpose_id to know
-// which rows need a token before a grant can take effect.
+// which rows can only be confirmed by the subject through a mailed link.
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
 type PersonConsentState = components["schemas"]["PersonConsentState"];
@@ -179,8 +178,9 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
 
 // One consent-purpose row on the Person 360 (P-8/P-9): the state badge, a
 // Grant/Withdraw toggle that writes an append-only consent_event through
-// POST /people/{id}/consent, the token field a DOI purpose needs before a
-// grant takes effect, and a toggleable proof log. lawful_basis is
+// POST /people/{id}/consent, and a toggleable proof log. A purpose needing
+// double opt-in says so and offers no control: only the subject can confirm
+// one, from a link mailed to their own address. lawful_basis is
 // intentionally omitted from the toggle body — it's optional in
 // RecordConsentRequest and this control has no field for it yet. Errors
 // surface verbatim (a DOI-required purpose 422s here rather than silently
@@ -197,23 +197,18 @@ function ConsentRow({
   events: ConsentEvent[];
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
   const queryClient = useQueryClient();
   const granted = entry.state === "granted";
-  const [token, setToken] = useState("");
   const [showLog, setShowLog] = useState(false);
   const requiresDoi = purpose?.requires_double_opt_in ?? false;
 
   const setState = useMutation({
     mutationFn: async (newState: "granted" | "withdrawn") => {
-      const trimmedToken = token.trim();
       const { data, error } = await api.POST("/people/{id}/consent", {
         params: { path: { id: personId } },
         body: {
           purpose_id: entry.purpose_id,
           new_state: newState,
-          ...(trimmedToken ? { double_opt_in_token: trimmedToken } : {}),
         },
       });
       if (error) {
@@ -231,26 +226,6 @@ function ConsentRow({
     },
   });
 
-  const issueDoi = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.POST(
-        "/people/{id}/consent/double-opt-in",
-        {
-          params: { path: { id: personId } },
-          // deliver:true would queue a confirmation email per the contract,
-          // but the server has no queue call behind it (doi.go mints only) —
-          // asking for delivery here would silently lose the token, so this
-          // surface takes ownership of disclosing it below instead.
-          body: { purpose_id: entry.purpose_id, deliver: false },
-        },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
   return (
     <div className="consent-row">
       <div className="consent-row-head">
@@ -265,48 +240,26 @@ function ConsentRow({
         )}
       </div>
       <div className="consent-row-actions">
-        <Button
-          small
-          disabled={setState.isPending}
-          onClick={() => setState.mutate(granted ? "withdrawn" : "granted")}
-        >
-          {granted ? t("consent.withdraw") : t("consent.grant")}
-        </Button>
-        {requiresDoi && (
+        {/* Withdraw stays on every row: a person may always take consent back,
+            and a double-opt-in purpose is no exception. Granting one from here
+            is what disappears — the server refuses it, because only the subject
+            can confirm a purpose that requires the round trip, so offering the
+            button would promise something every click fails to do. */}
+        {(granted || !requiresDoi) && (
           <Button
             small
-            disabled={issueDoi.isPending}
-            onClick={() => issueDoi.mutate()}
+            disabled={setState.isPending}
+            onClick={() => setState.mutate(granted ? "withdrawn" : "granted")}
           >
-            {t("consent.doubleOptIn")}
+            {granted ? t("consent.withdraw") : t("consent.grant")}
           </Button>
         )}
         <Button small onClick={() => setShowLog((value) => !value)}>
           {t("consent.proofLog")}
         </Button>
       </div>
-      {requiresDoi && (
-        <div className="field consent-token-field">
-          <label className="t-label" htmlFor={`doi-token-${entry.purpose_id}`}>
-            {t("consent.tokenLabel")}
-          </label>
-          <TextInput
-            id={`doi-token-${entry.purpose_id}`}
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-          />
-          <p className="t-caption">{t("consent.tokenHint")}</p>
-        </div>
-      )}
+      {requiresDoi && <p className="t-caption">{t("consent.doiBySubject")}</p>}
       {setState.isError && <MutationError error={setState.error} />}
-      {issueDoi.isError && <MutationError error={issueDoi.error} />}
-      {issueDoi.data && (
-        <p className="t-caption">
-          {t("consent.doiIssued")} <code>{issueDoi.data.token}</code> ·{" "}
-          {t("consent.doiExpires")}:{" "}
-          {formatDateTime(issueDoi.data.expires_at, locale, zone)}
-        </p>
-      )}
       {showLog && <ConsentProofLog events={events} />}
     </div>
   );
@@ -394,7 +347,7 @@ function sentenceFor(
   t: ReturnType<typeof useT>,
 ): string {
   const address = issued.delivered_to;
-  if (issued.delivered) {
+  if (issued.provider_accepted) {
     return t("consent.askSent", { address });
   }
   return issued.sendable

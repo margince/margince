@@ -272,10 +272,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves the record/viewer split on one row, which only works by naming both zones and a boundary-straddling instant.",
   },
   {
-    file: "screens/consent.test.tsx",
-    why: "Pins the proof log's rendered timestamps against a zone the test chose.",
-  },
-  {
     file: "screens/contractform.currency.test.tsx",
     why: "Installation-settings fixture: the organization timezone the contract form reads back.",
   },

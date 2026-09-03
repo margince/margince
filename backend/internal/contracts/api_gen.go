@@ -17084,9 +17084,6 @@ type CaptureConnectionListResponse struct {
 // (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
 // wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
 type CaptureConsent struct {
-	// DoubleOptInToken Present when the surface delivered its own DOI confirmation (issueDoubleOptIn with deliver=false).
-	DoubleOptInToken *string `json:"double_opt_in_token,omitempty"`
-
 	// PolicyVersion Version id of the consent wording shown to the subject.
 	PolicyVersion string             `json:"policy_version"`
 	PurposeId     openapi_types.UUID `json:"purpose_id"`
@@ -18178,14 +18175,15 @@ type ConfirmFieldOrigin struct {
 // outcomes rather than two, because a reader's next move differs: it went, this
 // installation cannot send at all, or the send was tried and failed.
 type ConfirmRequestIssued struct {
-	// Delivered Whether the relay accepted the message. False while `sendable` is true means the send
-	// was attempted and failed, which is a different fact from an installation that cannot
-	// send at all.
-	Delivered bool `json:"delivered"`
-
 	// DeliveredTo The address the link was posted to — the person's own live primary email.
 	DeliveredTo string    `json:"delivered_to"`
 	ExpiresAt   time.Time `json:"expires_at"`
+
+	// ProviderAccepted Whether the relay accepted the message. False while `sendable` is true means the send
+	// was attempted and failed, which is a different fact from an installation that cannot
+	// send at all. It is deliberately not called `delivered`: a relay returns before any
+	// mailbox has seen the message, and a later bounce cannot travel back to change this.
+	ProviderAccepted bool `json:"provider_accepted"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.
@@ -27536,12 +27534,10 @@ type RecordClaimRecordType string
 
 // RecordConsentRequest defines model for RecordConsentRequest.
 type RecordConsentRequest struct {
-	// DoubleOptInToken Required to make a grant effective when the purpose has requires_double_opt_in=true.
-	DoubleOptInToken *string                      `json:"double_opt_in_token,omitempty"`
-	LawfulBasis      *string                      `json:"lawful_basis,omitempty"`
-	NewState         RecordConsentRequestNewState `json:"new_state"`
-	PurposeId        openapi_types.UUID           `json:"purpose_id"`
-	Source           *string                      `json:"source,omitempty"`
+	LawfulBasis *string                      `json:"lawful_basis,omitempty"`
+	NewState    RecordConsentRequestNewState `json:"new_state"`
+	PurposeId   openapi_types.UUID           `json:"purpose_id"`
+	Source      *string                      `json:"source,omitempty"`
 }
 
 // RecordConsentRequestNewState defines model for RecordConsentRequest.NewState.
@@ -34395,8 +34391,6 @@ type RecordConsentParams struct {
 
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
-	// Deliver When true, queues the confirmation message; false mints only (for a capture surface that delivers its own — feedback/14 booking/forms).
-	Deliver   *bool              `json:"deliver,omitempty"`
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
@@ -45478,7 +45472,7 @@ type ServerInterface interface {
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /people/{id}/consent/confirm-request)
 	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
-	// Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
+	// Double-opt-in issuance — not available until the confirmation mail is durable.
 	// (POST /people/{id}/consent/double-opt-in)
 	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
 	// May we write to this person right now — per purpose and channel, with the reason.
@@ -48310,7 +48304,7 @@ func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
+// Double-opt-in issuance — not available until the confirmation mail is durable.
 // (POST /people/{id}/consent/double-opt-in)
 func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
