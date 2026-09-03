@@ -178,6 +178,7 @@ export const vi = {
   "nav.offers": "Báo giá",
   "nav.share": "Chia sẻ",
   "nav.search": "Kết quả tìm kiếm",
+  "nav.tags": "Thẻ",
 
   "shell.railAria": "Điều hướng chính",
   "shell.aside.hide": "Ẩn",
@@ -1811,8 +1812,12 @@ export const vi = {
   "tagResult.companies": "Công ty",
   "tagResult.deals": "Deal",
   "tagResult.viewAll": "Xem tất cả {count} {kind}",
-  "tagResult.carry": "{count} mang tag này",
-  "tagResult.none": "Không ai mang tag này",
+  "tagResult.resultsTitle": "Bản ghi có thẻ này",
+  "tagResult.nothingCarries":
+    "Chưa có bản ghi nào mang thẻ này. Hãy gán thẻ từ một liên hệ, công ty hoặc thương vụ.",
+  "tagResult.loadingRows": "Đang tải {kind}…",
+  "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
+  "tagResult.unnamed": "Chưa có tên",
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
   "co.overlayFallback":
     "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
