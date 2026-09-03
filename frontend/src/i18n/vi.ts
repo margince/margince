@@ -1148,6 +1148,8 @@ export const vi = {
   "contracts.statusChange.title": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
   "contracts.statusChange.label": "Tr\u1ea1ng th\u00e1i m\u1edbi",
   "contracts.statusChange.submit": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
+  "contracts.statusChange.errSame":
+    "\u0110\u00e3 \u1edf tr\u1ea1ng th\u00e1i n\u00e0y r\u1ed3i.",
   "contracts.cancel.title": "Ghi nh\u1eadn vi\u1ec7c h\u1ee7y",
   "contracts.cancel.hint":
     "Kh\u00e1ch h\u00e0ng v\u1eabn c\u00f2n hi\u1ec7u l\u1ef1c h\u1ee3p \u0111\u1ed3ng cho \u0111\u1ebfn ng\u00e0y c\u00f3 hi\u1ec7u l\u1ef1c \u2014 \u0111\u00e2y ch\u1ec9 ghi nh\u1eadn th\u00f4ng b\u00e1o h\u1ee7y, kh\u00f4ng \u0111\u1ed5i tr\u1ea1ng th\u00e1i.",
@@ -1156,10 +1158,12 @@ export const vi = {
   "contracts.cancel.effectiveOnHint":
     "Kh\u00f4ng sau ng\u00e0y k\u1ebft th\u00fac h\u1ee3p \u0111\u1ed3ng, v\u00e0 kh\u00f4ng tr\u01b0\u1edbc ng\u00e0y th\u00f4ng b\u00e1o.",
   "contracts.cancel.submit": "Ghi nh\u1eadn vi\u1ec7c h\u1ee7y",
-  "contracts.cancel.menuLabel": "H\u1ee7y",
+  "contracts.cancel.menuLabel": "H\u1ee7y h\u1ee3p \u0111\u1ed3ng",
   "contracts.cancel.errIncomplete": "C\u1ea7n c\u1ea3 hai ng\u00e0y.",
   "contracts.cancel.errOrder":
     "Vi\u1ec7c h\u1ee7y kh\u00f4ng th\u1ec3 c\u00f3 hi\u1ec7u l\u1ef1c tr\u01b0\u1edbc ng\u00e0y th\u00f4ng b\u00e1o.",
+  "contracts.cancel.errTermEnd":
+    "Vi\u1ec7c h\u1ee7y kh\u00f4ng th\u1ec3 c\u00f3 hi\u1ec7u l\u1ef1c sau khi h\u1ee3p \u0111\u1ed3ng \u0111\u00e3 k\u1ebft th\u00fac.",
   "contracts.value.perYear": "m\u1ed7i n\u0103m",
   "contracts.value.total": "cho to\u00e0n b\u1ed9 th\u1eddi h\u1ea1n",
   "contracts.files": "T\u1ec7p",

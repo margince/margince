@@ -256,8 +256,11 @@ function ContractRow({
   // agreement gets a successor, so renewal stays offered there.
   const mayRenewThis = mayRenew && contract.status !== "superseded";
   // A terminal status has no valid transition out of it but a same-status
-  // no-op (refuseInvalidTransition), so change-status and cancel are withheld
-  // rather than offered as controls that can only refuse.
+  // no-op (refuseInvalidTransition), so change-status is withheld rather than
+  // offered as a control that can only refuse. Cancel is NOT gated on this:
+  // Store.Cancel is a two-column patch with no status check at all, so it
+  // never refuses on a terminal row — withholding it there would refuse more
+  // than the server does.
   const terminal = isTerminalContractStatus(contract.status);
 
   // The id is a VARIABLE, never closed over: a click landing before React
@@ -339,7 +342,7 @@ function ContractRow({
                 {t("contracts.statusChange.submit")}
               </Button>
             )}
-            {mayWrite && !terminal && (
+            {mayWrite && (
               <Button small onClick={() => setCancelling(true)}>
                 {t("contracts.cancel.menuLabel")}
               </Button>
@@ -353,7 +356,6 @@ function ContractRow({
         )}
       </div>
       <ContractRenewModal
-        orgId={orgId}
         contract={contract}
         open={renewing}
         onClose={() => setRenewing(false)}

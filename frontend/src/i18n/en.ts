@@ -1208,6 +1208,7 @@ export const en = {
   "contracts.statusChange.title": "Change status",
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",
+  "contracts.statusChange.errSame": "Already at this status.",
   "contracts.cancel.title": "Record cancellation",
   "contracts.cancel.hint":
     "The customer stays under contract until the effective date — this records notice, not a state change.",
@@ -1216,10 +1217,12 @@ export const en = {
   "contracts.cancel.effectiveOnHint":
     "Not after the term ends, and not before the notice date.",
   "contracts.cancel.submit": "Record cancellation",
-  "contracts.cancel.menuLabel": "Cancel",
+  "contracts.cancel.menuLabel": "Cancel agreement",
   "contracts.cancel.errIncomplete": "Both dates are needed.",
   "contracts.cancel.errOrder":
     "Cancellation cannot take effect before notice was given.",
+  "contracts.cancel.errTermEnd":
+    "Cancellation cannot take effect after the term already ends.",
   "contracts.value.perYear": "per year",
   "contracts.value.total": "for the whole term",
   "contracts.files": "Files",

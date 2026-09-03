@@ -8,12 +8,17 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
-import { MoneyInput } from "../design-system/moneyinput";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import { draftProblem, pricedIn } from "./contractform";
+import {
+  type ContractDraft,
+  ContractTermsFields,
+  contractTermsBody,
+  draftProblem,
+  pricedIn,
+} from "./contractform";
 
 // margince#3286: the three transitions a signed agreement actually goes
 // through after it is first recorded — renew, assert a status, record a
@@ -23,9 +28,7 @@ import { draftProblem, pricedIn } from "./contractform";
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
-type ValueBasis = NonNullable<
-  components["schemas"]["RenewContractRequest"]["value_basis"]
->;
+type ValueBasis = ContractDraft["valueBasis"];
 
 // A status a contract can only ARRIVE at through renewal — the server sets it
 // on the predecessor, in the same transaction that creates the successor
@@ -48,29 +51,17 @@ const STATUS_LABEL_KEY: Record<ContractStatus, MessageKey> = {
 
 // A terminal status has no valid transition out of it other than a
 // same-status no-op (refuseInvalidTransition, contract_lifecycle.go), so
-// offering "change status" or "cancel" from one would be a control that can
-// only refuse — the reasoning #3573/#3700 already apply to the plan's write
-// controls.
+// offering "change status" from one would be a control that can only refuse —
+// the reasoning #3573/#3700 already apply to the plan's write controls.
+// Cancel is NOT gated on this (companycontracts.tsx): Store.Cancel is a plain
+// column patch with no status check at all.
 export function isTerminalContractStatus(status: Contract["status"]): boolean {
   return (
     status === "expired" || status === "cancelled" || status === "superseded"
   );
 }
 
-type RenewDraft = {
-  title: string;
-  contractNumber: string;
-  valueMinor: number;
-  currency: string;
-  valueBasis: ValueBasis;
-  startsOn: string;
-  endsOn: string;
-  renewalOn: string;
-  noticePeriodDays: string;
-  signedOn: string;
-};
-
-function renewDraftOf(predecessor: Contract): RenewDraft {
+function renewDraftOf(predecessor: Contract): ContractDraft {
   return {
     // Title and basis are the two fields the successor is likeliest to keep,
     // and both are required by the wire request — prefilled so renewing an
@@ -93,9 +84,9 @@ function renewDraftOf(predecessor: Contract): RenewDraft {
 }
 
 function renewalBody(
-  draft: RenewDraft,
+  draft: ContractDraft,
 ): components["schemas"]["RenewContractRequest"] {
-  const body: components["schemas"]["RenewContractRequest"] = {
+  return {
     title: draft.title.trim(),
     value_basis: draft.valueBasis,
     // Stated rather than defaulted, for the same reason contractBody
@@ -103,32 +94,8 @@ function renewalBody(
     // itself is a fact about the paper, and a field this form quietly omitted
     // would be a guess the record could not distinguish from an answer.
     auto_renew: false,
+    ...contractTermsBody(draft),
   };
-  if (draft.contractNumber.trim() !== "") {
-    body.contract_number = draft.contractNumber.trim();
-  }
-  if (draft.valueMinor > 0) {
-    body.value_minor = draft.valueMinor;
-    if (draft.currency !== "") {
-      body.currency = draft.currency;
-    }
-  }
-  if (draft.startsOn !== "") {
-    body.starts_on = draft.startsOn;
-  }
-  if (draft.endsOn !== "") {
-    body.ends_on = draft.endsOn;
-  }
-  if (draft.renewalOn !== "") {
-    body.renewal_on = draft.renewalOn;
-  }
-  if (draft.noticePeriodDays !== "") {
-    body.notice_period_days = Number(draft.noticePeriodDays);
-  }
-  if (draft.signedOn !== "") {
-    body.signed_on = draft.signedOn;
-  }
-  return body;
 }
 
 // The successor's terms, created in the same transaction that supersedes the
@@ -138,7 +105,7 @@ function renewalBody(
 // previous render held.
 async function renewContract(
   predecessor: Contract,
-  draft: RenewDraft,
+  draft: ContractDraft,
 ): Promise<string> {
   const { data, error } = await api.POST("/contracts/{id}/renewal", {
     params: {
@@ -154,12 +121,10 @@ async function renewContract(
 }
 
 export function ContractRenewModal({
-  orgId,
   contract,
   open,
   onClose,
 }: Readonly<{
-  orgId: string;
   contract: Contract;
   open: boolean;
   onClose: () => void;
@@ -167,7 +132,7 @@ export function ContractRenewModal({
   const t = useT();
   const titleId = useId();
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<RenewDraft>(renewDraftOf(contract));
+  const [draft, setDraft] = useState<ContractDraft>(renewDraftOf(contract));
   const baseCurrency = useInstallationSettings().data?.base_currency;
   const contractCurrency = draft.currency || baseCurrency || "";
 
@@ -182,11 +147,15 @@ export function ContractRenewModal({
   const renew = useMutation({
     mutationFn: async (submitted: {
       predecessor: Contract;
-      draft: RenewDraft;
+      draft: ContractDraft;
     }) => renewContract(submitted.predecessor, submitted.draft),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orgContracts", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] });
+      queryClient.invalidateQueries({
+        queryKey: ["orgContracts", contract.organization_id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["organization360", contract.organization_id],
+      });
       onClose();
     },
   });
@@ -198,123 +167,11 @@ export function ContractRenewModal({
       <h2 id={titleId}>{t("contracts.renew.title")}</h2>
       <p className="t-caption">{t("contracts.renew.hint")}</p>
 
-      <Field label={t("contracts.form.name")} required>
-        {(props) => (
-          <TextInput
-            {...props}
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.number")}>
-        {(props) => (
-          <TextInput
-            {...props}
-            value={draft.contractNumber}
-            onChange={(e) =>
-              setDraft({ ...draft, contractNumber: e.target.value })
-            }
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.value")}>
-        {(props) => (
-          <MoneyInput
-            {...props}
-            min={0}
-            currency={contractCurrency}
-            valueMinor={draft.valueMinor}
-            blankWhenZero
-            onChangeMinor={(valueMinor) => setDraft({ ...draft, valueMinor })}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.basis")} required>
-        {(props) => (
-          <Select
-            {...props}
-            value={draft.valueBasis}
-            onChange={(value) =>
-              setDraft({ ...draft, valueBasis: value as ValueBasis })
-            }
-            options={[
-              { value: "total", label: t("contracts.basis.total") },
-              { value: "annualized_12m", label: t("contracts.basis.annual") },
-            ]}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.startsOn")}>
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.startsOn}
-            onChange={(e) => setDraft({ ...draft, startsOn: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.form.endsOn")}
-        hint={t("contracts.form.endsOnHint")}
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.endsOn}
-            onChange={(e) => setDraft({ ...draft, endsOn: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.renewalOn")}>
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.renewalOn}
-            onChange={(e) => setDraft({ ...draft, renewalOn: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.form.noticeDays")}
-        hint={t("contracts.form.noticeDaysHint")}
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="number"
-            min={0}
-            value={draft.noticePeriodDays}
-            onChange={(e) =>
-              setDraft({ ...draft, noticePeriodDays: e.target.value })
-            }
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.form.signedOn")}
-        hint={t("contracts.form.signedOnHint")}
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.signedOn}
-            onChange={(e) => setDraft({ ...draft, signedOn: e.target.value })}
-          />
-        )}
-      </Field>
+      <ContractTermsFields
+        draft={draft}
+        setDraft={setDraft}
+        currency={contractCurrency}
+      />
 
       {renew.error && (
         <p className="t-caption" role="alert">
@@ -426,9 +283,18 @@ export function ContractStatusModal({
 
       <div className="modal-actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
+        {/* recordAssignment (patch.go) records a SET regardless of whether
+            the new value equals the old one, so a same-status submit would
+            still bump the row's version and write an audit row + a from==to
+            contract.status_changed event — a write nobody asked for. */}
         <Button
           variant="primary"
-          disabled={assert.isPending}
+          reason={
+            status === contract.status
+              ? t("contracts.statusChange.errSame")
+              : undefined
+          }
+          disabled={assert.isPending || status === contract.status}
           onClick={() => assert.mutate({ contract, status })}
         >
           {t("contracts.statusChange.submit")}
@@ -506,12 +372,18 @@ export function ContractCancelModal({
     },
   });
 
+  // Mirrors the two CHECK constraints contractCheckError names
+  // (contract_lifecycle.go): a cancellation cannot take effect before notice
+  // was given, and not after the term already ends. Held here too so the
+  // control does not enable a submit the server is certain to refuse.
   const invalid =
     noticeOn === "" || effectiveOn === ""
       ? "contracts.cancel.errIncomplete"
       : effectiveOn < noticeOn
         ? "contracts.cancel.errOrder"
-        : null;
+        : contract.ends_on && effectiveOn > contract.ends_on
+          ? "contracts.cancel.errTermEnd"
+          : null;
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>

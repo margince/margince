@@ -60,12 +60,7 @@ export const RenewOpen: Story = {
     routes();
     return (
       <StoryProviders>
-        <ContractRenewModal
-          orgId="o-1"
-          contract={AGREEMENT}
-          open
-          onClose={() => {}}
-        />
+        <ContractRenewModal contract={AGREEMENT} open onClose={() => {}} />
       </StoryProviders>
     );
   },

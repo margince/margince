@@ -1158,6 +1158,7 @@ export const de = {
   "contracts.statusChange.title": "Status ändern",
   "contracts.statusChange.label": "Neuer Status",
   "contracts.statusChange.submit": "Status ändern",
+  "contracts.statusChange.errSame": "Bereits in diesem Status.",
   "contracts.cancel.title": "Kündigung erfassen",
   "contracts.cancel.hint":
     "Der Kunde bleibt bis zum Wirksamkeitsdatum unter Vertrag — dies erfasst die Kündigung, keine Statusänderung.",
@@ -1170,6 +1171,8 @@ export const de = {
   "contracts.cancel.errIncomplete": "Beide Daten werden benötigt.",
   "contracts.cancel.errOrder":
     "Eine Kündigung kann nicht vor ihrer Erklärung wirksam werden.",
+  "contracts.cancel.errTermEnd":
+    "Eine Kündigung kann nicht nach Vertragsende wirksam werden.",
   "contracts.value.perYear": "pro Jahr",
   "contracts.value.total": "für die gesamte Laufzeit",
   "contracts.files": "Dateien",

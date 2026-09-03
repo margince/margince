@@ -79,14 +79,7 @@ describe("ContractRenewModal", () => {
     );
     const user = userEvent.setup();
     const onClose = vi.fn();
-    show(
-      <ContractRenewModal
-        orgId="o-1"
-        contract={PREDECESSOR}
-        open
-        onClose={onClose}
-      />,
-    );
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={onClose} />);
 
     // Prefilled from the predecessor, both editable.
     const title = await screen.findByLabelText(/^Title/);
@@ -96,14 +89,22 @@ describe("ContractRenewModal", () => {
 
     await waitFor(() => expect(posted).not.toBeNull());
     const sent = posted as unknown as {
-      body: { title?: string; value_basis?: string };
+      body: Record<string, unknown>;
       ifMatch: string | null;
       path: string;
     };
     expect(sent.path).toBe("/v1/contracts/c-1/renewal");
     expect(sent.ifMatch).toBe("3");
-    expect(sent.body.title).toBe("Framework agreement 2024");
-    expect(sent.body.value_basis).toBe("annualized_12m");
+    // The FULL body, not two fields of it: RenewContractRequest inherits
+    // nothing from the predecessor but the counterparty (which the server
+    // derives from the path, not the body) — a regression that leaked
+    // value_minor or currency from the predecessor would pass a check that
+    // only asserted title and value_basis.
+    expect(sent.body).toEqual({
+      title: "Framework agreement 2024",
+      value_basis: "annualized_12m",
+      auto_renew: false,
+    });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
@@ -123,14 +124,7 @@ describe("ContractRenewModal", () => {
     );
     const user = userEvent.setup();
     const onClose = vi.fn();
-    show(
-      <ContractRenewModal
-        orgId="o-1"
-        contract={PREDECESSOR}
-        open
-        onClose={onClose}
-      />,
-    );
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={onClose} />);
 
     await user.click(await screen.findByRole("button", { name: "Renew" }));
 
@@ -200,6 +194,36 @@ describe("ContractStatusModal", () => {
     expect(sent.body.status).toBe("expired");
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
+
+  it("refuses to submit the status the row already carries", async () => {
+    // recordAssignment (patch.go) records a SET regardless of whether the new
+    // value equals the old one, so a same-status POST still bumps the row's
+    // version and writes an audit row + a from==to contract.status_changed
+    // event — a write nobody asked for and a no-op that isn't free.
+    let posted = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(input, init);
+        const url = new URL(request.url);
+        if (request.method === "POST" && url.pathname.endsWith("/status")) {
+          posted = true;
+        }
+        return new Response("not found", { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    show(
+      <ContractStatusModal contract={PREDECESSOR} open onClose={() => {}} />,
+    );
+
+    // The Select opens seeded with the row's own status (active) — untouched.
+    await screen.findByRole("combobox");
+    await user.click(screen.getByRole("button", { name: "Change status" }));
+
+    expect(posted).toBe(false);
+  });
 });
 
 describe("ContractCancelModal", () => {
@@ -255,5 +279,34 @@ describe("ContractCancelModal", () => {
     expect(sent.body.cancellation_notice_on).toBe("2026-06-01");
     expect(sent.body.cancellation_effective_on).toBe("2026-09-01");
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it("refuses an effective date after the term already ends", async () => {
+    // contract_cancellation_within_term (contractCheckError,
+    // contract_lifecycle.go): "a cancellation cannot take effect after the
+    // term already ends." Held client-side too, so the control does not
+    // enable a submit the server is certain to refuse.
+    let posted = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        posted = true;
+        return new Response("not found", { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    const dated = { ...PREDECESSOR, ends_on: "2026-08-01" };
+    show(<ContractCancelModal contract={dated} open onClose={() => {}} />);
+
+    await user.type(
+      await screen.findByLabelText(/^Notice given/),
+      "2026-06-01",
+    );
+    await user.type(screen.getByLabelText(/^Takes effect/), "2026-09-01");
+    await user.click(
+      screen.getByRole("button", { name: "Record cancellation" }),
+    );
+
+    expect(posted).toBe(false);
   });
 });
