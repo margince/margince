@@ -3793,9 +3793,6 @@ export const vi = {
   "ob.factsSelected": "Đã chọn {selected} / {total}",
   "ob.factsSub":
     "Hãy bỏ chọn những gì không nên trở thành thông tin công ty — chọn được tối đa 100 dữ kiện.",
-  "ob.nowUnderstands": "Giờ tôi đã hiểu",
-  "ob.contextReady":
-    "Tôi dùng được ngữ cảnh này cho bản nháp, tìm kiếm, Agent và Voice DNA, luôn kèm nguồn.",
 
   // No step number: the rail decides how many stops a reader gets, so the
   // count belongs to ob.conv.scene.step, which reads it off the rail. A total
@@ -3971,34 +3968,6 @@ export const vi = {
   "ob.fieldEg.register_number": "HRB 12345 B",
   "ob.fieldEg.industry": "Logistics thương mại điện tử",
   "ob.fieldEg.history": "Thành lập năm 2015, tách ra từ một startup logistics.",
-
-  "ob.s3.title": "Hãy xem bạn đã dựng được gì —",
-  "ob.s3.titleEm": "mà chưa kết nối gì cả.",
-  "ob.s3.sub":
-    "Tổ chức của bạn đã biết công việc và giọng văn. Kết nối hộp thư, nó sẽ tự đầy lên.",
-  "ob.s3.subNoVoice":
-    "Tổ chức của bạn đã biết công việc kinh doanh. Kết nối hộp thư, nó sẽ tự đầy lên.",
-  "ob.s3.cardProfile": "Hồ sơ kinh doanh",
-  "ob.s3.cardProfileBody":
-    "Đã xác nhận và lưu vào trang công ty. Trường đọc từ website vẫn giữ nguồn.",
-  "ob.s3.cardProfileSkippedBody":
-    "Đã đọc từ website nhưng chưa lưu: bạn bỏ qua bước xác nhận. Quay lại xác nhận nhé.",
-  "ob.s3.cardVoice": "Giọng văn của bạn",
-  "ob.s3.cardVoiceBody":
-    "Dựng từ kho văn bản bạn vừa đưa. Ngay từ đầu, bản nháp đã nghe ra giọng bạn.",
-  "ob.s3.cardVoiceSkippedBody":
-    "Bạn đã bỏ qua bước này, nên bản nháp dùng giọng trung tính. Dựng giọng trong Cài đặt.",
-  "ob.s3.cardPipeline": "Pipeline bán hàng",
-  "ob.s3.cardPipelineBody":
-    "Mẫu B2B chuẩn 7 giai đoạn, chỉnh theo ngành của bạn. Trống cho đến khi bạn kết nối.",
-  "ob.s3.cardDraft": "Một bản nháp mẫu, viết bằng giọng của bạn",
-  "ob.s3.cardDraftExample": "Một bản nháp mẫu",
-  "ob.s3.cardDraftBody": "Xem ngay bên dưới.",
-  "ob.s3.originLabel": "Pipeline này từ đâu ra",
-  "ob.s3.originBody":
-    "Mẫu giai đoạn B2B chuẩn, chỉnh theo ngành từ lần đọc. Trống cho đến khi bạn kết nối. Bạn duyệt cái nào thành deal.",
-  "ob.s3.stillNothing":
-    "Vẫn chưa kết nối gì. Bạn quyết định khi nào điều đó thay đổi.",
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
@@ -4547,8 +4516,6 @@ export const vi = {
     "Lần dựng đang xếp hàng chờ hạn mức. Việc dựng sẽ tự chạy.",
   "ob.conv.build.failed":
     "Lần dựng chưa xong. Văn bản của bạn vẫn được giữ và bạn thử lại lúc nào cũng được.",
-  "ob.conv.recap":
-    "Đây là những gì CRM của bạn biết lúc này, mỗi mục đều kèm nguồn.",
   "ob.conv.done": "Thiết lập xong. CRM của bạn đã sẵn sàng.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4716,9 +4683,6 @@ export const vi = {
   "ob.conv.artifact.empty":
     "Chưa đọc được gì. Hãy đưa tôi một website và khung này sẽ đầy lên bằng các phát hiện có dẫn nguồn.",
   "ob.conv.results.continue": "Tiếp tục",
-  "ob.conv.results.artifactTitle": "Tóm tắt thiết lập",
-  "ob.conv.results.artifactBody":
-    "Những gì CRM của bạn khởi đầu. Ở đây không có gì nói quá so với thực tế đã xảy ra.",
   "ob.conv.recap.back": "Chào bạn quay lại. Đây là tình hình hiện tại.",
   "ob.conv.recap.company": "Hồ sơ công ty {name} của bạn đã được xác nhận.",
   "ob.conv.recap.companyUnsaved":
@@ -4772,8 +4736,23 @@ export const vi = {
   "ob.rail.read": "Đọc",
   "ob.rail.confirm": "Xác nhận",
   "ob.rail.voice": "Giọng văn",
-  "ob.rail.ready": "Sẵn sàng",
   "ob.rail.connect": "Kết nối",
+
+  "ob.conv.invite.title": "Bạn có tự mình làm việc trong Margince không?",
+  "ob.conv.invite.body":
+    "Công ty đã được thiết lập. Hai bước còn lại là về bạn, và chỉ có ý nghĩa nếu bạn cũng dùng Margince.",
+  "ob.conv.invite.voice":
+    "Huấn luyện giọng văn của bạn, để bản nháp nghe giống bạn ngay từ bản đầu tiên.",
+  "ob.conv.invite.connect":
+    "Kết nối hộp thư và lịch, để CRM tự điền từ những gì vốn đang diễn ra.",
+  "ob.conv.invite.yes": "Có, thiết lập cho tôi",
+  "ob.conv.invite.no": "Không, tôi chỉ thiết lập thôi",
+  "ob.conv.invite.accepted": "Có, tôi sẽ tự làm việc trong đó.",
+  "ob.conv.invite.declined": "Không, tôi chỉ thiết lập thôi.",
+  "ob.conv.invite.done":
+    "Thiết lập đã hoàn tất. Người bạn thêm vào có thể tự huấn luyện giọng văn và kết nối tài khoản trong Cài đặt.",
+  "ob.conv.invite.persistFailed":
+    "Tôi không ghi nhận được rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
@@ -4877,25 +4856,6 @@ export const vi = {
   // Two leads for one moment. The first is only true when the install really was
   // empty minutes ago; a setup picked up across days is the supported path, and
   // the payoff above all else may not overstate.
-  "ob.payoff.lead": "Vài phút trước đây còn là một bản cài đặt trống.",
-  "ob.payoff.leadResumed": "Khởi đầu đây là một bản cài đặt trống.",
-  "ob.payoff.factsRead": "dữ kiện đã đọc",
-  "ob.payoff.factsConfirmed": "dữ kiện bạn đã xác nhận",
-  "ob.payoff.peopleFound": "người tìm được",
-  "ob.payoff.profileFields": "trường hồ sơ",
-  "ob.payoff.voiceWords": "từ trong giọng văn của bạn",
-  "ob.payoff.pagesRead": "trang đã đọc",
-  "ob.payoff.voiceNotTrained": "chưa huấn luyện giọng văn",
-  "ob.payoff.body":
-    "Mọi thứ trong đó bạn đều sửa được, và mỗi giá trị vẫn trỏ về trang xuất xứ.",
-  "ob.payoff.defaults":
-    "Tôi chờ bạn xác nhận và không ghi đè trường bạn nhập. Đổi cả hai trong Cài đặt → Bậc tự chủ.",
-  "ob.payoff.seats":
-    "Việc còn lại là các đồng nghiệp của bạn. Mỗi suất người dùng đều tính phí, nên bạn tạo họ trong Cài đặt → Người dùng.",
-  "ob.payoff.understood": "Đã rõ",
-  "ob.payoff.projects":
-    "Khi một thương vụ trở thành công việc, hãy mở một dự án cho nó: dự án bắt đầu ngay trong thương vụ và tiếp tục sau khi chốt thắng, để việc triển khai có dòng thời gian riêng.",
-  "ob.payoff.projectsLink": "Xem dự án",
 
   // --- the handoff into the app -----------------------------------------
   "ob.enter.cta": "Vào Margince",

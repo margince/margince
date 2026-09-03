@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Eyebrow } from "../../design-system/eyebrow";
+import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ReviewRow } from "./company-review-state";
@@ -188,7 +189,9 @@ function SidebarRow({
         ) : (
           <>
             {value}
-            {n === undefined ? null : <sup className="pdigest-ref">{n}</sup>}
+            {n === undefined ? null : (
+              <sup className="pdigest-ref">{ordinalNumber(n)}</sup>
+            )}
           </>
         )}
       </dd>

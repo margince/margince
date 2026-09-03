@@ -122,17 +122,21 @@ function readRecap(read: CompanySiteRead, locale: Locale): NarrationEntry[] {
 // happened (the classic coordinator only advances past step "read"/"confirm"
 // by persisting the confirmed company).
 const confirmedSteps = new Set<OnboardingState["step"]>([
+  "invite",
   "voice",
   "results",
   "connect",
 ]);
 
 function creatorTarget(state: OnboardingState): ResumePoint {
-  if (state.step === "connect") {
+  // "results" is a row written before the invite existed, by a journey whose
+  // voice act had already concluded: the recap it pointed at is gone, and
+  // what came after the recap was connect.
+  if (state.step === "connect" || state.step === "results") {
     return "cn.consent";
   }
-  if (state.step === "results") {
-    return "re.recap";
+  if (state.step === "invite") {
+    return "in.ask";
   }
   // step "voice": the act is still open, and lands straight on the collect
   // scene. A skip recorded early is honored; otherwise collection reopens

@@ -20,12 +20,11 @@ function at(
 }
 
 describe("the setup rail's stops", () => {
-  it("gives a creator five stops and a member three", () => {
+  it("gives a creator four stops and a member three", () => {
     expect(railStops(false).map((stop) => stop.key)).toEqual([
       "read",
       "confirm",
       "voice",
-      "ready",
       "connect",
     ]);
     expect(railStops(true).map((stop) => stop.key)).toEqual([
@@ -60,8 +59,8 @@ describe("which stop the conversation is standing on", () => {
   });
 
   it("maps each later act to its own stop", () => {
+    expect(currentStop(at("invite", "in.ask"))).toBe("voice");
     expect(currentStop(at("voice", "vo.collecting"))).toBe("voice");
-    expect(currentStop(at("results", "re.recap"))).toBe("ready");
     expect(currentStop(at("connect", "cn.consent"))).toBe("connect");
     expect(currentStop(at("done", "cn.done"))).toBe("connect");
   });
@@ -94,7 +93,6 @@ describe("how each stop reads", () => {
     const state = at("voice", "vo.collecting");
     expect(stopState("confirm", state)).toBe("done");
     expect(stopState("voice", state)).toBe("now");
-    expect(stopState("ready", state)).toBe("todo");
     expect(stopState("connect", state)).toBe("todo");
   });
 
@@ -106,7 +104,6 @@ describe("how each stop reads", () => {
   it("reads todo for a stop the current path does not contain", () => {
     const member = at("connect", "cn.consent", { memberPath: true });
     expect(stopState("voice", member)).toBe("todo");
-    expect(stopState("ready", member)).toBe("todo");
     expect(stopState("connect", member)).toBe("now");
   });
 

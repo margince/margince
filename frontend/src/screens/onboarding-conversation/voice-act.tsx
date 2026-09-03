@@ -191,7 +191,7 @@ function continueBarFor(
   retryPending?: boolean;
   onRetry?: () => void;
 }> | null {
-  const onContinue = () => dispatch({ type: "RESULTS_CONTINUE" });
+  const onContinue = () => dispatch({ type: "VOICE_DONE" });
   if (state.phase === "vo.skipped") {
     return { reason: "skipped", onContinue };
   }
@@ -279,7 +279,7 @@ function VoiceSurface({
       <VoiceResultScene
         loading={build.builtVersion.isPending}
         version={build.builtVersion.data ?? null}
-        onContinue={() => dispatch({ type: "RESULTS_CONTINUE" })}
+        onContinue={() => dispatch({ type: "VOICE_DONE" })}
       />
     );
   }

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button } from "../../design-system/atoms";
+import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
@@ -55,7 +56,7 @@ export function DigestLine({
             // saying so is the honest half of citing everything else.
             <span className="pdigest-yours">{t("ob.digest.yours")}</span>
           ) : (
-            <sup className="pdigest-ref">{n}</sup>
+            <sup className="pdigest-ref">{ordinalNumber(n)}</sup>
           )}
         </>
       )}
@@ -99,7 +100,9 @@ export function FactLine({
     <p className="pdigest-line">
       <span className="pdigest-label">{label}</span>{" "}
       <span className="pdigest-value">{fact.value}</span>
-      {n === undefined ? null : <sup className="pdigest-ref">{n}</sup>}
+      {n === undefined ? null : (
+        <sup className="pdigest-ref">{ordinalNumber(n)}</sup>
+      )}
     </p>
   );
 }
@@ -121,7 +124,9 @@ export function PersonLine({
       {person.linkedin_url ? (
         <span className="pdigest-label"> · {person.linkedin_url}</span>
       ) : null}
-      {n === undefined ? null : <sup className="pdigest-ref">{n}</sup>}
+      {n === undefined ? null : (
+        <sup className="pdigest-ref">{ordinalNumber(n)}</sup>
+      )}
     </p>
   );
 }
@@ -146,7 +151,9 @@ export function LegalEntityLine({
       {details.length === 0 ? null : (
         <span className="pdigest-label"> · {details.join(" · ")}</span>
       )}
-      {n === undefined ? null : <sup className="pdigest-ref">{n}</sup>}
+      {n === undefined ? null : (
+        <sup className="pdigest-ref">{ordinalNumber(n)}</sup>
+      )}
     </p>
   );
 }

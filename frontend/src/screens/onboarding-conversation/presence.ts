@@ -160,7 +160,7 @@ export function presenceFor(
       );
     case "voice":
       return voicePresence(state);
-    case "results":
+    case "invite":
       return { core: "idle" };
     case "connect":
       return { core: "idle" };

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Eyebrow } from "../../design-system/eyebrow";
+import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { factCategoryLabelKey, factFieldLabelKey } from "../factview";
 import type { CompanyFieldName } from "../onboarding";
@@ -137,7 +138,9 @@ export function ProfileArticle({
           <ol>
             {cites.map((cite) => (
               <li key={cite.url}>
-                <span className="pdigest-source-n">{cite.n}</span>
+                <span className="pdigest-source-n">
+                  {ordinalNumber(cite.n)}
+                </span>
                 <span className="pdigest-source-path">
                   {referenceAddressOf(cite.url)}
                 </span>

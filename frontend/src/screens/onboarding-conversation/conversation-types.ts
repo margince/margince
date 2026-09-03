@@ -7,8 +7,12 @@ import type { MessageKey } from "../../i18n/en";
 export type ConversationAct =
   | "welcome"
   | "company"
+  // The question a creator is asked once the company is confirmed: will they
+  // work in Margince themselves? Voice and connect are only offered to
+  // someone who will; an administrator setting the installation up for
+  // others finishes here.
+  | "invite"
   | "voice"
-  | "results"
   | "connect"
   | "done";
 
@@ -28,7 +32,10 @@ export type ConversationPhase =
   | "vo.building"
   | "vo.result"
   | "vo.skipped"
-  | "re.recap"
+  | "in.ask"
+  // Declined: setup is complete without the personal steps, and the journey
+  // is over. A terminal like cn.done, reached without ever entering connect.
+  | "in.declined"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
   // the required gate (it is what CONNECT_DONE waits on), LinkedIn is the
   // recommended addition beside it (linkedinStatus tracks its own
@@ -161,7 +168,7 @@ export type BuildTerminalStatus = "succeeded" | "failed" | "deferred";
  */
 export type ResumePoint = Extract<
   ConversationPhase,
-  "vo.collecting" | "vo.skipped" | "re.recap" | "cn.consent"
+  "in.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
 >;
 
 export type ConversationEvent =
@@ -210,11 +217,17 @@ export type ConversationEvent =
   // member path) takes the same route the live confirmation takes; a target
   // fast-forwards a creator to the stable point the wizard state recorded.
   | { type: "RESUME"; target?: ResumePoint }
+  // The two answers to the invite. Accepting opens the voice act; declining
+  // ends the journey, because the steps left are all about the person who
+  // just said they will not be here.
+  | { type: "INVITE_ACCEPTED" }
+  | { type: "INVITE_DECLINED" }
   | { type: "VOICE_SKIPPED" }
   | { type: "UPLOAD_ADDED"; id: string; name: string }
   | { type: "SPEAKER_NEEDED"; question: ConversationQuestion }
   | { type: "BUILD_STARTED"; buildId: string }
   | { type: "BUILD_STAGE"; buildId: string; stage: BuildStage }
   | { type: "BUILD_TERMINAL"; buildId: string; status: BuildTerminalStatus }
-  | { type: "RESULTS_CONTINUE" }
+  // Leaving the voice act, built or skipped, lands straight on connect.
+  | { type: "VOICE_DONE" }
   | { type: "CONNECT_DONE" };

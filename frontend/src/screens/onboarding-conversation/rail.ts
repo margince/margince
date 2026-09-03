@@ -4,17 +4,17 @@
 import type { MessageKey } from "../../i18n/en";
 import type { ConversationState } from "./conversation-types";
 
-// Where the setup journey is, as five stops. Derived from the machine rather
+// Where the setup journey is, as four stops. Derived from the machine rather
 // than tracked beside it, so the rail cannot disagree with the conversation.
 //
 // The stops are NOT the phases: READ is already finished by the time the
-// two-column view first renders, and CONFIRM covers the whole clarify/review/
-// manual cluster. A member never reaches voice or ready, so their rail has
-// three stops — a greyed step that will never happen is a promise the flow
-// does not keep.
+// two-column view first renders, CONFIRM covers the whole clarify/review/
+// manual cluster, and the invite is the doorway to VOICE rather than a stop
+// of its own. A member never reaches voice, so their rail has three stops —
+// a greyed step that will never happen is a promise the flow does not keep.
 
 export type RailStop = Readonly<{
-  key: "read" | "confirm" | "voice" | "ready" | "connect";
+  key: "read" | "confirm" | "voice" | "connect";
   labelKey: MessageKey;
 }>;
 
@@ -24,13 +24,12 @@ const CREATOR_STOPS: readonly RailStop[] = [
   { key: "read", labelKey: "ob.rail.read" },
   { key: "confirm", labelKey: "ob.rail.confirm" },
   { key: "voice", labelKey: "ob.rail.voice" },
-  { key: "ready", labelKey: "ob.rail.ready" },
   { key: "connect", labelKey: "ob.rail.connect" },
 ];
 
-// The creator's rail minus the two stops the member path never visits.
+// The creator's rail minus the stop the member path never visits.
 const MEMBER_STOPS: readonly RailStop[] = CREATOR_STOPS.filter(
-  (stop) => stop.key !== "voice" && stop.key !== "ready",
+  (stop) => stop.key !== "voice",
 );
 
 export function railStops(memberPath: boolean): readonly RailStop[] {
@@ -48,10 +47,11 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
       return state.phase === "co.intro" || state.phase === "co.reading"
         ? null
         : "confirm";
+    // The invite asks whether the voice stop happens at all, so it stands on
+    // that stop: a rail pointing at the stop the question is about.
+    case "invite":
     case "voice":
       return "voice";
-    case "results":
-      return "ready";
     // Every account the setup asks for — mailbox and LinkedIn alike — belongs to
     // this one stop. A stop per integration would grow the rail once per provider
     // for something the reader already reads as "connecting".

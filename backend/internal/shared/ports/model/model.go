@@ -336,11 +336,11 @@ type Capabilities struct {
 // model listed here that the sheet cannot price is bindable and reports
 // UNPRICED — that is honest.
 //
-// The one caller that folds a vendor's own price in anyway is `ai`'s
-// unauthenticated, unbound OpenRouter read (asked by provider name, never
-// through a Lister): it has no stored binding to protect and no sheet row to
-// contradict yet, so its price rides beside the sheet's, always labelled
-// PROPOSED and never confused with a recorded rate.
+// `ai`'s unauthenticated, unbound OpenRouter read (asked by provider name,
+// never through a Lister) folds a vendor's own price in anyway: it has no
+// stored binding to protect and no sheet row to contradict yet, so its price
+// rides beside the sheet's, always labelled PROPOSED and never confused with
+// a recorded rate.
 type Lister interface {
 	// ListModels reports what the vendor serves, newest first where the vendor
 	// dates its models and in the vendor's own order where it does not.

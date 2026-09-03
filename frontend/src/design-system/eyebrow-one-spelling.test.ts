@@ -125,8 +125,7 @@ const restated: Record<string, number> = {
   "src/screens/onboarding-conversation/conversation.css": 11,
   "src/screens/onboarding-gate.css": 2,
   "src/screens/onboarding-live-panel.css": 2,
-  "src/screens/onboarding-payoff.css": 1,
-  "src/screens/onboarding.css": 5,
+  "src/screens/onboarding.css": 4,
   "src/screens/record360/spine.css": 1,
 };
 

@@ -133,8 +133,8 @@ describe("presenceFor: voice, results, connect", () => {
     );
   });
 
-  it("settles on the recap, and rests through consent and done", () => {
-    expect(presenceFor(state({ act: "results", phase: "re.recap" }))).toEqual({
+  it("rests on the invite, and through consent and done", () => {
+    expect(presenceFor(state({ act: "invite", phase: "in.ask" }))).toEqual({
       core: "idle",
     });
     expect(presenceFor(state({ act: "connect", phase: "cn.consent" }))).toEqual(

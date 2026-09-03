@@ -416,6 +416,23 @@
   margin-block-start: auto;
 }
 
+/* The invite: the question is the scene's own heading, and the body under it
+   is what accepting opens. A plain list rather than two cards: nothing here is
+   chosen, the choice is the foot's, and cards would read as two things to
+   pick between. */
+.ob-invite-scene {
+  max-width: 58rem;
+}
+.ob-invite-offers {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  color: var(--textContent);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+}
+
 /*
  * The refusal a confirm earned, at the head of the pane whose own Continue
  * earned it.
@@ -477,8 +494,7 @@
    reads 1280 and leaves the widest layout in place. Naming the container
    (`ob-scene`) rather than relying on "nearest" keeps a scene-level query
    scene-level even where a tighter container sits between — the board's own
-   column is its own container, `ob-board`. Same reasoning, and the same fix,
-   as onboarding-payoff.css. */
+   column is its own container, `ob-board`. */
 .ob-scene {
   container: ob-scene / inline-size;
   display: flex;
@@ -935,7 +951,9 @@
 }
 
 /* The scene's own footer: what the floor is, and the one action. */
-.ob-voice-foot {
+/* A scene's way onward: what is left to say on the left, the actions on the
+   right, under one hairline. The voice scenes and the invite share it. */
+.ob-scene-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -946,13 +964,13 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.ob-voice-foot p {
+.ob-scene-foot p {
   margin: 0;
   color: var(--textSecondary);
   font-size: var(--fs-sm);
 }
 
-.ob-voice-foot-acts {
+.ob-scene-foot-acts {
   display: flex;
   align-items: center;
   gap: var(--space-2);

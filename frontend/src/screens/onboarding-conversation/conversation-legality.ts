@@ -18,7 +18,9 @@ const creatorOnlyEvents = new Set<ConversationEvent["type"]>([
   "BUILD_STARTED",
   "BUILD_STAGE",
   "BUILD_TERMINAL",
-  "RESULTS_CONTINUE",
+  "VOICE_DONE",
+  "INVITE_ACCEPTED",
+  "INVITE_DECLINED",
 ]);
 
 // Narration streams only while the machine is actively reading or building;
@@ -51,6 +53,8 @@ const legalPhases: Record<
   MANUAL_CHOSEN: new Set(["co.intro", "co.reading", "co.review"]),
   COMPANY_CONFIRMED: new Set(["co.review", "co.manual"]),
   RESUME: new Set(["co.confirmed"]),
+  INVITE_ACCEPTED: new Set(["in.ask"]),
+  INVITE_DECLINED: new Set(["in.ask"]),
   VOICE_SKIPPED: new Set(["vo.collecting"]),
   UPLOAD_ADDED: new Set(["vo.collecting"]),
   SPEAKER_NEEDED: new Set(["vo.collecting"]),
@@ -59,7 +63,7 @@ const legalPhases: Record<
   // them to the SAME build id and a deferred last status.
   BUILD_STAGE: new Set(["vo.building", "vo.result"]),
   BUILD_TERMINAL: new Set(["vo.building", "vo.result"]),
-  RESULTS_CONTINUE: new Set(["vo.result", "vo.skipped", "re.recap"]),
+  VOICE_DONE: new Set(["vo.result", "vo.skipped"]),
   // Both live on the connect screen alongside mail; eventGuards restricts
   // them further to linkedinStatus "pending", so a stray dispatch cannot
   // re-run the authorization or overwrite an already-recorded skip.

@@ -1,5 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { Dispatch } from "react";
 import { useEffect, useReducer, useRef } from "react";
 import { api } from "../../api/client";
@@ -18,8 +18,8 @@ import {
   conversationReducer,
   initialConversationState,
 } from "./conversation-machine";
+import { InviteAct } from "./invite-act";
 import { restorePlan, type VoiceRestoreProbe } from "./restore";
-import { ResultsAct } from "./results-act";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { useWizardStatePersist } from "./use-wizard-state";
 import { VoiceAct } from "./voice-act";
@@ -87,36 +87,38 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
 
 // Live act transitions the server must remember, keyed by the phase pair
 // that only a user action (never a restore RESUME out of co.confirmed)
-// produces. Classic STEPS indexes: 1 voice, 2 results, 3 connect.
+// produces.
 function actCheckpoint(
   prev: ConversationPhase,
   next: ConversationPhase,
   buildSucceeded: boolean,
 ): Omit<WizardPersistInput, "values"> | null {
-  if (
-    (prev === "co.review" || prev === "co.manual") &&
-    next === "vo.collecting"
-  ) {
-    return { nextStep: 1, voiceSkipped: false };
+  if ((prev === "co.review" || prev === "co.manual") && next === "in.ask") {
+    return { step: "invite" };
+  }
+  if (prev === "in.ask" && next === "vo.collecting") {
+    return { step: "voice", voiceSkipped: false };
   }
   if (prev === "vo.collecting" && next === "vo.skipped") {
-    return { nextStep: 2, voiceSkipped: true };
+    return { step: "voice", voiceSkipped: true };
   }
   if (prev === "vo.building" && next === "vo.result" && buildSucceeded) {
-    return { nextStep: 2, voiceSkipped: false };
+    return { step: "voice", voiceSkipped: false };
   }
-  if ((prev === "vo.result" || prev === "vo.skipped") && next === "re.recap") {
-    return { nextStep: 2 };
-  }
-  // Entering the connect screen (from the recap, or straight off company
-  // confirmation on the member path) shows both mail and LinkedIn at once,
-  // so there is nothing left behind a reload could strand — the checkpoint
-  // fires on arrival, unlike voice and results which fire on departure.
+  // Entering the connect screen (out of the voice act, or straight off
+  // company confirmation on the member path) shows both mail and LinkedIn at
+  // once, so there is nothing left behind a reload could strand — the
+  // checkpoint fires on arrival, unlike voice which fires on departure. A
+  // declined invite is not here: it is a finish, and the invite act writes
+  // step "complete" itself before it moves, the way the connect act does.
   if (
-    (prev === "re.recap" || prev === "co.review" || prev === "co.manual") &&
+    (prev === "vo.result" ||
+      prev === "vo.skipped" ||
+      prev === "co.review" ||
+      prev === "co.manual") &&
     next === "cn.consent"
   ) {
-    return { nextStep: 3 };
+    return { step: "connect" };
   }
   return null;
 }
@@ -271,7 +273,6 @@ function useRestore(
 
 export function OnboardingConversationScreen() {
   const route = useRoute();
-  const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(
     conversationReducer,
     initialConversationState,
@@ -282,23 +283,6 @@ export function OnboardingConversationScreen() {
     dispatch,
     route.id === "connect",
   );
-
-  // The voice act's own word count lives in useVoiceCorpus's local state and
-  // dies with that component when the act changes; `voice` above is the
-  // restore probe that ran once at mount, before this session ingested
-  // anything. Refetching it the moment the voice act ends is what lets the
-  // results recap (and a returning creator who adds sources) read the
-  // server's current total instead of that stale mount-time snapshot.
-  const prevAct = useRef<ConversationState["act"] | null>(null);
-  useEffect(() => {
-    const prev = prevAct.current;
-    prevAct.current = state.act;
-    if (prev === "voice" && state.act !== "voice") {
-      void queryClient.invalidateQueries({
-        queryKey: ["onboarding-conv-voice"],
-      });
-    }
-  }, [state.act, queryClient]);
 
   // Act-transition checkpoints: the server remembers where the journey is,
   // so a mid-onboarding reload restores to the right act with recap. Only
@@ -368,8 +352,6 @@ function CurrentAct({
   voice: UseQueryResult<VoiceRestoreProbe>;
   persistedRead: UseQueryResult<CompanySiteRead | null>;
 }>) {
-  const voiceBuilt =
-    state.lastBuildStatus === "succeeded" || voice.data?.built === true;
   switch (state.act) {
     case "company":
       return (
@@ -394,18 +376,18 @@ function CurrentAct({
           initialSummary={voice.data?.summary ?? null}
         />
       );
-    case "results":
-      return (
-        <ResultsAct
-          state={state}
-          dispatch={dispatch}
-          profile={existing.data ?? null}
-          voiceBuilt={voiceBuilt}
-          corpusWords={voice.data?.summary?.total_words ?? null}
-        />
-      );
+    case "invite":
+      return <InviteAct state={state} dispatch={dispatch} persist={persist} />;
     case "connect":
     case "done":
+      // A journey can end two ways, and the act that ended it plays the
+      // handoff: the invite act for a declined invite, the connect act for
+      // everything else.
+      if (state.phase === "in.declined") {
+        return (
+          <InviteAct state={state} dispatch={dispatch} persist={persist} />
+        );
+      }
       return (
         <ConnectAct
           state={state}

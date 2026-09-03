@@ -3835,9 +3835,6 @@ export const de = {
   "ob.factsSelected": "{selected} von {total} ausgewählt",
   "ob.factsSub":
     "Wähle ab, was nicht Teil des Firmenkontexts werden soll — bis zu 100 Angaben können ausgewählt sein.",
-  "ob.nowUnderstands": "Ich verstehe jetzt",
-  "ob.contextReady":
-    "Ich nutze diesen Kontext für Entwürfe, Suche, Agenten und Voice DNA — mit Herkunft.",
 
   // Keine Schrittzahl: wie viele Stationen ein Leser bekommt, entscheidet die
   // Leiste, also gehört die Zählung zu ob.conv.scene.step, das sie von dort
@@ -4016,34 +4013,6 @@ export const de = {
   "ob.fieldEg.industry": "E-Commerce-Logistik",
   "ob.fieldEg.history":
     "Gegründet 2015, ausgegliedert aus einem Logistik-Startup.",
-
-  "ob.s3.title": "Sieh, was du gebaut hast —",
-  "ob.s3.titleEm": "ganz ohne Anbindung.",
-  "ob.s3.sub":
-    "Deine Organisation kennt dein Geschäft und deine Stimme. Verbinde dein Postfach, es füllt sich.",
-  "ob.s3.subNoVoice":
-    "Deine Organisation kennt dein Geschäft. Verbinde dein Postfach, es füllt sich.",
-  "ob.s3.cardProfile": "Geschäftsprofil",
-  "ob.s3.cardProfileBody":
-    "Bestätigt und auf deiner Firmenseite gespeichert. Gelesene Felder behalten ihre Quelle.",
-  "ob.s3.cardProfileSkippedBody":
-    "Gelesen, aber nicht gespeichert: du hast Bestätigen übersprungen. Geh zurück und bestätige.",
-  "ob.s3.cardVoice": "Deine Schreibstimme",
-  "ob.s3.cardVoiceBody":
-    "Gebaut aus dem Korpus, den du uns gerade gegeben hast. Entwürfe klingen ab Tag eins nach dir.",
-  "ob.s3.cardVoiceSkippedBody":
-    "Übersprungen — Entwürfe nutzen eine neutrale Stimme. Deine baust du in den Einstellungen.",
-  "ob.s3.cardPipeline": "Vertriebs-Pipeline",
-  "ob.s3.cardPipelineBody":
-    "Die Standard-B2B-Vorlage mit 7 Stufen, auf deine Branche gestimmt. Leer, bis du verbindest.",
-  "ob.s3.cardDraft": "Ein Beispiel-Entwurf, in deiner Stimme",
-  "ob.s3.cardDraftExample": "Ein Beispiel-Entwurf",
-  "ob.s3.cardDraftBody": "Sieh ihn unten.",
-  "ob.s3.originLabel": "Woher diese Pipeline kommt",
-  "ob.s3.originBody":
-    "Die Standard-B2B-Vorlage, aus dem Read auf deine Branche gestimmt. Leer, bis du verbindest. Du gibst frei, was ein Deal wird.",
-  "ob.s3.stillNothing":
-    "Noch immer nichts verbunden. Du bestimmst, wann sich das ändert.",
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
@@ -4596,8 +4565,6 @@ export const de = {
     "Der Aufbau wartet auf Budget. Er läuft automatisch an.",
   "ob.conv.build.failed":
     "Der Aufbau wurde nicht fertig. Deine Texte bleiben erhalten, du kannst es jederzeit erneut versuchen.",
-  "ob.conv.recap":
-    "Das weiß dein CRM jetzt, mit einer Quelle zu jedem Eintrag.",
   "ob.conv.done": "Einrichtung abgeschlossen. Dein CRM ist bereit.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4768,9 +4735,6 @@ export const de = {
   "ob.conv.artifact.empty":
     "Noch nichts gelesen. Nenn mir eine Website und dieses Panel füllt sich mit belegten Funden.",
   "ob.conv.results.continue": "Weiter",
-  "ob.conv.results.artifactTitle": "Einrichtung im Überblick",
-  "ob.conv.results.artifactBody":
-    "Womit dein CRM startet. Hier steht nichts, das nicht wirklich passiert ist.",
   "ob.conv.recap.back": "Willkommen zurück. Hier stehen wir.",
   "ob.conv.recap.company": "Dein Firmenprofil für {name} ist bestätigt.",
   "ob.conv.recap.companyUnsaved":
@@ -4825,8 +4789,23 @@ export const de = {
   "ob.rail.read": "Lesen",
   "ob.rail.confirm": "Bestätigen",
   "ob.rail.voice": "Stimme",
-  "ob.rail.ready": "Fertig",
   "ob.rail.connect": "Verbinden",
+
+  "ob.conv.invite.title": "Wirst du selbst in Margince arbeiten?",
+  "ob.conv.invite.body":
+    "Das Unternehmen ist eingerichtet. Zwei weitere Schritte drehen sich um dich, und sie ergeben nur Sinn, wenn du Margince auch selbst nutzt.",
+  "ob.conv.invite.voice":
+    "Trainiere deine Stimme, damit Entwürfe vom ersten an nach dir klingen.",
+  "ob.conv.invite.connect":
+    "Verbinde Postfach und Kalender, damit sich das CRM aus dem füllt, was ohnehin passiert.",
+  "ob.conv.invite.yes": "Ja, richte mich ein",
+  "ob.conv.invite.no": "Nein, ich richte nur ein",
+  "ob.conv.invite.accepted": "Ja, ich arbeite selbst damit.",
+  "ob.conv.invite.declined": "Nein, ich richte nur ein.",
+  "ob.conv.invite.done":
+    "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
+  "ob.conv.invite.persistFailed":
+    "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuch es noch einmal oder schließe später in den Einstellungen ab.",
 
   // --- das Tor: der erste Screen nach der Anmeldung ----------------------
   // Eine Frage und sonst nichts. Niemand soll das ganze Werkzeug auf dem
@@ -4930,25 +4909,6 @@ export const de = {
   // Zahlen, kein Applaus. Jede Zelle ist eine echte Zahl von der
   // Schnittstelle, und eine Zelle ohne Zahl sagt das, statt eine Null zu
   // zeigen, die wie ein Ergebnis aussieht.
-  "ob.payoff.lead": "Vor wenigen Minuten war das eine leere Installation.",
-  "ob.payoff.leadResumed": "Das hier hat als leere Installation angefangen.",
-  "ob.payoff.factsRead": "Fakten gelesen",
-  "ob.payoff.factsConfirmed": "Fakten bestätigt",
-  "ob.payoff.peopleFound": "Personen gefunden",
-  "ob.payoff.profileFields": "Profilfelder",
-  "ob.payoff.voiceWords": "Wörter deiner Stimme",
-  "ob.payoff.pagesRead": "Seiten gelesen",
-  "ob.payoff.voiceNotTrained": "Stimme noch nicht trainiert",
-  "ob.payoff.body":
-    "Alles darin kannst du korrigieren, und jeder Wert zeigt weiter auf die Seite, von der er kommt.",
-  "ob.payoff.defaults":
-    "Ich warte auf dein Ja und überschreibe nie deine Eingaben. Beides in Einstellungen → Autonomie.",
-  "ob.payoff.seats":
-    "Es fehlen nur noch deine Kollegen. Sitze sind kostenpflichtig, deshalb legst du sie unter Einstellungen → Nutzer selbst an.",
-  "ob.payoff.understood": "Verstanden",
-  "ob.payoff.projects":
-    "Wird aus einem Deal Arbeit, leg dafür ein Projekt an: Ein Projekt beginnt während des Deals und bleibt nach dem Gewinn bestehen, damit die Lieferung ihre eigene Chronik behält.",
-  "ob.payoff.projectsLink": "Projekte ansehen",
 
   // --- die Übergabe in die App ------------------------------------------
   "ob.enter.cta": "Margince öffnen",

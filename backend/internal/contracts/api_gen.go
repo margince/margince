@@ -7017,6 +7017,7 @@ const (
 	OnboardingStateStepComplete OnboardingStateStep = "complete"
 	OnboardingStateStepConfirm  OnboardingStateStep = "confirm"
 	OnboardingStateStepConnect  OnboardingStateStep = "connect"
+	OnboardingStateStepInvite   OnboardingStateStep = "invite"
 	OnboardingStateStepRead     OnboardingStateStep = "read"
 	OnboardingStateStepResults  OnboardingStateStep = "results"
 	OnboardingStateStepVoice    OnboardingStateStep = "voice"
@@ -7030,6 +7031,8 @@ func (e OnboardingStateStep) Valid() bool {
 	case OnboardingStateStepConfirm:
 		return true
 	case OnboardingStateStepConnect:
+		return true
+	case OnboardingStateStepInvite:
 		return true
 	case OnboardingStateStepRead:
 		return true
@@ -9600,6 +9603,7 @@ const (
 	PutOnboardingStateRequestStepComplete PutOnboardingStateRequestStep = "complete"
 	PutOnboardingStateRequestStepConfirm  PutOnboardingStateRequestStep = "confirm"
 	PutOnboardingStateRequestStepConnect  PutOnboardingStateRequestStep = "connect"
+	PutOnboardingStateRequestStepInvite   PutOnboardingStateRequestStep = "invite"
 	PutOnboardingStateRequestStepRead     PutOnboardingStateRequestStep = "read"
 	PutOnboardingStateRequestStepResults  PutOnboardingStateRequestStep = "results"
 	PutOnboardingStateRequestStepVoice    PutOnboardingStateRequestStep = "voice"
@@ -9613,6 +9617,8 @@ func (e PutOnboardingStateRequestStep) Valid() bool {
 	case PutOnboardingStateRequestStepConfirm:
 		return true
 	case PutOnboardingStateRequestStepConnect:
+		return true
+	case PutOnboardingStateRequestStepInvite:
 		return true
 	case PutOnboardingStateRequestStepRead:
 		return true
@@ -27862,15 +27868,17 @@ type PutOnboardingStateRequest struct {
 	SelectedFactKeys []string                             `json:"selected_fact_keys"`
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
-	Step             PutOnboardingStateRequestStep        `json:"step"`
-	VoiceSkipped     bool                                 `json:"voice_skipped"`
-	WebsiteUrl       *string                              `json:"website_url,omitempty"`
+
+	// Step Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+	Step         PutOnboardingStateRequestStep `json:"step"`
+	VoiceSkipped bool                          `json:"voice_skipped"`
+	WebsiteUrl   *string                       `json:"website_url,omitempty"`
 }
 
 // PutOnboardingStateRequestSourceMode defines model for PutOnboardingStateRequest.SourceMode.
 type PutOnboardingStateRequestSourceMode string
 
-// PutOnboardingStateRequestStep defines model for PutOnboardingStateRequest.Step.
+// PutOnboardingStateRequestStep Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the

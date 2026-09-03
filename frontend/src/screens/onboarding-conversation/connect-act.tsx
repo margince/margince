@@ -222,11 +222,11 @@ export function ConnectAct({
     if (!skipped) {
       await recordOvernightAnswer();
     }
-    // Step "complete" (classic STEPS index 4). Voice flags are NOT sent:
-    // the merge keeps whatever the voice act (or an earlier session)
-    // recorded, so finishing can never overwrite a built voice as skipped.
+    // Voice flags are NOT sent: the merge keeps whatever the voice act (or an
+    // earlier session) recorded, so finishing can never overwrite a built
+    // voice as skipped.
     const persisted = await persist({
-      nextStep: 4,
+      step: "complete",
       values: EMPTY_DRAFT.values,
       connectSkipped: skipped,
     });

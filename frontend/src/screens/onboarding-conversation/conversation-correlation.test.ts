@@ -57,7 +57,11 @@ describe("read-run correlation", () => {
     expect(
       conversationReducer(state, {
         type: "NARRATION",
-        entry: { kind: "narration", id: "recap", i18nKey: "ob.conv.recap" },
+        entry: {
+          kind: "narration",
+          id: "recap",
+          i18nKey: "ob.conv.recap.back",
+        },
       }),
     ).toBe(state);
   });
@@ -308,6 +312,7 @@ describe("voice build", () => {
       { type: "READ_TERMINAL", readId: "r1", status: "ready" },
       { type: "REVIEW_READY" },
       { type: "COMPANY_CONFIRMED" },
+      { type: "INVITE_ACCEPTED" },
       { type: "BUILD_STARTED", buildId: "b1" },
     ]);
   const built = (status: "succeeded" | "failed" | "deferred") =>

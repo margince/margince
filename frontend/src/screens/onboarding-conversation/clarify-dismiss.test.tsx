@@ -370,9 +370,13 @@ describe("dismissing a clarify in the company act", () => {
     await userEvent.click(confirm);
     const body = await confirmBody(calls);
     expect(body.resolutions).toEqual([]);
-    // The confirm moved the machine on to the voice act — the one thing on
+    // The confirm moved the machine on to the invite — the one thing on
     // screen that proves the write actually landed, since the transcript
-    // that used to narrate "Company profile confirmed" is gone.
+    // that used to narrate "Company profile confirmed" is gone — and
+    // accepting it opens the voice act.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, set me up" }),
+    );
     expect(
       await screen.findByRole("heading", { name: "Teach me how you write." }),
     ).toBeTruthy();

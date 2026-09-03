@@ -3882,9 +3882,6 @@ export const en = {
   "ob.factsSelected": "{selected} of {total} selected",
   "ob.factsSub":
     "Untick anything that should not become company context — up to 100 facts can be selected.",
-  "ob.nowUnderstands": "I now understand",
-  "ob.contextReady":
-    "I can use this context for drafts, search, agents and Voice DNA, with sources attached.",
 
   // No step number: the rail decides how many stops a reader gets, so the
   // count belongs to ob.conv.scene.step, which reads it off the rail. A total
@@ -4063,34 +4060,6 @@ export const en = {
   "ob.fieldEg.register_number": "HRB 12345 B",
   "ob.fieldEg.industry": "E-commerce logistics",
   "ob.fieldEg.history": "Founded 2015, spun off from a logistics startup.",
-
-  "ob.s3.title": "Look what you've built —",
-  "ob.s3.titleEm": "with nothing connected.",
-  "ob.s3.sub":
-    "Your organization knows your business and your voice. Connect your inbox and it fills itself.",
-  "ob.s3.subNoVoice":
-    "Your organization knows your business. Connect your inbox and it fills itself.",
-  "ob.s3.cardProfile": "Business profile",
-  "ob.s3.cardProfileBody":
-    "Confirmed and saved to your company page. Fields read from your site keep their source.",
-  "ob.s3.cardProfileSkippedBody":
-    "Read from your site but not saved — you skipped the confirm step. Go back to confirm it.",
-  "ob.s3.cardVoice": "Your writing voice",
-  "ob.s3.cardVoiceBody":
-    "Built from the corpus you just gave us. Drafts will sound like you from day one.",
-  "ob.s3.cardVoiceSkippedBody":
-    "You skipped this step, so drafts use a neutral starter voice. Build yours anytime in Settings.",
-  "ob.s3.cardPipeline": "Sales pipeline",
-  "ob.s3.cardPipelineBody":
-    "The standard 7-stage B2B template, tuned to your industry. Empty until you connect your inbox.",
-  "ob.s3.cardDraft": "A sample draft, in your voice",
-  "ob.s3.cardDraftExample": "A sample draft",
-  "ob.s3.cardDraftBody": "See it below.",
-  "ob.s3.originLabel": "Where this pipeline comes from",
-  "ob.s3.originBody":
-    "The standard B2B stage template, tuned to your industry from the read. Empty until you connect. You approve what becomes a deal.",
-  "ob.s3.stillNothing":
-    "Still nothing connected. You're in control of when that changes.",
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
@@ -4643,8 +4612,6 @@ export const en = {
     "The build is queued behind budget. It will run automatically.",
   "ob.conv.build.failed":
     "The build did not finish. Your texts are kept and you can retry anytime.",
-  "ob.conv.recap":
-    "Here is what your CRM knows now, with a source for every item.",
   "ob.conv.done": "Setup complete. Your CRM is ready.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4828,9 +4795,6 @@ export const en = {
   "ob.conv.artifact.empty":
     "Nothing read yet. Give me a website and this panel fills with sourced findings.",
   "ob.conv.results.continue": "Continue",
-  "ob.conv.results.artifactTitle": "Setup recap",
-  "ob.conv.results.artifactBody":
-    "What your CRM starts with. Nothing here claims more than what actually happened.",
   "ob.conv.recap.back": "Welcome back. Here is where we stand.",
   "ob.conv.recap.company": "Your company profile for {name} is confirmed.",
   "ob.conv.recap.companyUnsaved":
@@ -4885,8 +4849,26 @@ export const en = {
   "ob.rail.read": "Read",
   "ob.rail.confirm": "Confirm",
   "ob.rail.voice": "Voice",
-  "ob.rail.ready": "Ready",
   "ob.rail.connect": "Connect",
+
+  // The invite: asked once the company is confirmed, before the two steps
+  // that are only about the person answering. An administrator who sets the
+  // installation up for a team and never works in it finishes here.
+  "ob.conv.invite.title": "Will you be working in Margince yourself?",
+  "ob.conv.invite.body":
+    "The company is set up. Two more steps are about you, and they only make sense if you will be using Margince too.",
+  "ob.conv.invite.voice":
+    "Train your voice, so drafts sound like you from the first one.",
+  "ob.conv.invite.connect":
+    "Connect your inbox and calendar, so the CRM fills itself from what already happens.",
+  "ob.conv.invite.yes": "Yes, set me up",
+  "ob.conv.invite.no": "No, I'm only setting it up",
+  "ob.conv.invite.accepted": "Yes, I'll be working in it.",
+  "ob.conv.invite.declined": "No, I'm only setting it up.",
+  "ob.conv.invite.done":
+    "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
+  "ob.conv.invite.persistFailed":
+    "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
@@ -4985,32 +4967,6 @@ export const en = {
   "ob.facts.rowSave": "Save the fact: {fact}",
   "ob.facts.capReached":
     "You can save up to {max} facts. Clear one to make room for another.",
-
-  // --- the payoff: what two minutes actually bought ----------------------
-  // Counts, not congratulation. Every cell is a real number off the wire, and
-  // a cell with no number says so rather than showing a zero that looks earned.
-  // Two leads for one moment. The first is only true when the install really was
-  // empty minutes ago; a setup picked up across days is the supported path, and
-  // the payoff above all else may not overstate.
-  "ob.payoff.lead": "Minutes ago this was an empty install.",
-  "ob.payoff.leadResumed": "This started as an empty install.",
-  "ob.payoff.factsRead": "facts read",
-  "ob.payoff.factsConfirmed": "facts you confirmed",
-  "ob.payoff.peopleFound": "people found",
-  "ob.payoff.profileFields": "profile fields",
-  "ob.payoff.voiceWords": "words in your voice",
-  "ob.payoff.pagesRead": "pages read",
-  "ob.payoff.voiceNotTrained": "voice not trained yet",
-  "ob.payoff.body":
-    "Everything in there is yours to correct, and every value still points at the page it came from.",
-  "ob.payoff.defaults":
-    "I wait for your yes, and never overwrite what you typed. Both change in Settings → Autonomy.",
-  "ob.payoff.seats":
-    "The one thing left is your colleagues. Seats are billed, so you create them in Settings → People.",
-  "ob.payoff.understood": "Understood",
-  "ob.payoff.projects":
-    "When a deal turns into work, open a project for it: a project starts during the deal and outlives close-won, so delivery keeps its own timeline.",
-  "ob.payoff.projectsLink": "See projects",
 
   // --- the handoff into the app -----------------------------------------
   "ob.enter.cta": "Enter Margince",

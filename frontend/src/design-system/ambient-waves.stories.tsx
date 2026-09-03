@@ -38,7 +38,7 @@ export const BehindAWelcome: Story = {
         display: "grid",
         placeItems: "center",
         height: "420px",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--r-lg)",
         border: "1px solid var(--borderSubtle)",
         background: "var(--bgElevated)",
         textAlign: "center",

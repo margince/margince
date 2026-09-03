@@ -534,10 +534,13 @@ describe("the conversational company act", () => {
     expect((body.profile as Record<string, unknown>).website).toBe(
       "https://gradion.com",
     );
-    // The machine advanced straight into the voice act's collect scene —
-    // the one thing on screen that proves the write actually landed, since
-    // the transcript that used to narrate "Company profile confirmed" is
-    // gone.
+    // The machine advanced straight into the invite — the one thing on
+    // screen that proves the write actually landed, since the transcript
+    // that used to narrate "Company profile confirmed" is gone — and
+    // accepting it opens the voice act's collect scene.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, set me up" }),
+    );
     expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
   });
 
@@ -616,10 +619,12 @@ describe("the conversational company act", () => {
     // The confirmation this click was blocked from making had, in fact,
     // already landed (a duplicate submit, or another tab) — the reader is
     // moved on exactly as a fresh success would, not invited to press
-    // Confirm again for a state that can never succeed that way. The voice
-    // act's own heading is the proof: nothing on screen narrates the
+    // Confirm again for a state that can never succeed that way. The
+    // invite's own question is the proof: nothing on screen narrates the
     // confirmation any more.
-    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(
+      await screen.findByText("Will you be working in Margince yourself?"),
+    ).toBeTruthy();
     expect(screen.queryByText(/already confirmed/)).toBeNull();
   });
 
@@ -647,7 +652,9 @@ describe("the conversational company act", () => {
     expect(screen.queryByText(/read not ready/)).toBeNull();
     // Nothing moved the reader on: this refusal has no route forward but a
     // re-check, so the machine is still sitting in the company act.
-    expect(screen.queryByText(/Teach me how you write\./)).toBeNull();
+    expect(
+      screen.queryByText("Will you be working in Margince yourself?"),
+    ).toBeNull();
   });
 
   it("lets the workbench frame introduce itself once, not once per act", async () => {
@@ -668,6 +675,9 @@ describe("the conversational company act", () => {
     );
 
     await userEvent.click(accept);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, set me up" }),
+    );
     await screen.findByText(/Teach me how you write\./);
 
     // The next act mounts its own shell. The rail, the brand line, the orb and

@@ -323,7 +323,7 @@ export function VoiceCollectScene({
         </p>
       )}
 
-      <div className="ob-voice-foot">
+      <div className="ob-scene-foot">
         <p>
           {canBuild
             ? t("ob.conv.voice.footReady")
@@ -331,7 +331,7 @@ export function VoiceCollectScene({
                 min: formatNumber(VOICE_MIN_WORDS, locale),
               })}
         </p>
-        <div className="ob-voice-foot-acts">
+        <div className="ob-scene-foot-acts">
           <Button small variant="ghost" onClick={onSkip}>
             {t("ob.conv.voice.skipped")}
           </Button>
@@ -403,9 +403,9 @@ export function VoiceSpeakerScene({
           })}
         </div>
       </div>
-      <div className="ob-voice-foot">
+      <div className="ob-scene-foot">
         <p>{t("ob.conv.voice.speakerFoot")}</p>
-        <div className="ob-voice-foot-acts">
+        <div className="ob-scene-foot-acts">
           <Button
             variant="primary"
             disabled={picked === ""}

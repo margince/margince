@@ -82,9 +82,9 @@ const buildTerminalTones: Record<BuildTerminalStatus, OutcomeTone> = {
 // Which act owns each restorable landing point; RESUME derives the act from
 // the phase so the pair can never disagree.
 const resumeActs: Record<ResumePoint, ConversationAct> = {
+  "in.ask": "invite",
   "vo.collecting": "voice",
   "vo.skipped": "voice",
-  "re.recap": "results",
   "cn.consent": "connect",
 };
 
@@ -194,7 +194,7 @@ function applyResume(
   if (state.memberPath) {
     return withEntries(state, { act: "connect", phase: "cn.consent" });
   }
-  const phase = event.target ?? "vo.collecting";
+  const phase = event.target ?? "in.ask";
   return withEntries(state, { act: resumeActs[phase], phase });
 }
 
@@ -312,7 +312,7 @@ function applyEvent(
         state,
         state.memberPath
           ? { act: "connect", phase: "cn.consent" }
-          : { act: "voice", phase: "vo.collecting" },
+          : { act: "invite", phase: "in.ask" },
         [
           {
             kind: "outcome",
@@ -324,6 +324,28 @@ function applyEvent(
       );
     case "RESUME":
       return applyResume(state, event);
+    case "INVITE_ACCEPTED":
+      return withEntries(state, { act: "voice", phase: "vo.collecting" }, [
+        {
+          kind: "user",
+          id: "invite:accepted",
+          i18nKey: "ob.conv.invite.accepted",
+        },
+      ]);
+    case "INVITE_DECLINED":
+      return withEntries(state, { act: "done", phase: "in.declined" }, [
+        {
+          kind: "user",
+          id: "invite:declined",
+          i18nKey: "ob.conv.invite.declined",
+        },
+        {
+          kind: "outcome",
+          id: "invite:done",
+          i18nKey: "ob.conv.invite.done",
+          tone: "success",
+        },
+      ]);
     case "VOICE_SKIPPED":
       return withEntries(
         state,
@@ -395,12 +417,8 @@ function applyEvent(
           },
         ],
       );
-    case "RESULTS_CONTINUE":
-      return state.phase === "re.recap"
-        ? withEntries(state, { act: "connect", phase: "cn.consent" })
-        : withEntries(state, { act: "results", phase: "re.recap" }, [
-            { kind: "narration", id: "recap", i18nKey: "ob.conv.recap" },
-          ]);
+    case "VOICE_DONE":
+      return withEntries(state, { act: "connect", phase: "cn.consent" });
     // Neither resolution moves the act: both sections of the connect screen
     // stay on the same phase, and only mail's own consent gates CONNECT_DONE.
     case "LINKEDIN_CONNECTED":

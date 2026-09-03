@@ -218,8 +218,8 @@ function findingsIn(path: string, source: string): Finding[] {
  * to hold, and stopped when the tree grew: `Test timed out in 13437ms` on main,
  * on two consecutive runs, with every assertion in it passing.
  *
- * Derived per FILE and then multiplied out, not picked whole: 1400 files at
- * 40ms each. The corpus is 1066 today, so the headroom is ~330 files — chosen
+ * Derived per FILE and then multiplied out, not picked whole: 1600 files at
+ * 40ms each. The corpus is ~1410 today, so the headroom is ~190 files — chosen
  * against this tree's merge rate rather than as a round margin, because a
  * budget with thirty files of slack is one that fails next week. Measured at ~3.3ms per file on an idle ten-core machine and
  * unchanged under eight spinners — the cost is the parse, not contention for a
@@ -239,7 +239,7 @@ function findingsIn(path: string, source: string): Finding[] {
  * fails by name and count rather than returning as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-const BUDGETED_CORPUS_FILES = 1_400;
+const BUDGETED_CORPUS_FILES = 1_600;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("one plural rule", () => {

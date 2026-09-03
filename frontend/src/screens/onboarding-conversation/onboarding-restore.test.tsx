@@ -374,43 +374,6 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
-  it("carries a live source added mid-voice-act into the results recap, not the restore probe's stale total", async () => {
-    stubApi({
-      state: stateRow({ step: "voice" }),
-      company: savedProfile,
-      voiceProfiles: [{ id: "018f3a1b-0000-7000-8000-0000000000f1" }],
-      corpusWords: 0,
-      pasteWords: 400,
-    });
-    render(<OnboardingScreen />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Paste text instead" }),
-    );
-    await userEvent.type(
-      screen.getByLabelText("Paste the text you wrote here"),
-      "A paragraph I actually wrote in my own words.",
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Yes, add it to my corpus." }),
-    );
-    // The ingest landed: the collect scene's own meter already reads the
-    // grown total, entirely from useVoiceCorpus's local state.
-    expect(await screen.findByText(/400 of/)).toBeTruthy();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Skip voice for now." }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Continue" }),
-    );
-
-    // The results recap reads the restore probe's query again, refreshed by
-    // leaving the voice act — not the 0-word snapshot it was mounted with.
-    expect(await screen.findByText("400")).toBeTruthy();
-    expect(screen.getByText("words in your voice")).toBeTruthy();
-  });
-
   it("the member path comes from the state row and skips voice and results entirely", async () => {
     const calls = stubApi({
       state: stateRow({ path: "member", step: "connect" }),
@@ -430,35 +393,105 @@ describe("restore into the conversational shell", () => {
     expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(0);
   });
 
-  it("honors a recorded voice skip in the results act", async () => {
+  it("reopens the invite for a creator whose company is confirmed", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "invite" }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Will you be working in Margince yourself?"),
+    ).toBeTruthy();
+    // Both answers sit in the scene's own foot, and reopening the question
+    // records nothing: the row already says "invite".
+    const yes = screen.getByRole("button", { name: "Yes, set me up" });
+    expect(yes.closest(".ob-scene-foot")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "No, I'm only setting it up" }),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
+  });
+
+  it("accepting the invite opens the voice act and checkpoints step voice", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "invite" }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, set me up" }),
+    );
+
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.step).toBe("voice");
+    expect(body.voice_skipped).toBe(false);
+  });
+
+  // Declining is a FINISH: the row goes to "complete" with both personal
+  // steps recorded as skipped, and it goes there before the handoff, so a
+  // reload after the write lands on the app rather than back in the journey.
+  it("declining the invite completes setup with voice and connect skipped, before the handoff", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "invite" }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "No, I'm only setting it up",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.step).toBe("complete");
+    expect(body.voice_skipped).toBe(true);
+    expect(body.connect_skipped).toBe(true);
+    // The question is gone; the handoff scene has the surface.
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Will you be working in Margince yourself?"),
+      ).toBeNull(),
+    );
+  });
+
+  // A row written before the invite existed, parked at the recap that used to
+  // follow the voice act: it lands on connect, where the recap led.
+  it("lands a legacy results row on the merged connect screen", async () => {
     stubApi({
       state: stateRow({ step: "results", voice_skipped: true }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
-    expect(
-      await screen.findByText(/drafts use a neutral starter voice/),
-    ).toBeTruthy();
-    // The action that leaves the recap sits in the artifact surface's own
-    // pinned foot.
-    const understood = screen.getByRole("button", { name: "Understood" });
-    expect(understood.closest(".ob-triage-continue")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
   });
 
-  // Continuing out of the recap lands directly on the merged connect screen —
-  // mail and LinkedIn together, no separate network-ask act to pass through —
-  // and checkpoints step "connect" immediately: arriving here already shows
+  // Leaving the voice act lands directly on the merged connect screen — mail
+  // and LinkedIn together, no separate network-ask act to pass through — and
+  // checkpoints step "connect" immediately: arriving here already shows
   // everything, so there is nothing a reload could strand behind it.
-  it("continuing out of the results act lands on the merged connect screen and checkpoints it on arrival", async () => {
+  it("continuing out of the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "results" }),
+      state: stateRow({ step: "voice", voice_skipped: true }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Understood" }),
+      await screen.findByRole("button", { name: "Continue" }),
     );
 
     expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
@@ -477,13 +510,13 @@ describe("restore into the conversational shell", () => {
 
   it("skipping LinkedIn on the merged screen records no further checkpoint — the arrival already did", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "results" }),
+      state: stateRow({ step: "voice", voice_skipped: true }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Understood" }),
+      await screen.findByRole("button", { name: "Continue" }),
     );
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
