@@ -11114,6 +11114,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records one cell of an analytics answer was computed from.
+         * @description A number is worth having only if somebody can open it, and opening it means the
+         *     ROWS rather than a restatement of the formula.
+         *
+         *     The request carries the QUESTION unchanged plus the cell's own group keys. The
+         *     question rather than a handle, because an explanation of a different query than the
+         *     one that produced the number is not an explanation and nothing downstream could
+         *     tell.
+         *
+         *     The explanation reads the identical row set the answer read: same population, same
+         *     filters, same authority narrowings. It never out-sees the number it explains.
+         *
+         *     A cell the privacy floor withheld answers `withheld` with no rows. Handing over
+         *     those records one at a time is the same disclosure at a slower pace.
+         */
+        post: operations["explainAnalyticsCell"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/current": {
         parameters: {
             query?: never;
@@ -20978,6 +21010,48 @@ export interface components {
             label: string;
             evidence_ref?: components["schemas"]["OrganizationBriefEvidence"];
         };
+        /**
+         * @description Records the caller can name in support of a send, each by id. Evidence is
+         *     CHECKED, never trusted: the engine reads the named record and asks whether it
+         *     actually supports the category claimed — a deal id that is closed, an invoice
+         *     belonging to another organization, or a record the caller cannot see supports
+         *     nothing. Naming a record therefore never widens what a caller may do.
+         *
+         *     Every field is optional. A caller that can name nothing says nothing, and the
+         *     engine resolves the send from its origin instead.
+         */
+        CommunicationEvidence: {
+            /**
+             * Format: uuid
+             * @description The inbound message this send answers.
+             */
+            activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live opportunity this send moves along.
+             */
+            deal_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The invoice or payment event this send is about.
+             */
+            invoice_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live contract whose notice this send carries.
+             */
+            contract_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The recorded consent this send relies on.
+             */
+            consent_event_id?: string | null;
+            /**
+             * Format: uuid
+             * @description A recorded communication basis this send relies on.
+             */
+            basis_id?: string | null;
+        };
         SendEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
@@ -21030,6 +21104,41 @@ export interface components {
              *     outcome is inferred without a valid reference.
              */
             draft_ref?: string | null;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
              *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
@@ -21217,6 +21326,41 @@ export interface components {
              */
             draft_ref?: string | null;
             /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
              *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
              *     `person_consent` for THIS purpose.
@@ -21270,6 +21414,41 @@ export interface components {
              *     (422 `empty_message_body`) rather than staged for a delivery that could only park.
              */
             body: string;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`). The send is
              *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
@@ -23028,6 +23207,23 @@ export interface components {
             total_safe: boolean;
             /** @description The vocabulary this was asked in. */
             schema_version: string;
+        };
+        /** @description One cell of an answer, named by the question and its group keys. */
+        AnalyticsExplainRequest: {
+            query: components["schemas"]["AnalyticsQuery"];
+            /** @description The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none. */
+            group?: unknown[];
+        };
+        AnalyticsExplanation: {
+            columns: string[];
+            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** @description The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all. */
+            withheld: boolean;
+            /** @description The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why. */
+            truncated: boolean;
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -27684,6 +27880,7 @@ export interface components {
              *     sentence, and every one of those uses would go quietly wrong together.
              */
             quiet_days?: number | null;
+            relationship?: components["schemas"]["AttentionRelationshipFacts"];
             /**
              * @description Which underlying CONDITION this row reports, for a surface that groups repeated
              *     failures of one thing into one row. Two failures of one broken automation carry
@@ -27724,6 +27921,16 @@ export interface components {
             subject?: components["schemas"]["AttentionSubject"];
             pair?: components["schemas"]["AttentionPair"];
             deal?: components["schemas"]["AttentionDealFacts"];
+            /**
+             * Format: uuid
+             * @description Who holds this task, null when nobody has taken it. Sent by `task`.
+             *
+             *     The lane serves three scopes and only one is the reader's own queue: an
+             *     unassigned sweep and a named colleague's queue both put work on the page that
+             *     is not the reader's. Without this those rows read identically to their own,
+             *     and the row nobody owns — the whole point of that scope — cannot say so.
+             */
+            assignee_id?: string | null;
             /**
              * Format: date-time
              * @description When this is due (tasks), or when it lapses (approvals).
@@ -27807,6 +28014,34 @@ export interface components {
             currency?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+        };
+        /**
+         * @description What the lapsed relationship behind a `relationship_decay` item was WORTH before
+         *     it went quiet. Sent only for `source: relationship_decay`.
+         *
+         *     Without it every lapsed contact reads alike, and the rep's strongest relationship
+         *     going quiet is the row that most deserves to be told apart from a cc who has
+         *     drifted. Both facts were already in the lane's hand and discarded: the band is
+         *     scored from the edge the lane loads, and the deal is one batched read over the
+         *     candidates it already narrowed to.
+         *
+         *     The band travels rather than the raw score, because a number between 0 and 100
+         *     invites a client to draw a precision the §4 arithmetic does not claim.
+         */
+        AttentionRelationshipFacts: {
+            /**
+             * @description The relationship's band at the read instant, from the same §4 scoring the
+             *     contact's own page shows — computed on read rather than stored, so the two
+             *     surfaces cannot come to disagree about who this person is.
+             * @enum {string}
+             */
+            strength?: "none" | "weak" | "moderate" | "strong";
+            /**
+             * @description Whether money this reader can see still rests on this contact. Absent is not
+             *     "no": a contact with an open deal the reader may not see reads the same as one
+             *     with none, which is the answer every row-scoped read gives.
+             */
+            has_open_deal?: boolean;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {
@@ -46699,6 +46934,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsAnswer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainAnalyticsCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyticsExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this caller may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
             401: components["responses"]["Unauthorized"];

@@ -187,6 +187,10 @@ func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
 
+func (stubs) ExplainAnalyticsCell(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ExplainAnalyticsCell")
+}
+
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }

@@ -382,6 +382,12 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	} else if item.DueAt != nil {
 		row.Because = append(row.Because, reason("due_today", nil))
 	}
+	// Nobody has taken it. The same fact the lead lane states, and this lane
+	// has a whole scope devoted to surfacing it — a sweep of unowned work whose
+	// rows could not say that was what they were.
+	if item.AssigneeId == nil {
+		row.Because = append(row.Because, reason("unassigned", nil))
+	}
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -411,18 +417,6 @@ func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked
 	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// classifyDecay: a relationship going quiet. Nobody is waiting on the reader
-// for it, which is exactly why it goes unnoticed — and why it sits low rather
-// than not at all.
-func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelRoutine, "system", "data_drifts")
-	quiet := quietDaysOf(item)
-	if quiet > 0 {
-		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
-	}
-	return ranked{item: row, waitingDays: quiet, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifySystem: the pipes. A mailbox that stopped capturing makes every quiet

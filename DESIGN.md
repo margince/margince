@@ -166,7 +166,8 @@ ground, which is lit, and the surface, which is one translucent pane per zone.
 
 ### Dark
 
-The same room with the lights down: `--bg #0a100e`, the glows brighter
+The same room with the lights down: `--bg #0c1311` (a hair above the mock's
+`#0a100e`, so the sidebar's hover step still fits under the page), the glows brighter
 (`.10` / `.20`) because they are the only light, panes at
 `rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
@@ -193,7 +194,7 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 | Role | Family | Where |
 |---|---|---|
-| Display | **Bricolage Grotesque** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
+| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
 | Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
 | Figures | **Geist Mono** 500, tabular | A reading's figure at 22px (`-0.03em`), and every amount, count, date and identifier in a row or a cell. |
 

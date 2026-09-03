@@ -2484,6 +2484,16 @@ export const en = {
   "brief.sentence.manyWithCost":
     "First: {lead} — {consequence} Then {rest} more.",
 
+  // The weekly Brief's opening sentence, composed from the counts the week was
+  // frozen with. Result first, then what carried — the outcome before the debt.
+  "brief.week.won": "You closed {count} deals.",
+  "brief.week.moved": "You moved {count} deals forward.",
+  "brief.week.met": "You held {count} meetings.",
+  "brief.week.carryPromises": "{count} promises carried over.",
+  "brief.week.carryTasks": "{count} tasks carried over.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
+
   "brief.donext.sub": "One order, from your worklist.",
   "brief.donext.loading": "Reading what waits on you",
   "brief.donext.clear": "Nothing is waiting on you right now.",
@@ -2521,6 +2531,7 @@ export const en = {
   "teamweekly.card.commitmentsBasis": "of what was owed",
   "teamweekly.card.won": "Won",
   "teamweekly.card.wonBasis": "{lost} lost",
+  "teamweekly.card.wonBasisValue": "{value} won · {lost} lost",
   "teamweekly.card.reps": "Members counted",
   "teamweekly.card.repsBasis": "whose week was read in full",
   "teamweekly.movement.title": "What the week did",
@@ -8003,7 +8014,7 @@ export const en = {
   "worklist.because.overdue": "overdue",
   "worklist.because.due_today": "due today",
   "worklist.because.closing_soon": "has a close date",
-  "worklist.because.expected_revenue": "expected revenue",
+  "worklist.because.expected_revenue": "an open deal rests on this",
   "worklist.because.expected_revenue.value": "worth {value}",
   "worklist.because.material": "above the typical open deal",
   "worklist.because.material.value":

@@ -2411,6 +2411,16 @@ export const vi = {
   "brief.sentence.manyWithCost":
     "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
 
+  // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
+  "brief.week.won": "Bạn đã chốt {count} giao dịch.",
+  "brief.week.moved": "Bạn đã đẩy {count} giao dịch tiến lên.",
+  "brief.week.met": "Bạn đã có {count} cuộc họp.",
+  "brief.week.carryPromises": "{count} cam kết còn dang dở.",
+  "brief.week.carryTasks": "{count} công việc còn dang dở.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet":
+    "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
+
   "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
   "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
   "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
@@ -2448,6 +2458,7 @@ export const vi = {
   "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
   "teamweekly.card.won": "Thắng",
   "teamweekly.card.wonBasis": "{lost} thua",
+  "teamweekly.card.wonBasisValue": "thắng {value} · thua {lost}",
   "teamweekly.card.reps": "Thành viên được tính",
   "teamweekly.card.repsBasis": "có tuần được đọc đầy đủ",
   "teamweekly.movement.title": "Tuần đã làm được gì",
@@ -7834,7 +7845,8 @@ export const vi = {
   "worklist.because.overdue": "quá hạn",
   "worklist.because.due_today": "đến hạn hôm nay",
   "worklist.because.closing_soon": "có ngày chốt",
-  "worklist.because.expected_revenue": "doanh thu dự kiến",
+  "worklist.because.expected_revenue":
+    "một giao dịch đang mở phụ thuộc vào người này",
   "worklist.because.expected_revenue.value": "trị giá {value}",
   "worklist.because.material": "trên mức giao dịch mở thông thường",
   "worklist.because.material.value": "trị giá {value}, trên mức thông thường",

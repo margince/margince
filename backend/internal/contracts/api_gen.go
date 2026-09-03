@@ -1543,6 +1543,30 @@ func (e AttentionPairEvidenceSignal) Valid() bool {
 	}
 }
 
+// Defines values for AttentionRelationshipFactsStrength.
+const (
+	AttentionRelationshipFactsStrengthModerate AttentionRelationshipFactsStrength = "moderate"
+	AttentionRelationshipFactsStrengthNone     AttentionRelationshipFactsStrength = "none"
+	AttentionRelationshipFactsStrengthStrong   AttentionRelationshipFactsStrength = "strong"
+	AttentionRelationshipFactsStrengthWeak     AttentionRelationshipFactsStrength = "weak"
+)
+
+// Valid indicates whether the value is a known member of the AttentionRelationshipFactsStrength enum.
+func (e AttentionRelationshipFactsStrength) Valid() bool {
+	switch e {
+	case AttentionRelationshipFactsStrengthModerate:
+		return true
+	case AttentionRelationshipFactsStrengthNone:
+		return true
+	case AttentionRelationshipFactsStrengthStrong:
+		return true
+	case AttentionRelationshipFactsStrengthWeak:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionSubjectType.
 const (
 	AttentionSubjectTypeActivity     AttentionSubjectType = "activity"
@@ -8586,22 +8610,22 @@ func (e PersonConsentGuardEntryChannel) Valid() bool {
 
 // Defines values for PersonConsentGuardEntryPurposeClass.
 const (
-	BusinessCorrespondence PersonConsentGuardEntryPurposeClass = "business_correspondence"
-	Marketing              PersonConsentGuardEntryPurposeClass = "marketing"
-	PhoneOutreach          PersonConsentGuardEntryPurposeClass = "phone_outreach"
-	Transactional          PersonConsentGuardEntryPurposeClass = "transactional"
+	PersonConsentGuardEntryPurposeClassBusinessCorrespondence PersonConsentGuardEntryPurposeClass = "business_correspondence"
+	PersonConsentGuardEntryPurposeClassMarketing              PersonConsentGuardEntryPurposeClass = "marketing"
+	PersonConsentGuardEntryPurposeClassPhoneOutreach          PersonConsentGuardEntryPurposeClass = "phone_outreach"
+	PersonConsentGuardEntryPurposeClassTransactional          PersonConsentGuardEntryPurposeClass = "transactional"
 )
 
 // Valid indicates whether the value is a known member of the PersonConsentGuardEntryPurposeClass enum.
 func (e PersonConsentGuardEntryPurposeClass) Valid() bool {
 	switch e {
-	case BusinessCorrespondence:
+	case PersonConsentGuardEntryPurposeClassBusinessCorrespondence:
 		return true
-	case Marketing:
+	case PersonConsentGuardEntryPurposeClassMarketing:
 		return true
-	case PhoneOutreach:
+	case PersonConsentGuardEntryPurposeClassPhoneOutreach:
 		return true
-	case Transactional:
+	case PersonConsentGuardEntryPurposeClassTransactional:
 		return true
 	default:
 		return false
@@ -10492,6 +10516,168 @@ func (e SearchResultType) Valid() bool {
 	}
 }
 
+// Defines values for SendAccountEmailRequestCommunicationContext.
+const (
+	SendAccountEmailRequestCommunicationContextAccountNotice       SendAccountEmailRequestCommunicationContext = "account_notice"
+	SendAccountEmailRequestCommunicationContextActiveDealFollowup  SendAccountEmailRequestCommunicationContext = "active_deal_followup"
+	SendAccountEmailRequestCommunicationContextConsentConfirmation SendAccountEmailRequestCommunicationContext = "consent_confirmation"
+	SendAccountEmailRequestCommunicationContextContractNotice      SendAccountEmailRequestCommunicationContext = "contract_notice"
+	SendAccountEmailRequestCommunicationContextCustomerService     SendAccountEmailRequestCommunicationContext = "customer_service"
+	SendAccountEmailRequestCommunicationContextInvoiceOrPayment    SendAccountEmailRequestCommunicationContext = "invoice_or_payment"
+	SendAccountEmailRequestCommunicationContextMarketing           SendAccountEmailRequestCommunicationContext = "marketing"
+	SendAccountEmailRequestCommunicationContextOptoutConfirmation  SendAccountEmailRequestCommunicationContext = "optout_confirmation"
+	SendAccountEmailRequestCommunicationContextPrecontractQuote    SendAccountEmailRequestCommunicationContext = "precontract_quote"
+	SendAccountEmailRequestCommunicationContextPrivacyNotice       SendAccountEmailRequestCommunicationContext = "privacy_notice"
+	SendAccountEmailRequestCommunicationContextRecordConfirmation  SendAccountEmailRequestCommunicationContext = "record_confirmation"
+	SendAccountEmailRequestCommunicationContextReplyToInbound      SendAccountEmailRequestCommunicationContext = "reply_to_inbound"
+	SendAccountEmailRequestCommunicationContextRequestedFollowup   SendAccountEmailRequestCommunicationContext = "requested_followup"
+	SendAccountEmailRequestCommunicationContextSecurityNotice      SendAccountEmailRequestCommunicationContext = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the SendAccountEmailRequestCommunicationContext enum.
+func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendAccountEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendAccountEmailRequestCommunicationContextConsentConfirmation:
+		return true
+	case SendAccountEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendAccountEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendAccountEmailRequestCommunicationContextMarketing:
+		return true
+	case SendAccountEmailRequestCommunicationContextOptoutConfirmation:
+		return true
+	case SendAccountEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendAccountEmailRequestCommunicationContextPrivacyNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextRecordConfirmation:
+		return true
+	case SendAccountEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendAccountEmailRequestCommunicationContextRequestedFollowup:
+		return true
+	case SendAccountEmailRequestCommunicationContextSecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendEmailRequestCommunicationContext.
+const (
+	SendEmailRequestCommunicationContextAccountNotice       SendEmailRequestCommunicationContext = "account_notice"
+	SendEmailRequestCommunicationContextActiveDealFollowup  SendEmailRequestCommunicationContext = "active_deal_followup"
+	SendEmailRequestCommunicationContextConsentConfirmation SendEmailRequestCommunicationContext = "consent_confirmation"
+	SendEmailRequestCommunicationContextContractNotice      SendEmailRequestCommunicationContext = "contract_notice"
+	SendEmailRequestCommunicationContextCustomerService     SendEmailRequestCommunicationContext = "customer_service"
+	SendEmailRequestCommunicationContextInvoiceOrPayment    SendEmailRequestCommunicationContext = "invoice_or_payment"
+	SendEmailRequestCommunicationContextMarketing           SendEmailRequestCommunicationContext = "marketing"
+	SendEmailRequestCommunicationContextOptoutConfirmation  SendEmailRequestCommunicationContext = "optout_confirmation"
+	SendEmailRequestCommunicationContextPrecontractQuote    SendEmailRequestCommunicationContext = "precontract_quote"
+	SendEmailRequestCommunicationContextPrivacyNotice       SendEmailRequestCommunicationContext = "privacy_notice"
+	SendEmailRequestCommunicationContextRecordConfirmation  SendEmailRequestCommunicationContext = "record_confirmation"
+	SendEmailRequestCommunicationContextReplyToInbound      SendEmailRequestCommunicationContext = "reply_to_inbound"
+	SendEmailRequestCommunicationContextRequestedFollowup   SendEmailRequestCommunicationContext = "requested_followup"
+	SendEmailRequestCommunicationContextSecurityNotice      SendEmailRequestCommunicationContext = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the SendEmailRequestCommunicationContext enum.
+func (e SendEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendEmailRequestCommunicationContextConsentConfirmation:
+		return true
+	case SendEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendEmailRequestCommunicationContextMarketing:
+		return true
+	case SendEmailRequestCommunicationContextOptoutConfirmation:
+		return true
+	case SendEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendEmailRequestCommunicationContextPrivacyNotice:
+		return true
+	case SendEmailRequestCommunicationContextRecordConfirmation:
+		return true
+	case SendEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendEmailRequestCommunicationContextRequestedFollowup:
+		return true
+	case SendEmailRequestCommunicationContextSecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendMessageRequestCommunicationContext.
+const (
+	SendMessageRequestCommunicationContextAccountNotice       SendMessageRequestCommunicationContext = "account_notice"
+	SendMessageRequestCommunicationContextActiveDealFollowup  SendMessageRequestCommunicationContext = "active_deal_followup"
+	SendMessageRequestCommunicationContextConsentConfirmation SendMessageRequestCommunicationContext = "consent_confirmation"
+	SendMessageRequestCommunicationContextContractNotice      SendMessageRequestCommunicationContext = "contract_notice"
+	SendMessageRequestCommunicationContextCustomerService     SendMessageRequestCommunicationContext = "customer_service"
+	SendMessageRequestCommunicationContextInvoiceOrPayment    SendMessageRequestCommunicationContext = "invoice_or_payment"
+	SendMessageRequestCommunicationContextMarketing           SendMessageRequestCommunicationContext = "marketing"
+	SendMessageRequestCommunicationContextOptoutConfirmation  SendMessageRequestCommunicationContext = "optout_confirmation"
+	SendMessageRequestCommunicationContextPrecontractQuote    SendMessageRequestCommunicationContext = "precontract_quote"
+	SendMessageRequestCommunicationContextPrivacyNotice       SendMessageRequestCommunicationContext = "privacy_notice"
+	SendMessageRequestCommunicationContextRecordConfirmation  SendMessageRequestCommunicationContext = "record_confirmation"
+	SendMessageRequestCommunicationContextReplyToInbound      SendMessageRequestCommunicationContext = "reply_to_inbound"
+	SendMessageRequestCommunicationContextRequestedFollowup   SendMessageRequestCommunicationContext = "requested_followup"
+	SendMessageRequestCommunicationContextSecurityNotice      SendMessageRequestCommunicationContext = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the SendMessageRequestCommunicationContext enum.
+func (e SendMessageRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendMessageRequestCommunicationContextAccountNotice:
+		return true
+	case SendMessageRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendMessageRequestCommunicationContextConsentConfirmation:
+		return true
+	case SendMessageRequestCommunicationContextContractNotice:
+		return true
+	case SendMessageRequestCommunicationContextCustomerService:
+		return true
+	case SendMessageRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendMessageRequestCommunicationContextMarketing:
+		return true
+	case SendMessageRequestCommunicationContextOptoutConfirmation:
+		return true
+	case SendMessageRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendMessageRequestCommunicationContextPrivacyNotice:
+		return true
+	case SendMessageRequestCommunicationContextRecordConfirmation:
+		return true
+	case SendMessageRequestCommunicationContextReplyToInbound:
+		return true
+	case SendMessageRequestCommunicationContextRequestedFollowup:
+		return true
+	case SendMessageRequestCommunicationContextSecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
@@ -11181,22 +11367,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber TagDetailColor = "amber"
+	TagDetailColorRose  TagDetailColor = "rose"
+	TagDetailColorSlate TagDetailColor = "slate"
+	TagDetailColorTeal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
 	default:
 		return false
@@ -16052,6 +16238,29 @@ type AnalyticsEntity struct {
 	Name string `json:"name"`
 }
 
+// AnalyticsExplainRequest One cell of an answer, named by the question and its group keys.
+type AnalyticsExplainRequest struct {
+	// Group The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
+
+	// Query One question, in the vocabulary the schema returned.
+	Query AnalyticsQuery `json:"query"`
+}
+
+// AnalyticsExplanation defines model for AnalyticsExplanation.
+type AnalyticsExplanation struct {
+	Columns []string `json:"columns"`
+
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.
+	Truncated bool `json:"truncated"`
+
+	// Withheld The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all.
+	Withheld bool `json:"withheld"`
+}
+
 // AnalyticsFilter defines model for AnalyticsFilter.
 type AnalyticsFilter struct {
 	Field string            `json:"field"`
@@ -16817,6 +17026,14 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
+	//
+	// The lane serves three scopes and only one is the reader's own queue: an
+	// unassigned sweep and a named colleague's queue both put work on the page that
+	// is not the reader's. Without this those rows read identically to their own,
+	// and the row nobody owns — the whole point of that scope — cannot say so.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
 	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
 	// stopped.
 	//
@@ -16916,6 +17133,19 @@ type AttentionItem struct {
 	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
 	Rank *int `json:"rank,omitempty"`
 
+	// Relationship What the lapsed relationship behind a `relationship_decay` item was WORTH before
+	// it went quiet. Sent only for `source: relationship_decay`.
+	//
+	// Without it every lapsed contact reads alike, and the rep's strongest relationship
+	// going quiet is the row that most deserves to be told apart from a cc who has
+	// drifted. Both facts were already in the lane's hand and discarded: the band is
+	// scored from the edge the lane loads, and the deal is one batched read over the
+	// candidates it already narrowed to.
+	//
+	// The band travels rather than the raw score, because a number between 0 and 100
+	// invites a client to draw a precision the §4 arithmetic does not claim.
+	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
 
@@ -17009,6 +17239,34 @@ type AttentionPairSide struct {
 	// different fact from not having asked.
 	RelatedCount *int `json:"related_count,omitempty"`
 }
+
+// AttentionRelationshipFacts What the lapsed relationship behind a `relationship_decay` item was WORTH before
+// it went quiet. Sent only for `source: relationship_decay`.
+//
+// Without it every lapsed contact reads alike, and the rep's strongest relationship
+// going quiet is the row that most deserves to be told apart from a cc who has
+// drifted. Both facts were already in the lane's hand and discarded: the band is
+// scored from the edge the lane loads, and the deal is one batched read over the
+// candidates it already narrowed to.
+//
+// The band travels rather than the raw score, because a number between 0 and 100
+// invites a client to draw a precision the §4 arithmetic does not claim.
+type AttentionRelationshipFacts struct {
+	// HasOpenDeal Whether money this reader can see still rests on this contact. Absent is not
+	// "no": a contact with an open deal the reader may not see reads the same as one
+	// with none, which is the answer every row-scoped read gives.
+	HasOpenDeal *bool `json:"has_open_deal,omitempty"`
+
+	// Strength The relationship's band at the read instant, from the same §4 scoring the
+	// contact's own page shows — computed on read rather than stored, so the two
+	// surfaces cannot come to disagree about who this person is.
+	Strength *AttentionRelationshipFactsStrength `json:"strength,omitempty"`
+}
+
+// AttentionRelationshipFactsStrength The relationship's band at the read instant, from the same §4 scoring the
+// contact's own page shows — computed on read rather than stored, so the two
+// surfaces cannot come to disagree about who this person is.
+type AttentionRelationshipFactsStrength string
 
 // AttentionStagedFacts What the verdict engine already worked out about a staged contact decision, so a
 // surface can group alike questions without reading the proposal a second time.
@@ -18334,6 +18592,34 @@ type CommissionSummaryRow struct {
 
 	// Status accrued → approved → paid, with void as the exit at any point.
 	Status CommissionStatus `json:"status"`
+}
+
+// CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
+// CHECKED, never trusted: the engine reads the named record and asks whether it
+// actually supports the category claimed — a deal id that is closed, an invoice
+// belonging to another organization, or a record the caller cannot see supports
+// nothing. Naming a record therefore never widens what a caller may do.
+//
+// Every field is optional. A caller that can name nothing says nothing, and the
+// engine resolves the send from its origin instead.
+type CommunicationEvidence struct {
+	// ActivityId The inbound message this send answers.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// BasisId A recorded communication basis this send relies on.
+	BasisId *openapi_types.UUID `json:"basis_id,omitempty"`
+
+	// ConsentEventId The recorded consent this send relies on.
+	ConsentEventId *openapi_types.UUID `json:"consent_event_id,omitempty"`
+
+	// ContractId The live contract whose notice this send carries.
+	ContractId *openapi_types.UUID `json:"contract_id,omitempty"`
+
+	// DealId The live opportunity this send moves along.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// InvoiceId The invoice or payment event this send is about.
+	InvoiceId *openapi_types.UUID `json:"invoice_id,omitempty"`
 }
 
 // CompanyContext defines model for CompanyContext.
@@ -29245,6 +29531,23 @@ type SendAccountEmailRequest struct {
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories exist to serve the recipient — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation` — and are refused (422 `invalid`) from an
+	// ordinary send. They are reserved for the installation's own controller mail,
+	// which rides a registered template; a caller that could claim one could dress
+	// marketing as a security warning and reach somebody who has objected.
+	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
 	// suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
 	// `person_consent` for THIS purpose.
@@ -29253,6 +29556,9 @@ type SendAccountEmailRequest struct {
 	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
 	// Omit for independently composed mail.
 	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
@@ -29268,6 +29574,18 @@ type SendAccountEmailRequest struct {
 	// cannot see is refused 404 — and each probe is its own query, so the list is bounded
 	// at 25 (a message about more records than that is about none of them).
 	Links []ActivityLinkInput `json:"links"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
@@ -29296,6 +29614,23 @@ type SendAccountEmailRequest struct {
 	// anything is staged — `cc` alone does not make a message addressed to anyone.
 	To []openapi_types.Email `json:"to"`
 }
+
+// SendAccountEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories exist to serve the recipient — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation` — and are refused (422 `invalid`) from an
+// ordinary send. They are reserved for the installation's own controller mail,
+// which rides a registered template; a caller that could claim one could dress
+// marketing as a security warning and reach somebody who has objected.
+type SendAccountEmailRequestCommunicationContext string
 
 // SendEmailRequest defines model for SendEmailRequest.
 type SendEmailRequest struct {
@@ -29359,6 +29694,23 @@ type SendEmailRequest struct {
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories exist to serve the recipient — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation` — and are refused (422 `invalid`) from an
+	// ordinary send. They are reserved for the installation's own controller mail,
+	// which rides a registered template; a caller that could claim one could dress
+	// marketing as a security warning and reach somebody who has objected.
+	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
 	// The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
 	// `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
@@ -29371,12 +29723,27 @@ type SendEmailRequest struct {
 	// outcome is inferred without a valid reference.
 	DraftRef *string `json:"draft_ref,omitempty"`
 
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
 	// with the plain part first, so a client that cannot render HTML still
 	// receives the words. The sender's signature and the unsubscribe footer are
 	// appended to BOTH parts by the server, in each part's own syntax.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
@@ -29402,6 +29769,23 @@ type SendEmailRequest struct {
 	Subject     string                `json:"subject"`
 	To          []openapi_types.Email `json:"to"`
 }
+
+// SendEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories exist to serve the recipient — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation` — and are refused (422 `invalid`) from an
+// ordinary send. They are reserved for the installation's own controller mail,
+// which rides a registered template; a caller that could claim one could dress
+// marketing as a security warning and reach somebody who has objected.
+type SendEmailRequestCommunicationContext string
 
 // SendMessageRequest One channel reply. It carries no subject and no addressee list, and that absence is the
 // shape of the transport rather than an omission: a messaging channel has no subject line
@@ -29434,11 +29818,60 @@ type SendMessageRequest struct {
 	// (422 `empty_message_body`) rather than staged for a delivery that could only park.
 	Body string `json:"body"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories exist to serve the recipient — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation` — and are refused (422 `invalid`) from an
+	// ordinary send. They are reserved for the installation's own controller mail,
+	// which rides a registered template; a caller that could claim one could dress
+	// marketing as a security warning and reach somebody who has objected.
+	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
 	// suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
 	// `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
 	ConsentPurpose string `json:"consent_purpose"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 }
+
+// SendMessageRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories exist to serve the recipient — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation` — and are refused (422 `invalid`) from an
+// ordinary send. They are reserved for the installation's own controller mail,
+// which rides a registered template; a caller that could claim one could dress
+// marketing as a security warning and reach somebody who has objected.
+type SendMessageRequestCommunicationContext string
 
 // SetActivityAudienceRequest defines model for SetActivityAudienceRequest.
 type SetActivityAudienceRequest struct {
@@ -37023,6 +37456,9 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
+
+// ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
+type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
@@ -45489,6 +45925,9 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// The records one cell of an analytics answer was computed from.
+	// (POST /analytics/explain)
+	ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
@@ -47328,6 +47767,12 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
 func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records one cell of an analytics answer was computed from.
+// (POST /analytics/explain)
+func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52315,6 +52760,28 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainAnalyticsCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainAnalyticsCell(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75362,6 +75829,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/explain", wrapper.ExplainAnalyticsCell)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)

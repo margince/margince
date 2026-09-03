@@ -2435,6 +2435,16 @@ export const de = {
   "brief.sentence.manyWithCost":
     "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
 
+  // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
+  "brief.week.won": "Sie haben {count} Abschlüsse gemacht.",
+  "brief.week.moved": "Sie haben {count} Deals vorangebracht.",
+  "brief.week.met": "Sie hatten {count} Termine.",
+  "brief.week.carryPromises": "{count} Zusagen sind offen geblieben.",
+  "brief.week.carryTasks": "{count} Aufgaben sind offen geblieben.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet":
+    "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
+
   "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
   "brief.donext.loading": "Was auf dich wartet, wird gelesen",
   "brief.donext.clear": "Gerade wartet nichts auf dich.",
@@ -2472,6 +2482,7 @@ export const de = {
   "teamweekly.card.commitmentsBasis": "des Zugesagten",
   "teamweekly.card.won": "Gewonnen",
   "teamweekly.card.wonBasis": "{lost} verloren",
+  "teamweekly.card.wonBasisValue": "{value} gewonnen · {lost} verloren",
   "teamweekly.card.reps": "Gezählte Mitglieder",
   "teamweekly.card.repsBasis": "deren Woche vollständig gelesen wurde",
   "teamweekly.movement.title": "Was die Woche bewegt hat",
@@ -7925,7 +7936,7 @@ export const de = {
   "worklist.because.overdue": "überfällig",
   "worklist.because.due_today": "heute fällig",
   "worklist.because.closing_soon": "hat ein Abschlussdatum",
-  "worklist.because.expected_revenue": "erwarteter Umsatz",
+  "worklist.because.expected_revenue": "ein offener Deal hängt daran",
   "worklist.because.expected_revenue.value": "Wert {value}",
   "worklist.because.material": "über dem üblichen offenen Deal",
   "worklist.because.material.value":

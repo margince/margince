@@ -27,9 +27,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // Two placeholders and a dash. Every word in the line comes from elsewhere —
-  // the dimension's own label and the sentence the server wrote — so there is
-  // nothing here for a locale to translate.
+  // Two whole clauses and the space between them. The weekly's opening sentence
+  // is built from result keys and carry keys that ARE translated; this joins the
+  // two rendered clauses and contributes no word of its own, so a locale has
+  // nothing here to change.
+  "brief.week.andCarry",
   // The record's own name beside the numeral that names its reading. There is
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
