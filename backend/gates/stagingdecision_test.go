@@ -36,6 +36,13 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 			if !ok {
 				continue
 			}
+			// Receiver-qualified, because the method NAME is fixed by the
+			// interface: every type satisfying activities.DeliveryStager must
+			// call its method StageTx. Keyed on the bare name, a wrapper that
+			// staged without deciding would land in the same map entry as the
+			// one that decides, and the gate would absorb it and report PASS —
+			// which is the exact shape a second send door takes.
+			name := receiverQualified(fn)
 			ast.Inspect(fn, func(n ast.Node) bool {
 				sel, ok := n.(*ast.SelectorExpr)
 				if !ok {
@@ -47,9 +54,9 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 				// StageOrJoinPendingInTx on the site-read transport — which
 				// queues no message and owes no decision.
 				case "StageTx", "StageChannelTx":
-					staging[fn.Name.Name] = true
+					staging[name] = true
 				case "AuthorizeStagingTx":
-					authorizing[fn.Name.Name] = true
+					authorizing[name] = true
 				}
 				return true
 			})
@@ -67,4 +74,21 @@ func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 				"a message queued with nothing on record about why is one nobody can answer for", fn)
 		}
 	}
+}
+
+// receiverQualified names a function the way this gate must count it: the
+// receiver type and the method, so two types implementing one interface method
+// are two subjects rather than one.
+func receiverQualified(fn *ast.FuncDecl) string {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return fn.Name.Name
+	}
+	expr := fn.Recv.List[0].Type
+	if star, ok := expr.(*ast.StarExpr); ok {
+		expr = star.X
+	}
+	if id, ok := expr.(*ast.Ident); ok {
+		return id.Name + "." + fn.Name.Name
+	}
+	return fn.Name.Name
 }

@@ -16,6 +16,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,7 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // commsStager records an accepted send for transmission: the delivery row and
@@ -101,10 +104,22 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	// entry and the outbox event: all of them or none, so a decision can never
 	// describe a message that rolled back, and a delivery can never reach the
 	// worker with nothing on record about why it exists.
-	if s.authority != nil {
-		if _, err := s.authority.AuthorizeStagingTx(ctx, tx, id, in.Authorization); err != nil {
-			return err
-		}
+	//
+	// Not guarded on the authority being wired. A nil check here would read as
+	// caution and behave as a bypass: a refactor that dropped the field would
+	// compile, stage every message with no decision, and satisfy the census
+	// gate — which sees the CALL and cannot see that it was skipped. The
+	// transmit gate refuses a missing consent authority outright
+	// (comms/gates.go), and this fails the same way.
+	if s.authority == nil {
+		return errors.New("compose: no authorization authority is wired on this send path")
+	}
+	set, err := s.authority.AuthorizeStagingTx(ctx, tx, id, in.Authorization)
+	if err != nil {
+		return err
+	}
+	if err := refuseAbsoluteDenial(set); err != nil {
+		return err
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),
@@ -136,13 +151,41 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 	}
 	// The channel path is a second implementation of staging, and this is the
 	// half a fix to the mail path does not reach. It records the same decision
-	// for the same reason.
-	if s.authority != nil {
-		if _, err := s.authority.AuthorizeStagingTx(ctx, tx, id, in.Authorization); err != nil {
-			return err
-		}
+	// and fails closed the same way.
+	if s.authority == nil {
+		return errors.New("compose: no authorization authority is wired on this send path")
+	}
+	set, err := s.authority.AuthorizeStagingTx(ctx, tx, id, in.Authorization)
+	if err != nil {
+		return err
+	}
+	if err := refuseAbsoluteDenial(set); err != nil {
+		return err
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),
 	}, sendInsertOpts())
+}
+
+// refuseAbsoluteDenial stops a send at STAGING for the four refusals no
+// rollout mode may soften: an Art. 21 objection, a processing restriction, a
+// hard bounce, and marketing consent whose round trip never completed.
+//
+// Observe mode is why every other disagreement is recorded and let through: the
+// engine is being measured against the old gate, and blocking on a difference
+// nobody has reviewed would refuse legitimate mail. An absolute denial is not a
+// difference of opinion — the transmit phase already refuses it, so letting it
+// stage buys nothing and costs two things. The rep learns minutes or days
+// later, from a parked row in an operator lane rather than at the moment they
+// pressed send. And the activity commits first, carrying the outbound
+// attestation that makes an address correspondence-positive — so a message to
+// somebody who objected would mint evidence of correspondence with them that
+// never happened.
+func refuseAbsoluteDenial(set commsauthz.DecisionSet) error {
+	if !set.HasAbsoluteDenial() {
+		return nil
+	}
+	denied := set.Denied()
+	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
+		len(denied), len(set.Decisions), denied[0].ReasonCode, apperrors.ErrConsentNotGranted)
 }
