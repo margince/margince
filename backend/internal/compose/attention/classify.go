@@ -239,6 +239,21 @@ const waitingStaleDays = 14
 // anything about what to do first.
 const waitingDaysCeiling = 30
 
+// orderingAge is the age the ordering step reads, bounded by the ceiling.
+//
+// Every source that measures an age in days answers here, and that is the
+// point rather than a convenience: the three classifiers each held their own
+// age, and two of them left waitingRank at its zero value. A deal quiet ninety
+// days and one quiet three then tied on the ordering step while both rows
+// PRINTED their true age, so the page ordered by something no reader could see
+// and explained itself with a figure that had not decided anything.
+func orderingAge(days int) int {
+	if days > waitingDaysCeiling {
+		return waitingDaysCeiling
+	}
+	return days
+}
+
 // classifyWaiting: somebody wrote and nobody answered.
 //
 // Level 1, the top band below a pin, and the reason is the concept's own: a
@@ -315,14 +330,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// bounded one for the order. A rep reading "waiting 180 days" is being told
 	// something true; the queue placing that row above everything for the rest
 	// of its life is not.
-	ordering := days
-	if ordering > waitingDaysCeiling {
-		ordering = waitingDaysCeiling
-	}
 	return ranked{
 		item:        row,
 		waitingDays: days,
-		waitingRank: ordering,
+		waitingRank: orderingAge(days),
 		occurredAt:  waiting.Since,
 		// Who owes the reply, so the scope filters can judge this row the way
 		// they judge a deal-bearing one. A wait carries no deal on the wire, and

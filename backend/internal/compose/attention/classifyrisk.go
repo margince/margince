@@ -75,6 +75,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		hasExpected:      known,
 		expectedCurrency: money.base,
 		waitingDays:      quiet,
+		waitingRank:      orderingAge(quiet),
 		occurredAt:       occurredOf(item, asOf),
 	}
 }
