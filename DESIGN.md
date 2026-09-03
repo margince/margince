@@ -316,9 +316,9 @@ agent speaks in one place on the page and says what it rests on; every figure
 is in the same face and lines up; nothing casts a shadow or glows. It should
 feel like a well-lit desk with one folder open on it, not a dashboard.
 
-**Five rules of structure**, learned by inventorying what the two record pages
-render today and finding deals in four places, people in three, and two verdict
-cards stacked above a third list of things to do:
+**Five rules of structure**, each preventing a shape a record page falls into
+as it grows (a fact with several homes, verdicts stacked above the list they
+should lead):
 
 1. **Every fact has one home.** If a deal appears in the readings, it does not
    also appear in the rail. If people are in the context column, they are not
