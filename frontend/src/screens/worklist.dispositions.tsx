@@ -15,8 +15,10 @@
 // finding it again afterwards means knowing which of three judgements you made.
 
 import { Button } from "../design-system/atoms";
+import { Popover } from "../design-system/popover";
 import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { translatePlural, useLocale, useT } from "../i18n";
 import {
   useClearDisposition,
   useSetDisposition,
@@ -24,10 +26,28 @@ import {
   type WorklistItem,
 } from "./worklist.queries";
 
-// How long a snooze lasts. One working day, because the verb answers "not now,
-// but today is not over" — a rep reaching for it at ten in the morning means
-// tomorrow morning, not this afternoon.
+// How long a snooze lasts, when the reader does not say.
+//
+// One working day, because the verb answers "not now, but today is not over" —
+// a rep reaching for it at ten in the morning means tomorrow morning, not this
+// afternoon. It stays the default the plain press takes, so the fast path is
+// still one click.
 const SNOOZE_DAYS = 1;
+
+// The spans a reader can choose instead.
+//
+// The server takes any future instant — `snoozed_until` is caller-supplied and
+// validated only as "later than now" — so tomorrow was never the product's
+// limit, it was this file's. A rep who knows a customer is away all week had to
+// press the same button seven mornings running.
+//
+// Days rather than named moments ("this evening", "Monday"), because a named
+// moment is a claim about the reader's calendar: "Monday" from a Friday is
+// three days and from a Monday is seven, and a queue that guessed wrong would
+// hide work for four days nobody asked for. A span says exactly what it does.
+const SNOOZE_SPANS = [1, 3, 7] as const;
+
+type SnoozeSpan = (typeof SNOOZE_SPANS)[number];
 
 // Which undo REACH each judgement takes back.
 //
@@ -48,13 +68,13 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   if (offered.length === 0) {
     return null;
   }
-  const put = (disposition: WorklistDisposition) => {
+  const put = (disposition: WorklistDisposition, days?: SnoozeSpan) => {
     set.mutate(
       {
         activityId: item.id,
         disposition,
         ...(disposition === "snooze"
-          ? { snoozedUntil: snoozeUntil().toISOString() }
+          ? { snoozedUntil: snoozeUntil(days).toISOString() }
           : {}),
       },
       {
@@ -95,7 +115,59 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           {t(`worklist.disposition.verb.${disposition}` as const)}
         </Button>
       ))}
+      {/* The spans, BESIDE the snooze verb rather than replacing it. A rep
+          reaching for "not today" most often means tomorrow, and making them
+          choose a duration every time would charge the common case for the
+          rare one. */}
+      {offered.includes("snooze") && (
+        <SnoozeSpans
+          pending={set.isPending}
+          onPick={(days) => put("snooze", days)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * How long to put a row down for, when a day is not the answer.
+ *
+ * The server has always taken any future instant; this file was the thing that
+ * only ever sent tomorrow. A rep who knows a customer is away all week pressed
+ * the same button seven mornings running, and each press was a row that came
+ * back and a count that stayed wrong.
+ *
+ * A Popover rather than a row of buttons: three more controls on every snoozable
+ * row is three more things to read past on a page whose whole argument is that
+ * it can be worked to the bottom.
+ */
+function SnoozeSpans({
+  pending,
+  onPick,
+}: Readonly<{ pending: boolean; onPick: (days: SnoozeSpan) => void }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <Popover
+      label={t("worklist.disposition.snoozeFor")}
+      className="link-button"
+    >
+      <div className="worklist-snooze-spans">
+        {SNOOZE_SPANS.map((days) => (
+          <Button
+            key={days}
+            small
+            variant="ghost"
+            disabled={pending}
+            onClick={() => onPick(days)}
+          >
+            {translatePlural(locale, "worklist.disposition.snoozeDays", days, {
+              value: formatNumber(days, locale),
+            })}
+          </Button>
+        ))}
+      </div>
+    </Popover>
   );
 }
 
@@ -104,8 +176,8 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
 // Computed at the press rather than held in state: a page left open overnight
 // would otherwise snooze until a moment that has already passed, and the server
 // would refuse it with a validation error the reader cannot act on.
-function snoozeUntil(): Date {
+function snoozeUntil(days: number = SNOOZE_DAYS): Date {
   const until = new Date();
-  until.setDate(until.getDate() + SNOOZE_DAYS);
+  until.setDate(until.getDate() + days);
   return until;
 }

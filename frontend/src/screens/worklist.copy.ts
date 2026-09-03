@@ -389,7 +389,9 @@ export function whenText(
 // the field is declared. Drawing it as "due" would turn "this offer goes stale"
 // into "you are late", which is the row telling the reader something untrue
 // about their own day.
-function whenKeyFor(item: WorklistItem): "worklist.when.starts" | "worklist.when.due" | null {
+function whenKeyFor(
+  item: WorklistItem,
+): "worklist.when.starts" | "worklist.when.due" | null {
   if (item.source === "meeting") {
     return "worklist.when.starts";
   }
