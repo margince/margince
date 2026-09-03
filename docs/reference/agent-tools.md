@@ -127,6 +127,7 @@ Columns:
 | `relink_activity` | dynamic | `write` | — | Runs: a link row is not an SoR record write, so it is available in either mode |
 | `resolve_entities` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
+| `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |
 | `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `search_records` | 🟢 | `read` | — | Mirror-backed; results carry `trust_tier: external` |
 | `send_email` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |

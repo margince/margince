@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import type { components } from "../api/schema";
+import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import type { DecisionDeckItem } from "../design-system/decisiondeck";
 import { PageZones } from "../design-system/pagezones";
 import type { SectionState } from "../design-system/surfacestate";
+import { calendarDay } from "../format/calendarday";
+import { formatMoneyOrAbsent } from "../format/format";
 import { useNow } from "../format/now";
-import { useT } from "../i18n";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
 import { BriefDials } from "./brief.dials";
@@ -17,13 +21,19 @@ import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
-import { HomeGlance } from "./home.glance";
+import {
+  type GlanceBrief,
+  type GlanceOvernight,
+  HomeGlance,
+} from "./home.glance";
 import {
   type Deal,
   type MorningBrief,
+  type MorningDigest,
   quietDeals,
   useHomeDeals,
   useMorningBrief,
+  useMorningDigest,
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
@@ -97,6 +107,59 @@ export function deckItems(approvals: readonly Approval[]): DecisionDeckItem[] {
     );
   }
   return out;
+}
+
+/**
+ * How many pending decisions STOP WAITING today, in the reader's own day.
+ *
+ * Still ahead of the clock, and that is the whole reading: a lapsed proposal
+ * stays in the pending queue (the Decisions screen draws it as expired), so a
+ * plain same-day test counted deadlines that had already passed. The briefing
+ * then said "two stop waiting today" about work nobody could still answer, and
+ * the readings strip raised its warn tone off the same number.
+ */
+function expiringToday(approvals: readonly Approval[], nowMs: number): number {
+  const zone = viewerZone();
+  const today = calendarDay(new Date(nowMs), zone);
+  return approvals.filter((approval) => {
+    const expires = approval.expires_at;
+    if (expires == null) {
+      return false;
+    }
+    const at = new Date(expires);
+    return at.getTime() > nowMs && calendarDay(at, zone) === today;
+  }).length;
+}
+
+/** The top-ranked item's deal, named only if the loaded page names it. */
+function topDeal(
+  brief: MorningBrief | null,
+  deals: readonly Deal[],
+): Deal | null {
+  const first = brief?.items[0];
+  if (!first) {
+    return null;
+  }
+  return deals.find((deal) => deal.id === first.deal_id) ?? null;
+}
+
+/**
+ * Move the page to one of its own sections.
+ *
+ * The briefing's numerals are the way into the work, and on a page this tall the
+ * way in has to actually move. `scrollIntoView` on the section rather than a
+ * hash link: a hash would put a second history entry between the reader and
+ * wherever they came from, for a move within one page.
+ */
+function goToSection(id: string): void {
+  document.getElementById(id)?.scrollIntoView({
+    // The one motion the reader asked for by pressing a control. Honoured as
+    // instant under reduced motion, which the media query below reports.
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+    block: "start",
+  });
 }
 
 /**
@@ -218,8 +281,54 @@ function HomeWork({
     : [doNext, focus, decisions];
 }
 
+/**
+ * The top-ranked deal as the briefing states it — both halves or neither.
+ *
+ * A deal named without its figure reads as one nobody priced; a figure with no
+ * name belongs to no deal at all.
+ */
+function briefGlance(
+  answered: boolean,
+  brief: MorningBrief | null,
+  leader: Deal | null,
+  locale: Parameters<typeof formatMoneyOrAbsent>[2],
+): GlanceBrief | null {
+  if (!answered || !brief) {
+    return null;
+  }
+  // Both halves or neither, and `formatMoneyOrAbsent` cannot express the
+  // "neither" half: it answers with a placeholder string rather than with
+  // nothing, so passing it through left the glance's own guard unable to fire
+  // and printed an unpriced deal beside a dash. The figure is only a figure
+  // when there is money to state.
+  const priced =
+    leader != null && leader.amount_minor != null && leader.currency != null;
+  return {
+    ranked: brief.items.length,
+    topDeal: leader?.name ?? null,
+    topAmount: priced
+      ? formatMoneyOrAbsent(leader.amount_minor, leader.currency, locale)
+      : null,
+  };
+}
+
+/** What the night shift did, once the digest has answered. */
+function overnightGlance(
+  answered: boolean,
+  digest: MorningDigest | null,
+): GlanceOvernight | null {
+  if (!answered || !digest) {
+    return null;
+  }
+  return {
+    captured: digest.capture.messages_synced ?? 0,
+    duplicates: digest.review.dedupe_open ?? 0,
+  };
+}
+
 export function HomeScreen() {
   const t = useT();
+  const { locale } = useLocale();
   // One clock for the whole page, ticking by the minute: the deck's countdowns
   // read in days and hours, so a per-second tick would re-render every card on
   // the page for a digit none of them draw.
@@ -232,6 +341,7 @@ export function HomeScreen() {
   const { onAlreadyDecided, decidedNote } = useDecisionSink();
   const approvalsQuery = usePendingApprovals();
   const briefQuery = useMorningBrief();
+  const digestQuery = useMorningDigest();
   const dealsQuery = useHomeDeals();
   // The ONE ranked order, read here for its coverage. Home has always been
   // deal-only; what it could not say is which sources it never saw, and that
@@ -266,11 +376,17 @@ export function HomeScreen() {
   // bounded number as a total.
   const beyondPage = dealsQuery.data?.more ?? false;
   const quiet = quietDeals(deals);
+  const quietReading = dealsQuery.isSuccess
+    ? { seen: quiet.length, more: beyondPage }
+    : null;
   const brief = briefQuery.data ?? null;
+  const digest = digestQuery.data ?? null;
+  const leader = topDeal(brief, deals);
 
   // `QueryLike` has no `isSuccess`: settled-and-answered is the absence of both
   // other states, and the difference matters here — a reading that is still in
   // flight must stay null rather than count an empty page as "nothing waiting".
+  const approvalsReady = !approvalsQuery.isPending && !approvalsQuery.isError;
   // The deck carries its own read state rather than the work column being gated
   // as a whole: gating the column would hide a healthy ranked queue behind a
   // failed decisions read, which is exactly the coupling five separate reads
@@ -280,6 +396,12 @@ export function HomeScreen() {
   // one call and the deck draws it as one card, so counting raw approvals here
   // made the same queue read as two different sizes on one page: the strip said
   // six while the deck drew four and its tray sent "4 decisions".
+  const decisionReadings = approvalsReady
+    ? {
+        pending: items.length,
+        expiringToday: expiringToday(approvals, nowMs),
+      }
+    : null;
 
   return (
     <div className="wrap">
@@ -293,6 +415,14 @@ export function HomeScreen() {
         day={worklistQuery.data}
         firstName={firstNameOf(me.data?.user?.display_name)}
         now={new Date(nowMs)}
+        decisions={decisionReadings}
+        brief={briefGlance(briefQuery.isSuccess, brief, leader, locale)}
+        overnight={overnightGlance(digestQuery.isSuccess, digest)}
+        stalled={quietReading}
+        onGoToDecisions={() => goToSection("home-decisions")}
+        onGoToToday={() => goToSection("home-focus")}
+        onGoToDuplicates={() => navigate({ screen: "worklist" })}
+        onGoToWatch={() => goToSection("home-watch")}
       />
       {/* Before the readings, because a strip of numbers a reader cannot trust
           is worse than one they can qualify — and in the MAIN column rather

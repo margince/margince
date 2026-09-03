@@ -29,26 +29,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// createTagViaStore is createTag's store-path counterpart: this package's
-// createTag (tagvocab_integration_test.go) goes through the HTTP handler and
-// answers a string id; the tests here exercise the store directly and need
-// the typed ids.TagID its own methods take.
-func createTagViaStore(t *testing.T, e *integration.Env, tags *collectionsmod.Store, name string) ids.TagID {
-	t.Helper()
-	tag, err := tags.NewTag(e.Admin(), name, "")
-	if err != nil {
-		t.Fatalf("seeding the tag %q: %v", name, err)
-	}
-	return ids.From[ids.TagKind](tag.TagID)
-}
-
 func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
 	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
-	tagID := createTagViaStore(t, e, tags, "Key Account")
+	tag, err := tags.NewTag(e.Admin(), "Key Account", "")
+	if err != nil {
+		t.Fatalf("seeding the tag: %v", err)
+	}
+	tagID := ids.From[ids.TagKind](tag.TagID)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
@@ -107,7 +98,11 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 	tags := collectionsmod.NewStore(e.DB())
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
-	tagID := createTagViaStore(t, e, tags, "Archived Target")
+	tag, err := tags.NewTag(e.Admin(), "Archived Target", "")
+	if err != nil {
+		t.Fatalf("seeding the tag: %v", err)
+	}
+	tagID := ids.From[ids.TagKind](tag.TagID)
 
 	if _, err := e.People.ArchivePerson(e.Admin(), integration.PersonIDOf(own), nil); err != nil {
 		t.Fatalf("archiving the fixture: %v", err)
@@ -141,7 +136,11 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 	tags := collectionsmod.NewStore(e.DB())
 
 	unowned := e.SeedPerson(t, "Unclaimed", nil)
-	tagID := createTagViaStore(t, e, tags, "Ownerless Target")
+	tag, err := tags.NewTag(e.Admin(), "Ownerless Target", "")
+	if err != nil {
+		t.Fatalf("seeding the tag: %v", err)
+	}
+	tagID := ids.From[ids.TagKind](tag.TagID)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	if _, err := e.People.GetPerson(rep, integration.PersonIDOf(unowned), storekit.LiveOnly); err != nil {
@@ -204,7 +203,11 @@ func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
 	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
-	tagID := createTagViaStore(t, e, tags, "Imported")
+	tag, err := tags.NewTag(e.Admin(), "Imported", "")
+	if err != nil {
+		t.Fatalf("seeding the tag: %v", err)
+	}
+	tagID := ids.From[ids.TagKind](tag.TagID)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 

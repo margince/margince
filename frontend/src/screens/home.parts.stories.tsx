@@ -88,6 +88,13 @@ type Story = StoryObj;
 
 // ── The briefing ────────────────────────────────────────────────────────────
 
+const GLANCE_GO = {
+  onGoToDecisions: () => undefined,
+  onGoToToday: () => undefined,
+  onGoToDuplicates: () => undefined,
+  onGoToWatch: () => undefined,
+};
+
 // A day with work in it, for the opening sentence. The sentence names the FIRST
 // row through the same helpers the queue prints it with, so a story that passed
 // no queue would show the block without the thing it exists to say.
@@ -123,11 +130,9 @@ const GLANCE_DAY = {
   summary: { total: 2, urgent: 1 },
 } as unknown as Parameters<typeof HomeGlance>[0]["day"];
 
-// The header the Brief opens with: eyebrow, greeting, and ONE composed sentence
-// about the day — not a column of counts. Each fact the old briefing lines
-// stated has a better home on the page now: the decisions deck draws its own
-// cards, the readings strip carries the figures, and the rail's Overnight and
-// Watch panels list what the night found.
+// The full briefing: six sentences, each led by the figure that is also the way
+// to what it counts. What to look at — the numerals share one column, so the
+// sentences start on a single x rather than wherever their own digits ended.
 export const Glance: Story = {
   render: part(
     <HomeGlance
@@ -135,33 +140,74 @@ export const Glance: Story = {
       day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
+      decisions={{ pending: 6, expiringToday: 2 }}
+      brief={{
+        ranked: 3,
+        topDeal: "Fleet retrofit",
+        topAmount: "€48,000.00",
+      }}
+      overnight={{ captured: 42, duplicates: 3 }}
+      stalled={{ seen: 2, more: false }}
+      {...GLANCE_GO}
     />,
   ),
 };
 
-// The name has not arrived yet. The greeting is drawn anyway, because the hour
-// is known either way and a header that waited for `/me` would move under the
-// reader a moment after they started reading it.
-export const GlanceUnnamed: Story = {
+// Every reading answered, and every one of them zero or clear. The waiting line
+// becomes prose rather than a chip pointing at nothing.
+export const GlanceCalm: Story = {
+  render: part(
+    <HomeGlance
+      view="morning"
+      day={GLANCE_DAY}
+      firstName="Lena"
+      now={NOW_DATE}
+      decisions={{ pending: 0, expiringToday: 0 }}
+      brief={{ ranked: 0, topDeal: null, topAmount: null }}
+      overnight={{ captured: 0, duplicates: 0 }}
+      stalled={{ seen: 0, more: false }}
+      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// The quiet count came off one page with another behind it, so the numeral in
+// the briefing line is a floor and reads as one.
+export const GlanceCapped: Story = {
+  render: part(
+    <HomeGlance
+      view="morning"
+      day={GLANCE_DAY}
+      firstName="Lena"
+      now={NOW_DATE}
+      decisions={{ pending: 6, expiringToday: 2 }}
+      brief={{
+        ranked: 3,
+        topDeal: "Fleet retrofit",
+        topAmount: "\u20ac48,000.00",
+      }}
+      overnight={{ captured: 42, duplicates: 3 }}
+      stalled={{ seen: 100, more: true }}
+      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// Two reads have not answered and the name has not arrived. A missing reading
+// contributes NO LINE — an invented zero cannot be told apart from a real one,
+// and the greeting is drawn anyway because the hour is known either way.
+export const GlanceUnread: Story = {
   render: part(
     <HomeGlance
       view="morning"
       day={GLANCE_DAY}
       firstName={null}
       now={NOW_DATE}
-    />,
-  ),
-};
-
-// The weekly says its own thing under its own heading: no composed sentence,
-// because that one is built from the ranked queue and describes THIS morning.
-export const GlanceWeekly: Story = {
-  render: part(
-    <HomeGlance
-      view="weekly"
-      day={GLANCE_DAY}
-      firstName="Lena"
-      now={NOW_DATE}
+      decisions={{ pending: 4, expiringToday: 0 }}
+      brief={null}
+      overnight={null}
+      stalled={{ seen: 2, more: false }}
+      {...GLANCE_GO}
     />,
   ),
 };

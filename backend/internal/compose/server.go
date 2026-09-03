@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
@@ -169,6 +170,14 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// may not import compose, so it takes the function.
 		weeklyPlanHandlers: weeklyplan.NewHandlers(
 			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
+		),
+		// The forecast owns its arithmetic and nothing about deals, so the deal
+		// rows and the fiscal window arrive as seams. Row scope is applied in
+		// ForecastDeals, where the caller's authority already sits.
+		forecastHandlers: forecasting.NewHandlers(
+			forecasting.NewStore(InstallationDB(pool)),
+			ForecastDeals, ForecastPeriodAt,
+			func() time.Time { return time.Now().UTC() },
 		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep

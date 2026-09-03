@@ -178,6 +178,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog)
+	RegisterForecastTool(r, nil)
 	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
