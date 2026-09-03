@@ -113,6 +113,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// shape worth holding: an unrun check reports that it could not look,
 		// never a clean bill.
 		{"forecast_readings", `{}`},
+		// The open input checks, as a list. It takes no subject and answers on
+		// an unrun pipeline — an empty list is a real answer here, unlike
+		// forecast_input_checks beside it, which reports on a RUN and has none
+		// to report on.
+		{"list_input_checks", `{}`},
 		{"forecast_readings", `{"period":"month"}`},
 		// Renaming the tag the fixture above minted. The vocabulary tools are
 		// reachable here now that the lane's seat carries the tag grants the

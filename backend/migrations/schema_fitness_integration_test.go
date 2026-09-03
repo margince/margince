@@ -167,6 +167,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// one-subject check), so they carry one obligation stated twice rather than
 	// two: whichever subject a basis names is a row-scoped record, and naming
 	// it is a read of it.
+	// Server-derived, not client-supplied: recordAcquisition stamps the person
+	// createPerson JUST created, on that same transaction, and every production
+	// creation door goes through it. The id can only be one the caller was
+	// already authorized to create, so there is no reference here for a
+	// visibility probe to check — the person did not exist to be invisible.
+	"person_acquisition_evidence.person_id":  "server-derived: written by people.recordAcquisition inside createPerson's own transaction, against the person that call just minted — the id never comes from a request body, and the merge path only re-points existing rows at the surviving person through a merge that took its own gates",
 	"communication_basis.person_id":          "PENDING WRITER: no INSERT exists. A basis is recorded ABOUT a person, so the writer must put the named person through auth.EnsureLinkTarget — or resolve them from an activity the caller already opened, never from a request body",
 	"communication_basis.lead_id":            "PENDING WRITER: no INSERT exists. The lead half of the same one-subject check as person_id above, and it inherits the same obligation",
 	"communication_basis.source_activity_id": "PENDING WRITER: no INSERT exists. The message a basis stands on is EVIDENCE, so the writer owes the stronger check its shape already has a name for — auth.EnsureActivityContentVisibleLive, as conversation_claim.source_activity_id takes: a basis must not cite a message the caller may not open, and must not outlive it",
