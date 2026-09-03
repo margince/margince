@@ -28,7 +28,6 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { TimelineActions } from "./timelineactions";
 import { ConsentSection } from "./consent";
 import { RecordContextPanel } from "./context";
 import { CreateAction, type CreateField, type FormRows } from "./create";
@@ -77,6 +76,7 @@ import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { listQueryParams } from "./tagfilter";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import { VCardImport } from "./vcard-import";
 

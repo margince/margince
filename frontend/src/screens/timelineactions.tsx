@@ -7,7 +7,7 @@
 // now go through the shared audience service, which is where the thread
 // decision was already spelled a second time.
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
@@ -17,16 +17,12 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
 import { useMessageAudience, useThreadAudience } from "./audienceservice";
+import { problemMessageOf } from "./common";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
 // verbs, and moving them too would make a behaviour-preserving extraction into
 // a much larger diff. What moved here is the cluster and the two audience
 // controls, which are about reading a message rather than writing one.
-import {
-  ChannelReplyAction,
-  RelinkModal,
-  type RelinkKind,
-} from "./compose";
-import { problemMessageOf } from "./common";
+import { ChannelReplyAction, type RelinkKind, RelinkModal } from "./compose";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];

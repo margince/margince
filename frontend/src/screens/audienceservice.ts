@@ -13,8 +13,8 @@
 // Two copies of one decision drift, and the drift shows up as a control that
 // reports the wrong outcome.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryKey } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";

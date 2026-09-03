@@ -86,7 +86,6 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { TimelineActions } from "./timelineactions";
 import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
@@ -141,6 +140,7 @@ import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 
 // Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance

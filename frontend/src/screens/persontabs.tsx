@@ -22,7 +22,6 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
-import { TimelineActions } from "./timelineactions";
 import { RecordHistoryTab } from "./history";
 import { PersonCommercialCard, readableRole } from "./personcards";
 import {
@@ -35,6 +34,7 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./person360.css";
 import { invalidateRecord } from "./recordwritekeys";

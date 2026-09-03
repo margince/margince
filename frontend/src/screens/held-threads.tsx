@@ -173,7 +173,8 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
                   row.has_message ? undefined : t("heldThreads.nothingToShare")
                 }
                 pending={
-                  release.isPending && release.variables?.threadKey === row.thread_key
+                  release.isPending &&
+                  release.variables?.threadKey === row.thread_key
                 }
                 onClick={() =>
                   release.mutate({ threadKey: row.thread_key, share: true })
