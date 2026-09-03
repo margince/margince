@@ -226,6 +226,13 @@ func (s *Service) worklistFrom(
 	// One PERSON is one row. "Nobody has spoken to them in sixty days" and
 	// "they wrote last week and are waiting" are both true of the same contact
 	// and read as a contradiction side by side.
+	//
+	// Order does not matter among these three, and it is worth saying why
+	// rather than leaving the next reader to work it out: each drops rows of a
+	// source none of the others READS. This one decides on the waiting rows,
+	// and the two above remove only `deal_at_risk` and `task` rows — so the set
+	// it judges against is the same wherever it sits. A fourth pass that
+	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
