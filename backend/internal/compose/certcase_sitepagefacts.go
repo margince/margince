@@ -67,6 +67,10 @@ type sitePageFactsFixture struct {
 	Text string                        `json:"text"`
 }
 
+// sitePageFactsSite names this site in every refusal the shared expectation
+// reader raises, so a scenario author reads which site refused them.
+const sitePageFactsSite = "site_fact_extract/page_facts"
+
 // sitePageFactsCases serves the site that reads one page of a company's website
 // for the facts that page states.
 type sitePageFactsCases struct{}
@@ -116,21 +120,22 @@ func (sitePageFactsCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		return nil, errors.New(
 			"site_fact_extract/page_facts: the fixture's page yields no passage, and the lane calls no model without one")
 	}
-	var want map[string]string
-	if err := json.Unmarshal(expected, &want); err != nil {
-		return nil, fmt.Errorf("site_fact_extract/page_facts: the expected answer is not a field to value map: %w", err)
-	}
-	if len(want) == 0 {
-		return nil, errors.New("site_fact_extract/page_facts: the scenario expects no fact, so no reply could disagree with it")
+	want, err := parseGroundedExpectation(sitePageFactsSite, expected)
+	if err != nil {
+		return nil, err
 	}
 	if err := refuseUngroundableFacts(want, f.Kind, menu, idx); err != nil {
 		return nil, err
 	}
-	identities := make(map[string]string, len(want))
-	for field, value := range want {
+	identities := make(map[string]string, len(want.grounded))
+	for field, value := range want.grounded {
 		identities[field] = factIdentity(field, value)
 	}
-	return &sitePageFactsCase{page: page, menu: menu, idx: idx, expected: identities}, nil
+	return &sitePageFactsCase{
+		page: page, menu: menu, idx: idx,
+		expected:    identities,
+		notGrounded: want.notGrounded,
+	}, nil
 }
 
 // refuseUngroundableFacts names an expectation this page could never answer: a
@@ -148,9 +153,15 @@ func (sitePageFactsCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 // description the page supplied.
 //
 // Sorted so a fixture with two offences names the same one every time.
-func refuseUngroundableFacts(want map[string]string, kind crmcontracts.SiteReadPageKind, menu pageMenu, idx snippetIndex) error {
-	for _, field := range slices.Sorted(maps.Keys(want)) {
-		value := want[field]
+func refuseUngroundableFacts(
+	want groundedExpectation, kind crmcontracts.SiteReadPageKind, menu pageMenu, idx snippetIndex,
+) error {
+	if len(want.grounded) == 0 && len(want.notGrounded) == 0 {
+		return errors.New(
+			"site_fact_extract/page_facts: the scenario expects no fact and forbids none, so no reply could disagree with it")
+	}
+	for _, field := range slices.Sorted(maps.Keys(want.grounded)) {
+		value := want.grounded[field]
 		switch {
 		case !slices.Contains(menu.factFields, field):
 			return fmt.Errorf(
@@ -167,6 +178,21 @@ func refuseUngroundableFacts(want map[string]string, kind crmcontracts.SiteReadP
 			return fmt.Errorf(
 				"site_fact_extract/page_facts: the scenario expects %q to read %q, whose name no passage of this fixture "+
 					"contains, and the gate demands it appear in the passage cited for it", field, value)
+		}
+	}
+	// A negative claim is unmeasurable for its own reasons: a field outside this
+	// kind's menu is one the schema enum never offers, so no reply could ground
+	// it and forbidding it measures nothing; and a field both required and
+	// forbidden is a contradiction no reply can satisfy.
+	for _, field := range slices.Sorted(slices.Values(want.notGrounded)) {
+		switch {
+		case !slices.Contains(menu.factFields, field):
+			return fmt.Errorf(
+				"site_fact_extract/page_facts: the scenario forbids %q, which a %s page's menu never offers the model",
+				field, kind)
+		case want.grounded[field] != "":
+			return fmt.Errorf(
+				"site_fact_extract/page_facts: the scenario both expects and forbids %q, and no reply can satisfy both", field)
 		}
 	}
 	return nil
@@ -193,6 +219,10 @@ type sitePageFactsCase struct {
 	menu     pageMenu
 	idx      snippetIndex
 	expected map[string]string
+	// notGrounded is the fields this page must file nothing under. Kept beside
+	// the positive claim rather than folded into it: forbidding a field is not
+	// expecting an empty value for it, which the gate would drop anyway.
+	notGrounded []string
 }
 
 // Run issues the one request this page sends. It sends it bare: production wraps
@@ -241,6 +271,17 @@ func (c *sitePageFactsCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
 	grounded := groundedFactIdentities(result.facts, c.expected)
+	// Judged BEFORE the abstention and before the positive comparison, for the
+	// reason the profile site judges it there: it is the sharpest thing a reply
+	// can do wrong here, and a reply that grounded every expected fact while
+	// ALSO filing a forbidden one is not the clean run the positive comparison
+	// alone would call it.
+	if fabricated := forbiddenGroundings(c.notGrounded, grounded); len(fabricated) > 0 {
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: strings.Join(append(fabricated, detail...), "; "),
+		}
+	}
 	disagreements := expectationDisagreements(c.expected, grounded)
 	if pageFactsReplyIsSilent(result, dropped) {
 		return aitasks.Outcome{

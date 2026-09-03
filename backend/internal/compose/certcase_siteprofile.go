@@ -36,7 +36,6 @@ package compose
 // legal notice that names two entities.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -108,7 +107,7 @@ func (siteProfileCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		return nil, errors.New(
 			"site_extract/profile: the fixture's pages yield no passage, and the deep read calls no model without one")
 	}
-	want, err := parseSiteProfileExpectation(expected)
+	want, err := parseGroundedExpectation(siteProfileSite, expected)
 	if err != nil {
 		return nil, err
 	}
@@ -118,65 +117,9 @@ func (siteProfileCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 	return &siteProfileCase{idx: idx, expected: want}, nil
 }
 
-// The two keys the explicit expectation form is spelled with. They are not
-// profile field names, which is what lets one mapping carry both forms without
-// a discriminator: an expectation using either key is the explicit form, and
-// anything else is the bare field-to-value map.
-const (
-	siteProfileGroundedKey    = "grounded"
-	siteProfileNotGroundedKey = "not_grounded"
-)
-
-// siteProfileExpectation is what a profile scenario asserts about one crawl:
-// the fields the read must ground with the values they must carry, and the
-// fields it must not ground at all.
-type siteProfileExpectation struct {
-	grounded    map[string]string
-	notGrounded []string
-}
-
-// parseSiteProfileExpectation reads either spelling of this site's expectation.
-//
-// The bare field-to-value map stays legal because it is the whole claim of a
-// scenario that only says what a page grounds, and rewriting those into a
-// wrapper would buy nothing but churn. The explicit form exists for the claim
-// the bare map cannot make at all — that a field must NOT be grounded — and a
-// scenario asserting an abstention is making exactly that claim about a page
-// whose passages state nothing.
-//
-// The explicit form refuses an unknown key rather than ignoring it, because a
-// mistyped `not_ground:` would otherwise load as an expectation that forbids
-// nothing and pass whatever the model fabricated.
-func parseSiteProfileExpectation(expected json.RawMessage) (siteProfileExpectation, error) {
-	var keyed map[string]json.RawMessage
-	if err := json.Unmarshal(expected, &keyed); err != nil {
-		return siteProfileExpectation{}, fmt.Errorf(
-			"site_extract/profile: the expected answer is not a mapping: %w", err)
-	}
-	_, hasGrounded := keyed[siteProfileGroundedKey]
-	_, hasNotGrounded := keyed[siteProfileNotGroundedKey]
-	if !hasGrounded && !hasNotGrounded {
-		var bare map[string]string
-		if err := json.Unmarshal(expected, &bare); err != nil {
-			return siteProfileExpectation{}, fmt.Errorf(
-				"site_extract/profile: the expected answer is neither a field to value map nor a %s/%s mapping: %w",
-				siteProfileGroundedKey, siteProfileNotGroundedKey, err)
-		}
-		return siteProfileExpectation{grounded: bare}, nil
-	}
-	var explicit struct {
-		Grounded    map[string]string `json:"grounded"`
-		NotGrounded []string          `json:"not_grounded"`
-	}
-	dec := json.NewDecoder(bytes.NewReader(expected))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&explicit); err != nil {
-		return siteProfileExpectation{}, fmt.Errorf(
-			"site_extract/profile: the expected answer carries %s or %s but is not that form: %w",
-			siteProfileGroundedKey, siteProfileNotGroundedKey, err)
-	}
-	return siteProfileExpectation{grounded: explicit.Grounded, notGrounded: explicit.NotGrounded}, nil
-}
+// siteProfileSite names this site in every refusal the shared expectation
+// reader raises, so a scenario author reads which site refused them.
+const siteProfileSite = "site_extract/profile"
 
 // refuseUngroundableExpectation names an expectation this site could never
 // answer: a field outside the vocabulary the prompt offers is one no model was
@@ -204,7 +147,7 @@ func parseSiteProfileExpectation(expected json.RawMessage) (siteProfileExpectati
 // expectation asserting neither half is refused as asserting nothing.
 //
 // Sorted so a fixture with two offences names the same one every time.
-func refuseUngroundableExpectation(want siteProfileExpectation, idx snippetIndex) error {
+func refuseUngroundableExpectation(want groundedExpectation, idx snippetIndex) error {
 	if len(want.grounded) == 0 && len(want.notGrounded) == 0 {
 		return errors.New(
 			"site_extract/profile: the scenario requires no field and forbids none, so no reply could disagree with it")
@@ -255,7 +198,7 @@ func citableInSomePassage(idx snippetIndex, value string) bool {
 // expects.
 type siteProfileCase struct {
 	idx      snippetIndex
-	expected siteProfileExpectation
+	expected groundedExpectation
 }
 
 // Run issues the one request this site sends. It sends it bare: production wraps
@@ -333,9 +276,13 @@ func (c *siteProfileCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // because a record saying only that legal_name appeared cannot tell a reviewer
 // which of two conflicting entities the model picked.
 //
-// It lives here rather than beside the shared comparison because it is this
-// site's vocabulary: the other grounding cases assert only what must be present,
-// and a shared negative helper with one caller is an owner nobody keeps true.
+// Two sites make this claim now — site_extract/profile and
+// site_fact_extract/page_facts, which was given the same `not_grounded`
+// vocabulary because the guard it needed to hold was itself a negative. It is
+// still declared here rather than promoted to the shared comparison file: both
+// callers are grounding cases in this package, and the shared comparison is
+// about what a reply MUST say, which is a different question from what it must
+// not.
 //
 // Sorted so a reply with two fabrications names them in the same order every time.
 func forbiddenGroundings(forbidden []string, grounded map[string]string) []string {
