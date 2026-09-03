@@ -224,8 +224,15 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// to gate: nothing outside the triage resolve ever writes this column, and
 	// no human surface reads the row.
 	"organization_domain_disposition.organization_id": "server-derived: set only by ResolveDomainTriage, to the organization that same transaction created or adopted through the gated dedupe chokepoint",
-	"person_email.person_id":                          "child row: written through the person's own gated paths",
-	"person_phone.person_id":                          "child row: written through the person's own gated paths",
+	// Why a contact exists at all, written where the contact is. There is no
+	// client-supplied reference to gate: recordAcquisition takes the id
+	// createPerson has just minted, on that same transaction, so no caller can
+	// name a subject here at all. The one other writer is the merge relink,
+	// which MOVES the rows onto a survivor mergePair has already gated — it
+	// supplies neither id from a request body either.
+	"person_acquisition_evidence.person_id": "child row: written only by recordAcquisition, inside createPerson's own transaction, for the person that transaction just created; the merge relink is the only other writer and moves the rows onto an already-gated survivor",
+	"person_email.person_id":                "child row: written through the person's own gated paths",
+	"person_phone.person_id":                "child row: written through the person's own gated paths",
 	// The licensed-data-provider platform (ADR-0101). A run names the subject
 	// it spends credits on, so admitting one IS a read of that person: QueueRun
 	// takes auth.EnsureVisible inside the queueing transaction, before any
