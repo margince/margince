@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
@@ -164,6 +164,7 @@ describe("the week ahead", () => {
   // have to stop being staged, and the one that failed has to still say so.
   it("keeps the unsaved rows staged when one write is refused", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(
           plan({
@@ -330,6 +331,39 @@ describe("the week ahead", () => {
     expect(
       screen.queryByRole("button", { name: en["plan.help.ask"] }),
     ).toBeNull();
+  });
+
+  // The week can close under a reader who has already ticked a box: the weekly
+  // job settles it, and the next read says closed. The boxes go with it, so a
+  // Save left standing would send settlements the server refuses over ticks
+  // nobody can see any more.
+  it("takes Save away when the week closes under a staged tick", async () => {
+    let status: WeeklyPlan["status"] = "open";
+    const calls = stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () => jsonResponse(plan({ status })),
+    });
+    render(<PlanSection />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Call the Aster buyer back",
+      }),
+    );
+    const save = en["plan.save_one"].replace("{count}", "1");
+    expect(screen.getByRole("button", { name: save })).toBeTruthy();
+
+    // What the reader's own tab does when they come back to it: react-query
+    // refetches on focus, and this read answers with the closed week.
+    status = "closed";
+    act(() => {
+      window.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: save })).toBeNull(),
+    );
+    expect(writes(calls)).toHaveLength(0);
   });
 
   // A seat's posture is about the write THIS week needs, and the two are not

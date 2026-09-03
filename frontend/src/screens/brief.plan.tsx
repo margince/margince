@@ -111,11 +111,9 @@ function statesReadOnly(
 
 export function PlanSection() {
   const t = useT();
-  const { locale } = useLocale();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
-  const plural = usePlural();
   const me = useMe();
   // Bound to the grant each CONTROL asks for, because the two diverge: opening
   // a week is `weekly_plan.create` and everything after it is `update`. A seat
@@ -210,34 +208,13 @@ export function PlanSection() {
           ) : undefined
         }
         footer={
-          // Save appears only once a box has changed. A save bar standing in the
-          // resting layout would say there is something to save on a week nobody
-          // has touched.
-          //
-          // The refusal sits beside it rather than at the top of the panel: it
-          // is about the press the reader just made, and the rows it names are
-          // the ones still ticked under it.
-          staged.size > 0 || unsaved > 0 ? (
-            <>
-              {unsaved > 0 && (
-                <Callout tone="warn" live="alert">
-                  {plural("plan.saveRefused", unsaved, {
-                    count: formatNumber(unsaved, locale),
-                  })}
-                </Callout>
-              )}
-              {staged.size > 0 && (
-                <Button
-                  onClick={() => void save()}
-                  disabled={setState.isPending}
-                >
-                  {plural("plan.save", staged.size, {
-                    count: formatNumber(staged.size, locale),
-                  })}
-                </Button>
-              )}
-            </>
-          ) : undefined
+          <PlanFoot
+            editable={editable}
+            staged={staged.size}
+            unsaved={unsaved}
+            saving={setState.isPending}
+            onSave={() => void save()}
+          />
         }
       >
         <SurfaceState
@@ -283,12 +260,69 @@ export function PlanSection() {
                   onToggle={() => toggle(commitment.id)}
                 />
               ))}
-              {adding && <AddCommitment onDone={() => setAdding(false)} />}
+              {/* Gated on the same fact for the same reason: the form's own
+                  save reaches a write the closed week refuses. */}
+              {editable && adding && (
+                <AddCommitment onDone={() => setAdding(false)} />
+              )}
             </>
           )}
         </SurfaceState>
       </Panel>
     </section>
+  );
+}
+
+/**
+ * The save bar, and the refusal that can stand where it was.
+ *
+ * Save appears only once a box has changed: a save bar standing in the resting
+ * layout would say there is something to save on a week nobody has touched. The
+ * refusal sits here rather than at the top of the panel, because it is about the
+ * press the reader just made and the rows it names are the ones still ticked
+ * under it.
+ *
+ * The two halves are gated differently on purpose. A refusal is history and
+ * stays: `editable` goes false under a reader mid-stage when the weekly job
+ * closes the week, which is the very thing that refused their save — hiding the
+ * sentence with the button would leave them with neither the write nor the
+ * reason. The BUTTON goes, because the rows lose their boxes with it, and a Save
+ * left standing would send settlements the server refuses over ticks nobody can
+ * see any more.
+ */
+function PlanFoot({
+  editable,
+  staged,
+  unsaved,
+  saving,
+  onSave,
+}: Readonly<{
+  editable: boolean;
+  staged: number;
+  unsaved: number;
+  saving: boolean;
+  onSave: () => void;
+}>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (staged === 0 && unsaved === 0) {
+    return null;
+  }
+  return (
+    <>
+      {unsaved > 0 && (
+        <Callout tone="warn" live="alert">
+          {plural("plan.saveRefused", unsaved, {
+            count: formatNumber(unsaved, locale),
+          })}
+        </Callout>
+      )}
+      {editable && staged > 0 && (
+        <Button onClick={onSave} disabled={saving}>
+          {plural("plan.save", staged, { count: formatNumber(staged, locale) })}
+        </Button>
+      )}
+    </>
   );
 }
 

@@ -129,6 +129,17 @@ function waiversIn(source: string): Map<string, string | null> {
   return out;
 }
 
+/** One name this module imported, and the module that exports it. */
+type Import = Readonly<{ from: string; exported: string }>;
+
+/** What one module contributes to the tree's reach, before names are resolved. */
+type ModuleReach = Readonly<{
+  linked: Set<string>;
+  viaName: Set<string>;
+  aliases: Map<string, string>;
+  imports: Map<string, Import>;
+}>;
+
 /**
  * What one module contributes: the doors it opens, and the constants it binds.
  *
@@ -144,29 +155,28 @@ function waiversIn(source: string): Map<string, string | null> {
  *
  * A `screen:` written as an IDENTIFIER cannot be resolved yet: the constant may
  * be declared in a file this walk has not reached. So the name travels out as a
- * name, and `doorsIn` resolves it once every alias is known. Resolving inline
- * would make the answer depend on the order the files were read, which is the
- * quiet half of a census failing short.
+ * name, together with the imports that could bind it, and `doorsIn` resolves it
+ * once every module is read. Resolving inline would make the answer depend on
+ * the order the files were read, which is the quiet half of a census failing
+ * short.
  */
 function readModule(
   path: string,
   source: string,
   screens: ReadonlySet<string>,
-): Readonly<{
-  linked: Set<string>;
-  viaName: Set<string>;
-  aliases: Map<string, string>;
-}> {
+): ModuleReach {
   const linked = new Set<string>();
   const viaName = new Set<string>();
   const aliases = new Map<string, string>();
+  const imports = new Map<string, Import>();
   // An address, and not a MENTION of one. The chunk has to BEGIN with the
-  // address — bare, or joined to an origin — because that is what every href in
-  // this tree looks like and a sentence that merely names a screen is not a
-  // door somebody can press. Counting a mention would excuse exactly the screen
-  // most likely to have no door: the one the copy tells you to type.
+  // address — bare, or joined to an origin, whether the origin is spliced in at
+  // runtime or written out — because that is what every href in this tree looks
+  // like, and a sentence that merely names a screen is not a door somebody can
+  // press. Counting a mention would excuse exactly the screen most likely to
+  // have no door: the one the copy tells you to type.
   const address = (text: string): void => {
-    const found = /^\/?#\/([a-z-]+)/.exec(text);
+    const found = /^(?:[a-z][a-z\d+.-]*:\/\/[^/]*)?\/?#\/([a-z-]+)/i.exec(text);
     const id = found?.[1];
     if (id !== undefined && screens.has(id)) {
       linked.add(id);
@@ -196,6 +206,24 @@ function readModule(
       }
     }
     if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      const bindings = node.importClause?.namedBindings;
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const element of bindings.elements) {
+          // The LOCAL name is what the property assignment will be written
+          // with; the exported one is what the other module declares. They
+          // differ under `as`, and following the local name into the other file
+          // would find nothing there.
+          imports.set(element.name.text, {
+            from: node.moduleSpecifier.text,
+            exported: (element.propertyName ?? element.name).text,
+          });
+        }
+      }
+    }
+    if (
       ts.isPropertyAssignment(node) &&
       ts.isIdentifier(node.name) &&
       node.name.text === "screen"
@@ -211,7 +239,34 @@ function readModule(
     ts.forEachChild(node, walk);
   };
   walk(parse(path, source));
-  return { linked, viaName, aliases };
+  return { linked, viaName, aliases, imports };
+}
+
+/**
+ * Which file an import specifier names, when it names one in this corpus.
+ *
+ * A bare specifier is a package and binds nothing about this tree's screens. A
+ * relative one is resolved the way the bundler resolves it — the extensions
+ * this tree writes, plus a directory's `index` — and only against files the
+ * scan actually read, so a hit is a module whose declarations are known.
+ */
+function resolveSpecifier(
+  fromPath: string,
+  specifier: string,
+  known: ReadonlySet<string>,
+): string | null {
+  if (!specifier.startsWith(".")) {
+    return null;
+  }
+  const base = join(dirname(fromPath), specifier);
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    join(base, "index.ts"),
+    join(base, "index.tsx"),
+  ];
+  return candidates.find((candidate) => known.has(candidate)) ?? null;
 }
 
 /** Every screen the shipped tree opens a door to. */
@@ -219,27 +274,56 @@ function doorsIn(
   sources: ReadonlyArray<readonly [string, string]>,
   screens: ReadonlySet<string>,
 ): Set<string> {
+  const known = new Set(sources.map(([path]) => path));
+  const modules = new Map<string, ModuleReach>(
+    sources.map(([path, source]) => [path, readModule(path, source, screens)]),
+  );
   const linked = new Set<string>();
-  const viaName = new Set<string>();
-  const aliases = new Map<string, string>();
-  for (const [path, source] of sources) {
-    const read = readModule(path, source, screens);
-    for (const id of read.linked) {
+  for (const module of modules.values()) {
+    for (const id of module.linked) {
       linked.add(id);
-    }
-    for (const name of read.viaName) {
-      viaName.add(name);
-    }
-    for (const [name, id] of read.aliases) {
-      aliases.set(name, id);
     }
   }
-  // Resolved last, against every alias the tree declares — so a door written
-  // through a constant counts wherever that constant is declared.
-  for (const name of viaName) {
-    const id = aliases.get(name);
-    if (id !== undefined) {
-      linked.add(id);
+
+  /**
+   * The screen a name means WHERE IT IS WRITTEN.
+   *
+   * Scoped to the module and then followed through that module's imports,
+   * because a module's top-level `const` is visible to nobody else: resolving
+   * against one tree-wide table lets an unrelated file's same-named constant
+   * answer for this one, and the answer it gives is the quiet, wrong one — a
+   * door reported where none exists, excusing a screen nothing reaches.
+   */
+  const bound = (
+    path: string,
+    name: string,
+    seen: Set<string>,
+  ): string | undefined => {
+    const module = modules.get(path);
+    if (module === undefined || seen.has(path)) {
+      return undefined;
+    }
+    seen.add(path);
+    const own = module.aliases.get(name);
+    if (own !== undefined) {
+      return own;
+    }
+    const imported = module.imports.get(name);
+    if (imported === undefined) {
+      return undefined;
+    }
+    const target = resolveSpecifier(path, imported.from, known);
+    return target === null ? undefined : bound(target, imported.exported, seen);
+  };
+
+  // Resolved last, once every module is read, so a door written through a
+  // constant counts whichever file the scan happened to reach first.
+  for (const [path, module] of modules) {
+    for (const name of module.viaName) {
+      const id = bound(path, name, new Set());
+      if (id !== undefined) {
+        linked.add(id);
+      }
     }
   }
   return linked;
@@ -333,6 +417,12 @@ describe("every screen has a door", () => {
     expect(
       linkedBy(`const href = \`\${origin}/#/planted?c=\${token}\`;`),
     ).toContain("planted");
+    // The same link with the origin written out. A mailed address is spelled
+    // this way, and a reader that took only the relative form would call the
+    // screen it opens unreached.
+    expect(linkedBy(`const href = "https://app.example/#/planted";`)).toContain(
+      "planted",
+    );
     expect(linkedBy(`navigate({ screen: "planted" });`)).toContain("planted");
     // A route object held rather than navigated to — the palette's shape.
     expect(linkedBy(`const row = { route: { screen: "planted" } };`)).toContain(
@@ -356,7 +446,7 @@ describe("every screen has a door", () => {
   // in the reverse, because a walk that resolved a name the moment it met it
   // would answer differently depending on which file it read first — and the
   // wrong answer is the quiet one: the screen reported as having no door.
-  it("follows a door written through a constant, whichever file comes first", () => {
+  it("follows a door written through an imported constant, either file first", () => {
     const screens = new Set(["planted"]);
     const declares = [
       join(srcRoot, "a.ts"),
@@ -364,13 +454,53 @@ describe("every screen has a door", () => {
     ] as const;
     const uses = [
       join(srcRoot, "b.ts"),
-      `navigate({ screen: PLANTED_SCREEN });`,
+      [
+        `import { PLANTED_SCREEN } from "./a";`,
+        `navigate({ screen: PLANTED_SCREEN });`,
+      ].join("\n"),
     ] as const;
 
     expect(doorsIn([declares, uses], screens)).toContain("planted");
     expect(doorsIn([uses, declares], screens)).toContain("planted");
+    // Renamed on the way in. The local name is what the navigate reads and the
+    // exported one is what the other file declares.
+    const renamed = [
+      join(srcRoot, "c.ts"),
+      [
+        `import { PLANTED_SCREEN as HOME } from "./a";`,
+        `navigate({ screen: HOME });`,
+      ].join("\n"),
+    ] as const;
+    expect(doorsIn([declares, renamed], screens)).toContain("planted");
     // And a name nothing binds to a screen is not a door.
     expect(doorsIn([uses], screens).size).toBe(0);
+  });
+
+  // A name resolves where it is WRITTEN. A module's top-level const is visible
+  // to nobody else, so an unrelated file that happens to declare the same name
+  // must not answer for this one — that answer is a door reported where none
+  // exists, which excuses exactly the screen nothing reaches.
+  it("does not let an unrelated file's same-named constant open a door", () => {
+    const screens = new Set(["planted"]);
+    const elsewhere = [
+      join(srcRoot, "elsewhere.ts"),
+      `const SCREEN_ID = "planted";`,
+    ] as const;
+    const uses = [
+      join(srcRoot, "uses.ts"),
+      `navigate({ screen: SCREEN_ID });`,
+    ] as const;
+
+    expect(doorsIn([elsewhere, uses], screens).size).toBe(0);
+    // Nor may an import that names a module outside this tree bind it.
+    const packaged = [
+      join(srcRoot, "packaged.ts"),
+      [
+        `import { SCREEN_ID } from "some-package";`,
+        `navigate({ screen: SCREEN_ID });`,
+      ].join("\n"),
+    ] as const;
+    expect(doorsIn([elsewhere, packaged], screens).size).toBe(0);
   });
 
   it("does not accept a waiver with no reason", () => {
