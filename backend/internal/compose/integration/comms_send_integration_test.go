@@ -341,43 +341,28 @@ func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 	}
 }
 
-// grantMarketingConsent takes the recipient through the double-opt-in round
-// trip marketing_email requires — the server mints the token, the confirming
-// grant presents it — so the send under that purpose is lawful at both the
-// request-time gate and the dispatcher's.
+// grantMarketingConsent takes the recipient through the only round trip that
+// grants a purpose requiring double opt-in: the workspace mails them a
+// confirm-details link, and they spend it with their answer from the anonymous
+// public edge.
+//
+// It replaces a helper that minted a token over the operator's own session and
+// pasted it straight back into recordConsent. That path is gone — one caller
+// completing both halves is exactly what it was withdrawn for — and so the
+// grant here is earned the way a real one is, with the token read out of the
+// delivered mail because no response carries it.
 func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	t.Helper()
-	var purposes struct {
-		Data []struct {
-			ID  string `json:"id"`
-			Key string `json:"key"`
-		} `json:"data"`
+	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/confirm-request",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
-	if status := p.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
-		t.Fatalf("list purposes → %d", status)
-	}
-	var marketing string
-	for _, purpose := range purposes.Data {
-		if purpose.Key == "marketing_email" {
-			marketing = purpose.ID
-		}
-	}
-	if marketing == "" {
-		t.Fatalf("bootstrap seeded no marketing purpose: %+v", purposes.Data)
-	}
-	var issued struct {
-		Token string `json:"token"`
-	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/double-opt-in", AnyMap{
-		"purpose_id": marketing, "deliver": false,
-	}, nil, &issued); status != http.StatusCreated {
-		t.Fatalf("issue the double-opt-in token → %d", status)
-	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
-		"purpose_id": marketing, "new_state": "granted",
-		"lawful_basis": "consent", "double_opt_in_token": issued.Token,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("confirm the marketing grant → %d", status)
+	token := p.mail.confirmLinkToken(t)
+	if s := publicCall(t, p.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "Yes, send me occasional product news.",
+	}, nil, nil); s != http.StatusNoContent {
+		t.Fatalf("the subject spends their own link → %d, want 204", s)
 	}
 }
 

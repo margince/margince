@@ -13,8 +13,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ExceptionsFunc reads the open findings this caller may see.
@@ -182,4 +184,46 @@ func derefString(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// GetDataCoverage answers how current the sources behind the numbers are.
+//
+// Gated on `data_coverage` rather than on `forecast`: reading the pipeline's
+// numbers and reading the installation's connector health are different jobs,
+// and every seat that does the first does not do the second.
+func (h Handlers) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	if err := auth.Require(r.Context(), "data_coverage", principal.ActionRead); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	run, err := h.store.LatestRun(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	coverage, err := h.store.CoverageFor(r.Context(), run.ID)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.DataCoverage{
+		RunId: openapi_types.UUID(run.ID),
+		AsOf:  run.AsOf,
+		// Empty, never nil. A run that recorded no coverage is a real answer;
+		// null reads as "unknown", which on this surface is the difference
+		// between "nothing was tried" and "we cannot tell you".
+		Sources: []crmcontracts.ForecastAssuranceSource{},
+	}
+	for _, c := range coverage {
+		source := crmcontracts.ForecastAssuranceSource{
+			Source: crmcontracts.ForecastAssuranceSourceSource(c.Source),
+			State:  crmcontracts.ForecastAssuranceSourceState(c.State),
+		}
+		// Only a source actually read carries a date.
+		if c.State == CoverageChecked {
+			source.CheckedThrough = c.CheckedThrough
+		}
+		out.Sources = append(out.Sources, source)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

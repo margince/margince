@@ -74,6 +74,7 @@ changes none.
 | `computed_field` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `custom_field` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `data_coverage` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `deal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |

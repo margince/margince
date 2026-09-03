@@ -29,6 +29,7 @@ import {
   rowHref,
 } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
+import { WaitingEmailLine } from "./worklist.emailtitle";
 import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
 import {
@@ -44,6 +45,7 @@ export function WorklistRow({
   selected,
   onSelect,
   onReview,
+  onOpenEmail,
 }: Readonly<{
   item: WorklistItem;
   position: number;
@@ -63,6 +65,10 @@ export function WorklistRow({
   // Where a grouped row is reviewed. Also a filter change the Brief cannot
   // make: it shows a fixed cut and has no filter to move.
   onReview?: () => void;
+  // Opens a waiting email. Absent on a surface with no drawer — the Brief
+  // draws the message and does not offer to open it, rather than drawing a
+  // control that answers nothing.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -78,6 +84,7 @@ export function WorklistRow({
     .join(" · ");
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
+  const emailRow = item.email_summary != null;
   return (
     <PanelRow
       className={
@@ -91,8 +98,14 @@ export function WorklistRow({
         onSelect={onSelect}
       />
       <div className="worklist-row-text">
+        {/* A waiting EMAIL names itself with the canonical row — the same one
+            the timeline draws — so the queue shows the message rather than a
+            sentence about it. Everything else keeps the title line it had, and
+            the badges below stay on both: they say where the row sits in the
+            day, which the email row does not answer. */}
+        <WaitingEmailLine item={item} onOpen={onOpenEmail} />
         <p className="t-body worklist-row-title">
-          {href ? (
+          {emailRow ? null : href ? (
             <a className="entity-link" href={href}>
               {title}
             </a>
@@ -110,14 +123,30 @@ export function WorklistRow({
             <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
           )}
         </p>
-        {/* `detail` is not prose on every source: a relationship-decay row
-            carries a bare day COUNT there (attention/render.go's lapsedItem,
-            "the client writes 'quiet N days'"), which this row already says
-            properly through `because`. Only the `notice` source's detail is
-            a full sentence — the server sets it from the notice's own body,
-            the deal's name included — so only that source renders it here
-            rather than every source that happens to send one. */}
-        {item.source === "notice" && item.detail && (
+        {/* The supporting line, from every source that sends PROSE.
+
+            It was drawn for `notice` alone, because three sources used this
+            field as a typed channel — two wrote a bare day count, one wrote the
+            marker words the queue groups by — and drawing it would have printed
+            "90" under one title and "machine_sender" under another. Those three
+            send their values typed now, so the twelve sources that were already
+            writing sentences get to say them: which mailbox stopped, why a
+            message bounced, why a send was held, what an AI task was about,
+            which rule failed and how. That is the decisive line on most of these
+            rows, and a reader was reading around it.
+
+            `sync_health` is the one still held back, and deliberately. Its own
+            renderer says it carries "that condition's facts in the producer's
+            own vocabulary — the affected object classes, the failure class, or
+            the budget band — and the client writes the sentence": internal words
+            like `shed` or `deal, person`. The client never wrote that sentence,
+            so drawing the field raw would put the vocabulary on screen. Writing
+            it is real work on a lane this change is not about; until then the
+            row says its title, which is what it said before.
+
+            Held by: "draws no supporting line for a source that sends its own
+            vocabulary" (worklist.detail.test.tsx). */}
+        {item.detail && item.source !== "sync_health" && (
           <p className="t-caption worklist-row-detail">{item.detail}</p>
         )}
         {item.batch?.sample && item.batch.sample.length > 0 && (
