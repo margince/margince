@@ -107,10 +107,10 @@ func weeklyLines(line writeLine) {
 		"Your week of ",
 		"Deine Woche ab ",
 		"Tuần của bạn từ ")
-	line(func(c *Copy) *string { return &c.WeeklyPromised },
-		"Promised, delivered",
-		"Zugesagt, erledigt",
-		"Đã hứa, đã xong")
+	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
+		"Tasks delivered",
+		"Aufgaben erledigt",
+		"Công việc đã hoàn thành")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
@@ -139,6 +139,13 @@ func weeklyLines(line writeLine) {
 		"no",
 		"nein",
 		"từ chối")
+	weeklyQueueLines(line)
+	weeklyClosingLines(line)
+}
+
+// weeklyQueueLines is the retrospective's middle: what the morning list did
+// with the week, and what it carried into the next one.
+func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
 		"Morning queue",
 		"Morgen-Liste",
@@ -163,6 +170,16 @@ func weeklyLines(line writeLine) {
 		"… and %d more, on Home",
 		"… weitere auf Home: %d",
 		"… và %d mục nữa, trên Home")
+}
+
+// weeklyClosingLines is what the retrospective asks for once it has reported:
+// next week's plan, the archive behind it, and the outcome words the movement
+// list is written in.
+func weeklyClosingLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
+		"Plan next week",
+		"Nächste Woche planen",
+		"Lập kế hoạch tuần tới")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
 		"Die ganze Woche, und die davor:",

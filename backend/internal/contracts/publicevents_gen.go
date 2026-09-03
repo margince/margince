@@ -171,6 +171,24 @@ func (e PublicEventForecastExceptionResolvedOutcome) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventForecastShareIssuedKind.
+const (
+	ShareKindLive     PublicEventForecastShareIssuedKind = "live"
+	ShareKindSnapshot PublicEventForecastShareIssuedKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastShareIssuedKind enum.
+func (e PublicEventForecastShareIssuedKind) Valid() bool {
+	switch e {
+	case ShareKindLive:
+		return true
+	case ShareKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventForecastSnapshotCreatedTrigger.
 const (
 	Call        PublicEventForecastSnapshotCreatedTrigger = "call"
@@ -351,6 +369,8 @@ const (
 	ForecastAssuranceCreated              SubscribableEventType = "forecast.assurance_created"
 	ForecastCreated                       SubscribableEventType = "forecast.created"
 	ForecastExceptionResolved             SubscribableEventType = "forecast.exception_resolved"
+	ForecastShareIssued                   SubscribableEventType = "forecast.share_issued"
+	ForecastShareRevoked                  SubscribableEventType = "forecast.share_revoked"
 	ForecastSnapshotCreated               SubscribableEventType = "forecast.snapshot_created"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
@@ -513,6 +533,10 @@ func (e SubscribableEventType) Valid() bool {
 	case ForecastCreated:
 		return true
 	case ForecastExceptionResolved:
+		return true
+	case ForecastShareIssued:
+		return true
+	case ForecastShareRevoked:
 		return true
 	case ForecastSnapshotCreated:
 		return true
@@ -1258,6 +1282,29 @@ type PublicEventForecastExceptionResolved struct {
 
 // PublicEventForecastExceptionResolvedOutcome defines model for PublicEventForecastExceptionResolved.Outcome.
 type PublicEventForecastExceptionResolvedOutcome string
+
+// PublicEventForecastShareIssued Payload for forecast.share_issued — somebody created a link that shows a forecast reading to a recipient who is not signed in as them. The entity is the ISSUER, because a link is attributable to whoever made it and the issuer's standing is what keeps it serving.
+// `kind` says which promise the link makes: `live` re-runs the reading under the recipient's own grants, `snapshot` serves a frozen state filtered by their row scope. A consumer auditing what left the installation needs the two apart.
+// The token does not ride along, in any form. It is returned once to the caller that asked for it, and a bus is a place other systems keep copies of.
+type PublicEventForecastShareIssued struct {
+	// ExpiresAt When it stops serving on its own. Capped server-side, so a consumer can rely on it being a real horizon rather than a caller's preference.
+	ExpiresAt time.Time                          `json:"expires_at"`
+	Kind      PublicEventForecastShareIssuedKind `json:"kind"`
+	ShareId   openapi_types.UUID                 `json:"share_id"`
+
+	// Target Which reading the link opens.
+	Target string `json:"target"`
+}
+
+// PublicEventForecastShareIssuedKind defines model for PublicEventForecastShareIssued.Kind.
+type PublicEventForecastShareIssuedKind string
+
+// PublicEventForecastShareRevoked Payload for forecast.share_revoked — a share link was closed before its expiry. The entity is the person who revoked it.
+// A consumer that recorded the issue must record this too: the two together are the window during which a number was reachable by whoever held the link, and that window is what an access review asks for.
+type PublicEventForecastShareRevoked struct {
+	RevokedAt time.Time          `json:"revoked_at"`
+	ShareId   openapi_types.UUID `json:"share_id"`
+}
 
 // PublicEventForecastSnapshotCreated Payload for forecast.snapshot_created — a set of readings was frozen, with the per-deal rows behind them. A subscriber watching for movement waits on this: the difference between two snapshots is only answerable once the second exists.
 // The COUNTS ride along and the money does not. How many deals a run considered says whether it ran completely, which is what a consumer needs to decide whether to trust the state; the totals are a read away and putting them on a bus makes two places to correct when a definition changes.
@@ -2329,6 +2376,14 @@ func (PublicEventForecastExceptionResolved) EventType() string { return "forecas
 
 func (PublicEventForecastExceptionResolved) EntityType() string { return "user" }
 
+func (PublicEventForecastShareIssued) EventType() string { return "forecast.share_issued" }
+
+func (PublicEventForecastShareIssued) EntityType() string { return "user" }
+
+func (PublicEventForecastShareRevoked) EventType() string { return "forecast.share_revoked" }
+
+func (PublicEventForecastShareRevoked) EntityType() string { return "user" }
+
 func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.snapshot_created" }
 
 func (PublicEventForecastSnapshotCreated) EntityType() string { return "user" }
@@ -2666,6 +2721,8 @@ var PublicEventVersions = map[string]int{
 	"forecast.assurance_created":                1,
 	"forecast.created":                          1,
 	"forecast.exception_resolved":               1,
+	"forecast.share_issued":                     1,
+	"forecast.share_revoked":                    1,
 	"forecast.snapshot_created":                 1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,

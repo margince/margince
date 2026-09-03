@@ -9,6 +9,8 @@ package compose
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -76,6 +78,10 @@ func toContractHeldThread(t capture.HeldThread) crmcontracts.HeldThread {
 	}
 	if t.Subject != "" {
 		out.Subject = &t.Subject
+	}
+	if t.ActivityID != nil {
+		id := openapi_types.UUID(*t.ActivityID)
+		out.ActivityId = &id
 	}
 	out.OccurredAt = t.OccurredAt
 	return out

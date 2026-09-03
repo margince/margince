@@ -69,7 +69,7 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			if err != nil {
 				return err
 			}
-			deals, limited, err := ForecastDeals(ctx, tx, period, scope)
+			deals, limited, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
 			if err != nil {
 				return err
 			}

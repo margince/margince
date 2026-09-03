@@ -10926,6 +10926,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a link that shows a forecast reading to a colleague.
+         * @description Two kinds, and they make different promises. A `live` share re-runs the reading
+         *     under the RECIPIENT's own grants every time it is opened, so it answers what they
+         *     may see today. A `snapshot` share serves a state frozen at a moment, re-summed over
+         *     the rows that recipient may read.
+         *
+         *     A snapshot share never serves the stored totals. The frozen headline covers every
+         *     deal the issuer could see, and handing that number to somebody narrower discloses a
+         *     total about deals they may not read. The recompute is what the kind promises.
+         *
+         *     The token comes back ONCE, in `token`, and is never returned again — the table
+         *     holds only its digest, so a database dump opens nothing. A caller that loses it
+         *     issues another share.
+         *
+         *     `expires_at` is capped server-side. An expiry beyond the ceiling is REFUSED rather
+         *     than quietly shortened: a link the caller believes lasts a year, silently cut to a
+         *     month, fails in front of whoever they sent it to.
+         */
+        post: operations["createForecastShare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/shares/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Close a share link before it expires.
+         * @description Idempotent: revoking a revoked share is the outcome the caller asked for, and
+         *     answers 204 either way.
+         *
+         *     Revocation and expiry are both real and neither replaces the other. An expiry alone
+         *     means a link sent to the wrong address stays open until it lapses; a revocation
+         *     alone means a link nobody remembers stays open forever.
+         */
+        delete: operations["revokeForecastShare"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/shared/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Open a shared forecast view.
+         * @description Answers the reading the share names, computed for the CALLER rather than for whoever
+         *     issued it. A live share re-runs the reading; a snapshot share re-sums the frozen
+         *     contributions the caller may read.
+         *
+         *     Every refusal is the same 404 — an unknown token, an expired one, a revoked one, and
+         *     a share whose issuer has left or lost `forecast:read`. Distinguishing them would tell
+         *     somebody working through guessed tokens which guesses were closer.
+         *
+         *     `withheld` says something was kept back and never how much. A count of what a reader
+         *     may not see is itself a statement about how much of it there is.
+         */
+        get: operations["openForecastShare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/shared/{token}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The rows behind a shared reading, as CSV.
+         * @description One row per deal the CALLER may read, which is the same set the headline above it
+         *     was summed from. A file whose rows and whose total disagree is worse than no file:
+         *     somebody reconciles it by hand and concludes the product is wrong about one of them.
+         *
+         *     A live share exports the rows as they stand; a snapshot share exports the frozen
+         *     contributions. Refusals are the same 404 the read is, for the same reason.
+         *
+         *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
+         *     opening the file reads them as the text the record holds rather than evaluating them.
+         */
+        get: operations["exportForecastShare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/current": {
         parameters: {
             query?: never;
@@ -11005,6 +11130,37 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct what a commitment says, when it is due, or what it is about.
+         * @description The CALLER's own commitment, on an open week. A rep types a commitment on Monday and
+         *     finds the typo on Tuesday; without this the only way out is to drop the row and write
+         *     a new one, which discards the manager's answer and any help already asked for — the
+         *     two fields on the row that were never the rep's to throw away.
+         *
+         *     Every field is optional and only what is PRESENT changes. `due_on: null` clears the
+         *     date, which is a real state: something to do this week rather than by a day. Sending
+         *     `linked_record: null` unlinks the record.
+         *
+         *     State is not settable here. `PUT .../state` owns the move between open, done and
+         *     dropped because it ties `completed_at` to the state the schema's CHECK binds them
+         *     with, and two writers of that pair would drift.
+         */
+        patch: operations["editWeeklyPlanCommitment"];
         trace?: never;
     };
     "/weekly-plans/commitments/{id}/state": {
@@ -13764,6 +13920,17 @@ export interface components {
              *     pending, because nothing has concluded anything yet.
              */
             kind?: string;
+            /**
+             * Format: uuid
+             * @description The message that opened this thread, where this caller may read it — what a
+             *     client opens to show the correspondence rather than only naming it.
+             *
+             *     Null when the message was erased while the hold stood (the ledger deliberately
+             *     outlives it) AND null when the content is not this caller's: it is read from the
+             *     joined activity row, which carries the content gate, rather than from the
+             *     ledger's own column. `has_message` says which of the two it is.
+             */
+            readonly activity_id?: string | null;
             /**
              * @description The message this thread began with is still readable by you. False where it was erased
              *     while the verdict stood — which the ledger deliberately survives, because losing the
@@ -22668,6 +22835,79 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description A request to issue a share link. */
+        NewForecastShare: {
+            /**
+             * @description `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
+             * @enum {string}
+             */
+            kind: "live" | "snapshot";
+            /** @description Which reading the link opens. */
+            target: string;
+            /**
+             * @default workspace
+             * @enum {string}
+             */
+            scope_kind: "workspace" | "team" | "owner";
+            /**
+             * Format: uuid
+             * @description Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+             */
+            scope_id?: string;
+            /**
+             * Format: uuid
+             * @description The frozen state a snapshot share serves. Required for `snapshot` and refused for `live`, which has none — a snapshot share with no snapshot would fall back to serving live data, a different promise from the one its kind makes.
+             */
+            snapshot_id?: string;
+            /**
+             * Format: date-time
+             * @description When it stops serving. Capped server-side; an expiry beyond the ceiling is refused rather than shortened. Omitted takes the ceiling.
+             */
+            expires_at?: string;
+        };
+        /** @description A share as issued, carrying its token for the only time. */
+        IssuedForecastShare: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "live" | "snapshot";
+            target: string;
+            /** @enum {string} */
+            scope_kind?: "workspace" | "team" | "owner";
+            /** Format: uuid */
+            scope_id?: string;
+            /** Format: uuid */
+            snapshot_id?: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Shown ONCE. The table holds only its digest, so this value cannot be recovered — a caller that loses it issues another share. */
+            token: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description What one caller reads through a share.
+         *
+         *     The numbers are about THEM. A snapshot share re-sums the frozen contributions this
+         *     caller may read rather than serving the stored totals, so two colleagues opening
+         *     the same link can correctly see different figures.
+         */
+        SharedForecastView: {
+            /**
+             * @description Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+             * @enum {string}
+             */
+            kind: "live" | "snapshot";
+            target: string;
+            /**
+             * Format: date-time
+             * @description The instant a snapshot share's state describes. Absent on a live share.
+             */
+            as_of?: string;
+            readings: components["schemas"]["ForecastReadings"];
+            /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
+            withheld: boolean;
+        };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
          *     WeeklyReview beside it.
@@ -22734,6 +22974,24 @@ export interface components {
             /** @description Both halves or neither — a type with no id names nothing. */
             linked_record?: components["schemas"]["WeeklyPlanLink"];
             /** Format: date */
+            due_on?: string | null;
+        };
+        /**
+         * @description What a rep may correct about their own commitment. Only the fields PRESENT change —
+         *     an absent field is left alone, which is what lets a client send a new label without
+         *     also having to restate the due date it is not touching.
+         */
+        WeeklyPlanCommitmentEdit: {
+            label?: string;
+            /**
+             * @description Both halves or neither, as on create. Null unlinks the record, which is how a
+             *     commitment stops being about one without being rewritten.
+             */
+            linked_record?: components["schemas"]["WeeklyPlanLink"] | null;
+            /**
+             * Format: date
+             * @description Null clears the date — something to do this week, rather than by a day.
+             */
             due_on?: string | null;
         };
         /**
@@ -23191,8 +23449,11 @@ export interface components {
             };
             group_by?: string[];
             aggregates?: {
-                /** @enum {string} */
-                fn: "count" | "sum" | "avg" | "min" | "max";
+                /**
+                 * @description `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
+                 * @enum {string}
+                 */
+                fn: "count" | "sum" | "avg" | "min" | "max" | "median" | "p75";
                 field?: string | null;
                 as?: string | null;
             }[];
@@ -28011,6 +28272,8 @@ export interface components {
              */
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
+            /** @description The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             deal?: components["schemas"]["WorklistDealFacts"];
             batch?: components["schemas"]["WorklistBatch"];
             /**
@@ -28259,8 +28522,12 @@ export interface components {
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
-         *     `amount_minor × win_probability`, converted to the installation's base currency —
-         *     the only figure by which two deals in different currencies may be compared.
+         *     `amount_minor` converted to the installation's base currency — the only figure by
+         *     which two deals in different currencies may be compared. It does not yet weight by
+         *     `win_probability`: the pipeline this row comes from does not read a deal's stage
+         *     today, so the two fields are independent facts rather than one computed from the
+         *     other, and a reader must not multiply them together expecting the product to equal
+         *     a risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
             /** Format: uuid */
@@ -28273,7 +28540,7 @@ export interface components {
             win_probability?: number | null;
             /**
              * Format: int64
-             * @description Expected revenue in the base currency. Null when the amount or the rate is unknown.
+             * @description The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
              */
             expected_minor_base?: number | null;
             /** Format: date */
@@ -46164,6 +46431,108 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    createForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewForecastShare"];
+            };
+        };
+        responses: {
+            /** @description The share, with its token shown for the only time. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedForecastShare"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revokeForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The share no longer serves. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    openForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reading, as this caller may read it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedForecastView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rows, as CSV. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getCurrentWeeklyPlan: {
         parameters: {
             query?: never;
@@ -46259,6 +46628,34 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    editWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPlanCommitmentEdit"];
+            };
+        };
+        responses: {
+            /** @description Corrected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -1,5 +1,11 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -136,4 +142,26 @@ describe("evidence mark", () => {
     expect(open).toHaveLength(1);
     expect(open[0].getAttribute("aria-label")).toContain("Stuttgart");
   });
+});
+
+// A claim is checked by resting on it: the receipt opens under a pointer that
+// has settled on the value and closes once it has left, without a click.
+it("opens under a settled pointer and closes when it leaves", async () => {
+  show(
+    <EvidenceMark
+      value="1998"
+      source={{
+        provenance: { kind: "agent", agent: "capture" },
+        snippet: "Founded in 1998",
+      }}
+    />,
+  );
+  const mark = screen.getByRole("button", { name: /1998/ }).parentElement;
+  if (!mark) {
+    throw new Error("the mark has no wrapper");
+  }
+  fireEvent.pointerEnter(mark);
+  await waitFor(() => expect(screen.getByRole("region")).toBeTruthy());
+  fireEvent.pointerLeave(mark);
+  await waitFor(() => expect(screen.queryByRole("region")).toBeNull());
 });

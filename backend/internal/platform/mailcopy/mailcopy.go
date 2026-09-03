@@ -16,7 +16,7 @@
 // senders each inventing their own is how one product comes to have three
 // voices, and it is the duplication the issue that raised this named.
 //
-// THE WEEKLY'S LABELS ARE THE SCREEN'S. "Promised, delivered" in the mail is the
+// THE WEEKLY'S LABELS ARE THE SCREEN'S. "Tasks delivered" in the mail is the
 // same phrase the weekly panel draws, so they are not translated twice: the
 // strings here are the frontend catalog's, and a gate compares them. Two
 // translations of one label is how the mail comes to say something the panel
@@ -104,9 +104,9 @@ type Copy struct {
 	// The Monday retrospective. WeeklySubject and WeeklyHeading both name the
 	// week, because the subject is what tells two of these apart in a list and
 	// the heading is what a reader sees once the message is open.
-	WeeklySubject  string
-	WeeklyHeading  string
-	WeeklyPromised string
+	WeeklySubject        string
+	WeeklyHeading        string
+	WeeklyTasksDelivered string
 	// WeeklyOfDue is the panel's own "{done} of {due}" template, with the two
 	// counts as %d in the order the language puts them.
 	WeeklyOfDue     string
@@ -123,6 +123,11 @@ type Copy struct {
 	WeeklyWhatMoved string
 	WeeklyAndMore   string
 	WeeklyFullWeek  string
+	// The question the message closes on, in the panel's own words. The weekly
+	// mail reported the week and asked nothing, so it read as a receipt for
+	// work already done — while the screen it links to opens with a panel
+	// inviting the reader to plan the next one.
+	WeeklyPlanAhead string
 	// The three outcomes a deal line reports, lower-case because they are read
 	// inside a sentence rather than as a label.
 	WeeklyOutcomeWon   string

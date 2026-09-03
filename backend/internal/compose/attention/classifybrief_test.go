@@ -15,10 +15,12 @@ import (
 
 func TestClassifyBriefItemStampsItsDeadline(t *testing.T) {
 	closes := rankInstant.Add(-24 * time.Hour)
+	overdue := true
 	item := crmcontracts.AttentionItem{
-		Id:     "brief-1",
-		Source: "brief_item",
-		DueAt:  &closes,
+		Id:      "brief-1",
+		Source:  "brief_item",
+		DueAt:   &closes,
+		Overdue: &overdue,
 	}
 
 	got := classifyBriefItem(item, rankInstant)
@@ -31,6 +33,38 @@ func TestClassifyBriefItemStampsItsDeadline(t *testing.T) {
 	}
 	if !got.overdue {
 		t.Fatal("a close date in the past was not marked overdue")
+	}
+}
+
+// The brief row and the at-risk row for the SAME deal must never disagree
+// about whether it is late. The at-risk lane compares calendar dates in the
+// workspace zone (deals.CloseIsOverdue) — a deal due TODAY is not overdue —
+// and classifyBriefItem trusts the identical pre-computed verdict rather
+// than recomputing one from the INSTANT the close date round-trips as (UTC
+// midnight of the due day), which would read "overdue" from 00:00 UTC onward
+// on the due day itself — a whole local day out of step with the sibling
+// lane, for a deal due today.
+func TestClassifyBriefItemTrustsTheDealsCalendarOverdueVerdictOverAnInstantComparison(t *testing.T) {
+	// The close date's UTC-midnight round-trip is already behind rankInstant
+	// (09:00 UTC on the same day), so an instant comparison would call this
+	// overdue — but the deal's own calendar-date verdict, from the SAME lane's
+	// deal-figures read, says it is due today and not yet late.
+	closesToday := time.Date(rankInstant.Year(), rankInstant.Month(), rankInstant.Day(), 0, 0, 0, 0, time.UTC)
+	notOverdue := false
+	item := crmcontracts.AttentionItem{
+		Id:      "brief-due-today",
+		Source:  "brief_item",
+		DueAt:   &closesToday,
+		Overdue: &notOverdue,
+	}
+
+	got := classifyBriefItem(item, rankInstant)
+
+	if got.overdue {
+		t.Fatal("a deal due TODAY was marked overdue — the brief row disagrees with the at-risk row for the identical deal")
+	}
+	if got.item.Overdue == nil || *got.item.Overdue {
+		t.Fatalf("item.Overdue = %v, wanted the deal's own false to reach the card's badge too", got.item.Overdue)
 	}
 }
 

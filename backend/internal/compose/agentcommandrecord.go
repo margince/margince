@@ -57,6 +57,33 @@ func mergeCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body [
 	}), nil
 }
 
+// mergeTagsCommand decodes POST /v1/tags/{id}/merge. The routed tag is the
+// SOURCE — the one that is retired and whose name is released — and the body
+// names the survivor, which is the same reading the store gives the pair
+// (collections/tagvocab.go MergeTags).
+//
+// It does not share mergeCommand with the two record merges: that one is typed
+// by pol.RecordType and resolves through the SoR provider, which serves no
+// vocabulary at all. A tag reaches its own seam instead.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func mergeTagsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	sourceID, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	in, err := commandBody[struct {
+		IntoTagID ids.UUID `json:"into_tag_id"`
+	}](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewMergeTagsCall(deps.tags, agents.MergeTagsCommand{
+		SourceID: sourceID,
+		TargetID: in.IntoTagID,
+	}), nil
+}
+
 // scrapeCompanyCommand decodes POST /v1/organizations/{id}/enrich — the
 // one-page read.
 //

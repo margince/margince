@@ -152,14 +152,29 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonOffDomain)
 		return
 	}
-	if utf8.RuneCountInString(page.Text) < crawlMinRunes {
-		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
-		return
-	}
-	if r.seenText[page.Text] {
+	if r.seenText[bodyIdentity(page.Text, page.HeadText)] {
 		// An SPA catch-all serves the same document on every path; the
 		// duplicate carries zero new evidence and reporting it as a skip
 		// would flood the report with noise, so it vanishes silently.
+		//
+		// Asked BEFORE the text floor, because on exactly that site the
+		// duplicate is also SHORT: a client-rendered shell is the same two
+		// kilobytes of loader on every path, so thirty-one probes each wrote
+		// an `unreadable` skip for one document the crawl had already read.
+		// A body already seen carries no new evidence whatever its length,
+		// and the report is meant to name what could not be read rather than
+		// list one page thirty-one times.
+		return
+	}
+	if utf8.RuneCountInString(page.Text) < crawlMinRunes {
+		// Remembered as seen, though it was never committed as a page. A
+		// client-rendered site answers every path with the same short loader,
+		// and without this the dedupe above can never fire for it: each probe
+		// finds a body no commit ever recorded, so one document was reported
+		// as thirty-one separate unreadable pages. The FIRST one is the honest
+		// report; the repeats are the same fact again.
+		r.seenText[bodyIdentity(page.Text, page.HeadText)] = true
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
 		return
 	}
 
@@ -184,7 +199,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		r.markVisited(servedURL)
 		kind = classifyKind(servedURL)
 	}
-	r.seenText[page.Text] = true
+	r.seenText[bodyIdentity(page.Text, page.HeadText)] = true
 	r.canonicalDone[localeCanonical(adm.url)] = true
 	if kind == crmcontracts.SiteReadPageKindImpressum {
 		r.impressumRead++
@@ -195,7 +210,8 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		// what it guessed at; its kind stays open for the next guess.
 		r.probeKindDone[adm.cand.kind] = true
 	}
-	committed := crawlPage{URL: servedURL, Kind: kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur, Fingerprint: page.Fingerprint}
+	committed := pageFrom(servedURL, kind, page)
+	committed.FetchDur = res.dur
 	r.crawl.Pages = append(r.crawl.Pages, committed)
 	if r.onPage != nil {
 		r.onPage(committed)

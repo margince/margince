@@ -16,6 +16,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// EmailSummariesByID is EmailSummariesByIDBatch for a caller with no
+// transaction of its own to lend — the who-is-waiting seam, whose rows come
+// back from a read that has already committed. Same reader, same gate; only
+// the transaction differs.
+func (s *Store) EmailSummariesByID(
+	ctx context.Context, activityIDs []ids.UUID,
+) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+	var out map[ids.UUID]crmcontracts.EmailSummary
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var readErr error
+		out, readErr = EmailSummariesByIDBatch(ctx, tx, activityIDs)
+		return readErr
+	})
+	return out, err
+}
+
 // EmailSummariesByIDBatch answers the email row of each of these activities,
 // for THIS caller, in the caller's own transaction. Ids that are not emails,
 // that the caller may not read, or that do not exist are simply absent from
@@ -75,22 +91,35 @@ func EmailSummariesByIDBatch(
 	}
 	defer rows.Close()
 
-	out := make(map[ids.UUID]crmcontracts.EmailSummary, len(activityIDs))
+	admitted := make([]crmcontracts.Activity, 0, len(activityIDs))
 	for rows.Next() {
 		var scan activityScan
 		if err := rows.Scan(activityScanTargets(&scan)...); err != nil {
 			return nil, fmt.Errorf("activities: scanning an email summary: %w", err)
 		}
-		activity := scan.record()
-		// RowEmailSummary rather than a second assembler: the row a search hit
-		// shows and the row a timeline shows are the same row, and two
-		// projections of it would drift the moment either grew a field.
-		if summary := RowEmailSummary(activity); summary != nil {
-			out[scan.id] = *summary
-		}
+		admitted = append(admitted, scan.record())
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("activities: reading email summaries for a page: %w", err)
+	}
+	// Collected first: the count runs a second statement on this transaction,
+	// which needs the cursor above already closed.
+	rows.Close()
+	if err := WithAttachmentCounts(ctx, tx, admitted); err != nil {
+		return nil, err
+	}
+
+	out := make(map[ids.UUID]crmcontracts.EmailSummary, len(activityIDs))
+	for _, activity := range admitted {
+		// RowEmailSummary rather than a second assembler: the row a search hit
+		// shows and the row a timeline shows are the same row, and two
+		// projections of it would drift the moment either grew a field.
+		// The summary the page carries is the row RECORD() already built,
+		// counts and all — not a second call to RowEmailSummary, which would
+		// rebuild it from the activity and drop the count just applied.
+		if activity.EmailSummary != nil {
+			out[ids.UUID(activity.Id)] = *activity.EmailSummary
+		}
 	}
 	return out, nil
 }

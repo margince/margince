@@ -51,7 +51,7 @@ func TestAStagedTagArchiveNeedsTagReadAndNotOnlyTagDelete(t *testing.T) {
 
 	author := e.As(e.Rep1, []ids.UUID{e.Team1},
 		tagPerms(principal.ObjectGrant{Create: true, Read: true, Delete: true}))
-	tag, err := tags.CreateTag(author, "Champion", nil)
+	tag, err := tags.CreateTag(author, "Champion", nil, nil)
 	if err != nil {
 		t.Fatalf("create tag: %v", err)
 	}

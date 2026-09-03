@@ -284,9 +284,11 @@ const (
 // wholeCatalogBudgetNumerator/Denominator bound the WHOLE catalog, and this is
 // a floor rather than a budget — the distinction is the point.
 //
-// The certification lane really does offer all 56 tools: 21 of the 23
+// The certification lane really does offer the WHOLE catalog: 21 of the 23
 // agent_loop corpus scenarios declare `tools: catalog`, resolved through
-// agentLoopCatalog(), each building a real window. If that stopped fitting,
+// agentLoopCatalog(), each building a real window. (The count is deliberately
+// not written here — it said 56 while the surface served 67, and a number in a
+// comment nothing checks is one more thing to go quietly wrong.) If that stopped fitting,
 // NOTHING WOULD BREAK LOUDLY — window.bounded() elides the transcript only,
 // stops at two messages, and sends whatever remains, and the bound providers'
 // real contexts dwarf 24,000. The scenarios would keep passing while measuring
@@ -298,8 +300,20 @@ const (
 // transcript — so it does not need the 7/24 a forty-step run reserves. 7/8 of
 // 24,000 leaves 3,000 for those three, which is ample for a one-turn replay.
 //
-// No feature is expected to argue with this number. The per-agent bound above
-// is the one that rations anything.
+// No feature is expected to argue with this number, and one that has to is a
+// signal about the CEILING rather than about itself. That happened at a
+// PromptTokenCeiling of 24,000, where this floor left 63 tokens for a 67-tool
+// catalog and the next verb anyone added failed here (margince/margince#3882).
+// The ceiling is now derived from the local provider's cap rather than picked.
+//
+// THE ROOM IS STILL SMALL: a few hundred tokens, which is one or two more
+// verbs. That is not an oversight to trim the ceiling for — the slack the
+// ceiling holds covers prompt bytes this side cannot count, and spending it
+// here buys tool descriptions at the price of truncating runs. When this fails
+// again, the question is which tools the certification lane needs to offer at
+// once, not how to make the number bigger.
+//
+// The per-agent bound above is the one that rations anything.
 const (
 	wholeCatalogBudgetNumerator   = 7
 	wholeCatalogBudgetDenominator = 8

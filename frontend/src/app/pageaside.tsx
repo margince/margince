@@ -56,14 +56,17 @@ const PageAsideContext = createContext<PageAsideState | null>(null);
 const COLLAPSE_KEY = "margince.pageAside.collapsed";
 
 function readCollapsed(): boolean {
-  // A private window, cleared site data, or a browser refusing storage all
-  // throw here rather than returning null. None of them is a reason to fail to
-  // render a column, so the answer is the default and the reader simply does
-  // not get their remembered choice.
+  // Closed until asked: the details column is where a reader goes for the
+  // attributes and the short lists, not what they open a record to see, so a
+  // reader who has never chosen finds it folded. A private window, cleared
+  // site data, or a browser refusing storage all throw here rather than
+  // returning null. None of them is a reason to fail to render a column, so
+  // the answer is the default and the reader simply does not get their
+  // remembered choice.
   try {
-    return window.localStorage.getItem(COLLAPSE_KEY) === "1";
+    return window.localStorage.getItem(COLLAPSE_KEY) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 

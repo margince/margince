@@ -29,6 +29,7 @@ import {
   rowHref,
 } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
+import { WaitingEmailLine } from "./worklist.emailtitle";
 import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
 import {
@@ -44,6 +45,7 @@ export function WorklistRow({
   selected,
   onSelect,
   onReview,
+  onOpenEmail,
 }: Readonly<{
   item: WorklistItem;
   position: number;
@@ -63,6 +65,10 @@ export function WorklistRow({
   // Where a grouped row is reviewed. Also a filter change the Brief cannot
   // make: it shows a fixed cut and has no filter to move.
   onReview?: () => void;
+  // Opens a waiting email. Absent on a surface with no drawer — the Brief
+  // draws the message and does not offer to open it, rather than drawing a
+  // control that answers nothing.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -78,6 +84,7 @@ export function WorklistRow({
     .join(" · ");
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
+  const emailRow = item.email_summary != null;
   return (
     <PanelRow
       className={
@@ -91,8 +98,14 @@ export function WorklistRow({
         onSelect={onSelect}
       />
       <div className="worklist-row-text">
+        {/* A waiting EMAIL names itself with the canonical row — the same one
+            the timeline draws — so the queue shows the message rather than a
+            sentence about it. Everything else keeps the title line it had, and
+            the badges below stay on both: they say where the row sits in the
+            day, which the email row does not answer. */}
+        <WaitingEmailLine item={item} onOpen={onOpenEmail} />
         <p className="t-body worklist-row-title">
-          {href ? (
+          {emailRow ? null : href ? (
             <a className="entity-link" href={href}>
               {title}
             </a>

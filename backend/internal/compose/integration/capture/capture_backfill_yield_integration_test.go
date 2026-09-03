@@ -48,6 +48,14 @@ type mailPageConnector struct {
 	// in the connector contract forbids it, and what the counters do under it
 	// is the question TestConcurrentCreationsAreAllCounted asks.
 	parallel bool
+	// prelude is walked SERIALLY, and to completion, before the parallel batch
+	// starts. It exists because "at once" is two different races and only one
+	// of them is ever the subject: eight creations recomputing one run's reach
+	// is the race under test, while a reply overtaking the send it answers is
+	// the ladder deferring correctly. Racing both meant a loaded runner could
+	// defer every counterparty and leave nothing to count — the test then
+	// failing for the reason it says in its own comment is not a failure.
+	prelude [][]byte
 }
 
 func (m *mailPageConnector) Descriptor() connector.Descriptor {
@@ -120,6 +128,19 @@ func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink)
 	var walking sync.WaitGroup
 	res := connector.BackfillPageResult{}
 	var failed error
+	// Everything the parallel batch needs already committed, in order, first.
+	for _, raw := range m.prelude {
+		msg, err := mailmap.Parse(raw, captureOwner)
+		if err != nil {
+			return connector.BackfillPageResult{}, err
+		}
+		msg = msg.AttestSentByOwner(m.sent[msg.ID()])
+		if _, err := sink.Upsert(ctx, msg.ToRecord("gmail", raw)); err != nil {
+			return connector.BackfillPageResult{}, err
+		}
+		res.Scanned++
+		res.Captured++
+	}
 	for _, raw := range m.raws {
 		walking.Add(1)
 		go func() {
@@ -739,22 +760,28 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	// the race is eight person creations recomputing the same run's reach at
 	// once.
 	//
-	// The page is walked in parallel, so a reply may be read before the send it
-	// answers has committed. That is a real property of capturing out of order
-	// and not a fixture detail: the evidence for an exchange is two rows, and a
-	// reader that sees only one defers the sender to the verdict rather than
-	// creating. The count below is therefore of what the ledger actually
-	// recorded, which is the number the race is about.
+	// A reply read before its send has committed is also real — the evidence
+	// for an exchange is two rows, and a reader seeing one defers the sender to
+	// the verdict rather than creating. But that is the ladder working, not
+	// this test's subject, and racing it alongside the creations meant a loaded
+	// runner could defer every counterparty and leave no creations to count.
+	// So the sends are the connector's prelude and only the replies race.
+	sends := make([][]byte, 0, counterparties)
 	sent := make(map[string]bool, counterparties)
 	for i := range counterparties {
 		msgID := fmt.Sprintf("race%d@myco.example", i)
 		addr := fmt.Sprintf("racer%d@globex.example", i)
 		sent[msgID] = true
-		raws = append(raws,
-			email(captureOwner, "", addr, msgID, ""),
-			email(addr, "Racer", captureOwner, fmt.Sprintf("race%dr@globex.example", i), msgID))
+		sends = append(sends, email(captureOwner, "", addr, msgID, ""))
+		raws = append(raws, email(addr, "Racer", captureOwner, fmt.Sprintf("race%dr@globex.example", i), msgID))
 	}
-	registry.Register(&mailPageConnector{raws: raws, sent: sent, parallel: true})
+	// The eight sends first and in order, the eight replies at once. Both
+	// orderings are real, and separating them is what makes this test about
+	// ONE of them: with the sends committed, every reply completes an exchange
+	// the ladder admits, so all eight counterparties are creatable and the
+	// race is eight creations recomputing the same run's reach — which is the
+	// lost update the run row's lock exists to prevent.
+	registry.Register(&mailPageConnector{prelude: sends, raws: raws, sent: sent, parallel: true})
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
@@ -772,13 +799,15 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 
 	people, _ := readBackfillYieldColumns(t, e, run.ID)
 	ledgered, _ := readCreationLedger(t, e, run.ID)
-	// At least two concurrent creations, or there is no race to lose. Not all
-	// eight: a parallel walk may read a reply before its send commits, and the
-	// sender then defers rather than being created — which is the rule working,
-	// not the counter failing. What this test is about is whether EVERY
-	// creation that did happen was counted.
-	if ledgered < 2 {
-		t.Fatalf("the page ledgered %d creations, so there was no race to lose", ledgered)
+	// Every one of them, now that each reply meets a committed send. The floor
+	// used to be two — a hedge against the send/reply race above, which cost the
+	// test its own subject: two concurrent creations out of eight is a weaker
+	// claim than the lock owes, and zero, which a loaded runner really did
+	// produce, is no claim at all.
+	if ledgered != counterparties {
+		t.Fatalf("the page ledgered %d creations, want all %d — each reply meets a committed send, "+
+			"so every counterparty is creatable and the race is between the creations alone",
+			ledgered, counterparties)
 	}
 	if people != ledgered {
 		t.Errorf("the run reports %d people and its ledger holds %d — every creation counts, "+

@@ -94,7 +94,7 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	// English ones they were laid out for, and a fixed width turns the column
 	// into a ragged edge in two of the three.
 	rows := [][2]string{
-		{words.WeeklyPromised, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue)},
+		{words.WeeklyTasksDelivered, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue)},
 		{
 			words.WeeklyDealsWon + " · " + words.WeeklyDealsLost + " · " + words.WeeklyMoved,
 			strconv.Itoa(c.DealsWon) + " · " + strconv.Itoa(c.DealsLost) + " · " + strconv.Itoa(c.DealsMoved),
@@ -109,9 +109,20 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 
 	writeDealLines(&b, review.Deals, words)
 
-	if homeURL != "" {
-		b.WriteString("\n" + words.WeeklyFullWeek + "\n  " + homeURL + "\n")
-	}
+	// The message closes forward, not back.
+	//
+	// Everything above it reports a week that is over. Without a question the
+	// mail is a receipt — a rep reads their numbers, agrees with them and does
+	// nothing, while the panel the link opens is asking them to plan the next
+	// week. Asked in the PANEL's own words (mailcopy pairs it to plan.title),
+	// so the message invites exactly what the page it opens offers.
+	//
+	// It sits above the archive link because it is what the reader is being
+	// asked to do; the archive is where they go if they want the week before.
+	b.WriteString("\n" + words.WeeklyPlanAhead + "\n")
+	// The WEEKLY view, not the bare origin: this message is about a week, and
+	// the page it opened without the fragment was showing this morning.
+	mailcopy.Link(&b, homeURL, mailcopy.BriefWeeklyFragment, words.WeeklyFullWeek)
 	return b.String()
 }
 

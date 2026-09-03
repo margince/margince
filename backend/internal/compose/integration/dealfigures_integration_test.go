@@ -15,6 +15,7 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,6 +25,14 @@ import (
 // card states.
 func seedFiguresDeal(t *testing.T, owner ids.UUID, amount int64) ids.UUID {
 	t.Helper()
+	return seedFiguresDealClosing(t, owner, amount, time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC))
+}
+
+// seedFiguresDealClosing writes one deal with the given expected close date —
+// the workspace's own timezone setting is what Figures reads it against
+// (UTC, the fresh-installation default this harness never overrides).
+func seedFiguresDealClosing(t *testing.T, owner ids.UUID, amount int64, closes time.Time) ids.UUID {
+	t.Helper()
 	conn := OwnerConn(t)
 	pipeline := SeedIDRow(t, conn, `INSERT INTO pipeline (id, name, is_default, position)
 		VALUES ($1, 'Sales', true, 0)`)
@@ -32,8 +41,8 @@ func seedFiguresDeal(t *testing.T, owner ids.UUID, amount int64) ids.UUID {
 	return SeedIDRow(t, conn, `INSERT INTO deal
 		(id, owner_id, name, pipeline_id, stage_id, amount_minor, currency, expected_close_date,
 		 source, captured_by)
-		VALUES ($1, $2, 'Northstar renewal', $3, $4, $5, 'EUR', DATE '2026-08-28', 'manual', 'human:x')`,
-		owner, pipeline, stage, amount)
+		VALUES ($1, $2, 'Northstar renewal', $3, $4, $5, 'EUR', $6, 'manual', 'human:x')`,
+		owner, pipeline, stage, amount, closes)
 }
 
 // A deal the reader may see comes back with the figures a card states.
@@ -117,7 +126,14 @@ func TestDealFiguresApplyTheRolesFieldMask(t *testing.T) {
 		e.WsExec(t, `UPDATE deal SET amount_minor = $2, currency = 'EUR' WHERE id = $1`, id, amount)
 	}
 	perms := activityLifecyclePerms
-	perms.Objects = map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}, "pipeline": {Read: true}}
+	perms.Objects = map[string]principal.ObjectGrant{
+		"deal": {Read: true, Update: true}, "pipeline": {Read: true},
+		// Figures reads the installation's timezone to state each deal's own
+		// overdue verdict — installation_settings mirrors 0191's real seed,
+		// readable by every seeded role, so a narrow test fixture needs it
+		// stated explicitly the way dozens of others in this package already do.
+		"installation_settings": {Read: true},
+	}
 	perms.FieldMasks = []principal.FieldMask{
 		{Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority},
 	}
@@ -147,5 +163,61 @@ func TestDealFiguresApplyTheRolesFieldMask(t *testing.T) {
 	}
 	if other.Currency != "" {
 		t.Fatalf("another team's currency reached the Worklist as %q — a currency alone says the deal is priced and in what units", other.Currency)
+	}
+}
+
+// A close date already behind today's calendar date, in the
+// workspace's own zone (UTC — this harness's fresh-installation default),
+// answers overdue — the same verdict deals.CloseIsOverdue gives the at-risk
+// lane over the identical deal, so the Worklist's two rows for one deal state
+// one verdict about whether it is late.
+func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
+	e := Setup(t)
+	yesterday := time.Now().UTC().AddDate(0, 0, -1)
+	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, yesterday)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})
+	if err != nil {
+		t.Fatalf("reading the deal's figures: %v", err)
+	}
+
+	got, ok := figures[dealID]
+	if !ok {
+		t.Fatal("the deal did not come back at all")
+	}
+	if !got.CloseOverdue {
+		t.Fatal("a close date already behind today's calendar date came back not overdue")
+	}
+}
+
+// A close date that has not yet arrived — today's or later — is not overdue.
+// Today itself is the boundary this asserts: CloseIsOverdue is a calendar-date
+// comparison, and a deal due today is due today, not late.
+func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
+	e := Setup(t)
+	// The DB's own "today", not Go's: Figures compares against Postgres's
+	// now() in the installation's zone, and seeding from the wall clock this
+	// process reads would race a UTC-midnight rollover between the seed and
+	// the query.
+	var today time.Time
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT (timezone('UTC', now()))::date`).Scan(&today); err != nil {
+		t.Fatalf("reading the database's own today: %v", err)
+	}
+	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, today)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})
+	if err != nil {
+		t.Fatalf("reading the deal's figures: %v", err)
+	}
+
+	got, ok := figures[dealID]
+	if !ok {
+		t.Fatal("the deal did not come back at all")
+	}
+	if got.CloseOverdue {
+		t.Fatal("a deal due TODAY came back overdue")
 	}
 }

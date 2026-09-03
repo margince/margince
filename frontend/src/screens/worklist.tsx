@@ -4,11 +4,14 @@ import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useOpenEmail } from "./openemail";
 import { TeamBoard } from "./worklist.board";
 import {
   completenessText,
@@ -231,6 +234,7 @@ function WorklistBody({
   onFilter,
   onOwner,
   onSelect,
+  onOpenEmail,
   hasMore,
   loadingMore,
   moreFailed,
@@ -246,6 +250,8 @@ function WorklistBody({
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
   onSelect: (next: string) => void;
+  // Opens a waiting email into the page's one drawer.
+  onOpenEmail: (activityId: string) => void;
   hasMore: boolean;
   loadingMore: boolean;
   moreFailed: boolean;
@@ -309,7 +315,7 @@ function WorklistBody({
       {/* The one thing to do next, said rather than implied. The row stays in
           the queue below: removing it would make the rank numbers lie and the
           counts disagree with the page. */}
-      {focus && <FocusCard item={focus} />}
+      {focus && <FocusCard item={focus} onOpenEmail={onOpenEmail} />}
       {/* And then? A finite list a reader can see the end of, so a morning has a
           shape rather than a backlog. Drawn only under a focus card: without
           one there is no "next", only the queue. */}
@@ -377,6 +383,7 @@ function WorklistBody({
                               )
                           : undefined
                       }
+                      onOpenEmail={onOpenEmail}
                       onReview={() => onFilter(reviewFilter(item))}
                     />
                   </li>
@@ -466,6 +473,7 @@ export function WorklistScreen({
   // would make the address describe a fraction of what the reader is looking
   // at. Moving them all there is its own change.
   const [selectedId, setSelectedId] = useState("");
+  const [openEmail, setOpenEmail] = useOpenEmail();
   // Changing a dial drops the selection. A row chosen under one question is
   // not a row the reader chose under the next one, and keeping the id means a
   // row that comes back — a filter switched away and back, a snooze that lifts
@@ -524,6 +532,7 @@ export function WorklistScreen({
             onFilter={answerWith(setFilter)}
             onOwner={answerWith(setOwner)}
             onSelect={setSelectedId}
+            onOpenEmail={setOpenEmail}
             hasMore={day.hasNextPage}
             loadingMore={day.isFetchingNextPage}
             moreFailed={day.isError && day.data !== undefined}
@@ -531,6 +540,14 @@ export function WorklistScreen({
           />
         )}
       </SurfaceState>
+      {/* One drawer over the whole queue, at page level rather than inside a
+          row: two mounted dialogs would be two `aria-modal` elements, and the
+          day stays legible behind the message being read. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
     </div>
   );
 }

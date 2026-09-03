@@ -24,6 +24,7 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ForecastView } from "./analytics.forecast";
+import { ShareViewButton } from "./analytics.share";
 import {
   OverlayUnavailable,
   problemMessageOf,
@@ -32,6 +33,7 @@ import {
   useSorMode,
 } from "./common";
 import { EntityRef } from "./entityref";
+import "./analytics.css";
 
 // Analytics (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
 // (unweighted next to weighted), forecast (category readings, each showing
@@ -741,17 +743,23 @@ export function AnalyticsScreen() {
     },
   });
 
+  // Sharing sits beside the tabs rather than inside a section, because the
+  // thing being shared is the SECTION the reader is on — a button that moved
+  // with the content would read as sharing one card.
   const header = (
-    <RecordTabs
-      options={SECTIONS}
-      value={section}
-      onChange={setSection}
-      labels={{
-        forecast: t("analytics.sectionForecast"),
-        pipeline: t("analytics.sectionPipeline"),
-      }}
-      label={t("analytics.sections")}
-    />
+    <div className="analytics-header">
+      <RecordTabs
+        options={SECTIONS}
+        value={section}
+        onChange={setSection}
+        labels={{
+          forecast: t("analytics.sectionForecast"),
+          pipeline: t("analytics.sectionPipeline"),
+        }}
+        label={t("analytics.sections")}
+      />
+      {section === "forecast" && <ShareViewButton target="forecast" />}
+    </div>
   );
 
   if (overlay) {

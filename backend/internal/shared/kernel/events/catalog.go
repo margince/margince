@@ -335,6 +335,10 @@ var catalog = map[string]struct {
 	"forecast.exception_resolved": {identityStreamEntity, 1},
 	"forecast.assurance_created":  {identityStreamEntity, 1},
 	"forecast.snapshot_created":   {identityStreamEntity, 1},
+	// A share is attributable to whoever issued it, and the issuer's standing
+	// is what keeps it serving, so both halves ride the identity stream.
+	"forecast.share_issued":  {identityStreamEntity, 1},
+	"forecast.share_revoked": {identityStreamEntity, 1},
 
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a

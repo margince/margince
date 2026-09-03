@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { ShareViewButton } from "./analytics.share";
 import {
   installFetchStub,
   jsonResponse,
@@ -279,4 +280,50 @@ export const ForecastSlots: Story = {
       </StatStrip>
     </StoryProviders>
   ),
+};
+
+// The share dialog, in both states a reader meets it in. The kind picker is
+// the first: two promises, told apart in words rather than by a label. The
+// link reveal is the second, and it is the one worth capturing — it is shown
+// once, so a regression that hid the caution would be invisible until somebody
+// closed the dialog and lost their link.
+const shareRoutes: RouteMap = {
+  ...meRoute,
+  "POST /v1/forecast/shares": () =>
+    jsonResponse({
+      id: "share-1",
+      kind: "live",
+      target: "forecast",
+      expires_at: "2026-10-03T00:00:00Z",
+      token: "shr_9f2c4a1e",
+      created_at: "2026-09-03T00:00:00Z",
+    }),
+};
+
+export const ShareDialogKinds: Story = {
+  render: () => (
+    <StoryProviders>
+      <ShareViewButton target="forecast" snapshotId="snap-1" />
+    </StoryProviders>
+  ),
+  beforeEach: () => installFetchStub(shareRoutes),
+  play: clickButton("Share view"),
+};
+
+export const ShareDialogLinkShownOnce: Story = {
+  render: () => (
+    <StoryProviders>
+      <ShareViewButton target="forecast" snapshotId="snap-1" />
+    </StoryProviders>
+  ),
+  beforeEach: () => installFetchStub(shareRoutes),
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Share view" }),
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Create link" }),
+    );
+  },
 };

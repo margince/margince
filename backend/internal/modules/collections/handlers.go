@@ -66,7 +66,7 @@ func (h Handlers) CreateTag(w http.ResponseWriter, r *http.Request) {
 		c := string(*req.Color)
 		color = &c
 	}
-	tag, err := h.store.CreateTag(r.Context(), req.Name, color)
+	tag, err := h.store.CreateTag(r.Context(), req.Name, color, tagDescriptionOrNone(req.Description))
 	if err != nil {
 		writeErr(w, r, err)
 		return
