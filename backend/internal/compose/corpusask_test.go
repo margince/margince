@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -40,9 +41,14 @@ func askPassages() []knowledge.Passage {
 	}}
 }
 
-// corpusReply renders a model answer over the given passage ids.
+// corpusReply renders a model answer over the given passage ids. A call with no
+// claims renders `{"claims": []}` rather than a null, which is the difference
+// between the empty answer this site asks for and a reply it cannot read.
 func corpusReply(claims ...askedClaim) string {
-	out, err := json.Marshal(askedAnswer{Claims: claims})
+	if claims == nil {
+		claims = []askedClaim{}
+	}
+	out, err := json.Marshal(askedAnswer{Claims: &claims})
 	if err != nil {
 		panic(err)
 	}
@@ -379,5 +385,132 @@ func TestAWrittenAnswerIsNeverUnreviewed(t *testing.T) {
 	}
 	if answer.GeneratedBy != crmcontracts.Model {
 		t.Fatalf("generated_by = %q, want model", answer.GeneratedBy)
+	}
+}
+
+// reAskingLane is the structured lane: it hands the validator its first answer
+// and, when that is refused, answers again — which is what the real pipeline
+// does with the refusal message in hand.
+type reAskingLane struct {
+	fixedLane
+	validated int
+	refused   error
+	second    string
+}
+
+func (l *reAskingLane) CompleteValidated(
+	_ context.Context, req model.Request, validate ai.Validator,
+) (model.Response, error) {
+	l.reqs = append(l.reqs, req)
+	l.validated++
+	l.refused = validate(l.text)
+	if l.refused == nil {
+		return model.Response{Text: l.text}, nil
+	}
+	return model.Response{Text: l.second}, nil
+}
+
+// A reply this site cannot read buys a re-ask rather than a silent degrade to
+// the passages, and the refusal the model is shown is the answer path's own.
+func TestAnUnreadableReplyIsReAskedThroughTheSitesOwnRefusal(t *testing.T) {
+	passages := askPassages()
+	lane := &reAskingLane{
+		fixedLane: fixedLane{text: "here you go: {claims: none}"},
+		second: corpusReply(askedClaim{
+			Text:  "Messages are kept for 400 days.",
+			ID:    passages[0].ChunkID.String(),
+			Quote: "kept for 400 days",
+		}),
+	}
+	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
+		passages, string(textlang.English), corpusQuietLog())
+
+	if lane.validated != 1 {
+		t.Fatalf("the validated lane was used %d times, want once", lane.validated)
+	}
+	if lane.refused == nil {
+		t.Fatal("the validator accepted a reply GroundCorpusAnswer refuses, so nothing was re-asked")
+	}
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		t.Fatalf("outcome = %q, want answered from the second reply", answer.Outcome)
+	}
+	if answer.GeneratedBy != crmcontracts.Model {
+		t.Fatalf("generated_by = %q, want model", answer.GeneratedBy)
+	}
+	if answer.Claims == nil || len(*answer.Claims) != 1 {
+		t.Fatalf("the re-asked answer carries %v claims, want the one it wrote", answer.Claims)
+	}
+}
+
+// The empty answer is the one this site asks for when the passages do not cover
+// the question, so it must not be refused: re-asking there would spend a call
+// pushing a model that obeyed the prompt to disobey it.
+func TestAnAnswerWithNoClaimsIsNotReAsked(t *testing.T) {
+	passages := askPassages()
+	lane := &reAskingLane{fixedLane: fixedLane{text: corpusReply()}, second: "never sent"}
+	answer := AnswerCorpus(t.Context(), lane, answeredState(), "what does it cost",
+		passages, string(textlang.English), corpusQuietLog())
+
+	if lane.validated != 1 {
+		t.Fatalf("the validated lane was used %d times, want once", lane.validated)
+	}
+	if lane.refused != nil {
+		t.Fatalf("an empty answer was refused: %v", lane.refused)
+	}
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeNotCovered {
+		t.Fatalf("outcome = %q, want not_covered", answer.Outcome)
+	}
+}
+
+// A reply carrying none of this site's keys decodes to the same zero value an
+// empty answer would, and the two mean opposite things: one says the passages
+// do not cover the question, the other never answered it. Reading the second as
+// the first would report not_covered — a confident statement about the corpus —
+// on a reply nobody could read.
+func TestAReplyWithoutAClaimsKeyIsRefusedRatherThanReadAsEmpty(t *testing.T) {
+	passages := askPassages()
+	for _, reply := range []string{
+		`{}`,
+		`{"claims":null}`,
+		`{"answer":"I could not find that in the documents."}`,
+	} {
+		if _, err := GroundCorpusAnswer(reply, passages); err == nil {
+			t.Errorf("%s was read as an empty answer rather than refused", reply)
+		}
+	}
+}
+
+// And the empty answer itself still is not refused, which is the whole reason
+// the two shapes had to be told apart rather than both rejected.
+func TestAnExplicitlyEmptyClaimsListIsNotRefused(t *testing.T) {
+	kept, err := GroundCorpusAnswer(`{"claims":[]}`, askPassages())
+	if err != nil {
+		t.Fatalf(`{"claims":[]} was refused: %v`, err)
+	}
+	if len(kept) != 0 {
+		t.Fatalf("an empty answer kept %d claim(s)", len(kept))
+	}
+}
+
+// The refusal reaches the model: a reply the site cannot read buys the same
+// re-ask a malformed one does, rather than settling for not_covered.
+func TestAReplyWithoutAClaimsKeyIsReAsked(t *testing.T) {
+	passages := askPassages()
+	lane := &reAskingLane{
+		fixedLane: fixedLane{text: `{}`},
+		second: corpusReply(askedClaim{
+			Text:  "Messages are kept for 400 days.",
+			ID:    passages[0].ChunkID.String(),
+			Quote: "kept for 400 days",
+		}),
+	}
+	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
+		passages, string(textlang.English), corpusQuietLog())
+
+	if lane.refused == nil {
+		t.Fatal("a reply with no claims key was accepted, so nothing was re-asked")
+	}
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		t.Fatalf("outcome = %q, want answered from the second reply", answer.Outcome)
 	}
 }
