@@ -165,10 +165,16 @@ function screenStory() {
 
 // Press each named button in turn, waiting for it to exist first.
 //
-// A LIST rather than one name, because the screen's two sections are a tab
+// VARIADIC rather than one name, because the screen's two sections are a tab
 // apart: the report cards live under Pipeline and the Forecast tab is the
 // default, so anything inside a report card takes two presses to reach.
-const clickButtons =
+//
+// The NAME stays `clickButton` deliberately. Widening it to take several was a
+// rename first, and the rename cost a red pipeline: this file gains stories on
+// main while a branch is open, a new one arrived calling the old name, and the
+// merge compiled a call to a symbol neither side had broken by itself. A
+// signature can widen without every existing caller having to move.
+const clickButton =
   (...names: readonly string[]) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     for (const name of names) {
@@ -191,7 +197,7 @@ export const DealsByStage: Story = { render: screenStory };
 // callout that says how to read the second figure in each slot.
 export const Forecast: Story = {
   render: screenStory,
-  play: clickButtons("Forecast"),
+  play: clickButton("Forecast"),
 };
 
 // The company table, which is a CARD in the Pipeline section rather than a
@@ -199,7 +205,7 @@ export const Forecast: Story = {
 // selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButtons("Pipeline"),
+  play: clickButton("Pipeline"),
 };
 
 // "Explain this number" open: the report card above, the derivation card below
@@ -208,7 +214,7 @@ export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and
   // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButtons("Pipeline", "Explain this number"),
+  play: clickButton("Pipeline", "Explain this number"),
 };
 
 // The three absences a slot has to tell apart, side by side, because they are
