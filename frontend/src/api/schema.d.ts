@@ -27631,8 +27631,11 @@ export interface components {
             more_available: boolean;
         };
         /**
-         * @description The day in figures, for the one line above the queue. Each count is of items the
-         *     queue actually CARRIES, so a number here and the rows below it cannot disagree.
+         * @description The day in figures, for the one line above the queue. Every count is over the
+         *     candidates this read WEIGHED — the whole assembled day, before the page cut and
+         *     before any category narrowing — so the sentence is one scope and does not move as
+         *     the reader pages. A page-scoped band beside a day-scoped `total` read as a
+         *     breakdown of that total and was not one.
          *
          *     These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
          *     `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -27655,7 +27658,7 @@ export interface components {
             in_play?: number;
             /** @description Routine work: decisions that block nothing, and data hygiene. */
             lower_priority: number;
-            /** @description How many items the queue carries. */
+            /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
             total: number;
             /**
              * Format: int64

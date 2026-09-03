@@ -78,16 +78,6 @@ function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
 }
 
-// How much work the day holds, as opposed to how much one response carried.
-//
-// `summary.total` counts the rows in ONE page — it is computed after the page
-// cut — so it is the wrong number to print beside a queue the reader can page
-// through: it would stay at 25 while the list grew past it. `counts[].
-// considered` is the figure taken before the cut, which is what "in all" means.
-function dayTotal(day: Worklist): number {
-  return day.counts.reduce((total, count) => total + count.considered, 0);
-}
-
 // Whether this row opens its band — the first banded row, or the first after a
 // row of a DIFFERENT band.
 //
@@ -144,6 +134,11 @@ function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded);
   return (
     <div className="worklist-header">
+      {/* Five figures, ONE scope: the whole assembled day. All five come off
+          `summary`, which the server counts over every candidate it weighed
+          rather than over the page it cut — so the sentence stays still as the
+          reader pages, and a total the browser derived a second way cannot
+          disagree with the bands beside it. */}
       <p className="t-h2 worklist-lead">
         {t(
           // `in_play` is optional, and a server that does not send it has not
@@ -158,10 +153,7 @@ function WorklistHeader({
             due: formatNumber(day.summary.due, locale),
             inPlay: formatNumber(day.summary.in_play ?? 0, locale),
             lower: formatNumber(day.summary.lower_priority, locale),
-            // The DAY's candidates, not this page's rows. `summary.total`
-            // counts what one response carried, so printing it beside a queue
-            // the reader has paged past would shrink as they read further in.
-            total: formatNumber(dayTotal(day), locale),
+            total: formatNumber(day.summary.total, locale),
           },
         )}
       </p>

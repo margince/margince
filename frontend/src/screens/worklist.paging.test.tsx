@@ -119,10 +119,13 @@ describe("walking to the rest of the queue", () => {
   // loaded. Reading the figures off the latest page instead would make the
   // summary shrink as the reader pages further in.
   //
-  // Each page's `summary` counts ITS OWN rows — the server computes it after
-  // the page cut — so these fixtures spell that rather than pretending a
-  // one-row page reports the whole day. The day's size comes from
-  // `counts[].considered`, which is taken before the cut.
+  // Every figure comes off the FIRST page's `summary`, which the server counts
+  // over the whole day rather than over the rows it cut. The fixture says so:
+  // its summary is far bigger than either page's row count, and it agrees with
+  // `counts[].considered` — which is what makes it one sentence about one
+  // population rather than four figures about the page beside a fifth about the
+  // day. A fixture whose bands could be a count of its own page would pass
+  // whichever the header meant, which is how this shipped.
   it("keeps the day's figures still while the rows grow", async () => {
     const counts = [
       {
@@ -135,7 +138,7 @@ describe("walking to the rest of the queue", () => {
     stubWalk([
       day({
         queue: [row({ id: "a", title: "First thing" })],
-        summary: { urgent: 3, due: 9, in_play: 2, lower_priority: 6, total: 1 },
+        summary: { urgent: 3, due: 9, in_play: 2, lower_priority: 6, total: 48 },
         counts,
         next_cursor: "page-2",
       }),
@@ -155,9 +158,10 @@ describe("walking to the rest of the queue", () => {
     await waitFor(() => {
       expect(screen.getByText(/3 urgent/)).toBeTruthy();
     });
-    // And the total is the DAY's candidates, not the page's row count — which
-    // is 1 on both of these pages.
+    // One scope, stated: the total the sentence ends on is the same population
+    // the bands are counted over, and neither is this page's single row.
     expect(screen.getByText(/48 in all/)).toBeTruthy();
+    expect(screen.queryByText(/1 in all/)).toBeNull();
   });
 
   // A server that does not send `in_play` has not said there is none of it.
