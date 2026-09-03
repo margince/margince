@@ -138,7 +138,13 @@ describe("walking to the rest of the queue", () => {
     stubWalk([
       day({
         queue: [row({ id: "a", title: "First thing" })],
-        summary: { urgent: 3, due: 9, in_play: 2, lower_priority: 6, total: 48 },
+        summary: {
+          urgent: 3,
+          due: 9,
+          in_play: 2,
+          lower_priority: 6,
+          total: 48,
+        },
         counts,
         next_cursor: "page-2",
       }),
