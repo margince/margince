@@ -7827,6 +7827,7 @@ export const de = {
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
+  "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",

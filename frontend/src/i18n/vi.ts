@@ -7736,6 +7736,7 @@ export const vi = {
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
+  "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",

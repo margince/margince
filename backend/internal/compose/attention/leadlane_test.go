@@ -98,6 +98,68 @@ func TestABreachedLeadRanksAboveOneMerelyAtRisk(t *testing.T) {
 	}
 }
 
+// An at-risk lead says WHEN, not merely that something is due.
+//
+// "reply due soon" alone asks the rep to guess how soon, while its breached
+// sibling already carries a figure. The moment travels as a date value and the
+// client formats it — nothing here composes a date into words, because the
+// product ships three languages and a zone per reader.
+func TestAnAtRiskLeadCarriesTheDeadlineItIsMeasuredAgainst(t *testing.T) {
+	due := readInstant.Add(30 * time.Minute)
+	svc := leadLaneService(&stubLeads{tracked: true, rows: []OwedLead{
+		{ID: ids.NewV7(), Name: "at risk", DeadlineAt: due, State: "at_risk", OwnerID: ids.NewV7()},
+	}})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	row := rowFor(t, day, "at risk")
+	for _, because := range row.Because {
+		if because.Kind != "response_due_soon" {
+			continue
+		}
+		if because.Value == nil {
+			t.Fatal("the at-risk reason carries no value, so the row says a reply is due " +
+				"soon without saying by when")
+		}
+		if because.Value.Kind != "date" || because.Value.Date == nil {
+			t.Fatalf("the value is %+v, wanted a date — the client renders a date in the "+
+				"reader's own locale and zone, and no other kind reaches that path",
+				because.Value)
+		}
+		if !because.Value.Date.Equal(due) {
+			t.Errorf("the deadline reads %s, wanted the lead's own %s",
+				because.Value.Date, due)
+		}
+		return
+	}
+	t.Fatalf("no response_due_soon reason on the row: %v", kindsOf(row))
+}
+
+// A lead with no deadline says the plain sentence rather than a zero time.
+//
+// The honest absence: a date value built from an unset time would render as
+// 1 January, year 1, which is a worse answer than not naming a moment at all.
+func TestAnAtRiskLeadWithNoDeadlineNamesNoMoment(t *testing.T) {
+	svc := leadLaneService(&stubLeads{tracked: true, rows: []OwedLead{
+		{ID: ids.NewV7(), Name: "at risk", State: "at_risk", OwnerID: ids.NewV7()},
+	}})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	row := rowFor(t, day, "at risk")
+	for _, because := range row.Because {
+		if because.Kind == "response_due_soon" && because.Value != nil {
+			t.Errorf("a lead with no deadline still carried a value: %+v", because.Value)
+		}
+	}
+}
+
 // The policy question is not a filter. With no target set nothing is late, so
 // the source is ABSENT — a page reporting zero overdue leads would be stating a
 // number nothing measures.

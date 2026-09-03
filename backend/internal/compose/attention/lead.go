@@ -135,7 +135,19 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 		}
 		return levelWaiting, because
 	case string(crmcontracts.LeadSlaStateAtRisk):
-		return levelPromise, []crmcontracts.WorklistReason{reason("response_due_soon", nil)}
+		// The deadline travels with the reason, because "reply due soon" alone
+		// asks the rep to guess how soon. Its breached sibling above already
+		// carries a figure (the days it has been overdue); this is the same
+		// courtesy on the side of the clock where it can still be met.
+		//
+		// A row whose deadline is missing says the plain sentence rather than a
+		// zero time: absent is honest, 1 January 1 is not.
+		if lead.DeadlineAt.IsZero() {
+			return levelPromise, []crmcontracts.WorklistReason{reason("response_due_soon", nil)}
+		}
+		return levelPromise, []crmcontracts.WorklistReason{
+			reason("response_due_soon", deadlineValue(lead.DeadlineAt)),
+		}
 	default:
 		return levelAgreed, []crmcontracts.WorklistReason{}
 	}
