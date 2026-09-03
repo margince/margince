@@ -31900,6 +31900,17 @@ components:
             filters offer, not every type `taggable` admits. It is what tells a searcher
             whether the word is worth opening before they open it. Null on every other hit
             type, and null when no count was taken.
+        email_summary:
+          allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            The canonical email row, on an `activity` hit whose activity is an email THIS
+            caller may read. Null on every other hit type, and null for a non-email activity
+            — a call, a note, a task and a meeting are activities too, and each keeps its
+            generic hit. An email whose content is not this caller's produces no hit at all,
+            because the activity branch is content-gated. A client renders the canonical row
+            when this is present and falls back to `title`/`snippet` when it is not.
         trust_tier:
           type: [string, 'null']
           enum: [authoritative, external, unverified, null]
