@@ -159,3 +159,19 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
     );
   },
 };
+
+// The same row on a phone.
+//
+// The state the old mobile test could not see: above this breakpoint the row is
+// rank, text and verbs on one line, and the verbs never yield width — so at
+// 390px the title column was squeezed to a few characters while three buttons
+// held their full size beside it. Here the text takes the line and the verbs
+// drop below it at a real target height.
+//
+// Worth a story of its own rather than a note on the desktop one: this is a
+// different layout, and the two are checked by looking at both.
+export const ATaskOnAPhone: Story = {
+  ...ATaskNobodyOwnsBeingPutDown,
+  globals: { viewport: { value: "phone" } },
+  play: undefined,
+};
