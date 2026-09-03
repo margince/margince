@@ -7825,7 +7825,7 @@ export const vi = {
   "worklist.because.overdue": "quá hạn",
   "worklist.because.due_today": "đến hạn hôm nay",
   "worklist.because.closing_soon": "có ngày chốt",
-  "worklist.because.expected_revenue": "doanh thu dự kiến",
+  "worklist.because.expected_revenue": "một giao dịch đang mở phụ thuộc vào người này",
   "worklist.because.expected_revenue.value": "trị giá {value}",
   "worklist.because.material": "trên mức giao dịch mở thông thường",
   "worklist.because.material.value": "trị giá {value}, trên mức thông thường",
