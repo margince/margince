@@ -1,11 +1,13 @@
-/* Panel — the titled-card shape Card does not offer: a fixed-height header,
- * full-bleed rows, and an optional footer band. No gradient, no glass, no
- * backdrop-filter on the header — a flat surface, same as every other card. */
+/* Panel — the ZONE PANE: one zone of a record on translucent ground over the
+ * lit page, with a hairline edge and the pane's corner. Its whole elevation
+ * is the ground and the edge; nothing at rest casts a shadow. The blur is
+ * what makes the ground read as glass rather than as a grey box when the
+ * page's glow runs under it. */
 .panel {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-card);
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(12px);
   overflow: hidden;
 }
 
@@ -26,14 +28,18 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 48px;
+  min-height: 52px;
   padding: 0 var(--space-5);
   border-bottom: 1px solid var(--borderSubtle);
 }
+/* The zone's title in the display face: the one word a reader finds a zone
+ * by, so it is set as a heading rather than as a label on a card. */
 .panel-head .panel-title {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  color: var(--textContent);
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  color: var(--textPrimary);
 }
 /* The title and its description are one stacked item, and that item absorbs the
  * row's free space — so whatever comes after it (a badge, a button, two of
@@ -122,7 +128,7 @@
  * `settingrow.css` holds the same cap for an empty state inside a row. Two
  * parents, one reading. */
 .panel-body > .empty {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) 0;
   text-align: left;
 }
 
@@ -210,13 +216,13 @@
   padding-top: var(--space-4);
 }
 
-/* The recessed plate: what IS, inset from the panel's edges, while the rows
- * below run full-bleed on the panel's own ground. Nothing on the plate looks
- * pressable, which is the entire device. */
+/* The plate is a ROW on the recessed ground, not a well inside the pane: a
+ * box inside a pane is the one thing the language refuses. It runs the pane's
+ * width like every other row and is told apart by its ground alone. */
 .panel-plate {
-  margin: var(--space-4) var(--space-5);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--r-md);
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-radius: 0;
   background: var(--bgCard);
 }
 

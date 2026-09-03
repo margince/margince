@@ -471,22 +471,29 @@
   text-overflow: ellipsis;
 }
 
+/* The header is a quiet label row in sentence case: a table's headers are
+ * read once, and set as shouting caps they competed with the rows for the
+ * eye. A hairline under them, the same rule every row draws. */
 .lt-table th {
   position: sticky;
   top: 0;
   z-index: 1;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: var(--fw-medium);
   color: var(--textMeta);
   padding: var(--space-2) var(--space-3);
   background: var(--bgElevated);
-  border-bottom: 1px solid var(--borderStrong);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--borderSubtle);
   white-space: nowrap;
 }
 
+/* A 44px row: enough that two rows cannot be mistaken for one, which is the
+ * test the language sets for every list. The dense table keeps its own rhythm
+ * (below); a cell's height is a floor in a table, so a tall cell still grows. */
+.lt-table:not(.dense) td {
+  block-size: 44px;
+}
 .lt-table td {
   padding: var(--space-3);
   /* Every cell centres on the row, so a cell carrying a chip and a cell

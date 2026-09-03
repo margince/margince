@@ -204,7 +204,8 @@
 .record-head h1 {
   font-family: var(--f-display);
   font-size: 22px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
   min-width: 0;
   overflow: hidden;
@@ -218,10 +219,10 @@
 .record-head-wide h1 {
   font-size: var(--fs-display);
   line-height: 1.1;
-  letter-spacing: -0.025em;
 }
 .record-head .record-sub {
   font-size: 13px;
+  line-height: 1.5;
   color: var(--textMeta);
 }
 /* One quiet line under the name, at the same size as the facts beside it. Set
@@ -466,12 +467,12 @@
   margin-top: var(--space-2);
   /* Air on all four sides. With none at the top the first row's date and badge
      sat on the card's own border, which reads as content clipped by the edge
-     rather than as the start of a list. */
+     rather than as the start of a list. The chronology's pane is the same pane
+     every zone of the record stands on. */
   padding: var(--space-2) var(--space-5);
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
 }
 
 .timeline {
@@ -498,10 +499,16 @@
      `auto`, so the dates and the rail hold one line down the whole list
      however wide a single date renders — an axis that stepped left and right
      row by row is not an axis. */
-  grid-template-columns: 4.5rem 1rem minmax(0, 1fr) auto;
+  grid-template-columns: 76px 20px minmax(0, 1fr) auto;
   align-items: stretch;
   column-gap: var(--space-3);
   padding: 0;
+  /* A hairline under each entry is the only divider: no day headings, the
+     date column is the axis. */
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.timeline li:last-child {
+  border-block-end: 0;
 }
 
 /* A record's CHANGE history carries its date inside the body, under the
@@ -567,14 +574,25 @@
   background: var(--bgElevated);
   border-color: var(--borderStrong);
 }
+/* A change the AGENT made: indigo, because the hue is a fact about who did
+   it, and a reader following the rail sees where the machine wrote. */
+.timeline .tl-dot-agent {
+  background: var(--ai);
+  border-color: var(--ai);
+}
 
 /* The kind, set as a label rather than as a word: a chronology is scanned down
    this column, and small caps at a fixed size give the eye one shape per kind
-   to find. */
+   to find. Quiet — no pill: the kind is an eyebrow on the entry, and a filled
+   pill on every row read as a column of statuses. */
 .timeline .tl-head .badge {
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  background: none;
+  padding: 0;
+  min-block-size: 0;
 }
 
 /* What kind of thing it was and which way it went, over the headline. */
@@ -603,12 +621,12 @@
   position: absolute;
   inset-block-start: 0.4rem;
   inset-inline-start: 50%;
-  margin-inline-start: -0.8125rem;
-  width: 26px;
-  height: 26px;
+  margin-inline-start: -12px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--r-full);
-  background: var(--bgCard);
-  border: 2px solid var(--bgElevated);
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
   display: grid;
   place-items: center;
   color: var(--textMeta);
@@ -630,7 +648,7 @@
    with, what changed — qualifies this line, and set at the same weight as its
    qualifiers the reader had to read all four to find out what happened. */
 .timeline .tl-title {
-  font-size: var(--fs-sm);
+  font-size: 13.5px;
   font-weight: var(--fw-semibold);
   line-height: 1.35;
   color: var(--textPrimary);
@@ -786,7 +804,7 @@
 
 .tl-text-clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-wrap;
@@ -865,12 +883,15 @@
   font-weight: 500;
 }
 
-/* Members sit inside the group's own body, indented enough to read as
-   contained rather than as siblings that happen to follow. */
+/* A thread's members are a card on the body side of the rail: the
+   conversation is one entry on the axis, and its messages sit inside it on the
+   recessed ground, each with its own mark, newest first. */
 .tl-group-members {
-  margin-block-start: 0.4rem;
-  padding-inline-start: 0.6rem;
-  border-inline-start: 2px solid var(--borderSubtle);
+  margin-block-start: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
 }
 
 /*

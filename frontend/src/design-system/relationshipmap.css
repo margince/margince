@@ -39,9 +39,9 @@
  * inside its own box rather than making the page scroll sideways. */
 .rmap-scroll {
   overflow-x: auto;
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
   padding: var(--space-3);
 }
 
@@ -86,7 +86,7 @@
 
 .rmap-box {
   fill: var(--bgElevated);
-  stroke: var(--borderStrong);
+  stroke: var(--borderSubtle);
   stroke-width: 1;
 }
 
@@ -137,9 +137,10 @@
 }
 
 /* Faded, never hidden: a node the reader can still tab to and still read,
- * pushed back so the lit route is what the eye lands on. */
+ * pushed back so the lit route is what the eye lands on. Faded to a third,
+ * not a quarter: the rest of the map stays legible as context. */
 .rmap-node[data-faded="true"] {
-  opacity: 0.25;
+  opacity: 0.35;
 }
 
 .rmap-node[data-added="true"] .rmap-box {
@@ -158,7 +159,8 @@
   fill: var(--accentText);
 }
 
-/* THICKNESS is the band. Cold is dashed as well, so the three are told apart
+/* THICKNESS and LINE are the band: strong is the accent at full weight,
+ * developing is dashed, cold is dotted and thin — so the three are told apart
  * in a screenshot, on a projector, and by a reader who does not see colour. */
 .rmap-edge {
   fill: none;
@@ -166,16 +168,19 @@
 }
 
 .rmap-band-strong {
-  stroke-width: 3.5;
+  stroke: var(--accent);
+  stroke-width: 2.5;
 }
 
 .rmap-band-developing {
-  stroke-width: 2;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
 }
 
 .rmap-band-cold {
   stroke-width: 1;
-  stroke-dasharray: 4 3;
+  stroke-dasharray: 1 3;
+  stroke-linecap: round;
 }
 
 .rmap-edge-membership {
@@ -189,7 +194,7 @@
 }
 
 .rmap-edge[data-faded="true"] {
-  opacity: 0.25;
+  opacity: 0.35;
 }
 
 .rmap-completeness {

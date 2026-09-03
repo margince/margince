@@ -1,11 +1,10 @@
 /* The record's tab strip. Tokens only (make ds-purity). */
 
-/* The rules run the full width of the window, not of the record's column: they
-   divide the record's identity from its content, which are two halves of the
-   page rather than two blocks inside it. Inset to the column they read as a
-   border drawn around the tabs. */
+/* The strip is quiet: no rule under it and no pane around it, only the accent
+   under the open tab. It still spans the work column rather than the reading
+   column — the breakout below is where the first tab lands under the record's
+   mark, and that geometry is the page's, not the strip's ornament. */
 .recordtabs {
-  border-block: 1px solid var(--borderSubtle);
   margin-block-end: var(--space-5);
   /* Out past the reading column entirely, to the edges of the work column.
      The column decides how wide the RECORD reads; this rule is about the page,
@@ -147,7 +146,7 @@
 
 .recordtabs-tab[aria-pressed="true"] {
   color: var(--textPrimary);
-  border-block-end-color: var(--textPrimary);
+  border-block-end-color: var(--accent);
 }
 
 /* The count is a figure, so it reads in the mono face where digits share one
@@ -169,4 +168,20 @@
   block-size: 5px;
   border-radius: var(--r-full);
   background: var(--accent);
+}
+
+/* The row's far end: the control that opens the details column. Held to the
+   right of the strip and off the strip's own scroll, so it stays in view when
+   the tabs scroll sideways and never reads as one more tab. */
+.recordtabs-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.recordtabs-strip {
+  flex: 1 1 auto;
+}
+.recordtabs-trailing {
+  flex: none;
+  margin-inline-start: auto;
 }
