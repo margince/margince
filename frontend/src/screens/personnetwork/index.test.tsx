@@ -7,7 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { meFixture } from "../../app/mefixture";
+import { type GrantSpec, meFixture } from "../../app/mefixture";
 import { type Locale, LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { PersonNetworkTab } from "./index";
@@ -41,7 +41,7 @@ function jsonResponse(body: unknown): Response {
 // The seat the tab is read as. `/me` answers the grant map every capability
 // hook consults, and the default fixture grants nothing — so a case about a
 // write control has to say which seat is looking.
-function stub(graph: PersonGraph, allow: Record<string, string[]> = {}) {
+function stub(graph: PersonGraph, allow: GrantSpec = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -63,7 +63,7 @@ function stub(graph: PersonGraph, allow: Record<string, string[]> = {}) {
 function renderTab(
   graph: PersonGraph,
   locale: Locale = "en",
-  allow: Record<string, string[]> = {},
+  allow: GrantSpec = {},
 ) {
   stub(graph, allow);
   const client = new QueryClient({

@@ -1501,6 +1501,9 @@ function LeadOverviewPane({
       {!lead.archived_at && overlay && askedToLogCall && (
         <SurfaceState
           state="unsupported"
+          // Never drawn — the state above is fixed — but the primitive asks
+          // every caller for the sentence it would say if it were empty.
+          emptyLabel={t("lead.callNotInOverlay")}
           detail={{ unsupportedReason: t("lead.callNotInOverlay") }}
         >
           {null}
