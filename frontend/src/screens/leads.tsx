@@ -18,6 +18,7 @@ import { Callout } from "../design-system/callout";
 import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
+import { EmailDetail } from "../design-system/emaildetail";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -1698,7 +1699,26 @@ function LeadRecord({
   // the two share one query whenever no filter is set.
   const threadQuery = useRecordTimeline("lead", id);
   const viewerId = useViewerId();
-  const timelineEntries = activityTimeline(timelineQuery.activities, viewerId);
+  // Which message the drawer is showing, reset when the record changes: this
+  // component outlives a move from one lead to the next, and a drawer left
+  // open would reopen the previous record's mail over the new one.
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const { locale } = useLocale();
+  const shownFor = useRef(id);
+  if (shownFor.current !== id) {
+    shownFor.current = id;
+    if (openEmail) {
+      setOpenEmail(null);
+    }
+  }
+  const timelineEntries = activityTimeline(
+    timelineQuery.activities,
+    viewerId,
+  ).map((entry) =>
+    entry.emailSummary
+      ? { ...entry, onOpenEmail: () => setOpenEmail(entry.id) }
+      : entry,
+  );
   const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
   // What the last qualify did, said once: the contact and, when one was
   // opened, the deal. The page stays (ADR-0119) and the outcome panel below
@@ -1771,7 +1791,19 @@ function LeadRecord({
           />
         )
       }
-      timelineFooter={<LoadMoreButton query={timelineQuery} />}
+      timelineFooter={
+        <>
+          <LoadMoreButton query={timelineQuery} />
+          {/* One drawer over the lead, beside the timeline it opens from. */}
+          {openEmail && (
+            <EmailDetail
+              activityId={openEmail}
+              onClose={() => setOpenEmail(null)}
+              formatWhen={(iso) => formatDateTime(iso, locale, viewerZone())}
+            />
+          )}
+        </>
+      }
       timelineNotice={timelineZoneNotice(
         { overlay, pending: timelineQuery.isPending },
         t,

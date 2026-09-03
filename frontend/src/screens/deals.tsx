@@ -45,6 +45,7 @@ import {
   PipelineBoard,
   RecordView,
 } from "../design-system/composed";
+import { EmailDetail } from "../design-system/emaildetail";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { FieldGuard } from "../design-system/rbac";
@@ -59,6 +60,7 @@ import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
 import {
   formatDate,
+  formatDateTime,
   formatDuration,
   formatMoney,
   formatMoneyOrAbsent,
@@ -3882,12 +3884,27 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // said "no reply since" because the reader had hidden emails would be false.
   // The two share one query whenever no filter is set.
   const threadQuery = useRecordTimeline("deal", id);
+  // Which message the drawer is showing, reset when the record changes: this
+  // component outlives a move from one deal to the next, and a drawer left open
+  // would reopen the previous record's mail over the new one.
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const shownFor = useRef(id);
+  if (shownFor.current !== id) {
+    shownFor.current = id;
+    if (openEmail) {
+      setOpenEmail(null);
+    }
+  }
   const timelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,
     (activity) => (
       <TimelineActions activity={activity} entityType="deal" entityId={id} />
     ),
+  ).map((entry) =>
+    entry.emailSummary
+      ? { ...entry, onOpenEmail: () => setOpenEmail(entry.id) }
+      : entry,
   );
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
@@ -3993,7 +4010,22 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   />
                 )
               }
-              timelineFooter={<LoadMoreButton query={timelineQuery} />}
+              timelineFooter={
+                <>
+                  <LoadMoreButton query={timelineQuery} />
+                  {/* One drawer over the deal, beside the timeline it opens
+                      from. */}
+                  {openEmail && (
+                    <EmailDetail
+                      activityId={openEmail}
+                      onClose={() => setOpenEmail(null)}
+                      formatWhen={(iso) =>
+                        formatDateTime(iso, locale, recordZone)
+                      }
+                    />
+                  )}
+                </>
+              }
               timelineNotice={timelineZoneNotice(
                 { overlay, pending: timelineQuery.isPending },
                 t,

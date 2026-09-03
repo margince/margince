@@ -2,15 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId, useState, useRef} from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { EmailDetail } from "../design-system/emaildetail";
 import { OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { EmailDetail } from "../design-system/emaildetail";
 import {
   hasTimelineFilters,
   useRecordTimeline,
