@@ -8,15 +8,19 @@ import {
   Card,
   DataTable,
   SectionHeader,
-  SegmentedControl,
   Skeleton,
   StatCard,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
+import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
-import { formatMoneyOrAbsent, MONEY_ABSENT } from "../format/format";
+import {
+  formatDateTime,
+  formatMoneyOrAbsent,
+  MONEY_ABSENT,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -56,17 +60,44 @@ type StageAgg = {
 
 type ReportKey = "deals-by-stage" | "forecast" | "open-deals-per-company";
 
-type Segment = ReportKey;
+// A SECTION is what the address names and what the tabs choose between; a
+// REPORT is one result inside it. They were the same thing while every section
+// held exactly one report, and keeping them the same would have meant the
+// address changing the day a section grew a second result — breaking every
+// link anyone had saved to it.
+type Section = "forecast" | "pipeline";
 
-const SEGMENTS: readonly Segment[] = [
-  "deals-by-stage",
-  "forecast",
-  "open-deals-per-company",
-];
+// Which results each section holds, in the order they are drawn. The tab strip
+// and the bodies both read this, so a section cannot come to list a report it
+// does not draw.
+const SECTION_REPORTS = {
+  forecast: ["forecast"],
+  pipeline: ["deals-by-stage", "open-deals-per-company"],
+} as const satisfies Record<Section, readonly ReportKey[]>;
 
-/** isSegment narrows a URL segment, which is any string a reader can type. */
-function isSegment(value: string | undefined): value is Segment {
-  return SEGMENTS.some((segment) => segment === value);
+const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
+
+/** isSection narrows a URL segment, which is any string a reader can type. */
+function isSection(value: string | undefined): value is Section {
+  return SECTIONS.some((section) => section === value);
+}
+
+// The old address named a report. Those links are in bookmarks and in sent
+// mail, so each one still answers, with the section that now holds it.
+const SECTION_OF_REPORT = {
+  forecast: "forecast",
+  "deals-by-stage": "pipeline",
+  "open-deals-per-company": "pipeline",
+} as const satisfies Record<ReportKey, Section>;
+
+export function sectionFromAddress(segment: string | undefined): Section {
+  if (isSection(segment)) {
+    return segment;
+  }
+  if (segment && segment in SECTION_OF_REPORT) {
+    return SECTION_OF_REPORT[segment as ReportKey];
+  }
+  return "forecast";
 }
 
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
@@ -140,10 +171,10 @@ const REPORT_LABEL_KEY = {
   "open-deals-per-company": "analytics.reportOpenByCompany",
 } as const satisfies Record<ReportKey, string>;
 
-// The line under the segment picker, for the two segments whose copy says
-// something the card's own title does not. A segment absent from here gets no
-// caption: an explanation of the report beside it is worse than none.
-const segmentSub: Partial<Record<Segment, MessageKey>> = {
+// The line under a report's title, for the reports whose copy says something
+// the card's own title does not. A report absent from here gets no caption: an
+// explanation beside a report it does not describe is worse than none.
+const reportSub: Partial<Record<ReportKey, MessageKey>> = {
   "deals-by-stage": "analytics.sub",
 };
 
@@ -424,7 +455,11 @@ function StageTable({
   rows,
   stages,
   locale,
-}: Readonly<{ rows: ReportRow[]; stages: Stage[]; locale: Locale }>) {
+}: Readonly<{
+  rows: ReportRow[];
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
   const t = useT();
   const aggregates = buildStageAggregates(rows, stages);
   return (
@@ -550,46 +585,25 @@ function ExplainCard({
   );
 }
 
-export function AnalyticsScreen() {
+// One report: its own query, its own explain disclosure, its own card. A
+// section may hold several, and each has to be able to load, fail and be
+// explained on its own — a single query per screen would have made a section
+// with two results show one spinner for both and one error for either.
+function ReportCard({
+  report,
+  stages,
+  locale,
+}: Readonly<{
+  report: ReportKey;
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
   const t = useT();
-  const { locale } = useLocale();
   const [explain, setExplain] = useState(false);
   const explainId = useId();
-  // Which report is open is an ADDRESS, so a reader can link to one and Back
-  // steps between the reports they looked at rather than leaving the screen.
-  // Read here rather than taken as a prop, so this screen stays drivable on its
-  // own: a suite that renders it directly goes on pressing the picker.
-  const route = useRoute();
-  const segment: Segment =
-    route.screen === "analytics" && isSegment(route.id)
-      ? route.id
-      : "deals-by-stage";
-  const setSegment = (next: Segment) =>
-    navigate({ screen: "analytics", id: next });
-  const report: ReportKey = segment;
-  // Deal reports aggregate over the pipeline/stage structure the overlay mirror
-  // does not hold (the report endpoints answer 422 unsupported_by_sor in
-  // overlay), so the report segments show the honest unavailable state.
-  const overlay = useSorMode() === "overlay";
-  const reportActive = !overlay;
-
-  const pipelineQuery = useQuery({
-    queryKey: ["pipelines"],
-    enabled: reportActive,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data.find((pipeline) => pipeline.is_default) ?? data.data[0];
-    },
-  });
 
   const reportQuery = useQuery({
     queryKey: ["report", report],
-    enabled: reportActive,
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report } },
@@ -611,7 +625,7 @@ export function AnalyticsScreen() {
   const derivationUrl = reportQuery.data?.derivation_url ?? null;
   const derivationQuery = useQuery({
     queryKey: ["derivation", derivationUrl],
-    enabled: reportActive && explain && derivationUrl != null,
+    enabled: explain && derivationUrl != null,
     queryFn: async () => {
       // parsed carries by/agg PLUS every equality predicate from the handle
       // (group-key values + plan filters). The endpoint treats each extra key
@@ -631,32 +645,106 @@ export function AnalyticsScreen() {
     },
   });
 
-  // Header + segment picker are shared by every report body; factored so the
-  // report body below stays at one depth.
-  const header = (
-    <div className="filter-tabs">
-      <SegmentedControl
-        options={
-          ["deals-by-stage", "forecast", "open-deals-per-company"] as const
-        }
-        value={segment}
-        onChange={setSegment}
-        labels={{
-          "deals-by-stage": t(REPORT_LABEL_KEY["deals-by-stage"]),
-          forecast: t(REPORT_LABEL_KEY.forecast),
-          "open-deals-per-company": t(
-            REPORT_LABEL_KEY["open-deals-per-company"],
-          ),
-        }}
-      />
-      {/* Only where the copy is true of the SELECTED segment. `analytics.sub`
-          explains deals-by-stage's two money columns; printed over the forecast
-          or the per-company table it described a report the reader was not
-          looking at. The others are named by their card's own title. */}
-      {segmentSub[segment] && (
-        <span className="sub">{t(segmentSub[segment])}</span>
+  return (
+    <QueryGate query={reportQuery}>
+      {(run) => (
+        <>
+          <Card title={t(REPORT_LABEL_KEY[report])}>
+            {reportSub[report] && <p className="sub">{t(reportSub[report])}</p>}
+            {report === "forecast" && (
+              <ForecastStrip rows={run.rows} locale={locale} />
+            )}
+            {report === "open-deals-per-company" && (
+              <CompanyTable rows={run.rows} locale={locale} />
+            )}
+            {report === "deals-by-stage" && (
+              <StageTable rows={run.rows} stages={stages} locale={locale} />
+            )}
+            {/* The frame every figure above was cut in. A total with no zone
+                and no currency beside it is a number a reader places by
+                assumption, and the assumption is usually their own zone.
+                Drawn only when the server sent a whole frame: a caption
+                naming two of the three would be worse than none, and a
+                server mid-upgrade is exactly where a partial one arrives. */}
+            {run.as_of && run.timezone && run.base_currency && (
+              <p className="sub analytics-frame">
+                {t("analytics.frame", {
+                  asOf: formatDateTime(run.as_of, locale, run.timezone),
+                  zone: run.timezone,
+                  currency: run.base_currency,
+                })}
+              </p>
+            )}
+            <div className="card-actions">
+              {/* A toggle, and it says so: the button reveals and hides the
+                  card below, so it announces the open state and names what
+                  it controls. */}
+              <Button
+                small
+                aria-expanded={explain}
+                aria-controls={explainId}
+                onClick={() => setExplain((value) => !value)}
+              >
+                {t("explain.open")}
+              </Button>
+            </div>
+          </Card>
+          {explain && (
+            <ExplainCard
+              id={explainId}
+              url={derivationUrl}
+              query={derivationQuery}
+            />
+          )}
+        </>
       )}
-    </div>
+    </QueryGate>
+  );
+}
+
+export function AnalyticsScreen() {
+  const t = useT();
+  const { locale } = useLocale();
+  // Which SECTION is open is an ADDRESS, so a reader can link to one and Back
+  // steps between the sections they looked at rather than leaving the screen.
+  // Read here rather than taken as a prop, so this screen stays drivable on its
+  // own: a suite that renders it directly goes on pressing the tabs.
+  const route = useRoute();
+  const section = sectionFromAddress(
+    route.screen === "analytics" ? route.id : undefined,
+  );
+  const setSection = (next: Section) =>
+    navigate({ screen: "analytics", id: next });
+  // Deal reports aggregate over the pipeline/stage structure the overlay mirror
+  // does not hold (the report endpoints answer 422 unsupported_by_sor in
+  // overlay), so the sections show the honest unavailable state.
+  const overlay = useSorMode() === "overlay";
+
+  const pipelineQuery = useQuery({
+    queryKey: ["pipelines"],
+    enabled: !overlay,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/pipelines", {
+        params: { query: {} },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data.find((pipeline) => pipeline.is_default) ?? data.data[0];
+    },
+  });
+
+  const header = (
+    <RecordTabs
+      options={SECTIONS}
+      value={section}
+      onChange={setSection}
+      labels={{
+        forecast: t("analytics.sectionForecast"),
+        pipeline: t("analytics.sectionPipeline"),
+      }}
+      label={t("analytics.sections")}
+    />
   );
 
   if (overlay) {
@@ -671,47 +759,14 @@ export function AnalyticsScreen() {
   return (
     <div className="wrap">
       {header}
-      <QueryGate query={reportQuery}>
-        {(run) => (
-          <>
-            <Card title={t(REPORT_LABEL_KEY[report])}>
-              {report === "forecast" && (
-                <ForecastStrip rows={run.rows} locale={locale} />
-              )}
-              {report === "open-deals-per-company" && (
-                <CompanyTable rows={run.rows} locale={locale} />
-              )}
-              {report === "deals-by-stage" && (
-                <StageTable
-                  rows={run.rows}
-                  stages={pipelineQuery.data?.stages ?? []}
-                  locale={locale}
-                />
-              )}
-              <div className="card-actions">
-                {/* A toggle, and it says so: the button reveals and hides the
-                    card below, so it announces the open state and names what
-                    it controls. */}
-                <Button
-                  small
-                  aria-expanded={explain}
-                  aria-controls={explainId}
-                  onClick={() => setExplain((value) => !value)}
-                >
-                  {t("explain.open")}
-                </Button>
-              </div>
-            </Card>
-            {explain && (
-              <ExplainCard
-                id={explainId}
-                url={derivationUrl}
-                query={derivationQuery}
-              />
-            )}
-          </>
-        )}
-      </QueryGate>
+      {SECTION_REPORTS[section].map((report) => (
+        <ReportCard
+          key={report}
+          report={report}
+          stages={pipelineQuery.data?.stages ?? []}
+          locale={locale}
+        />
+      ))}
     </div>
   );
 }

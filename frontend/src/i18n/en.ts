@@ -3178,6 +3178,10 @@ export const en = {
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Deals by stage",
+  "analytics.sections": "Analytics sections",
+  "analytics.sectionForecast": "Forecast",
+  "analytics.sectionPipeline": "Pipeline",
+  "analytics.frame": "As of {asOf} · {zone} · {currency}",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
   "analytics.forecastBanner":

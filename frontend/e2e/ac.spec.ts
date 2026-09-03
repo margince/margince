@@ -1361,6 +1361,7 @@ const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
   "analytics/forecast",
+  "analytics/pipeline",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and

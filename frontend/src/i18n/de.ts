@@ -3131,6 +3131,10 @@ export const de = {
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
   "analytics.reportDeals": "Deals nach Phase",
+  "analytics.sections": "Analytics-Bereiche",
+  "analytics.sectionForecast": "Forecast",
+  "analytics.sectionPipeline": "Pipeline",
+  "analytics.frame": "Stand {asOf} · {zone} · {currency}",
   "analytics.reportForecast": "Forecast-Kategorien",
   "analytics.reportOpenByCompany": "Offene Deals pro Firma",
   "analytics.forecastBanner":

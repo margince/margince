@@ -3098,6 +3098,10 @@ export const vi = {
   "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
   "analytics.reportDeals": "Deal theo giai đoạn",
+  "analytics.sections": "Các mục phân tích",
+  "analytics.sectionForecast": "Dự báo",
+  "analytics.sectionPipeline": "Kênh bán",
+  "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
   "analytics.reportForecast": "Nhóm dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
   "analytics.forecastBanner":
