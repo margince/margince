@@ -83,6 +83,7 @@ const buildTerminalTones: Record<BuildTerminalStatus, OutcomeTone> = {
 // the phase so the pair can never disagree.
 const resumeActs: Record<ResumePoint, ConversationAct> = {
   "in.ask": "invite",
+  "tm.ask": "team",
   "vo.collecting": "voice",
   "vo.skipped": "voice",
   "cn.consent": "connect",
@@ -333,16 +334,19 @@ function applyEvent(
         },
       ]);
     case "INVITE_DECLINED":
-      return withEntries(state, { act: "done", phase: "in.declined" }, [
+      return withEntries(state, { act: "team", phase: "tm.ask" }, [
         {
           kind: "user",
           id: "invite:declined",
           i18nKey: "ob.conv.invite.declined",
         },
+      ]);
+    case "TEAM_DONE":
+      return withEntries(state, { act: "done", phase: "tm.done" }, [
         {
           kind: "outcome",
-          id: "invite:done",
-          i18nKey: "ob.conv.invite.done",
+          id: "team:done",
+          i18nKey: "ob.conv.team.done",
           tone: "success",
         },
       ]);

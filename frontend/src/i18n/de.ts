@@ -4794,17 +4794,28 @@ export const de = {
   "ob.conv.invite.title": "Wirst du selbst in Margince arbeiten?",
   "ob.conv.invite.body":
     "Das Unternehmen ist eingerichtet. Zwei weitere Schritte drehen sich um dich, und sie ergeben nur Sinn, wenn du Margince auch selbst nutzt.",
-  "ob.conv.invite.voice":
-    "Trainiere deine Stimme, damit Entwürfe vom ersten an nach dir klingen.",
-  "ob.conv.invite.connect":
-    "Verbinde Postfach und Kalender, damit sich das CRM aus dem füllt, was ohnehin passiert.",
-  "ob.conv.invite.yes": "Ja, richte mich ein",
+  "ob.conv.invite.yes": "Ja, ich arbeite in Margince",
+  "ob.conv.invite.yesBody":
+    "Trainiere deine Stimme und verbinde Postfach und Kalender: zwei kurze Schritte, beide über dich.",
   "ob.conv.invite.no": "Nein, ich richte nur ein",
+  "ob.conv.invite.noBody":
+    "Lade stattdessen die erste Person ein, die hier arbeiten wird, und du bist fertig.",
+  "ob.conv.invite.foot":
+    "So oder so lassen sich Stimme und Konten später in den Einstellungen einrichten.",
+  "ob.conv.invite.continue": "Weiter",
   "ob.conv.invite.accepted": "Ja, ich arbeite selbst damit.",
   "ob.conv.invite.declined": "Nein, ich richte nur ein.",
-  "ob.conv.invite.done":
+
+  "ob.conv.team.title": "Lade die erste Person ein.",
+  "ob.conv.team.body":
+    "Jemand muss die erste Person sein, die in Margince arbeitet. Füge sie jetzt hinzu oder später unter Einstellungen → Personen.",
+  "ob.conv.team.invitedLabel": "Bisher eingeladen",
+  "ob.conv.team.invitedLine": "{name} ist eingeladen.",
+  "ob.conv.team.skip": "Vorerst überspringen",
+  "ob.conv.team.finish": "Einrichtung abschließen",
+  "ob.conv.team.done":
     "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
-  "ob.conv.invite.persistFailed":
+  "ob.conv.team.persistFailed":
     "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuch es noch einmal oder schließe später in den Einstellungen ab.",
 
   // --- das Tor: der erste Screen nach der Anmeldung ----------------------

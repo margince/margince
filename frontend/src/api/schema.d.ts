@@ -23561,10 +23561,10 @@ export interface components {
             /** @description Zero creates; otherwise the version last read. */
             expected_version: number;
             /**
-             * @description Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+             * @description Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
              * @enum {string}
              */
-            step: "read" | "confirm" | "invite" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -23580,7 +23580,7 @@ export interface components {
             /** @enum {string} */
             readonly path: "creator" | "member";
             /** @enum {string} */
-            step: "read" | "confirm" | "invite" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */

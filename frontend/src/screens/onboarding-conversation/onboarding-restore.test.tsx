@@ -401,14 +401,17 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     expect(
-      await screen.findByText("Will you be working in Margince yourself?"),
+      await screen.findByRole("heading", {
+        name: "Will you be working in Margince yourself?",
+      }),
     ).toBeTruthy();
-    // Both answers sit in the scene's own foot, and reopening the question
-    // records nothing: the row already says "invite".
-    const yes = screen.getByRole("button", { name: "Yes, set me up" });
-    expect(yes.closest(".ob-scene-foot")).toBeTruthy();
+    // Both answers are on the page, and reopening the question records
+    // nothing: the row already says "invite".
     expect(
-      screen.getByRole("button", { name: "No, I'm only setting it up" }),
+      screen.getByRole("radio", { name: /Yes, I'll work in Margince/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: /No, I'm only setting it up/ }),
     ).toBeTruthy();
     expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
   });
@@ -421,8 +424,9 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, set me up" }),
+      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
@@ -434,10 +438,10 @@ describe("restore into the conversational shell", () => {
     expect(body.voice_skipped).toBe(false);
   });
 
-  // Declining is a FINISH: the row goes to "complete" with both personal
-  // steps recorded as skipped, and it goes there before the handoff, so a
-  // reload after the write lands on the app rather than back in the journey.
-  it("declining the invite completes setup with voice and connect skipped, before the handoff", async () => {
+  // Declining opens the team act and records both personal steps as skipped
+  // on the way in, so a reload lands on the invite form and never reopens the
+  // question.
+  it("declining the invite opens the team act with voice and connect recorded as skipped", async () => {
     const calls = stubApi({
       state: stateRow({ step: "invite" }),
       company: savedProfile,
@@ -445,9 +449,38 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", {
-        name: "No, I'm only setting it up",
+      await screen.findByRole("radio", { name: /No, I'm only setting it up/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByText("Invite the first user.")).toBeTruthy();
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.step).toBe("team");
+    expect(body.voice_skipped).toBe(true);
+    expect(body.connect_skipped).toBe(true);
+  });
+
+  // Leaving the team act is a FINISH: the row goes to "complete" before the
+  // handoff, so a reload after the write lands on the app rather than back in
+  // the journey.
+  it("skipping the team act completes setup before the handoff", async () => {
+    const calls = stubApi({
+      state: stateRow({
+        step: "team",
+        voice_skipped: true,
+        connect_skipped: true,
       }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Skip for now" }),
     );
 
     await waitFor(() => {
@@ -457,13 +490,9 @@ describe("restore into the conversational shell", () => {
       .clone()
       .json()) as Record<string, unknown>;
     expect(body.step).toBe("complete");
-    expect(body.voice_skipped).toBe(true);
-    expect(body.connect_skipped).toBe(true);
-    // The question is gone; the handoff scene has the surface.
+    // The handoff scene has the surface.
     await waitFor(() =>
-      expect(
-        screen.queryByText("Will you be working in Margince yourself?"),
-      ).toBeNull(),
+      expect(screen.queryByText("Invite the first user.")).toBeNull(),
     );
   });
 

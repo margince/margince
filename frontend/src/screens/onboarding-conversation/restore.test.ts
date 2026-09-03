@@ -200,6 +200,16 @@ describe("restorePlan", () => {
         locale: "en",
       }),
     ).toMatchObject({ resumeTarget: "vo.skipped" });
+    expect(
+      restorePlan({
+        state: stateRow({ step: "team", voice_skipped: true }),
+        profile,
+        voice: emptyVoice,
+        read: null,
+        routeConnect: false,
+        locale: "en",
+      }),
+    ).toMatchObject({ resumeTarget: "tm.ask" });
     // A row written before the invite existed, at the recap that used to
     // follow the voice act: the recap is gone, and what followed it was
     // connect.

@@ -539,8 +539,9 @@ describe("the conversational company act", () => {
     // that used to narrate "Company profile confirmed" is gone — and
     // accepting it opens the voice act's collect scene.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, set me up" }),
+      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
   });
 
@@ -623,7 +624,9 @@ describe("the conversational company act", () => {
     // invite's own question is the proof: nothing on screen narrates the
     // confirmation any more.
     expect(
-      await screen.findByText("Will you be working in Margince yourself?"),
+      await screen.findByRole("heading", {
+        name: "Will you be working in Margince yourself?",
+      }),
     ).toBeTruthy();
     expect(screen.queryByText(/already confirmed/)).toBeNull();
   });
@@ -653,7 +656,9 @@ describe("the conversational company act", () => {
     // Nothing moved the reader on: this refusal has no route forward but a
     // re-check, so the machine is still sitting in the company act.
     expect(
-      screen.queryByText("Will you be working in Margince yourself?"),
+      screen.queryByRole("heading", {
+        name: "Will you be working in Margince yourself?",
+      }),
     ).toBeNull();
   });
 
@@ -676,8 +681,9 @@ describe("the conversational company act", () => {
 
     await userEvent.click(accept);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, set me up" }),
+      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await screen.findByText(/Teach me how you write\./);
 
     // The next act mounts its own shell. The rail, the brand line, the orb and

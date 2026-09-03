@@ -4857,17 +4857,30 @@ export const en = {
   "ob.conv.invite.title": "Will you be working in Margince yourself?",
   "ob.conv.invite.body":
     "The company is set up. Two more steps are about you, and they only make sense if you will be using Margince too.",
-  "ob.conv.invite.voice":
-    "Train your voice, so drafts sound like you from the first one.",
-  "ob.conv.invite.connect":
-    "Connect your inbox and calendar, so the CRM fills itself from what already happens.",
-  "ob.conv.invite.yes": "Yes, set me up",
+  "ob.conv.invite.yes": "Yes, I'll work in Margince",
+  "ob.conv.invite.yesBody":
+    "Train your voice and connect your inbox and calendar: two short steps, both about you.",
   "ob.conv.invite.no": "No, I'm only setting it up",
+  "ob.conv.invite.noBody":
+    "Invite the first person who will work here instead, and you're done.",
+  "ob.conv.invite.foot":
+    "Either way, a voice and accounts can be set up later from Settings.",
+  "ob.conv.invite.continue": "Continue",
   "ob.conv.invite.accepted": "Yes, I'll be working in it.",
   "ob.conv.invite.declined": "No, I'm only setting it up.",
-  "ob.conv.invite.done":
+
+  // The team act: the first person who will work here, invited with the
+  // same form Settings → People uses.
+  "ob.conv.team.title": "Invite the first user.",
+  "ob.conv.team.body":
+    "Somebody has to be the first person working in Margince. Add them now, or later from Settings → People.",
+  "ob.conv.team.invitedLabel": "Invited so far",
+  "ob.conv.team.invitedLine": "{name} is invited.",
+  "ob.conv.team.skip": "Skip for now",
+  "ob.conv.team.finish": "Finish setup",
+  "ob.conv.team.done":
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
-  "ob.conv.invite.persistFailed":
+  "ob.conv.team.persistFailed":
     "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
 
   // --- the gate: the first screen after sign-in -------------------------

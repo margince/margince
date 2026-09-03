@@ -166,8 +166,8 @@ describe("conversationReducer happy path", () => {
     expect(state).toMatchObject({ act: "invite", phase: "in.ask" });
   });
 
-  it("declining the invite ends the journey without the personal acts", () => {
-    const state = run([
+  it("declining the invite opens the team act, and leaving it ends the journey", () => {
+    let state = run([
       { type: "START", memberPath: false },
       { type: "READ_STARTED", readId: "r1" },
       { type: "READ_TERMINAL", readId: "r1", status: "ready" },
@@ -175,15 +175,22 @@ describe("conversationReducer happy path", () => {
       { type: "COMPANY_CONFIRMED" },
       { type: "INVITE_DECLINED" },
     ]);
-    expect(state).toMatchObject({ act: "done", phase: "in.declined" });
+    expect(state).toMatchObject({ act: "team", phase: "tm.ask" });
     expect(state.thread.at(-1)).toMatchObject({
-      kind: "outcome",
-      i18nKey: "ob.conv.invite.done",
-      tone: "success",
+      kind: "user",
+      i18nKey: "ob.conv.invite.declined",
     });
-    // Nothing the voice or connect acts say is legal after that.
+    // Neither personal act is reachable from here: the answer was about them.
     expect(conversationReducer(state, { type: "VOICE_SKIPPED" })).toBe(state);
     expect(conversationReducer(state, { type: "CONNECT_DONE" })).toBe(state);
+
+    state = run([{ type: "TEAM_DONE" }], state);
+    expect(state).toMatchObject({ act: "done", phase: "tm.done" });
+    expect(state.thread.at(-1)).toMatchObject({
+      kind: "outcome",
+      i18nKey: "ob.conv.team.done",
+      tone: "success",
+    });
   });
 
   it("lets the voice act be skipped and still reach connect", () => {
@@ -250,6 +257,7 @@ describe("restore normalization out of co.confirmed", () => {
       { target: "vo.collecting", act: "voice" },
       { target: "vo.skipped", act: "voice" },
       { target: "in.ask", act: "invite" },
+      { target: "tm.ask", act: "team" },
       { target: "cn.consent", act: "connect" },
     ] as const;
     for (const { target, act } of targets) {
@@ -350,6 +358,7 @@ describe("member path", () => {
       { type: "VOICE_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "INVITE_DECLINED" },
+      { type: "TEAM_DONE" },
     ];
     for (const event of creatorOnly) {
       expect(conversationReducer(state, event)).toBe(state);

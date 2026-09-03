@@ -375,8 +375,9 @@ describe("dismissing a clarify in the company act", () => {
     // that used to narrate "Company profile confirmed" is gone — and
     // accepting it opens the voice act.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, set me up" }),
+      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
       await screen.findByRole("heading", { name: "Teach me how you write." }),
     ).toBeTruthy();

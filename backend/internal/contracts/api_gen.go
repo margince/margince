@@ -7020,6 +7020,7 @@ const (
 	OnboardingStateStepInvite   OnboardingStateStep = "invite"
 	OnboardingStateStepRead     OnboardingStateStep = "read"
 	OnboardingStateStepResults  OnboardingStateStep = "results"
+	OnboardingStateStepTeam     OnboardingStateStep = "team"
 	OnboardingStateStepVoice    OnboardingStateStep = "voice"
 )
 
@@ -7037,6 +7038,8 @@ func (e OnboardingStateStep) Valid() bool {
 	case OnboardingStateStepRead:
 		return true
 	case OnboardingStateStepResults:
+		return true
+	case OnboardingStateStepTeam:
 		return true
 	case OnboardingStateStepVoice:
 		return true
@@ -9606,6 +9609,7 @@ const (
 	PutOnboardingStateRequestStepInvite   PutOnboardingStateRequestStep = "invite"
 	PutOnboardingStateRequestStepRead     PutOnboardingStateRequestStep = "read"
 	PutOnboardingStateRequestStepResults  PutOnboardingStateRequestStep = "results"
+	PutOnboardingStateRequestStepTeam     PutOnboardingStateRequestStep = "team"
 	PutOnboardingStateRequestStepVoice    PutOnboardingStateRequestStep = "voice"
 )
 
@@ -9623,6 +9627,8 @@ func (e PutOnboardingStateRequestStep) Valid() bool {
 	case PutOnboardingStateRequestStepRead:
 		return true
 	case PutOnboardingStateRequestStepResults:
+		return true
+	case PutOnboardingStateRequestStepTeam:
 		return true
 	case PutOnboardingStateRequestStepVoice:
 		return true
@@ -27869,7 +27875,7 @@ type PutOnboardingStateRequest struct {
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
 
-	// Step Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+	// Step Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
 	Step         PutOnboardingStateRequestStep `json:"step"`
 	VoiceSkipped bool                          `json:"voice_skipped"`
 	WebsiteUrl   *string                       `json:"website_url,omitempty"`
@@ -27878,7 +27884,7 @@ type PutOnboardingStateRequest struct {
 // PutOnboardingStateRequestSourceMode defines model for PutOnboardingStateRequest.SourceMode.
 type PutOnboardingStateRequestSourceMode string
 
-// PutOnboardingStateRequestStep Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+// PutOnboardingStateRequestStep Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the

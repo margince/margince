@@ -123,6 +123,7 @@ function readRecap(read: CompanySiteRead, locale: Locale): NarrationEntry[] {
 // by persisting the confirmed company).
 const confirmedSteps = new Set<OnboardingState["step"]>([
   "invite",
+  "team",
   "voice",
   "results",
   "connect",
@@ -137,6 +138,9 @@ function creatorTarget(state: OnboardingState): ResumePoint {
   }
   if (state.step === "invite") {
     return "in.ask";
+  }
+  if (state.step === "team") {
+    return "tm.ask";
   }
   // step "voice": the act is still open, and lands straight on the collect
   // scene. A skip recorded early is honored; otherwise collection reopens

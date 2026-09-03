@@ -67,7 +67,23 @@
      Core's place. The Core is positioned rather than columned, so this is the
      only thing standing between the two. */
   --ob-board-inset: clamp(330px, 30%, 460px);
-  --ob-board-inset-work: clamp(160px, 17%, 240px);
+  /* Where the Core hangs, as one number the orb and the board both read: a
+     share of the room, but never so far left that the halo leaves it (the
+     floor is the halo's half-reach, 209px at full size, scaled with the orb).
+     Declared here rather than on the orb so the work inset below can be
+     DERIVED from it — the board starts past the ball's own edge plus a gutter,
+     so the two cannot overlap at any width, which a second independent number
+     let them do on a narrow window. */
+  --ob-core-left: max(
+    11%,
+    calc(209px * var(--ob-core-scale, 1) + var(--space-6))
+  );
+  --ob-board-inset-work: calc(
+    var(--ob-core-left) +
+    150px *
+    var(--ob-core-scale, 1) +
+    var(--space-8)
+  );
   --ob-core-scale: 1;
   position: relative;
   width: 100%;
@@ -262,19 +278,15 @@
   position: absolute;
   z-index: 1;
   /*
-   * A share of the room, but never so far left that the ball leaves it. 13% of
-   * a narrow stage is less than the orb's own reach, and it then hangs off the
-   * edge with a bite taken out of it.
-   *
-   * The floor is measured from the HALO, not from the sphere. `.core-glow` is
-   * 1.39x `--coreSize` (300px here), so its half-reach is 209px against the
-   * ball's own 150px, and a floor built on the ball left the light around it
-   * cut off by the card's `overflow: hidden` on a straight vertical line. That
-   * reads as a rendering fault rather than as an orb near an edge. Scaled the
-   * way the orb itself is, so the same rule holds for the hero and for the
-   * smaller one the work layout steps back to.
+   * The floor in `--ob-core-left` is measured from the HALO, not from the
+   * sphere: `.core-glow` is 1.39x `--coreSize` (300px here), so its half-reach
+   * is 209px against the ball's own 150px, and a floor built on the ball left
+   * the light around it cut off by the card's `overflow: hidden` on a straight
+   * vertical line. That reads as a rendering fault rather than as an orb near
+   * an edge. Scaled the way the orb itself is, so the same rule holds for the
+   * hero and for the smaller one the work layout steps back to.
    */
-  left: max(13%, calc(209px * var(--ob-core-scale, 1) + var(--space-6)));
+  left: var(--ob-core-left);
   top: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%) scale(var(--ob-core-scale, 1));

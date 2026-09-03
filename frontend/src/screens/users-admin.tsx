@@ -1,75 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Badge,
   Button,
-  Checkbox,
   EmptyState,
-  Field,
   Modal,
   OverflowMenu,
-  TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Select, type SelectOption } from "../design-system/select";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
 import { useHoldsAdminRole } from "../app/capability";
 import { isOption } from "../app/options";
-import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
-import { AccessPreviewPanel } from "./users-access";
+import {
+  InviteUserForm,
+  ROLES,
+  type Role,
+  roleLabel,
+  roleOptions,
+} from "./users-invite-form";
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
 
 type User = components["schemas"]["User"];
-type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
-
-// Wire keys, not product names: `manager` shows as Team Lead, `rep` as User
-// (ADR-0110). The catalog carries the display names.
-const ROLES: readonly Role[] = [
-  "admin",
-  "management",
-  "manager",
-  "rep",
-  "read_only",
-  "ops",
-];
-
-// The catalog key each wire key reads under. `role.*` is the ONE role catalog —
-// this screen used to carry a second, `users.role.*`, whose English was
-// identical and therefore drifted silently the moment either was edited. The
-// map is written out rather than templated because one key is not its wire key:
-// `read_only` reads under `role.readOnly`, and a template would compile to a key
-// the catalog does not answer.
-const ROLE_LABEL_KEY = {
-  admin: "role.admin",
-  management: "role.management",
-  manager: "role.manager",
-  rep: "role.rep",
-  read_only: "role.readOnly",
-  ops: "role.ops",
-} as const satisfies Record<Role, MessageKey>;
-
-// roleLabel names a held role key. The catalog covers the six system roles;
-// a workspace-defined key has no translation, so it reads as itself rather
-// than as a missing-translation marker — the admin still learns what is held.
-const roleLabel = (t: ReturnType<typeof useT>) => (key: string) =>
-  isOption(key, ROLES) ? t(ROLE_LABEL_KEY[key]) : key;
-
-// The six system roles as pickable options — shared by the invite form and
-// every roster row so the two lists cannot drift apart.
-const roleOptions = (t: ReturnType<typeof useT>): SelectOption[] =>
-  ROLES.map((role) => ({ value: role, label: t(ROLE_LABEL_KEY[role]) }));
-
 // The member roster (org settings). Every user-management WRITE is admin-only
 // server-side, but the read is not: `GET /users` answers 200 to any authenticated
 // principal, so the list is fetched for everyone and only the controls that
@@ -205,19 +166,13 @@ function MembersCard({
 
 // Inviting somebody is four decisions committed together — an address, a name,
 // a role and the teams they land in — so the roster's header carries the verb
-// and the form lives in the dialog behind it.
+// and the form (users-invite-form.tsx, shared with the setup journey) lives in
+// the dialog behind it.
 function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
   const t = useT();
   const qc = useQueryClient();
   const formTitleId = useId();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<Role>("rep");
-  const [teamIds, setTeamIds] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const teams = useRoster("team", true);
-  const teamsPartial = useRosterPartial("team", true);
   // Where no email channel exists the invite alone leaves a member who cannot
   // sign in, so the dialog opens straight away and mints the link. The member
   // row keeps its own action, which is what makes a dismissed dialog
@@ -226,48 +181,6 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
     null,
   );
   const passwordLink = usePasswordLink();
-
-  // The team set rides as the mutation's variable rather than through the
-  // closure: react-query re-arms a mutation's options in a passive effect,
-  // so a click in that window would otherwise invite with the PREVIOUS
-  // selection — granting or omitting authority the admin did not choose.
-  const invite = useMutation({
-    mutationFn: async (teams: string[]): Promise<string> => {
-      const { data, error: err } = await api.POST("/users", {
-        body: {
-          email: email.trim(),
-          display_name: name.trim(),
-          role,
-          team_ids: teams,
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
-      return data.id;
-    },
-    onSuccess: (newUserId) => {
-      const invitedName = name.trim();
-      setEmail("");
-      setName("");
-      setRole("rep");
-      setTeamIds([]);
-      setError(null);
-      // The dialog closes on the write that landed, never before it: a refused
-      // invite has to leave the address and the name where the admin typed
-      // them.
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["users-admin"] });
-      if (canIssueLink) {
-        setInvited({ id: newUserId, name: invitedName });
-        void passwordLink.mint(newUserId);
-      }
-    },
-    onError: (e: Error) => setError(problemMessageOf(e, t)),
-  });
-
-  const canInvite =
-    email.trim().length > 0 && name.trim().length > 0 && !invite.isPending;
 
   return (
     <>
@@ -282,109 +195,20 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
         onClose={() => setOpen(false)}
         labelledBy={formTitleId}
       >
-        {/* A real <form>, so Enter submits it — and the house dialog stack, so
-            the fields sit on the same rhythm as every other settings dialog.
-            The three inputs used to be a wrapping flex line of unlabelled
-            boxes, with the heading's interval set by an inline style. */}
-        <form
-          className="form-stack"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (canInvite) {
-              invite.mutate(teamIds);
+        <InviteUserForm
+          titleId={formTitleId}
+          onInvited={(member) => {
+            // The dialog closes on the write that landed, never before it: a
+            // refused invite has to leave the address and the name where the
+            // admin typed them.
+            setOpen(false);
+            qc.invalidateQueries({ queryKey: ["users-admin"] });
+            if (canIssueLink) {
+              setInvited(member);
+              void passwordLink.mint(member.id);
             }
           }}
-        >
-          <h2 className="t-h3 modal-title" id={formTitleId}>
-            {t("users.inviteTitle")}
-          </h2>
-          <p className="t-small">{t("users.inviteSub")}</p>
-          <Field label={t("users.emailLabel")} required>
-            {(control) => (
-              <TextInput
-                {...control}
-                placeholder={t("users.emailPlaceholder")}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("users.nameLabel")} required>
-            {(control) => (
-              <TextInput
-                {...control}
-                placeholder={t("users.namePlaceholder")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("users.roleLabel")}>
-            {(control) => (
-              <Select
-                {...control}
-                value={role}
-                onChange={(value) => {
-                  if (isOption(value, ROLES)) setRole(value);
-                }}
-                options={roleOptions(t)}
-              />
-            )}
-          </Field>
-          {/* The teams the member joins on arrival. A team-scoped role with
-              no team edits only its own records, and the preview below says
-              so before the invite goes out. */}
-          <fieldset className="users-invite-teams">
-            <legend className="t-caption">{t("users.teamsLabel")}</legend>
-            {(teams.data ?? []).flatMap((entry) =>
-              "name" in entry ? (
-                <Checkbox
-                  key={entry.id}
-                  className="t-body"
-                  label={entry.name}
-                  checked={teamIds.includes(entry.id)}
-                  onChange={(event) =>
-                    setTeamIds((current) =>
-                      event.target.checked
-                        ? [...current, entry.id]
-                        : current.filter((id) => id !== entry.id),
-                    )
-                  }
-                />
-              ) : (
-                []
-              ),
-            )}
-            {/* "No teams yet" is a claim about the workspace, so only a
-                roster read to its end may make it: a walk that stopped early
-                would have an admin invite people into no team at all on the
-                strength of pages nothing read. */}
-            {teams.data?.length === 0 && !teamsPartial && (
-              <p className="t-small">{t("users.noTeamsYet")}</p>
-            )}
-            <RosterPartialNote partial={teamsPartial} />
-          </fieldset>
-          <AccessPreviewPanel role={role} teamIds={teamIds} />
-          {/* `.form-actions` rather than a bare button: `.form-stack` stretches
-              its children, and a submit that fills the dialog reads as a banner
-              rather than as the move the form is for. */}
-          <div className="form-actions">
-            <Button variant="primary" small type="submit" disabled={!canInvite}>
-              <UserPlus aria-hidden /> {t("users.invite")}
-            </Button>
-          </div>
-          {/* A refused invite is the surface saying something is wrong, which
-              is what Callout's `danger` tone is; a bare tinted paragraph with a
-              role on it was the same claim, hand-drawn, and it took its
-              emphasis from nothing at all. `alert` because the reader pressed
-              the button and has to act on the answer. */}
-          {error && (
-            <Callout tone="danger" live="alert">
-              {error}
-            </Callout>
-          )}
-        </form>
+        />
       </Modal>
       {invited && (
         <PasswordLinkModal

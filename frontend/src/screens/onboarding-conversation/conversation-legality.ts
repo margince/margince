@@ -21,6 +21,7 @@ const creatorOnlyEvents = new Set<ConversationEvent["type"]>([
   "VOICE_DONE",
   "INVITE_ACCEPTED",
   "INVITE_DECLINED",
+  "TEAM_DONE",
 ]);
 
 // Narration streams only while the machine is actively reading or building;
@@ -55,6 +56,7 @@ const legalPhases: Record<
   RESUME: new Set(["co.confirmed"]),
   INVITE_ACCEPTED: new Set(["in.ask"]),
   INVITE_DECLINED: new Set(["in.ask"]),
+  TEAM_DONE: new Set(["tm.ask"]),
   VOICE_SKIPPED: new Set(["vo.collecting"]),
   UPLOAD_ADDED: new Set(["vo.collecting"]),
   SPEAKER_NEEDED: new Set(["vo.collecting"]),

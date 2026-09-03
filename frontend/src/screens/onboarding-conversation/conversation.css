@@ -416,21 +416,34 @@
   margin-block-start: auto;
 }
 
-/* The invite: the question is the scene's own heading, and the body under it
-   is what accepting opens. A plain list rather than two cards: nothing here is
-   chosen, the choice is the foot's, and cards would read as two things to
-   pick between. */
-.ob-invite-scene {
+/* The invite: the question is the scene's own heading, and the two answers
+   are the choice list's cards under it. A narrower measure than the working
+   scenes: two plates of one sentence each, stretched across the whole board,
+   read as two panels rather than two answers. */
+.ob-scene.ob-invite-scene {
+  max-width: 44rem;
+}
+
+/* The team act: the settings invite form on a plate of its own, held to a
+   form's measure rather than the scene's, and the people it has invited so
+   far listed under it. */
+.ob-scene.ob-team-scene {
   max-width: 58rem;
 }
-.ob-invite-offers {
+.ob-team-form {
+  max-width: 34rem;
+  padding: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.ob-team-invited {
   margin: 0;
   padding-inline-start: var(--space-5);
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   color: var(--textContent);
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
+  font-size: var(--fs-sm);
 }
 
 /*

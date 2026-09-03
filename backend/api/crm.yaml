@@ -32360,11 +32360,12 @@ components:
         expected_version: { type: integer, minimum: 0, description: Zero creates; otherwise the version last read. }
         step:
           type: string
-          enum: [read, confirm, invite, voice, results, connect, complete]
+          enum: [read, confirm, invite, team, voice, results, connect, complete]
           description: >
             Where the creator's setup stands. `invite` is the question asked once the company is
             confirmed — whether the person setting the installation up will also work in it, which
             is what decides whether the optional `voice` and `connect` steps are offered at all.
+            `team` is where a creator who will not work in it invites the first person who will.
             `results` is kept for rows written before that question existed; a client treats it as
             the connect step being next.
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
@@ -32384,7 +32385,7 @@ components:
       required: [path, step, source_mode, company_draft, selected_fact_keys, voice_skipped, connect_skipped, version, created_at, updated_at]
       properties:
         path: { type: string, enum: [creator, member], readOnly: true }
-        step: { type: string, enum: [read, confirm, invite, voice, results, connect, complete] }
+        step: { type: string, enum: [read, confirm, invite, team, voice, results, connect, complete] }
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }

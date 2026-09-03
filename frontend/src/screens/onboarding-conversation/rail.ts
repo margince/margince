@@ -52,6 +52,10 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
     case "invite":
     case "voice":
       return "voice";
+    // The team act is a creator's way OUT of the personal stops, not one of
+    // them: no stop is current, and none is promised.
+    case "team":
+      return null;
     // Every account the setup asks for — mailbox and LinkedIn alike — belongs to
     // this one stop. A stop per integration would grow the rail once per provider
     // for something the reader already reads as "connecting".

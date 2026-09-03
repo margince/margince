@@ -4741,17 +4741,28 @@ export const vi = {
   "ob.conv.invite.title": "Bạn có tự mình làm việc trong Margince không?",
   "ob.conv.invite.body":
     "Công ty đã được thiết lập. Hai bước còn lại là về bạn, và chỉ có ý nghĩa nếu bạn cũng dùng Margince.",
-  "ob.conv.invite.voice":
-    "Huấn luyện giọng văn của bạn, để bản nháp nghe giống bạn ngay từ bản đầu tiên.",
-  "ob.conv.invite.connect":
-    "Kết nối hộp thư và lịch, để CRM tự điền từ những gì vốn đang diễn ra.",
-  "ob.conv.invite.yes": "Có, thiết lập cho tôi",
+  "ob.conv.invite.yes": "Có, tôi sẽ làm việc trong Margince",
+  "ob.conv.invite.yesBody":
+    "Huấn luyện giọng văn và kết nối hộp thư, lịch: hai bước ngắn, đều về bạn.",
   "ob.conv.invite.no": "Không, tôi chỉ thiết lập thôi",
+  "ob.conv.invite.noBody":
+    "Thay vào đó, mời người đầu tiên sẽ làm việc ở đây, và bạn xong việc.",
+  "ob.conv.invite.foot":
+    "Dù chọn gì, giọng văn và tài khoản đều có thể thiết lập sau trong Cài đặt.",
+  "ob.conv.invite.continue": "Tiếp tục",
   "ob.conv.invite.accepted": "Có, tôi sẽ tự làm việc trong đó.",
   "ob.conv.invite.declined": "Không, tôi chỉ thiết lập thôi.",
-  "ob.conv.invite.done":
+
+  "ob.conv.team.title": "Mời người dùng đầu tiên.",
+  "ob.conv.team.body":
+    "Phải có ai đó là người đầu tiên làm việc trong Margince. Thêm họ ngay, hoặc sau này trong Cài đặt → Nhân sự.",
+  "ob.conv.team.invitedLabel": "Đã mời",
+  "ob.conv.team.invitedLine": "{name} đã được mời.",
+  "ob.conv.team.skip": "Bỏ qua lúc này",
+  "ob.conv.team.finish": "Hoàn tất thiết lập",
+  "ob.conv.team.done":
     "Thiết lập đã hoàn tất. Người bạn thêm vào có thể tự huấn luyện giọng văn và kết nối tài khoản trong Cài đặt.",
-  "ob.conv.invite.persistFailed":
+  "ob.conv.team.persistFailed":
     "Tôi không ghi nhận được rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
 
   // --- the gate: the first screen after sign-in -------------------------

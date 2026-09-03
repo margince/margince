@@ -33,6 +33,13 @@ const (
 	OnboardingStepRead = "read"
 	// OnboardingStepConfirm reviews the company draft.
 	OnboardingStepConfirm = "confirm"
+	// OnboardingStepInvite asks whether the person setting the installation up
+	// will work in it, which decides whether the voice and connect steps are
+	// offered at all.
+	OnboardingStepInvite = "invite"
+	// OnboardingStepTeam is where a creator who will not work in the
+	// installation invites the first person who will.
+	OnboardingStepTeam = "team"
 	// OnboardingStepVoice captures optional writing examples.
 	OnboardingStepVoice = "voice"
 	// OnboardingStepResults reveals confirmed understanding.
@@ -64,8 +71,9 @@ const (
 )
 
 var onboardingSteps = map[string]struct{}{
-	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepVoice: {},
-	OnboardingStepResults: {}, OnboardingStepConnect: {}, OnboardingStepComplete: {},
+	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepInvite: {},
+	OnboardingStepTeam: {}, OnboardingStepVoice: {}, OnboardingStepResults: {},
+	OnboardingStepConnect: {}, OnboardingStepComplete: {},
 }
 
 // OnboardingCompanyDraft is intentionally partial. Confirmed values are owned

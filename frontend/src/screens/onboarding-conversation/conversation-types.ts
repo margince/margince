@@ -12,6 +12,9 @@ export type ConversationAct =
   // someone who will; an administrator setting the installation up for
   // others finishes here.
   | "invite"
+  // Where a creator who declined the invite adds the first person who will
+  // work in Margince, and finishes.
+  | "team"
   | "voice"
   | "connect"
   | "done";
@@ -33,9 +36,10 @@ export type ConversationPhase =
   | "vo.result"
   | "vo.skipped"
   | "in.ask"
-  // Declined: setup is complete without the personal steps, and the journey
-  // is over. A terminal like cn.done, reached without ever entering connect.
-  | "in.declined"
+  | "tm.ask"
+  // The team act's terminal: setup is complete without the personal steps.
+  // A terminal like cn.done, reached without ever entering connect.
+  | "tm.done"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
   // the required gate (it is what CONNECT_DONE waits on), LinkedIn is the
   // recommended addition beside it (linkedinStatus tracks its own
@@ -168,7 +172,7 @@ export type BuildTerminalStatus = "succeeded" | "failed" | "deferred";
  */
 export type ResumePoint = Extract<
   ConversationPhase,
-  "in.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
+  "in.ask" | "tm.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
 >;
 
 export type ConversationEvent =
@@ -218,10 +222,13 @@ export type ConversationEvent =
   // fast-forwards a creator to the stable point the wizard state recorded.
   | { type: "RESUME"; target?: ResumePoint }
   // The two answers to the invite. Accepting opens the voice act; declining
-  // ends the journey, because the steps left are all about the person who
-  // just said they will not be here.
+  // opens the team act instead, because the steps left are all about the
+  // person who just said they will not be here — so the one thing left to do
+  // is name who will be.
   | { type: "INVITE_ACCEPTED" }
   | { type: "INVITE_DECLINED" }
+  // Leaving the team act, with or without an invite sent, ends the journey.
+  | { type: "TEAM_DONE" }
   | { type: "VOICE_SKIPPED" }
   | { type: "UPLOAD_ADDED"; id: string; name: string }
   | { type: "SPEAKER_NEEDED"; question: ConversationQuestion }

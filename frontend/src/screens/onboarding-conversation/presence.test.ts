@@ -137,6 +137,9 @@ describe("presenceFor: voice, results, connect", () => {
     expect(presenceFor(state({ act: "invite", phase: "in.ask" }))).toEqual({
       core: "idle",
     });
+    expect(presenceFor(state({ act: "team", phase: "tm.ask" }))).toEqual({
+      core: "idle",
+    });
     expect(presenceFor(state({ act: "connect", phase: "cn.consent" }))).toEqual(
       { core: "idle" },
     );

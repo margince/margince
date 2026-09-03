@@ -8,8 +8,8 @@ import type { ConversationState } from "./conversation-types";
 import { InviteAct } from "./invite-act";
 
 // The question between the company and the personal steps. One state worth
-// reviewing, in two languages: the surface is the same whatever the answer,
-// and each answer leaves it.
+// reviewing, in two languages: the surface is the same whichever card is
+// picked, and Continue leaves it.
 
 const asking: ConversationState = {
   ...initialConversationState,
@@ -22,11 +22,7 @@ function act(locale?: "de") {
     installFetchStub({ "GET /me": meRoute({}) });
     return (
       <StoryProviders locale={locale}>
-        <InviteAct
-          state={asking}
-          dispatch={() => {}}
-          persist={async () => true}
-        />
+        <InviteAct state={asking} dispatch={() => {}} />
       </StoryProviders>
     );
   };
@@ -42,5 +38,6 @@ type Story = StoryObj<typeof InviteAct>;
 /** The company is confirmed; will this person work in Margince too? */
 export const Asking: Story = { render: act() };
 
-/** The German act: two answers that must not read as skip and continue. */
+/** The German act: two answers that must read as equals, not as a step and
+ *  its skip. */
 export const AskingGerman: Story = { render: act("de") };

@@ -60,6 +60,7 @@ describe("which stop the conversation is standing on", () => {
 
   it("maps each later act to its own stop", () => {
     expect(currentStop(at("invite", "in.ask"))).toBe("voice");
+    expect(currentStop(at("team", "tm.ask"))).toBeNull();
     expect(currentStop(at("voice", "vo.collecting"))).toBe("voice");
     expect(currentStop(at("connect", "cn.consent"))).toBe("connect");
     expect(currentStop(at("done", "cn.done"))).toBe("connect");
