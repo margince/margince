@@ -8645,7 +8645,7 @@ export interface paths {
          *     The token is never returned. It is only ever mailed — returning it would defeat the
          *     mailbox-as-evidence property above, and this link IS how a double-opt-in purpose gets
          *     confirmed now that no operator-held token exists.
-         *     A fresh request supersedes any unspent earlier link for the same person.
+         *     A fresh request supersedes any unspent earlier link of the SAME KIND for this person — a record-confirmation request does not expire a pending subscription-confirmation link, because they ask different questions and arrive in different mails.
          *
          *     `provider_accepted` reports whether the relay took the message, and `sendable` says whether
          *     this installation can send at all. Both, because they are different facts and a reader's next
@@ -10710,6 +10710,117 @@ export interface paths {
         get: operations["getForecast"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What last night's input check found, and how much of the pipeline it reached.
+         * @description A forecast is only as good as its inputs, and the failures are mundane: a close
+         *     date that went by, an amount that disagrees with the offer that was sent, a deal
+         *     nobody has heard from in ninety days. None is a bug in the arithmetic; every one
+         *     makes the total wrong.
+         *
+         *     `readiness` is the verdict, and `checks_incomplete` is NOT a worse `needs_review`.
+         *     One says the pipeline has problems; the other says we could not look. A reader
+         *     told the first when the second is true has been told the pipeline is sound when
+         *     nobody read the mailbox — and that cannot be acted on.
+         *
+         *     `sources` is why. Every source the run tried carries the state it reached:
+         *     `checked` with the instant it read through, or `stale`, `unavailable` or
+         *     `permission_limited` with no date at all — a date on an unread source would claim
+         *     coverage that did not happen.
+         *
+         *     `eligible_deals` is how much there was to check, counted once per deal actually
+         *     evaluated. Compared against the previous run it shows a pass that covered less of
+         *     the pipeline.
+         */
+        get: operations["getForecastAssurance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open findings this caller can see.
+         * @description What the nightly check found, ordered the way a manager with ten minutes before a
+         *     call needs it: high severity first, then by the money at stake.
+         *
+         *     The list is SCOPED to what the caller can open. The scan itself reads the whole
+         *     pipeline — a duplicate-detection rule seeing one rep's deals would report no
+         *     duplicates — and that decision is paid for here: a finding about a deal the caller
+         *     cannot see is a finding they never meet. There is deliberately no count of what was
+         *     withheld, because a count of what somebody may not read is itself a statement about
+         *     how much of it there is.
+         *
+         *     `claim` and `observed` hold structured values whose keys depend on the exception
+         *     type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
+         *     body: a frozen copy of a protected sentence outlives the protection on its source.
+         */
+        get: operations["listInputChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a finding from the nightly input check.
+         * @description Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
+         *     say the record moved. `reassign` says it is somebody else's. `remind_later` says
+         *     not now — and it leaves the finding OPEN, because "not now" is an answer about
+         *     when rather than about whether, and a deferred finding that read as resolved would
+         *     never come back.
+         *
+         *     `value_correct` and `not_relevant` are different in kind: they HIDE the finding
+         *     from Forecast, the Brief, the Worklist and readiness — the screens a revenue
+         *     commitment is made from. So both must name a reason, and both carry an expiry
+         *     capped server-side at 90 days. A value that was correct in May is a claim about
+         *     May, and an uncapped suppression outlives the fact it rested on.
+         *
+         *     An expiry beyond the ceiling is REFUSED rather than silently shortened: a caller
+         *     who asked for a year and got ninety days without being told would believe the
+         *     finding stays hidden through the next two quarters.
+         *
+         *     The actor is the authenticated principal, never the body. `condition_cleared` is
+         *     the check's own answer and a person naming it is refused — it says the condition
+         *     stopped being true, which only something that looked can say.
+         *
+         *     404 when the finding is not there or is already answered. Telling a caller that
+         *     one exists but is resolved says it exists, about a deal they may not be able to
+         *     open.
+         */
+        post: operations["resolveInputCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17828,6 +17939,13 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /**
+             * @description What the receipt is evidence OF. The graph counts attendees and organizers as well
+             *     as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+             *     that drew every one of them as an email would tell a reader a meeting was one.
+             * @enum {string}
+             */
+            kind: "email" | "call" | "meeting" | "note" | "task" | "message";
         };
         /**
          * @description The warmest way in, chosen deterministically rather than scored by a model: the
@@ -22329,6 +22447,98 @@ export interface components {
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
         };
+        /** @description One finding from the nightly input check. */
+        InputCheck: {
+            /** Format: uuid */
+            id: string;
+            /** @description Which question noticed it. The key set in `claim` and `observed` depends on this. */
+            type: string;
+            /** @enum {string} */
+            subject_kind: "deal" | "signal" | "offer" | "contract";
+            /** Format: uuid */
+            subject_id: string;
+            /** @enum {string} */
+            severity: "low" | "medium" | "high";
+            /**
+             * Format: int64
+             * @description How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+             */
+            affected_minor?: number;
+            currency?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** @enum {string} */
+            status: "open" | "resolved" | "expired";
+            /** @description What the record says, as structured values only. */
+            claim?: {
+                [key: string]: unknown;
+            };
+            /** @description What the check found, as structured values only. */
+            observed?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            first_seen_at: string;
+            /**
+             * Format: date-time
+             * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+             */
+            last_seen_at: string;
+        };
+        ResolveInputCheck: {
+            /**
+             * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+             * @enum {string}
+             */
+            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign";
+            /** @description Required for `value_correct` and `not_relevant`. Those hide the finding, and the next person to see the number is owed the reason it is not flagged. */
+            reason?: string;
+            /** @description What was looked at, for an answer that rests on something. */
+            evidence_ref?: string;
+            /**
+             * Format: date-time
+             * @description Required for `remind_later`, and must be in the future. A deferral with no date is a dismissal wearing a different word.
+             */
+            remind_at?: string;
+            /**
+             * Format: date-time
+             * @description When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
+             */
+            expires_at?: string;
+        };
+        /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
+        ForecastAssurance: {
+            /** Format: uuid */
+            run_id: string;
+            /** Format: date-time */
+            as_of: string;
+            /**
+             * @description `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+             * @enum {string}
+             */
+            status: "complete" | "incomplete";
+            /**
+             * @description What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+             * @enum {string}
+             */
+            readiness?: "ready" | "ready_with_exceptions" | "needs_review" | "checks_incomplete";
+            /** @description How many deals the run evaluated, counted one per deal. */
+            eligible_deals: number;
+            eligible_signals?: number;
+            /** @description Every source the run tried, and how far it reached into each. */
+            sources: components["schemas"]["ForecastAssuranceSource"][];
+        };
+        ForecastAssuranceSource: {
+            /** @enum {string} */
+            source: "mail" | "calendar" | "documents" | "contracts" | "offers" | "incumbent";
+            /** @enum {string} */
+            state: "checked" | "stale" | "unavailable" | "permission_limited";
+            /**
+             * Format: date-time
+             * @description How current the source was. Present only for a `checked` source: a date on an unread one would read as "checked up to then" when nothing was read at all.
+             */
+            checked_through?: string;
+        };
         /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
         ForecastMovement: {
             /** @enum {string} */
@@ -23019,6 +23229,8 @@ export interface components {
             score?: number | null;
             /** @description For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
+            /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /**
              * @description Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
              * @enum {string|null}
@@ -35097,7 +35309,11 @@ export interface operations {
                      * @enum {string}
                      */
                     marketing_choice?: "granted" | "withdrawn";
-                    /** @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant. */
+                    /**
+                     * @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+                     *     grant. Bounded because it is stored on the proof row and read back through the subject
+                     *     access export — the same bound is enforced server-side, and the two are one rule.'
+                     */
                     marketing_wording?: string;
                 };
             };
@@ -45632,6 +45848,87 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastAssurance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The most recent completed run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastAssurance"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No run has completed yet. A fresh installation has not been checked. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listInputChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open findings, most material first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InputCheck"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    resolveInputCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveInputCheck"];
+            };
+        };
+        responses: {
+            /** @description The answer was recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

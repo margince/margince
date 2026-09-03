@@ -96,6 +96,81 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventForecastAssuranceCreatedReadiness.
+const (
+	AssuranceChecksIncomplete    PublicEventForecastAssuranceCreatedReadiness = "checks_incomplete"
+	AssuranceNeedsReview         PublicEventForecastAssuranceCreatedReadiness = "needs_review"
+	AssuranceReady               PublicEventForecastAssuranceCreatedReadiness = "ready"
+	AssuranceReadyWithExceptions PublicEventForecastAssuranceCreatedReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastAssuranceCreatedReadiness enum.
+func (e PublicEventForecastAssuranceCreatedReadiness) Valid() bool {
+	switch e {
+	case AssuranceChecksIncomplete:
+		return true
+	case AssuranceNeedsReview:
+		return true
+	case AssuranceReady:
+		return true
+	case AssuranceReadyWithExceptions:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventForecastAssuranceCreatedStatus.
+const (
+	Complete   PublicEventForecastAssuranceCreatedStatus = "complete"
+	Incomplete PublicEventForecastAssuranceCreatedStatus = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastAssuranceCreatedStatus enum.
+func (e PublicEventForecastAssuranceCreatedStatus) Valid() bool {
+	switch e {
+	case Complete:
+		return true
+	case Incomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventForecastExceptionResolvedOutcome.
+const (
+	ResolvedAddedEvidence    PublicEventForecastExceptionResolvedOutcome = "added_evidence"
+	ResolvedConditionCleared PublicEventForecastExceptionResolvedOutcome = "condition_cleared"
+	ResolvedFixedRecord      PublicEventForecastExceptionResolvedOutcome = "fixed_record"
+	ResolvedNotRelevant      PublicEventForecastExceptionResolvedOutcome = "not_relevant"
+	ResolvedReassign         PublicEventForecastExceptionResolvedOutcome = "reassign"
+	ResolvedRemindLater      PublicEventForecastExceptionResolvedOutcome = "remind_later"
+	ResolvedValueCorrect     PublicEventForecastExceptionResolvedOutcome = "value_correct"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventForecastExceptionResolvedOutcome enum.
+func (e PublicEventForecastExceptionResolvedOutcome) Valid() bool {
+	switch e {
+	case ResolvedAddedEvidence:
+		return true
+	case ResolvedConditionCleared:
+		return true
+	case ResolvedFixedRecord:
+		return true
+	case ResolvedNotRelevant:
+		return true
+	case ResolvedReassign:
+		return true
+	case ResolvedRemindLater:
+		return true
+	case ResolvedValueCorrect:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventForecastSnapshotCreatedTrigger.
 const (
 	Call        PublicEventForecastSnapshotCreatedTrigger = "call"
@@ -273,7 +348,9 @@ const (
 	DealUpdated                           SubscribableEventType = "deal.updated"
 	EmailSignatureChanged                 SubscribableEventType = "email_signature.changed"
 	EngagementReply                       SubscribableEventType = "engagement.reply"
+	ForecastAssuranceCreated              SubscribableEventType = "forecast.assurance_created"
 	ForecastCreated                       SubscribableEventType = "forecast.created"
+	ForecastExceptionResolved             SubscribableEventType = "forecast.exception_resolved"
 	ForecastSnapshotCreated               SubscribableEventType = "forecast.snapshot_created"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
@@ -431,7 +508,11 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case EngagementReply:
 		return true
+	case ForecastAssuranceCreated:
+		return true
 	case ForecastCreated:
+		return true
+	case ForecastExceptionResolved:
 		return true
 	case ForecastSnapshotCreated:
 		return true
@@ -1129,6 +1210,26 @@ type PublicEventEnvelope struct {
 	Version int `json:"version"`
 }
 
+// PublicEventForecastAssuranceCreated Payload for forecast.assurance_created — a nightly input check finished, and the forecast's inputs have been examined. The Morning Brief waits on this: a brief assembled before the night's check has nothing to say about whether the numbers in it were verified.
+// `readiness` is the verdict, and `checks_incomplete` is NOT a worse `needs_review`. One says the pipeline has problems; the other says we could not look, and a consumer that treats them alike will tell somebody their pipeline is sound when nobody read the mailbox.
+// The counts ride along because they say how much of the pipeline the run covered. The findings do not: they are a read away, and a subscriber acting on a list that arrived on a bus is acting on a list somebody may already have resolved.
+type PublicEventForecastAssuranceCreated struct {
+	// EligibleDeals How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline.
+	EligibleDeals   int                                           `json:"eligible_deals"`
+	EligibleSignals *int                                          `json:"eligible_signals,omitempty"`
+	Readiness       *PublicEventForecastAssuranceCreatedReadiness `json:"readiness,omitempty"`
+	RunId           openapi_types.UUID                            `json:"run_id"`
+
+	// Status `incomplete` means an upstream was unavailable. The run still happened and still recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+	Status PublicEventForecastAssuranceCreatedStatus `json:"status"`
+}
+
+// PublicEventForecastAssuranceCreatedReadiness defines model for PublicEventForecastAssuranceCreated.Readiness.
+type PublicEventForecastAssuranceCreatedReadiness string
+
+// PublicEventForecastAssuranceCreatedStatus `incomplete` means an upstream was unavailable. The run still happened and still recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+type PublicEventForecastAssuranceCreatedStatus string
+
 // PublicEventForecastCreated Payload for forecast.created — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a person and that person is who it is attributable to.
 // A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
 type PublicEventForecastCreated struct {
@@ -1142,6 +1243,21 @@ type PublicEventForecastCreated struct {
 	// SupersedesId The call this one replaces. Absent on the first call of a period — which is a different fact from replacing nothing, and a consumer tracking revisions needs to tell them apart.
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
+
+// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved — somebody answered a finding from the nightly input check. The entity is the AUTHOR, because an answer is attributable to whoever gave it.
+// `outcome` says what KIND of answer it was, and consumers must not treat the six alike. `value_correct` and `not_relevant` HIDE the finding from the screens a revenue commitment is made from, so a surface counting open findings has to drop them; `remind_later` leaves the finding open and it comes back.
+// The reason does not ride along. It is prose a person wrote for another person, and a subscriber acting on it is acting on something the author may edit.
+type PublicEventForecastExceptionResolved struct {
+	ActorUserId openapi_types.UUID `json:"actor_user_id"`
+	ExceptionId openapi_types.UUID `json:"exception_id"`
+
+	// ExpiresAt When a suppressing answer stops holding. Present only for the two outcomes that hide a finding — a consumer that re-surfaces findings needs the date.
+	ExpiresAt *time.Time                                  `json:"expires_at,omitempty"`
+	Outcome   PublicEventForecastExceptionResolvedOutcome `json:"outcome"`
+}
+
+// PublicEventForecastExceptionResolvedOutcome defines model for PublicEventForecastExceptionResolved.Outcome.
+type PublicEventForecastExceptionResolvedOutcome string
 
 // PublicEventForecastSnapshotCreated Payload for forecast.snapshot_created — a set of readings was frozen, with the per-deal rows behind them. A subscriber watching for movement waits on this: the difference between two snapshots is only answerable once the second exists.
 // The COUNTS ride along and the money does not. How many deals a run considered says whether it ran completely, which is what a consumer needs to decide whether to trust the state; the totals are a read away and putting them on a bus makes two places to correct when a definition changes.
@@ -2201,9 +2317,17 @@ func (PublicEventEngagementReply) EventType() string { return "engagement.reply"
 
 func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
+func (PublicEventForecastAssuranceCreated) EventType() string { return "forecast.assurance_created" }
+
+func (PublicEventForecastAssuranceCreated) EntityType() string { return "user" }
+
 func (PublicEventForecastCreated) EventType() string { return "forecast.created" }
 
 func (PublicEventForecastCreated) EntityType() string { return "user" }
+
+func (PublicEventForecastExceptionResolved) EventType() string { return "forecast.exception_resolved" }
+
+func (PublicEventForecastExceptionResolved) EntityType() string { return "user" }
 
 func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.snapshot_created" }
 
@@ -2539,7 +2663,9 @@ var PublicEventVersions = map[string]int{
 	"deal_room.updated":                         1,
 	"email_signature.changed":                   1,
 	"engagement.reply":                          1,
+	"forecast.assurance_created":                1,
 	"forecast.created":                          1,
+	"forecast.exception_resolved":               1,
 	"forecast.snapshot_created":                 1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,

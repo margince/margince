@@ -164,6 +164,10 @@ export function useBuiltinCommands(): Command[] {
 
 // The record kinds a search hit can route to (activity is a valid
 // SearchResult type but has no 360 to land on — see entity.ts).
+//
+// An EMAIL hit is findable and openable on the search screen, which owns a
+// drawer. The palette owns no page and every Command must carry a route, so it
+// cannot open one; issue #3850 holds what that would take.
 const RECORD_KINDS = new Set<EntityKind>(ENTITY_KINDS);
 
 // Live record hits for the palette (RS-1): debounced via useDeferredValue

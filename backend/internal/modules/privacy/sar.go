@@ -51,6 +51,11 @@ type SARPackage struct {
 	Attachments         []map[string]any `json:"attachments"`
 	Consent             []map[string]any `json:"consent"`
 	ConsentEvents       []map[string]any `json:"consent_events"`
+	// The deterministic thing on the record that made business correspondence
+	// lawful, which the consent state alone does not say.
+	ConsentQualifyingEvents []map[string]any `json:"consent_qualifying_events"`
+	// Why this contact exists: the answer to Art. 15(1)(g).
+	AcquisitionEvidence []map[string]any `json:"acquisition_evidence"`
 	// What the subject themselves sent through their confirm link — a
 	// correction they typed, or a request to be removed. The one part of this
 	// package the subject authored rather than the workspace, which is exactly

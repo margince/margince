@@ -47,6 +47,7 @@ import {
 } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
@@ -130,6 +131,7 @@ import {
   withoutScreenDials,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
+import { useOpenEmail, withEmailOpener } from "./openemail";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordEmailVerb } from "./recordemail";
@@ -3882,13 +3884,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // said "no reply since" because the reader had hidden emails would be false.
   // The two share one query whenever no filter is set.
   const threadQuery = useRecordTimeline("deal", id);
-  const timelineEntries = activityTimeline(
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const rawTimelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,
     (activity) => (
       <TimelineActions activity={activity} entityType="deal" entityId={id} />
     ),
   );
+  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
     enabled: !overlay,
@@ -3993,7 +3997,18 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   />
                 )
               }
-              timelineFooter={<LoadMoreButton query={timelineQuery} />}
+              timelineFooter={
+                <>
+                  <LoadMoreButton query={timelineQuery} />
+                  {/* One drawer over the deal, beside the timeline it opens
+                      from. */}
+                  <OpenEmailDrawer
+                    activityId={openEmail}
+                    zone={recordZone}
+                    onClose={() => setOpenEmail(null)}
+                  />
+                </>
+              }
               timelineNotice={timelineZoneNotice(
                 { overlay, pending: timelineQuery.isPending },
                 t,

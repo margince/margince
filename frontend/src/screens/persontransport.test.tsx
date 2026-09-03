@@ -62,6 +62,28 @@ const aChatMessage = anActivity({
   source: "ext:zalo-oa:zalo",
 });
 
+// A withheld mail that STILL carries its subject, its body and a summary. The
+// server strips all three, so this row cannot come off the wire — which is the
+// point: the card's own check is what stands between a response assembled by a
+// path that forgot and a reader seeing mail that is not theirs.
+const aWithheldMail = anActivity({
+  id: "a-withheld",
+  kind: "email",
+  subject: "Angebot Q4",
+  body: "Können wir Dienstag sprechen?",
+  content_state: "withheld",
+  email_summary: {
+    activity_id: "a-withheld",
+    occurred_at: AT,
+    display_status: "withheld",
+    attachment_count: 0,
+    move: "none",
+    version: 1,
+    subject: "Angebot Q4",
+    preview: "Können wir Dienstag sprechen?",
+  },
+});
+
 // Everything the three surfaces read, and nothing inherited from a fixture that
 // might change for another test's reasons.
 function viewWith(
@@ -308,5 +330,18 @@ describe("consent and channels", () => {
     expect(rail.getByText("Allowed")).toBeTruthy();
     expect(rail.queryByText("No address on file")).toBeNull();
     expect(rail.getByText("she wrote to you on 15 Aug")).toBeTruthy();
+  });
+});
+
+describe("a message the reader may not read", () => {
+  it("says so, and says nothing else, whatever the row carries", () => {
+    render(<PersonMemory view={viewWith({ activities: [aWithheldMail] })} />);
+
+    // The row stays — a reader can tell a limited conversation from one that
+    // never happened.
+    expect(screen.getByText("Not shared with you")).toBeTruthy();
+    // And none of what it carries reaches the card.
+    expect(screen.queryByText("Angebot Q4")).toBeNull();
+    expect(screen.queryByText(/Können wir Dienstag sprechen/)).toBeNull();
   });
 });

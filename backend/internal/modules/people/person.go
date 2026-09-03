@@ -58,16 +58,21 @@ type PersonPhoneInput struct {
 }
 
 type CreatePersonInput struct {
-	FullName  string
-	FirstName *string
-	LastName  *string
-	Title     *string
-	OwnerID   *ids.UserID
-	Social    map[string]any
-	Address   *crmcontracts.Address
-	Emails    []PersonEmailInput
-	Phones    []PersonPhoneInput
-	Source    string
+	// Acquisition says why this contact exists — what the person did, or what
+	// was done to obtain them. A caller that does not say records
+	// unknown_legacy, which is the honest answer and the one that makes the
+	// gap visible instead of leaving the question unasked.
+	Acquisition Acquisition
+	FullName    string
+	FirstName   *string
+	LastName    *string
+	Title       *string
+	OwnerID     *ids.UserID
+	Social      map[string]any
+	Address     *crmcontracts.Address
+	Emails      []PersonEmailInput
+	Phones      []PersonPhoneInput
+	Source      string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -150,6 +155,11 @@ func createPersonInTx(ctx context.Context, tx pgx.Tx, in CreatePersonInput, by s
 	}
 
 	id, err := createPerson(ctx, tx, match, PersonSpec{
+		// Whatever the caller declared. An unset kind records unknown_legacy,
+		// which is the honest answer for a contact somebody typed in without
+		// saying why — and the answer that makes the gap visible rather than
+		// leaving the question unasked.
+		Acquisition:  in.Acquisition,
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,

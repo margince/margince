@@ -18,9 +18,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
@@ -117,7 +119,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
-		searchHandlers:      search.NewHandlers(InstallationDB(pool), collections.CountTagReachBatch),
+		searchHandlers:      search.NewHandlers(InstallationDB(pool), collections.CountTagReachBatch, activities.EmailSummariesByIDBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
@@ -174,6 +176,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The forecast owns its arithmetic and nothing about deals, so the deal
 		// rows and the fiscal window arrive as seams. Row scope is applied in
 		// ForecastDeals, where the caller's authority already sits.
+		// The assurance surface reads what last night's pass found. Its scan
+		// is a job rather than a request, so the handler set is a read.
+		assuranceHandlers: assurance.NewHandlers(
+			assurance.NewStore(InstallationDB(pool)),
+			AssuranceExceptions,
+			func() time.Time { return time.Now().UTC() },
+		),
 		forecastHandlers: forecasting.NewHandlers(
 			forecasting.NewStore(InstallationDB(pool)),
 			ForecastDeals, ForecastPeriodAt,

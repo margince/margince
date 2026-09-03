@@ -180,6 +180,8 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterReportTool(r, nil, probeReportCatalog)
 	RegisterForecastTool(r, nil)
 	RegisterMovementTool(r, nil)
+	RegisterAssuranceTool(r, nil)
+	RegisterInputChecksTool(r, nil)
 	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,

@@ -21,6 +21,7 @@ import { ContactLink } from "../design-system/contactlink";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
@@ -76,6 +77,7 @@ import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
 import { LogActivity } from "./logactivity";
+import { useOpenEmail, withEmailOpener } from "./openemail";
 import {
   CallCard,
   RecordReading,
@@ -1698,7 +1700,12 @@ function LeadRecord({
   // the two share one query whenever no filter is set.
   const threadQuery = useRecordTimeline("lead", id);
   const viewerId = useViewerId();
-  const timelineEntries = activityTimeline(timelineQuery.activities, viewerId);
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const rawTimelineEntries = activityTimeline(
+    timelineQuery.activities,
+    viewerId,
+  );
+  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
   // What the last qualify did, said once: the contact and, when one was
   // opened, the deal. The page stays (ADR-0119) and the outcome panel below
@@ -1771,7 +1778,17 @@ function LeadRecord({
           />
         )
       }
-      timelineFooter={<LoadMoreButton query={timelineQuery} />}
+      timelineFooter={
+        <>
+          <LoadMoreButton query={timelineQuery} />
+          {/* One drawer over the lead, beside the timeline it opens from. */}
+          <OpenEmailDrawer
+            activityId={openEmail}
+            zone={viewerZone()}
+            onClose={() => setOpenEmail(null)}
+          />
+        </>
+      }
       timelineNotice={timelineZoneNotice(
         { overlay, pending: timelineQuery.isPending },
         t,
