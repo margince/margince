@@ -43,9 +43,20 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 	// and would otherwise see a participants-only row that no import row asks
 	// for, and widen it back — the reason is how a hold placed for something
 	// other than a mailbox's posture survives being recomputed.
+	// WHICH no-record case this is, recorded rather than inferred later. Both
+	// hold the message identically today; they differ in what a later link
+	// means. A judged sender's message stays held however it is filed — the
+	// judgement was about them, not about the filing — while a record that
+	// merely named nobody is held only until something files it. A reader that
+	// tried to tell the two apart afterwards, by kind or by any other proxy,
+	// would be guessing at a distinction only this decision knows.
+	reason := audienceReasonNoRecord
+	if decision.traceReason == traceReasonNoCounterparty {
+		reason = audienceReasonNoCounterparty
+	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
-		id, audienceParticipants, audienceReasonNoRecord)
+		id, audienceParticipants, reason)
 	if err != nil {
 		return fmt.Errorf("capture: limiting a link-less message to its participants: %w", err)
 	}
@@ -73,8 +84,17 @@ const (
 	audienceReasonPosture = "posture"
 	// Nothing has judged the thread yet.
 	audienceReasonPendingVerdict = "pending_verdict"
-	// The message is filed under no record at all.
+	// The message is filed under no record at all, because something JUDGED
+	// its sender: a suppression rule, a settled verdict, a thread the owner's
+	// own. Nothing about a later link says anything about that judgement, so
+	// the hold survives one.
 	audienceReasonNoRecord = "no_record"
+	// The message named nobody a record COULD be created for — the calendar
+	// case, where attendance is a list and the mapper leaves the counterparty
+	// unset. No judgement was made about anybody, so this hold is exactly as
+	// true as "nothing has filed it yet", and it stops being true when
+	// something does.
+	audienceReasonNoCounterparty = "no_counterparty"
 	// The workspace turned mail sharing off. No verdict clears this one.
 	audienceReasonWorkspaceFloor = "workspace_floor"
 	// This seat holds mail with one of the parties, whatever it is about.
