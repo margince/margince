@@ -1509,6 +1509,8 @@ export const de = {
   "email.move.waitingForThem": "Warten auf Antwort",
   "email.detail.loading": "Nachricht wird geöffnet",
   "email.detail.none": "Diese Nachricht",
+  "email.detail.attachments_one": "{count} Anhang",
+  "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.close": "Schließen",
   "email.detail.withheldReason":

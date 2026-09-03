@@ -1503,6 +1503,8 @@ export const vi = {
   "email.move.waitingForThem": "Đang chờ họ",
   "email.detail.loading": "Đang mở thư",
   "email.detail.none": "Thư này",
+  "email.detail.attachments_one": "{count} tệp đính kèm",
+  "email.detail.attachments_other": "{count} tệp đính kèm",
   "email.detail.showQuoted": "Hiện phần trích dẫn",
   "email.detail.close": "Đóng",
   "email.detail.withheldReason": "Thư này không được chia sẻ với bạn",

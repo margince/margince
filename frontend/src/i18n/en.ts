@@ -1563,6 +1563,8 @@ export const en = {
   "email.move.waitingForThem": "Waiting for them",
   "email.detail.loading": "Opening the message",
   "email.detail.none": "This message",
+  "email.detail.attachments_one": "{count} attachment",
+  "email.detail.attachments_other": "{count} attachments",
   "email.detail.showQuoted": "Show quoted history",
   "email.detail.close": "Close",
   "email.detail.withheldReason": "This message is not shared with you",
