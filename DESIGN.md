@@ -311,20 +311,21 @@ has two depths, and the shallow one is the default.
 version and brings the product's own features back in reduced form — each
 one present, none at full depth:
 
-- The name at 44px in the display face, one line of facts with the live dot
+- The name at 32px in the display face beside a 56px mark, both centred on
+  one axis so a facts line that wraps never breaks the head; the facts with the live dot
   ("In conversation · Hamburg · Freight forwarding · 240 employees · Owner"),
   and three verbs. No badges beyond the standing, no second line.
 - **A quiet tab row** under the head — no pane, no rule, a 2px accent under
   the current tab — so every sub page (History, People, Deals, Tasks,
   Finance, Documents, Profile, Partner) is one click away. The links inside
   the panes ("All deals", "Full history") open the same tabs.
-- **Five readings as roomy cards**, 160px tall, an uppercase label, one
-  figure at 30px in the mono face, one line of basis at the foot, and empty
+- **Five readings as roomy cards**, 138px tall, an uppercase label, one
+  figure at 26px in the mono face (22px under 1400px), one line of basis at the foot, and empty
   space between them. When the details panel is open they shrink to 21px
   figures and never wrap.
 - **The 360 as the first pane**, full width, on the same hairline as every
   other pane: the record's name and "· 360" as the pane title, the agent's word
-  at 40px, one sentence beside it whose claims are hoverable sources (the
+  at 34px, one sentence beside it whose claims are hoverable sources (the
   chip sits inline on the agent's tint; hover opens what it rests on), the
   three rated dimensions, then the spine. The thread is folded — "Read the
   thread · 5" opens the five most recent exchanges inside the pane; "Full
@@ -769,7 +770,7 @@ the test is what proves the canon moved rather than one screen. The order of
 work that gets the most visible change for the least churn:
 
 1. **The shell.** The two glows on the ground, the sidebar as glass with the
-   fold, the top strip to a 44px row with the breadcrumb and the Details
+   fold, the top strip to a 44px row with the breadcrumb and the command field
    toggle. One file
    each (`shell.css`, `topbar.css`), and the whole product stops looking like a
    template.
