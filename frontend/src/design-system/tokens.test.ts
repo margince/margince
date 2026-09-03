@@ -34,11 +34,11 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // are the ordering and the contrast pairs further down, which a wrong tint
 // fails whether or not the arithmetic is repeated.
 const canonical: Record<string, string> = {
-  "--bgPage": "#f4f8f6",
-  "--bgSidebar": "#e5ebe8",
-  "--bgElevated": "#fafffd",
-  "--bgCard": "#e6ece9",
-  "--bgHover": "#e9efec",
+  "--bgPage": "#f1f5f2",
+  "--bgSidebar": "#e6eae7",
+  "--bgElevated": "#fbfcfb",
+  "--bgCard": "#eaedeb",
+  "--bgHover": "#edf0ee",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
