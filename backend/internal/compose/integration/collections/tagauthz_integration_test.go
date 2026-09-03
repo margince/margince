@@ -17,6 +17,7 @@ package collections
 // Postgres row-scope predicate can arbitrate.
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -29,19 +30,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// seedTag mints a live tag as admin, in the caller's shape (ids.TagID).
+func seedTag(t *testing.T, e *integration.Env, tags *collectionsmod.Store, name string) ids.TagID {
+	t.Helper()
+	tag, err := tags.NewTag(e.Admin(), name, "")
+	if err != nil {
+		t.Fatalf("seeding the tag: %v", err)
+	}
+	return ids.From[ids.TagKind](tag.TagID)
+}
+
+// repCtx is the one seat every test in this file probes: Rep1 on Team1,
+// holding AccountRepPerms — read-all on person, write bounded to their team.
+func repCtx(e *integration.Env) context.Context {
+	return e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+}
+
 func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
 	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
-	tag, err := tags.NewTag(e.Admin(), "Key Account", "")
-	if err != nil {
-		t.Fatalf("seeding the tag: %v", err)
-	}
-	tagID := ids.From[ids.TagKind](tag.TagID)
+	tagID := seedTag(t, e, tags, "Key Account")
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	rep := repCtx(e)
 
 	// The admit arm first: this seat CAN read the foreign contact (person is
 	// read-all), which is the exact condition an object grant alone cannot
@@ -98,17 +111,13 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 	tags := collectionsmod.NewStore(e.DB())
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
-	tag, err := tags.NewTag(e.Admin(), "Archived Target", "")
-	if err != nil {
-		t.Fatalf("seeding the tag: %v", err)
-	}
-	tagID := ids.From[ids.TagKind](tag.TagID)
+	tagID := seedTag(t, e, tags, "Archived Target")
 
 	if _, err := e.People.ArchivePerson(e.Admin(), integration.PersonIDOf(own), nil); err != nil {
 		t.Fatalf("archiving the fixture: %v", err)
 	}
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	rep := repCtx(e)
 	if _, err := tags.ApplyTag(rep, tagID, "person", own); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("applying a tag to an archived record this seat owns → %v, want ErrNotFound", err)
 	}
@@ -136,13 +145,9 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 	tags := collectionsmod.NewStore(e.DB())
 
 	unowned := e.SeedPerson(t, "Unclaimed", nil)
-	tag, err := tags.NewTag(e.Admin(), "Ownerless Target", "")
-	if err != nil {
-		t.Fatalf("seeding the tag: %v", err)
-	}
-	tagID := ids.From[ids.TagKind](tag.TagID)
+	tagID := seedTag(t, e, tags, "Ownerless Target")
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	rep := repCtx(e)
 	if _, err := e.People.GetPerson(rep, integration.PersonIDOf(unowned), storekit.LiveOnly); err != nil {
 		t.Fatalf("reading an unowned contact: %v, want success — read-all covers ownerless rows too", err)
 	}
@@ -183,7 +188,7 @@ func TestEnsureTaggableRefusesTheSameForeignOwnedRecordApplyDoes(t *testing.T) {
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
 	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	rep := repCtx(e)
 
 	if err := tags.EnsureTaggable(rep, "person", own); err != nil {
 		t.Errorf("EnsureTaggable on this seat's own contact: %v, want success", err)
@@ -203,13 +208,9 @@ func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
 
 	own := e.SeedPerson(t, "Own", &e.Rep1)
 	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
-	tag, err := tags.NewTag(e.Admin(), "Imported", "")
-	if err != nil {
-		t.Fatalf("seeding the tag: %v", err)
-	}
-	tagID := ids.From[ids.TagKind](tag.TagID)
+	tagID := seedTag(t, e, tags, "Imported")
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	rep := repCtx(e)
 
 	tx, err := e.Pool.Begin(rep)
 	if err != nil {
