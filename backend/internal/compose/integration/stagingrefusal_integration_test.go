@@ -158,3 +158,92 @@ func TestAnAllowedSendRecordsItsStagingDecision(t *testing.T) {
 		t.Error("the decision names no actor — a proof row nobody can be held to is not proof")
 	}
 }
+
+// sendExpectingAcceptanceClaiming sends while naming a category, and expects
+// the send to be accepted. It is the accepting twin of sendClaiming below.
+func (p *preflightEnv) sendExpectingAcceptanceClaiming(t *testing.T, context string) ids.UUID {
+	t.Helper()
+	var sent struct {
+		ID string `json:"id"`
+	}
+	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "As discussed.",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"communication_context": context,
+	}, nil, &sent)
+	if status != http.StatusAccepted {
+		t.Fatalf("send-email claiming %q → %d, want 202", context, status)
+	}
+	id, err := ids.Parse(sent.ID)
+	if err != nil {
+		t.Fatalf("accepted send returned no activity id: %v", err)
+	}
+	return id
+}
+
+// sendClaiming posts a send naming a communication context, and returns the
+// status plus the problem code.
+func (p *preflightEnv) sendClaiming(t *testing.T, context string) (status int, code string) {
+	t.Helper()
+	var problem struct {
+		Code    string `json:"code"`
+		Details struct {
+			Errors []struct {
+				Field string `json:"field"`
+				Code  string `json:"code"`
+			} `json:"errors"`
+		} `json:"details"`
+	}
+	status = p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"communication_context": context,
+	}, nil, &problem)
+	if errs := problem.Details.Errors; len(errs) > 0 {
+		return status, errs[0].Code
+	}
+	return status, problem.Code
+}
+
+// A rep may say what their own message is about, and the claim is recorded
+// beside the category the engine resolved — so a claim the evidence does not
+// support is visible later rather than silently honoured or silently dropped.
+func TestAClaimedContextReachesTheDecision(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	sent := p.sendExpectingAcceptanceClaiming(t, "reply_to_inbound")
+	deliveryID, _ := p.deliveryFor(t, sent)
+
+	var requested *string
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT requested_category FROM communication_decision
+			  WHERE delivery_id = $1 AND phase = 'staging'`, deliveryID).Scan(&requested)
+	}); err != nil {
+		t.Fatalf("reading the decision: %v", err)
+	}
+	if requested == nil || *requested != "reply_to_inbound" {
+		t.Fatalf("requested_category = %v, want the category the caller claimed", requested)
+	}
+}
+
+// The five categories reserved for controller mail are refused at the send
+// door. A send able to claim one could dress marketing as a security warning
+// and pass a suppression that exists to stop exactly that.
+func TestASendCannotClaimAControllerCategory(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	status, code := p.sendClaiming(t, "security_notice")
+
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("a send claiming security_notice → %d, want 422", status)
+	}
+	if code != "invalid" {
+		t.Errorf("refusal code = %q, want invalid", code)
+	}
+	if n := p.stagedDeliveries(t); n != 0 {
+		t.Errorf("%d deliveries staged behind a refused claim, want 0", n)
+	}
+}

@@ -21010,6 +21010,48 @@ export interface components {
             label: string;
             evidence_ref?: components["schemas"]["OrganizationBriefEvidence"];
         };
+        /**
+         * @description Records the caller can name in support of a send, each by id. Evidence is
+         *     CHECKED, never trusted: the engine reads the named record and asks whether it
+         *     actually supports the category claimed — a deal id that is closed, an invoice
+         *     belonging to another organization, or a record the caller cannot see supports
+         *     nothing. Naming a record therefore never widens what a caller may do.
+         *
+         *     Every field is optional. A caller that can name nothing says nothing, and the
+         *     engine resolves the send from its origin instead.
+         */
+        CommunicationEvidence: {
+            /**
+             * Format: uuid
+             * @description The inbound message this send answers.
+             */
+            activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live opportunity this send moves along.
+             */
+            deal_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The invoice or payment event this send is about.
+             */
+            invoice_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live contract whose notice this send carries.
+             */
+            contract_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The recorded consent this send relies on.
+             */
+            consent_event_id?: string | null;
+            /**
+             * Format: uuid
+             * @description A recorded communication basis this send relies on.
+             */
+            basis_id?: string | null;
+        };
         SendEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
@@ -21062,6 +21104,41 @@ export interface components {
              *     outcome is inferred without a valid reference.
              */
             draft_ref?: string | null;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `context_not_available`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
              *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
@@ -21249,6 +21326,41 @@ export interface components {
              */
             draft_ref?: string | null;
             /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `context_not_available`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
              *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
              *     `person_consent` for THIS purpose.
@@ -21302,6 +21414,41 @@ export interface components {
              *     (422 `empty_message_body`) rather than staged for a delivery that could only park.
              */
             body: string;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `context_not_available`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`). The send is
              *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
