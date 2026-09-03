@@ -31458,14 +31458,18 @@ type WorklistCount struct {
 type WorklistCountCategory string
 
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
-// `amount_minor × win_probability`, converted to the installation's base currency —
-// the only figure by which two deals in different currencies may be compared.
+// `amount_minor` converted to the installation's base currency — the only figure by
+// which two deals in different currencies may be compared. It does not yet weight by
+// `win_probability`: the pipeline this row comes from does not read a deal's stage
+// today, so the two fields are independent facts rather than one computed from the
+// other, and a reader must not multiply them together expecting the product to equal
+// a risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor       *int64              `json:"amount_minor,omitempty"`
 	Currency          *string             `json:"currency,omitempty"`
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
-	// ExpectedMinorBase Expected revenue in the base currency. Null when the amount or the rate is unknown.
+	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
 	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays         *int                `json:"quiet_days,omitempty"`
@@ -31537,8 +31541,12 @@ type WorklistItem struct {
 	Consequence WorklistItemConsequence `json:"consequence"`
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
-	// `amount_minor × win_probability`, converted to the installation's base currency —
-	// the only figure by which two deals in different currencies may be compared.
+	// `amount_minor` converted to the installation's base currency — the only figure by
+	// which two deals in different currencies may be compared. It does not yet weight by
+	// `win_probability`: the pipeline this row comes from does not read a deal's stage
+	// today, so the two fields are independent facts rather than one computed from the
+	// other, and a reader must not multiply them together expecting the product to equal
+	// a risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
 	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that

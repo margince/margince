@@ -166,7 +166,7 @@ func TestDealFiguresApplyTheRolesFieldMask(t *testing.T) {
 	}
 }
 
-// margince#3749: a close date already behind today's calendar date, in the
+// A close date already behind today's calendar date, in the
 // workspace's own zone (UTC — this harness's fresh-installation default),
 // answers overdue — the same verdict deals.CloseIsOverdue gives the at-risk
 // lane over the identical deal, so the Worklist's two rows for one deal state

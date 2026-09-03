@@ -30,7 +30,7 @@ import (
 
 // nameTheMoney puts a deal's figures on every lane item that names one and
 // carries none — and drops the item where Figures cannot answer for it at
-// all (margince#3800), since a row that can name nothing is not a suggestion.
+// all, since a row that can name nothing is not a suggestion.
 //
 // Items that already have facts are left alone: the lane that produced them
 // read the deal under this same reader, and asking again could only produce a
@@ -75,7 +75,7 @@ func (s *Service) nameTheMoney(ctx context.Context, day *crmcontracts.Attention)
 				// way, and a row that can name nothing is not a suggestion:
 				// dropped here rather than left on the page with no amount,
 				// no close date and no reason, still offering act/set_aside/
-				// dismiss over a deal that no longer resolves (margince#3800).
+				// dismiss over a deal that no longer resolves.
 				continue
 			}
 			applyDealFigures(&item, found)

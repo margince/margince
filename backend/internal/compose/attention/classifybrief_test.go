@@ -36,15 +36,14 @@ func TestClassifyBriefItemStampsItsDeadline(t *testing.T) {
 	}
 }
 
-// margince#3749: the brief row and the at-risk row for the SAME deal must
-// never disagree about whether it is late. The at-risk lane compares calendar
-// dates in the workspace zone (deals.CloseIsOverdue) — a deal due TODAY is not
-// overdue — and that verdict now arrives pre-computed on item.Overdue
-// (deals.Store.Figures, threaded through applyDealFigures). Before this fix,
-// classifyBriefItem recomputed its own answer from the INSTANT the close date
-// round-trips as (UTC midnight of the due day), which reads "overdue" from
-// 00:00 UTC onward on the due day itself — a whole local day out of step with
-// the sibling lane, for a deal due today.
+// The brief row and the at-risk row for the SAME deal must never disagree
+// about whether it is late. The at-risk lane compares calendar dates in the
+// workspace zone (deals.CloseIsOverdue) — a deal due TODAY is not overdue —
+// and classifyBriefItem trusts the identical pre-computed verdict rather
+// than recomputing one from the INSTANT the close date round-trips as (UTC
+// midnight of the due day), which would read "overdue" from 00:00 UTC onward
+// on the due day itself — a whole local day out of step with the sibling
+// lane, for a deal due today.
 func TestClassifyBriefItemTrustsTheDealsCalendarOverdueVerdictOverAnInstantComparison(t *testing.T) {
 	// The close date's UTC-midnight round-trip is already behind rankInstant
 	// (09:00 UTC on the same day), so an instant comparison would call this

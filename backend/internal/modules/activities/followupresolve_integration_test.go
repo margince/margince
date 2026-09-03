@@ -284,7 +284,7 @@ func TestADisqualifiedLeadCompletesItsSystemTasks(t *testing.T) {
 	}
 }
 
-// margince#3764: a lead PROMOTED is a different shape. carryLeadActivities
+// A lead PROMOTED is a different shape. carryLeadActivities
 // (people/promote.go) moves the follow-up task's link from the lead onto the
 // person it became — entity_type 'person', person_id set, lead_id NULL —
 // inside the SAME transaction that emits lead.promoted, so the resolver never

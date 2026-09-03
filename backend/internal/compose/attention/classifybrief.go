@@ -29,13 +29,12 @@ import (
 // deal-figures read that supplied DueAt (applyDealFigures, dealfacts.go),
 // which states deals.CloseIsOverdue's verdict — a CALENDAR-DATE comparison in
 // the workspace zone, the same rule the sibling "deals_at_risk" row for the
-// identical deal is judged by. Recomputing an instant comparison here instead
-// (as this once did, via overdueAt) is exactly what let the two rows disagree
-// for a deal due today: a close date round-trips as UTC midnight, so an
-// instant read calls it overdue from 00:00 UTC onward on the due day itself,
-// up to a whole local day before the calendar-date verdict agrees.
-// base() already carries item.Overdue onto row.Overdue; there is nothing left
-// to set here.
+// identical deal is judged by. A close date round-trips as UTC midnight, so
+// an INSTANT comparison here would call a deal overdue from 00:00 UTC onward
+// on the due day itself — up to a whole local day before the calendar-date
+// verdict agrees, and the two rows for one deal would disagree over exactly
+// that window. base() already carries item.Overdue onto row.Overdue; there
+// is nothing left to set here.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
 	if item.DueAt != nil {

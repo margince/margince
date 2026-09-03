@@ -89,13 +89,10 @@ func TestAnEmptyOriginIsRefused(t *testing.T) {
 	}
 }
 
-// margince#3457: a caller that has not wired a public origin at all is not a
-// broken configuration under development or test — those postures need no
-// real link to work, and the refusal used to run before the posture was even
-// consulted, so a worker started with no origin flag could not start at all
-// while the api process (which did receive one) came up fine beside it.
-// Production and every OTHER posture — an unrecognised one included — still
-// refuse below, through TestAnEmptyOriginIsRefused and
+// A caller that has not wired a public origin at all is not a broken
+// configuration under development or test — those postures need no real
+// link to work. Production and every OTHER posture — an unrecognised one
+// included — still refuse below, through TestAnEmptyOriginIsRefused and
 // TestAnUnknownPostureIsTreatedAsProduction.
 func TestAnUnsetOriginInDevelopmentOrTestIsNotRefused(t *testing.T) {
 	for _, env := range []runtimeenv.Environment{runtimeenv.Development, runtimeenv.Test} {

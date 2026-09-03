@@ -72,8 +72,8 @@ func TestABriefRowGainsItsDealsFigures(t *testing.T) {
 	}
 }
 
-// margince#3800: a deal Figures cannot answer for — gone (archived, deleted)
-// or no longer visible to this reader — drops the row entirely, rather than
+// A deal Figures cannot answer for — gone (archived, deleted) or no longer
+// visible to this reader — drops the row entirely, rather than
 // leaving an unidentifiable one on the page: no amount, no close date, no
 // reason, yet still offering act/set_aside/dismiss over a deal that no longer
 // resolves. A row that can name nothing is not a suggestion, and the refusal

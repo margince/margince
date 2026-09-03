@@ -51,14 +51,12 @@ var ErrOriginNotPublic = errors.New("public origin is not reachable by a recipie
 // including an unrecognised one, which runtimeenv parses as production —
 // gets the full rule, so the carve-out fails closed.
 //
-// The development/test exemption is checked BEFORE bareOrigin for an
-// UNSET value specifically (margince#3457): a caller that never wired an
-// origin at all is not a broken configuration under a posture that needs no
-// real link to work, and refusing it before the posture was even consulted
-// once left a worker process unable to start while the api process (which
-// did receive a value) came up fine beside it. A NON-empty value still goes
-// through the full shape check in every posture — only genuine absence is
-// exempt, so a real but malformed origin is still caught.
+// The development/test exemption is checked BEFORE bareOrigin for an UNSET
+// value specifically: a caller that never wired an origin at all is not a
+// broken configuration under a posture that needs no real link to work. A
+// NON-empty value still goes through the full shape check in every posture
+// — only genuine absence is exempt, so a real but malformed origin is still
+// caught.
 func RequirePublicOrigin(label, raw string, env runtimeenv.Environment) error {
 	devOrTest := env == runtimeenv.Development || env == runtimeenv.Test
 	if devOrTest && strings.TrimSpace(raw) == "" {

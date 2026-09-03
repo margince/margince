@@ -155,8 +155,8 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		}
 		completed += done
 	}
-	// margince#3764: a PROMOTED lead is a different shape from a disqualified
-	// one. carryLeadActivities (people/promote.go) moves the follow-up task's
+	// A PROMOTED lead is a different shape from a disqualified one.
+	// carryLeadActivities (people/promote.go) moves the follow-up task's
 	// link from the lead onto the person it became, inside the SAME
 	// transaction that emits this event — so the lead-keyed completion above
 	// never finds it once a lead has genuinely promoted; only the payload
@@ -169,7 +169,8 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 	// way a lead's follow-up does — and completing every open system task on
 	// the person would tick off work this promotion has nothing to do with.
 	// A newly minted person cannot yet carry anything else, so completing by
-	// person id is exact there and only there.
+	// person id is exact there and only there. A MERGED promotion's carried
+	// follow-up is left open by this arm; nothing else resolves it either.
 	if w.trigger == leadPromotedTrigger {
 		promoted, err := decodeLeadPromoted(ev.Payload)
 		if err != nil {
