@@ -5,8 +5,9 @@ package compose
 
 // The runner's listing omits two SURFACE-owned things from every schema it
 // renders — `idempotency_key`'s description and `"additionalProperties":false` —
-// and states each once in the system frame instead of once per tool. That saves
-// ~1,165 tokens on a listing every step of every run re-sends.
+// and states each once in the system frame instead of once per tool, on a
+// listing every step of every run re-sends. What it saves is published as
+// catalog.tokens in docs/reference/agent-tool-budget.json.
 //
 // The invariant is held HERE and not only in the runner, because the runner
 // cannot see the whole served catalog and this package can. The weaker version
@@ -48,7 +49,7 @@ func TestTheListingIsTheDeclaredCompactionOfEveryServedSchema(t *testing.T) {
 			t.Errorf("%s is served but the listing renders no schema for it", spec.Name)
 			continue
 		}
-		if want := runner.CompactSchema(spec.InputSchema); got != want {
+		if want := runner.CompactSchema(spec); got != want {
 			t.Errorf("%s: the listing renders\n\t%s\nand the declared compaction of the served schema is\n\t%s\n"+
 				"The two must be the same string. If the renderer has started changing something else — "+
 				"member order, an enum, a required list, a nested object — that change is invisible to "+
@@ -174,18 +175,17 @@ func TestTheServedSurfaceKeepsWhatTheListingOmits(t *testing.T) {
 }
 
 // systemFrameBudgetNumerator / Denominator bound the frame at 1/16 of the
-// window — 1,536 tokens against today's 351.
+// window.
 //
-// The bound exists because this change made the frame a PLACE TO PUT THINGS.
-// Moving a sentence out of 32 schemas and into the frame trades (tools x
-// sentence) for (1 x sentence), which is a good trade and an inviting one, and
-// the catalog floor measures the LISTING alone. Without a bound the only thing
-// between a paragraph in the frame and every run of every agent paying for it
-// is somebody noticing a regenerated doc diff.
+// The frame is a PLACE TO PUT THINGS: moving a sentence out of every schema and
+// into it trades (tools x sentence) for (1 x sentence), which is a good trade
+// and an inviting one, and the catalog floor measures the LISTING alone.
+// Without a bound the only thing between a paragraph here and every run of
+// every agent paying for it is somebody reading a regenerated doc diff.
 //
-// Generous on purpose: it is a ceiling on the shape of the mistake, not a
-// budget to argue with. Four times today's frame still fails long before it
-// could displace the observations a run reasons over.
+// Generous on purpose: a ceiling on the shape of the mistake, not a budget to
+// argue with. The frame has several times this much room today and still fails
+// long before it could displace what a run reasons over.
 const (
 	systemFrameBudgetNumerator   = 1
 	systemFrameBudgetDenominator = 16

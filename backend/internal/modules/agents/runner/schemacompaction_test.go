@@ -13,13 +13,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
+// mutating wraps a bare schema as a MUTATING tool, which is the only kind whose
+// root `idempotency_key` the surface owns.
+func mutating(schema json.RawMessage) mcp.ToolSpec {
+	return mcp.ToolSpec{Name: "probe", RequiredScope: principal.ScopeWrite, InputSchema: schema}
+}
+
+// readOnly wraps a bare schema as a READ-ONLY tool. The surface splices the
+// retry key into mutating tools only, so a root member of that name on a
+// read-only one is the tool's own and its description is the tool's meaning.
+func readOnly(schema json.RawMessage) mcp.ToolSpec {
+	return mcp.ToolSpec{Name: "probe", RequiredScope: principal.ScopeRead, InputSchema: schema}
+}
+
 // mutatingSpec is a tool shaped the way the surface splices one: a closed
 // object, one domain argument, and the retry key the surface owns — including
 // its description, which is what the compaction takes out.
 //
-// The retry key's rendering is the SURFACE's, byte for byte
-// (agents.retryKeyProperty), so a change to the member there shows up here as a
-// changed expectation rather than as a silently weaker case.
+// It shares mcp.ReservedIdempotencyKeyRule with the surface, so a reworded rule
+// moves this fixture too. The bound and the `Optional. ` prefix are copied, and
+// that much is a copy: nothing holds them equal to agents.retryKeyProperty, and
+// what the compaction reads is the member's presence rather than its shape.
 func mutatingSpec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name:          "log_activity",
@@ -51,7 +65,7 @@ func nestedSpec() mcp.ToolSpec {
 // know the argument exists, its type and its bound in order to send one — what
 // it no longer needs, 32 times over, is the sentence the frame states once.
 func TestTheRetryKeysDescriptionIsOmittedAndTheMemberKept(t *testing.T) {
-	compacted := CompactSchema(mutatingSpec().InputSchema)
+	compacted := CompactSchema(mutatingSpec())
 	if strings.Contains(compacted, mcp.ReservedIdempotencyKeyRule) {
 		t.Errorf("the retry key's description is still rendered per tool:\n%s", compacted)
 	}
@@ -87,7 +101,7 @@ func TestTheRetryKeysDescriptionIsOmittedAndTheMemberKept(t *testing.T) {
 // themselves, which is why the whole-catalog count of the keyword exceeds the
 // tool count: a top-level-only compaction would leave most of it behind.
 func TestTheClosedFormIsOmittedAtEveryDepth(t *testing.T) {
-	compacted := CompactSchema(nestedSpec().InputSchema)
+	compacted := CompactSchema(nestedSpec())
 	if strings.Contains(compacted, `"additionalProperties":false`) {
 		t.Errorf("a nested closed object still renders the keyword:\n%s", compacted)
 	}
@@ -105,7 +119,7 @@ func TestTheClosedFormIsOmittedAtEveryDepth(t *testing.T) {
 // there is this tool's own rule about what an unlisted key must look like.
 func TestOnlyTheClosedFormIsOmitted(t *testing.T) {
 	open := json.RawMessage(`{"type":"object","additionalProperties":{"type":"string"}}`)
-	compacted := CompactSchema(open)
+	compacted := CompactSchema(mutating(open))
 	if !strings.Contains(compacted, `"additionalProperties":{"type":"string"}`) {
 		t.Errorf("a constrained additionalProperties was dropped as though it were the closed form:\n%s", compacted)
 	}
@@ -123,7 +137,7 @@ func TestAToolThatMentionsTheReservedNameKeepsItsOwnProse(t *testing.T) {
 	spec := json.RawMessage(`{"type":"object","properties":{` +
 		`"note":{"type":"string","description":"Say whether an idempotency_key was sent."}},` +
 		`"additionalProperties":false}`)
-	compacted := CompactSchema(spec)
+	compacted := CompactSchema(mutating(spec))
 	if !strings.Contains(compacted, "Say whether an idempotency_key was sent.") {
 		t.Errorf("a tool's own prose was stripped because it mentioned the reserved name:\n%s", compacted)
 	}
@@ -147,7 +161,7 @@ func TestANestedMemberOfTheReservedNameKeepsItsDescription(t *testing.T) {
 		`"idempotency_key":{"type":"string","maxLength":255,` +
 		`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
 		`"additionalProperties":false}`)
-	compacted := CompactSchema(spec)
+	compacted := CompactSchema(mutating(spec))
 	if !strings.Contains(compacted, perItem) {
 		t.Errorf("a NESTED member named %q lost its own description, which the surface never wrote "+
 			"and the frame does not state:\n%s", mcp.ReservedIdempotencyKeyArg, compacted)
@@ -160,17 +174,17 @@ func TestANestedMemberOfTheReservedNameKeepsItsDescription(t *testing.T) {
 }
 
 // `approval_id` is NOT compacted, and that is a decision rather than an
-// omission: it carries three descriptions across nineteen members, and one of
-// them is a per-tool replay instruction that no frame sentence replaces. Keying
-// the compaction on text would have taken all three; keying it on ownership
-// takes none, which is the right answer for a member whose meaning varies.
+// omission: its description VARIES by tool, and one spelling of it is a per-tool
+// replay instruction that no frame sentence replaces. Keying the compaction on
+// text would have taken every spelling; keying it on ownership takes none, which
+// is the right answer for a member whose meaning is not the surface's.
 func TestTheApprovalKeyIsNotCompacted(t *testing.T) {
 	const instruction = "Set on retry after a human approved overwriting their edit; " +
 		"send it with exactly the staged replay arguments"
 	spec := json.RawMessage(`{"type":"object","properties":{` +
 		`"approval_id":{"type":"string","description":"` + instruction + `"}},` +
 		`"additionalProperties":false}`)
-	compacted := CompactSchema(spec)
+	compacted := CompactSchema(mutating(spec))
 	if !strings.Contains(compacted, instruction) {
 		t.Errorf("approval_id's per-tool replay instruction was compacted away:\n%s", compacted)
 	}
@@ -191,7 +205,7 @@ func TestAPropertyNamedLikeAKeywordIsStillAProperty(t *testing.T) {
 		`"additionalProperties":false}},` +
 		`"properties":{"type":"object","description":"Extra columns, by name."}},` +
 		`"additionalProperties":false}`)
-	compacted := CompactSchema(spec)
+	compacted := CompactSchema(mutating(spec))
 	var parsed struct {
 		Properties map[string]map[string]json.RawMessage `json:"properties"`
 	}
@@ -212,6 +226,30 @@ func TestAPropertyNamedLikeAKeywordIsStillAProperty(t *testing.T) {
 	// compaction having skipped the whole schema.
 	if strings.Contains(compacted, `"additionalProperties":false`) {
 		t.Errorf("the closed form survived, so nothing was compacted here at all:\n%s", compacted)
+	}
+}
+
+// A READ-ONLY tool's own root `idempotency_key` keeps its description.
+//
+// The surface splices the retry key into MUTATING core tools only, and refuses a
+// mutating tool that declares the member itself — so a read-only tool carrying
+// one wrote it, and the frame's sentence is not about it. Stripping it there
+// would take away per-tool meaning on the strength of a name the surface never
+// claimed for that tool. No such tool exists today, which is what makes this a
+// planted case rather than a repair.
+func TestAReadOnlyToolsOwnRetryKeyKeepsItsDescription(t *testing.T) {
+	const own = "A caller-chosen cursor; repeats are cheap and this is not the surface's key."
+	schema := json.RawMessage(`{"type":"object","properties":{` +
+		`"idempotency_key":{"type":"string","description":"` + own + `"}},` +
+		`"additionalProperties":false}`)
+	if compacted := CompactSchema(readOnly(schema)); !strings.Contains(compacted, own) {
+		t.Errorf("a read-only tool's own root %q lost its description, which the surface never wrote:\n%s",
+			mcp.ReservedIdempotencyKeyArg, compacted)
+	}
+	// The same schema on a MUTATING tool IS the surface's, and is compacted —
+	// otherwise this passes by the level rule having stopped working.
+	if compacted := CompactSchema(mutating(schema)); strings.Contains(compacted, own) {
+		t.Errorf("a mutating tool's root retry key kept its description:\n%s", compacted)
 	}
 }
 
@@ -238,9 +276,9 @@ func TestTheSharedRetryKeyRuleIsSafeInAJSONLiteral(t *testing.T) {
 // this function's output against the listing's, so a map iteration leaking into
 // the rendered order would make that gate flap rather than fail.
 func TestTheCompactionIsByteStable(t *testing.T) {
-	first := CompactSchema(mutatingSpec().InputSchema)
+	first := CompactSchema(mutatingSpec())
 	for range 16 {
-		if again := CompactSchema(mutatingSpec().InputSchema); again != first {
+		if again := CompactSchema(mutatingSpec()); again != first {
 			t.Fatalf("two compactions of one schema differ:\n%s\n%s", first, again)
 		}
 	}
@@ -252,7 +290,7 @@ func TestTheCompactionIsByteStable(t *testing.T) {
 // which would leave a model unable to call a tool it can see.
 func TestAnUnparseableSchemaIsRenderedRatherThanDropped(t *testing.T) {
 	broken := json.RawMessage(`{"type":"object",`)
-	if got := CompactSchema(broken); got != string(broken) {
+	if got := CompactSchema(mutating(broken)); got != string(broken) {
 		t.Errorf("CompactSchema(%s) = %s, want it verbatim", broken, got)
 	}
 }

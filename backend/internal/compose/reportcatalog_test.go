@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -248,7 +247,10 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 	if len(catalog) == 0 {
 		t.Fatal("the prebuilt catalog is empty, so this test proved nothing")
 	}
-	described := agents.RenderedReportKeyGuidance(catalog)
+	// Read out of the SERVED spec, not from a rendering helper: these are the
+	// bytes a client actually receives, and reading them needs no exported
+	// surface built for one test.
+	described := servedReportArgumentDescription(t)
 	for _, entry := range catalog {
 		if entry.Defaults == "" {
 			t.Errorf("%s answers nothing by default, so run_report's description reduces it to a bare "+
@@ -264,6 +266,28 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 				entry.Report, entry.Defaults)
 		}
 	}
+}
+
+// servedReportArgumentDescription is what a client is told about `report`, read
+// off the real served surface.
+func servedReportArgumentDescription(t *testing.T) string {
+	t.Helper()
+	for _, spec := range servedSurface(t).Specs() {
+		if spec.Name != "run_report" {
+			continue
+		}
+		var parsed struct {
+			Properties map[string]struct {
+				Description string `json:"description"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(spec.InputSchema, &parsed); err != nil {
+			t.Fatalf("run_report's served input schema is not a JSON object: %v", err)
+		}
+		return parsed.Properties["report"].Description
+	}
+	t.Fatal("run_report is not on the served surface, so this measures nothing")
+	return ""
 }
 
 // A misspelled THRESHOLD key is refused with a list that contains the threshold

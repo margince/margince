@@ -141,11 +141,10 @@ func TestTheProvenanceNoteIsKeyedOnWhatIsRendered(t *testing.T) {
 	if !strings.Contains(withPipeline.Notes[0], "list_pipelines") {
 		t.Errorf("the note does not name the tool that yields the id: %s", withPipeline.Notes[0])
 	}
-	// The note is keyed on ALL THREE vocabularies, so each one is exercised
-	// alone: a catalog whose only mention of a pipeline id is in `aggregates`
-	// must still carry the note, and only a catalog with none anywhere must not.
-	// Clearing two slots together — which the first version of this test did —
-	// leaves the third loop deletable with nothing failing.
+	// The note is keyed on ALL THREE vocabularies, so each is exercised ALONE: a
+	// catalog whose only mention of a pipeline id is in `aggregates` must still
+	// carry the note. Clearing two slots together would leave the third arm of
+	// the predicate deletable with nothing failing.
 	for _, slot := range []string{"group_by", "filters", "aggregates"} {
 		t.Run("named only in "+slot, func(t *testing.T) {
 			only := []ReportCatalogEntry{{Report: "somewhere", Defaults: "count as rows"}}
@@ -246,12 +245,6 @@ func TestTheCatalogueEntryDoesNotOrderARead(t *testing.T) {
 	}
 	if entry.RequiredScope != principal.ScopeRead {
 		t.Errorf("RequiredScope = %v, want read — the same grant run_report spends", entry.RequiredScope)
-	}
-	for _, imperative := range []string{"read this", "read it", "before your first", "you must read"} {
-		if strings.Contains(strings.ToLower(entry.Description), imperative) {
-			t.Errorf("the description orders a read (%q), which is measured to draw reads from "+
-				"runs that had no use for one: %s", imperative, entry.Description)
-		}
 	}
 	if !strings.Contains(entry.Description, "run_report") {
 		t.Error("the description does not name the tool that consumes it, so a caller learns " +

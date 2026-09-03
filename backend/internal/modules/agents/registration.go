@@ -208,16 +208,11 @@ func assertObjectSchemas(spec mcp.ToolSpec) error {
 			return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
 				spec.Name, s.field, declaredType)
 		}
-		// A COMPOSING schema is refused for EVERY served spec, not only the
-		// mutating ones spliceRetryKey happens to walk.
-		//
-		// It was refused there alone, which made a true statement about part of
-		// the surface: the runner's listing renderer reaches an object schema
-		// through `properties` and `items` and nowhere else, so a read-only tool
-		// composing its schema would have escaped the compaction in silence —
-		// nothing failing, and the headroom the budget page publishes larger
-		// than the headroom that exists. This is the same obligation as one
-		// fitness function instead of a point check.
+		// A COMPOSING schema is refused for EVERY served spec, mutating or not.
+		// The runner's listing renderer reaches an object schema through
+		// `properties` and `items` and nowhere else, so a composed branch keeps
+		// its closed form and the headroom the budget page publishes is larger
+		// than the headroom that exists — with nothing failing.
 		if err := assertNoSchemaComposition(spec.Name, s.field, declared); err != nil {
 			return err
 		}
@@ -225,23 +220,83 @@ func assertObjectSchemas(spec mcp.ToolSpec) error {
 	return nil
 }
 
-// assertNoSchemaComposition refuses a schema this surface cannot reason about.
+// composingKeywords are the JSON Schema branches this surface cannot follow:
+// the retry-key splice cannot reach inside one, the runner's listing renderer
+// does not walk one, and the response assembler cannot read a result shape
+// behind one.
 //
-// Two things depend on an object schema being reachable by walking `properties`
-// and `items`: spliceRetryKey, which cannot add a top-level member to a schema
-// whose closed branch would then reject it, and the runner's listing
-// compaction, which would leave a composed branch unvisited. Neither is a
-// judgement about JSON Schema — they are limits of this tree, so a schema that
-// composes gets an answer at boot rather than a puzzle at call time.
+// TestAComposedInputSchemaIsRefusedAtBoot iterates this list rather than naming
+// keywords, so a branch added here is refused and exercised in the same commit.
+var composingKeywords = []string{"allOf", "anyOf", "oneOf", "$ref"}
+
+// assertNoSchemaComposition refuses a schema this surface cannot reason about,
+// AT EVERY DEPTH.
 //
-// It takes the DECODED members rather than the bytes, so there is one decode
-// and no second error to swallow.
+// Three things need an object schema to be reachable by walking `properties` and
+// `items`, and each breaks silently rather than loudly without this:
+//
+//   - spliceRetryKey cannot add a top-level member to a schema whose closed
+//     branch would then reject it, so a schema-aware client would be told to
+//     send an argument its own validator refuses.
+//   - the runner's listing renderer walks those two keys and no others, so a
+//     composed branch keeps its `"additionalProperties":false` and the headroom
+//     the budget page publishes is larger than the headroom that exists.
+//   - the dispatcher can only honour an object `structuredContent`, which is
+//     why this binds OutputSchema too: a result shape behind a `$ref` is a
+//     promise the response assembler cannot read.
+//
+// RECURSIVE, because a root-only check holds none of the three. A branch spelled
+// `properties.foo.allOf` passes a root check, and then the renderer copies
+// `allOf` through verbatim without ever entering it. That is the same
+// fail-short shape as a census that reads a smaller tree and reports PASS.
+//
+// It takes the DECODED members rather than the bytes, so there is one decode of
+// each object and no second error to swallow.
 func assertNoSchemaComposition(tool, field string, shape map[string]json.RawMessage) error {
-	for _, keyword := range []string{"allOf", "anyOf", "oneOf", "$ref"} {
+	for _, keyword := range composingKeywords {
 		if _, composed := shape[keyword]; composed {
 			return fmt.Errorf("%s's %s uses `%s`, which this surface cannot reason about: "+
-				"the retry-key splice cannot reach inside it and the runner's listing renderer "+
-				"would not walk it", tool, field, keyword)
+				"the retry-key splice cannot reach inside it, the runner's listing renderer "+
+				"would not walk it, and the response assembler cannot read a result shape "+
+				"behind it", tool, field, keyword)
+		}
+	}
+	// The same two keys the renderer walks, so the refusal covers exactly what
+	// the renderer can reach and nothing it cannot.
+	for _, nested := range []string{"properties", "items"} {
+		raw, present := shape[nested]
+		if !present {
+			continue
+		}
+		if err := assertNoCompositionUnder(tool, field, nested, raw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// assertNoCompositionUnder descends one `properties` map or one `items` schema.
+//
+// A value that is not an object schema is not an error here: `properties` is a
+// map of them, `items` is one, and JSON Schema allows `items` to be an array
+// (the tuple form) which this surface does not serve and the renderer leaves
+// alone. Anything that does not decode as an object simply carries no branch to
+// refuse.
+func assertNoCompositionUnder(tool, field, keyword string, raw json.RawMessage) error {
+	var decoded map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return nil //nolint:nilerr // not an object: `items` in tuple form, or a bool schema. It carries no branch, and assertObjectSchemas has already judged the root's shape.
+	}
+	if keyword == "items" {
+		return assertNoSchemaComposition(tool, field, decoded)
+	}
+	for name, property := range decoded {
+		var member map[string]json.RawMessage
+		if err := json.Unmarshal(property, &member); err != nil {
+			continue
+		}
+		if err := assertNoSchemaComposition(tool, field+"."+name, member); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -249,13 +304,10 @@ func assertNoSchemaComposition(tool, field string, shape map[string]json.RawMess
 
 // retryKeyProperty is the advertised member, served in the tools/list catalog.
 //
-// The prose used to be short because a Surface-B run re-sent it once per
-// mutating tool on every step. It no longer does: the runner's listing omits
-// this description and its frame states the rule once
-// (runner.surfaceSchemaRules), so the sentence here is paid for by a client
-// catalogue a client caches, and not by every turn of every run. Keep it short
-// anyway — a client holds it for a whole session — but the reason is now the
-// catalogue and not the window.
+// Keep it short: a client holds this catalogue for a whole session. The runner's
+// listing omits this description and states the rule once in its frame
+// (runner.surfaceSchemaRules), so it is the catalogue that pays for the sentence
+// and not every turn of every run.
 //
 // The SENTENCE is mcp.ReservedIdempotencyKeyRule, not a literal here: the
 // runner's frame states the same rule once for the whole listing, and two
@@ -348,12 +400,15 @@ func spliceRetryKey(inputSchema json.RawMessage) (json.RawMessage, error) {
 	// A schema that COMPOSES cannot be spliced by adding one top-level member: a
 	// closed branch inside `allOf` still rejects the key this surface just
 	// advertised, so a schema-aware client would be told to send an argument its
-	// own validator refuses. No tool here composes today; the one that tries gets
-	// an answer at boot rather than a puzzle at call time.
-	for _, keyword := range []string{"allOf", "anyOf", "oneOf", "$ref"} {
-		if _, composed := shape[keyword]; composed {
-			return nil, fmt.Errorf("its input schema uses `%s`, which this splice cannot reason about", keyword)
-		}
+	// own validator refuses.
+	//
+	// The SAME refusal assertObjectSchemas applies to every served spec, shared
+	// rather than re-typed. It is reachable here too because spliceRetryKey's
+	// own refusals are exercised directly (its doc says why), so this is not
+	// dead: it is the one caller that can arrive without having been through the
+	// registration door.
+	if err := assertNoSchemaComposition("its input schema", "schema", shape); err != nil {
+		return nil, err
 	}
 	if _, taken := properties[idempotencyKeyArg]; taken {
 		// A tool that wrote the member itself would have TWO definitions of it —

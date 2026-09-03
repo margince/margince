@@ -325,9 +325,9 @@ func resourceUIMeta(resource mcp.Resource) *resourceUIWire {
 // closed list holding nothing, `null` is a list that was not stated — an
 // omission, and an omission is where a permissive default lives. Both callers
 // depend on that distinction for their own reason, and each says so at the call.
-func closedList(origins []string) []string {
-	if origins == nil {
+func closedList(names []string) []string {
+	if names == nil {
 		return []string{}
 	}
-	return origins
+	return names
 }

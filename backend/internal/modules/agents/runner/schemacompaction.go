@@ -21,8 +21,7 @@ import (
 //
 //   - `idempotency_key`'s description. There is ONE definition of that member
 //     (the surface splices it into every mutating core tool), so its sentence is
-//     a fact about the surface and not about the tool it lands on. It was 32
-//     copies of one sentence.
+//     a fact about the surface and not about the tool it lands on.
 //   - `"additionalProperties":false`. It is how this surface answers an unknown
 //     key EVERYWHERE, and the runtime enforces that independently of the schema
 //     — RejectNonCanonicalKeys on the core path, strictDecodeReportPlan on the
@@ -55,14 +54,19 @@ import (
 // replaced. The registry refuses one at boot (assertObjectSchemas), so this is
 // unreachable from the real surface; a caller who reached it anyway is better
 // served by an unhelpfully large schema than by a silently absent one.
-func CompactSchema(inputSchema json.RawMessage) string {
+func CompactSchema(spec mcp.ToolSpec) string {
 	var shape map[string]json.RawMessage
-	if err := json.Unmarshal(inputSchema, &shape); err != nil {
-		return string(inputSchema)
+	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
+		return string(spec.InputSchema)
 	}
-	compacted, err := json.Marshal(compactSchemaShape(shape, atSchemaRoot))
+	// The surface splices the retry key into MUTATING core tools only, so only
+	// those have a root member of that name it owns. A read-only tool that
+	// declared one would have written it itself, and its description is that
+	// tool's own meaning.
+	root := atSchemaRoot && !spec.ReadOnly()
+	compacted, err := json.Marshal(compactSchemaShape(shape, root))
 	if err != nil {
-		return string(inputSchema)
+		return string(spec.InputSchema)
 	}
 	return string(compacted)
 }
@@ -88,11 +92,11 @@ const (
 //
 // It recurses because `additionalProperties` is not only a top-level member:
 // run_report's `aggregates` items close themselves, and the whole-catalog count
-// is 78 across 70 tools for that reason. The recursion walks `properties` and
+// exceeds the tool count for that reason. The recursion walks `properties` and
 // `items`, which are the two places this surface nests an object schema — and
 // that claim is HELD rather than asserted: assertObjectSchemas refuses a served
-// schema that composes with allOf/anyOf/oneOf/$ref, so there is no third place
-// for an object schema to hide.
+// schema that composes with allOf/anyOf/oneOf/$ref AT ANY DEPTH, so there is no
+// third place for an object schema to hide.
 //
 // Read back as members and re-marshalled, the way spliceRetryKey does it:
 // marshalling a map sorts its keys, so every process renders the same bytes and

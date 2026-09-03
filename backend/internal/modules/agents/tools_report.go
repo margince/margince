@@ -107,20 +107,17 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 // describeReportCatalog says what each report ANSWERS, and names where the
 // three plan vocabularies are rather than reciting them.
 //
-// It used to recite everything: every report's group_by, filters, aggregates,
-// default and note, in this one property. That was 3.4KB — 6% of the served
-// catalog in a single tool, held by every client for a whole session and re-sent
-// by every Surface-B run on every step.
+// Reciting all three vocabularies for every report cost 3.4KB here — 6% of the
+// served catalog in one tool, held by every client for a whole session and
+// re-sent by every Surface-B run on every step. They are the document's now.
 //
-// WHERE THE LINE FALLS is the whole of this function, and it was MEASURED
-// rather than reasoned. The first pass deferred the DEFAULTS along with the
-// vocabularies, leaving an enum of bare report keys. The certification lane
-// answered that immediately and twice: on the goal "how much open pipeline do we
-// have in each stage", every run reached for the vocabulary door instead of the
-// report — 2/3 to 0/3 — and it was RIGHT to. `deals-by-stage` answers exactly
-// that goal with no plan at all, and a bare key does not say so. The recital's
-// `default:` line was carrying the selection signal; nothing else on this
-// surface does.
+// WHERE THE LINE FALLS is MEASURED rather than reasoned, and the measurement is
+// worth keeping: with the defaults deferred too, leaving an enum of bare keys,
+// the certification lane scored 0/3 on "how much open pipeline do we have in
+// each stage" and every run opened the vocabulary door instead of the report.
+// That was correct of it — `deals-by-stage` answers that goal with no plan at
+// all, and a bare key does not say so. The default line is the selection
+// signal, and nothing else on this surface carries one.
 //
 // So the split is by QUESTION, not by size:
 //
@@ -158,9 +155,8 @@ func describeReportCatalog(catalog []ReportCatalogEntry) string {
 //
 // It sits HERE as well as in the document because the obligation follows the
 // NAMES: TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines reads the
-// input schema, and restoring the defaults put those ids back into it. When the
-// first pass deferred the defaults, the ids left the schema and this sentence
-// went with them — correctly. They are back, so it is.
+// input schema, so this sentence is owed exactly while the defaults above name
+// those ids.
 //
 // The predicate and the sentence are SHARED with the document rather than
 // re-typed there: they were two copies of one obligation and had already
@@ -188,17 +184,6 @@ func catalogNamesAPipelineID(catalog []ReportCatalogEntry) bool {
 		}
 	}
 	return false
-}
-
-// RenderedReportKeyGuidance is what run_report's `report` argument says about
-// the catalog, for the composition to hold against the engine's own specs.
-//
-// Exported for ONE reader: the gate that every enum key is described by its
-// default answer. That obligation belongs to the composition, which owns the
-// prebuilt specs, and it cannot be checked without the rendered text this
-// package produces.
-func RenderedReportKeyGuidance(catalog []ReportCatalogEntry) string {
-	return describeReportCatalog(catalog)
 }
 
 // writeReportDefaults renders what each report answers with no plan — the one

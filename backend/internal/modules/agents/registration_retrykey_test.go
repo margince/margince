@@ -44,6 +44,15 @@ func mutatingSpec(name string) mcp.ToolSpec {
 	}
 }
 
+// readOnlySpec is the same tool the retry-key splice never touches, which is
+// what makes it the right subject for a check the registration door owes every
+// spec rather than only the mutating ones.
+func readOnlySpec(name string) mcp.ToolSpec {
+	spec := mutatingSpec(name)
+	spec.RequiredScope = principal.ScopeRead
+	return spec
+}
+
 func TestAMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 	registered := registeredSpec(t, mutatingSpec("archive_record"))
 	props := declaredProperties(t, registered.InputSchema)
@@ -189,7 +198,7 @@ func TestTheAdvertisedKeyBoundIsTheOneTheSurfaceEnforces(t *testing.T) {
 // schema-aware client would be told to send an argument its own validator
 // refuses.
 func TestAComposedInputSchemaIsRefusedAtBoot(t *testing.T) {
-	for _, keyword := range []string{"allOf", "anyOf", "oneOf", "$ref"} {
+	for _, keyword := range composingKeywords {
 		t.Run(keyword, func(t *testing.T) {
 			spec := mutatingSpec("compose_probe")
 			spec.InputSchema = json.RawMessage(`{"type":"object","properties":{},"` + keyword + `":[]}`)
@@ -198,4 +207,45 @@ func TestAComposedInputSchemaIsRefusedAtBoot(t *testing.T) {
 			})
 		})
 	}
+}
+
+// A composed schema is refused AT ANY DEPTH, and on a READ-ONLY tool too.
+//
+// A root-only check holds neither thing that depends on it. The runner's listing
+// renderer walks `properties` and `items` and no other key, so a branch spelled
+// `properties.foo.allOf` passes a root check and is then copied through
+// verbatim — keeping its closed form, with the published headroom larger than
+// the real one and nothing failing. And the refusal used to live in the retry-key
+// splice, which read-only tools never reach.
+//
+// The clean case at the end is what stops this passing by the refusal having
+// become indiscriminate.
+func TestAComposedBranchIsRefusedAtEveryDepthAndOnReadOnlyTools(t *testing.T) {
+	for _, tc := range []struct{ name, schema string }{
+		{"under properties", `{"type":"object","properties":{"a":{"allOf":[{"additionalProperties":false}]}}}`},
+		{"under items", `{"type":"object","properties":{"a":{"type":"array","items":{"$ref":"#/x"}}}}`},
+		{"two levels down", `{"type":"object","properties":{"a":{"type":"object","properties":{"b":{"oneOf":[{}]}}}}}`},
+		{"in an output schema", `{"type":"object","properties":{"data":{"anyOf":[{}]}}}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// READ-ONLY, so the retry-key splice never runs and only the
+			// registration door can refuse this.
+			spec := readOnlySpec("nested_compose_probe")
+			if tc.name == "in an output schema" {
+				spec.OutputSchema = json.RawMessage(tc.schema)
+			} else {
+				spec.InputSchema = json.RawMessage(tc.schema)
+			}
+			mustPanic(t, "a composed branch below the root was served", func() {
+				NewRegistry(nil, nil).Register(&fakeTool{spec: spec})
+			})
+		})
+	}
+	// A deeply nested schema that composes NOWHERE is served. Without this the
+	// test above passes for a refusal that rejects everything.
+	clean := readOnlySpec("nested_clean_probe")
+	clean.InputSchema = json.RawMessage(`{"type":"object","properties":{` +
+		`"rows":{"type":"array","items":{"type":"object","properties":{` +
+		`"ref":{"type":"string"}},"additionalProperties":false}}},"additionalProperties":false}`)
+	NewRegistry(nil, nil).Register(&fakeTool{spec: clean})
 }

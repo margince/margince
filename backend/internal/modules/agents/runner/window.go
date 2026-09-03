@@ -305,19 +305,17 @@ Available tools:
 // own description, where it is paid for once by the tool that needs it.
 //
 // It is paid once per run against what the compaction saves on every listing.
-// No figure is written here on purpose: both numbers are DERIVED and published
-// (system_frame_tokens and catalog.tokens in docs/reference/agent-tool-budget.json),
-// and a hand-typed one in a change whose whole subject is token counts is the
-// first thing to go stale — the first draft of this comment said ~40 where the
-// measured cost is ~65.
+// No figure is written here: both numbers are derived and published as
+// system_frame_tokens and catalog.tokens in docs/reference/agent-tool-budget.json,
+// and a hand-typed count in a change whose subject IS token counts is the first
+// thing to go stale.
 //
 // The retry key's meaning comes from mcp.ReservedIdempotencyKeyRule, which the
-// member's own schema description also reads. Two hand-written copies of one
-// rule would drift with nothing failing, and every check on it matches the text.
+// member's own schema description also reads. Two copies of one rule drift with
+// nothing failing, and every check on it matches the text.
 //
-// COMPLETE BULLET LINES, leading dash included. It was stitched between dashes
-// supplied by the caller, which made the constant unreadable alone and meant a
-// third sentence had to get punctuation right in two places.
+// COMPLETE BULLET LINES, leading dash included, so the constant reads alone and
+// a new sentence needs punctuation in one place rather than two.
 //
 // One line per omission, and no more: the schema-equivalence gate asserts the
 // other direction too — the frame states nothing about a member the compaction
@@ -331,12 +329,11 @@ const surfaceSchemaRules = "- An argument no tool declares is refused by name, n
 // fence, measured with the same ~4-bytes-per-token heuristic the window bounds
 // itself with.
 //
-// Exported for the same reason ToolListing and PromptTokenCeiling are, and for a
-// reason this change created: moving a per-tool sentence into the frame trades
-// (tools × sentence) for (1 × sentence), and only the first half was ever
-// measured. The catalog floor holds ToolListing alone, so a frame that grew a
-// paragraph would spend it on every run of every agent with no assertion and no
-// published number anywhere. Now it is published beside the listing it bought.
+// Exported for the same reason ToolListing and PromptTokenCeiling are: moving a
+// per-tool sentence into the frame trades (tools × sentence) for (1 × sentence),
+// and the catalog floor holds ToolListing alone. Without this number a frame
+// that grew a paragraph would spend it on every run of every agent with nothing
+// measuring it, so it is published beside the listing it buys.
 //
 // The language rule is excluded because it is the CALLER's, not the frame's:
 // the certification lane passes none, and an installation's own base language
@@ -363,7 +360,7 @@ func ToolListing(specs []mcp.ToolSpec) string {
 		// alike, and the description is the half that choice is made on — so it
 		// goes first, rather than after the several hundred characters of JSON
 		// the model needs only once it has chosen.
-		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, CompactSchema(spec.InputSchema))
+		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, CompactSchema(spec))
 	}
 	return b.String()
 }

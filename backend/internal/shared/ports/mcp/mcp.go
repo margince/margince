@@ -145,7 +145,13 @@ const (
 	ReservedIdempotencyKeyArg = "idempotency_key"
 )
 
-// ReservedIdempotencyKeyRule is what the retry key MEANS, spelled once.
+// ReservedIdempotencyKeyRule is what the retry key MEANS.
+//
+// Held by: TestTheCompactionStillRemovesWhatTheFrameStatesOnce
+// (backend/internal/compose/agenttoollistingcompaction_test.go), which reads the
+// SERVED description off the real catalog and fails when it stops carrying this
+// constant — so the catalogue and the frame cannot come to state the rule from
+// two sources again.
 //
 // Two surfaces state it and they must not drift: the tool catalogue carries it
 // as the member's own `description` (the surface splices it into every mutating

@@ -7,12 +7,10 @@ package agents
 // accepts, published as a document rather than recited into run_report's own
 // input schema.
 //
-// It used to be recited. run_report's `report` property carried, for all nine
-// prebuilt reports, their group_by, filters, aggregates, default answer and
-// notes — 3.4KB of one tool's description, making run_report 6% of the whole
-// served catalog and 2.3× the next tool. Text every client holds for the whole
-// session, and every Surface-B run re-sends on every step, to answer a question
-// one call asks once.
+// run_report's `report` property carried these lists for all nine prebuilt
+// reports — 3.4KB of one tool's description, 6% of the whole served catalog and
+// 2.3× the next tool. Text every client holds for a whole session, and every
+// Surface-B run re-sends on every step, to answer a question one call asks once.
 //
 // Moving it is the same move the write vocabulary made to
 // margince://schema/record-fields, and it is not the schema deferral this
