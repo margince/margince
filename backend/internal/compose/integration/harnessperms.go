@@ -217,13 +217,13 @@ var (
 			// data_coverage is read-only for admin in the real seed — how much
 			// of the pipeline a forecast could see is computed, never edited.
 			//
-			// Nothing in the tree exercises this one yet: its tool answers
-			// not-found until the nightly pass has run, so the conformance lane
-			// waives it. It is here because the file's premise is mirroring the
-			// seed, and this is the fourth drift found the same way after tag,
-			// list and forecast — a fixture narrower than the seat it stands in
-			// for does not fail, it answers, which is why each was found by a
-			// puzzling result rather than by a refusal.
+			// Nothing exercises this one yet: its tool answers not-found until
+			// the nightly pass has run, so the conformance lane waives it. It
+			// is here because this file's premise is mirroring the seed, and it
+			// is the fourth drift found the same way after tag, list and
+			// forecast. Each was found by a puzzling ANSWER rather than by a
+			// refusal, which is what makes a fixture narrower than the seat it
+			// stands in for worth fixing on sight.
 			"data_coverage": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,

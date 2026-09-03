@@ -156,29 +156,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// a promise: nothing writes task_activity_id.
 	"conversation_claim.person_id":          "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(person, update), then auth.EnsureWritableLive on the person inside the write's own transaction — a claim may only be recorded against a person the caller could already change",
 	"conversation_claim.source_activity_id": "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
-	// The lawful-basis substrate #3815 added (core 1788407500). Nothing inserts
-	// into either table yet: privacy reads them for a subject-access package
-	// and deletes from them on erasure, and the send path declares a decision
-	// against them, but no caller supplies any of these ids. So each entry
-	// records the obligation the writer inherits rather than a gate already
-	// taken — which is what "PENDING WRITER" means beside it.
-	//
-	// The two SUBJECT columns are alternatives, never both (the table's own
-	// one-subject check), so they carry one obligation stated twice rather than
-	// two: whichever subject a basis names is a row-scoped record, and naming
-	// it is a read of it.
-	// Server-derived, not client-supplied: recordAcquisition stamps the person
-	// createPerson JUST created, on that same transaction, and every production
-	// creation door goes through it. The id can only be one the caller was
-	// already authorized to create, so there is no reference here for a
-	// visibility probe to check — the person did not exist to be invisible.
-	"person_acquisition_evidence.person_id":  "server-derived: written by people.recordAcquisition inside createPerson's own transaction, against the person that call just minted — the id never comes from a request body, and the merge path only re-points existing rows at the surviving person through a merge that took its own gates",
-	"communication_basis.person_id":          "PENDING WRITER: no INSERT exists. A basis is recorded ABOUT a person, so the writer must put the named person through auth.EnsureLinkTarget — or resolve them from an activity the caller already opened, never from a request body",
-	"communication_basis.lead_id":            "PENDING WRITER: no INSERT exists. The lead half of the same one-subject check as person_id above, and it inherits the same obligation",
-	"communication_basis.source_activity_id": "PENDING WRITER: no INSERT exists. The message a basis stands on is EVIDENCE, so the writer owes the stronger check its shape already has a name for — auth.EnsureActivityContentVisibleLive, as conversation_claim.source_activity_id takes: a basis must not cite a message the caller may not open, and must not outlive it",
-	"communication_suppression.person_id":    "PENDING WRITER: no INSERT exists. Privacy updates rows on erasure and the send path reads them; nothing creates one from a caller-supplied id. A writer must gate the named subject, with one exception worth stating now — a hard_bounce or one-click objection is derived from a delivery the system already resolved, and resolving a subject from an outcome is not the same as accepting one from a body",
-	"communication_suppression.lead_id":      "PENDING WRITER: no INSERT exists. The lead half of the same target check as person_id above, and it inherits the same obligation",
-	"conversation_claim.task_activity_id":    "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
+	"conversation_claim.task_activity_id":   "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
 	"organization_geocode_state.organization_id": "child row: the sidecar for an organization's own coordinate lookup, and no caller ever names the organization it keys on. " +
