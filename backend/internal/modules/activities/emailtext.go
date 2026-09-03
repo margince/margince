@@ -19,11 +19,12 @@ import (
 // drawer still folds the tail in the browser, and a preview that disagreed
 // with the message it opens would be a row lying about its own mail.
 //
-// Nothing yet FAILS when they drift: emailtext_test.go's table was checked by
-// hand against the TypeScript on the same twelve bodies, which proves they
-// agree today and not that they will tomorrow. The gate that reads both
-// tables and fails in either direction is owed (margince#3782), and until it
-// exists a change to either side has to be made to both by whoever makes it.
+// backend/gates/emailsplitterparity_test.go is what makes "mirror" true. It
+// reads both files and compares the five vocabularies and the four single
+// patterns below, in BOTH directions, so a sign-off added here and not there is
+// a red build rather than a preview that ends mid-sentence. The scan window is
+// compared too: fifteen lines on one side and ten on the other folds a message
+// on one surface and prints the sign-off on the other.
 //
 // Why not textlang.NewTextOnly, which also finds where a message ends: it
 // answers a different question and its answer is wrong for a row. Asked for

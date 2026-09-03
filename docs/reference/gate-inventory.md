@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (65)
+## Parity (66)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -40,6 +40,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
+| `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
