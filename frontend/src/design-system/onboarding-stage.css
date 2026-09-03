@@ -37,14 +37,9 @@
      centred track overflows equally in both directions and the top half is the
      half that cannot be scrolled back to. */
   align-content: safe center;
-  /* The ground shows around the room on every screen, not only on a wide one.
-     Without an inset a laptop saw the card fill the window edge to edge and the
-     ribbons never appeared at all, so the composition the ground exists for
-     was the one thing a laptop never got. Scaled with the viewport so a small
-     window gives up little of itself to margin and a large one shows the
-     ground generously. */
-  padding: clamp(var(--space-3), 2.5vh, var(--space-8))
-    clamp(var(--space-3), 3vw, var(--space-10));
+  /* NO PADDING HERE: the ground canvas fills this element, so an inset on the
+     page is a flat band the ground never paints. The room keeps its distance
+     from the window's edge with its own margin instead — see .ob-stage. */
   /* The ground (`AmbientWaves`) is the first child at `z-index: -1`, which
      paints it after this element's own background and before the card. Both
      properties are needed: `relative` gives the canvas a box to fill, and
@@ -94,9 +89,15 @@
   );
   --ob-core-scale: 1;
   position: relative;
-  width: 100%;
+  /* The ground shows around the room on every screen, not only on a wide one.
+     Without this a laptop saw the card fill the window edge to edge and the
+     ribbons never appeared at all, so the composition the ground exists for
+     was the one thing a laptop never got. Scaled with the viewport so a small
+     window gives up little of itself and a large one shows the ground
+     generously; the width follows, so the margin is never eaten by the cap. */
+  width: calc(100% - 2 * clamp(var(--space-3), 3vw, var(--space-10)));
   max-width: 1560px;
-  margin: 0 auto;
+  margin: clamp(var(--space-3), 2.5vh, var(--space-8)) auto;
   min-height: var(--ob-stage-min);
   display: flex;
   flex-direction: column;
@@ -525,10 +526,9 @@
   /* No room to stand the Core beside the question, so it takes a row above it
      and the board stops reserving a place for something that is no longer
      there. */
-  .ob-page {
-    padding: 0;
-  }
   .ob-stage {
+    width: 100%;
+    margin: 0;
     min-height: 100vh;
     border: 0;
     border-radius: 0;
