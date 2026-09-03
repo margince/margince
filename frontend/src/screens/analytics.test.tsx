@@ -176,7 +176,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Forecast" }),
+      await screen.findByRole("button", { name: "Pipeline" }),
     );
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
@@ -218,7 +218,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Forecast" }),
+      await screen.findByRole("button", { name: "Pipeline" }),
     );
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
@@ -296,9 +296,12 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Explain/ }),
-    );
+    await openPipeline();
+    // The FIRST card's explain. Pipeline draws three reports and each carries
+    // its own control, so a query that matched one of them would have been
+    // matching whichever happened to render first.
+    const explains = await screen.findAllByRole("button", { name: /Explain/ });
+    await userEvent.click(explains[0]);
     await waitFor(() =>
       expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
     );
@@ -423,7 +426,7 @@ describe("reports never sum money across currencies", () => {
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Forecast"));
+    await userEvent.setup().click(await screen.findByText("Pipeline"));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -509,7 +512,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Forecast"));
+    await userEvent.setup().click(await screen.findByText("Pipeline"));
     // Both currencies of the uncategorised pipeline, each in its own unit.
     expect(
       await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
@@ -541,7 +544,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Forecast"));
+    await userEvent.setup().click(await screen.findByText("Pipeline"));
     await waitFor(() =>
       expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
     );
@@ -577,7 +580,7 @@ describe("sectionFromAddress", () => {
 // Pipeline draws deals-by-stage and open-deals-per-company, so its captions
 // come in pairs. Named rather than written as a bare 2, so a third report
 // added to the section reads as a deliberate change here.
-const SECTION_REPORT_COUNT_PIPELINE = 2;
+const SECTION_REPORT_COUNT_PIPELINE = 3;
 
 describe("the report frame", () => {
   // A total with no zone and no currency beside it is a number the reader

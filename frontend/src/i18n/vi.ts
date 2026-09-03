@@ -3108,6 +3108,29 @@ export const vi = {
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
   "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
+  "forecast.question": "Quý này chúng ta sẽ đạt bao nhiêu?",
+  "forecast.answerWithCall":
+    "Cam kết hiện tại là {call}. Bằng chứng hỗ trợ {evidence}.",
+  "forecast.answerNoCall":
+    "Chưa ai đưa ra cam kết cho kỳ này. Bằng chứng hỗ trợ {evidence}.",
+  "forecast.partialTitle": "Không phải deal nào cũng có giá",
+  "forecast.partial":
+    "{priced} trên {eligible} deal có số tiền. Số còn lại là pipeline thật nhưng không đóng góp vào các tổng ở trên.",
+  "forecast.currentCall": "Cam kết hiện tại",
+  "forecast.evidence": "Có bằng chứng hỗ trợ",
+  "forecast.alreadyWon": "Đã thắng",
+  "forecast.updateCall": "Cập nhật cam kết hiện tại",
+  "forecast.callExplains":
+    "Cam kết là con số bạn tin sẽ chốt. Nó ghi lại con số của bạn và không thay đổi deal nào.",
+  "forecast.expectedTotal": "Tổng dự kiến cho kỳ này",
+  "forecast.supportingNote": "Ghi chú kèm theo",
+  "forecast.cancel": "Hủy",
+  "forecast.saveCall": "Lưu cam kết",
+  "forecast.receipt": "Đã kiểm tra dữ liệu và bằng chứng",
+  "forecast.eligible": "Deal được tính",
+  "forecast.priced": "Có số tiền",
+  "forecast.confirmed": "Đã xác nhận ngày chốt",
+  "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Nhóm dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
   "analytics.forecastBanner":
