@@ -597,6 +597,31 @@ public.ai_usage.tier text NOT NULL gen=- def=-
 public.ai_usage.tokens_in bigint NOT NULL gen=- def=0
 public.ai_usage.tokens_out bigint NOT NULL gen=- def=0
 public.ai_usage_pkey CREATE UNIQUE INDEX ai_usage_pkey ON public.ai_usage USING btree (day, task, tier)
+public.analytics_share acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.analytics_share.analytics_share_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE CASCADE
+public.analytics_share.analytics_share_expires_after_creation CHECK ((expires_at > created_at))
+public.analytics_share.analytics_share_kind_check CHECK ((kind = ANY (ARRAY['live'::text, 'snapshot'::text])))
+public.analytics_share.analytics_share_pkey PRIMARY KEY (id)
+public.analytics_share.analytics_share_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
+public.analytics_share.analytics_share_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
+public.analytics_share.analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
+public.analytics_share.analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL)))
+public.analytics_share.captured_by text NOT NULL gen=- def=-
+public.analytics_share.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.analytics_share.created_by uuid NOT NULL gen=- def=-
+public.analytics_share.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.analytics_share.id uuid NOT NULL gen=- def=uuidv7()
+public.analytics_share.kind text NOT NULL gen=- def=-
+public.analytics_share.revoked_at timestamp with time zone gen=- def=-
+public.analytics_share.scope_id uuid gen=- def=-
+public.analytics_share.scope_kind text NOT NULL gen=- def=-
+public.analytics_share.snapshot_id uuid gen=- def=-
+public.analytics_share.target text NOT NULL gen=- def=-
+public.analytics_share.token_hash text NOT NULL gen=- def=-
+public.analytics_share.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.analytics_share.uq_analytics_share_token UNIQUE (token_hash)
+public.analytics_share.version bigint NOT NULL gen=- def=1
+public.analytics_share_pkey CREATE UNIQUE INDEX analytics_share_pkey ON public.analytics_share USING btree (id)
 public.app_user acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.app_user.app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'full'::text)))
 public.app_user.app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password)))
@@ -2447,6 +2472,7 @@ public.idx_alink_lead CREATE INDEX idx_alink_lead ON public.activity_link USING 
 public.idx_alink_org CREATE INDEX idx_alink_org ON public.activity_link USING btree (organization_id) WHERE (organization_id IS NOT NULL)
 public.idx_alink_person CREATE INDEX idx_alink_person ON public.activity_link USING btree (person_id) WHERE (person_id IS NOT NULL)
 public.idx_alink_project CREATE INDEX idx_alink_project ON public.activity_link USING btree (project_id) WHERE (project_id IS NOT NULL)
+public.idx_analytics_share_creator CREATE INDEX idx_analytics_share_creator ON public.analytics_share USING btree (created_by, created_at DESC)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_person CREATE INDEX idx_aparticipant_person ON public.activity_participant USING btree (person_id, activity_id) WHERE (person_id IS NOT NULL)
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
@@ -4930,6 +4956,7 @@ public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
 public.uq_ai_call_ws_id CREATE UNIQUE INDEX uq_ai_call_ws_id ON public.ai_call USING btree (id)
+public.uq_analytics_share_token CREATE UNIQUE INDEX uq_analytics_share_token ON public.analytics_share USING btree (token_hash)
 public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email))
 public.uq_approval_autonomy_policy_user_kind CREATE UNIQUE INDEX uq_approval_autonomy_policy_user_kind ON public.approval_autonomy_policy USING btree (user_id, kind)
 public.uq_assurance_exception_logical_key CREATE UNIQUE INDEX uq_assurance_exception_logical_key ON public.assurance_exception USING btree (logical_key)

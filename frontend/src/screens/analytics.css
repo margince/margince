@@ -1,0 +1,15 @@
+/* The analytics header: the section tabs, and the share action beside them.
+   The page gutter is `.wrap` (app/shell.css) one level up; this row only
+   spaces its own two children.
+
+   `gap` rather than a margin on the button, so the row keeps its spacing when
+   the button is absent — which it is on every section but the forecast. */
+.analytics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  /* The tabs can outgrow the row on a narrow screen. Wrapping puts the button
+     on its own line rather than letting the strip scroll away from it. */
+  flex-wrap: wrap;
+}

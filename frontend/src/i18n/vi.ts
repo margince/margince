@@ -3115,6 +3115,30 @@ export const vi = {
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
+  "analytics.share.open": "Chia sẻ chế độ xem",
+  "analytics.share.title": "Chia sẻ chế độ xem này",
+  "analytics.share.kindLegend": "Liên kết hiển thị điều gì",
+  "analytics.share.liveLabel": "Chế độ xem trực tiếp",
+  "analytics.share.liveHelp":
+    "Được tính lại mỗi lần mở, giới hạn ở những gì người đọc được phép xem. Các con số thay đổi theo pipeline.",
+  "analytics.share.snapshotLabel": "Trạng thái đã đóng băng",
+  "analytics.share.snapshotHelp":
+    "Các con số như khi trạng thái được lưu lại. Chúng không thay đổi, nên liên kết nêu rõ thời điểm.",
+  "analytics.share.snapshotUnavailable":
+    "Chưa có trạng thái nào được đóng băng cho kỳ này.",
+  "analytics.share.expiryNote":
+    "Liên kết ngừng hoạt động sau 30 ngày. Bạn có thể đóng sớm hơn.",
+  "analytics.share.create": "Tạo liên kết",
+  "analytics.share.linkTitle": "Liên kết của bạn",
+  "analytics.share.linkWarning":
+    "Đây là lần duy nhất liên kết được hiển thị. Hãy sao chép ngay — không thể đọc lại.",
+  "analytics.share.leaveWarning":
+    "Rời đi mà không sao chép sẽ làm mất liên kết. Bạn sẽ phải tạo liên kết khác.",
+  "analytics.share.copy": "Sao chép liên kết",
+  "analytics.share.copied": "Đã sao chép",
+  "analytics.share.copyFailed":
+    "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
+  "analytics.share.done": "Xong",
   "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
   "review.title": "Cần kiểm tra gì trước cuộc gọi?",
   "review.ready": "Sẵn sàng",

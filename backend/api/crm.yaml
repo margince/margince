@@ -16127,6 +16127,129 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/shares:
+    post:
+      tags: [Reports]
+      operationId: createForecastShare
+      summary: Issue a link that shows a forecast reading to a colleague.
+      description: |
+        Two kinds, and they make different promises. A `live` share re-runs the reading
+        under the RECIPIENT's own grants every time it is opened, so it answers what they
+        may see today. A `snapshot` share serves a state frozen at a moment, re-summed over
+        the rows that recipient may read.
+
+        A snapshot share never serves the stored totals. The frozen headline covers every
+        deal the issuer could see, and handing that number to somebody narrower discloses a
+        total about deals they may not read. The recompute is what the kind promises.
+
+        The token comes back ONCE, in `token`, and is never returned again — the table
+        holds only its digest, so a database dump opens nothing. A caller that loses it
+        issues another share.
+
+        `expires_at` is capped server-side. An expiry beyond the ceiling is REFUSED rather
+        than quietly shortened: a link the caller believes lasts a year, silently cut to a
+        month, fails in front of whoever they sent it to.
+      # Human-only. Issuing a share is a decision to show somebody a number,
+      # and an agent that could mint one could widen who reads the forecast
+      # without a person choosing to.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewForecastShare' }
+      responses:
+        '201':
+          description: The share, with its token shown for the only time.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuedForecastShare' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/shares/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Reports]
+      operationId: revokeForecastShare
+      summary: Close a share link before it expires.
+      description: |
+        Idempotent: revoking a revoked share is the outcome the caller asked for, and
+        answers 204 either way.
+
+        Revocation and expiry are both real and neither replaces the other. An expiry alone
+        means a link sent to the wrong address stays open until it lapses; a revocation
+        alone means a link nobody remembers stays open forever.
+      x-agent-access: human-only
+      responses:
+        '204': { description: The share no longer serves. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /forecast/shared/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+        description: The token handed out when the share was issued.
+    get:
+      tags: [Reports]
+      operationId: openForecastShare
+      summary: Open a shared forecast view.
+      description: |
+        Answers the reading the share names, computed for the CALLER rather than for whoever
+        issued it. A live share re-runs the reading; a snapshot share re-sums the frozen
+        contributions the caller may read.
+
+        Every refusal is the same 404 — an unknown token, an expired one, a revoked one, and
+        a share whose issuer has left or lost `forecast:read`. Distinguishing them would tell
+        somebody working through guessed tokens which guesses were closer.
+
+        `withheld` says something was kept back and never how much. A count of what a reader
+        may not see is itself a statement about how much of it there is.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The reading, as this caller may read it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharedForecastView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /forecast/shared/{token}/export.csv:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+        description: The token handed out when the share was issued.
+    get:
+      tags: [Reports]
+      operationId: exportForecastShare
+      summary: The rows behind a shared reading, as CSV.
+      description: |
+        One row per deal the CALLER may read, which is the same set the headline above it
+        was summed from. A file whose rows and whose total disagree is worse than no file:
+        somebody reconciles it by hand and concludes the product is wrong about one of them.
+
+        A live share exports the rows as they stand; a snapshot share exports the frozen
+        contributions. Refusals are the same 404 the read is, for the same reason.
+
+        Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
+        opening the file reads them as the text the record holds rather than evaluating them.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The rows, as CSV.
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /weekly-plans/current:
     get:
       tags: [Brief]
@@ -31109,6 +31232,89 @@ components:
             The call this one replaces. Absent on the first call of a period, which is a
             different fact from replacing nothing.
         created_at: { type: string, format: date-time }
+      additionalProperties: false
+    NewForecastShare:
+      type: object
+      description: A request to issue a share link.
+      required: [kind, target]
+      properties:
+        kind:
+          type: string
+          enum: [live, snapshot]
+          x-enum-varnames: [ForecastShareLive, ForecastShareSnapshot]
+          description: >-
+            `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen
+            state, re-summed over the rows that reader may see.
+        target:
+          type: string
+          description: Which reading the link opens.
+        scope_kind: { type: string, enum: [workspace, team, owner], default: workspace }
+        scope_id:
+          type: string
+          format: uuid
+          description: >-
+            Whose forecast, for a team or owner scope. Refused with the workspace scope,
+            which names no subject.
+        snapshot_id:
+          type: string
+          format: uuid
+          description: >-
+            The frozen state a snapshot share serves. Required for `snapshot` and refused
+            for `live`, which has none — a snapshot share with no snapshot would fall back
+            to serving live data, a different promise from the one its kind makes.
+        expires_at:
+          type: string
+          format: date-time
+          description: >-
+            When it stops serving. Capped server-side; an expiry beyond the ceiling is
+            refused rather than shortened. Omitted takes the ceiling.
+      additionalProperties: false
+    IssuedForecastShare:
+      type: object
+      description: A share as issued, carrying its token for the only time.
+      required: [id, kind, target, expires_at, token, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [live, snapshot] }
+        target: { type: string }
+        scope_kind: { type: string, enum: [workspace, team, owner] }
+        scope_id: { type: string, format: uuid }
+        snapshot_id: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+        token:
+          type: string
+          description: >-
+            Shown ONCE. The table holds only its digest, so this value cannot be recovered
+            — a caller that loses it issues another share.
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
+    SharedForecastView:
+      type: object
+      description: |
+        What one caller reads through a share.
+
+        The numbers are about THEM. A snapshot share re-sums the frozen contributions this
+        caller may read rather than serving the stored totals, so two colleagues opening
+        the same link can correctly see different figures.
+      required: [kind, target, readings, withheld]
+      properties:
+        kind:
+          type: string
+          enum: [live, snapshot]
+          description: >-
+            Which promise this view makes. A reader shown a frozen number needs to know it
+            is frozen, and as of when.
+        target: { type: string }
+        as_of:
+          type: string
+          format: date-time
+          description: The instant a snapshot share's state describes. Absent on a live share.
+        readings: { $ref: '#/components/schemas/ForecastReadings' }
+        withheld:
+          type: boolean
+          description: >-
+            Whether anything was kept back from this reader. A boolean and never a count:
+            a count of what somebody may not see states how much of it there is.
       additionalProperties: false
     WeeklyPlan:
       type: object

@@ -96,6 +96,8 @@ components:
         - forecast.assurance_created
         - forecast.exception_resolved
         - forecast.snapshot_created
+        - forecast.share_issued
+        - forecast.share_revoked
         - weekly_plan.updated
         - weekly_plan.help_requested
         - activity.disposition_recorded
@@ -1972,6 +1974,59 @@ components:
           description: >-
             How many deals the run considered. A consumer comparing this against the
             previous snapshot's count sees a run that covered less of the pipeline.
+      additionalProperties: false
+    PublicEventForecastShareIssued:
+      type: object
+      x-event-type: forecast.share_issued
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for forecast.share_issued — somebody created a link that shows a
+        forecast reading to a recipient who is not signed in as them. The entity is the
+        ISSUER, because a link is attributable to whoever made it and the issuer's
+        standing is what keeps it serving.
+
+        `kind` says which promise the link makes: `live` re-runs the reading under the
+        recipient's own grants, `snapshot` serves a frozen state filtered by their row
+        scope. A consumer auditing what left the installation needs the two apart.
+
+        The token does not ride along, in any form. It is returned once to the caller
+        that asked for it, and a bus is a place other systems keep copies of.
+      required: [share_id, kind, target, expires_at]
+      properties:
+        share_id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [live, snapshot]
+          x-enum-varnames:
+            - ShareKindLive
+            - ShareKindSnapshot
+        target:
+          type: string
+          description: Which reading the link opens.
+        expires_at:
+          type: string
+          format: date-time
+          description: >-
+            When it stops serving on its own. Capped server-side, so a consumer can
+            rely on it being a real horizon rather than a caller's preference.
+      additionalProperties: false
+    PublicEventForecastShareRevoked:
+      type: object
+      x-event-type: forecast.share_revoked
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for forecast.share_revoked — a share link was closed before its expiry.
+        The entity is the person who revoked it.
+
+        A consumer that recorded the issue must record this too: the two together are
+        the window during which a number was reachable by whoever held the link, and
+        that window is what an access review asks for.
+      required: [share_id, revoked_at]
+      properties:
+        share_id: { type: string, format: uuid }
+        revoked_at: { type: string, format: date-time }
       additionalProperties: false
     PublicEventWeeklyPlanUpdated:
       type: object

@@ -3198,6 +3198,30 @@ export const en = {
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.share.open": "Share view",
+  "analytics.share.title": "Share this view",
+  "analytics.share.kindLegend": "What the link shows",
+  "analytics.share.liveLabel": "Live view",
+  "analytics.share.liveHelp":
+    "Recomputed each time it is opened, under what the reader may see. The numbers move as the pipeline does.",
+  "analytics.share.snapshotLabel": "Frozen state",
+  "analytics.share.snapshotHelp":
+    "The figures as they stood when the state was taken. They do not change, so the link says which moment it describes.",
+  "analytics.share.snapshotUnavailable":
+    "No state has been frozen for this period yet.",
+  "analytics.share.expiryNote":
+    "The link stops working after 30 days. You can close it sooner.",
+  "analytics.share.create": "Create link",
+  "analytics.share.linkTitle": "Your link",
+  "analytics.share.linkWarning":
+    "This is the only time the link is shown. Copy it now — it cannot be read back.",
+  "analytics.share.leaveWarning":
+    "Leaving without copying discards the link. You would have to create another.",
+  "analytics.share.copy": "Copy link",
+  "analytics.share.copied": "Copied",
+  "analytics.share.copyFailed":
+    "The link could not be copied. Select it above and copy it by hand.",
+  "analytics.share.done": "Done",
   "analytics.frame": "As of {asOf} · {zone} · {currency}",
   "review.title": "What should be checked before the call?",
   "review.ready": "Ready",
