@@ -138,9 +138,10 @@
      that has to be visible without being looked for. */
   /* One length, and never a percentage: a size that resolves against the card's
      width in one axis and the viewport in the other would give the ball two
-     different diameters. 232px is the width the card can give it, and 24vh is
-     what a short window can, whichever is smaller. */
-  --coreSize: min(196px, 20vh);
+     different diameters. 172px is a step under the width the card could give
+     it — the ball leads the rail without crowding the destinations above it —
+     and 18vh is what a short window can, whichever is smaller. */
+  --coreSize: min(172px, 18vh);
   --coreGlass: calc(var(--coreSize) - 6px);
   /* The viewport cap is for a hero standing in a content column; the rail's own
      width and height are the only caps this one needs. */

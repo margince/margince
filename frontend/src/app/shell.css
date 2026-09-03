@@ -457,19 +457,20 @@
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: 9px;
-  padding: 2px 7px 2px 3px; /* ds:ignore 3 + the rail's 8px inset centres the 40px chip on the rows' own 18px glyph axis */
+  padding: 2px 7px 2px 1px; /* ds:ignore 1 + the rail's 8px inset centres the 44px chip on the rows' own 18px glyph axis */
   flex: 1;
   min-width: 0;
   overflow: hidden;
 }
 .rail .ws-chip {
   /* The workspace's mark is the one picture in the chrome, and at 32px it read
-     as one more row glyph. 40px fills the strip's height less the head's own
-     inset, which is as large as the head can carry without moving the rows. */
-  width: 40px;
-  height: 40px;
+     as one more row glyph. 44px is the head's height less a 2px inset on each
+     side: the head is the strip's height to the pixel, so this is as large as
+     the mark can be without touching the rail's edge or the rule under it. */
+  width: 44px;
+  height: 44px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 11px;
   /* Flat brand emerald, no gradient and no lift: the mark is the one filled
      thing in the chrome, and a lit, shadowed chip beside quiet rows was the
      loudest object on the screen. */
@@ -482,7 +483,7 @@
    stands here is a logo drawn for its own background, or the monogram Avatar
    tints from the record's identity, and either one on the brand emerald would
    be a second surface behind a finished mark. The avatar fills the slot so the
-   collapsed rail keeps centring the same 40px box on the rows' glyph axis. */
+   collapsed rail keeps centring the same 44px box on the rows' glyph axis. */
 .rail .ws-chip-company {
   background: none;
 }
