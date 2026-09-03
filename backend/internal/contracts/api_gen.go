@@ -8545,6 +8545,36 @@ func (e PersonGraphNodeType) Valid() bool {
 	}
 }
 
+// Defines values for PersonGraphReceiptKind.
+const (
+	PersonGraphReceiptKindCall    PersonGraphReceiptKind = "call"
+	PersonGraphReceiptKindEmail   PersonGraphReceiptKind = "email"
+	PersonGraphReceiptKindMeeting PersonGraphReceiptKind = "meeting"
+	PersonGraphReceiptKindMessage PersonGraphReceiptKind = "message"
+	PersonGraphReceiptKindNote    PersonGraphReceiptKind = "note"
+	PersonGraphReceiptKindTask    PersonGraphReceiptKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphReceiptKind enum.
+func (e PersonGraphReceiptKind) Valid() bool {
+	switch e {
+	case PersonGraphReceiptKindCall:
+		return true
+	case PersonGraphReceiptKindEmail:
+		return true
+	case PersonGraphReceiptKindMeeting:
+		return true
+	case PersonGraphReceiptKindMessage:
+		return true
+	case PersonGraphReceiptKindNote:
+		return true
+	case PersonGraphReceiptKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PersonGraphRouteAvailability.
 const (
 	PersonGraphRouteAvailabilityAlreadyRequested PersonGraphRouteAvailability = "already_requested"
@@ -12180,22 +12210,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
-	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
-	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
-	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
+	Automatic  VoiceProfileVersionReason = "automatic"
+	Manual     VoiceProfileVersionReason = "manual"
+	Onboarding VoiceProfileVersionReason = "onboarding"
+	Rollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case VoiceProfileVersionReasonAutomatic:
+	case Automatic:
 		return true
-	case VoiceProfileVersionReasonManual:
+	case Manual:
 		return true
-	case VoiceProfileVersionReasonOnboarding:
+	case Onboarding:
 		return true
-	case VoiceProfileVersionReasonRollback:
+	case Rollback:
 		return true
 	default:
 		return false
@@ -26349,9 +26379,19 @@ type PersonGraphNodeType string
 // PersonGraphReceipt defines model for PersonGraphReceipt.
 type PersonGraphReceipt struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
-	OccurredAt time.Time          `json:"occurred_at"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// Kind What the receipt is evidence OF. The graph counts attendees and organizers as well
+	// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+	// that drew every one of them as an email would tell a reader a meeting was one.
+	Kind       PersonGraphReceiptKind `json:"kind"`
+	OccurredAt time.Time              `json:"occurred_at"`
+	Subject    *string                `json:"subject,omitempty"`
 }
+
+// PersonGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
+// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+// that drew every one of them as an email would tell a reader a meeting was one.
+type PersonGraphReceiptKind string
 
 // PersonGraphRoute The warmest way in, chosen deterministically rather than scored by a model: the
 // strongest direct relationship if one exists, otherwise the strongest relationship any

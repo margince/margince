@@ -6806,9 +6806,9 @@ export const de = {
   "person.graph.withContact": "mit diesem Kontakt",
   "person.graph.counts":
     "{total} Interaktionen in 90 Tagen \u00b7 {inbound} eingehend, {outbound} ausgehend",
+  "person.graph.untitledMessage": "Ohne Titel",
   "person.graph.countsOnly":
     "Nur Z\u00e4hlwerte \u2014 die Nachrichten selbst bleiben in der Chronik.",
-  "person.graph.untitledMessage": "Nachricht ohne Betreff",
   "person.intro.routesTitle": "Wege hinein",
   "person.graph.droppedNote": "{count} weitere werden nicht angezeigt.",
   "person.graph.withheldDirect":
