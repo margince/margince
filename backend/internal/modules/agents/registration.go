@@ -261,9 +261,11 @@ func assertNoSchemaComposition(tool, field string, shape map[string]json.RawMess
 				"behind it", tool, field, keyword)
 		}
 	}
-	// The same two keys the renderer walks, so the refusal covers exactly what
-	// the renderer can reach and nothing it cannot.
-	for _, nested := range []string{"properties", "items"} {
+	// The same keys the renderer walks, so the refusal covers exactly what the
+	// renderer can reach and nothing it cannot. `additionalProperties` belongs
+	// here as much as the other two: it can be a full object schema, and
+	// qualify_lead nests a `properties` tree under one.
+	for _, nested := range []string{"properties", "items", "additionalProperties"} {
 		raw, present := shape[nested]
 		if !present {
 			continue
@@ -287,7 +289,9 @@ func assertNoCompositionUnder(tool, field, keyword string, raw json.RawMessage) 
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		return nil //nolint:nilerr // not an object: `items` in tuple form, or a bool schema. It carries no branch, and assertObjectSchemas has already judged the root's shape.
 	}
-	if keyword == "items" {
+	// `items` and `additionalProperties` hold ONE schema; `properties` holds a
+	// map of them.
+	if keyword != "properties" {
 		return assertNoSchemaComposition(tool, field, decoded)
 	}
 	for name, property := range decoded {

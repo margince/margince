@@ -226,6 +226,13 @@ func TestAComposedBranchIsRefusedAtEveryDepthAndOnReadOnlyTools(t *testing.T) {
 		{"under items", `{"type":"object","properties":{"a":{"type":"array","items":{"$ref":"#/x"}}}}`},
 		{"two levels down", `{"type":"object","properties":{"a":{"type":"object","properties":{"b":{"oneOf":[{}]}}}}}`},
 		{"in an output schema", `{"type":"object","properties":{"data":{"anyOf":[{}]}}}`},
+		// The third nesting place. An earlier pass walked `properties` and
+		// `items` only, so a composed branch under `additionalProperties` passed
+		// boot — and qualify_lead's own output schema nests a `properties` tree
+		// under one, which is what makes this reachable.
+		{"under additionalProperties", `{"type":"object","additionalProperties":{"oneOf":[{}]}}`},
+		{"deep under additionalProperties", `{"type":"object","properties":{"filled":{"type":"object",` +
+			`"additionalProperties":{"type":"object","properties":{"v":{"$ref":"#/x"}}}}}}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// READ-ONLY, so the retry-key splice never runs and only the

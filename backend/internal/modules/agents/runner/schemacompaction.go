@@ -92,11 +92,15 @@ const (
 //
 // It recurses because `additionalProperties` is not only a top-level member:
 // run_report's `aggregates` items close themselves, and the whole-catalog count
-// exceeds the tool count for that reason. The recursion walks `properties` and
-// `items`, which are the two places this surface nests an object schema — and
-// that claim is HELD rather than asserted: assertObjectSchemas refuses a served
-// schema that composes with allOf/anyOf/oneOf/$ref AT ANY DEPTH, so there is no
-// third place for an object schema to hide.
+// exceeds the tool count for that reason.
+//
+// THE RECURSION WALKS `properties`, `items` AND `additionalProperties`, which is
+// every keyword this surface nests an object schema under — checked against the
+// served catalog rather than assumed, and `additionalProperties` was the one an
+// earlier pass missed (qualify_lead nests a `properties` tree under one). The
+// claim is HELD rather than asserted: assertObjectSchemas refuses a served
+// schema that composes with allOf/anyOf/oneOf/$ref under those same three keys,
+// at any depth, so there is no fourth place for an object schema to hide.
 //
 // Read back as members and re-marshalled, the way spliceRetryKey does it:
 // marshalling a map sorts its keys, so every process renders the same bytes and
@@ -106,13 +110,15 @@ func compactSchemaShape(shape map[string]json.RawMessage, root bool) map[string]
 	for key, raw := range shape {
 		switch key {
 		case schemaAdditionalProperties:
-			// Only the CLOSED form. A schema constraining what an open object's
-			// extra members must look like is saying something the frame does
-			// not, so it survives.
+			// Only the CLOSED form is dropped. A schema constraining what an
+			// open object's extra members must look like is saying something
+			// the frame does not, so it survives — and it is RECURSED INTO,
+			// because it is an object schema like any other and can close
+			// itself. qualify_lead nests a whole `properties` tree under one.
 			if string(raw) == "false" {
 				continue
 			}
-			out[key] = raw
+			out[key] = compactNestedSchema(raw)
 		case schemaProperties:
 			out[key] = compactSchemaProperties(raw, root)
 		case schemaItems:

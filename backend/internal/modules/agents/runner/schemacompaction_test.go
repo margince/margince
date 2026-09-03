@@ -125,6 +125,31 @@ func TestOnlyTheClosedFormIsOmitted(t *testing.T) {
 	}
 }
 
+// `additionalProperties` is RECURSED INTO when it is a schema.
+//
+// It is the third place this surface nests an object schema, and an earlier pass
+// walked only `properties` and `items` — so a closed object under one survived
+// the compaction while the comment claimed there was nowhere left to hide.
+// qualify_lead's own output schema nests a `properties` tree under one, which is
+// what makes this reachable rather than hypothetical.
+func TestAClosedObjectUnderAdditionalPropertiesIsCompacted(t *testing.T) {
+	schema := json.RawMessage(`{"type":"object","properties":{` +
+		`"filled":{"type":"object","additionalProperties":{"type":"object","properties":{` +
+		`"value":{"type":"string","description":"What was filled in."}},` +
+		`"additionalProperties":false}}},` +
+		`"additionalProperties":false}`)
+	compacted := CompactSchema(mutating(schema))
+	if strings.Contains(compacted, `"additionalProperties":false`) {
+		t.Errorf("a closed object nested under `additionalProperties` kept the closed form, so the "+
+			"third nesting place is still unvisited:\n%s", compacted)
+	}
+	// The per-tool meaning inside it survives, so this is not passing by the
+	// whole branch having been dropped.
+	if !strings.Contains(compacted, `"What was filled in."`) {
+		t.Errorf("the compaction dropped a description nested under `additionalProperties`:\n%s", compacted)
+	}
+}
+
 // THE PLANTED FALSE POSITIVE. `idempotency_key` appears inside the retry key's
 // OWN description text, so a compaction that matched the property NAME against
 // the rendered bytes — rather than against the member the surface owns — has a
