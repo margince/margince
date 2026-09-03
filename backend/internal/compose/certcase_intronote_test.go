@@ -270,3 +270,22 @@ func TestAScenarioInTheOtherContractsVocabularyIsRefused(t *testing.T) {
 		t.Errorf("the refusal did not name the word at fault: %v", err)
 	}
 }
+
+// A blank forbidden phrase is refused, because it is contained by every reply:
+// one in the list would report a wrong answer on every run whatever the model
+// wrote, and the site would read as never able to write a sendable note.
+func TestABlankForbiddenPhraseIsRefused(t *testing.T) {
+	t.Parallel()
+	for _, expected := range []string{`[""]`, `["   "]`, `["close friend","\t"]`} {
+		_, err := introNoteCases{}.Prepare(json.RawMessage(noteFixtureJSON), json.RawMessage(expected))
+		if err == nil {
+			t.Errorf("%s was prepared, and would have failed every run", expected)
+		}
+	}
+	// A list with no phrases at all stays legal: it means the scenario is
+	// checking only that a forwardable note came back.
+	_, err := introNoteCases{}.Prepare(json.RawMessage(noteFixtureJSON), json.RawMessage(`[]`))
+	if err != nil {
+		t.Errorf("an empty expectation was refused: %v", err)
+	}
+}

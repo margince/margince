@@ -37,9 +37,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 38 |
-| … best state `current` | 36 |
+| … best state `current` | 35 |
 | … best state `partial` | 0 |
-| … best state `stale` | 2 |
+| … best state `stale` | 3 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 129 |
 | Committed records | 59 |
@@ -74,7 +74,7 @@ tables below.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 29 | 0 | 2 | 333 | 268 | 0.80 | 68516ms | 12 | 7 | 12 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 28 | 0 | 3 | 333 | 268 | 0.80 | 68516ms | 12 | 7 | 12 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -105,6 +105,7 @@ model, real network).
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario intro_note_is_written_to_the_customer_not_about_the_request — or the prompt this build now builds from it — has changed since the record scored it |
 | `draft_reply/person` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/person` | `gemini · gemini-3.5-flash · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -603,7 +604,7 @@ sites repeats the same pair on each of their rows.
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `supported_degraded` | 9 | 8 | 0.89 | 18392ms | 68516ms | 8 | 0 | 1 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 2/3 | `supported_degraded` | 9 | 8 | 0.89 | 18392ms | 68516ms | 8 | 0 | 1 | 0 |
 
 #### `draft_reply/person`
 

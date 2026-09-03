@@ -85,6 +85,18 @@ func (introNoteCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 			"%s: the expected value is not a list of phrases the note must avoid: %w",
 			introNoteSite, err)
 	}
+	for i, phrase := range forbidden {
+		// A blank phrase is contained by EVERY string, so one in the list scores
+		// every reply a wrong answer and the site reads as never able to write a
+		// sendable note. Nothing upstream refuses it: the corpus loader checks
+		// the scenario's shape, not the meaning of a phrase inside it.
+		if strings.TrimSpace(phrase) == "" {
+			return nil, fmt.Errorf(
+				"%s: the phrase at position %d is blank, and a blank phrase appears in every reply — "+
+					"the scenario would report a wrong answer on every run whatever the model wrote",
+				introNoteSite, i)
+		}
+	}
 	// The request is built HERE rather than in Run, so a scenario the endpoint
 	// cannot be handed — a strength bucket from the wrong contract's vocabulary
 	// — is refused before a model is paid to answer a prompt nobody sends.

@@ -20,7 +20,7 @@ fixture:
 expect:
   outcome: accepted
   # The first four are claims about a relationship the record scores as
-  # "moderate" with one exchange in August. The last three are the failure
+  # "moderate", last spoken in August. The last three are the failure
   # that belongs to THIS site alone: the note must never reveal that anybody
   # asked for the introduction. A customer who reads that the note was
   # requested learns the warmth was manufactured, which is worse than a note
@@ -50,8 +50,9 @@ expect:
     forwarded at all.
 
     Penalise heavily any characterisation of Sofia's relationship with
-    Philipp beyond "moderate" and one exchange in August, and any claim
-    about Philipp's company that the facts do not carry. Philipp cannot
+    Philipp beyond the two facts it was given — the bucket "moderate" and a
+    last exchange in August — and any claim about Philipp's company that the
+    facts do not carry. Philipp cannot
     falsify a claim about himself the way a colleague could, which is what
     makes invention worse here than in the colleague-facing ask.
 
