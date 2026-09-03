@@ -95,20 +95,27 @@ const sourceDecay = crmcontracts.WorklistItemSource("relationship_decay")
 // is the more urgent and the more actionable of the two, because it names the
 // message to reply to. A silence has no message to point at.
 //
-// Nothing is absorbed onto the survivor, unlike the deal case. What the decay
-// row would have added — how long the silence ran — is a claim the waiting row
-// contradicts rather than completes: the contact is not quiet, they are
-// unanswered.
+// The silence itself is NOT absorbed: "quiet 60 days" is a claim the waiting
+// row contradicts rather than completes — the contact is not quiet, they are
+// unanswered. But the money IS, and that half took a defect to notice. The two
+// lanes answer different questions about a deal: a wait asks whether one rides
+// on THIS THREAD, the decay lane asks whether the person sits on any open deal
+// the reader can see. So a fifteen-day-old wait about a contact who carries a
+// deal elsewhere loses `expected_revenue` when its decay row goes, and drops a
+// band with it — the row falls out of the day for lack of a fact the page had.
 func dropDecayAlreadyWaiting(rows []ranked) []ranked {
-	waitingPeople := map[string]bool{}
-	for _, row := range rows {
-		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
-			row.item.Subject.Type == subjectPerson {
-			waitingPeople[row.item.Subject.Id.String()] = true
-		}
-	}
+	waitingPeople := waitingContacts(rows)
 	if len(waitingPeople) == 0 {
 		return rows
+	}
+	// What the dropped rows were going to say about money, kept for the row
+	// that replaces them.
+	funded := map[string]bool{}
+	for _, row := range rows {
+		if row.item.Source == sourceDecay && waitingPeople[row.item.Id] &&
+			hasReason(row.item, reasonExpectedRevenue) {
+			funded[row.item.Id] = true
+		}
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
@@ -117,7 +124,41 @@ func dropDecayAlreadyWaiting(rows []ranked) []ranked {
 		if row.item.Source == sourceDecay && waitingPeople[row.item.Id] {
 			continue
 		}
+		if row.item.Source == sourceWaiting && funded[row.person.String()] &&
+			!hasReason(row.item, reasonExpectedRevenue) {
+			row.item.Because = append(row.item.Because, reason(reasonExpectedRevenue, nil))
+		}
 		kept = append(kept, row)
 	}
 	return kept
+}
+
+// waitingContacts collects the contacts named by the waiting rows on this page.
+//
+// It reads the row's OWN person rather than its subject, and that distinction
+// is the whole correctness of this pass. A wait carrying both a deal and a
+// person takes the deal as its subject — the deal says more about what the
+// reply is for — so a subject-keyed lookup misses exactly the contacts most
+// likely to also be lapsing, and the page shows them twice.
+func waitingContacts(rows []ranked) map[string]bool {
+	people := map[string]bool{}
+	for _, row := range rows {
+		if row.item.Source == sourceWaiting && !row.person.IsZero() {
+			people[row.person.String()] = true
+		}
+	}
+	return people
+}
+
+// reasonExpectedRevenue says money still rests on this row.
+const reasonExpectedRevenue = crmcontracts.WorklistReasonKind("expected_revenue")
+
+// hasReason reports whether a row already states one fact.
+func hasReason(item crmcontracts.WorklistItem, kind crmcontracts.WorklistReasonKind) bool {
+	for _, because := range item.Because {
+		if because.Kind == kind {
+			return true
+		}
+	}
+	return false
 }

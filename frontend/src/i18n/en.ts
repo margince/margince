@@ -7944,6 +7944,8 @@ export const en = {
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.done.snooze": "Back on your list tomorrow.",
+  "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
+  "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",

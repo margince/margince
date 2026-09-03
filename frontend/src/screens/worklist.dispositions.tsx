@@ -18,7 +18,7 @@ import { Button } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import {
   useClearDisposition,
   useSetDisposition,
@@ -58,9 +58,12 @@ function undoScope(disposition: WorklistDisposition): "mine" | "thread" {
   return disposition === "not_sales" ? "thread" : "mine";
 }
 
+type T = ReturnType<typeof useT>;
+
 // The set-aside verbs for one row, drawn only where the server offers them.
 export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
   const set = useSetDisposition();
   const clear = useClearDisposition();
@@ -79,7 +82,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       },
       {
         onSuccess: () =>
-          toast.show(t(`worklist.disposition.done.${disposition}` as const), {
+          toast.show(doneText(disposition, days, t, locale), {
             action: {
               label: t("worklist.disposition.undo"),
               // A failed undo needs saying. The toast dismisses itself the
@@ -169,6 +172,32 @@ function SnoozeSpans({
       </div>
     </Popover>
   );
+}
+
+// What the confirmation says a press did.
+//
+// The span has to reach this sentence or the sentence is false. The default
+// press really does bring the row back tomorrow, and the fixed copy said so —
+// but the moment a reader could choose seven days, that same line told them
+// "back tomorrow" for a row returning next week. A confirmation that misstates
+// what just happened is worse than none: the reader believes it and stops
+// checking.
+//
+// Only the snooze needs the span. The other judgements name no moment, so they
+// keep the sentence they had.
+function doneText(
+  disposition: WorklistDisposition,
+  days: SnoozeSpan | undefined,
+  t: T,
+  locale: Locale,
+): string {
+  if (disposition !== "snooze") {
+    return t(`worklist.disposition.done.${disposition}` as const);
+  }
+  const span = days ?? SNOOZE_DAYS;
+  return translatePlural(locale, "worklist.disposition.doneSnooze", span, {
+    value: formatNumber(span, locale),
+  });
 }
 
 // When a snooze lifts.

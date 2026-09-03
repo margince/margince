@@ -7767,6 +7767,10 @@ export const vi = {
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
   "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.doneSnooze_one":
+    "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.doneSnooze_other":
+    "Sẽ trở lại danh sách của bạn sau {value} ngày.",
   "worklist.disposition.done.not_mine":
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",

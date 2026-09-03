@@ -118,16 +118,29 @@ describe("how long a row is put down for", () => {
   });
 
   // The case the change is for: a week, in one press instead of seven.
-  it("sends the span the reader picked", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const fetch = draw();
+  //
+  // EVERY declared span, not a sample. The list is the product decision, so a
+  // test covering two of three would let the middle one be deleted or wired to
+  // the wrong number with nothing failing.
+  it.each([1, 3, 7])(
+    "sends the %i-day span the reader picked",
+    async (days) => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const fetch = draw();
 
-    await user.click(screen.getByRole("button", { name: "For how long" }));
-    await user.click(await screen.findByRole("button", { name: "7 days" }));
+      await user.click(screen.getByRole("button", { name: "For how long" }));
+      await user.click(
+        await screen.findByRole("button", {
+          name: days === 1 ? "1 day" : `${days} days`,
+        }),
+      );
 
-    await waitFor(async () => expect((await sentBodies(fetch)).length).toBe(1));
-    expect(daysSent((await sentBodies(fetch))[0])).toBe(7);
-  });
+      await waitFor(async () =>
+        expect((await sentBodies(fetch)).length).toBe(1),
+      );
+      expect(daysSent((await sentBodies(fetch))[0])).toBe(days);
+    },
+  );
 
   // The spans are offered only where the verb is. A duration picker beside a
   // row the server never offered a snooze on is a control that 404s.
@@ -154,6 +167,36 @@ describe("how long a row is put down for", () => {
     );
 
     expect(screen.queryByRole("button", { name: "For how long" })).toBeNull();
+  });
+
+  // What the confirmation SAYS a press did.
+  //
+  // The copy was fixed at "back tomorrow" and correct while tomorrow was the
+  // only span. The moment a reader could pick seven days, that same line told
+  // them the row returns tomorrow when it returns next week — a confirmation
+  // that misstates what just happened, which the reader believes.
+  it("says how long the row is actually gone for", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    draw();
+
+    await user.click(screen.getByRole("button", { name: "For how long" }));
+    await user.click(await screen.findByRole("button", { name: "7 days" }));
+
+    expect(
+      await screen.findByText("Back on your list in 7 days."),
+    ).toBeTruthy();
+  });
+
+  // And the default press still says tomorrow, because for that press it is
+  // true. A change that made every confirmation say "in 1 days" would be the
+  // same defect wearing the fix's clothes.
+  it("still says tomorrow on the plain press", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    draw();
+
+    await user.click(screen.getByRole("button", { name: "Later" }));
+
+    expect(await screen.findByText("Back on your list tomorrow.")).toBeTruthy();
   });
 
   // Singular reads as singular. "1 days" is a different kind of wrong from a

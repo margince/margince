@@ -16,26 +16,44 @@ package attention
 
 import (
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// Both fixtures go through the REAL classifiers rather than being built by
+// hand. The defect this pass exists to close lives in classifyWaiting's subject
+// choice — a wait naming both a deal and a person takes the deal — so a
+// hand-built row with the subject the test wants is a row that proves the
+// suppressor agrees with the test, not that it agrees with the product.
 func decayRowFor(person ids.UUID) ranked {
-	return ranked{item: crmcontracts.WorklistItem{
-		Id:      person.String(),
-		Source:  sourceDecay,
-		Subject: subjectOf(subjectPerson, person),
-	}}
+	return classifyDecay(lapsedItem(QuietRelationship{
+		PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: dedupeInstant,
+	}), dedupeInstant)
 }
 
+// waitingRowFor is a wait about a person and nothing else.
 func waitingRowFor(person ids.UUID) ranked {
-	return ranked{item: crmcontracts.WorklistItem{
-		Id:      ids.NewV7().String(),
-		Source:  sourceWaiting,
-		Subject: subjectOf(subjectPerson, person),
-	}}
+	return classifyWaiting(WaitingCustomer{
+		ActivityID: ids.NewV7(), Subject: "Re: the retrofit quote",
+		Since: dedupeInstant.AddDate(0, 0, -2), PersonID: person,
+	}, dedupeInstant)
 }
+
+// waitingOnADealFor is the case that made this pass wrong: a wait naming BOTH
+// the contact and the deal their thread belongs to. classifyWaiting gives the
+// deal the subject, so the person is on the row and nowhere in its subject.
+func waitingOnADealFor(person ids.UUID) ranked {
+	return classifyWaiting(WaitingCustomer{
+		ActivityID: ids.NewV7(), Subject: "Re: the retrofit quote",
+		Since:    dedupeInstant.AddDate(0, 0, -2),
+		PersonID: person, DealID: ids.NewV7(),
+	}, dedupeInstant)
+}
+
+// dedupeInstant is the one moment every row here is classified against.
+var dedupeInstant = time.Date(2026, 8, 31, 9, 0, 0, 0, time.UTC)
 
 func sourcesOf(rows []ranked) []crmcontracts.WorklistItemSource {
 	out := make([]crmcontracts.WorklistItemSource, 0, len(rows))
@@ -91,22 +109,91 @@ func TestADayWithNobodyWaitingKeepsEveryQuietContact(t *testing.T) {
 	}
 }
 
-// A waiting row about a DEAL does not silence a contact. The two lanes both
+// The case a subject-keyed lookup misses entirely.
+//
+// A wait naming both the contact and their deal takes the DEAL as its subject,
+// so the person is on the row and nowhere in its subject. Those are exactly the
+// contacts most likely to also be lapsing — somebody with an open deal — and
+// the page showed them twice: unanswered in one row, gone quiet in another.
+func TestAContactWaitingOnADealThreadIsStillNotReportedAsGoneQuiet(t *testing.T) {
+	dana := ids.NewV7()
+
+	kept := dropDecayAlreadyWaiting([]ranked{decayRowFor(dana), waitingOnADealFor(dana)})
+
+	if len(kept) != 1 {
+		t.Fatalf("the page carries %v for one contact, want the waiting row alone — "+
+			"the wait's SUBJECT is the deal, so only the row's own person can match",
+			sourcesOf(kept))
+	}
+	if kept[0].item.Source != sourceWaiting {
+		t.Fatalf("the surviving row is %q, want the waiting row", kept[0].item.Source)
+	}
+}
+
+// A waiting row about a DEAL and NOBODY does not silence a contact. The two lanes both
 // carry subjects, and matching on the id alone rather than on the subject type
 // would let an unrelated record's id suppress a person who shares nothing with
 // it but a coincidence.
-func TestAWaitOnADealDoesNotSilenceAContact(t *testing.T) {
+func TestAWaitNamingNoContactDoesNotSilenceOne(t *testing.T) {
 	dana := ids.NewV7()
-	onADeal := ranked{item: crmcontracts.WorklistItem{
-		Id:      ids.NewV7().String(),
-		Source:  sourceWaiting,
-		Subject: subjectOf(subjectDeal, dana),
-	}}
+	// A thread filed under a deal alone, naming no person. Its subject id
+	// happens to equal the contact's — the coincidence a subject-keyed match
+	// would fall for.
+	onADealOnly := classifyWaiting(WaitingCustomer{
+		ActivityID: ids.NewV7(), Subject: "Re: the retrofit quote",
+		Since: dedupeInstant.AddDate(0, 0, -2), DealID: dana,
+	}, dedupeInstant)
 
-	kept := dropDecayAlreadyWaiting([]ranked{decayRowFor(dana), onADeal})
+	kept := dropDecayAlreadyWaiting([]ranked{decayRowFor(dana), onADealOnly})
 
 	if len(kept) != 2 {
-		t.Fatalf("the page carries %v, want both — the wait is about a deal, and the "+
-			"silence is about a person", sourcesOf(kept))
+		t.Fatalf("the page carries %v, want both — the wait names no person at all, "+
+			"and an id that merely matches is a coincidence", sourcesOf(kept))
+	}
+}
+
+// The money survives the row that carried it.
+//
+// The two lanes answer different questions about a deal: a wait asks whether one
+// rides on THIS THREAD, the decay lane asks whether the person sits on any open
+// deal the reader can see. So the decay row can be the only row on the page that
+// knows money rests on this contact — and dropping it silently took that with
+// it, which for a wait past the staleness window is the difference between
+// agreed work and routine tidying.
+func TestTheMoneyOnASilencedContactSurvivesOntoTheWaitingRow(t *testing.T) {
+	dana := ids.NewV7()
+	quiet := classifyDecay(lapsedItem(QuietRelationship{
+		PersonID: dana, Name: "Dana Weiss", QuietDays: 63,
+		LastAt: dedupeInstant, HasOpenDeal: true,
+	}), dedupeInstant)
+	if !hasReason(quiet.item, reasonExpectedRevenue) {
+		t.Fatalf("the decay row states %v and not that money rests on it — the fixture "+
+			"proves nothing about what the drop would lose", quiet.item.Because)
+	}
+
+	kept := dropDecayAlreadyWaiting([]ranked{quiet, waitingRowFor(dana)})
+
+	if len(kept) != 1 {
+		t.Fatalf("the page carries %v, want the waiting row alone", sourcesOf(kept))
+	}
+	if !hasReason(kept[0].item, reasonExpectedRevenue) {
+		t.Fatalf("the surviving row states %v — the money the dropped row knew about "+
+			"left the page with it", kept[0].item.Because)
+	}
+}
+
+// And a contact with NO money on them gains no such claim. Without this the
+// test above passes on a pass that stamps every survivor as funded, which would
+// be the row inventing a fact rather than inheriting one.
+func TestASilencedContactWithNoDealAddsNoRevenueClaim(t *testing.T) {
+	dana := ids.NewV7()
+
+	kept := dropDecayAlreadyWaiting([]ranked{decayRowFor(dana), waitingRowFor(dana)})
+
+	if len(kept) != 1 {
+		t.Fatalf("the page carries %v, want the waiting row alone", sourcesOf(kept))
+	}
+	if hasReason(kept[0].item, reasonExpectedRevenue) {
+		t.Fatalf("the surviving row claims money rests on it: %v", kept[0].item.Because)
 	}
 }

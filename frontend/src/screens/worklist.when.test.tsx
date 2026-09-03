@@ -165,6 +165,23 @@ describe("a meeting says when it starts", () => {
     expect(momentLine()?.textContent).toMatch(/02/);
     expect(momentLine()?.textContent).toMatch(/09:00/);
   });
+
+  // The case that tells the VIEWER's day from the server's.
+  //
+  // 22:30 UTC on the 31st is 00:30 on the 1st in Berlin — tomorrow to the
+  // person reading it, still today to a machine in UTC. Every other case here
+  // lands on the same calendar day under either rule, so without this one the
+  // zone-aware comparison could be swapped for a UTC one and nothing would
+  // fail. That is the shape of a test suite that agrees with itself.
+  it("reads the day in the reader's zone, not the server's", async () => {
+    draw([meetingAt("2026-08-31T22:30:00Z")]);
+
+    await screen.findByText("Quarterly review with Turbinenbau");
+    // Dated, because in Berlin this is tomorrow. A bare "00:30" would tell a
+    // rep scanning their morning that it starts within the hour.
+    expect(momentLine()?.textContent).toMatch(/01/);
+    expect(momentLine()?.textContent).toMatch(/00:30/);
+  });
 });
 
 describe("a task says when it is due", () => {
