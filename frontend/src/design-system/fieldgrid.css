@@ -76,5 +76,11 @@
    on a record whose values are the point. */
 .fieldgrid-value .inlinetext[data-empty="true"],
 .fieldgrid-value .inline-editable[data-empty="true"] {
-  color: var(--textTertiary);
+  /* --textMeta and not --textTertiary: this is 13px TEXT, and the contrast law
+     at the top of tokens.css gives all 11-13px meta text one role. The
+     tertiary tone is a MARK tone and measures 2.49:1 here, which axe reads as
+     a serious AA failure on every record carrying an unfilled field. It still
+     sits below the filled values, which is what the paragraph above asks of
+     it — the invitation is the hover fill, never the colour. */
+  color: var(--textMeta);
 }
