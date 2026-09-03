@@ -4,6 +4,7 @@
 package weeklyplan
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Handlers is the plan's HTTP surface.
@@ -83,6 +85,103 @@ func (h Handlers) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, commitmentToWire(out))
+}
+
+// EditWeeklyPlanCommitment corrects one of the caller's own commitments.
+//
+// DECODED AS RAW KEYS, not into the generated struct, and that is forced by the
+// shape of the request. Both `due_on` absent and `due_on: null` render as a nil
+// pointer there, and the two mean opposite things: leave the date alone, and
+// clear it. A rep who fixes a typo would otherwise silently lose the date they
+// never mentioned.
+func (h Handlers) EditWeeklyPlanCommitment(
+	w http.ResponseWriter, r *http.Request, id openapi_types.UUID,
+) {
+	var body map[string]json.RawMessage
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	edit, err := editFromBody(body)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := h.store.EditCommitment(r.Context(), ids.UUID(id), edit); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// editFromBody reads the keys that are PRESENT into the store's edit.
+//
+// Each block is the same three steps — the key is there, it parses, it becomes
+// a pointer — and the ParseError names the field the client sent rather than
+// the Go one, so a malformed date reads as `due_on` and not as `DueOn`.
+func editFromBody(body map[string]json.RawMessage) (CommitmentEdit, error) {
+	var edit CommitmentEdit
+	if raw, ok := body["label"]; ok {
+		var label string
+		if err := json.Unmarshal(raw, &label); err != nil {
+			return edit, &values.ParseError{
+				Field: "label", Code: "invalid", Message: "a label is text",
+			}
+		}
+		edit.Label = &label
+	}
+	if raw, ok := body["due_on"]; ok {
+		due, err := parseEditDate(raw)
+		if err != nil {
+			return edit, err
+		}
+		edit.DueOn = &due
+	}
+	if raw, ok := body["linked_record"]; ok {
+		linkType, linkID, err := parseEditLink(raw)
+		if err != nil {
+			return edit, err
+		}
+		edit.LinkedRecordType, edit.LinkedRecordID = &linkType, &linkID
+	}
+	return edit, nil
+}
+
+// parseEditDate reads a date or an explicit null.
+func parseEditDate(raw json.RawMessage) (*time.Time, error) {
+	if string(raw) == "null" {
+		return nil, nil
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err != nil {
+		return nil, &values.ParseError{
+			Field: "due_on", Code: "invalid", Message: "a due date is a calendar day",
+		}
+	}
+	day, err := time.Parse(time.DateOnly, text)
+	if err != nil {
+		return nil, &values.ParseError{
+			Field: "due_on", Code: "invalid", Message: "a due date is a calendar day",
+		}
+	}
+	return &day, nil
+}
+
+// parseEditLink reads a record link or an explicit null.
+//
+// A null unlinks, which reaches the store as the empty pair — the same shape
+// the store already treats as "this commitment is about no record".
+func parseEditLink(raw json.RawMessage) (string, ids.UUID, error) {
+	if string(raw) == "null" {
+		return "", ids.Nil, nil
+	}
+	var link crmcontracts.WeeklyPlanLink
+	if err := json.Unmarshal(raw, &link); err != nil {
+		return "", ids.Nil, &values.ParseError{
+			Field: "linked_record", Code: "invalid",
+			Message: "a linked record is a type and an id",
+		}
+	}
+	return string(link.Type), ids.UUID(link.Id), nil
 }
 
 // SetWeeklyPlanCommitmentState settles one of the caller's commitments.

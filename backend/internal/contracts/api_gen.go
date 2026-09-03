@@ -31012,6 +31012,19 @@ type WeeklyPlanCommitment struct {
 // deciding a thing is not worth doing is not failing to do it.
 type WeeklyPlanCommitmentState string
 
+// WeeklyPlanCommitmentEdit What a rep may correct about their own commitment. Only the fields PRESENT change —
+// an absent field is left alone, which is what lets a client send a new label without
+// also having to restate the due date it is not touching.
+type WeeklyPlanCommitmentEdit struct {
+	// DueOn Null clears the date — something to do this week, rather than by a day.
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+	Label *string             `json:"label,omitempty"`
+
+	// LinkedRecord Both halves or neither, as on create. Null unlinks the record, which is how a
+	// commitment stops being about one without being rewritten.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+}
+
 // WeeklyPlanLink defines model for WeeklyPlanLink.
 type WeeklyPlanLink struct {
 	Id   openapi_types.UUID `json:"id"`
@@ -37292,6 +37305,9 @@ type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
 
 // AddWeeklyPlanCommitmentJSONRequestBody defines body for AddWeeklyPlanCommitment for application/json ContentType.
 type AddWeeklyPlanCommitmentJSONRequestBody = NewWeeklyPlanCommitment
+
+// EditWeeklyPlanCommitmentJSONRequestBody defines body for EditWeeklyPlanCommitment for application/json ContentType.
+type EditWeeklyPlanCommitmentJSONRequestBody = WeeklyPlanCommitmentEdit
 
 // AskForWeeklyPlanHelpJSONRequestBody defines body for AskForWeeklyPlanHelp for application/json ContentType.
 type AskForWeeklyPlanHelpJSONRequestBody AskForWeeklyPlanHelpJSONBody
@@ -46670,6 +46686,9 @@ type ServerInterface interface {
 	// Write one thing onto this week's plan.
 	// (POST /weekly-plans/commitments)
 	AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request)
+	// Correct what a commitment says, when it is due, or what it is about.
+	// (PATCH /weekly-plans/commitments/{id})
+	EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Say what you need from your lead on one commitment.
 	// (PUT /weekly-plans/commitments/{id}/help)
 	AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -50018,6 +50037,12 @@ func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Reques
 // Write one thing onto this week's plan.
 // (POST /weekly-plans/commitments)
 func (_ Unimplemented) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Correct what a commitment says, when it is due, or what it is about.
+// (PATCH /weekly-plans/commitments/{id})
+func (_ Unimplemented) EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -74038,6 +74063,40 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// EditWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EditWeeklyPlanCommitment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AskForWeeklyPlanHelp operation middleware
 func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
 
@@ -76278,6 +76337,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/weekly-plans/commitments", wrapper.AddWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/weekly-plans/commitments/{id}", wrapper.EditWeeklyPlanCommitment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/help", wrapper.AskForWeeklyPlanHelp)

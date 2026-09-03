@@ -16221,6 +16221,41 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /weekly-plans/commitments/{id}:
+    patch:
+      tags: [Brief]
+      operationId: editWeeklyPlanCommitment
+      summary: Correct what a commitment says, when it is due, or what it is about.
+      description: |
+        The CALLER's own commitment, on an open week. A rep types a commitment on Monday and
+        finds the typo on Tuesday; without this the only way out is to drop the row and write
+        a new one, which discards the manager's answer and any help already asked for — the
+        two fields on the row that were never the rep's to throw away.
+
+        Every field is optional and only what is PRESENT changes. `due_on: null` clears the
+        date, which is a real state: something to do this week rather than by a day. Sending
+        `linked_record: null` unlinks the record.
+
+        State is not settable here. `PUT .../state` owns the move between open, done and
+        dropped because it ties `completed_at` to the state the schema's CHECK binds them
+        with, and two writers of that pair would drift.
+      x-agent-access: human-only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WeeklyPlanCommitmentEdit' }
+      responses:
+        '204': { description: Corrected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/commitments/{id}/state:
     put:
       tags: [Brief]
@@ -31136,6 +31171,26 @@ components:
           description: Both halves or neither — a type with no id names nothing.
           allOf: [{ $ref: '#/components/schemas/WeeklyPlanLink' }]
         due_on: { type: [string, 'null'], format: date }
+
+    WeeklyPlanCommitmentEdit:
+      type: object
+      additionalProperties: false
+      description: |
+        What a rep may correct about their own commitment. Only the fields PRESENT change —
+        an absent field is left alone, which is what lets a client send a new label without
+        also having to restate the due date it is not touching.
+      properties:
+        label: { type: string, minLength: 1, maxLength: 500 }
+        linked_record:
+          description: |
+            Both halves or neither, as on create. Null unlinks the record, which is how a
+            commitment stops being about one without being rewritten.
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/WeeklyPlanLink' }]
+        due_on:
+          description: Null clears the date — something to do this week, rather than by a day.
+          type: [string, 'null']
+          format: date
 
     RbacObject:
       type: string

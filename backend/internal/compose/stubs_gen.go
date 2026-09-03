@@ -2227,6 +2227,10 @@ func (stubs) AddWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "AddWeeklyPlanCommitment")
 }
 
+func (stubs) EditWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "EditWeeklyPlanCommitment")
+}
+
 func (stubs) AskForWeeklyPlanHelp(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "AskForWeeklyPlanHelp")
 }

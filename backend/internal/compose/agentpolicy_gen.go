@@ -368,6 +368,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PATCH /v1/voice-profiles/{id}":                                      {Op: "updateVoiceProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/voice-profiles/{id}/sources/{sourceId}":                   {Op: "updateVoiceCorpusSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/webhook-subscriptions/{id}":                               {Op: "updateWebhookSubscription", Access: "tool", Tool: "update_record", RecordType: "webhook_subscription", Tier: "confirmation_required", Scope: "write"},
+	"PATCH /v1/weekly-plans/commitments/{id}":                            {Op: "editWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/activities":                                                {Op: "logActivity", Access: "tool", Tool: "log_activity", RecordType: "activity", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/activities/relink-bulk":                                    {Op: "relinkActivities", Access: "tool", Tool: "relink_activities", RecordType: "activity", Tier: "dynamic", Scope: "write"},
 	"POST /v1/activities/relink-thread":                                  {Op: "relinkThread", Access: "tool", Tool: "relink_thread", RecordType: "activity", Tier: "dynamic", Scope: "write"},
