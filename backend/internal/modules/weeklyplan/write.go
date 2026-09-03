@@ -100,13 +100,13 @@ func (s *Store) AddCommitment(ctx context.Context, now time.Time, in NewCommitme
 	if err := auth.Require(ctx, "weekly_plan", principal.ActionUpdate); err != nil {
 		return Commitment{}, err
 	}
-	label, err := bounded("label", in.Label, labelBound)
+	label, err := bounded(fieldLabel, in.Label, labelBound)
 	if err != nil {
 		return Commitment{}, err
 	}
 	if label == "" {
 		return Commitment{}, &values.ParseError{
-			Field: "label", Code: "required", Message: "a commitment needs saying in words",
+			Field: fieldLabel, Code: codeRequired, Message: "a commitment needs saying in words",
 		}
 	}
 	if err := checkLink(in.LinkedRecordType, in.LinkedRecordID); err != nil {
@@ -163,7 +163,7 @@ func (s *Store) AddCommitment(ctx context.Context, now time.Time, in NewCommitme
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, owner, crmcontracts.PublicEventWeeklyPlanUpdated{
 			PlanId: openapi_types.UUID(plan.ID), OwnerUserId: openapi_types.UUID(owner),
-			ChangedFields: []string{"commitments"},
+			ChangedFields: []string{changedCommitments},
 		})
 	})
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *Store) openPlanTx(
 	// already frozen, so the two would disagree about a week that is over.
 	if plan.Status != "open" {
 		return Plan{}, &values.ParseError{
-			Field: "week", Code: "week_closed",
+			Field: fieldWeek, Code: codeWeekClosed,
 			Message: "that week is closed; plan the current one",
 		}
 	}
