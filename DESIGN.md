@@ -64,8 +64,8 @@ checked against it. The sources are listed at the end of the section.
    1px inset white highlight on their top edge; nothing else does.
 4. **Nested radii obey one law.** Mismatched corners on a control inside a
    card is the most common single reason an interface reads as "off":
-   inner radius = outer radius − padding. **Rule:** a 14px card with 12px
-   padding holds 8px controls; `--r-card` 14, `--r-control` 8, and a keycap 4.
+   inner radius = outer radius − padding. **Rule:** an 18px pane with an 8px
+   inset holds 10px controls; `--r-lg` 18, `--r-control` 10, and a keycap 4.
 5. **Text is near-black slate, never pure black; grays carry the brand hue.**
    Stripe sets text in deep slate on near-white; Refactoring UI's rule is that
    a gray far from mid-lightness needs saturation or it looks washed out.
@@ -822,7 +822,7 @@ looks now.
 | `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
 | `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
-| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 8px radius, the "Margince read this record" label at 11.5px 500 in `--aiText`, the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
+| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the "Margince read this record" label at 11.5px 500 in `--aiText`, the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
 | `RecordTimeline` | The rail: a 76px mono date column, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |

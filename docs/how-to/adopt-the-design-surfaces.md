@@ -74,10 +74,10 @@ and Step 4 (`shell.css`):
 
 | Width | What changes |
 |---|---|
-| ≥ 1400px | The full layout: five readings, the 360, two columns 3fr/2fr, the details panel opens beside the reading at 300px. |
-| 1200–1400px | Readings keep five across at 22px figures; the details panel, when open, takes the readings to 21px and the columns stay two. |
+| Above 1400px | The full layout: five readings, the 360, two columns 3fr/2fr, the details panel opens beside the reading at 300px. |
+| 1200–1400px (inclusive) | Readings keep five across at 22px figures; the details panel, when open, takes the readings to 21px and the columns stay two. |
 | 720–1200px | Readings wrap to three then two per row; the two columns stack into one; the details panel opens as a **drawer over the page** (the `Modal placement="right"` surface), never squeezing the reading; the tab strip scrolls sideways inside its own box (`TableScroll` discipline: the page never scrolls sideways). |
-| < 720px | The head stacks: mark and name, then facts, then the verbs as **primary + more** only (the others move into `more`); readings two per row; the spine scrolls sideways in its own box (`.co-spine-scroll` already does); the map scrolls (`.rmap-scroll` already does); the rail becomes the phone bar. |
+| < 720px | The head stacks: mark and name, then facts, then the verbs as **the first base verb + more** only (the head's first verb keeps its outline, the rest move into `more`; only a lead's Qualify is filled, as everywhere); readings two per row; the spine scrolls sideways in its own box (`.co-spine-scroll` already does); the map scrolls (`.rmap-scroll` already does); the rail becomes the phone bar. |
 | 390px | The existing sweep: no horizontal scroll, 44px targets, `--stickyBottomInset`. |
 
 Rules: widths in `rem`/`fr`/`minmax(0, …)`, never fixed px on a column
