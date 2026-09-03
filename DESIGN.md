@@ -92,7 +92,9 @@ checked against it. The sources are listed at the end of the section.
    guidance is that every visible element earns its place and density and
    clarity coexist through strong opinions about the workflow. **Rule:** rows
    are 44–48px, a table shows eight columns before it scrolls, and the record
-   page answers the rep's first five questions above the fold.
+   page answers the rep's first five questions above the fold. Dense is not
+   the same as cramped: the density comes from saying each thing once, not
+   from shaving the space between rows.
 9. **The keyboard is visible.** Linear, Raycast and Attio surface a command
    field with its shortcut, and show the key beside every verb in a menu; a
    keycap is drawn as a small physical key (a one-step gradient, a 4px
@@ -203,11 +205,18 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 ## 5. Space, shape, depth
 
-- **4px base**, the existing `--space-*` ladder. Rows are 36–40px; a table row
-  38px; a sidebar row 30px; a control 30px (26px in a row).
-- **Radii by role**: 14px for a pane and the details panel, 12px for a board
-  card, 10px for the agent's row, 6px for a control and a pill, full for a
-  monogram.
+- **4px base**, the existing `--space-*` ladder, spent generously. The page
+  gutter is 32px; panes sit 24px apart; a pane has 20px above and below its
+  content and 26px at its sides; a zone title has 12px under it.
+- **Rows breathe.** A list row is 13px above and below its content (about
+  48px tall with two lines); a table row 44px; a sidebar row 34px; a control
+  32px (28px in a row); the attribute rows in the details panel 32px. The
+  test for "gedrungen": if two rows could be mistaken for one, the row is too
+  short.
+- **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
+  its first; prose is 14px on 1.65 at 72 characters.
+- **Radii by role**: 16px for a pane and the details panel, 12px for a board
+  card and the agent's row, 6px for a control and a pill, full for a monogram.
 - **Depth is light, not shadow.** A pane is translucent over the lit ground
   with a hairline edge; that is its whole elevation. Nothing at rest casts a
   shadow, glows or has a gradient. A popover, menu or drawer takes the one
