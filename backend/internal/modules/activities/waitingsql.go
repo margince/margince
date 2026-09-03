@@ -55,7 +55,7 @@ package activities
 // unthreaded question at once. Excluding them under-reports, which is the
 // direction that costs a row rather than a customer.
 const waitingRepliesSQL = `
-	SELECT a.id, COALESCE(a.subject, ''),
+	SELECT a.id, a.kind, COALESCE(a.subject, ''),
 	       COALESCE((array_agg(sender.address ORDER BY sender.address)
 	                 FILTER (WHERE sender.address IS NOT NULL))[1], ''),
 	       a.occurred_at,
@@ -257,7 +257,7 @@ const waitingRepliesSQL = `
 	            AND mine.reader_id = $%[10]d
 	            AND (mine.state = 'not_mine'
 	              OR (mine.state = 'snoozed' AND mine.snoozed_until > $%[1]d)))
-	 GROUP BY a.id, a.subject, a.occurred_at
+	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and

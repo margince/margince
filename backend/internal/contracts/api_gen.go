@@ -31574,6 +31574,9 @@ type WorklistItem struct {
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
 

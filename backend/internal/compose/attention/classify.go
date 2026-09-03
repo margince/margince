@@ -276,6 +276,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if subject != "" {
 		row.Title = &subject
 	}
+	// Present exactly when this wait is an email the reader may read. A client
+	// branches on the field rather than on the kind word: the lane also carries
+	// channel messages, and each keeps the plain title it had.
+	row.EmailSummary = waiting.EmailSummary
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
 	switch {
