@@ -1711,11 +1711,24 @@ function useChronologySlots({
 function useCitedReceipt() {
   const [cited, setCited] = useState<CitedRecord | null>(null);
   const [list, setList] = useState<readonly CitedRecord[]>([]);
+  // The message a citation opened, held HERE beside the receipt it opens for
+  // the other kinds: both answer "what did this chip open", and splitting them
+  // would leave a caller wiring two states for one question.
+  const [email, setEmail] = useState<string | null>(null);
   const open = (
     entityType: string,
     entityId: string,
     siblings?: readonly CitedRecord[],
   ) => {
+    // An activity opens the message itself. It used to fall through both
+    // branches below and land nowhere — the account's commitment rows have
+    // been passing `source_activity_id` into a button that did nothing since
+    // the day they were written, because an activity had no detail route.
+    // It has one now.
+    if (citationOpensEmail(entityType)) {
+      setEmail(entityId);
+      return;
+    }
     if (citationOpensRecord(entityType)) {
       openCitation(entityType, entityId);
       return;
@@ -1743,8 +1756,10 @@ function useCitedReceipt() {
   };
   return {
     cited,
+    email,
     open,
     close: () => setCited(null),
+    closeEmail: () => setEmail(null),
     step: list.length > 1 ? step : undefined,
   };
 }
@@ -2258,6 +2273,13 @@ function CompanyRecordBody({
           onStep={receipt.step}
         />
       )}
+      {/* The message a citation opened. Beside the receipt modal above and for
+          the same reason: both are what a chip on this page opens into. */}
+      <OpenEmailDrawer
+        activityId={receipt.email}
+        zone={viewerZone()}
+        onClose={receipt.closeEmail}
+      />
       {!overlay && (
         <CompanyProfileTab
           active={tab === "profile"}
@@ -2906,6 +2928,17 @@ function CompanyTasksTab({
 // what the reader wanted when they clicked the chip.
 function citationOpensRecord(entityType: string): boolean {
   return entityType === "deal" || entityType === "person";
+}
+
+// An activity opens the MESSAGE, in the account page's own email drawer.
+//
+// Its own named decision rather than a bare comparison inside the hook, so the
+// rule can be asserted without mounting the page: the account's commitment rows
+// have passed `source_activity_id` into a button since the day they were
+// written, and it did nothing because an activity fell through both branches
+// above. A rule with no name is a rule with no test.
+export function citationOpensEmail(entityType: string): boolean {
+  return entityType === "activity";
 }
 
 // The kinds a receipt can be written for. Narrowing HERE rather than asserting
