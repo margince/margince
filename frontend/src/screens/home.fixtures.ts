@@ -264,6 +264,56 @@ export function meetingRow(id: string, prepared: boolean): WorklistItem {
   };
 }
 
+/**
+ * A lead owed a first answer, optionally naming when that answer is due.
+ *
+ * `due` undefined is the breached case: the moment has already passed, so the
+ * row carries `response_overdue` and names no future deadline.
+ */
+export function leadRow(id: string, due?: string): WorklistItem {
+  return {
+    id,
+    source: "lead_response",
+    level: due === undefined ? 1 : 2,
+    category: "leads",
+    title: "Weber GmbH · inbound enquiry",
+    because:
+      due === undefined
+        ? // A breached lead the way the lane really builds one: the overdue
+          // reason plus how long it has been waiting. The second reason CARRIES
+          // A VALUE, which is what makes this fixture able to tell a slot that
+          // filters on the reason kind from one that merely takes the first
+          // value it meets.
+          [
+            { kind: "response_overdue" },
+            { kind: "waiting_days", value: { kind: "days", days: 3 } },
+          ]
+        : [{ kind: "response_due_soon", value: { kind: "date", date: due } }],
+    consequence: "buyer_waits",
+    actions: ["open"],
+  };
+}
+
+/** A leads count the page carries whole — considered, shown and read to the end. */
+export function wholeLeads(n: number): WorklistCount {
+  return {
+    category: "leads",
+    considered: n,
+    shown: n,
+    more_available: false,
+  };
+}
+
+/** A leads count whose read stopped at its bound: more exist than the page shows. */
+export function boundedLeads(considered: number, shown: number): WorklistCount {
+  return {
+    category: "leads",
+    considered,
+    shown,
+    more_available: true,
+  };
+}
+
 type WorklistItem = components["schemas"]["WorklistItem"];
 
 /**
