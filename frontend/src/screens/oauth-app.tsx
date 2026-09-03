@@ -25,7 +25,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
  * against the vendor's console.
  */
 
-type Vendor = "google" | "microsoft";
+export type Vendor = "google" | "microsoft";
 
 // vendorCopy is each vendor's own wording, as literal message keys.
 //
@@ -33,7 +33,7 @@ type Vendor = "google" | "microsoft";
 // translator's key type is a closed union, so a computed key types as a plain
 // string and a missing translation would reach a reader as a raw key instead of
 // failing the build.
-const vendorCopy = {
+export const vendorCopy = {
   google: {
     title: "oauthApp.google.title",
     sub: "oauthApp.google.sub",
@@ -163,7 +163,7 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
 // An empty list renders nothing rather than an empty heading: a deployment that
 // serves none of a vendor's flows has nothing to register, and a bare heading
 // would read as a list that failed to load.
-function RedirectUris({
+export function RedirectUris({
   uris,
   sub,
 }: Readonly<{

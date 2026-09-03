@@ -251,6 +251,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.fieldEg.legal_form",
   "ob.fieldEg.register_court",
   "ob.fieldEg.register_number",
+
+  // Brand names, and the console Google itself names in English.
+  "firstRun.platform.google",
+  "firstRun.platform.microsoft",
+  "firstRun.google.helpConsole",
 ]);
 
 // Every invariant below derives from `catalogs`, so a locale added to the

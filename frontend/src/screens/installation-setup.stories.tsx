@@ -68,6 +68,38 @@ function setup(steps: ReadonlyArray<{ step: string; configured: boolean }>) {
         steps: steps.map((s) => ({ ...s, blocking: true })),
       }),
     "GET /ai-model-rates": () => jsonResponse(RATES),
+    // The platform step reads each vendor's app for the redirect URIs its
+    // console asks for; a fresh installation has none stored.
+    "GET /installation/oauth-apps/google": () =>
+      jsonResponse({
+        source: "none",
+        client_id: "",
+        redirect_uris: [
+          {
+            purpose: "mailbox_connect",
+            url: "https://crm.example/v1/connectors/gmail/callback",
+          },
+          {
+            purpose: "calendar_connect",
+            url: "https://crm.example/v1/connectors/gcal/callback",
+          },
+          {
+            purpose: "sign_in",
+            url: "https://crm.example/v1/auth/oidc/google/callback",
+          },
+        ],
+      }),
+    "GET /installation/oauth-apps/microsoft": () =>
+      jsonResponse({
+        source: "none",
+        client_id: "",
+        redirect_uris: [
+          {
+            purpose: "mailbox_connect",
+            url: "https://crm.example/v1/connectors/graph/callback",
+          },
+        ],
+      }),
   };
 }
 
@@ -78,7 +110,7 @@ export const BindingTheModel: Story = {
     installFetchStub(
       setup([
         { step: "ai_models", configured: false },
-        { step: "google_app", configured: false },
+        { step: "oauth_app", configured: false },
       ]),
     );
     return (
@@ -131,7 +163,7 @@ export const TheLiveList: Story = {
     installFetchStub({
       ...setup([
         { step: "ai_models", configured: false },
-        { step: "google_app", configured: false },
+        { step: "oauth_app", configured: false },
       ]),
       "GET /ai/available-models/openrouter": () =>
         jsonResponse(VENDOR_CATALOGUE),
@@ -159,7 +191,7 @@ export const TheLiveListUnavailable: Story = {
     installFetchStub({
       ...setup([
         { step: "ai_models", configured: false },
-        { step: "google_app", configured: false },
+        { step: "oauth_app", configured: false },
       ]),
       "GET /ai/available-models/openrouter": () =>
         jsonResponse({
@@ -185,7 +217,7 @@ export const NoPricesOnFile: Story = {
     installFetchStub({
       ...setup([
         { step: "ai_models", configured: false },
-        { step: "google_app", configured: false },
+        { step: "oauth_app", configured: false },
       ]),
       "GET /ai-model-rates": () =>
         jsonResponse({ title: "Forbidden", status: 403 }, 403),
@@ -199,15 +231,14 @@ export const NoPricesOnFile: Story = {
 };
 
 // One step later. The model is bound, so the room is lit for the rest of first
-// run and for everything after it. The platform question opens on Google, and
-// its notice says the part the form cannot do: saving the app connects mail and
-// calendar, while sign-in reads the same pair from the environment at startup.
+// run and for everything after it. The platform question opens on Google, with
+// the console steps and the redirect URIs folded under the fields.
 export const ChoosingThePlatform: Story = {
   render: () => {
     installFetchStub(
       setup([
         { step: "ai_models", configured: true },
-        { step: "google_app", configured: false },
+        { step: "oauth_app", configured: false },
       ]),
     );
     return (
@@ -253,10 +284,8 @@ export const TheIgnition: Story = {
   },
 };
 
-// The answer that needs no Google app here, which is where the honest awkwardness
-// lives: the operator work is somebody else's and named, and first run still
-// cannot finish, because `google_app` blocks whatever this answer is. The fields
-// stay usable, because pasting an app is the only way past that step today.
+// Microsoft: the same two fields plus the optional directory pin, and the
+// Entra note in place of the Google fold.
 export const OnMicrosoft: Story = {
   ...ChoosingThePlatform,
   play: async ({ canvasElement }) => {
@@ -268,7 +297,7 @@ export const OnMicrosoft: Story = {
 };
 
 // Neither platform: IMAP mailboxes carrying their own credentials, entered on
-// the mailbox rather than here.
+// the mailbox rather than here, so Continue is the only control left.
 export const OnNeither: Story = {
   ...ChoosingThePlatform,
   play: async ({ canvasElement }) => {

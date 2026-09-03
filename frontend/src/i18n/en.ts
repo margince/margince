@@ -8097,6 +8097,42 @@ export const en = {
   "ob.stop.read": "Read the site",
   "firstRun.ai.eyebrow": "Nothing here can think yet",
   "firstRun.step.model": "The model",
+  "firstRun.step.platform": "Your platform",
+  "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
+  "firstRun.platform.title": "What does your organization run on?",
+  "firstRun.platform.sub":
+    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
+  "firstRun.platform.legend": "The platform this organization runs on",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, calendar and sign-in through one Google app you own.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail and calendar through Microsoft Graph. Sign-in is email and password.",
+  "firstRun.platform.other": "Neither",
+  "firstRun.platform.otherWhat":
+    "Each mailbox connects over IMAP. Sign-in is email and password.",
+  "firstRun.google.helpSignIn":
+    "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
+  "firstRun.google.helpToggle": "Where do I get these?",
+  "firstRun.google.helpStep1":
+    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
+  "firstRun.google.helpStep2":
+    "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
+  "firstRun.google.helpStep3":
+    "Add an authorized redirect URI for each thing you will use. Mail is the only one you need; add Calendar if you want calendar too, and the sign-in one if people will sign in to Margince with their Google account.",
+  "firstRun.google.helpStep4":
+    "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpDocs":
+    "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
+  "firstRun.platform.otherNote":
+    "Nothing to fill in here. Each mailbox is set up under Settings → Integrations, with its own credentials.",
+  "firstRun.platform.skip": "Not now",
+  "firstRun.platform.foot":
+    "Whatever you answer here can be changed later under Settings → Admin.",
+  "firstRun.microsoft.note":
+    "Register an app in Microsoft Entra with the redirect URIs below, then paste its client id and secret here. Pin it to your directory if only your organization should sign in through it.",
   "firstRun.ai.rankedHint":
     "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
   "firstRun.ai.rankedUnavailable":

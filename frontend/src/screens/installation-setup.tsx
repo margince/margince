@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { OnboardingStage } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
+import { ProviderMark } from "../design-system/provider-mark";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -21,6 +24,13 @@ import {
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
+import {
+  RedirectUris,
+  useOAuthApp,
+  useSetOAuthApp,
+  type Vendor,
+  vendorCopy,
+} from "./oauth-app";
 import { CORE_LABELS } from "./onboarding-core-label";
 import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
@@ -73,33 +83,90 @@ export function useInstallationSetup() {
 }
 
 /**
- * The steps this screen has a panel for. Today the model binding is the whole
- * list, and the server agrees — it reports every other step non-blocking, held
- * by TestOnlyTheModelBindingBlocksFirstRun.
+ * The steps this screen has a panel for, in the order the server reports
+ * them: the model binding, which blocks, and the organisation's OAuth app,
+ * which does not — held by TestOnlyTheModelBindingBlocksFirstRun.
  *
  * It is read by `outstandingStep` rather than only by the render, and that is
  * the point. A frontend older than its server would otherwise meet a blocking
  * step it has no panel for, and the caller — which gates on this same
- * function — would keep drawing a component that renders nothing: a reader held
- * behind an empty screen, with nothing on it to say what it wants.
+ * function — would keep drawing a component that renders nothing: a reader
+ * held behind an empty screen, with nothing on it to say what it wants.
  */
-const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models"];
+const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
+
+/**
+ * Where "Not now" on the platform question is remembered.
+ *
+ * The app step is asked of the person running the cold start, once. The server
+ * has no word for "asked and declined" — the step is simply unconfigured until
+ * an app is stored, from here or from Settings — so the decline lives in this
+ * browser. That is the honest scope of it: a different browser, or a cleared
+ * one, asks once more, and the answer is still one press away.
+ */
+const PLATFORM_DECLINED_KEY = "margince.first-run.platform-declined";
+
+function platformDeclined(): boolean {
+  try {
+    return window.localStorage.getItem(PLATFORM_DECLINED_KEY) === "1";
+  } catch {
+    // Storage blocked (a private window, a policy): the question is asked
+    // again, which is the safe reading of not knowing.
+    return false;
+  }
+}
+
+// Who is watching the decline: the gate on this screen and the act that
+// stands in front of it. Storage has no change event in the tab that wrote
+// it, so the write tells them itself.
+const declinedListeners = new Set<() => void>();
+
+function subscribeDeclined(listener: () => void): () => void {
+  declinedListeners.add(listener);
+  return () => declinedListeners.delete(listener);
+}
+
+function rememberPlatformDeclined(): void {
+  try {
+    window.localStorage.setItem(PLATFORM_DECLINED_KEY, "1");
+  } catch {
+    // Nothing to remember it in; the reader is let through regardless, and
+    // asked again next time.
+  }
+  for (const listener of declinedListeners) {
+    listener();
+  }
+}
+
+/**
+ * Whether the platform question was declined in this browser, live: the
+ * answer every caller of `outstandingStep` passes it, so the gate and the act
+ * in front of it re-read the same fact the moment it changes.
+ */
+export function usePlatformDeclined(): boolean {
+  return useSyncExternalStore(subscribeDeclined, platformDeclined, () => false);
+}
 
 /**
  * The first step that is not done yet AND that this screen can ask for, in the
- * server's order.
+ * server's order. A blocking step is always outstanding; the app step, which
+ * does not block, is outstanding until it is configured or declined.
  *
  * `steps` is optional-chained as well as `setup`: an answer that arrives
  * without it is not an answer, and the alternative is this throwing inside a
  * render — which takes down the screen it was meant to stand in front of.
  * Undefined here reads as "nothing outstanding", which lets the reader past
- * rather than trapping them behind a gate that cannot say what it wants. A
- * blocking step with no panel takes the same exit, for the same reason: past a
- * gate is somewhere, and a settings screen can still be reached from there.
+ * rather than trapping them behind a gate that cannot say what it wants.
  */
-export function outstandingStep(setup: Setup | undefined): Step | undefined {
+export function outstandingStep(
+  setup: Setup | undefined,
+  platformDeclined: boolean,
+): Step | undefined {
   return setup?.steps?.find(
-    (s) => s.blocking && !s.configured && ASKABLE_STEPS.includes(s.step),
+    (s) =>
+      !s.configured &&
+      ASKABLE_STEPS.includes(s.step) &&
+      (s.blocking || !platformDeclined),
   );
 }
 
@@ -426,15 +493,270 @@ function AiStep({
   );
 }
 
-// What the room says while the one step is answered, and for the four seconds
-// after it lands. Two states rather than one per step: first run asks a single
-// question now, and the ignition is not a step but the moment the answer takes
-// effect.
+/**
+ * What the organization runs on — ONE answer covering mail and sign-in.
+ *
+ * They are separate mechanisms in the server and the same fact about a
+ * company: an organization on Workspace reads mail through a Google app and
+ * signs its people in with Google accounts, through that same app and the same
+ * console entry. Two questions would ask somebody to state one fact twice and
+ * then keep the two answers agreeing.
+ */
+const PLATFORMS = ["google", "microsoft", "other"] as const;
+type Platform = (typeof PLATFORMS)[number];
+
+// Typed by `Platform` in both directions: an answer with no copy fails, and
+// copy for an answer that does not exist fails too.
+const PLATFORM_COPY: Readonly<
+  Record<Platform, { label: MessageKey; what: MessageKey }>
+> = {
+  google: {
+    label: "firstRun.platform.google",
+    what: "firstRun.platform.googleWhat",
+  },
+  microsoft: {
+    label: "firstRun.platform.microsoft",
+    what: "firstRun.platform.microsoftWhat",
+  },
+  other: {
+    label: "firstRun.platform.other",
+    what: "firstRun.platform.otherWhat",
+  },
+};
+
+/** Google's own console, where the app is created and the two values are read. */
+const GOOGLE_CREDENTIALS_CONSOLE =
+  "https://console.cloud.google.com/apis/credentials";
+
+/**
+ * Where the client id and secret come from, folded away.
+ *
+ * A fold rather than four paragraphs above the fields: an operator who has done
+ * this before wants the two boxes, and one who has not needs every step. Open
+ * by default would push the actual form below the fold for everybody. The
+ * redirect URIs inside it are the server's own list, never spelled here.
+ */
+function GoogleAppHelp({
+  uris,
+}: Readonly<{
+  uris: readonly { purpose: string; url: string }[] | undefined;
+}>) {
+  const t = useT();
+  return (
+    <Disclosure summary={t("firstRun.google.helpToggle")}>
+      <ol className="ob-fr-help">
+        <li>{t("firstRun.google.helpStep1")}</li>
+        <li>{t("firstRun.google.helpStep2")}</li>
+        <li>
+          {t("firstRun.google.helpStep3")}
+          <RedirectUris uris={uris} sub={t(vendorCopy.google.redirectSub)} />
+        </li>
+        <li>{t("firstRun.google.helpStep4")}</li>
+      </ol>
+      <p className="ob-fr-help-note">
+        <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
+          {t("firstRun.google.helpConsole")}
+        </OffsiteLink>
+      </p>
+      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+      {/* The sign-in step, here rather than on the screen itself. It is work
+          for whoever runs the server, not for the admin filling this form. */}
+      <p className="ob-fr-help-note">{t("firstRun.google.helpSignIn")}</p>
+    </Disclosure>
+  );
+}
+
+/**
+ * The vendor's app: the two values every OAuth client has, and Microsoft's
+ * optional directory pin. Its own component so the app query is asked only
+ * for the vendor on screen, and so the fields reset when the answer changes.
+ */
+function VendorAppFields({
+  vendor,
+  onBusy,
+  onDecline,
+}: Readonly<{
+  vendor: Vendor;
+  onBusy: (busy: boolean) => void;
+  /** The way past for an admin without the console open: the step does not
+   * block, and the same form waits in Settings. */
+  onDecline: () => void;
+}>) {
+  const t = useT();
+  const app = useOAuthApp(vendor);
+  const save = useSetOAuthApp(vendor);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [tenant, setTenant] = useState("");
+  const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
+  useEffect(() => {
+    onBusy(save.isPending);
+    return () => onBusy(false);
+  }, [save.isPending, onBusy]);
+  return (
+    <>
+      {vendor === "google" ? (
+        <GoogleAppHelp uris={app.data?.redirect_uris} />
+      ) : (
+        <>
+          <p className="ob-fr-help-note">{t("firstRun.microsoft.note")}</p>
+          <RedirectUris
+            uris={app.data?.redirect_uris}
+            sub={t(vendorCopy.microsoft.redirectSub)}
+          />
+        </>
+      )}
+      {save.error && (
+        <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
+      )}
+      <Field label={t("oauthApp.clientId")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={clientId}
+            disabled={save.isPending}
+            autoComplete="off"
+            placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
+            onChange={(e) => setClientId(e.target.value)}
+          />
+        )}
+      </Field>
+      <Field label={t("oauthApp.clientSecret")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            type="password"
+            autoComplete="off"
+            value={clientSecret}
+            disabled={save.isPending}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        )}
+      </Field>
+      {vendor === "microsoft" && (
+        <Field label={t("oauthApp.tenant")} hint={t("oauthApp.tenantHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={tenant}
+              autoComplete="off"
+              disabled={save.isPending}
+              placeholder={t("oauthApp.tenantPlaceholder")}
+              onChange={(e) => setTenant(e.target.value)}
+            />
+          )}
+        </Field>
+      )}
+      <div className="ob-fr-actions">
+        <Button variant="ghost" onClick={onDecline} disabled={save.isPending}>
+          {t("firstRun.platform.skip")}
+        </Button>
+        <Button
+          variant="primary"
+          pending={save.isPending}
+          disabled={!ready}
+          onClick={() => {
+            save.reset();
+            save.mutate(
+              {
+                clientId: clientId.trim(),
+                clientSecret: clientSecret.trim(),
+                tenant: tenant.trim(),
+              },
+              {
+                onSuccess: () => {
+                  // Cleared on the way out rather than left in state: the
+                  // field is the only copy this app holds, and it has done
+                  // its job. The invalidated setup report is what moves the
+                  // screen on.
+                  setClientSecret("");
+                  save.reset();
+                },
+              },
+            );
+          }}
+        >
+          {t("firstRun.continue")}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+/**
+ * The platform step: which vendor's app mailboxes and calendars connect
+ * through, asked once, of the person running the cold start. Neither vendor
+ * is an answer too — IMAP mailboxes carry their own credentials — and so is
+ * "not now": the step does not block, and Settings keeps the same form.
+ */
+function PlatformStep({
+  onBusy,
+  onDecline,
+}: Readonly<{
+  onBusy: (busy: boolean) => void;
+  /** The reader passed on the question; the gate lets them through. */
+  onDecline: () => void;
+}>) {
+  const t = useT();
+  const [platform, setPlatform] = useState<Platform>("google");
+  return (
+    <div className="ob-fr-form">
+      <Panel>
+        <PanelBody>
+          {/* Plates rather than a radio column: the answers are two vendors
+              and a protocol, and an admin picks the platform their company
+              already runs by recognising it. `other` gets the component's own
+              fallback mark, a key rather than an invented logo. */}
+          <ChoiceList<Platform>
+            legend={t("firstRun.platform.legend")}
+            hideLegend
+            layout="cards"
+            value={platform}
+            onChange={setPlatform}
+            choices={PLATFORMS.map((id) => ({
+              value: id,
+              label: t(PLATFORM_COPY[id].label),
+              description: t(PLATFORM_COPY[id].what),
+              mark: <ProviderMark providerKey={id} />,
+            }))}
+          />
+          {platform === "other" ? (
+            <>
+              <p className="ob-fr-help-note">
+                {t("firstRun.platform.otherNote")}
+              </p>
+              <div className="ob-fr-actions">
+                <Button variant="primary" onClick={onDecline}>
+                  {t("firstRun.continue")}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <VendorAppFields
+              key={platform}
+              vendor={platform}
+              onBusy={onBusy}
+              onDecline={onDecline}
+            />
+          )}
+        </PanelBody>
+      </Panel>
+    </div>
+  );
+}
+
+// What the room says while a step is answered, and for the four seconds after
+// the model binding lands: the ignition is not a step but the moment that
+// answer takes effect.
 function head(
+  step: Step["step"],
   ignited: boolean,
 ): Readonly<{ title: MessageKey; sub: MessageKey }> {
-  return ignited
-    ? { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" }
+  if (ignited) {
+    return { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" };
+  }
+  return step === "oauth_app"
+    ? { title: "firstRun.platform.title", sub: "firstRun.platform.sub" }
     : { title: "firstRun.ai.title", sub: "firstRun.ai.sub" };
 }
 
@@ -460,7 +782,8 @@ export function InstallationSetup() {
   const t = useT();
   const queryClient = useQueryClient();
   const setup = useInstallationSetup();
-  const step = outstandingStep(setup.data);
+  const declined = usePlatformDeclined();
+  const step = outstandingStep(setup.data, declined);
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
   const [busy, setBusy] = useState(false);
@@ -503,22 +826,33 @@ export function InstallationSetup() {
       // orb showing the same state on two screens must not read as two
       // different things.
       coreStateLabel={t(CORE_LABELS[core])}
-      // ONE step, so the band names it rather than counting it. The model
-      // binding is the whole of first run — the Google app is configured from
-      // settings, where the card can also show the redirect URIs Google's
-      // console asks for — and a progress counter over a flow of one would be
-      // ceremony inventing a journey.
-      step={t("firstRun.step.model")}
-      eyebrow={t("firstRun.ai.eyebrow")}
+      // The band names the step rather than counting it: two questions are
+      // not a journey, and a counter over them would be ceremony.
+      step={t(
+        step.step === "oauth_app"
+          ? "firstRun.step.platform"
+          : "firstRun.step.model",
+      )}
+      eyebrow={t(
+        step.step === "oauth_app"
+          ? "firstRun.google.eyebrow"
+          : "firstRun.ai.eyebrow",
+      )}
       // The one qualification the step carries, on the card's bottom edge. It
       // is true of the whole screen rather than of any field on it, which is
       // what makes it chrome: as a callout in the board it read as an
       // instruction and pushed the actual form below the fold.
-      hint={t("firstRun.ai.foot")}
-      title={t(head(ignited !== null).title)}
-      sub={t(head(ignited !== null).sub)}
+      hint={t(
+        step.step === "oauth_app"
+          ? "firstRun.platform.foot"
+          : "firstRun.ai.foot",
+      )}
+      title={t(head(step.step, ignited !== null).title)}
+      sub={t(head(step.step, ignited !== null).sub)}
     >
-      {ignited === null ? (
+      {step.step === "oauth_app" ? (
+        <PlatformStep onBusy={setBusy} onDecline={rememberPlatformDeclined} />
+      ) : ignited === null ? (
         <AiStep
           onBusy={setBusy}
           onIgnite={(vendor) => {

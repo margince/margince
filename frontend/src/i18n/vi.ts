@@ -7925,6 +7925,43 @@ export const vi = {
     "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
   "firstRun.ignite.carryOn": "Tiếp tục",
   "firstRun.step.model": "Mô hình",
+  "firstRun.step.platform": "Nền tảng của bạn",
+  "firstRun.google.eyebrow":
+    "Nó suy nghĩ được. Nhưng chưa liên lạc được với ai",
+  "firstRun.platform.title": "Tổ chức của bạn đang chạy trên nền tảng nào?",
+  "firstRun.platform.sub":
+    "Một câu trả lời quyết định cách thư đến Margince và cách mọi người đăng nhập. Có thể đổi sau ở Cài đặt.",
+  "firstRun.platform.legend": "Nền tảng của tổ chức này",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Thư, lịch và đăng nhập qua một app Google của chính bạn.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Thư và lịch qua Microsoft Graph. Đăng nhập bằng email và mật khẩu.",
+  "firstRun.platform.other": "Không dùng cả hai",
+  "firstRun.platform.otherWhat":
+    "Mỗi hộp thư kết nối qua IMAP. Đăng nhập bằng email và mật khẩu.",
+  "firstRun.google.helpSignIn":
+    "Để đăng nhập bằng Google, người vận hành server cũng export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
+  "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
+  "firstRun.google.helpStep1":
+    "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
+  "firstRun.google.helpStep2":
+    "Bật Gmail API và đưa cả hai scope gmail.readonly và gmail.send lên màn hình đồng ý. Chúng đi cùng một lần đồng ý là có chủ ý: Google không thêm scope vào refresh token đã cấp, nên xin quyền gửi sau này đồng nghĩa với việc kết nối hộp thư hai lần.",
+  "firstRun.google.helpStep3":
+    "Thêm một authorized redirect URI cho từng thứ sẽ dùng. Chỉ Mail là bắt buộc; thêm Calendar nếu cần lịch, và thêm URI đăng nhập nếu mọi người sẽ đăng nhập Margince bằng tài khoản Google.",
+  "firstRun.google.helpStep4":
+    "Chép client ID và client secret mà Google hiển thị vào hai ô bên dưới. Secret chỉ được gửi một lần và niêm phong trong key vault; sau đó không đọc lại được ở bất kỳ đâu.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpDocs":
+    "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
+  "firstRun.platform.otherNote":
+    "Không có gì để nhập ở đây. Mỗi hộp thư được thiết lập ở Cài đặt → Tích hợp, với thông tin đăng nhập riêng.",
+  "firstRun.platform.skip": "Để sau",
+  "firstRun.platform.foot":
+    "Câu trả lời ở đây có thể đổi sau ở Cài đặt → Quản trị.",
+  "firstRun.microsoft.note":
+    "Đăng ký một app trong Microsoft Entra với các redirect URI bên dưới, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn nếu chỉ tổ chức của bạn được đăng nhập qua đó.",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",

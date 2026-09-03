@@ -8027,6 +8027,42 @@ export const de = {
     "etwas senden oder einen Datensatz ändern, solange Sie es nicht sagen",
   "firstRun.ignite.carryOn": "Weiter",
   "firstRun.step.model": "Das Modell",
+  "firstRun.step.platform": "Ihre Plattform",
+  "firstRun.google.eyebrow": "Es denkt. Erreichen kann es noch niemanden",
+  "firstRun.platform.title": "Womit arbeitet Ihre Organisation?",
+  "firstRun.platform.sub":
+    "Eine Antwort entscheidet, wie Mail zu Margince kommt und wie sich Leute anmelden. Später unter Einstellungen änderbar.",
+  "firstRun.platform.legend": "Die Plattform dieser Organisation",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, Kalender und Anmeldung über eine eigene Google-App.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail und Kalender über Microsoft Graph. Anmeldung per E-Mail und Passwort.",
+  "firstRun.platform.other": "Keins von beiden",
+  "firstRun.platform.otherWhat":
+    "Jedes Postfach verbindet sich per IMAP. Anmeldung per E-Mail und Passwort.",
+  "firstRun.google.helpSignIn":
+    "Für die Google-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
+  "firstRun.google.helpToggle": "Woher bekomme ich das?",
+  "firstRun.google.helpStep1":
+    "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
+  "firstRun.google.helpStep2":
+    "Die Gmail API aktivieren und beide Bereiche gmail.readonly und gmail.send auf den Zustimmungsbildschirm setzen. Sie gehören absichtlich in eine Zustimmung: Google ergänzt einen Bereich nicht nachträglich an einem bereits ausgegebenen Refresh-Token, ein späteres Senden-Recht bedeutet also, das Postfach zweimal zu verbinden.",
+  "firstRun.google.helpStep3":
+    "Für alles, was genutzt wird, eine autorisierte Weiterleitungs-URI hinterlegen. Nötig ist nur Mail; Kalender nur bei Kalendernutzung, und die Anmelde-URI nur, wenn sich Leute mit ihrem Google-Konto bei Margince anmelden sollen.",
+  "firstRun.google.helpStep4":
+    "Client-ID und Client-Secret aus Google in die beiden Felder unten kopieren. Das Secret wird einmal gesendet und im Schlüsseltresor versiegelt; es ist danach nirgends mehr lesbar.",
+  "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
+  "firstRun.google.helpDocs":
+    "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
+  "firstRun.platform.otherNote":
+    "Hier ist nichts einzutragen. Jedes Postfach wird unter Einstellungen → Integrationen mit eigenen Zugangsdaten eingerichtet.",
+  "firstRun.platform.skip": "Jetzt nicht",
+  "firstRun.platform.foot":
+    "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
+  "firstRun.microsoft.note":
+    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs unten und fügen Sie hier Client-ID und Secret ein. Pinnen Sie sie auf Ihr Verzeichnis, wenn sich nur Ihre Organisation darüber anmelden soll.",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",

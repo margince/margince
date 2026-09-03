@@ -16,6 +16,7 @@ import {
   InstallationSetup,
   outstandingStep,
   useInstallationSetup,
+  usePlatformDeclined,
 } from "../installation-setup";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {
@@ -760,8 +761,9 @@ export function CompanyAct({
   // installation is plainly configured, and a query fired then would be a
   // request per render of a screen whose answer cannot have changed.
   const setup = useInstallationSetup();
+  const platformDeclined = usePlatformDeclined();
   const setupOutstanding =
-    beforeReview && outstandingStep(setup.data) !== undefined;
+    beforeReview && outstandingStep(setup.data, platformDeclined) !== undefined;
   const scanning =
     state.phase === "co.reading" && state.activeReadId !== null && read
       ? { read, host: normalizeUrl(read.root_url).host, locale }

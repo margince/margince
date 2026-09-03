@@ -57,3 +57,28 @@
 .ai-rate-proposed {
   color: var(--aiText);
 }
+
+/* The platform step's fold: the console steps as a numbered list at the
+   sheet's own body size, and the notes under it as captions. */
+.ob-fr-help {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+.ob-fr-help-note {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+/* The step's way onward, at the sheet's right edge like the model step's:
+   the quiet way past first, the answer last. */
+.ob-fr-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
