@@ -1,0 +1,60 @@
+name: intro_note_is_written_to_the_customer_not_about_the_request
+task: draft_reply
+site: intro_note
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The outward half of the introduction pair. Its sibling (site: intro) asks a
+# COLLEAGUE for the favour; this is the note that colleague forwards, and it
+# goes out over their name to somebody who cannot check what it claims.
+fixture:
+  colleague: "Sofia Meier"
+  contact: "Philipp Königs"
+  requester: "Jonas Weber"
+  through: ""
+  # The ROUTE's strength bucket, which is none/weak/moderate/strong. The
+  # company page's cold/developing/strong is a different contract's enum and
+  # this endpoint never sends it.
+  relationship: "moderate"
+  last_spoke: "2026-08-20"
+  why_it_matters: "We have done depot retrofits at two carriers their size."
+expect:
+  outcome: accepted
+  # The first four are claims about a relationship the record scores as
+  # "moderate" with one exchange in August. The last three are the failure
+  # that belongs to THIS site alone: the note must never reveal that anybody
+  # asked for the introduction. A customer who reads that the note was
+  # requested learns the warmth was manufactured, which is worse than a note
+  # that was never sent.
+  answer:
+    - "close friend"
+    - "know each other well"
+    - "years"
+    - "good friends"
+    - "asked me to"
+    - "reached out to me"
+    - "requested an introduction"
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    This note is FORWARDED by Sofia to Philipp, a customer. Score whether it
+    reads as Sofia's own words to somebody she knows: addressed to Philipp by
+    his first name, naming Jonas Weber in full as the person being introduced,
+    and saying in one sentence why Philipp might care.
+
+    Penalise at the floor any mention that an introduction was requested, or
+    any reference to an internal ask — Philipp must not learn that this note
+    exists because Jonas asked for it. Penalise addressing Jonas or Sofia
+    rather than Philipp: a note written to the wrong reader cannot be
+    forwarded at all.
+
+    Penalise heavily any characterisation of Sofia's relationship with
+    Philipp beyond "moderate" and one exchange in August, and any claim
+    about Philipp's company that the facts do not carry. Philipp cannot
+    falsify a claim about himself the way a colleague could, which is what
+    makes invention worse here than in the colleague-facing ask.
+
+    Penalise a pitch, a price or a proposed meeting time: the note asks for a
+    conversation and nothing more. Penalise a subject line repeated inside the
+    body.

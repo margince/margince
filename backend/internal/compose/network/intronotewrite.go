@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -80,7 +81,9 @@ The reader is the recipient — a customer or a prospect, not a teammate. You ar
 
 Rules you must not break:
 - Write TO the recipient, and address them by name: open with their first name. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
-- Say who is being introduced, naming them in full, and why the recipient might care, in one sentence each.
+- Say who is being introduced, naming them in full, in one sentence.
+- Say why the recipient might care ONLY when "why_it_matters" carries a reason, in one sentence, and say nothing beyond what it states. When it is empty, ask for the conversation without giving a reason: an introduction is a complete request on its own, and a reason nobody wrote is one you invented.
+- When "through_contact" names somebody, you may say they suggested the introduction. Say nothing else about them, and never say they asked for it.
 - Write a short subject line in the "subject" field, naming the colleague you are introducing.
 - Do not invent anything about the relationship or about the recipient's company. You are told how warm the relationship is and when they last spoke; say no more than that.
 - Ask for nothing more than a conversation. No pitch, no pricing, no meeting times.
@@ -359,4 +362,106 @@ func noteRelationshipLabel(facts noteFacts) string {
 		return who
 	}
 	return who + " (" + facts.band + ")"
+}
+
+// IntroNoteFixture is one forwardable note as a certification scenario states
+// it: the ROUTE the graph returned, in the vocabulary the graph uses.
+//
+// Exported because the cert lane lives in `compose` and this site's material
+// does not: without it the case would build its own facts, and a case that
+// rebuilds its subject measures a copy that stays green through the change
+// which breaks the original.
+//
+// It is org360.IntroFixture's sibling and NOT its twin, and the differences are
+// the endpoint's rather than this type's. This site is handed a route, so it
+// carries an intermediary and the rep's own free-text reason; and it carries no
+// correspondence, because this endpoint does not read one — see Band and the
+// note on language in IntroNoteFactsFor.
+type IntroNoteFixture struct {
+	// Colleague is the person who will forward the note; it goes out in their
+	// voice, so they are the sender rather than the subject.
+	Colleague string `json:"colleague"`
+	// Contact is the customer or prospect who reads it.
+	Contact string `json:"contact"`
+	// Requester is the rep being introduced — the person the note is about.
+	Requester string `json:"requester"`
+	// Through names the intermediary on an indirect route, and is empty on a
+	// direct one.
+	Through string `json:"through"`
+	// Band is the route's strength bucket, and its vocabulary is the ROUTE's —
+	// none, weak, moderate, strong — not the company page's cold/developing/
+	// strong. They are different enums on different contracts, and a scenario
+	// written in the wrong one puts a word in the prompt that this endpoint
+	// never sends, so every rubric scoring against it grades a prompt nobody
+	// runs. IntroNoteFactsFor refuses one.
+	Band string `json:"relationship"`
+	// LastAt is when the colleague and the contact last spoke, as the route's
+	// evidence records it, or empty when nothing is recorded.
+	LastAt string `json:"last_spoke"`
+	// Value is the rep's own sentence on why this is worth the contact's time,
+	// and reaches the prompt as free text off a request body.
+	Value string `json:"why_it_matters"`
+}
+
+// IntroNoteFactsFor turns a scenario into this site's input THROUGH the
+// endpoint's own assembler.
+//
+// It builds the route and calls factsFromRoute rather than restating what that
+// function does. The first version of this seam restated it, and drifted
+// immediately: it detected the output language from the contact's
+// correspondence the way org360's sibling does, while this endpoint sets
+// textlang.Unknown and lets the writer default. A German scenario would have
+// certified a prompt the product cannot send. Going through the assembler makes
+// that class of divergence unrepresentable rather than merely absent today.
+func IntroNoteFactsFor(fixture IntroNoteFixture) (noteFacts, error) {
+	bucket := crmcontracts.PersonGraphRouteCandidateStrengthBucket(fixture.Band)
+	if fixture.Band != "" && !bucket.Valid() {
+		return noteFacts{}, fmt.Errorf(
+			"network: %q is not a route strength bucket this endpoint can be handed — the route "+
+				"vocabulary is none/weak/moderate/strong, and the company page's "+
+				"cold/developing/strong belongs to a different contract", fixture.Band)
+	}
+	graph := &crmcontracts.PersonGraph{
+		Nodes: []crmcontracts.PersonGraphNode{{
+			Group: crmcontracts.PersonGraphNodeGroupAnchor,
+			Label: fixture.Contact,
+		}},
+	}
+	route := crmcontracts.PersonGraphRouteCandidate{ViaDisplayName: fixture.Colleague}
+	if fixture.Band != "" {
+		route.StrengthBucket = &bucket
+	}
+	if fixture.Through != "" {
+		route.ThroughDisplayName = &fixture.Through
+	}
+	// An unreadable date is read as NO date, which is the safe direction: the
+	// note then says the two are in touch and stops, rather than printing
+	// something that is not a date into a message a customer reads.
+	if when, err := time.Parse("2006-01-02", fixture.LastAt); err == nil {
+		route.Evidence.LastAt = &when
+	}
+	body := crmcontracts.DraftIntroNoteJSONRequestBody{}
+	if fixture.Value != "" {
+		body.ValueForTarget = &fixture.Value
+	}
+	return factsFromRoute(graph, route, fixture.Requester, body), nil
+}
+
+// IntroNoteRequestFor builds the model call this site sends, from a fixture.
+func IntroNoteRequestFor(fixture IntroNoteFixture) (model.Request, error) {
+	facts, err := IntroNoteFactsFor(fixture)
+	if err != nil {
+		return model.Request{}, err
+	}
+	return noteRequest(facts), nil
+}
+
+// CheckIntroNote runs the production check over a reply.
+func CheckIntroNote(raw string, fixture IntroNoteFixture) (subject, body string, err error) {
+	facts, err := IntroNoteFactsFor(fixture)
+	if err != nil {
+		return "", "", err
+	}
+	note, err := parseIntroNote(raw, facts)
+	return note.subject, note.body, err
 }

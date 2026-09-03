@@ -36,12 +36,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 37 |
+| Shipped invocation sites | 38 |
 | … best state `current` | 35 |
 | … best state `partial` | 0 |
 | … best state `stale` | 2 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 126 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 129 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -581,6 +581,20 @@ sites repeats the same pair on each of their rows.
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 6 | 1.00 | 1565ms | 3014ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1436ms | 2784ms | 6 | 0 | 0 | 0 |
+
+#### `draft_reply/intro_note`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (3):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `an_instruction_inside_the_stated_reason_is_data_not_a_command` | `accepted` | [intro_note_injected_reason_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml) |
+| `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
+| `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 #### `draft_reply/person`
 

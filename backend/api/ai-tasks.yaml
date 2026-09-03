@@ -164,9 +164,9 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [reply, person, account, first, intro]
+    sites: [reply, person, account, first, intro, intro_note]
     company_context: {scopes: [positioning, sales, proof, market], token_budget: 1400}
-    doc: "Five sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, and the ask a rep sends a COLLEAGUE for an introduction (the only one of the five written to somebody on our own side, which is why it carries its own phrasing) (draft_email over MCP, which names records to file under rather than records to write from). They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them."
+    doc: "Six sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them."
 
   nl_search:
     ladder: [cheap_cloud, premium]
