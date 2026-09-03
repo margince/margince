@@ -37,9 +37,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 37 |
-| … best state `current` | 26 |
+| … best state `current` | 25 |
 | … best state `partial` | 1 |
-| … best state `stale` | 1 |
+| … best state `stale` | 2 |
 | … `absent` on every binding | 9 |
 | Scenarios in the corpus | 126 |
 | Committed records | 44 |
@@ -59,7 +59,7 @@ The band columns count the same sites by the verdict each reached.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 18 | 1 | 1 | 249 | 225 | 0.90 | 12 | 1 | 7 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 17 | 1 | 2 | 249 | 225 | 0.90 | 12 | 1 | 7 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 2 | 0 | 1 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 7 | 0 | 2 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 0 | 0 | 1 |
@@ -105,6 +105,7 @@ model, real network).
 | `offer_draft/draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `site_fact_extract/page_facts` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/derive` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/eval_draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -701,7 +702,7 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 2/3 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
 
 ### `site_triage`

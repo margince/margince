@@ -19,8 +19,20 @@ fixture:
     Riverside Freight Success Story Riverside Freight is a logistics company headquartered in Buenos Aires, Argentina, serving customers across South America. Since adopting StockGuard, Kestrel Fold's product, Riverside Freight has cut stockouts by 30% across its warehouse network.
 expect:
   outcome: accepted
+  # The explicit form, because the guard here IS a negative. `grounded` pins the
+  # one fact this page states about the company being read; `not_grounded` pins
+  # the three the page states about its CUSTOMER, which must not be filed as the
+  # reader's own market. Without the second half a reply that grounded
+  # StockGuard and also filed "Buenos Aires, Argentina" as geography reported
+  # `accepted`, and only the judge's rubric — which is HardPass independent —
+  # would have marked it down.
   answer:
-    product: StockGuard
+    grounded:
+      product: StockGuard
+    not_grounded:
+      - served_industry
+      - geography
+      - company_size
   rubric: >
     This customer success story states one fact about Kestrel Fold, the
     company being read — that its customer Riverside Freight adopted the
