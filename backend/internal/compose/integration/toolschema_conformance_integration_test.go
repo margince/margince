@@ -75,6 +75,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
 	activity := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"activity","fields":{"kind":"note","body":"to be relinked"}}`)
+	// The vocabulary half: coined here so update_tag below has a word to rename.
+	tag := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"conformance","color":"teal"}`)
 	// Records the confirm-first sweep consumes, each its own so one tool's write
 	// cannot decide whether the next tool's call is even legal.
 	promotable := createThroughTheToolSurface(ctx, t, registry,
@@ -92,12 +94,6 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// answers not-found rather than an empty queue.
 	briefItem, briefEvidence := annotatable(t, snapshotBriefRun(ctx, t, e))
 
-	// A tag for the vocabulary tools. Minted through create_tag rather than
-	// seeded, because the id update_tag needs has to come from the answer
-	// create_tag gives — which is that answer held to its own schema, the same
-	// way every record above is created through create_record.
-	tag := tagThroughTheToolSurface(ctx, t, registry)
-
 	// One waiting proposal for the queue tools, staged through the engine that
 	// stages every other one. The verdict below is a REJECTION: it exercises the
 	// same answer shape and releases nothing, so the sweep does not perform a
@@ -106,23 +102,6 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
-		// The forecast's three reads. `forecast_readings` and
-		// `forecast_input_checks` answer about the whole workspace and take no
-		// subject, so the empty object is the whole input — and both answer
-		// even on a pipeline nothing has been checked against, which is the
-		// shape worth holding: an unrun check reports that it could not look,
-		// never a clean bill.
-		{"forecast_readings", `{}`},
-		// The open input checks, as a list. It takes no subject and answers on
-		// an unrun pipeline — an empty list is a real answer here, unlike
-		// forecast_input_checks beside it, which reports on a RUN and has none
-		// to report on.
-		{"list_input_checks", `{}`},
-		{"forecast_readings", `{"period":"month"}`},
-		// Renaming the tag the fixture above minted. The vocabulary tools are
-		// reachable here now that the lane's seat carries the tag grants the
-		// real admin seed gives it.
-		{"update_tag", `{"tag_id":"` + tag.String() + `","name":"Conformance (renamed)","color":"amber"}`},
 		{"read_brief", `{}`},
 		// The night writing back onto the morning it just read. The narrative
 		// is the run-level half and the item names one the snapshot above
@@ -243,6 +222,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"merge_records", `{"record_type":"person","source_id":"` + duplicate.String() +
 			`","target_id":"` + person.String() + `"}`},
 		{"advance_project_phase", `{"project_id":"` + project.String() + `","to_phase":"pursuing"}`},
+		// Renaming the word coined above. Both tag-vocabulary writes are reachable
+		// here: AdminPerms carries tag create/read/update/delete.
+		{"update_tag", `{"tag_id":"` + tag.String() + `","name":"conformance-renamed","color":"amber"}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
@@ -292,6 +274,18 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"granting it here would widen the authority every other tool in the sweep runs under, " +
 		"and the answer shape it would prove is the one remove_tag already shares",
 	"remove_tag": "same missing tag.read as apply_tag above",
+	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
+		"carry — measured, not assumed: the bare call comes back permission denied. Granting it " +
+		"here would widen the authority every other tool in the sweep runs under",
+	"forecast_input_checks": "same missing forecast.read as forecast_readings above",
+	"data_coverage": "needs a seat holding data_coverage.read, which this lane's seat does not " +
+		"carry — measured, not assumed: the bare call comes back permission denied. Its own object, " +
+		"not the forecast's, so it clears the lane on a grant of its own rather than with the three above",
+	"list_input_checks": "same missing forecast.read as forecast_readings above — it reads the " +
+		"exceptions behind that tool's summary off the same forecast surface, so it clears the " +
+		"lane exactly when the others do",
+	"forecast_movement": "same missing forecast.read as forecast_readings above, and it also " +
+		"requires a `from`/`to` window, so a bare call would not reach the handler either way",
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
@@ -301,18 +295,6 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"get_record_tags": "same missing tag.read as apply_tag above. Its answer shape IS held, " +
 		"against a real database, by the record-tags integration suite — including the withheld " +
 		"case, which is the one a schema alone could not prove",
-	"data_coverage": "answers about the same nightly RUN forecast_input_checks does — how much of " +
-		"the pipeline that pass could see — so with no run recorded it answers not-found, which is " +
-		"the correct answer to a question nobody has asked yet and not a result shape to hold",
-	"forecast_input_checks": "answers about last night's input-check RUN, and this lane composes " +
-		"no nightly pass — so with no run recorded the tool answers not-found, which is the " +
-		"correct answer to a question nobody has asked yet and not a result shape to hold. " +
-		"Standing the pass up here would make a schema check depend on a scheduler",
-	"forecast_movement": "needs TWO forecast snapshots to difference, and a snapshot is written " +
-		"by the nightly forecast pass rather than by any caller — so reaching it here would mean " +
-		"standing that producer up twice against a moved clock. The waterfall's own arithmetic, " +
-		"which is the part a schema could not prove, is held against a real database by the " +
-		"forecast movement suite",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
 	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
@@ -354,15 +336,10 @@ func stageOneProposal(ctx context.Context, t *testing.T, e *Env, deal ids.UUID) 
 // named as unreachable with its reason, and nothing may be both.
 func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Registry, calls []struct{ tool, args string }) {
 	t.Helper()
-	// create_record and create_tag are exercised by the fixture setup rather
-	// than by the table:
+	// create_record is exercised by the fixture setup rather than by the table:
 	// every record the calls below read was made through it, and
 	// createThroughTheToolSurface holds each of those answers to its schema and
 	// its envelope on the way past.
-	// create_tag joins create_record here for the same reason: both are
-	// exercised by the fixture setup rather than by the table, because a later
-	// call needs the id their answer carries. Both hold their own answer to
-	// their own schema on the way, which is what the table would have done.
 	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
@@ -410,39 +387,37 @@ func createThroughTheToolSurface(ctx context.Context, t *testing.T, registry *ag
 	return created.Data.ID
 }
 
-// tagThroughTheToolSurface mints one tag and holds create_tag's own answer to
-// its schema on the way, exactly as createThroughTheToolSurface does for a
-// record. The id it returns is what update_tag renames.
-func tagThroughTheToolSurface(ctx context.Context, t *testing.T, registry *agents.Registry) ids.UUID {
+// coinTagThroughTheToolSurface creates one tag through create_tag and returns
+// its id, holding that tool's own answer to its schema on the way.
+//
+// Mirrors createThroughTheToolSurface for the same reason: update_tag needs a
+// tag that exists, and the call list is assembled before any call runs, so the
+// id has to come from somewhere. Coining it through the tool rather than seeding
+// SQL means create_tag is exercised too — which is why the census pre-seeds it
+// as invoked, exactly as it does for create_record.
+func coinTagThroughTheToolSurface(ctx context.Context, t *testing.T, registry *agents.Registry, args string) ids.UUID {
 	t.Helper()
 	spec, registered := registry.Spec("create_tag")
 	if !registered {
 		t.Fatal("create_tag is not registered")
 	}
-	out, err := registry.Invoke(ctx, "create_tag", json.RawMessage(`{"name":"Conformance","color":"teal"}`))
+	out, err := registry.Invoke(ctx, "create_tag", json.RawMessage(args))
 	if err != nil {
-		t.Fatalf("create_tag: %v", err)
+		t.Fatalf("create_tag(%s): %v", args, err)
 	}
 	if defect := agents.ResultDefect(spec.OutputSchema, out); defect != "" {
 		t.Fatalf("create_tag answered %s, which does not keep its own schema: %s", out, defect)
 	}
 	assertEnvelopePopulated(t, "create_tag", out)
-	// `data.tag_id`, not `data.id`: a Tag names itself by its own key, unlike
-	// the records create_record answers for. Read where it actually is — a zero
-	// id would send update_tag at nothing and come back as an argument error,
-	// which reads like the tool being broken rather than the fixture.
 	var created struct {
 		Data struct {
-			ID ids.UUID `json:"tag_id"`
+			TagID ids.UUID `json:"tag_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(out, &created); err != nil {
 		t.Fatalf("unreadable create_tag answer %s: %v", out, err)
 	}
-	if created.Data.ID.IsZero() {
-		t.Fatalf("create_tag answered %s, which names no id for update_tag to rename", out)
-	}
-	return created.Data.ID
+	return created.Data.TagID
 }
 
 // A conformance suite that could not fail is the thing it exists to prevent, so

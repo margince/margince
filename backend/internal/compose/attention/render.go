@@ -6,8 +6,6 @@ package attention
 import (
 	"context"
 	"errors"
-	"strconv"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -181,29 +179,37 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 	if approval.TargetEntityType != nil && approval.TargetEntityId != nil {
 		item.Subject = subjectOf(*approval.TargetEntityType, ids.UUID(*approval.TargetEntityId))
 	}
-	if markers := stagedMarkers(approval, machine); markers != "" {
-		item.Detail = &markers
+	if staged, ok := stagedFacts(approval, machine); ok {
+		item.Staged = &staged
 	}
 	return item
 }
 
-// stagedMarkers says what a routine contact decision is ABOUT, for the group it
+// stagedFacts says what a routine contact decision is ABOUT, for the group it
 // will join.
 //
 // Read from the payload the verdict engine staged — the address it is asking
 // about, and whether that address's domain already names a company here. Both
 // are facts the engine had; re-deriving them in the queue would be a second
 // opinion, and one decision would land in two groups across two reads.
-func stagedMarkers(approval crmcontracts.Approval, machine MachineSender) string {
+//
+// TYPED on the item rather than written into `detail` as marker words. They were
+// words because `detail` was the only line on the wire and this was all they
+// needed to carry — but that made a supporting line undrawable on this source,
+// and any client rendering it faithfully showed a rep "machine_sender".
+func stagedFacts(
+	approval crmcontracts.Approval, machine MachineSender,
+) (crmcontracts.AttentionStagedFacts, bool) {
 	if approval.Kind != "capture_counterparty" || approval.ProposedChange == nil {
-		return ""
+		return crmcontracts.AttentionStagedFacts{}, false
 	}
 	change := *approval.ProposedChange
-	markers := make([]string, 0, 2)
+	facts := crmcontracts.AttentionStagedFacts{}
 	if address, ok := change["email"].(string); ok && machine != nil && machine(address) {
-		markers = append(markers, stagedMachineSender)
+		sender := true
+		facts.MachineSender = &sender
 	}
-	// There is no company marker here, and the reason is worth stating: the
+	// KnownCompany is left UNSET here, and the reason is worth stating: the
 	// only company-ish field the staged payload carries is `display_name`,
 	// which capture labels "untrusted header text — for display, never
 	// matching" (modules/capture/pending.go). A sender types it, so
@@ -212,7 +218,7 @@ func stagedMarkers(approval crmcontracts.Approval, machine MachineSender) string
 	// A real match needs a lookup against the organizations this workspace has,
 	// which is a read this assembler does not make. Until it does, a contact
 	// question is either from a machine or is the honest remainder.
-	return strings.Join(markers, " ")
+	return facts, true
 }
 
 // taskItem renders one open task.
@@ -333,11 +339,15 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 		Deal:    dealFacts(deal),
 		Actions: []crmcontracts.AttentionItemActions{actionOpen},
 	}
-	// The idle count rides as the detail's own number, so the card can say the
-	// window the server actually applied instead of implying one.
+	// The idle count travels TYPED, so the card can say the window the server
+	// actually applied instead of implying one — and so `detail` stays the
+	// supporting sentence it is everywhere else. It used to ride as the detail's
+	// own decimal, which made one field mean a sentence on ten sources and an
+	// integer on two, and any client rendering it faithfully printed a naked
+	// "90" under the title.
 	if deal.QuietDays > 0 {
-		days := strconv.Itoa(deal.QuietDays)
-		item.Detail = &days
+		days := deal.QuietDays
+		item.QuietDays = &days
 	}
 	if deal.ExpectedCloseDate != nil {
 		due := *deal.ExpectedCloseDate
@@ -349,9 +359,9 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 // lapsedItem renders one relationship this reader has stopped talking to.
 //
 // The contact's NAME travels as the title because a person's name is a
-// sentence in every language, and the silence rides as the detail's own
-// number, the way the risk card carries its idle count — so the client writes
-// "quiet 63 days" and the server implies no window it did not apply.
+// sentence in every language, and the silence rides as a typed count, the way
+// the risk card carries its idle days — so the client writes "quiet 63 days"
+// and the server implies no window it did not apply.
 //
 // `occurred_at` is the last time they spoke. It is the fact the card dates
 // itself from, and it lets the lane be read as a chronology rather than only
@@ -362,13 +372,16 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 // answered it here would be deciding rather than warning.
 func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 	name := quiet.Name
-	days := strconv.Itoa(quiet.QuietDays)
+	days := quiet.QuietDays
 	lastAt := quiet.LastAt
 	return crmcontracts.AttentionItem{
-		Id:         quiet.PersonID.String(),
-		Source:     crmcontracts.AttentionItemSource("relationship_decay"),
-		Title:      &name,
-		Detail:     &days,
+		Id:     quiet.PersonID.String(),
+		Source: crmcontracts.AttentionItemSource("relationship_decay"),
+		Title:  &name,
+		// Typed, for the reason riskItem's is: `detail` is a sentence on every
+		// other source, and the client writes "quiet N days" in the reader's
+		// own language rather than rendering a decimal the server chose.
+		QuietDays:  &days,
 		Subject:    subjectOf("person", quiet.PersonID),
 		OccurredAt: &lastAt,
 		Actions:    []crmcontracts.AttentionItemActions{},

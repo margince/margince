@@ -136,6 +136,26 @@ func systemCause(row ranked) (string, bool) {
 	return *row.item.CauseRef, true
 }
 
+// causeLabelOf is the words for the condition a group was formed on.
+//
+// The members share one cause, so they carry one label, and the first that has
+// it answers for all. It walks rather than reading members[0] because a lane can
+// name the condition on some of its rows and not others — an automation run
+// whose rule was deleted between firings has the id and no name — and taking the
+// first row's absence for the group's would leave a named condition unnamed.
+//
+// An empty answer is a group with no name of its own, which the client draws by
+// its kind. It never falls back to the cause: that is an identity, and putting
+// it on screen is the defect this pair of fields exists to prevent.
+func causeLabelOf(members []ranked) string {
+	for _, member := range members {
+		if member.item.CauseLabel != nil && *member.item.CauseLabel != "" {
+			return *member.item.CauseLabel
+		}
+	}
+	return ""
+}
+
 // batchKeyOf says which group a row belongs to, and whether it may be grouped
 // at all.
 //
@@ -271,6 +291,14 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 	}
 	if cause != "" {
 		row.Batch.Cause = &cause
+		// And the words for it. The members of a group share their condition, so
+		// they share its name — this is a lookup among rows already in hand, not
+		// a second read, and NOT the sampled member's own title: the members are
+		// alike rather than identical, and one member's subject describes that
+		// member instead of the thing they have in common.
+		if label := causeLabelOf(members); label != "" {
+			row.Batch.Label = &label
+		}
 	}
 	if bounded {
 		atLeast := true

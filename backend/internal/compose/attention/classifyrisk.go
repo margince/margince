@@ -83,7 +83,7 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		Currency:    item.Deal.Currency,
 	}
 	// The close date rides on the lane item's own due moment, and the idle
-	// count on its detail. Both were already resolved; only this projection
+	// count on its own typed field. Both were already resolved; only this projection
 	// dropped them, so the card could state money and never say when the deal
 	// was meant to land.
 	if item.DueAt != nil {

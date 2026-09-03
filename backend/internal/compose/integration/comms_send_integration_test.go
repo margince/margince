@@ -319,16 +319,16 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	}
 }
 
-// A bulk send carries the RFC 8058 one-click pair, and the pair is what
+// A marketing send carries the RFC 8058 one-click pair, and the pair is what
 // is asserted: List-Unsubscribe-Post is derived from its partner rather than
 // stored, so only a real message shows the two lines actually arriving
 // together.
 func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
-	purpose := p.grantBulkConsent(t)
+	p.grantMarketingConsent(t)
 
-	sentActivity := p.sendExpectingAcceptance(t, purpose, "Spring pricing", "Here is what changed.")
+	sentActivity := p.sendExpectingAcceptance(t, "marketing_email", "Spring pricing", "Here is what changed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)
 	rfc822, _ := p.transmit(t, deliveryID, "")
 	mime := string(rfc822)
@@ -341,37 +341,29 @@ func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 	}
 }
 
-// grantBulkConsent gives the recipient a consent-class purpose the send can
-// lawfully go out under, at both the request-time gate and the dispatcher's.
+// grantMarketingConsent takes the recipient through the only round trip that
+// grants a purpose requiring double opt-in: the workspace mails them a
+// confirm-details link, and they spend it with their answer from the anonymous
+// public edge.
 //
-// A purpose of its own rather than marketing_email, because marketing_email
-// requires double opt-in and an operator can no longer complete that round trip
-// at all: #3807 removed the endpoint that minted a token and handed the
-// plaintext back to the caller, on the ground that one person closing both
-// halves is precisely what the round trip exists to prevent. Marketing now
-// confirms only through the mailed confirm-details link.
-//
-// What the test above actually needs is a purpose that is not LOCKED —
-// compose/preferenceunsub.go emits the one-click surface for every purpose that
-// is not — and a consent-class purpose this lane can grant is exactly that. It
-// returns the key so the send names the same purpose that was granted.
-func (p *preflightEnv) grantBulkConsent(t *testing.T) string {
+// It replaces a helper that minted a token over the operator's own session and
+// pasted it straight back into recordConsent. That path is gone — one caller
+// completing both halves is exactly what it was withdrawn for — and so the
+// grant here is earned the way a real one is, with the token read out of the
+// delivered mail because no response carries it.
+func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	t.Helper()
-	const key = "product_newsletter"
-	var purpose struct {
-		ID string `json:"id"`
+	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/confirm-request",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
-	if status := p.Call(t, "POST", "/v1/consent-purposes", AnyMap{
-		"key": key, "label": "Product newsletter", "requires_double_opt_in": false,
-	}, nil, &purpose); status != http.StatusCreated {
-		t.Fatalf("create the %s purpose → %d", key, status)
+	token := p.mail.confirmLinkToken(t)
+	if s := publicCall(t, p.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "Yes, send me occasional product news.",
+	}, nil, nil); s != http.StatusNoContent {
+		t.Fatalf("the subject spends their own link → %d, want 204", s)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
-		"purpose_id": purpose.ID, "new_state": "granted", "lawful_basis": "consent",
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("grant %s → %d", key, status)
-	}
-	return key
 }
 
 // Revocation binds mid-flight on the one lane that reaches a real external
