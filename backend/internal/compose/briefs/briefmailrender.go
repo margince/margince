@@ -142,8 +142,5 @@ func waitingItems(run BriefRun) []BriefRunItem {
 
 // writeLink closes with the way in, when there is a usable one.
 func writeLink(b *strings.Builder, homeURL string, words mailcopy.Copy) {
-	if homeURL == "" {
-		return
-	}
-	b.WriteString("\n" + words.MorningOpenDay + "\n  " + homeURL + "\n")
+	mailcopy.Link(b, homeURL, mailcopy.BriefMorningFragment, words.MorningOpenDay)
 }

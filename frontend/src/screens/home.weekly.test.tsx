@@ -81,6 +81,53 @@ describe("HomeScreen — the weekly retrospective", () => {
     expect(screen.getByText(en["home.weekly.promised"])).toBeTruthy();
   });
 
+  // What the wins were WORTH, beside how many there were.
+  //
+  // The count alone says a week of five small renewals and a week of one
+  // company-making deal are the same week. The money was computed, converted
+  // and stored — and read by no screen until now.
+  it("says what the week's wins were worth", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: {
+            created_minor: 4500000,
+            won_minor: 1250000,
+            lost_minor: 0,
+            currency: "EUR",
+          },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The review's OWN currency, not the installation's current setting: base
+    // currency is operator-mutable, and re-reading it would re-label an old
+    // week with a currency its numbers were never in.
+    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+  });
+
+  // And a week with no pipeline block draws no money at all.
+  //
+  // The block is optional on the wire — a week assembled before the money
+  // columns existed, or one whose FX rate was missing, has no honest figure.
+  // "0 €" is a claim about a week nobody measured.
+  it("draws no money for a week that carries none", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Weber Rahmenvertrag");
+    const strip = document.querySelector('[data-testid="weekly-strip"]');
+    expect(strip).not.toBeNull();
+    expect(strip?.textContent ?? "").not.toMatch(/€|EUR/);
+  });
+
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
     stubApi({
       "GET /weekly-reviews/latest": () =>

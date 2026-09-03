@@ -172,6 +172,20 @@ var unrunnableCalls = map[string]unrunnableCall{
 	},
 	"createProject": bodyFixture("/v1/projects", `{"nickname":"typo"}`, "nickname"),
 
+	// The self-merge, not a malformed id: a tag folded into itself is a WELL
+	// FORMED request naming a real word twice, so it proves the resolver
+	// refuses on the argument PAIR rather than only on a value it could not
+	// parse. It is also the refusal that costs most to reach late — the store
+	// makes it at the end of its own transaction, so without the staging-time
+	// check a human's yes buys a merge that dies there.
+	"mergeTags": {
+		refusal: refusedArgument("itself", "the source and the target are the same word, which the store refuses"),
+		build: func() (*http.Request, []byte) {
+			id := ids.NewV7().String()
+			return routedFixture(http.MethodPost, "/v1/tags/"+id+"/merge", id, `{"into_tag_id":"`+id+`"}`)
+		},
+	},
+
 	"advanceProjectPhase": {
 		refusal: refusedArgument("vibing", "the phase named is outside the contract's ladder"),
 		build: func() (*http.Request, []byte) {

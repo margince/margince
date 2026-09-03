@@ -127,6 +127,58 @@ export function dealWinKeys(
   return keys;
 }
 
+// ── Every timeline, not one record's ────────────────────────────────────────
+
+// A change to who may read a MESSAGE reaches every record the message is filed
+// against, and the client is not told which those are: the server names the
+// activities a decision touched, and `Activity.links` is not on that answer —
+// putting a record list on a privacy response for the sake of a cache is the
+// wrong trade. So the reads that could be showing the old audience are found by
+// their SHAPE instead of by their record.
+//
+// It is a wide invalidation and that is affordable here, not everywhere: an
+// audience change is a deliberate, rare human act, and react-query refetches
+// only the queries that are actually mounted — the rest are marked stale and
+// re-read when something asks for them.
+//
+// The shapes are derived from the tables above rather than listed again, so a
+// record kind that grows a timeline read joins this by being added there. A
+// second list would go stale exactly the way the record-scoped invalidation it
+// replaces did, and just as quietly.
+const SHAPE_ID = "\u0000id";
+
+// Every key shape that draws a message: the per-record timelines, the composite
+// 360 payloads that carry their first page, the reads derived from a timeline,
+// and the canonical email read itself — a drawer's thread-member page can carry
+// a message the reader did not open and did not change.
+function messageBearingShapes(): unknown[][] {
+  const shapes: unknown[][] = [["activities"], ["email-presentation"]];
+  for (const seed of Object.values(TIMELINE_SEED_KEYS)) {
+    shapes.push(seed(SHAPE_ID) as unknown[]);
+  }
+  for (const derived of Object.values(DERIVED_FROM_TIMELINE)) {
+    shapes.push(derived(SHAPE_ID) as unknown[]);
+  }
+  return shapes;
+}
+
+/**
+ * Whether a cached read could be showing a message whose audience just changed.
+ *
+ * Matched as a PREFIX with the id position wild, so `["activities", …]` covers
+ * every record's timeline while `["project", id, "360"]` covers the project
+ * 360 payload without also matching `["project", id]` — the project record
+ * itself, which carries no message and does not need re-reading.
+ */
+export function showsAMessage(query: { queryKey: QueryKey }): boolean {
+  const key = query.queryKey as unknown[];
+  return messageBearingShapes().some(
+    (shape) =>
+      key.length >= shape.length &&
+      shape.every((segment, at) => segment === SHAPE_ID || segment === key[at]),
+  );
+}
+
 // The canonical email read's key belongs to the component that reads under it,
 // so this is a re-export rather than a second spelling. Two copies of a cache
 // key do not fail loudly: they fail as a drawer that quietly stops refreshing

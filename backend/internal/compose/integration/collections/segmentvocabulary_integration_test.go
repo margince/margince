@@ -698,7 +698,7 @@ func (f fixture) assertTagSegment(t *testing.T, entity, tagID string, tagged, pl
 // unit lane happened to exercise.
 func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
 	f := setupFixture(t)
-	tag, err := f.lists.CreateTag(f.ctx, "vip", nil)
+	tag, err := f.lists.CreateTag(f.ctx, "vip", nil, nil)
 	if err != nil {
 		t.Fatalf("create tag: %v", err)
 	}

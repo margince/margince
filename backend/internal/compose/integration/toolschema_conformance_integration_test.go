@@ -270,6 +270,17 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"authority every other tool in the sweep runs under",
 	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
+	// merge_tags is confirm-first (TierConfirmationRequired) AND it consumes
+	// its arguments: the merged tag is gone afterwards, so a call here would
+	// have to mint two tags of its own and leave one deleted. The vocabulary
+	// merge's own behaviour — what moves, what the surviving tag keeps, what a
+	// saved view naming the merged word then selects — is held against a real
+	// database by the collections suite, which is where the interesting half
+	// of this operation lives.
+	"merge_tags": "confirm-first, and destructive: it consumes the tag it merges, so this sweep " +
+		"would have to mint a second tag purely to destroy it — and the answer shape it would " +
+		"prove is update_tag's, which is called above. The merge's own behaviour is held by the " +
+		"collections integration suite",
 	"apply_tag": "needs a seat holding tag.read, which this lane's seat does not carry — " +
 		"granting it here would widen the authority every other tool in the sweep runs under, " +
 		"and the answer shape it would prove is the one remove_tag already shares",

@@ -50,6 +50,21 @@ var createTagCopy = toolCopy{
 		"which an ordinary seat does not hold.",
 }
 
+// merge_tags is the one tag verb a human releases. The copy says so plainly
+// and says what cannot be walked back, because a model that reads "merge" as
+// the reversible record merge will propose one casually.
+var mergeTagsCopy = toolCopy{
+	Purpose: "Fold a duplicate word into the one the workspace keeps, moving every record that " +
+		"carries it.",
+	// The governance sentence the surface appends already says a person approves
+	// this, so that is not repeated. What only this copy can say is that the act
+	// cannot be walked back, and which of the two words is the one that dies.
+	Limits: "NOT UNDOABLE once approved: the source is retired, its name is released — links " +
+		"to it stop working and someone may coin it again — and no pointer home is kept, " +
+		"unlike a person or company merge. The TARGET is the word that survives; read both " +
+		"with get_tag first. Needs the tag.update grant.",
+}
+
 var updateTagCopy = toolCopy{
 	Purpose: "Rename, recolour or describe a word that already exists. Fields left out are " +
 		"unchanged, so a recolour need not restate the name.",

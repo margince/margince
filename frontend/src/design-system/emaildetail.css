@@ -70,3 +70,50 @@
   gap: var(--space-2);
   justify-content: space-between;
 }
+
+/* What came with the message. A list, not a grid: filenames run to very
+   different lengths and a column would either truncate the long ones or leave
+   a gutter beside the short ones. */
+.emaildetail__files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+.emaildetail__filesLabel {
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+}
+.emaildetail__fileList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+}
+.emaildetail__file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.emaildetail__file svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--textTertiary);
+}
+/* The filename truncates, the size does not: a size is four characters and
+   losing them tells the reader nothing, while a long filename is the thing
+   the row is about. */
+.emaildetail__file a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.emaildetail__fileSize {
+  flex: none;
+  font-size: var(--fs-meta);
+  color: var(--textTertiary);
+}

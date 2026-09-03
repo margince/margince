@@ -65,6 +65,12 @@ func TestAConfirmRequestMailsTheSubjectTheirOwnLink(t *testing.T) {
 		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body.String())
 	}
 
+	// `provider_accepted`, not `delivered`. #3807 renamed it and the
+	// description always said the true thing: the relay TAKING a message is not
+	// the same as it arriving, and a field called `delivered` claimed the
+	// second while reporting the first. This struct kept the old name, so it
+	// decoded to the zero value and the assertion below read a working relay as
+	// a silent one.
 	var got struct {
 		DeliveredTo      string `json:"delivered_to"`
 		ProviderAccepted bool   `json:"provider_accepted"`
