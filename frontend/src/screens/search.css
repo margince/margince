@@ -33,3 +33,11 @@
   color: var(--textSecondary);
   font-size: 13px;
 }
+
+/* An email hit is the canonical row, which owns its own padding, typography
+   and focus treatment. The host supplies position and nothing else — the same
+   contract the timeline `<li>` and the company card give it. */
+.search-hit-email {
+  padding: 0;
+  gap: 0;
+}
