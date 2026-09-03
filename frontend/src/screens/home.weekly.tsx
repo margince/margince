@@ -84,6 +84,69 @@ export function WeeklySection() {
 }
 
 /**
+ * The week's workings, under the strip.
+ *
+ * Five readings that answer "how did the week go" rather than "what did the week
+ * produce" — how much of the queue was worked, how proposals were decided, how
+ * many deals moved without closing. They were slots six to ten of a ten-slot
+ * strip, where they made the row fold into two ranks and cost the outcomes their
+ * one-comparison reading.
+ *
+ * A definition list, not more cards: these are looked up one at a time by
+ * somebody who already read the strip, which is the opposite of the strip's
+ * read-across claim.
+ */
+function WeeklyWorkings({
+  counts,
+}: Readonly<{ counts: WeeklyReview["counts"] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const n = (value: number) => formatNumber(value, locale);
+  return (
+    <dl className="home-weekly-workings">
+      <Working
+        label={t("home.weekly.promised")}
+        value={t("home.weekly.ofDue", {
+          done: n(counts.tasks_done),
+          due: n(counts.tasks_due),
+        })}
+      />
+      <Working
+        label={t("home.weekly.dealsMoved")}
+        value={n(counts.deals_moved)}
+      />
+      <Working
+        label={t("home.weekly.dealsLost")}
+        value={n(counts.deals_lost)}
+      />
+      <Working
+        label={t("home.weekly.decided")}
+        value={t("home.weekly.acceptedRejected", {
+          accepted: n(counts.proposals_accepted),
+          rejected: n(counts.proposals_rejected),
+        })}
+      />
+      <Working
+        label={t("home.weekly.queueWorked")}
+        value={t("home.weekly.actedDismissed", {
+          acted: n(counts.brief_items_acted),
+          dismissed: n(counts.brief_items_dismissed),
+        })}
+      />
+    </dl>
+  );
+}
+
+function Working({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="home-weekly-working">
+      <dt className="t-caption">{label}</dt>
+      <dd className="t-body">{value}</dd>
+    </div>
+  );
+}
+
+/**
  * The sentence about the week, above its numbers.
  *
  * THREE STATES, and the third is the one worth the code. A review with no
@@ -192,29 +255,28 @@ function WeeklyBody({
   return (
     <>
       <WeeklyNarrative review={review} />
+      {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
+          is a table wearing a strip's clothes — at 1280 the row folded to two
+          ranks of five and stopped being one reading at all (#3709).
+          These five are the week's outcomes: what was promised and kept, what
+          closed, how fast new business was answered, whether meetings led
+          anywhere, and what did not get finished. The other five are workings
+          — how the queue was worked, how proposals were decided — and they
+          read as a list under the strip, where they are still available to
+          anyone who wants them and no longer compete with the outcomes. */}
       <StatStrip testId="weekly-strip">
         <StatCard
-          label={t("home.weekly.promised")}
+          label={t("home.weekly.promisesKept")}
           value={t("home.weekly.ofDue", {
-            done: formatNumber(c.tasks_done, locale),
-            due: formatNumber(c.tasks_due, locale),
+            done: formatNumber(c.commitments_kept, locale),
+            due: formatNumber(c.commitments_due, locale),
           })}
-          detail={since(c.tasks_done, prior?.tasks_done)}
+          detail={since(c.commitments_kept, prior?.commitments_kept)}
         />
         <StatCard
           label={t("home.weekly.dealsWon")}
           value={formatNumber(c.deals_won, locale)}
           detail={since(c.deals_won, prior?.deals_won)}
-        />
-        <StatCard
-          label={t("home.weekly.dealsLost")}
-          value={formatNumber(c.deals_lost, locale)}
-          detail={since(c.deals_lost, prior?.deals_lost)}
-        />
-        <StatCard
-          label={t("home.weekly.dealsMoved")}
-          value={formatNumber(c.deals_moved, locale)}
-          detail={since(c.deals_moved, prior?.deals_moved)}
         />
         <StatCard
           label={t("home.weekly.leadsAnswered")}
@@ -228,14 +290,6 @@ function WeeklyBody({
           )}
         />
         <StatCard
-          label={t("home.weekly.promisesKept")}
-          value={t("home.weekly.ofDue", {
-            done: formatNumber(c.commitments_kept, locale),
-            due: formatNumber(c.commitments_due, locale),
-          })}
-          detail={since(c.commitments_kept, prior?.commitments_kept)}
-        />
-        <StatCard
           label={t("home.weekly.meetingsHeld")}
           value={t("home.weekly.ofMeetings", {
             withStep: formatNumber(c.meetings_with_next_step, locale),
@@ -244,24 +298,12 @@ function WeeklyBody({
           detail={since(c.meetings_held, prior?.meetings_held)}
         />
         <StatCard
-          label={t("home.weekly.decided")}
-          value={t("home.weekly.acceptedRejected", {
-            accepted: formatNumber(c.proposals_accepted, locale),
-            rejected: formatNumber(c.proposals_rejected, locale),
-          })}
-        />
-        <StatCard
-          label={t("home.weekly.queueWorked")}
-          value={t("home.weekly.actedDismissed", {
-            acted: formatNumber(c.brief_items_acted, locale),
-            dismissed: formatNumber(c.brief_items_dismissed, locale),
-          })}
-        />
-        <StatCard
           label={t("home.weekly.carriedOver")}
           value={formatNumber(c.tasks_carried_over, locale)}
+          detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
         />
       </StatStrip>
+      <WeeklyWorkings counts={c} />
       {review.deals.length > 0 && (
         <ul className="home-weekly-deals">
           {review.deals.map((deal) => (

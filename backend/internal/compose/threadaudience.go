@@ -42,6 +42,19 @@ type ThreadAudienceOutcome struct {
 	// keeps private is itself private, and "your colleague is holding this"
 	// already says more than a held message should.
 	HeldByOthers int `json:"held_by_others"`
+	// ActivityIDs names the caller's own messages the decision reached, so a
+	// client can refresh exactly them.
+	//
+	// A thread decision changes several messages at once, and they are filed
+	// against whatever records each one touches — a message on this deal, a
+	// second on that contact. A caller refreshing only the record it happened
+	// to be looking at leaves the others reading the audience they had before
+	// the press, which is the shape of a control that appeared to do nothing.
+	//
+	// These are ids the caller imported, so naming them discloses nothing they
+	// could not already read: the same capture_import row that put a message in
+	// this list is an arm of the audience gate.
+	ActivityIDs []ids.UUID `json:"activity_ids"`
 }
 
 // ThreadAudienceSetter applies an owner's decision to their own view of a
@@ -103,6 +116,18 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 			}
 		}
 		outcome.Messages = len(messages)
+		// The ids the CALLER may read, which is narrower than the set whose
+		// audience was just recomputed. An import row satisfies one arm of the
+		// audience gate but says nothing about discoverability: a message this
+		// seat imported that is filed only against records outside their row
+		// scope is not theirs to read, and handing back its stable id would say
+		// that record exists. The decision still reached it — that is what
+		// Messages counts — the client is simply not told which one it was.
+		readable, err := readableActivityIDsTx(ctx, tx, messages)
+		if err != nil {
+			return err
+		}
+		outcome.ActivityIDs = readable
 		held, err := othersHoldingTx(ctx, tx, messages, actor.UserID)
 		if err != nil {
 			return err
@@ -115,6 +140,42 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		return ThreadAudienceOutcome{}, err
 	}
 	return outcome, nil
+}
+
+// readableActivityIDsTx keeps only the ids the caller may actually read.
+//
+// ActivityDiscoverClause is the weaker of the two activity gates and the one
+// that answers the question at issue here: may this caller learn the row
+// EXISTS. The audience arm is already satisfied for every id in this list by
+// the import row that put it there, so discoverability is the whole of what
+// is left to ask.
+func readableActivityIDsTx(ctx context.Context, tx pgx.Tx, ids0 []ids.UUID) ([]ids.UUID, error) {
+	if len(ids0) == 0 {
+		return nil, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(ids0)
+	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(
+		`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND (%s) ORDER BY a.id`,
+		idsPos, scope), args...)
+	if err != nil {
+		return nil, fmt.Errorf("compose: narrowing a thread decision to what the caller reads: %w", err)
+	}
+	defer rows.Close()
+	out := []ids.UUID{}
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("compose: narrowing a thread decision to what the caller reads: %w", err)
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }
 
 // othersHoldingTx counts the OTHER seats whose contribution still holds the

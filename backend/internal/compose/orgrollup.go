@@ -12,12 +12,9 @@ package compose
 // handler arrives with the transport slice.
 
 import (
-	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -115,36 +112,6 @@ func currentQuarterBounds(now time.Time, loc *time.Location, fiscalStartMonth in
 	end = start.AddDate(0, 3, 0)
 	return start, end
 }
-
-// weightedValue is the account roll-up's spelling of formulas §6, and the
-// declared mirror of report.go's weightedAmountMinorExpr: the report engine
-// folds the same figure into an SQL aggregate, which this path has no
-// aggregate to fold into. TestTheTwoSpellingsOfWeightedValueAgree
-// (weightedvalueparity_integration_test.go) runs both over the same cases and
-// fails in either direction.
-//
-// It rounds baseMinor × winProbability/100 half away from
-// zero, in EXACT big.Int arithmetic — never a native int64 multiply.
-// amount_minor is contract-unbounded, so baseMinor×winProbability can
-// exceed int64 before the division ever runs; a silent wraparound there
-// would put a wrong number in a money total. The overflow check mirrors
-// deals.ConvertToBase's: a result outside int64's range refuses loudly rather
-// than truncating.
-func weightedValue(baseMinor int64, winProbability int) (int64, error) {
-	product := new(big.Int).Mul(big.NewInt(baseMinor), big.NewInt(int64(winProbability)))
-	rounded := deals.DivRoundHalfAwayFromZero(product, big.NewInt(100))
-	if !rounded.IsInt64() {
-		return 0, fmt.Errorf("%w: a %d-minor-unit amount at %d%%; correct the deal amount before retrying the rollup",
-			errWeightedValueOutOfRange, baseMinor, winProbability)
-	}
-	return rounded.Int64(), nil
-}
-
-// errWeightedValueOutOfRange marks the ARITHMETIC's own refusal, as distinct
-// from a caller rejecting an input before the multiply ever runs. A test that
-// accepted any error here would keep passing with the overflow check deleted,
-// as long as something else refused first.
-var errWeightedValueOutOfRange = errors.New("weighted pipeline value exceeds the representable money range")
 
 // FXRateUnavailableError reports that the rollup needed a stored FX
 // rate for currency as of a point in time and none was on file — the

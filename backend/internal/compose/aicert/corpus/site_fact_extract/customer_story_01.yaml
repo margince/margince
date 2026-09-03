@@ -1,0 +1,45 @@
+name: customer_story_credits_the_customer_not_the_reader
+task: site_fact_extract
+site: page_facts
+source: hand_authored
+sanitized_by: hand_authored/claude-sonnet-5
+# A customer success story's subject is the CUSTOMER it names. The passage
+# states one fact about the reading company (a customer adopted its product)
+# and three facts about that customer's own business — its industry, its
+# headquarters, the region it serves. The guard this pins: none of the
+# customer's own facts may be filed as a market this reading company serves.
+#
+# /solutions/<customer> is the URL shape classifyKind actually routes to
+# "services" (the first path segment contains "solution"), so this fixture
+# reads the same as a production page a services-menu call would be sent for.
+fixture:
+  url: https://kestrelfold.test/solutions/riverside-freight
+  kind: services
+  text: |
+    Riverside Freight Success Story Riverside Freight is a logistics company headquartered in Buenos Aires, Argentina, serving customers across South America. Since adopting StockGuard, Kestrel Fold's product, Riverside Freight has cut stockouts by 30% across its warehouse network.
+expect:
+  outcome: accepted
+  answer:
+    product: StockGuard
+  rubric: >
+    This customer success story states one fact about Kestrel Fold, the
+    company being read — that its customer Riverside Freight adopted the
+    StockGuard product — and three facts about that CUSTOMER's own business:
+    Riverside Freight is a logistics company, is headquartered in Buenos
+    Aires, Argentina, and serves customers across South America. Score 100
+    only if StockGuard is filed as a product and none of Riverside Freight's
+    own facts — its industry (logistics), its headquarters (Buenos Aires,
+    Argentina) or the region it serves (South America) — appear under ANY
+    field, market or offering, as something Kestrel Fold itself is, sells or
+    serves: not served_industry, geography or company_size, and not
+    "logistics" misfiled as a service, product or capability either. Those
+    three facts describe Riverside Freight telling its own story, never a
+    market or offering of Kestrel Fold's, however naturally the page's
+    language reads that way. Penalize heavily any entry that attributes the
+    customer's own industry, headquarters or reach to the company being
+    read — crediting a case study's subject to the site owner is exactly the
+    mistake this scenario exists to catch.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -13,7 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { ComposeModal, RelinkModal, TimelineActions } from "./compose";
+import { ComposeModal, RelinkModal } from "./compose";
+import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
 

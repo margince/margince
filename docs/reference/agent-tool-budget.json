@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 61,
-    "tokens": 19280,
-    "median_tool_tokens": 274,
-    "mean_tool_tokens": 315
+    "tools": 66,
+    "tokens": 20773,
+    "median_tool_tokens": 273,
+    "mean_tool_tokens": 314
   },
   "agents": [
     {
@@ -114,6 +114,10 @@
       "tokens": 456
     },
     {
+      "name": "forecast_readings",
+      "tokens": 441
+    },
+    {
       "name": "progress_deal",
       "tokens": 435
     },
@@ -136,6 +140,10 @@
     {
       "name": "search_records",
       "tokens": 392
+    },
+    {
+      "name": "forecast_movement",
+      "tokens": 358
     },
     {
       "name": "search_context",
@@ -214,6 +222,10 @@
       "tokens": 260
     },
     {
+      "name": "forecast_input_checks",
+      "tokens": 259
+    },
+    {
       "name": "apply_tag",
       "tokens": 258
     },
@@ -234,6 +246,10 @@
       "tokens": 228
     },
     {
+      "name": "update_tag",
+      "tokens": 228
+    },
+    {
       "name": "disqualify_lead",
       "tokens": 221
     },
@@ -248,6 +264,10 @@
     {
       "name": "read_brief",
       "tokens": 213
+    },
+    {
+      "name": "create_tag",
+      "tokens": 206
     },
     {
       "name": "who_knows",

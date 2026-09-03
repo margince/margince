@@ -251,16 +251,51 @@ func (d InternalDomains) Domains() []string {
 // everything — which leaves every gate reading it exactly where it was.
 type SelfSet struct {
 	addresses map[string]struct{}
-	domains   InternalDomains
+	// identityOnly are addresses that say WHO the seat is without proving what
+	// reached their mailbox. They answer Covers and never CoversAddressExactly —
+	// see that method for why the two questions cannot share one set.
+	identityOnly map[string]struct{}
+	domains      InternalDomains
 }
 
 // NewSelfSet folds and de-duplicates a seat's declared addresses and domains.
 func NewSelfSet(addresses, domains []string) SelfSet {
-	set := SelfSet{addresses: make(map[string]struct{}, len(addresses)), domains: NewInternalDomains(domains)}
+	return NewSelfSetWithIdentityOnly(addresses, nil, domains)
+}
+
+// NewSelfSetWithIdentityOnly separates the addresses that PROVE DELIVERY from
+// the ones that merely name the seat.
+//
+// The distinction is not a nicety. An address in the first group is either the
+// mailbox a provider attested at grant or one the seat declared about
+// themselves; an address in the second is one the product knows belongs to them
+// for another reason — the address they sign in with — which nobody proved they
+// control as a mailbox. Only the first can answer "did this message reach me",
+// because that answer grants read access to an incumbent message a colleague
+// may have captured first.
+func NewSelfSetWithIdentityOnly(addresses, identityOnly, domains []string) SelfSet {
+	set := SelfSet{
+		addresses:    make(map[string]struct{}, len(addresses)),
+		identityOnly: make(map[string]struct{}, len(identityOnly)),
+		domains:      NewInternalDomains(domains),
+	}
 	for _, address := range addresses {
 		if folded := foldAddress(address); folded != "" {
 			set.addresses[folded] = struct{}{}
 		}
+	}
+	for _, address := range identityOnly {
+		folded := foldAddress(address)
+		if folded == "" {
+			continue
+		}
+		if _, proven := set.addresses[folded]; proven {
+			// The same address arrived both ways. The stronger claim stands:
+			// listing it here as well would not weaken it, but keeping one
+			// address in two sets invites a later reader to ask which wins.
+			continue
+		}
+		set.identityOnly[folded] = struct{}{}
 	}
 	return set
 }
@@ -299,6 +334,13 @@ func foldAddress(address string) string {
 // address as delivered to them. An exact address is different in kind — it is
 // either the mailbox the provider attested at grant, or one the seat declared
 // about themselves, and neither names a colleague.
+//
+// The seat's LOGIN address is deliberately not among them, for the same reason
+// in a different shape. It says who the seat is and proves nothing about what
+// their mailbox received, so admitting it here would let a message that merely
+// NAMES that address stand as proof of delivery — and a message's identity is a
+// Message-ID the sender types. A colleague's held mail would then be reachable
+// by anybody who could get their own capture to name the right address.
 func (s SelfSet) CoversAddressExactly(address string) bool {
 	folded := foldAddress(address)
 	if folded == "" {
@@ -316,12 +358,17 @@ func (s SelfSet) Covers(address string) bool {
 	if _, ok := s.addresses[folded]; ok {
 		return true
 	}
+	if _, ok := s.identityOnly[folded]; ok {
+		return true
+	}
 	return s.domains.Covers(folded)
 }
 
 // Empty reports whether the seat declared nothing, which lets a caller skip
 // work rather than test every address against an empty set.
-func (s SelfSet) Empty() bool { return len(s.addresses) == 0 && s.domains.empty() }
+func (s SelfSet) Empty() bool {
+	return len(s.addresses) == 0 && len(s.identityOnly) == 0 && s.domains.empty()
+}
 
 // WithoutSelf is the addresses that are NOT the seat's own, order preserved.
 // The gates need the remainder rather than a yes/no: what makes a message

@@ -16,9 +16,11 @@ import {
   formatDuration,
   formatMoneyOrAbsent,
   formatNumber,
+  formatTimeOfDay,
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { EmailEntry } from "./emailentry";
 
 type RowTag = components["schemas"]["RowTag"];
 
@@ -408,6 +410,8 @@ export type TimelineGroup = {
   partial: boolean;
 };
 
+type EmailSummary = components["schemas"]["EmailSummary"];
+
 export type TimelineEntry = {
   id: string;
   // The backend's activity kinds, not a reduced set: collapsing call, task
@@ -446,6 +450,21 @@ export type TimelineEntry = {
    * sent", and the row that does not say which one is a row they have to open.
    */
   counterparts?: string;
+  /**
+   * The server's own row model for an email, present exactly when `kind` is
+   * `email`. It is what EmailEntry draws, so the timeline hands the canonical
+   * row its data rather than re-deriving a reading of the message here — the
+   * four independent readings this component was one of are what the canonical
+   * row exists to replace.
+   */
+  emailSummary?: EmailSummary;
+  /**
+   * Opens the canonical detail for this message. The caller's, because the
+   * drawer is mounted by the screen rather than by the list — absent leaves
+   * the row readable and not openable, which is what a surface with nowhere to
+   * open it should draw.
+   */
+  onOpenEmail?: () => void;
   /**
    * What KIND of thing happened to the record, in the words a reader uses:
    * "field updated", "completed". It sits where an exchange's direction sits,
@@ -1305,6 +1324,39 @@ export function TimelineRow({
   const rowClass = [directionClass(entry.direction), noteClass(entry)]
     .filter(Boolean)
     .join(" ");
+  // An email draws the canonical row, which is the one reading of a message in
+  // the product. It keeps the date gutter and the rail — those place the row on
+  // the chronology and are the timeline's, not the message's — and hands
+  // everything the message itself says to EmailEntry.
+  //
+  // Every other kind keeps the row below. A note is the rep's own words, a
+  // change is a field edit, a meeting has a transcript: none of them has an
+  // email's shape, and giving them one would be the collapse this component
+  // already made once by rendering a call as a note.
+  if (entry.kind === "email" && entry.emailSummary) {
+    return (
+      <li className={rowClass}>
+        <span className="tl-when t-mono">
+          {formatDate(entry.atIso, locale, zone)}
+        </span>
+        <span className="tl-rail" aria-hidden="true">
+          <span className={dotClass(entry)} />
+        </span>
+        <div className="tl-body">
+          {/* The TIME, not the date: the gutter beside this already carries
+              the day, and printing it twice on one row spends the space that
+              tells two messages on one subject apart. */}
+          <EmailEntry
+            summary={entry.emailSummary}
+            timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
+            onOpen={entry.onOpenEmail}
+          />
+          {flag}
+        </div>
+        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
+      </li>
+    );
+  }
   return (
     <li className={rowClass}>
       {/* The date leads the row, in its own gutter. A chronology is read down
@@ -1340,9 +1392,18 @@ export function TimelineRow({
           )}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
-              fact about the relationship, which is what the row is for. */}
+              fact about the relationship, which is what the row is for.
+              A WITHHELD row keeps the direction and loses the name: "Received
+              from Ana" beside a message whose subject the row just refused
+              still says who this record is talking to, which is the thing the
+              audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span className="tl-direction">{directionPhrase(entry, t)}</span>
+            <span className="tl-direction">
+              {directionPhrase(
+                entry.withheld ? { ...entry, counterparts: undefined } : entry,
+                t,
+              )}
+            </span>
           )}
           {entry.via}
           {flag}
@@ -1358,7 +1419,10 @@ export function TimelineRow({
         {/* Never for a withheld entry: the title above already says the
             content is for participants only, and a row must not show the
             words it just refused. The server withholds bodies upstream; this
-            is the row keeping its own promise whatever it is handed. */}
+            is the row keeping its own promise whatever it is handed.
+            An email WITH its summary drew EmailEntry above and never reaches
+            here; one without still needs the splitter, because a reader whose
+            server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
           <TimelineText text={entry.body} email={entry.kind === "email"} />
         )}

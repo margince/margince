@@ -53,6 +53,17 @@ const extensionStreamEntity = "extension"
 // purge does not unlink is one that outlives a data reset.
 const aiTaskStreamEntity = "aitask"
 
+// briefStreamEntity is the stream every brief.* product-telemetry event rides.
+//
+// Out of streamEntities for the same three reasons aiTaskStreamEntity is, and
+// they hold one at a time: the automation engine has no trigger for "a rep
+// opened their Brief", the webhook deliverer has no public type to name it by,
+// and the audit stream already carries what the rep DID — brief_item marks
+// write audit rows — so an all-stream consumer would gain nothing but volume.
+// What this stream answers is the one thing those cannot: whether the page was
+// opened at all. Enumerated by Streams() all the same, so the purge unlinks it.
+const briefStreamEntity = "brief"
+
 // ExtensionEventVersion is the payload schema version every extension event
 // carries, and it is 1 forever.
 //
@@ -108,11 +119,12 @@ var streamEntities = []string{
 // left out here is one the data reset does not unlink and no operator can see,
 // which is a worse outcome than the entries it would leave behind.
 func Streams() []string {
-	out := make([]string, 0, len(streamEntities)+2)
+	out := make([]string, 0, len(streamEntities)+3)
 	for _, e := range streamEntities {
 		out = append(out, StreamPrefix+e)
 	}
-	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity)
+	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity,
+		StreamPrefix+briefStreamEntity)
 	sort.Strings(out)
 	return out
 }
@@ -315,6 +327,15 @@ var catalog = map[string]struct {
 	"weekly_plan.updated":        {identityStreamEntity, 1},
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
 
+	// A call rides the identity stream because its entity is the AUTHOR. A
+	// forecast is about a pipeline, but a CALL is an assertion by a person and
+	// is attributable to them — a consumer asking "who said this number" is
+	// asking about a user, not about a deal.
+	"forecast.created":            {identityStreamEntity, 1},
+	"forecast.exception_resolved": {identityStreamEntity, 1},
+	"forecast.assurance_created":  {identityStreamEntity, 1},
+	"forecast.snapshot_created":   {identityStreamEntity, 1},
+
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a
 	// consumer ranking that contact's open work already reads.
@@ -382,28 +403,10 @@ var catalog = map[string]struct {
 	// The AI-activity projection feed (ai_task_run). One type with the state
 	// inside, like voice.build_changed: a new state must never need a new type.
 	"ai_task.state_changed": {aiTaskStreamEntity, 1},
-}
 
-// pipelineEventTypes are the events that may ride the bus WITHOUT a subject
-// entity ref, because the thing they report names no record.
-//
-// Two families qualify, for the same reason. A capture pipeline step can be
-// subject-less by nature — capture.skipped names NOTHING (an excluded personal
-// message creates no row), yet the spec still requires it on the bus as the
-// machine-checkable "personal mail is never ingested" proof (capture.md AC1.3,
-// EVT-SEM-10). An AI task's state change names no record either: the occurrence
-// it reports is operational state, and the row that will hold it does not exist
-// until the projection this event feeds writes it — so there is nothing for a
-// consumer to read back under its own scope, which is what an entity ref is
-// for. These events carry no entity handle, but they DO keep the ledger trace
-// link (audit_log OR system_log) so the outcome stays attributable — Validate
-// enforces the trace, only the entity is relaxed.
-var pipelineEventTypes = map[string]struct{}{
-	"capture.received":      {},
-	"capture.normalized":    {},
-	"capture.failed":        {},
-	"capture.skipped":       {},
-	"ai_task.state_changed": {},
+	// Product telemetry: the morning Brief was read. Internal only — nothing
+	// subscribes to it, and api/internal-events.yaml says why that file exists.
+	"brief.opened": {briefStreamEntity, 1},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

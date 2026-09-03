@@ -55,11 +55,11 @@ func maskExclusionClauses(ctx context.Context, spec reportSpec, arg func(any) in
 // mask withheld: the same FROM and WHERE minus the mask clauses, counting the
 // rows that fail them. Every bind of the main statement is referenced here
 // too, so one args slice serves both.
-func countMaskExcluded(ctx context.Context, tx pgx.Tx, spec reportSpec, baseWhere []string, maskClauses []string, args []any) (int, error) {
+func countMaskExcluded(ctx context.Context, tx pgx.Tx, frame reportFrame, spec reportSpec, baseWhere []string, maskClauses []string, args []any) (int, error) {
 	where := strings.Join(baseWhere, " AND ")
 	sql := fmt.Sprintf("SELECT count(*) FILTER (WHERE NOT (%s)) FROM %s WHERE %s",
 		strings.Join(maskClauses, " AND "), spec.fromClause(), where)
-	sql, args, err := bindReportTokens(ctx, tx, sql, args)
+	sql, args, err := bindReportTokens(ctx, frame, sql, args)
 	if err != nil {
 		return 0, err
 	}

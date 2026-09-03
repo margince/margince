@@ -91,6 +91,12 @@
         "read": true,
         "update": true
       },
+      "forecast": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "fx_rate": {
         "create": true,
         "delete": false,
@@ -344,6 +350,12 @@
       },
       "finance": {
         "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "forecast": {
+        "create": true,
         "delete": false,
         "read": true,
         "update": false
@@ -605,6 +617,12 @@
         "read": true,
         "update": false
       },
+      "forecast": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "fx_rate": {
         "create": false,
         "delete": false,
@@ -861,6 +879,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "forecast": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "fx_rate": {
         "create": true,
@@ -1119,6 +1143,12 @@
         "read": true,
         "update": false
       },
+      "forecast": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "fx_rate": {
         "create": false,
         "delete": false,
@@ -1371,6 +1401,12 @@
         "update": false
       },
       "finance": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "forecast": {
         "create": false,
         "delete": false,
         "read": true,

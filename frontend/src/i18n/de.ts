@@ -162,7 +162,7 @@ export const de = {
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
   "nav.today": "Arbeitsliste",
-  "nav.reports": "Berichte",
+  "nav.analytics": "Analytics",
   "nav.ai": "Margince fragen",
   "nav.settings": "Einstellungen",
   "nav.automations": "Automatisierungen",
@@ -172,6 +172,7 @@ export const de = {
   "nav.offers": "Angebot",
   "nav.share": "Freigabe",
   "nav.search": "Suchergebnisse",
+  "nav.tags": "Tag",
 
   "shell.railAria": "Hauptnavigation",
   "shell.aside.hide": "Ausblenden",
@@ -220,6 +221,7 @@ export const de = {
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.tag.carriedBy": "Auf {count} Datensätzen",
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 
@@ -738,9 +740,8 @@ export const de = {
   "person.consent": "Einwilligung",
   "consent.grant": "Erteilen",
   "consent.withdraw": "Widerrufen",
-  "consent.doubleOptIn": "Double-Opt-in anfordern",
-  "consent.doiIssued": "Einmal-Token (nur einmal sichtbar):",
-  "consent.doiExpires": "Läuft ab",
+  "consent.doiBySubject":
+    "Diesen Zweck best\u00e4tigt der Kontakt selbst \u2013 \u00fcber einen Link an seine eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
@@ -759,9 +760,6 @@ export const de = {
   "consent.proofEmpty":
     "Für diesen Zweck ist keine Einwilligungsentscheidung erfasst. Ein leeres Protokoll ist ehrlich, keine Lücke.",
   "consent.sourceUnknown": "Quelle nicht erfasst",
-  "consent.tokenLabel": "Bestätigungs-Token",
-  "consent.tokenHint":
-    "Dieser Zweck benötigt ein Double-Opt-in: Einmal-Token hier einfügen, damit die Einwilligung wirksam wird.",
   "consent.actorHuman": "Mensch",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "System",
@@ -1237,7 +1235,6 @@ export const de = {
   "co.growthFit.whitespace": "Noch zu verkaufen",
   "co.growthFit.objections": "Voraussichtliche Einwände",
   "co.growthFit.angle": "Vorgeschlagener Ansatz",
-  "co.writeEmail": "E-Mail schreiben",
   "co.dossier.title": "Was diese Firma ist",
   "co.dossier.unavailable":
     "Diese Beschreibung ließ sich nicht lesen. An der Firma hat sich nichts geändert.",
@@ -1498,6 +1495,28 @@ export const de = {
   "compose.audience": "Sichtbarkeit",
   "compose.audienceTitle": "Wer darf diese Nachricht lesen?",
   "compose.audienceLegend": "Sichtbarkeit dieser einen Nachricht",
+  "email.aMessage": "Eine Nachricht",
+  "email.noSubject": "Kein Betreff",
+  "email.withheldSubject": "Nicht für Sie freigegeben",
+  "email.receivedFrom": "Erhalten von",
+  "email.sentTo": "Gesendet an",
+  "email.access.team": "Team",
+  "email.access.participants": "Beteiligte",
+  "email.access.selected": "Ausgewählte",
+  "email.access.withheld": "Zurückgehalten",
+  "email.move.needsReply": "Antwort offen",
+  "email.move.waitingForThem": "Warten auf Antwort",
+  "email.detail.loading": "Nachricht wird geöffnet",
+  "email.detail.none": "Diese Nachricht",
+  "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
+  "email.detail.close": "Schließen",
+  "email.detail.withheldReason":
+    "Diese Nachricht ist nicht für Sie freigegeben",
+  "email.detail.from": "Von",
+  "email.detail.to": "An",
+  "email.detail.cc": "Cc",
+  "email.detail.bccWithheld":
+    "Einige Empfänger stehen im Blindkopie-Feld und werden Ihnen nicht angezeigt",
   "compose.audienceWorkspace": "Alle in der Organisation",
   "compose.audienceWorkspaceHint":
     "Jeder, der den Kontakt sehen darf, liest auch diese Nachricht.",
@@ -1743,6 +1762,53 @@ export const de = {
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
   "co.recent.reNamed": "zu {name}",
+  "tagAdmin.title": "Tags",
+  "tagAdmin.sub":
+    "Die Wörter, unter denen diese Organisation Datensätze ablegt. Anwenden darf jeder; anlegen, umbenennen und stilllegen nur Admin- und Ops-Plätze.",
+  "tagAdmin.listLabel": "Vokabular",
+  "tagAdmin.empty": "Noch keine Tags. Legen Sie das erste Wort an.",
+  "import.contextTag": "Diesen Stapel unter einem Tag ablegen",
+  "import.contextTagChosen":
+    "Neu angelegte Datensätze werden unter {name} abgelegt.",
+  "import.contextTagChosenUnnamed":
+    "Neu angelegte Datensätze werden unter dem für diesen Lauf gewählten Tag abgelegt.",
+  "import.contextTagHint":
+    "Wird auf neu angelegte Datensätze angewendet, damit der Stapel auffindbar bleibt. Aktualisierte Datensätze behalten ihre Tags.",
+  "import.contextTagNone": "Kein Tag",
+  "tagAdmin.add": "Tag anlegen",
+  "tagAdmin.addTitle": "Tag anlegen",
+  "tagAdmin.editTitle": "Tag bearbeiten",
+  "tagAdmin.nameLabel": "Name",
+  "tagAdmin.colorLabel": "Farbe",
+  "tagAdmin.colorNone": "Keine Farbe",
+  "tagAdmin.create": "Anlegen",
+  "tagAdmin.save": "Speichern",
+  "tagAdmin.edit": "Bearbeiten",
+  "tagAdmin.merge": "Zusammenführen",
+  "tagAdmin.archive": "Stilllegen",
+  "tagAdmin.restore": "Wiederherstellen",
+  "tagAdmin.usage": "{count} Datensätze",
+  "tagAdmin.usagePending": "Wird gezählt…",
+  "tagAdmin.nearMatch":
+    "Ähnlich einem vorhandenen Wort: {names}. Verwenden Sie dieses, sofern nicht wirklich etwas anderes gemeint ist.",
+  "tagAdmin.mergeTitle": "{name} in ein anderes Tag zusammenführen",
+  "tagAdmin.mergeIntoLabel": "Dieses Tag behalten",
+  "tagAdmin.mergeIntoNone": "Tag wählen",
+  "tagAdmin.mergeConfirm": "Zusammenführen",
+  "tagAdmin.mergeWarning":
+    "Nicht widerrufbar. Datensätze mit {name} tragen danach das andere Tag, und der Name wird wieder freigegeben.",
+  "tagAdmin.mergedTitle": "Zusammengeführt",
+  "tagAdmin.mergedBody":
+    "{moved} Datensätze übernommen. {collapsed} trugen bereits beide; das doppelte Tag wurde entfernt.",
+  "tagAdmin.countUsage": "Datensätze zählen",
+  "tagAdmin.noVersion":
+    "Dieses Tag wurde ohne Version gelesen und kann nicht gespeichert werden. Seite neu laden und erneut versuchen.",
+  "tagAdmin.withheld":
+    "Sie haben keinen Zugriff auf das Tag-Vokabular dieser Organisation.",
+  "tagAdmin.truncated":
+    "Diese Liste ist gekürzt. Wörter jenseits der Grenze erscheinen hier nicht und lassen sich nicht bearbeiten.",
+  "tagAdmin.usageFailed": "Zählung nicht verfügbar",
+  "tagAdmin.done": "Fertig",
   "tags.archived": "archiviert",
   "tags.columnHeader": "Tags",
   "tags.filterAll": "Beliebiger Tag",
@@ -1778,8 +1844,12 @@ export const de = {
   "tagResult.companies": "Unternehmen",
   "tagResult.deals": "Deals",
   "tagResult.viewAll": "Alle {count} {kind} anzeigen",
-  "tagResult.carry": "{count} tragen dieses Tag",
-  "tagResult.none": "Niemand trägt dieses Tag",
+  "tagResult.resultsTitle": "Datensätze mit diesem Tag",
+  "tagResult.nothingCarries":
+    "Noch kein Datensatz trägt dieses Tag. Vergeben Sie es auf einem Kontakt, einem Unternehmen oder einem Deal.",
+  "tagResult.loadingRows": "{kind} werden geladen…",
+  "tagResult.noneLeft": "Trägt niemand mehr",
+  "tagResult.unnamed": "Ohne Namen",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
@@ -1903,7 +1973,7 @@ export const de = {
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
   "lead.ladder.title": "Wo dieser Lead steht",
-  "lead.railTitle": "Zust\u00e4ndigkeit und Score",
+  "lead.railTitle": "Verantwortlich",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -1967,6 +2037,8 @@ export const de = {
     "Die Aufschlüsselung zu diesem Score ist noch nicht gespeichert — die nächste Aktualisierung zeigt sie.",
   "lead.scoreLoading": "Begründung wird geladen…",
   "lead.scoreNoFactors": "Bisher zahlt nichts auf diesen Score ein.",
+  "lead.scoreFactorsFailed":
+    "Was auf diesen Score einzahlt, konnte nicht gelesen werden.",
   "lead.scoreFactorsExplainMachine":
     "Sie haben diesen Score selbst gesetzt. Die Faktoren unten erklären den Wert des Modells: {score}.",
   "lead.scoreDecayed": "{base}, halbiert sich alle 14 Tage",
@@ -2446,6 +2518,8 @@ export const de = {
   "home.weekly.outcome.moved": "bewegt",
   "home.weekly.outcome.won": "gewonnen",
   "home.weekly.outcome.lost": "verloren",
+  "home.focus.allAbove":
+    "Alles aus der Nacht steht schon oben, bei dem, was auf dich wartet.",
   "home.quietRun":
     "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",
@@ -2483,29 +2557,18 @@ export const de = {
   "home.glance.eveningAnon": "Guten Abend.",
   "home.glance.night": "Noch im Einsatz, {name}.",
   "home.glance.nightAnon": "Noch im Einsatz.",
+  "home.glance.introWeekly": "Das ist deine abgeschlossene Woche.",
   "home.glance.intro": "Das ist dein Tag.",
-  "home.glance.decisionsClear": "Es wartet nichts auf dich.",
-  "home.glance.decisions_one": "Entscheidung wartet auf dich.",
-  "home.glance.decisions_other": "Entscheidungen warten auf dich.",
-  "home.glance.expiring_one": "davon läuft heute ab.",
-  "home.glance.expiring_other": "davon laufen heute ab.",
-  "home.glance.ranked_one": "Deal ist für heute priorisiert.",
-  "home.glance.ranked_other": "Deals sind für heute priorisiert.",
-  "home.glance.leader": "{deal} führt mit {amount}.",
-  "home.glance.captured_one": "Nachricht wurde über Nacht erfasst.",
-  "home.glance.captured_other": "Nachrichten wurden über Nacht erfasst.",
-  "home.glance.duplicates_one": "Duplikat braucht einen Blick.",
-  "home.glance.duplicates_other": "Duplikate brauchen einen Blick.",
-  "home.glance.quiet_one": "offener Deal ist still geworden.",
-  "home.glance.quiet_other": "offene Deals sind still geworden.",
-  "home.glance.goDecisions": "Zu den Entscheidungen, die auf dich warten",
-  "home.glance.goToday": "Zu den heute priorisierten Deals",
-  "home.glance.goDuplicates": "Zur Duplikate-Warteschlange",
-  "home.glance.goWatch": "Zu den Deals, die still geworden sind",
   "home.panel.decisions": "Wartet auf dich",
-  "home.panel.today": "Heute",
+  "home.panel.focus": "Wenn Zeit bleibt",
   "home.panel.overnight": "Über Nacht",
   "home.panel.position": "Bestand",
+  "home.panel.schedule": "Heutiger Kalender",
+  "home.schedule.clear": "Heute steht nichts an.",
+  "home.panel.promises": "Zusagen & Aufgaben",
+  "home.promises.clear": "Nichts ist offen.",
+  "home.promises.untracked":
+    "Zusagen aus Gesprächen werden noch nicht erfasst — hier stehen nur Aufgaben.",
   "home.panel.watch": "Still geworden",
   "home.overnight.fixConnector": "Verbindung prüfen",
   "home.watch.clear": "Nichts ist still geworden.",
@@ -2524,6 +2587,7 @@ export const de = {
   "home.readings.promisesBasis": "Zusagen werden noch nicht erfasst",
   "home.readings.leads": "Erstkontakt",
   "home.readings.leadsBasis": "warten auf die erste Antwort",
+  "home.readings.leadsDue": "nächste fällig {value}",
   "home.readings.quota": "Ziel-Tempo",
   "home.readings.quotaBasis": "kein Ziel hinterlegt",
   "home.rail": "Kontext",
@@ -2714,6 +2778,7 @@ export const de = {
   "dedupe.viewExisting": "Vorhandenen Eintrag anzeigen",
 
   "co.spine.earlierMore": "Weitere Gespräche davor",
+  "co.spine.failed": "Der Verlauf konnte nicht gelesen werden.",
   "co.spine.exchangeCount": "{count} Nachrichten",
   "co.spine.kind.email": "E-Mail",
   "co.spine.kind.call": "Anruf",
@@ -2728,7 +2793,8 @@ export const de = {
   "co.spine.said.met": "{host} traf {who}",
   "co.spine.said.held": "Termin von {host}",
   "co.spine.lastSpoke": "Zuletzt gesprochen",
-  "co.spine.days": "{count} Tage",
+  "co.spine.days_one": "{count} Tag",
+  "co.spine.days_other": "{count} Tage",
   "co.spine.quietSince": "Seitdem Funkstille",
   "co.spine.neverReplied": "Sie haben nie geantwortet",
   "co.spine.singleThreaded": "Ein Kontakt, und keine Antwort von ihm",
@@ -2743,8 +2809,10 @@ export const de = {
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
   "today.quiet": "Hier braucht Sie heute nichts.",
+  "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
     "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",
+  "today.source.moments": "was Margince gefunden hat",
   "today.source.nextSteps": "offene Aufgaben",
   "today.source.nextMeeting": "der Kalender",
   "today.source.deals": "Deals",
@@ -3062,20 +3130,47 @@ export const de = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
-  "reports.sub": "Deals je Phase — ungewichtet neben gewichtet",
-  "reports.currency": "Währung",
-  "reports.count": "Deals",
-  "reports.unweighted": "Ungewichtet",
-  "reports.weighted": "Gewichtet",
-  "reports.planNote":
+  "analytics.sub": "Deals je Phase — ungewichtet neben gewichtet",
+  "analytics.currency": "Währung",
+  "analytics.count": "Deals",
+  "analytics.unweighted": "Ungewichtet",
+  "analytics.weighted": "Gewichtet",
+  "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
-  "reports.reportDeals": "Deals nach Phase",
-  "reports.reportForecast": "Forecast",
-  "reports.reportOpenByCompany": "Offene Deals pro Firma",
-  "reports.forecastBanner":
+  "analytics.reportDeals": "Deals nach Phase",
+  "analytics.sections": "Analytics-Bereiche",
+  "analytics.sectionForecast": "Forecast",
+  "analytics.sectionPipeline": "Pipeline",
+  "analytics.frame": "Stand {asOf} · {zone} · {currency}",
+  "forecast.question": "Wo landen wir dieses Quartal?",
+  "forecast.answerWithCall":
+    "Der aktuelle Call liegt bei {call}. Durch Belege gestützt sind {evidence}.",
+  "forecast.answerNoCall":
+    "Für diesen Zeitraum gibt es noch keinen Call. Durch Belege gestützt sind {evidence}.",
+  "forecast.partialTitle": "Nicht jeder Deal hat einen Betrag",
+  "forecast.partial":
+    "{priced} von {eligible} Deals führen einen Betrag. Die übrigen sind echte Pipeline und tragen nichts zu den Summen oben bei.",
+  "forecast.currentCall": "Aktueller Call",
+  "forecast.evidence": "Durch Belege gestützt",
+  "forecast.alreadyWon": "Bereits gewonnen",
+  "forecast.updateCall": "Aktuellen Call aktualisieren",
+  "forecast.callExplains":
+    "Ein Call ist das, was Sie erwarten. Er hält Ihre Zahl fest und ändert keinen Deal.",
+  "forecast.expectedTotal": "Erwartete Summe für diesen Zeitraum",
+  "forecast.supportingNote": "Begründung",
+  "forecast.cancel": "Abbrechen",
+  "forecast.saveCall": "Call speichern",
+  "forecast.receipt": "Daten und Belege geprüft",
+  "forecast.eligible": "Berücksichtigte Deals",
+  "forecast.priced": "Mit Betrag",
+  "forecast.confirmed": "Abschlussdatum bestätigt",
+  "forecast.fxMissing": "Wechselkurs fehlt",
+  "analytics.reportForecast": "Forecast-Kategorien",
+  "analytics.reportOpenByCompany": "Offene Deals pro Firma",
+  "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die gewichtete Summe — pro Deal gerundet, sodass sie immer mit „Diese Zahl erklären“ übereinstimmt.",
-  "reports.company": "Firma",
-  "reports.openDeals": "Offene Deals",
+  "analytics.company": "Firma",
+  "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
@@ -5232,7 +5327,6 @@ export const de = {
   "deal360.verdict.drifting": "Schläft ein",
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
-  "deal360.next": "Was als Nächstes zu tun ist",
   "dealmail.title": "E-Mail",
   "dealmail.sub.reply":
     "Sie haben geschrieben, und noch hat niemand geantwortet.",
@@ -5241,7 +5335,7 @@ export const de = {
   "dealmail.send": "E-Mail senden",
   "recordmail.title": "E-Mail",
   "recordmail.sub.reply": "Eine Antwort steht noch aus.",
-  "recordmail.sub.fresh": "Schreiben Sie den Kontakten dieses Datensatzes.",
+  "recordmail.sub.fresh": "Schreiben Sie ihnen.",
   "recordmail.reply": "Antwort entwerfen",
   "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
@@ -5604,6 +5698,8 @@ export const de = {
     "kein Absender, den dieses CRM erfassen konnte",
   "captureActivity.reason.role_mailbox":
     "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
+  "captureActivity.reason.private_thread":
+    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.transactional_infra":
     "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem Sie arbeiten",
   "captureActivity.reason.transactional_prefix":
@@ -5667,6 +5763,8 @@ export const de = {
     "kein Absender, den dieses CRM erfassen konnte",
   "pipeline.reason.role_mailbox":
     "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
+  "pipeline.reason.private_thread":
+    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
   "pipeline.reason.no_granting_human":
     "die Verbindung nennt kein Mitglied, in dessen Namen gehandelt wird",
   "pipeline.reason.derivation_failed":
@@ -6727,9 +6825,9 @@ export const de = {
   "person.graph.withContact": "mit diesem Kontakt",
   "person.graph.counts":
     "{total} Interaktionen in 90 Tagen \u00b7 {inbound} eingehend, {outbound} ausgehend",
+  "person.graph.untitledMessage": "Ohne Titel",
   "person.graph.countsOnly":
     "Nur Z\u00e4hlwerte \u2014 die Nachrichten selbst bleiben in der Chronik.",
-  "person.graph.untitledMessage": "Nachricht ohne Betreff",
   "person.intro.routesTitle": "Wege hinein",
   "person.graph.droppedNote": "{count} weitere werden nicht angezeigt.",
   "person.graph.withheldDirect":
@@ -6916,16 +7014,12 @@ export const de = {
 
   "person.page.loading": "Wird geladen…",
   "person.page.notOpened": "Dieser Kontakt konnte nicht geöffnet werden.",
-  "person.page.asideLabel": "Beziehungskontext",
   "person.page.buyingRole": "Rolle im Kauf",
   "person.page.owner": "Zuständig",
-  "person.page.ownerAssigned": "Zugewiesen",
   "person.page.ownerUnassigned": "Nicht zugewiesen",
   "person.page.linkedin": "LinkedIn",
   "person.page.openProfile": "Profil öffnen",
   "person.rail.detailsTitle": "Details",
-  "person.rail.contactMethodImmutable":
-    "Beim Anlegen dieses Kontakts festgelegt. E-Mail und Telefon können hier nicht geändert werden.",
   "person.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert. Stelle ihn wieder her, um hier etwas zu ändern.",
   "person.rail.employmentVersionUnresolved":
@@ -6973,14 +7067,12 @@ export const de = {
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
   "person.strip.reciprocity": "Gegenseitigkeit",
-  "person.strip.openDeal": "Offener Deal",
+  "person.strip.inOut": "{inbound} ein · {outbound} aus",
   "person.strip.nextMeeting": "Nächster Termin",
-  "person.strip.consent": "Einwilligung",
   "person.strip.never": "Nie",
   "person.strip.today": "Heute",
   "person.strip.yesterday": "Gestern",
   "person.strip.days": "vor {count} Tagen",
-  "person.strip.inOut": "{inbound} ein · {outbound} aus",
   "person.strip.noOpenDeal": "Kein offener Deal",
   "person.strip.noMeeting": "Keiner",
   "person.consent.allowedWord": "Erlaubt",
@@ -7620,7 +7712,12 @@ export const de = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Dein Tag wird gelesen…",
   "worklist.queue": "Was als Nächstes zu tun ist",
-  "worklist.summary": "{urgent} dringend · {due} fällig · {lower} nachrangig",
+  "worklist.more": "Mehr anzeigen",
+  "worklist.more.failed": "Konnte nicht mehr laden. Bitte erneut versuchen.",
+  "worklist.summary":
+    "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} nachrangig — {total} insgesamt",
+  "worklist.summary.noMiddle":
+    "{urgent} dringend · {due} fällig · {lower} nachrangig — {total} insgesamt",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.completeness.bounded":
     "{shown} angezeigt · {sources} Quellen haben mehr",
@@ -7629,6 +7726,13 @@ export const de = {
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
+  "worklist.pair.ask": "Welcher Datensatz soll bleiben?",
+  "worklist.pair.keep": "{name} behalten",
+  "worklist.pair.notDuplicate": "Nicht dieselben",
+  "worklist.pair.related": "{count} verknüpft",
+  "worklist.pair.failed":
+    "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
+  "worklist.needsPrep": "Unvorbereitet",
   "worklist.pane.title": "Zu diesem Datensatz",
   "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",
   "worklist.pane.loading": "Datensatz wird gelesen…",
@@ -7749,7 +7853,8 @@ export const de = {
   "worklist.because.pinned": "Von dir angeheftet",
   "worklist.because.buyer_wrote_last": "Sie haben zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
-  "worklist.because.waiting_days.value": "wartet seit {value} Tagen",
+  "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
+  "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
   "worklist.because.overdue": "überfällig",
   "worklist.because.due_today": "heute fällig",
   "worklist.because.closing_soon": "hat ein Abschlussdatum",
@@ -7762,7 +7867,8 @@ export const de = {
   "worklist.because.below_material.value":
     "Wert {value}, unter dem üblichen offenen Deal",
   "worklist.because.quiet_days": "still geworden",
-  "worklist.because.quiet_days.value": "seit {value} Tagen still",
+  "worklist.because.quiet_days.value_one": "seit {value} Tag still",
+  "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
   "worklist.because.no_champion": "kein Fürsprecher",
   "worklist.because.promised": "du hast es zugesagt",
   "worklist.because.approved_and_failed":
@@ -7775,6 +7881,7 @@ export const de = {
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
+  "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
@@ -7790,6 +7897,8 @@ export const de = {
     "Über dem Nächsten: {mine} gegen {theirs}.",
   "worklist.above.relationship":
     "Über dem Nächsten wegen der engeren Beziehung.",
+  "worklist.above.crowded":
+    "Über dem Nächsten, weil davon viele gleichzeitig anstehen.",
   "worklist.consequence.buyer_waits": "Wenn du nichts tust, warten sie weiter.",
   "worklist.consequence.promise_breaks":
     "Wenn du nichts tust, brichst du eine Zusage.",
@@ -7855,6 +7964,9 @@ export const de = {
   "worklist.verb.draft_reply": "Zum Antworten öffnen",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
   "worklist.verb.draft_reply_now": "Antwort entwerfen",
+  // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.
+  "worklist.verb.draft_email": "Zum Schreiben öffnen",
+  "worklist.verb.draft_email_now": "E-Mail entwerfen",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",
@@ -7957,4 +8069,57 @@ export const de = {
   "aiRates.proposedDetail":
     "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
   "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
+  "person.readings.title": "Wo dieser Kontakt steht",
+  "person.readings.move": "Wer ist am Zug",
+  "person.readings.yourMove": "Du",
+  "person.readings.theirMove": "Der Kontakt",
+  "person.readings.quiet": "Verstummt",
+  "person.readings.neverSpoke": "Noch nie gesprochen",
+  "person.readings.lastFromThem": "zuletzt von ihnen: {when}",
+  "person.readings.neverReplied": "bisher nichts von ihnen",
+  "person.readings.promises": "Offene Zusagen",
+  "person.readings.nothingOwed": "nichts offen",
+  "person.readings.onTime": "noch nichts überfällig",
+  "person.readings.deal": "Deals, die sie entscheiden",
+  "person.readings.openDeals": "Deals öffnen",
+  "person.readings.openMeetings": "Termine öffnen",
+  "deal360.brief": "Was dieser Deal ist",
+  "deal.strip.openHistory": "Zum Verlauf",
+  "deal.strip.lastTouch": "Letzter Kontakt",
+  "lead.standing.qualified": "Qualifiziert",
+  "lead.standing.qualifiedOn":
+    "Qualifiziert am {at}. Dieser Lead ist jetzt ein Kontakt.",
+  "lead.standing.qualifiedUndated": "Dieser Lead ist jetzt ein Kontakt.",
+  "lead.standing.closed": "Geschlossen",
+  "lead.standing.closedFor":
+    "Geschlossen: {reason}. Der Datensatz bleibt als Spur.",
+  "lead.standing.closedUnreasoned":
+    "Geschlossen. Der Datensatz bleibt als Spur.",
+  "lead.standing.yourMove": "Du bist am Zug",
+  "lead.standing.noResponse": "Niemand hat diesen Lead bisher beantwortet.",
+  "lead.standing.theirMove": "Der Lead ist am Zug",
+  "lead.standing.answeredOn":
+    "Wir haben am {at} geantwortet. Bisher kam nichts zurück.",
+  "lead.standing.inMotion": "In Bewegung",
+  "lead.standing.engagedBecause":
+    "Der Lead hat geantwortet, oder ein Termin steht im Kalender.",
+  "lead.standing.rests.promoted": "Zu einem Kontakt befördert.",
+  "lead.standing.rests.closed": "Disqualifiziert, kein Grund erfasst.",
+  "lead.standing.rests.ladder": "Lead-Leiter",
+  "lead.standing.rests.record": "Lead-Datensatz",
+  "lead.standing.rests.captured": "Erfasst am {at}.",
+  "lead.standing.rests.noResponse": "Keine erste Antwort erfasst.",
+  "lead.standing.rests.engaged": "Engagement erfasst am {at}.",
+  "lead.readings.title": "Wo dieser Lead steht",
+  "lead.readings.firstResponse": "Erste Antwort",
+  "lead.readings.noClock": "kein Antwortziel gesetzt",
+  "lead.readings.owed": "Steht aus",
+  "lead.today.answer": "{name} antworten",
+  "lead.today.answerMeta": "Erste Antwort steht aus",
+  "lead.today.nextTask": "Nächste Aufgabe",
+  "lead.readings.answered": "Beantwortet",
+  "lead.standing.dueBy":
+    "Noch hat niemand geantwortet. Die erste Antwort ist bis {at} fällig.",
+  "lead.standing.overdueSince":
+    "Noch hat niemand geantwortet. Die erste Antwort war am {at} fällig.",
 } as const satisfies Record<MessageKey, string>;

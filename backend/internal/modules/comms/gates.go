@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -233,15 +234,42 @@ func (d *Dispatcher) gateSeat(ctx context.Context, del Delivery) (Outcome, time.
 	return outcomeUndecided, 0, nil
 }
 
-// gateConsent asks the authoritative suppression question and returns
-// outcomeUndecided when every addressee may still be mailed.
-func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (Outcome, time.Duration, error) {
+// gateConsent is suppression and consent, and now also the point at which the
+// engine records why this attempt was permitted.
+//
+// Two authorities run here, deliberately, while the rollout is in observe
+// mode: the engine writes its own per-recipient decision and applies only the
+// refusals no mode may soften, and the legacy purpose gate still rules
+// everything else. The engine's ticket is what transmit demands, so a provider
+// call without one cannot happen.
+func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {
+	var none commsauthz.TransmitTicket
 	if d.consent == nil {
 		// A send path with no consent authority wired is a deployment defect.
 		// Retrying would hide the misconfiguration behind a delivery that
 		// quietly never goes out.
-		return d.park(ctx, del.ID, "no consent authority is configured on this send path")
+		o, w, err := d.park(ctx, del.ID, "no consent authority is configured on this send path")
+		return none, o, w, err
 	}
+	ticket, terr := d.consent.AuthorizeTransmit(ctx, commsauthz.TransmitRequest{
+		DeliveryID: del.ID,
+		Attempt:    del.Attempts,
+		Recipients: consentRecipients(del),
+		PurposeKey: del.ConsentPurpose,
+		Subject:    del.Subject,
+		Body:       del.Body,
+	})
+	if terr != nil {
+		// The question could not be asked. A consent service that is merely
+		// down must not permanently destroy a legitimate send.
+		o, w, err := d.retry(ctx, del.ID, terr)
+		return none, o, w, err
+	}
+	if !ticket.Allowed {
+		o, w, err := d.park(ctx, del.ID, ticket.Reason)
+		return ticket, o, w, err
+	}
+
 	// EVERY subject this delivery reaches is asked about, not just the To line:
 	// a Cc'd person is owed the same suppression, and this call is the only one
 	// that runs after they could have withdrawn. consentRecipients is what makes
@@ -249,16 +277,17 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (Outcome, ti
 	// recipient arrive here as the same list.
 	switch err := d.consent.RequireGrantedForRecipients(ctx, consentRecipients(del), del.ConsentPurpose); {
 	case errors.Is(err, apperrors.ErrConsentNotGranted):
-		// An answer: consent is absent, and no amount of waiting brings it
-		// back.
-		return d.park(ctx, del.ID, fmt.Sprintf(
+		// An answer: consent is absent, and no amount of waiting brings it back.
+		o, w, perr := d.park(ctx, del.ID, fmt.Sprintf(
 			"consent for purpose %q is not granted for these recipients", del.ConsentPurpose,
 		))
+		return ticket, o, w, perr
 	case err != nil:
 		// NOT an answer. A consent service that is merely down must not
 		// permanently destroy a consented send — getting this branch backwards
 		// silently kills legitimate mail.
-		return d.retry(ctx, del.ID, err)
+		o, w, rerr := d.retry(ctx, del.ID, err)
+		return ticket, o, w, rerr
 	}
-	return outcomeUndecided, 0, nil
+	return ticket, outcomeUndecided, 0, nil
 }

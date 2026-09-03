@@ -8,7 +8,8 @@ import type { components } from "../api/schema";
 import { ENTITY, ENTITY_KINDS, type EntityKind } from "../app/entity";
 import { navigate } from "../app/router";
 import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
 import "./search.css";
@@ -125,11 +126,25 @@ function SearchGroups({ results }: Readonly<{ results: SearchResult[] }>) {
 
 function SearchHit({ hit }: Readonly<{ hit: SearchResult }>) {
   const t = useT();
+  const { locale } = useLocale();
+  // A tag is not an ENTITY kind — it has no 360 — but it does have a page, and
+  // it is the whole point of finding one: the word is the way to the records
+  // carrying it. Routed on its own rather than by widening ENTITY_KINDS, which
+  // drives record routing everywhere else and would claim a tag is a record.
+  const isTag = hit.type === "tag";
   const isLinkable = LINKABLE_KINDS.has(hit.type as EntityKind);
   return (
     <li className="search-hit">
       <div className="search-hit-title">
-        {isLinkable ? (
+        {isTag ? (
+          <button
+            type="button"
+            className="entity-link"
+            onClick={() => navigate({ screen: "tags", id: hit.id })}
+          >
+            {hit.title ?? hit.id}
+          </button>
+        ) : isLinkable ? (
           // The search API already returns the hit's display name as
           // `title` — routing through EntityRef here would re-fetch the
           // same record per hit (an N+1 GET per result) just to re-derive
@@ -171,6 +186,16 @@ function SearchHit({ hit }: Readonly<{ hit: SearchResult }>) {
           reached the page as "relevance 280%" — a percentage of nothing, which
           a reader can neither act on nor disbelieve. It still does its job in
           the ordering the results arrive in. */}
+      {/* What the word is on, so a reader can tell a live tag from one nobody
+          used without opening it. Absent rather than zero when the server sent
+          no number: a count it could not take is not a count of none. */}
+      {isTag && hit.carried_by != null && (
+        <p className="search-hit-snippet">
+          {t("search.tag.carriedBy", {
+            count: formatNumber(hit.carried_by, locale),
+          })}
+        </p>
+      )}
       {hit.snippet && <p className="search-hit-snippet">“{hit.snippet}”</p>}
     </li>
   );

@@ -191,3 +191,84 @@ export function Chip({
   // link, not the value.
   return <span className="chip">{body}</span>;
 }
+
+// A ranked set of one-dimensional readings: label, bar, formatted amount, one
+// row each. `Meter` draws one such bar; this is what a caller reaches for when
+// there are several and the point is COMPARING them, which is why the rows
+// share one denominator rather than each scaling to itself. Rows that each fill
+// their own track are N readings; rows on one scale are a ranking.
+//
+// The amount arrives already formatted, because money and counts are the two
+// things this list holds and both are the caller's locale to spell. Handing the
+// component a number and a currency would make it the second author of a format
+// the `format/` module owns.
+export function BarList({
+  rows,
+  label,
+  max,
+}: Readonly<{
+  rows: readonly BarListRow[];
+  // What the whole list is a reading OF, for a reader who meets it without the
+  // surrounding card — and the caption of the table equivalent below.
+  label: string;
+  // The denominator every bar is drawn against. Optional: the default is the
+  // largest row, which makes the list a ranking. Pass it where the whole is a
+  // known figure the rows do not reach — a stage's share of a pipeline total —
+  // or the longest bar claims to be everything.
+  max?: number;
+}>) {
+  // The bars would otherwise each scale to themselves, and `Meter` clamps at
+  // its max, so an explicit max BELOW the largest row is a caller error that
+  // silently pins several rows at full. Taking the larger of the two keeps
+  // every row's share honest and leaves the caller's whole visible where it
+  // is the bigger number.
+  const largestRow = rows.reduce((high, row) => Math.max(high, row.value), 0);
+  const denominator = Math.max(max ?? 0, largestRow);
+  return (
+    <div className="barlist">
+      {/* The bars carry the shape and the table carries the figures. A reader
+          on a screen reader gets the second, which is the one with the values
+          in it — so the bars are hidden rather than announced twice. */}
+      <ul className="barlist-rows" aria-hidden="true">
+        {rows.map((row) => (
+          <li key={row.key} className="barlist-row">
+            <span className="barlist-label">{row.label}</span>
+            <Meter
+              value={row.value}
+              max={denominator}
+              label={row.label}
+              tone={row.tone}
+              dense
+              flat
+            />
+            <span className="barlist-amount num">{row.amount}</span>
+          </li>
+        ))}
+      </ul>
+      <table className="sr-only">
+        <caption>{label}</caption>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <th scope="row">{row.label}</th>
+              <td>{row.amount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export type BarListRow = Readonly<{
+  // Identity, separate from the label: two rows may legitimately read the same
+  // (two stages named "Qualified" in different pipelines) and a list keyed by
+  // its own display text loses one of them.
+  key: string;
+  label: string;
+  // The figure the bar is drawn from, in whatever unit the list is counting.
+  value: number;
+  // The same figure, spelled for a human by the caller's own formatter.
+  amount: string;
+  tone?: "warn" | "danger";
+}>;

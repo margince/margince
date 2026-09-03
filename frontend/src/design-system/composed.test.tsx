@@ -326,6 +326,119 @@ describe("TimelineText on a mail row", () => {
     },
   ];
 
+  // The email branch replaced ONE kind's reading. These are the other six —
+  // `change` included, because a field edit rendered through a message's row
+  // would be the same collapse this component made once by drawing a call as a
+  // note. Each carries an emailSummary it must ignore, so the test proves the
+  // `kind === "email"` half of the guard rather than the half that is true by
+  // accident.
+  const IGNORED_SUMMARY = {
+    activity_id: "a-ignored",
+    occurred_at: "2026-07-01T00:00:00Z",
+    display_status: "team" as const,
+    attachment_count: 0,
+    move: "none" as const,
+    version: 1,
+    subject: "Ein Betreff, der nicht gezeichnet werden darf",
+  };
+
+  it("leaves every kind that is not an email drawing its own body", () => {
+    for (const kind of [
+      "note",
+      "call",
+      "meeting",
+      "task",
+      "message",
+      "change",
+    ] as const) {
+      const { unmount } = render(
+        <RecordView
+          name="Acme"
+          zone="UTC"
+          timeline={[
+            {
+              id: `a-${kind}`,
+              kind,
+              title: "Was besprochen wurde",
+              atIso: "2026-07-01T00:00:00Z",
+              provenance: { kind: "human" as const, self: true },
+              body: "Der ganze Text, den dieser Eintrag traegt.",
+              emailSummary: IGNORED_SUMMARY,
+            },
+          ]}
+        />,
+      );
+      expect(
+        screen.getByText("Der ganze Text, den dieser Eintrag traegt."),
+      ).toBeTruthy();
+      // The summary is there and unused: only an email draws through it.
+      expect(
+        screen.queryByText("Ein Betreff, der nicht gezeichnet werden darf"),
+      ).toBeNull();
+      unmount();
+    }
+  });
+
+  // The canonical row, drawn: an email WITH its summary goes through
+  // EmailEntry, which is the whole point of the branch.
+  it("draws an email with its summary through the canonical row", () => {
+    render(
+      <RecordView
+        name="Acme"
+        zone="UTC"
+        timeline={[
+          {
+            id: "a-email",
+            kind: "email",
+            title: "Re: Angebot",
+            atIso: "2026-07-01T09:12:00Z",
+            provenance: { kind: "human" as const, self: true },
+            body: "Der Text der Mail.",
+            emailSummary: {
+              ...IGNORED_SUMMARY,
+              activity_id: "a-email",
+              subject: "Re: Angebot",
+              preview: "Können wir Dienstag sprechen?",
+              direction: "inbound" as const,
+              counterparty: "Anna Berger",
+              move: "needs_reply" as const,
+            },
+          },
+        ]}
+      />,
+    );
+    // EmailEntry's own marks, which the generic row does not draw.
+    expect(screen.getByText("Needs reply")).toBeTruthy();
+    expect(screen.getByText("Können wir Dienstag sprechen?")).toBeTruthy();
+  });
+
+  // A withheld email whose server has not caught up carries no summary and
+  // falls to the generic row. That row masked the title and went on printing
+  // the counterparty above it — "Received from Anna" beside a message whose
+  // subject it just refused still says who this record is talking to.
+  it("names nobody on a withheld row, summary or not", () => {
+    render(
+      <RecordView
+        name="Acme"
+        zone="UTC"
+        timeline={[
+          {
+            id: "a-withheld",
+            kind: "email",
+            title: "Re: Angebot",
+            atIso: "2026-07-01T00:00:00Z",
+            provenance: { kind: "human" as const, self: true },
+            direction: "inbound",
+            counterparts: "Anna Berger",
+            withheld: true,
+          },
+        ]}
+      />,
+    );
+    expect(screen.queryByText(/Anna Berger/)).toBeNull();
+    expect(screen.queryByText("Re: Angebot")).toBeNull();
+  });
+
   it("shows the message and hides the signature until asked", async () => {
     const user = userEvent.setup();
     render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);

@@ -24,6 +24,12 @@ type Eraser struct {
 	// bytes, not only the row). nil in a deployment with no object store —
 	// where no upload path could have stored an object either.
 	blob blobstore.Store
+	// payloads destroys the one-time link material behind a controller
+	// delivery. Like blob it is nil where no such material could exist, and
+	// like blob the purge happens BEFORE the rows that reference it: the
+	// reference lives in the row, so clearing the row first would orphan a live
+	// confirmation link with no key left to find it.
+	payloads PayloadPurger
 	// purgeRawCaptures destroys the provider original behind an activity whose
 	// text this eraser destroys.
 	//
@@ -49,6 +55,14 @@ func NewEraser(db *database.DB) *Eraser { return &Eraser{db: db} }
 func (e *Eraser) WithRawCapturePurger(purge RawCapturePurger) *Eraser {
 	clone := *e
 	clone.purgeRawCaptures = purge
+	return &clone
+}
+
+// WithPayloadVault returns an eraser that also destroys the one-time link
+// material behind the subject's controller deliveries.
+func (e *Eraser) WithPayloadVault(p PayloadPurger) *Eraser {
+	clone := *e
+	clone.payloads = p
 	return &clone
 }
 

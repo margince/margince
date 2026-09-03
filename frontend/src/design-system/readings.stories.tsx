@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Building2, Globe, Link2, MapPin, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
-import { Chip, Meter, Sparkline } from "./readings";
+import { BarList, Chip, Meter, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
 const meta: Meta = {
@@ -121,4 +121,59 @@ export const Chips: Story = {
       <Chip icon={Users}>51–200 employees</Chip>
     </div>
   ),
+};
+
+// A ranking: several bars on ONE denominator, which is the whole difference
+// between this and a column of Meters.
+export const Bars: Story = {
+  render: () => (
+    <BarList
+      label="Deals by stage"
+      rows={[
+        { key: "qualified", label: "Qualified", value: 42, amount: "42" },
+        { key: "proposal", label: "Proposal", value: 18, amount: "18" },
+        { key: "negotiation", label: "Negotiation", value: 7, amount: "7" },
+        { key: "closing", label: "Closing", value: 2, amount: "2" },
+      ]}
+    />
+  ),
+};
+
+// The caller's whole as the denominator: four stages of a pipeline that holds
+// more than they add up to, so no bar claims to be everything.
+export const BarsAgainstAWhole: Story = {
+  render: () => (
+    <BarList
+      label="Open pipeline by stage"
+      max={200}
+      rows={[
+        { key: "qualified", label: "Qualified", value: 80, amount: "€80,000" },
+        { key: "proposal", label: "Proposal", value: 45, amount: "€45,000" },
+        {
+          key: "late",
+          label: "Slipped",
+          value: 12,
+          amount: "€12,000",
+          tone: "warn",
+        },
+      ]}
+    />
+  ),
+};
+
+// One row is a list of one, not a bar at full width with nothing to compare it
+// to — worth seeing, because it is what a filtered report often produces.
+export const BarsSingleRow: Story = {
+  render: () => (
+    <BarList
+      label="Deals by stage"
+      rows={[{ key: "only", label: "Qualified", value: 6, amount: "6" }]}
+    />
+  ),
+};
+
+// The empty report. A real answer, and the case where a shared denominator is
+// a division by zero if nobody guarded it.
+export const BarsEmpty: Story = {
+  render: () => <BarList label="Deals by stage" rows={[]} />,
 };

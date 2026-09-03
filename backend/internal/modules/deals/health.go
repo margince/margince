@@ -371,12 +371,15 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 	in.engagedStakeholderIDs = engaged
 
 	// Recency evidence: the freshest live activity on the deal — the
-	// record behind deal.last_activity_at.
+	// record behind deal.last_activity_at. Its filters must match
+	// last_activity_of_deal exactly, or this points at a row the timestamp
+	// does not count and the evidence contradicts the number it explains.
 	var recent ids.UUID
 	err = tx.QueryRow(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
+		WHERE a.archived_at IS NULL
+		  AND a.origin <> 'system_remediation'`+auth.AudienceWorkspaceOnly("a")+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, in.dealID).Scan(&recent)
 	switch {

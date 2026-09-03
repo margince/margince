@@ -1,28 +1,34 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// comparisonText's `waiting_days` tie-break: when the server's own comparator
-// falls back from a bucketed day count to the exact instant two items
-// occurred, the line under "how many days" must still read as a day count
-// rather than as two clock times a reader cannot reconcile with its own
-// heading.
+// comparisonText and reasonText: the sentences the Worklist draws for why one
+// row beat the next, and for each fact behind an item's rank.
 
 import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
-import { comparisonText, moveHref, moveOpensComposer } from "./worklist.copy";
-import type { WorklistComparison, WorklistItem } from "./worklist.queries";
+import {
+  comparisonText,
+  moveHref,
+  moveLabel,
+  moveOpensComposer,
+  reasonText,
+} from "./worklist.copy";
+import type {
+  WorklistComparison,
+  WorklistItem,
+  WorklistReason,
+} from "./worklist.queries";
 
 const t: Translator = (key, params) => translate("en", key, params);
-// The elapsed-days math under test (calendarDaysBetween) does not take a
-// zone at all, and the one case that renders a date only asserts it contains
-// a year — so the viewer's own zone stands in rather than a pinned literal
+// The "still renders a full date" case below only asserts the year, so the
+// viewer's own zone stands in rather than a pinned literal
 // (format/zone-by-purpose.test.ts).
 const zone = viewerZone();
 
-describe("comparisonText — waiting_days tie-break", () => {
-  it("renders raw days-kind values as-is (the ordinary, non-tied case)", () => {
+describe("comparisonText", () => {
+  it("renders a waiting_days pair as day counts", () => {
     const comparison: WorklistComparison = {
       comparator: "waiting_days",
       mine: { kind: "days", days: 12 },
@@ -33,49 +39,12 @@ describe("comparisonText — waiting_days tie-break", () => {
     );
   });
 
-  it("converts a date-kind tie-break value to elapsed days, not a timestamp", () => {
-    const now = new Date("2026-09-01T00:00:00.000Z");
-    const comparison: WorklistComparison = {
-      comparator: "waiting_days",
-      mine: { kind: "date", date: "2026-08-30T21:52:00.000Z" },
-      theirs: { kind: "date", date: "2026-08-29T22:24:00.000Z" },
-    };
-    const line = comparisonText(comparison, t, "en", zone, now);
-    expect(line).toBe("Above the next: 2 against 3.");
-    expect(line).not.toContain(":52");
-    expect(line).not.toContain(":24");
-  });
-
-  it("floors at zero rather than printing a negative count on clock skew", () => {
-    // `now` is the server's own snapshot instant in production
-    // (Worklist.as_of), so an occurred_at reading later than it means the
-    // two clocks disagree at the margin, never that the row is from the
-    // future. A negative count under "how many days" is the same dishonest
-    // line this function exists to remove, just spelled with a minus sign.
-    const now = new Date("2026-08-30T00:00:00.000Z");
-    const comparison: WorklistComparison = {
-      comparator: "waiting_days",
-      mine: { kind: "date", date: "2026-08-31T09:00:00.000Z" },
-      theirs: { kind: "date", date: "2026-08-29T09:00:00.000Z" },
-    };
-    expect(comparisonText(comparison, t, "en", zone, now)).toBe(
-      "Above the next: 0 against 1.",
-    );
-  });
-
-  it("falls back to the bare sentence when a same-day tie-break would print equal numbers", () => {
-    // Two different instants that still round to the same calendar day.
-    // Printing "0 against 0" would claim they tied, when the comparator's
-    // whole reason for firing is that they did not — so this reads as the
-    // plain "how long it has waited" sentence instead, the same call the
-    // backend's own same-minute guard makes one level finer.
-    const now = new Date("2026-08-31T23:00:00.000Z");
-    const comparison: WorklistComparison = {
-      comparator: "waiting_days",
-      mine: { kind: "date", date: "2026-08-31T21:52:00.000Z" },
-      theirs: { kind: "date", date: "2026-08-31T22:24:00.000Z" },
-    };
-    expect(comparisonText(comparison, t, "en", zone, now)).toBe(
+  it("falls back to the bare sentence when the server sends no values", () => {
+    // The occurrence step withholds both values when they would print the
+    // same day count — a comparator that decided but has nothing a reader
+    // could check draws the plain sentence rather than a false tie.
+    const comparison: WorklistComparison = { comparator: "waiting_days" };
+    expect(comparisonText(comparison, t, "en", zone)).toBe(
       "Above the next on how long it has waited.",
     );
   });
@@ -91,6 +60,20 @@ describe("comparisonText — waiting_days tie-break", () => {
 
   it("draws nothing for order (every comparator tied, ids broke it)", () => {
     expect(comparisonText({ comparator: "order" }, t, "en", zone)).toBeNull();
+  });
+
+  // The comparator this build emits and could not name.
+  //
+  // `crowded` is the anti-monopoly rule: the row BELOW was held back so one
+  // lane could not own the page. It carries no values on purpose — "8th
+  // against 9th" describes the lane, not either row — and the client's
+  // known-comparator guard, written to drop values from NEWER servers, was
+  // dropping one this same build sends. The row whose position is hardest to
+  // explain was the one row with no explanation.
+  it("names crowded, which this build's own server emits", () => {
+    expect(comparisonText({ comparator: "crowded" }, t, "en", zone)).toBe(
+      "Above the next because that one is one of many of its kind.",
+    );
   });
 });
 
@@ -151,5 +134,158 @@ describe("moveHref — the draft_reply move", () => {
     };
     expect(moveHref(noMove as unknown as WorklistItem)).toBeUndefined();
     expect(moveOpensComposer(noMove as unknown as WorklistItem)).toBe(false);
+  });
+});
+
+// The wider vocabulary.
+//
+// The move slot carried one verb while one lane produced one; the deal card
+// decides five, and the row now reads them. These are about the row refusing to
+// draw a control it cannot honour, and about the label naming the verb the
+// SERVER chose rather than the one that used to be the only option.
+
+// The shapes the server really sends, not a bare action. `draft_reply` always
+// names the message it answers — that is what makes it a reply — and the other
+// verbs name whatever their own operand is, or nothing.
+function movingRow(action: string, activityId?: string) {
+  const row = replyRow({ type: "person", id: "p-1" }) as unknown as {
+    move: unknown;
+  };
+  const move =
+    action === "draft_reply"
+      ? { action, activity_id: activityId ?? "a-1" }
+      : { action, ...(activityId ? { activity_id: activityId } : {}) };
+  return { ...row, move } as unknown as WorklistItem;
+}
+
+describe("the verbs the row can and cannot take a reader to", () => {
+  // A first outreach reaches the same composer a reply does — the composer
+  // picks its own transport from the person, so the address is the same.
+  it("opens the composer for a fresh message too", () => {
+    const item = movingRow("draft_email");
+    expect(moveHref(item)).toContain("compose=");
+    expect(moveOpensComposer(item)).toBe(true);
+  });
+
+  // THE distinction the wider vocabulary made necessary. One hardcoded label
+  // was right while draft_reply was the only verb; over an opening outreach it
+  // names a conversation nobody has had.
+  it("names a first message as writing, not as replying", () => {
+    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft the email");
+    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft the reply");
+  });
+
+  // And the label still follows the ROUTE. A deal has no composer, so the same
+  // verb reaching only the record must not claim to draft anything.
+  it("claims only to open where the composer cannot", () => {
+    const onADeal = {
+      ...(movingRow("draft_email") as unknown as { subject: unknown }),
+      subject: { type: "deal", id: "d-1" },
+    } as unknown as WorklistItem;
+    expect(moveLabel(onADeal, t)).toBe("Open to write");
+  });
+
+  // These are PERFORMED, not navigated: one posts a task body, one opens a
+  // drawer, and one leaves for a provider's consent screen. A link drawn for
+  // any of them would be pressable with nothing behind it — the exact defect
+  // the move slot's own comment warned about.
+  it("draws no link for a verb no address can perform", () => {
+    for (const action of [
+      "create_task",
+      "open_meeting_brief",
+      "reconnect",
+      "none",
+    ]) {
+      const item = movingRow(action);
+      expect(moveHref(item)).toBeUndefined();
+      expect(moveOpensComposer(item)).toBe(false);
+    }
+  });
+
+  // A reply that names no message. Schema-VALID — `activity_id` is optional, for
+  // the verbs that take no record — and undrawable all the same: there is
+  // nothing to answer, and the contract says a client draws a control only where
+  // the operand its verb needs is present.
+  it("draws no reply where the move names no message", () => {
+    const noMessage = {
+      ...(movingRow("draft_email") as unknown as { move: unknown }),
+      move: { action: "draft_reply" },
+    } as unknown as WorklistItem;
+    expect(moveHref(noMessage)).toBeUndefined();
+    // And the LABEL agrees. A move refused a link must not still be described
+    // as one that drafts, or the row says two things about one control.
+    expect(moveOpensComposer(noMessage)).toBe(false);
+  });
+
+  // The sibling that must NOT be refused: an opening outreach legitimately names
+  // no record, because there is no earlier message for it to name. Without this
+  // case the completeness rule could be "require an id from every mail verb" and
+  // the test above would still pass, while a first outreach lost its control.
+  it("still draws a first message that names no record", () => {
+    expect(moveHref(movingRow("draft_email"))).toContain("compose=");
+    expect(moveOpensComposer(movingRow("draft_email"))).toBe(true);
+  });
+});
+
+// A row waiting one day said "waiting 1 days". quiet_days carries the exact
+// same day-count value shape through the exact same reasonText path, so it
+// gets the exact same fix rather than a patch on one string.
+describe("reasonText — day-count plural", () => {
+  it("uses the singular day form for a one-day wait", () => {
+    const reason: WorklistReason = {
+      kind: "waiting_days",
+      value: { kind: "days", days: 1 },
+    };
+    expect(reasonText(reason, t, "en", zone)).toBe("waiting 1 day");
+  });
+
+  it("uses the plural day form otherwise", () => {
+    const reason: WorklistReason = {
+      kind: "waiting_days",
+      value: { kind: "days", days: 5 },
+    };
+    expect(reasonText(reason, t, "en", zone)).toBe("waiting 5 days");
+  });
+
+  it("pluralizes the sibling quiet_days reason the same way", () => {
+    const one: WorklistReason = {
+      kind: "quiet_days",
+      value: { kind: "days", days: 1 },
+    };
+    const many: WorklistReason = {
+      kind: "quiet_days",
+      value: { kind: "days", days: 14 },
+    };
+    expect(reasonText(one, t, "en", zone)).toBe("quiet for 1 day");
+    expect(reasonText(many, t, "en", zone)).toBe("quiet for 14 days");
+  });
+});
+
+// The lead's deadline is a MOMENT, and the sentence has to put it somewhere.
+//
+// Both halves of this live on opposite sides of the wire: the backend attaches
+// the date (attention/lead.go leadStanding), and VALUED_REASONS here decides
+// whether it reaches a sentence at all. A value can travel for a reason whose
+// copy has nowhere to put it, and that combination renders the plain phrase
+// while the figure is silently dropped — so the two are one change, and this is
+// the half that fails if only the backend lands.
+describe("reasonText — the lead's own deadline", () => {
+  it("names when the reply is due", () => {
+    const reason: WorklistReason = {
+      kind: "response_due_soon",
+      value: { kind: "date", date: "2026-09-03T14:30:00Z" },
+    };
+    const got = reasonText(reason, t, "en", zone);
+    expect(got).not.toBeNull();
+    // The formatted moment, not the raw ISO string: valueText renders it in the
+    // reader's locale and zone, and asserting the literal would pin a format
+    // this file does not own.
+    expect(got).not.toBe("reply due soon");
+    expect(got).toContain("reply due by");
+  });
+
+  it("falls back to the plain phrase when no deadline travelled", () => {
+    const reason: WorklistReason = { kind: "response_due_soon" };
+    expect(reasonText(reason, t, "en", zone)).toBe("reply due soon");
   });
 });

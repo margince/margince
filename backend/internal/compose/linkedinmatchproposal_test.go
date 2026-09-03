@@ -78,19 +78,22 @@ func TestStagingRefusesAContextWithNoHumanBehindIt(t *testing.T) {
 	// what the audit trail answers "who asked" with. A context carrying no
 	// human cannot stage: writing the proposal anyway would put a question in
 	// somebody's inbox that no trail attributes to anyone.
-	if _, err := withGhostOwnerAsSubject(context.Background()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := withGhostOwnerAsSubject(context.Background()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("staging without an actor answered %v, want a permission refusal", err)
 	}
 
 	// With a member bound, the subject IS that member.
 	me := ids.NewV7()
-	ctx, err := withGhostOwnerAsSubject(principal.WithActor(context.Background(),
+	ctx, subject, err := withGhostOwnerAsSubject(principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalHuman, UserID: me}))
 	if err != nil {
 		t.Fatalf("staging as a member: %v", err)
 	}
+	if subject != me {
+		t.Errorf("the staging subject is %v, want the acting member %s", subject, me)
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.OnBehalfOf != me {
-		t.Errorf("the staging subject is %v, want the acting member %s", actor.OnBehalfOf, me)
+		t.Errorf("the context's own actor is %v, want the acting member %s", actor.OnBehalfOf, me)
 	}
 }

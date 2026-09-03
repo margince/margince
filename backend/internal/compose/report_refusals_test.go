@@ -154,3 +154,51 @@ func (emptyRows) RawValues() [][]byte {
 }
 
 var _ pgx.Rows = emptyRows{}
+
+// TestTwoFallbackAliasesKeepTheirOwnColumnNames holds the property that makes
+// quoteIdent's shared "result" fallback safe.
+//
+// Two aggregates whose aliases are both outside the identifier shape select
+// into the SAME SQL column name. That is only harmless because the SQL alias is
+// never read back: the caller-facing names travel separately and the row map is
+// built from those by position. If a future change ever keys rows by the SQL
+// alias instead, this test is what fails — and the failure is a caller reading
+// one measure's number under another measure's name.
+func TestTwoFallbackAliasesKeepTheirOwnColumnNames(t *testing.T) {
+	t.Parallel()
+
+	spec := prebuiltReports["deals-by-stage"]
+
+	firstName, firstSelect, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "total count"})
+	if err != nil {
+		t.Fatalf("a free-form alias was refused: %v", err)
+	}
+	secondName, secondSelect, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "1st try"})
+	if err != nil {
+		t.Fatalf("a free-form alias was refused: %v", err)
+	}
+
+	if firstName == secondName {
+		t.Errorf("both aggregates report the caller-facing name %q — the row map is "+
+			"keyed by these, so one measure would overwrite the other", firstName)
+	}
+	if firstName != "total count" || secondName != "1st try" {
+		t.Errorf("caller-facing names were rewritten (%q, %q) — a caller reads its own "+
+			"alias back, not the SQL identifier", firstName, secondName)
+	}
+	if !strings.Contains(firstSelect, "AS result") || !strings.Contains(secondSelect, "AS result") {
+		t.Errorf("expected both selects to fall back to the fixed literal, got %q and %q "+
+			"— an alias outside the identifier shape must never reach the SQL text",
+			firstSelect, secondSelect)
+	}
+
+	// The admitting case: a well-formed alias rides into the SQL unchanged, so
+	// the fallback above is reached only by names that need it.
+	_, wellFormed, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "my_own_label"})
+	if err != nil {
+		t.Fatalf("a well-formed alias was refused: %v", err)
+	}
+	if !strings.Contains(wellFormed, "AS my_own_label") {
+		t.Errorf("a well-formed alias did not reach the SQL text: %q", wellFormed)
+	}
+}

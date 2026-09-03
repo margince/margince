@@ -20,7 +20,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
-import { useCan } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -47,6 +47,7 @@ import {
 } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
@@ -86,7 +87,6 @@ import {
   useSorMode,
   useViewerId,
 } from "./common";
-import { TimelineActions } from "./compose";
 import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
@@ -131,7 +131,10 @@ import {
   withoutScreenDials,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
+import { useOpenEmail, withEmailOpener } from "./openemail";
 import type { Project } from "./projects.form";
+import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
+import { RecordEmailVerb } from "./recordemail";
 import { tagsColumn } from "./recordlist";
 import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
@@ -139,6 +142,7 @@ import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 
 // Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance
@@ -154,7 +158,6 @@ type Organization = components["schemas"]["Organization"];
 type Stage = components["schemas"]["Stage"];
 type Pipeline = components["schemas"]["Pipeline"];
 type Offer = components["schemas"]["Offer"];
-type DealCoverage = components["schemas"]["DealCoverage"];
 type DealStatusCard = components["schemas"]["DealStatusCard"];
 type Activity = components["schemas"]["Activity"];
 
@@ -3074,31 +3077,21 @@ function editProjectFields(
 // complexity ceiling.
 function DealPeoplePanels({
   dealId,
-  coverage,
   overlay,
 }: Readonly<{
   dealId: string;
-  coverage: ReturnType<typeof useDealCoverage>;
   overlay: boolean;
 }>) {
+  // Out in overlay mode, where the deal is a mirror with no native row for a
+  // relationship to point at. The committee map is not here any more: it is
+  // one half of the reading's reference pair, beside the offers.
+  if (overlay) {
+    return null;
+  }
   return (
-    <>
-      <div style={{ marginTop: "var(--space-4)" }}>
-        <DealCommitteeMap
-          coverage={coverage.coverage}
-          withheld={coverage.withheld}
-          pending={coverage.pending}
-          overlay={overlay}
-        />
-      </div>
-      {/* Out in overlay mode, where the deal is a mirror with no native row for
-          a relationship to point at. */}
-      {!overlay && (
-        <div style={{ marginTop: "var(--space-4)" }}>
-          <RelationshipsTab scope={{ deal_id: dealId }} />
-        </div>
-      )}
-    </>
+    <div style={{ marginTop: "var(--space-4)" }}>
+      <RelationshipsTab scope={{ deal_id: dealId }} />
+    </div>
   );
 }
 
@@ -3115,6 +3108,25 @@ function DealPeoplePanels({
 // meant for a status and a project chip. Edit leads because it is the verb a
 // reader reaches for; the three whose consequence has to be read before they
 // are pressed go behind the overflow.
+// The shared Email verb every record header carries. Not in overlay, where
+// the mirror owns the deal's mail.
+function DealEmailVerb({
+  deal,
+  overlay,
+  disabledReasonId,
+}: Readonly<{ deal: Deal; overlay: boolean; disabledReasonId?: string }>) {
+  if (overlay) {
+    return null;
+  }
+  return (
+    <RecordEmailVerb
+      entityType="deal"
+      entityId={deal.id}
+      disabledReasonId={disabledReasonId}
+    />
+  );
+}
+
 function DealActions({
   deal,
   orgs,
@@ -3185,6 +3197,11 @@ function DealActions({
   const seeded = { ...dealEditRecord(deal), ...cf.recordSlice(deal) };
   return (
     <>
+      <DealEmailVerb
+        deal={deal}
+        overlay={overlay}
+        disabledReasonId={refusedByArchive}
+      />
       <EditAction<Deal>
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
@@ -3555,14 +3572,25 @@ function DealLead({
   dealId,
   dealName,
   overlay,
-}: Readonly<{ dealId: string; dealName: string; overlay: boolean }>) {
+  pulse,
+  spine,
+}: Readonly<{
+  dealId: string;
+  dealName: string;
+  overlay: boolean;
+  pulse: ReactNode | undefined;
+  spine: ReactNode;
+}>) {
   if (overlay) {
     return null;
   }
   return (
-    <div className="deal360-lead">
-      <DealStatusCardPanel dealId={dealId} dealName={dealName} />
-    </div>
+    <DealStatusCardPanel
+      dealId={dealId}
+      dealName={dealName}
+      pulse={pulse}
+      spine={spine}
+    />
   );
 }
 
@@ -3574,7 +3602,11 @@ function DealLead({
  * may see the vocabulary at all.
  */
 function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
-  const canUpdate = useCan("deal", "update");
+  // useCanWriteRecord, not useCan: applying a tag writes to the deal, so the
+  // verb owes the seat ceiling and this row's own `writable` alongside the
+  // object grant — a grant by itself would offer the picker on a colleague's
+  // deal, and to a read seat the server refuses before RBAC is consulted.
+  const canUpdate = useCanWriteRecord("deal", deal);
   const overlay = useSorMode() === "overlay";
   return (
     <TagsPanel
@@ -3599,6 +3631,10 @@ function DealOverviewPane({
   onAdvance,
   advancing,
   advanceRefused,
+  pulse,
+  spine,
+  coverage,
+  onOpenHistory,
 }: Readonly<{
   deal: Deal;
   stages: Stage[];
@@ -3621,10 +3657,32 @@ function DealOverviewPane({
   /** Where this deal cannot be moved at all — archived (restore it first), or
    * mirrored from an incumbent that refuses the write. */
   advanceRefused: boolean;
+  // Whose move it is, in one sentence, drawn under the call inside the
+  // reading — it is the sentence the call rests on, not a header fact.
+  pulse: ReactNode | undefined;
+  // The deal's story as a thread, drawn under the call inside the reading.
+  spine: ReactNode;
+  // Who is on the deal, for the reading's reference pair beside the offers.
+  coverage: ReturnType<typeof useDealCoverage>;
+  // Where the momentum reading's door goes: the history tab, which the page
+  // owns.
+  onOpenHistory: () => void;
 }>) {
   const t = useT();
   return (
-    <>
+    // The same stack every record's overview reads down, with its rhythm.
+    <div className="record-stack">
+      {/* The readings open the overview, as they do on every record page.
+          Not in overlay, where the mirror carries no offers or seats. */}
+      {!overlay && (
+        <DealStrip
+          deal={deal}
+          offers={offers}
+          coverage={coverage.coverage}
+          coverageWithheld={coverage.withheld}
+          onOpenHistory={onOpenHistory}
+        />
+      )}
       {deal.fx_rate_to_base != null && (
         <FxLine
           amountMinor={deal.amount_minor ?? null}
@@ -3637,11 +3695,6 @@ function DealOverviewPane({
       {/* A won deal with no project, on a company with exactly one open
           project, is offered that project once. Nothing else here asks. */}
       {!overlay && <StartDeliveryPrompt deal={deal} />}
-      {/* How this deal is filed. It rides in the overview rather than in a
-          rail, because this record page has no rail column: RecordView
-          collapses to one column when it is handed neither, and giving the
-          deal a rail for one card would move every block on the page. */}
-      <DealTagsSection deal={deal} />
       {/* A group, not a nav: these buttons move the deal, they do not take the
           reader anywhere, and a landmark in the navigation list that writes
           when you press it misdescribes what it does. */}
@@ -3670,31 +3723,42 @@ function DealOverviewPane({
           )}
         </fieldset>
       )}
-      {/* Below the stage bar on purpose: a reader takes in WHERE the deal is
-          before they read the account of how it got there, and the briefing is
-          long enough that putting it first pushed the stages off the first
-          screen. */}
-      <DealLead dealId={deal.id} dealName={deal.name} overlay={overlay} />
-      <DealApprovals approvals={dealApprovals} decide={onDecide} />
-      {/* The coverage card is NOT here any more, and its absence is the point.
-          Its two halves went to the two places that answer their questions: the
-          seats to the rail, where a reader asks who these people are, and the
-          findings to Deal360's chips, where they sit under the verdict they
-          explain. Left mounted as well, a reader met "Single-threaded" three
-          times on one screen — as a figure in the readings, as a chip, and as
-          a row here. The card itself still exists for any surface that wants
-          both halves in one place (network.tsx). */}
-      <OffersPanel
-        offers={offers}
-        creating={creatingOffer}
-        locale={locale}
-        dealCurrency={deal.currency ?? null}
-        onCreate={onCreateOffer}
-      />
+      {/* ONE READING, IN PARTS, below the stage bar on purpose: a reader
+          takes in WHERE the deal is before they read the account of how it got
+          there. The call with the deal's thread, the move the briefing names,
+          the brief itself, and under them the two sections a reader consults
+          rather than reads — what is on the table, and who is in the room.
+          The buying committee sits beside the offers rather than at the foot
+          of the page, because the two are the deal's two sides. */}
+      <RecordReading>
+        <DealLead
+          dealId={deal.id}
+          dealName={deal.name}
+          overlay={overlay}
+          pulse={pulse}
+          spine={spine}
+        />
+        <DealApprovals approvals={dealApprovals} decide={onDecide} />
+        <RecordReadingPair>
+          <OffersPanel
+            offers={offers}
+            creating={creatingOffer}
+            locale={locale}
+            dealCurrency={deal.currency ?? null}
+            onCreate={onCreateOffer}
+          />
+          <DealCommitteeMap
+            coverage={coverage.coverage}
+            withheld={coverage.withheld}
+            pending={coverage.pending}
+            overlay={overlay}
+          />
+        </RecordReadingPair>
+      </RecordReading>
       <CustomFieldsCard object="deal" record={deal} />
       <RecordContextPanel entityType="deal" id={deal.id} />
       <LogActivity entityType="deal" entityId={deal.id} />
-    </>
+    </div>
   );
 }
 
@@ -3704,7 +3768,7 @@ function DealOverviewPane({
 // element that renders null, because RecordView reserves the band's space for
 // anything it is handed, and a page that always kept the gap would read as a
 // record with something to say about itself and nothing said.
-// The sentence above the readings: whose move it is.
+// The sentence under the call: whose move it is.
 //
 // Absent in overlay mode for the reason the readings are: whose move it is, is
 // read from this installation's own timeline, and a mirrored deal's is the
@@ -3734,38 +3798,19 @@ function dealPulse({
 function dealBand({
   deal,
   reasonId,
-  offers,
-  coverage,
-  coverageWithheld,
-  overlay,
   t,
 }: Readonly<{
   deal: Deal;
   reasonId: string;
-  offers?: readonly Offer[];
-  coverage?: DealCoverage;
-  coverageWithheld: boolean;
-  overlay: boolean;
   t: ReturnType<typeof useT>;
 }>): ReactNode | undefined {
-  const archived = deal.archived_at != null && (
+  if (deal.archived_at == null) {
+    return undefined;
+  }
+  return (
     <p id={reasonId} className="t-caption">
       {t("deal.archivedReadOnly")}
     </p>
-  );
-  if (overlay) {
-    return archived || undefined;
-  }
-  return (
-    <>
-      {archived}
-      <DealStrip
-        deal={deal}
-        offers={offers}
-        coverage={coverage}
-        coverageWithheld={coverageWithheld}
-      />
-    </>
   );
 }
 
@@ -3834,13 +3879,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const timelineQuery = useRecordTimeline("deal", id, {
     filters: timelineFilters,
   });
-  const timelineEntries = activityTimeline(
+  // The thread under the call reads the WHOLE history, not the page the filter
+  // strip narrowed: a filter is a view of the timeline tab, and a call that
+  // said "no reply since" because the reader had hidden emails would be false.
+  // The two share one query whenever no filter is set.
+  const threadQuery = useRecordTimeline("deal", id);
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const rawTimelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,
     (activity) => (
       <TimelineActions activity={activity} entityType="deal" entityId={id} />
     ),
   );
+  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
     enabled: !overlay,
@@ -3931,20 +3983,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   <PageAsideToggle />
                 </>
               }
-              pulse={dealPulse({
-                card: statusQuery.data,
-                timeline: timelineQuery.activities,
-                overlay,
-              })}
-              band={dealBand({
-                deal,
-                reasonId: archivedReasonId,
-                offers: offersQuery.data?.data,
-                coverage: coverageRead.coverage,
-                coverageWithheld: coverageRead.withheld,
-                overlay,
-                t,
-              })}
+              band={dealBand({ deal, reasonId: archivedReasonId, t })}
               timeline={timelineEntries}
               timelineGroups={groupChronology(
                 timelineEntries,
@@ -3958,7 +3997,18 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   />
                 )
               }
-              timelineFooter={<LoadMoreButton query={timelineQuery} />}
+              timelineFooter={
+                <>
+                  <LoadMoreButton query={timelineQuery} />
+                  {/* One drawer over the deal, beside the timeline it opens
+                      from. */}
+                  <OpenEmailDrawer
+                    activityId={openEmail}
+                    zone={recordZone}
+                    onClose={() => setOpenEmail(null)}
+                  />
+                </>
+              }
               timelineNotice={timelineZoneNotice(
                 { overlay, pending: timelineQuery.isPending },
                 t,
@@ -3985,6 +4035,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   pending={coverageRead.pending}
                   overlay={overlay}
                 />
+                {/* How this deal is filed, in the rail with the rest of its
+                    context — the same card a person and a company draw, in the
+                    same column of their pages. It sat full-width in the
+                    overview before, between the readings and the stage
+                    stepper, where a reader looking for the record's context
+                    was not looking. */}
+                <DealTagsSection deal={deal} />
                 {!overlay && (
                   <>
                     <DealRoomAside dealId={id} dealName={deal.name} />
@@ -4017,6 +4074,19 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   onCreateOffer={(currency) => createOffer.mutate(currency)}
                   overlay={overlay}
                   advancing={advance.isPending}
+                  pulse={dealPulse({
+                    card: statusQuery.data,
+                    timeline: timelineQuery.activities,
+                    overlay,
+                  })}
+                  spine={
+                    <TimelineThread
+                      thread={threadQuery}
+                      commercial={{ next_close_on: deal.expected_close_date }}
+                    />
+                  }
+                  coverage={coverageRead}
+                  onOpenHistory={() => setTab("history")}
                   // An archived deal is not moved through the pipeline, and
                   // the mirror answers an advance with unsupported_by_sor —
                   // a control that can only fail is worse than none.
@@ -4050,11 +4120,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 />
               )}
               {tab === "overview" && (
-                <DealPeoplePanels
-                  dealId={deal.id}
-                  coverage={coverageRead}
-                  overlay={overlay}
-                />
+                <DealPeoplePanels dealId={deal.id} overlay={overlay} />
               )}
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}

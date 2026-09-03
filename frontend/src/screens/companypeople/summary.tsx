@@ -56,6 +56,23 @@ const ROLE_LABELS = {
   user: "co.role.user",
 } as const;
 
+function isCatalogRole(role: string): role is keyof typeof ROLE_LABELS {
+  return Object.hasOwn(ROLE_LABELS, role);
+}
+
+/**
+ * The reader's word for a recorded buying role. A role is written by
+ * convention rather than drawn from an enum, so a value the catalog does not
+ * name is a fact to show as written, not an error — every record page that
+ * prints one reads it here, so the account and the person agree on the word.
+ */
+export function buyingRoleLabel(
+  role: string,
+  t: ReturnType<typeof useT>,
+): string {
+  return isCatalogRole(role) ? t(ROLE_LABELS[role]) : role.replace(/_/g, " ");
+}
+
 export function useOrganizationCoverage(orgId: string) {
   return useQuery({
     queryKey: ["organization-coverage", orgId],

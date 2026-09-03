@@ -169,7 +169,7 @@ export const en = {
   // The merge decision. Both values survive a merge — choosing a side decides
   // which record stands and which value is shown first — so the copy never says
   // "delete", because nothing is deleted.
-  "nav.reports": "Reports",
+  "nav.analytics": "Analytics",
   "nav.ai": "Ask Margince",
   "nav.settings": "Settings",
   "nav.automations": "Automations",
@@ -179,6 +179,7 @@ export const en = {
   "nav.offers": "Offer",
   "nav.share": "Sharing",
   "nav.search": "Search results",
+  "nav.tags": "Tag",
 
   "shell.railAria": "Primary navigation",
   "shell.aside.hide": "Hide",
@@ -240,6 +241,7 @@ export const en = {
   "search.group.activity": "Activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.tag.carriedBy": "On {count} records",
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 
@@ -783,9 +785,8 @@ export const en = {
   "person.consent": "Consent",
   "consent.grant": "Grant",
   "consent.withdraw": "Withdraw",
-  "consent.doubleOptIn": "Issue double opt-in",
-  "consent.doiIssued": "One-time token (shown once):",
-  "consent.doiExpires": "Expires",
+  "consent.doiBySubject":
+    "This purpose is confirmed by the contact themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
@@ -803,9 +804,6 @@ export const en = {
   "consent.proofEmpty":
     "No consent decision recorded for this purpose. An empty log is honest, not a gap.",
   "consent.sourceUnknown": "source not recorded",
-  "consent.tokenLabel": "Confirmation token",
-  "consent.tokenHint":
-    "This purpose needs a double opt-in: paste the one-time token to make the grant effective.",
   "consent.actorHuman": "Human",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "System",
@@ -1289,7 +1287,6 @@ export const en = {
   "co.growthFit.whitespace": "Room to sell",
   "co.growthFit.objections": "Likely pushback",
   "co.growthFit.angle": "Suggested approach",
-  "co.writeEmail": "Write email",
   "co.dossier.title": "What this company is",
   "co.dossier.unavailable":
     "This description could not be read. Nothing about the company has changed.",
@@ -1549,6 +1546,30 @@ export const en = {
   "compose.audience": "Visibility",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Visibility of this one message",
+  // The canonical email row and its detail. "Team" never means the whole
+  // workspace: who may discover the linked record still decides who sees the
+  // row at all, so the word is about the audience and not the population.
+  "email.aMessage": "A message",
+  "email.noSubject": "No subject",
+  "email.withheldSubject": "Not shared with you",
+  "email.receivedFrom": "Received from",
+  "email.sentTo": "Sent to",
+  "email.access.team": "Team",
+  "email.access.participants": "Participants",
+  "email.access.selected": "Selected",
+  "email.access.withheld": "Withheld",
+  "email.move.needsReply": "Needs reply",
+  "email.move.waitingForThem": "Waiting for them",
+  "email.detail.loading": "Opening the message",
+  "email.detail.none": "This message",
+  "email.detail.showQuoted": "Show quoted history",
+  "email.detail.close": "Close",
+  "email.detail.withheldReason": "This message is not shared with you",
+  "email.detail.from": "From",
+  "email.detail.to": "To",
+  "email.detail.cc": "Cc",
+  "email.detail.bccWithheld":
+    "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the organization",
   "compose.audienceWorkspaceHint":
     "Anyone who may see the contact reads this message too.",
@@ -1790,6 +1811,54 @@ export const en = {
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
+  "tagAdmin.title": "Tags",
+  "tagAdmin.sub":
+    "The words this organization files records under. Anyone can apply one; only admin and ops seats add, rename or retire them.",
+  "tagAdmin.listLabel": "Vocabulary",
+  "tagAdmin.empty":
+    "No tags yet. Add the first word this organization files records under.",
+  "import.contextTag": "File this batch under a tag",
+  "import.contextTagChosen":
+    "Records this import creates will be filed under {name}.",
+  "import.contextTagChosenUnnamed":
+    "Records this import creates will be filed under the tag chosen for this run.",
+  "import.contextTagHint":
+    "Applied to records this import creates, so the batch stays findable. Records it updates keep the tags they have.",
+  "import.contextTagNone": "No tag",
+  "tagAdmin.add": "Add tag",
+  "tagAdmin.addTitle": "Add a tag",
+  "tagAdmin.editTitle": "Edit tag",
+  "tagAdmin.nameLabel": "Name",
+  "tagAdmin.colorLabel": "Colour",
+  "tagAdmin.colorNone": "No colour",
+  "tagAdmin.create": "Add",
+  "tagAdmin.save": "Save",
+  "tagAdmin.edit": "Edit",
+  "tagAdmin.merge": "Merge",
+  "tagAdmin.archive": "Retire",
+  "tagAdmin.restore": "Restore",
+  "tagAdmin.usage": "{count} records",
+  "tagAdmin.usagePending": "Counting…",
+  "tagAdmin.nearMatch":
+    "Close to a word this organization already has: {names}. Apply that one instead unless this is a different thing.",
+  "tagAdmin.mergeTitle": "Merge {name} into another tag",
+  "tagAdmin.mergeIntoLabel": "Keep this tag",
+  "tagAdmin.mergeIntoNone": "Choose a tag",
+  "tagAdmin.mergeConfirm": "Merge",
+  "tagAdmin.mergeWarning":
+    "This cannot be undone. Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again.",
+  "tagAdmin.mergedTitle": "Merged",
+  "tagAdmin.mergedBody":
+    "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped.",
+  "tagAdmin.countUsage": "Count records",
+  "tagAdmin.noVersion":
+    "This tag was read without a version, so it cannot be saved. Reopen the page and try again.",
+  "tagAdmin.withheld":
+    "You do not have access to this organization's tag vocabulary.",
+  "tagAdmin.truncated":
+    "This list is shortened. Words past the limit are not shown here and cannot be edited or merged into.",
+  "tagAdmin.usageFailed": "Count unavailable",
+  "tagAdmin.done": "Done",
   "tags.archived": "archived",
   "tags.columnHeader": "Tags",
   "tags.filterAll": "Any tag",
@@ -1825,8 +1894,12 @@ export const en = {
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
   "tagResult.viewAll": "View all {count} {kind}",
-  "tagResult.carry": "{count} carry this tag",
-  "tagResult.none": "None carry this tag",
+  "tagResult.resultsTitle": "Records with this tag",
+  "tagResult.nothingCarries":
+    "Nothing carries this tag yet. Apply it from any contact, company or deal.",
+  "tagResult.loadingRows": "Loading {kind}…",
+  "tagResult.noneLeft": "Nothing carries it any more",
+  "tagResult.unnamed": "Unnamed",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
@@ -1948,7 +2021,7 @@ export const en = {
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
   "lead.ladder.title": "Where this lead stands",
-  "lead.railTitle": "Owner and score",
+  "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.boardTerminalOnly":
@@ -2008,6 +2081,7 @@ export const en = {
     "The breakdown for this score isn’t stored yet — the next update will show it.",
   "lead.scoreLoading": "Working out why…",
   "lead.scoreNoFactors": "Nothing counted toward this score yet.",
+  "lead.scoreFactorsFailed": "What counts toward this score could not be read.",
   "lead.scoreFactorsExplainMachine":
     "You set this score by hand. The factors below explain what the model says: {score}.",
   "lead.scoreDecayed": "{base} halving every 14 days",
@@ -2493,6 +2567,8 @@ export const en = {
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
   "home.weekly.outcome.lost": "lost",
+  "home.focus.allAbove":
+    "Everything the night suggested is already above, in what waits on you.",
   "home.quietRun":
     "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
@@ -2530,29 +2606,18 @@ export const en = {
   "home.glance.eveningAnon": "Good evening.",
   "home.glance.night": "Still at it, {name}.",
   "home.glance.nightAnon": "Still at it.",
+  "home.glance.introWeekly": "This is the week you just closed.",
   "home.glance.intro": "Here is your day.",
-  "home.glance.decisionsClear": "Nothing is waiting on you.",
-  "home.glance.decisions_one": "decision is waiting on you.",
-  "home.glance.decisions_other": "decisions are waiting on you.",
-  "home.glance.expiring_one": "of them expires today.",
-  "home.glance.expiring_other": "of them expire today.",
-  "home.glance.ranked_one": "deal is ranked for today.",
-  "home.glance.ranked_other": "deals are ranked for today.",
-  "home.glance.leader": "{deal} leads at {amount}.",
-  "home.glance.captured_one": "message was captured overnight.",
-  "home.glance.captured_other": "messages were captured overnight.",
-  "home.glance.duplicates_one": "duplicate needs a look.",
-  "home.glance.duplicates_other": "duplicates need a look.",
-  "home.glance.quiet_one": "open deal has gone quiet.",
-  "home.glance.quiet_other": "open deals have gone quiet.",
-  "home.glance.goDecisions": "Go to the decisions waiting on you",
-  "home.glance.goToday": "Go to today's ranked deals",
-  "home.glance.goDuplicates": "Go to the duplicates queue",
-  "home.glance.goWatch": "Go to the deals that have gone quiet",
   "home.panel.decisions": "Waiting on you",
-  "home.panel.today": "Today",
+  "home.panel.focus": "Focus when time opens",
   "home.panel.overnight": "Overnight",
   "home.panel.position": "Position",
+  "home.panel.schedule": "Today's schedule",
+  "home.schedule.clear": "Nothing is booked today.",
+  "home.panel.promises": "Promises & tasks",
+  "home.promises.clear": "Nothing is open on you.",
+  "home.promises.untracked":
+    "Promises made in conversation are not tracked yet — only tasks are listed here.",
   "home.panel.watch": "Gone quiet",
   "home.overnight.fixConnector": "Fix the connection",
   "home.watch.clear": "Nothing has gone quiet.",
@@ -2571,6 +2636,7 @@ export const en = {
   "home.readings.promisesBasis": "promises are not tracked yet",
   "home.readings.leads": "Lead response",
   "home.readings.leadsBasis": "owed a first answer",
+  "home.readings.leadsDue": "next due {value}",
   "home.readings.quota": "Quota pace",
   "home.readings.quotaBasis": "no target is set",
   "home.rail": "Context",
@@ -2763,6 +2829,7 @@ export const en = {
   "dedupe.viewExisting": "View existing record",
 
   "co.spine.earlierMore": "More conversations before this",
+  "co.spine.failed": "The thread could not be read.",
   "co.spine.exchangeCount": "{count} messages",
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Call",
@@ -2777,7 +2844,8 @@ export const en = {
   "co.spine.said.met": "{host} met {who}",
   "co.spine.said.held": "Meeting held by {host}",
   "co.spine.lastSpoke": "You last spoke",
-  "co.spine.days": "{count} days",
+  "co.spine.days_one": "{count} day",
+  "co.spine.days_other": "{count} days",
   "co.spine.quietSince": "Silence since then",
   "co.spine.neverReplied": "They have never written back",
   "co.spine.singleThreaded": "One contact, and no reply from them",
@@ -2792,8 +2860,10 @@ export const en = {
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",
   "today.quiet": "Nothing here needs you today.",
+  "task.untitled": "Untitled task",
   "today.withheld":
     "Hidden from you: {sections}. This list is assembled without them.",
+  "today.source.moments": "what Margince found",
   "today.source.nextSteps": "open tasks",
   "today.source.nextMeeting": "the calendar",
   "today.source.deals": "deals",
@@ -3109,20 +3179,47 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "reports.sub": "deals by stage — unweighted next to weighted",
-  "reports.currency": "Currency",
-  "reports.count": "Deals",
-  "reports.unweighted": "Unweighted",
-  "reports.weighted": "Weighted",
-  "reports.planNote":
+  "analytics.sub": "deals by stage — unweighted next to weighted",
+  "analytics.currency": "Currency",
+  "analytics.count": "Deals",
+  "analytics.unweighted": "Unweighted",
+  "analytics.weighted": "Weighted",
+  "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "reports.reportDeals": "Deals by stage",
-  "reports.reportForecast": "Forecast",
-  "reports.reportOpenByCompany": "Open deals per company",
-  "reports.forecastBanner":
+  "analytics.reportDeals": "Deals by stage",
+  "analytics.sections": "Analytics sections",
+  "analytics.sectionForecast": "Forecast",
+  "analytics.sectionPipeline": "Pipeline",
+  "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "forecast.question": "Where will we land this quarter?",
+  "forecast.answerWithCall":
+    "The current call is {call}. Evidence supports {evidence}.",
+  "forecast.answerNoCall":
+    "Nobody has called this period yet. Evidence supports {evidence}.",
+  "forecast.partialTitle": "Not every deal is priced",
+  "forecast.partial":
+    "{priced} of {eligible} deals carry an amount. The rest are real pipeline contributing nothing to the totals above.",
+  "forecast.currentCall": "Current call",
+  "forecast.evidence": "Supported by evidence",
+  "forecast.alreadyWon": "Already won",
+  "forecast.updateCall": "Update the current call",
+  "forecast.callExplains":
+    "A call is what you believe will close. It records your number and changes no deal.",
+  "forecast.expectedTotal": "Expected total for this period",
+  "forecast.supportingNote": "Supporting note",
+  "forecast.cancel": "Cancel",
+  "forecast.saveCall": "Save call",
+  "forecast.receipt": "Data and evidence checked",
+  "forecast.eligible": "Eligible deals",
+  "forecast.priced": "Priced",
+  "forecast.confirmed": "Close date confirmed",
+  "forecast.fxMissing": "Exchange rate missing",
+  "analytics.reportForecast": "Forecast categories",
+  "analytics.reportOpenByCompany": "Open deals per company",
+  "analytics.forecastBanner":
     "Each tile shows the raw total and, beneath it, the probability-weighted total — rounded per deal, so it always reconciles to Explain This Number.",
-  "reports.company": "Company",
-  "reports.openDeals": "Open deals",
+  "analytics.company": "Company",
+  "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
 
   "ai.sub": "bring your own agent — governed by the two-tier contract",
@@ -5319,7 +5416,6 @@ export const en = {
   "deal360.verdict.drifting": "Drifting",
   "deal360.verdict.blocked": "Blocked",
   "deal360.verdict.cold": "Cold",
-  "deal360.next": "What to do next",
   "dealmail.title": "Email",
   "dealmail.sub.reply": "They wrote and nobody has answered yet.",
   "dealmail.sub.fresh": "Write to the people on this deal.",
@@ -5327,7 +5423,7 @@ export const en = {
   "dealmail.send": "Send an email",
   "recordmail.title": "Email",
   "recordmail.sub.reply": "An answer is owed.",
-  "recordmail.sub.fresh": "Write to this record's contacts.",
+  "recordmail.sub.fresh": "Write to them.",
   "recordmail.reply": "Draft the reply",
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
@@ -5690,6 +5786,8 @@ export const en = {
   "captureActivity.reason.no_counterparty": "no sender this CRM could record",
   "captureActivity.reason.role_mailbox":
     "a shared mailbox, not a person — kept, but no contact created",
+  "captureActivity.reason.private_thread":
+    "a private conversation — kept for you, but no contact created",
   "captureActivity.reason.transactional_infra":
     "the sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
@@ -5748,6 +5846,8 @@ export const en = {
   "pipeline.reason.no_counterparty": "no sender this CRM could record",
   "pipeline.reason.role_mailbox":
     "a shared mailbox, not a person — kept, but no contact created",
+  "pipeline.reason.private_thread":
+    "a private conversation — kept for you, but no contact created",
   "pipeline.reason.no_granting_human":
     "the connection named no member to act for",
   "pipeline.reason.derivation_failed":
@@ -6787,9 +6887,9 @@ export const en = {
   "person.graph.withContact": "with this contact",
   "person.graph.counts":
     "{total} interactions in 90 days · {inbound} in, {outbound} out",
+  "person.graph.untitledMessage": "Untitled",
   "person.graph.countsOnly":
     "Counts only — the messages themselves stay on the timeline.",
-  "person.graph.untitledMessage": "Message with no subject",
   "person.intro.routesTitle": "Ways in",
   "person.graph.droppedNote": "{count} more not shown.",
   "person.graph.withheldDirect": "Some colleagues are not shown.",
@@ -6970,10 +7070,8 @@ export const en = {
   // booking, and German renders them differently.
   "person.page.loading": "Loading…",
   "person.page.notOpened": "This contact could not be opened.",
-  "person.page.asideLabel": "Relationship context",
   "person.page.buyingRole": "Buying role",
   "person.page.owner": "Owner",
-  "person.page.ownerAssigned": "Assigned",
   "person.page.ownerUnassigned": "Unassigned",
   "person.page.linkedin": "LinkedIn",
   // Beside the editable address, not instead of it: the row holds a value to
@@ -6983,8 +7081,6 @@ export const en = {
   // The rail's own details grid: the contact's own fields, at a glance above
   // the six relationship sections below it.
   "person.rail.detailsTitle": "Details",
-  "person.rail.contactMethodImmutable":
-    "Set when this contact was added. Email and phone cannot be changed here.",
   "person.rail.archivedReadOnly":
     "This contact is archived. Restore them to change anything here.",
   // Fired when an employment row's version could not be read back before a
@@ -7041,14 +7137,12 @@ export const en = {
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",
   "person.strip.reciprocity": "Reciprocity",
-  "person.strip.openDeal": "Open deal",
+  "person.strip.inOut": "{inbound} in · {outbound} out",
   "person.strip.nextMeeting": "Next meeting",
-  "person.strip.consent": "Consent",
   "person.strip.never": "Never",
   "person.strip.today": "Today",
   "person.strip.yesterday": "Yesterday",
   "person.strip.days": "{count} days",
-  "person.strip.inOut": "{inbound} in · {outbound} out",
   "person.strip.noOpenDeal": "No open deal",
   "person.strip.noMeeting": "None",
   "person.consent.allowedWord": "Allowed",
@@ -7709,7 +7803,12 @@ export const en = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Reading your day…",
   "worklist.queue": "What to do next",
-  "worklist.summary": "{urgent} urgent · {due} due · {lower} lower-priority",
+  "worklist.more": "Show more",
+  "worklist.more.failed": "Could not load more. Try again.",
+  "worklist.summary":
+    "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine — {total} in all",
+  "worklist.summary.noMiddle":
+    "{urgent} urgent · {due} due · {lower} routine — {total} in all",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",
@@ -7718,6 +7817,12 @@ export const en = {
     "Nothing is waiting among the sources that answered.",
   "worklist.partial": "{sources}, so this is not the whole day.",
   "worklist.overdue": "Overdue",
+  "worklist.pair.ask": "Which record should survive?",
+  "worklist.pair.keep": "Keep {name}",
+  "worklist.pair.notDuplicate": "Not the same",
+  "worklist.pair.related": "{count} linked",
+  "worklist.pair.failed": "Could not settle the pair. Try again.",
+  "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "About this record",
   "worklist.pane.openRow": "Show what {position}, {title}, is about",
   "worklist.pane.loading": "Reading the record…",
@@ -7838,7 +7943,8 @@ export const en = {
   "worklist.because.pinned": "You pinned this",
   "worklist.because.buyer_wrote_last": "They wrote last",
   "worklist.because.waiting_days": "waiting",
-  "worklist.because.waiting_days.value": "waiting {value} days",
+  "worklist.because.waiting_days.value_one": "waiting {value} day",
+  "worklist.because.waiting_days.value_other": "waiting {value} days",
   "worklist.because.overdue": "overdue",
   "worklist.because.due_today": "due today",
   "worklist.because.closing_soon": "has a close date",
@@ -7851,7 +7957,8 @@ export const en = {
   "worklist.because.below_material.value":
     "worth {value}, below the typical open deal",
   "worklist.because.quiet_days": "gone quiet",
-  "worklist.because.quiet_days.value": "quiet for {value} days",
+  "worklist.because.quiet_days.value_one": "quiet for {value} day",
+  "worklist.because.quiet_days.value_other": "quiet for {value} days",
   "worklist.because.no_champion": "no champion",
   "worklist.because.promised": "you promised this",
   "worklist.because.approved_and_failed": "you approved it and it did not run",
@@ -7863,6 +7970,7 @@ export const en = {
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
+  "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
   "worklist.above.pin": "Above the next because you pinned it.",
@@ -7878,6 +7986,8 @@ export const en = {
     "Above the next: {mine} against {theirs}.",
   "worklist.above.relationship":
     "Above the next on how close the relationship is.",
+  "worklist.above.crowded":
+    "Above the next because that one is one of many of its kind.",
   "worklist.consequence.buyer_waits": "If you do nothing, they keep waiting.",
   "worklist.consequence.promise_breaks": "If you do nothing, a promise breaks.",
   "worklist.consequence.deal_drifts":
@@ -7939,6 +8049,11 @@ export const en = {
   // Where the composer actually opens, the verb is the ACT rather than the way
   // to it. The two labels are separate keys because the two clicks differ.
   "worklist.verb.draft_reply_now": "Draft the reply",
+  // A FIRST message rather than an answer to one. Separate keys because the two
+  // are different acts: a row saying "reply" over an opening outreach names a
+  // conversation that has not happened yet.
+  "worklist.verb.draft_email": "Open to write",
+  "worklist.verb.draft_email_now": "Draft the email",
   "worklist.deal.closes": "closes {date}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",
@@ -8041,6 +8156,55 @@ export const en = {
   "firstRun.ignite.carryOn": "Carry on",
   "firstRun.ai.foot":
     "Nothing is sent to your vendor until you press Continue.",
+  "person.readings.title": "Where this contact stands",
+  "person.readings.move": "Whose move",
+  "person.readings.yourMove": "Yours",
+  "person.readings.theirMove": "Theirs",
+  "person.readings.quiet": "Gone quiet",
+  "person.readings.neverSpoke": "Never spoken",
+  "person.readings.lastFromThem": "last from them: {when}",
+  "person.readings.neverReplied": "nothing from them yet",
+  "person.readings.promises": "Open promises",
+  "person.readings.nothingOwed": "nothing owed",
+  "person.readings.onTime": "none late yet",
+  "person.readings.deal": "Deals they decide",
+  "person.readings.openDeals": "Open deals",
+  "person.readings.openMeetings": "Open meetings",
+  "deal360.brief": "What this deal is",
+  "deal.strip.openHistory": "See the ledger",
+  "deal.strip.lastTouch": "Last touch",
+  "lead.standing.qualified": "Qualified",
+  "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a contact now.",
+  "lead.standing.qualifiedUndated": "This lead is a contact now.",
+  "lead.standing.closed": "Closed",
+  "lead.standing.closedFor": "Closed: {reason}. The record stays as the trail.",
+  "lead.standing.closedUnreasoned": "Closed. The record stays as the trail.",
+  "lead.standing.yourMove": "Your move",
+  "lead.standing.noResponse": "Nobody has answered this lead yet.",
+  "lead.standing.theirMove": "Their move",
+  "lead.standing.answeredOn": "We answered on {at}. Nothing has come back yet.",
+  "lead.standing.inMotion": "In motion",
+  "lead.standing.engagedBecause":
+    "They answered, or a meeting is on the calendar.",
+  "lead.standing.rests.promoted": "Promoted to a contact.",
+  "lead.standing.rests.closed": "Disqualified, no reason recorded.",
+  "lead.standing.rests.ladder": "Lead ladder",
+  "lead.standing.rests.record": "Lead record",
+  "lead.standing.rests.captured": "Captured {at}.",
+  "lead.standing.rests.noResponse": "No first response recorded.",
+  "lead.standing.rests.engaged": "Engagement captured {at}.",
+  "lead.readings.title": "Where this lead stands",
+  "lead.readings.firstResponse": "First response",
+  "lead.readings.noClock": "no response target set",
+  "lead.readings.owed": "Still owed",
+  "lead.today.answer": "Answer {name}",
+  "lead.today.answerMeta": "First response owed",
+  "lead.today.nextTask": "Next task",
+  "lead.readings.answered": "Answered",
+  "lead.standing.dueBy":
+    "Nobody has answered yet. The first response is due by {at}.",
+  "lead.standing.overdueSince":
+    "Nobody has answered yet. The first response was due {at}.",
 } as const;
 
 export type MessageKey = keyof typeof en;

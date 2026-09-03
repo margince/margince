@@ -1,0 +1,63 @@
+/* A cited email: the subject and when, on one line.
+ *
+ * It owns its own chrome so it reads the same inside an analytics stop, a
+ * brief's evidence row and a graph receipt — the three places that each drew
+ * their own version of this line before. The host supplies position; nothing
+ * about the reference itself is the host's to spell. */
+
+.emailref {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  font: inherit;
+  color: var(--textContent);
+  text-align: left;
+}
+
+.emailref > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--textTertiary);
+}
+
+/* The subject takes the room and gives it back: a long one truncates rather
+ * than pushing the date off the line, because the date is how a reader tells
+ * two messages on the same subject apart. */
+.emailref__subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emailref__when {
+  flex: none;
+  color: var(--textSecondary);
+  font-size: var(--fs-meta);
+}
+
+/* The openable form. Bare like `.link-button` rather than filled: a citation
+ * sits inside somebody else's layout, and a button drawn as a button there
+ * would out-shout the sentence it belongs to. */
+.emailref--open {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.emailref--open .emailref__subject {
+  color: var(--accent);
+}
+
+.emailref--open:hover .emailref__subject {
+  text-decoration: underline;
+}
+
+.emailref--open:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}

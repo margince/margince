@@ -47,6 +47,7 @@ type apiConfig struct {
 	connectorStateKey     string
 	webhookKey            string
 	metricsToken          string
+	vatCheckBaseURL       string
 	oauthAccessTokenTTL   time.Duration
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
@@ -102,12 +103,13 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
 	env.String(fs, &cfg.graphPushToken, "graph-push-token", "MARGINCE_GRAPH_PUSH_TOKEN", "", "shared secret on the Graph change-notification URL; enables POST /webhooks/graph (empty = route absent)")
 	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for the consent endpoint (default: common — any organization)")
-	env.String(fs, &cfg.microsoftSignInTenant, "microsoft-signin-tenant", "MARGINCE_MICROSOFT_SIGNIN_TENANT", "", "Entra DIRECTORY ID (a GUID) whose members may sign in; defaults to --graph-tenant when that names a directory. Sign-in cannot run on common/organizations/consumers — it matches a token address to a member, and any tenant admin controls their own users mail attribute")
+	env.String(fs, &cfg.microsoftSignInTenant, "microsoft-signin-tenant", "MARGINCE_MICROSOFT_SIGNIN_TENANT", "", "Entra DIRECTORY IDs (GUIDs, comma-separated) whose members may sign in; defaults to --graph-tenant when that names a directory. Sign-in cannot run on common/organizations/consumers — it matches a token address to a member, and any tenant admin controls their own users mail attribute, so each directory is one an operator vouched for. 9188040d-6c67-4c5b-b112-36a304b66dad admits PERSONAL accounts, whose address Microsoft made the holder prove they receive mail at")
 	env.String(fs, &cfg.hubspotAppSecret, "hubspot-app-secret", "MARGINCE_HUBSPOT_APP_SECRET", "", "HubSpot app client secret; verifies inbound overlay webhook v3 signatures and, when set, mounts /webhooks/hubspot (absent otherwise)")
 	env.String(fs, &cfg.apiBaseURL, "api-base-url", "MARGINCE_API_BASE_URL", "", "the api's externally-reachable base for the OAuth callback redirect_uri; defaults to --public-base-url (same-origin deployments), set only when the api is on a different origin than the SPA (e.g. dev)")
 	env.String(fs, &cfg.connectorStateKey, "connector-state-key", "MARGINCE_CONNECTOR_STATE_KEY", "", "HMAC key (>=32 bytes) signing the OAuth connect `state`; required for the Gmail and Graph connect flows")
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the mutating /webhook-subscriptions surface, and (with --inline-relay) the cg:webhooks delivery consumer. Empty = those paths answer 503 and no inline delivery runs. Re-attempting a parked delivery is the worker role's River job, never this one's.")
 	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential; empty (the default) answers 404 for /metrics rather than serving per-workspace job telemetry with no authentication at all")
+	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "", "same variable the worker reads to reach VIES; read here only to decide whether this role queues a consultation at all. Set on both roles together, or a stated VAT number goes unverified and /vat-check answers 404")
 	// A malformed TTL is CARRIED rather than returned, so it can be reported
 	// beside a missing DSN instead of hiding it for a boot. Returning here
 	// would put this fault ahead of every other one by accident of ordering —
@@ -168,6 +170,19 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	if cfg.oauthAccessTokenTTL < 0 || cfg.oauthAccessTokenTTL > identity.MaxOAuthAccessTokenTTL {
 		faults = append(faults, fmt.Sprintf("--oauth-access-token-ttl %s is out of range: 0 (the default) or up to %s",
 			cfg.oauthAccessTokenTTL, identity.MaxOAuthAccessTokenTTL))
+	}
+	// ONE authority, because capture builds a URL out of it. --graph-tenant is
+	// spliced straight into login.microsoftonline.com/%s/oauth2/..., so a list
+	// there produces an authority no directory answers for and a consent screen
+	// that fails with Microsoft's own opaque error.
+	//
+	// Worth naming now that its SIBLING takes a list:
+	// --microsoft-signin-tenant accepts several directories and falls back to
+	// this flag, so an operator configuring multi-directory sign-in has a
+	// reason to reach for the more prominent variable and break capture with it.
+	if strings.Contains(cfg.graphTenant, ",") {
+		faults = append(faults, "--graph-tenant takes ONE authority (a directory id, or common) and got a list: "+
+			cfg.graphTenant+" — several directories is a SIGN-IN posture, so put them in --microsoft-signin-tenant")
 	}
 	if len(faults) == 1 {
 		return apiConfig{}, errors.New("api: " + faults[0])

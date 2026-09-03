@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -88,6 +89,11 @@ type MessageIdentityReconciler interface {
 // asked. The dispatcher parks on the first and retries on the second.
 type ConsentGate interface {
 	RequireGrantedForRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string) error
+	// AuthorizeTransmit answers whether this delivery may go out NOW and
+	// records the answer per recipient before any provider I/O. The ticket it
+	// returns is what transmit demands: a send with no current ticket is a
+	// send nobody can account for.
+	AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error)
 }
 
 // SeatAuthority answers whether the human whose mailbox is about to transmit

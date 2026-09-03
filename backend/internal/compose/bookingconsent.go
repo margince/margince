@@ -66,13 +66,12 @@ func admitBookingPurpose(purposes []consent.Purpose, purposeID ids.UUID) error {
 func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, personID ids.UUID, c activities.BookingConsent) error {
 	source := "public_booking"
 	_, err := a.store.Record(ctx, consent.RecordInput{
-		PersonID:         ids.From[ids.PersonKind](personID),
-		PurposeID:        ids.From[ids.PurposeKind](c.PurposeID),
-		NewState:         "granted",
-		Source:           &source,
-		DoubleOptInToken: c.DoubleOptInToken,
-		PolicyText:       c.Wording,
-		PolicyVersion:    &c.PolicyVersion,
+		PersonID:      ids.From[ids.PersonKind](personID),
+		PurposeID:     ids.From[ids.PurposeKind](c.PurposeID),
+		NewState:      "granted",
+		Source:        &source,
+		PolicyText:    c.Wording,
+		PolicyVersion: &c.PolicyVersion,
 		// Anyone knowing an email can post this form: a decision already
 		// on record — above all a withdrawal — must stand.
 		NeverOverrideExisting: true,

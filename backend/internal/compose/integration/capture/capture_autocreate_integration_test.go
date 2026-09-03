@@ -127,10 +127,13 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 			email(captureOwner, "", "alice@acme.example", "fzo1@myco.example", ""),
 			email(captureOwner, "", "alice2@acme.example", "fzo2@myco.example", ""),
 		)
+		// Both answer on the thread they were written on, which is the exchange
+		// the create tier needs. The subject here is the fuzzy near-duplicate,
+		// so the reply is fixture rather than finding.
 		sync(
 			t,
-			email("alice@acme.example", "Alice Example", captureOwner, "fz0@acme.example", ""),
-			email("alice2@acme.example", "Alice Exampel", captureOwner, "f1@acme.example", ""),
+			email("alice@acme.example", "Alice Example", captureOwner, "fz0@acme.example", "fzo1@myco.example"),
+			email("alice2@acme.example", "Alice Exampel", captureOwner, "f1@acme.example", "fzo2@myco.example"),
 		)
 		if n := countRows(t, e, `
 			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id

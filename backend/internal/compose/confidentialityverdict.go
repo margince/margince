@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -57,8 +58,13 @@ const (
 type ConfidentialityVerdictEngine struct {
 	pool    *pgxpool.Pool
 	threads *capture.ThreadVerdictStore
-	brain   completer
-	log     *slog.Logger
+	// people is here for one reason: a personal verdict has to be able to
+	// retract the contact capture already made. Capture decides which records a
+	// private thread orphaned; people archives them through its own writer, so
+	// the write shape holds. Neither module imports the other.
+	people *people.Store
+	brain  completer
+	log    *slog.Logger
 }
 
 // NewConfidentialityVerdictEngine builds the engine over the pool and the model
@@ -69,6 +75,7 @@ func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *s
 	return &ConfidentialityVerdictEngine{
 		pool:    pool,
 		threads: capture.NewThreadVerdictStore(InstallationDB(pool)),
+		people:  people.NewStore(InstallationDB(pool)),
 		brain:   brain,
 		log:     log,
 	}
@@ -227,6 +234,9 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// so a thread ledger updated on its own is an answer with no effect:
 		// the message stays exactly as held as it was born.
 		if err := e.threads.RecordOutcomeTx(ctx, tx, row, status, kind); err != nil {
+			return err
+		}
+		if err := e.retractPrivateContactsTx(ctx, tx, row, kind); err != nil {
 			return err
 		}
 		return recomputeJudgedMessageTx(ctx, tx, row)

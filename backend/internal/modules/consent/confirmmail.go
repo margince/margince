@@ -67,8 +67,7 @@ func (h Handlers) sendConfirmLink(r *http.Request, issued IssuedConfirm) error {
 		"  " + h.confirmLink(issued.Token) + "\n\n" +
 		"This link is personal to you and works until " +
 		issued.ExpiresAt.Format("2 January 2006") + ".\n\n" +
-		"You do not have to do anything. Ignoring this changes nothing, and we will\n" +
-		"not write to you about it again.\n"
+		"You do not have to do anything. Ignoring this changes nothing.\n"
 	if err := h.confirmMailer.Send(r.Context(), issued.DeliveredTo,
 		"Your details, and whether we may stay in touch", body); err != nil {
 		return fmt.Errorf("send confirm-details link: %w", err)
@@ -81,8 +80,8 @@ func (h Handlers) sendConfirmLink(r *http.Request, issued IssuedConfirm) error {
 //
 // Delivery is best-effort and never fails the write. The token is minted either
 // way, and answering with an error would invite a retry that mints a second one
-// and silently supersedes the link already on its way. `delivered` says which
-// happened.
+// and silently supersedes the link already on its way. `provider_accepted`
+// says which happened.
 //
 // The plaintext token is deliberately absent from the response. This link is
 // only ever mailed, and returning it would hand a caller the capability that
@@ -100,7 +99,11 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 	// Collapsing them let the screen tell somebody "this installation sends no
 	// mail" about an installation that does.
 	sendable := h.canSendConfirm()
-	delivered := false
+	// What the relay accepted, which is not what a mailbox received. The
+	// previous name for this was "delivered", and it claimed the second thing
+	// while measuring the first: a relay returns before any inbox has seen the
+	// message, and a later bounce cannot travel back to change this answer.
+	providerAccepted := false
 	if sendable {
 		if sendErr := h.sendConfirmLink(r, issued); sendErr != nil {
 			// Logged rather than returned, for the reason above.
@@ -114,19 +117,19 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 			slog.ErrorContext(r.Context(), "confirm-details email failed",
 				"person_id", id)
 		} else {
-			delivered = true
+			providerAccepted = true
 		}
 	}
 
 	httperr.WriteJSON(w, http.StatusCreated, struct {
-		DeliveredTo string    `json:"delivered_to"`
-		ExpiresAt   time.Time `json:"expires_at"`
-		Delivered   bool      `json:"delivered"`
-		Sendable    bool      `json:"sendable"`
+		DeliveredTo      string    `json:"delivered_to"`
+		ExpiresAt        time.Time `json:"expires_at"`
+		ProviderAccepted bool      `json:"provider_accepted"`
+		Sendable         bool      `json:"sendable"`
 	}{
-		DeliveredTo: issued.DeliveredTo,
-		ExpiresAt:   issued.ExpiresAt,
-		Delivered:   delivered,
-		Sendable:    sendable,
+		DeliveredTo:      issued.DeliveredTo,
+		ExpiresAt:        issued.ExpiresAt,
+		ProviderAccepted: providerAccepted,
+		Sendable:         sendable,
 	})
 }

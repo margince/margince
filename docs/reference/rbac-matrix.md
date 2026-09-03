@@ -78,6 +78,7 @@ changes none.
 | `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `finance` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `forecast` | CR-- | CR-- | CR-- | -R-- | -R-- | CR-- |
 | `fx_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
 | `import_run` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `installation_settings` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |

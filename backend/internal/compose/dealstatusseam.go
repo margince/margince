@@ -26,11 +26,33 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/dealrooms"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// newDealStatusService builds the deal's status card service.
+//
+// ONE constructor, because two surfaces read it and a deal has one next step.
+// The deal page draws the card; the worklist reads the move that card decided,
+// so a queue row and the deal page name the same thing. Building a second
+// service for the queue would have been the shorter path and the wrong one: the
+// two would carry different seat readers and different lane bindings, and the
+// row would then suggest a step the page does not.
+//
+// It performs nothing. The click goes through the verb the move names, and the
+// only row it writes is its own per-reader cache entry.
+func newDealStatusService(pool *pgxpool.Pool) *dealstatus.Service {
+	db := InstallationDB(pool)
+	return dealstatus.NewService(
+		pool, deals.NewStore(db, DealsInstallation()),
+		activities.NewStore(db), dealrooms.NewStore(db), time.Now,
+	).WithSeats(dealSeatReader(pool))
+}
 
 // dealSeatReader reads the deal's seats with their roles and names.
 //

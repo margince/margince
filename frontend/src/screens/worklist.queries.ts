@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
@@ -51,21 +56,54 @@ export function useWorklist(
   filter: WorklistFilter,
   owner?: string,
 ) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: [...worklistKey, scope, filter, owner ?? ""],
     refetchOnWindowFocus: true,
-    queryFn: async (): Promise<Worklist> => {
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }): Promise<Worklist> => {
+      const dials = owner ? { owner, filter } : { scope, filter };
       const { data, error } = await api.GET("/worklist", {
-        params: {
-          query: owner ? { owner, filter } : { scope, filter },
-        },
+        params: { query: pageParam ? { ...dials, cursor: pageParam } : dials },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
+    // The server hands back no cursor on the final page, which is how a walk
+    // ends. Returning undefined for an empty page too, so a day that empties
+    // between reads stops rather than asking again for nothing.
+    getNextPageParam: (last) =>
+      last.queue.length > 0 ? (last.next_cursor ?? undefined) : undefined,
   });
+}
+
+/**
+ * The rows loaded so far, as one queue.
+ *
+ * DEDUPED, and that is a correctness requirement rather than defensive tidying.
+ * The contract is explicit that a walk offers no snapshot: the day is
+ * re-assembled and re-ranked on every read, so a row crossing the page boundary
+ * between two reads is served twice or not at all. Twice is the case a client
+ * can fix, and React would otherwise render duplicate keys for it.
+ *
+ * By source AND id, the same identity the screen selects by: `id` alone is not
+ * unique across lanes.
+ */
+export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
+  const seen = new Set<string>();
+  const rows: WorklistItem[] = [];
+  for (const page of pages) {
+    for (const item of page.queue) {
+      const identity = `${item.source}-${item.id}`;
+      if (seen.has(identity)) {
+        continue;
+      }
+      seen.add(identity);
+      rows.push(item);
+    }
+  }
+  return rows;
 }
 
 // Who on the team is carrying what.

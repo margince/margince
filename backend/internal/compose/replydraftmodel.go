@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
+	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -153,12 +154,7 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 		return replyDraft{}, err
 	}
 
-	var resp model.Response
-	if structured, ok := d.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, replyDraftShapeValid)
-	} else {
-		resp, err = d.brain.Complete(ctx, req)
-	}
+	resp, err := draftreply.Ask(ctx, d.brain, req, replyDraftShapeValid)
 	if err != nil {
 		return replyDraft{}, err
 	}

@@ -1,0 +1,53 @@
+/* A row of bars sharing one baseline. Grid rather than flex so every column is
+   the same width regardless of how long its label is — a step whose name is
+   longer must not draw a wider bar than the one beside it. */
+.waterfall-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: end;
+  gap: var(--space-2);
+  min-height: 8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.waterfall-bar {
+  display: grid;
+  align-content: end;
+  gap: var(--space-1);
+  height: 100%;
+  text-align: center;
+}
+/* The label sits under the bar and may be longer than its column. It wraps
+   rather than ellipsizing: a bucket name cut to "reopened_or…" tells a reader
+   nothing, and there are few enough of them that two lines is affordable. */
+.waterfall-label {
+  order: 2;
+  font-size: var(--fs-meta);
+  color: var(--textMuted);
+  overflow-wrap: anywhere;
+}
+.waterfall-fill {
+  order: 1;
+  align-self: end;
+  min-height: 2px;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+}
+/* The two anchors are the totals, drawn recessed so the movement between them
+   is what the eye lands on. */
+.waterfall-anchor .waterfall-fill {
+  background: var(--textMuted);
+}
+.waterfall-up .waterfall-fill {
+  background: var(--success);
+}
+.waterfall-down .waterfall-fill {
+  background: var(--danger);
+}
+.waterfall-warning {
+  margin: var(--space-2) 0 0;
+  color: var(--danger);
+  font-size: var(--fs-sm);
+}

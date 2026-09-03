@@ -38,97 +38,6 @@
   color: var(--textSecondary);
 }
 
-.glance-lines {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-}
-
-.glance-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin: 0;
-  font-size: var(--fs-lead);
-  line-height: var(--lh-snug);
-  color: var(--textPrimary);
-}
-
-/* A line with no figure to press — "nothing is waiting on you" — reads as
- * prose, so it is not indented to a numeral that is not there. */
-.glance-line-plain {
-  color: var(--textSecondary);
-}
-
-/* The sentence takes whatever the chip leaves and wraps INSIDE itself. Without
- * the shrink it is one unbreakable flex item, so a clause too long for the rest
- * of a phone's line pushed the whole sentence below its own numeral — a chip
- * alone on one row and its words on the next, which reads as two broken lines
- * rather than one. */
-.glance-clause {
-  flex: 1;
-  min-width: 0;
-  color: var(--textSecondary);
-}
-
-.glance-leader {
-  color: var(--textPrimary);
-}
-
-/* The numeral IS the control: every one of these goes somewhere, and a figure
- * that looks pressable and is not is worse than a plain one.
- *
- * One WIDTH for all of them, and tabular figures inside it, so the sentences
- * start on a single x — five chips sized to their own digits left the briefing
- * with a ragged left edge, which is the whole block reading as unaligned rather
- * than as one list. The floor is the width of the widest count this page can
- * show (three digits and the arrow); a longer one still grows the chip rather
- * than being clipped. */
-.glance-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  min-inline-size: calc(var(--space-12) + var(--space-2));
-  padding: 0 var(--space-2);
-  font-variant-numeric: tabular-nums;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  background: var(--accentLight);
-  color: var(--accentText);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
-  transition:
-    background-color var(--dur-state) var(--ease-out),
-    border-color var(--dur-state) var(--ease-out);
-}
-
-/* The flat form: a figure with no destination. It keeps the numeral's ground so
- * the column of counts still reads as one column, and gives up the arrow, the
- * hover and the pointer — nothing here can be pressed. */
-.glance-count-flat {
-  cursor: default;
-}
-
-/* Scoped to the BUTTON: the flat form wears the same class for the same ground,
-   and a hover state on a figure nobody can press is a promise of a control. */
-button.glance-count:hover {
-  background: var(--accentMed);
-  border-color: var(--accent);
-}
-
-button.glance-count:active {
-  transition-duration: var(--dur-tap);
-}
-
-.glance-count:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
 /* ── The readings plate ────────────────────────────────────────────────────
  * `StatStrip` owns the plate; this only places it. It sits between the
  * briefing and the work, which is the reading order the sentences promise.
@@ -248,6 +157,42 @@ button.glance-count:active {
   gap: var(--space-2);
 }
 
+/* ── The day's own shape, in the rail ──────────────────────────────────────
+ * A schedule row is read as a COLUMN of times: the hour sits on its own rail
+ * so the eye runs down the times rather than hunting for each one at the head
+ * of a sentence of different length. */
+
+.rail-schedule-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+/* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
+   that shifts by a digit reads as a ragged edge rather than as a rail. */
+.rail-schedule-when {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The badge sits WITH the title rather than after it, so a meeting whose name
+   wraps keeps its warning attached to it. */
+.rail-schedule-what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* What the panel cannot tell you, under what it can. Quiet like every other
+   line where a surface reports on its own limits. */
+.rail-promise-note {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
 /* ── Folds ────────────────────────────────────────────────────────────────
  * `PageZones` folds the columns; what folds here is the briefing's own scale.
  * A display-size greeting on a phone costs three lines before a reader has
@@ -298,7 +243,8 @@ button.glance-count:active {
 
 /* The Brief's opening block: a scope label, the greeting, then the day in one
    sentence. The sentence is body-weight rather than caption — it is the thing
-   the page is FOR, and the counts under it are the detail. */
+   the page is FOR, and every figure it used to be followed by is now drawn by
+   the section that owns it. */
 .glance-eyebrow {
   color: var(--textMeta);
   display: block;

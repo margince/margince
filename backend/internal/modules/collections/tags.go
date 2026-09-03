@@ -196,13 +196,57 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 	// UPDATE on the target, not merely read. A tag is part of the record: it
 	// steers who sees it in a filter and what an automation does with it, so
 	// writing one onto a record a caller may only READ would let them change
-	// a record they cannot edit. EnsureLinkTarget below still answers
-	// not-found for a row outside their scope, so existence stays hidden.
+	// a record they cannot edit. This is the OBJECT grant only; the ROW gate
+	// is applyTagTx's EnsureWritableLive, which still answers not-found for a
+	// record that does not exist or is archived, exactly as EnsureLinkTarget
+	// did — no owner predicate narrows a seated actor's read of a taggable
+	// table (tableclass.go), but capture privacy and the buyer bound still
+	// can, and both of those still answer not-found rather than a refusal
+	// that would confirm the row.
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return taggableRow{}, err
 	}
 	var out taggableRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var applyErr error
+		out, applyErr = applyTagTx(ctx, tx, tagID, entityType, entityID)
+		return applyErr
+	})
+	return out, err
+}
+
+// ApplyTagTx is ApplyTag inside a caller-opened transaction.
+//
+// The importer needs it: a record it creates and the tag that files it must
+// land together, or a crash between the two leaves a row in the estate that
+// the batch it belongs to cannot find. Same gates in the same order — the
+// caller runs them before opening its transaction, which is where the object
+// grants belong.
+func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (taggableRow, error) {
+	if err := httperr.RequireBodyID(entityIDField, entityID); err != nil {
+		return taggableRow{}, err
+	}
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
+		return taggableRow{}, err
+	}
+	if !memberEntityTables[entityType] {
+		return taggableRow{}, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
+	}
+	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
+		return taggableRow{}, err
+	}
+	return applyTagTx(ctx, tx, tagID, entityType, entityID)
+}
+
+// applyTagTx is the write itself, shared by both entry points above so a change
+// to what an application records reaches the HTTP caller and the importer
+// together.
+//
+// The gates are the callers' — each runs them before reaching here, because a
+// transaction is the wrong place to discover a caller had no authority.
+func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (taggableRow, error) {
+	var out taggableRow
+	err := func() error {
 		var archived *time.Time
 		err := tx.QueryRow(ctx, `SELECT archived_at FROM tag WHERE id = $1`, tagID).Scan(&archived)
 		if errors.Is(err, pgx.ErrNoRows) || (err == nil && archived != nil) {
@@ -211,9 +255,13 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 		if err != nil {
 			return err
 		}
-		// Tagging a record is a READ of it (H1): the reference is
-		// client-supplied and row-scoped.
-		if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
+		// Tagging a record CHANGES it: a caller whose only authority over the
+		// row is READ must not be able to re-file it. EnsureWritableLive keeps
+		// the existence-hiding EnsureLinkTarget gave — it runs the same
+		// live-visibility probe first and only narrows with the write arm —
+		// so a record that does not exist or is archived still answers
+		// not-found rather than confirming it exists by refusing differently.
+		if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
 		by, byKind := assigningPrincipal(ctx)
@@ -234,7 +282,7 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 			"applied": map[string]any{"entity_type": entityType, "entity_id": entityID},
 		})
 		return err
-	})
+	}()
 	return out, err
 }
 
@@ -245,9 +293,11 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 // tag was to retire the tag for everybody — which is not undo, it is a second
 // mistake with a wider blast radius.
 //
-// Same gates as applying, for the same reasons: `tag` update authority, and
-// EnsureLinkTarget because naming a record you cannot see must answer
-// not-found rather than confirming it exists by refusing differently.
+// Same gates as applying, for the same reasons: the target's own UPDATE
+// object grant, and EnsureWritableLive because taking a tag off a record
+// changes it — a caller who may only see the row must not be able to. A
+// record that does not exist or is archived still answers not-found rather
+// than confirming it exists by refusing differently.
 // Removing a tagging that is not there is NOT an error — the caller asked for
 // a state, and the state is already true (idempotent by intent, which is what
 // makes a retry safe).
@@ -263,8 +313,8 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 	}
 	// UPDATE on the target, the same gate applying holds: taking a tag off a
 	// record changes the record, and a caller who may only read it must not be
-	// able to. EnsureLinkTarget still answers not-found for a row outside
-	// their scope, so a refusal never confirms a deal id exists.
+	// able to. This is the OBJECT grant only; the ROW scope is
+	// EnsureWritableLive below.
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -277,7 +327,9 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 		if err != nil {
 			return err
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
+		// Same reasoning as applyTagTx: removing a tag CHANGES the record too,
+		// so the gate is write authority, not merely visibility.
+		if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
 		tag, err := tx.Exec(ctx, `
@@ -305,19 +357,21 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 // word behind when the record turned out not to exist or to sit outside the
 // caller's row scope.
 //
-// It also requires READ on the target's object type, which EnsureLinkTarget
-// alone does not: a role holding tag.update but not deal.read could otherwise
-// take taggings off deals it may not see, and tell an existing deal from a
-// missing one by which refusal came back.
+// The gate is exactly ApplyTag's own: UPDATE on the target's object type (not
+// merely read — tagging changes the record) and EnsureWritableLive for the
+// row. Asking a weaker question here than the real write asks would make this
+// pre-flight worse than useless: it would admit a caller apply-by-name then
+// spends a ResolveTag lookup on, only to have the write itself refuse them
+// afterward.
 func (s *Store) EnsureTaggable(ctx context.Context, entityType string, entityID ids.UUID) error {
 	if !memberEntityTables[entityType] {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
-	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureLinkTarget(ctx, tx, entityType, entityID)
+		return auth.EnsureWritableLive(ctx, tx, entityType, entityID)
 	})
 }
 
@@ -354,79 +408,6 @@ func ValidateTagName(name string) (string, error) {
 		}
 	}
 	return normalized, nil
-}
-
-// FindTag answers the id of the LIVE tag with this name, or ok=false.
-//
-// Case-insensitive, matching the uq_tag_name index, and live-only: an archived
-// word was retired on purpose and is not what a caller naming it means.
-func (s *Store) FindTag(ctx context.Context, name string) (ids.UUID, bool, error) {
-	id, state, err := s.lookupTagByName(ctx, name)
-	return id, state == tagNameLive, err
-}
-
-// TagNameState says which of the three answers a name lookup gave, because a
-// caller that has to explain a refusal cannot tell them apart from an id and a
-// bool: an unknown word and a retired one need different sentences, and
-// collapsing them tells somebody their tag does not exist when an admin can
-// restore it.
-type TagNameState int
-
-const (
-	tagNameMissing TagNameState = iota
-	tagNameLive
-	tagNameArchived
-)
-
-// LookupTagName resolves a name to its id and which state it is in.
-func (s *Store) LookupTagName(ctx context.Context, name string) (ids.UUID, TagNameState, error) {
-	return s.lookupTagByName(ctx, name)
-}
-
-// Archived returns whether the name resolved to a retired tag.
-func (st TagNameState) Archived() bool { return st == tagNameArchived }
-
-// Live returns whether the name resolved to a tag that may be applied.
-func (st TagNameState) Live() bool { return st == tagNameLive }
-
-func (s *Store) lookupTagByName(ctx context.Context, name string) (ids.UUID, TagNameState, error) {
-	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
-		return ids.UUID{}, tagNameMissing, err
-	}
-	var id ids.TagID
-	var archived *time.Time
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Live first, then the most recently retired. uq_tag_name binds live
-		// rows only, so a name can be held by one live tag AND any number of
-		// archived ones — without the ordering this picks whichever row the
-		// planner reaches, and a caller naming a word they can see would be
-		// told it is archived.
-		return tx.QueryRow(ctx, `
-			SELECT id, archived_at FROM tag
-			 WHERE lower(name) = lower($1)
-			 ORDER BY archived_at IS NOT NULL, archived_at DESC
-			 LIMIT 1`, NormalizeTagName(name)).Scan(&id, &archived)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, tagNameMissing, nil
-	}
-	if err != nil {
-		return ids.UUID{}, tagNameMissing, fmt.Errorf("collections: finding tag by name: %w", err)
-	}
-	if archived != nil {
-		return id.UUID, tagNameArchived, nil
-	}
-	return id.UUID, tagNameLive, nil
-}
-
-// TagSummary is the tag as another module sees it. tagRow is unexported
-// because its shape is this store's business; the seam that carries a tag
-// across a module boundary carries this instead.
-type TagSummary struct {
-	TagID    ids.UUID
-	Name     string
-	Color    string
-	Archived bool
 }
 
 func tagSummary(t tagRow) TagSummary {

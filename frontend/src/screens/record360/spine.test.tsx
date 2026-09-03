@@ -499,6 +499,29 @@ describe("the conversations behind the last word", () => {
     expect(screen.queryByText("1 Jul 2026")).toBeNull();
   });
 
+  it("says more when the page was cut, even with every conversation it holds drawn", () => {
+    // Two conversations on a page the server cut: the older history is real
+    // and the thread must not read as though these two were all of it.
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: {
+          ...activities([
+            { id: "c-2", kind: "email", subject: "Second", at: SPOKE },
+            {
+              id: "c-1",
+              kind: "email",
+              subject: "First",
+              at: "2026-08-05T09:00:00Z",
+            },
+          ]),
+          page: { has_more: true, next_cursor: "c" },
+        },
+      }),
+    );
+    expect(screen.getByText("More conversations before this")).toBeTruthy();
+  });
+
   it("counts one dropped conversation in the singular", () => {
     draw(
       view({

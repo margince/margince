@@ -1411,6 +1411,8 @@ describe("LeadScreen — overlay mode write affordances", () => {
 
     await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
     expect(screen.queryByTestId("lead-disqualify")).toBeNull();
+    // The mirror owns the lead's mail, so the header offers no Email verb.
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
   });
 
   it("Edit's real click path PATCHes and the 360 shows the saved name", async () => {
@@ -1985,6 +1987,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       "History",
       "Hide panel",
       "Show panel",
+      // The day's work opens the task LIST: a door to another screen, which
+      // writes nothing on this record.
+      "View tasks",
+      // A reading's receipt: it opens what the figure was computed from and
+      // writes nothing.
+      "How it stands",
     ]);
     // The column's OWN fold is skipped structurally rather than by its label:
     // it belongs to the shell's chrome, not to this record, and "Hide" is too
@@ -1996,7 +2004,14 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // unlabelled button on the page along with it.
       const name =
         button.textContent?.trim() || (button.getAttribute("aria-label") ?? "");
-      if (viewControls.has(name) || contextColumn?.contains(button)) {
+      // The call's own disclosure is skipped the same way: it opens the
+      // readings a verdict rests on and writes nothing, and its name carries a
+      // count that changes with the record.
+      if (
+        viewControls.has(name) ||
+        contextColumn?.contains(button) ||
+        button.classList.contains("r360-rests-toggle")
+      ) {
         continue;
       }
       expect(
@@ -2190,14 +2205,30 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "The breakdown for this score isn\u2019t stored yet — the next update will show it.",
-        ),
-      ).toBeTruthy(),
+    // Said wherever the score is. The score card states it in the open; the
+    // reading beside it keeps its receipt behind its "How it stands" door, so
+    // the sentence is counted once before that door opens and twice after —
+    // exactly, so neither surface can drop it unnoticed.
+    const notStored =
+      "The breakdown for this score isn\u2019t stored yet — the next update will show it.";
+    await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(1));
+    const grid = document.querySelector(".readings-grid");
+    if (!(grid instanceof HTMLElement)) {
+      throw new Error("the lead's readings row is not on the page");
+    }
+    const scoreCard = within(grid).getByText("Score").closest(".stat-card");
+    if (!(scoreCard instanceof HTMLElement)) {
+      throw new Error("the score reading is not a card in the readings row");
+    }
+    const user = userEvent.setup();
+    await user.click(
+      within(scoreCard).getByRole("button", { name: "How it stands" }),
     );
+    await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(2));
     expect(screen.queryByText("What this score has to work with:")).toBeNull();
+    expect(
+      screen.queryByText("Nothing counted toward this score yet."),
+    ).toBeNull();
   });
 
   it("says why a lead scores nothing rather than explaining our storage history", async () => {
@@ -2287,5 +2318,15 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
+  });
+});
+
+describe("LeadScreen — the header's Email verb", () => {
+  it("carries the same Email verb every record header does", async () => {
+    stubFetchWithMe(async () => jsonResponse(lead));
+    render(<LeadScreen id="l-1" />);
+    const verb = await screen.findByRole("button", { name: "Email" });
+    expect(verb.querySelector(".lucide-mail")).toBeTruthy();
+    expect(verb.hasAttribute("disabled")).toBe(false);
   });
 });

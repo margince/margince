@@ -106,6 +106,7 @@ Columns:
 | `catch_me_up_on` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `check_availability` | 🟢 | `read` | — | Calendar seam; not mode-routed |
 | `create_record` | 🟢 / 🟡 | `write` | — | Seam-routed: write-back through the incumbent |
+| `create_tag` | 🟢 | `write` | — | Coins a word in the workspace vocabulary; native, not mode-routed. Needs `tag.create`, which the seeded roles give Admin and Ops alone |
 | `disqualify_lead` | 🟢 | `write` | — | `unsupported_by_sor`: a lead is mirrored and the provider cannot serve this write, so the native table is empty |
 | `draft_email` | 🟢 | `draft` | — | Activities seam; not mode-routed |
 | `draft_follow_ups_for` | 🟢 | `draft` | — | `unsupported_by_sor` (native-only guard) |
@@ -127,11 +128,15 @@ Columns:
 | `relink_activity` | dynamic | `write` | — | Runs: a link row is not an SoR record write, so it is available in either mode |
 | `resolve_entities` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
+| `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |
+| `forecast_movement` | 🟢 | `read` | — | Diffs two stored snapshots, so it answers only where snapshots exist |
+| `forecast_input_checks` | 🟢 | `read` | — | Reads the nightly run's own record, so it answers only where a run has completed |
 | `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `search_records` | 🟢 | `read` | — | Mirror-backed; results carry `trust_tier: external` |
 | `send_email` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
 | `send_message` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
 | `update_record` | 🟢 / 🟡 | `write` | — | Seam-routed; see the per-field split below |
+| `update_tag` | 🟢 | `write` | — | Renames, recolours or describes an existing word; native, not mode-routed |
 | `whats_slipping_this_week` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `who_knows` | 🟢 | `read` | — | Native relationship read; carries no mode guard |
 

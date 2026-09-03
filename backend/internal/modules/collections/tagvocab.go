@@ -108,6 +108,13 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 		{typeDeal, &out.Deals},
 	} {
 		n, err := countVisibleTagged(ctx, tx, id, c.entityType)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			// No grant on that type is not "none of them carry it": the caller
+			// may not read the type at all, and a number covering rows they
+			// cannot list would tell them those rows exist. Zero is the honest
+			// answer to a caller who is not admitted to look.
+			continue
+		}
 		if err != nil {
 			return TagUsage{}, err
 		}
@@ -119,6 +126,13 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 // countVisibleTagged counts one type's tagged records under that type's own
 // row-scope predicate.
 func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType string) (int, error) {
+	// The OBJECT grant first. ScopeClauseFor renders a row predicate and is not
+	// a gate: a seat holding tag.read and no person.read would otherwise be
+	// counted the people it may not list, and a count of rows a caller cannot
+	// open discloses that they exist.
+	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+		return 0, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	tagPos, typePos := arg(id), arg(entityType)
@@ -143,6 +157,85 @@ func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType
 		return 0, fmt.Errorf("collections: counting %s tag usage: %w", entityType, err)
 	}
 	return n, nil
+}
+
+// CountTagReachBatch totals, per tag, the records THIS caller may see carrying
+// it — one statement per record type for the whole page rather than three per
+// hit, which is what a search page of tag hits would otherwise cost.
+//
+// The per-type structure is kept, not flattened: each type carries its own
+// object grant and its own row-scope predicate, and a single query across
+// types could honour neither. What is batched is the tags, not the rules.
+//
+// A tag absent from the returned map is one nothing visible carries; the
+// caller decides whether that reads as zero or as unknown.
+func CountTagReachBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID) (map[ids.TagID]int, error) {
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	out := make(map[ids.TagID]int, len(tagIDs))
+	if len(tagIDs) == 0 {
+		return out, nil
+	}
+	for _, entityType := range []string{typePerson, typeOrganization, typeDeal} {
+		counts, err := countVisibleTaggedBatch(ctx, tx, tagIDs, entityType)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			// Same rule as tagUsage: a type this caller may not read
+			// contributes nothing rather than disclosing that its rows exist.
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for tagID, n := range counts {
+			out[tagID] += n
+		}
+	}
+	return out, nil
+}
+
+// countVisibleTaggedBatch is countVisibleTagged over many tags at once, under
+// the same object grant and the same row-scope predicate.
+func countVisibleTaggedBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID, entityType string) (map[ids.TagID]int, error) {
+	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos, typePos := arg(tagIDs), arg(entityType)
+	scope, err := auth.ScopeClauseFor(ctx, entityType, "r", arg)
+	if err != nil {
+		return nil, fmt.Errorf("collections: scoping %s tag usage: %w", entityType, err)
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	query := fmt.Sprintf(`
+		SELECT tg.tag_id, count(*)
+		  FROM taggable tg
+		  JOIN %s r ON r.id = tg.entity_id
+		 WHERE tg.tag_id = ANY($%d) AND tg.entity_type = $%d
+		   AND r.archived_at IS NULL
+		   AND (%s)
+		 GROUP BY tg.tag_id`, pgx.Identifier{entityType}.Sanitize(), idsPos, typePos, scope)
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("collections: counting %s tag usage: %w", entityType, err)
+	}
+	defer rows.Close()
+	out := make(map[ids.TagID]int, len(tagIDs))
+	for rows.Next() {
+		var tagID ids.TagID
+		var n int
+		if err := rows.Scan(&tagID, &n); err != nil {
+			return nil, fmt.Errorf("collections: reading %s tag usage: %w", entityType, err)
+		}
+		out[tagID] = n
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("collections: reading %s tag usage: %w", entityType, err)
+	}
+	return out, nil
 }
 
 // TagUpdate is the partial a rename carries. A nil field is left alone; a
@@ -296,6 +389,12 @@ type MergeResult struct {
 // deliberate product decision and it has a cost the caller has to be told
 // about: links to the old tag stop working, searching its name finds nothing,
 // and somebody can coin the same word again next month.
+// It carries no per-record row gate, unlike applyTagTx/RemoveTag: it rewrites
+// every taggable row across the workspace as one vocabulary operation. No
+// SEEDED role pairs tag.update with a bounded row scope — every role holding
+// it today is unbounded — but the pairing is an object grant an admin could
+// still set (identity.Service.SetRoleObjectGrant), which this gate does not
+// itself refuse.
 func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeResult, error) {
 	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
 		return MergeResult{}, err

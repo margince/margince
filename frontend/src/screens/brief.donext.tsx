@@ -5,7 +5,7 @@ import { Panel } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { waitingRows } from "./brief.sentence";
+import { leadRows, waitingRows } from "./brief.sentence";
 import type { Worklist } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
@@ -28,9 +28,6 @@ import "./brief.donext.css";
 // base-currency conversion and a materiality threshold the browser does not
 // hold — so this takes a prefix of the queue and nothing else.
 
-/** How many rows lead the page. */
-const LEAD = 3;
-
 /**
  * The head of the ranked queue, expanded.
  *
@@ -52,7 +49,7 @@ export function DoNext({
   // "what this page is answerable for", so the sentence cannot name a row this
   // section did not draw.
   const waiting = waitingRows(day);
-  const rows = waiting.slice(0, LEAD);
+  const rows = leadRows(day);
   return (
     <section id="brief-donext" aria-label={t("brief.donext.title")}>
       <Panel
@@ -94,7 +91,6 @@ export function DoNext({
                     // only from a page that is already about somebody else, and
                     // this page is about the person reading it.
                     owner=""
-                    asOf={day.as_of}
                     // No pane and no filter on this surface, so the rank draws
                     // as a number rather than as a control that opens nothing.
                     // WorklistRow leaves both out when they are absent.

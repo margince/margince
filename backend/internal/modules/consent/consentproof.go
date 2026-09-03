@@ -34,14 +34,13 @@ func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID)
 	return key, requiresDOI, nil
 }
 
-// resolveDOIConfirmation enforces the German email norm: a DOI purpose's
-// grant is only effective once the double-opt-in round-trip confirmed.
-// The token must be one this server issued (hash-matched, unconsumed,
-// unexpired) — consuming it here makes the confirmation single-use and
-// unfabricatable rather than stored half-true. Non-DOI paths return nil.
-// The DOI round-trip is person-keyed (consent_doi_token has no lead arm),
-// so a DOI grant on a lead subject is refused rather than recorded
-// unconfirmed — the lead promotes first, then confirms.
+// resolveDOIConfirmation enforces the German email norm: a DOI purpose's grant
+// is only effective once the double-opt-in round-trip confirmed, and the only
+// thing that confirms one is the subject spending a single-use link that was
+// mailed to their own live primary address. Non-DOI paths return nil.
+//
+// The round trip is person-keyed, so a DOI grant on a lead subject is refused
+// rather than recorded unconfirmed — the lead promotes first, then confirms.
 func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
 	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
 		return nil, nil
@@ -62,14 +61,15 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 		confirmed := s.now().UTC()
 		return &confirmed, nil
 	}
-	if in.DoubleOptInToken == nil || *in.DoubleOptInToken == "" {
-		return nil, &ValidationError{Field: "double_opt_in_token", Reason: "purpose requires a confirmed double opt-in"}
+	// Nothing else confirms. An operator-held token used to satisfy this, which
+	// meant the round trip could be completed by the same person who started it
+	// — the subject's mailbox never took part, and the grant recorded a
+	// confirmation that had not happened. A grant reaching here has no mailbox
+	// behind it, so it is refused rather than recorded half-true.
+	return nil, &ValidationError{
+		Field:  "purpose_id",
+		Reason: "this purpose is confirmed by the subject through a link mailed to them, not by a value a caller supplies",
 	}
-	confirmed, err := s.consumeDOIToken(ctx, tx, in.PersonID, in.PurposeID, *in.DoubleOptInToken)
-	if err != nil {
-		return nil, err
-	}
-	return &confirmed, nil
 }
 
 // upsertConsentWithProof writes the state row and appends the immutable
@@ -87,12 +87,15 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source); err != nil {
 		return err
 	}
-	// issuance_trigger names what made this grant confirmable without a round
-	// trip, so the chain is readable from the proof row alone. Set only where a
-	// mailbox proof actually STOOD IN for one: an ordinary purpose needed no
+	// issuance_trigger names the mailbox proof this grant rests on, so the chain
+	// is readable from the proof row alone. Set only where a mailbox proof
+	// actually stood in for the round trip: an ordinary purpose needed no
 	// confirmation, so claiming the link substituted for one would overstate
-	// what happened. NULL where a real token was redeemed — there the consumed
-	// token is itself the record.
+	// what happened.
+	//
+	// It is also what the outbound gates read to tell a real confirmation from
+	// a claimed one (verdict.go, gate.go). Rows the retired operator-token
+	// endpoint produced carry NULL here and authorize nothing.
 	var trigger *string
 	if doiConfirmedAt != nil && in.MailboxProof.proves() {
 		named := string(in.MailboxProof)

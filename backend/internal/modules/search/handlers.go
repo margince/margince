@@ -21,8 +21,11 @@ type Handlers struct {
 }
 
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
-func NewHandlers(db *database.DB) Handlers {
-	store := NewStore(db)
+// NewHandlers binds the HTTP search surface. `tagReach` counts what a tag hit
+// is on for the asking caller; compose supplies the collections store's own
+// counter, and a nil one leaves every hit's count absent rather than zero.
+func NewHandlers(db *database.DB, tagReach TagReachCounter) Handlers {
+	store := NewStore(db).WithTagReach(tagReach)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The
 	// request-path embed lane compose binds is for the RANKED half, and
@@ -63,6 +66,11 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		}
 		if hit.Snippet != "" {
 			result.Snippet = ptr(hit.Snippet)
+		}
+		// Copied, not aliased: `hit` is the loop's own variable and taking its
+		// address would give every result the last hit's number.
+		if hit.CarriedBy != nil {
+			result.CarriedBy = ptr(*hit.CarriedBy)
 		}
 		// native records are authoritative
 		result.TrustTier = ptr(crmcontracts.SearchResultTrustTierAuthoritative)

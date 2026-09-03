@@ -1531,7 +1531,8 @@
   /* Tight on purpose. A reading is four short lines — what it is, the figure,
      what the figure is drawn from, and a bar — and generous padding around
      that much text turns a row a reader takes in at a glance into four boxes
-     they have to travel down. */
+     they have to travel down. ReadingsGrid, whose cards stand free, gives its
+     own more room (readingsgrid.css). */
   padding: 0.7rem 0.9rem;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -1623,11 +1624,19 @@
    floating wherever its own content ended. */
 .stat-card-foot {
   display: flex;
+  /* Two whole items that may go onto two lines, never two items broken
+     mid-phrase: in a four-across row the receipt and the door do not always
+     share a line, and a receipt shrunk to one word per line reads as damage. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
   margin-top: auto;
   padding-top: var(--space-2);
+}
+
+.stat-card-foot > * {
+  white-space: nowrap;
 }
 /* Only the door: with no receipt beside it, it still sits at the card's end
    rather than under the figure. */

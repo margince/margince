@@ -42,6 +42,10 @@ func withDue(at time.Time) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.DueAt = &at }
 }
 
+func withOccurred(at time.Time) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) { i.OccurredAt = &at }
+}
+
 func withDetail(detail string) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.Detail = &detail }
 }
@@ -161,6 +165,49 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 	}
 	if summary.LowerPriority != 1 {
 		t.Fatalf("counted %d lower-priority, wanted the one hygiene decision", summary.LowerPriority)
+	}
+	// Every row reaches one of the three, so the line cannot describe a page
+	// while leaving rows out of every figure on it.
+	if counted := summary.Urgent + inPlayOf(summary) + summary.LowerPriority; counted != summary.Total {
+		t.Fatalf("the three bands hold %d of %d rows — some row is in no figure at all",
+			counted, summary.Total)
+	}
+}
+
+// inPlayOf reads the optional figure. Absent is zero — an older answer that
+// counted no middle band, which is what the client shows for one too.
+func inPlayOf(summary crmcontracts.WorklistSummary) int {
+	if summary.InPlay == nil {
+		return 0
+	}
+	return *summary.InPlay
+}
+
+// A queue of nothing but at-risk deals still reports numbers.
+//
+// Levels 3 to 5 — material risk, agreed work, blocking decisions — fell between
+// the summary's two arms, so a page full of them read "0 urgent, 0 due, 0
+// routine". A reader takes three zeros over a full page as a broken screen or
+// an empty day, and it was neither.
+func TestTheMiddleOfTheDayReachesAFigure(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("d1", "deal_at_risk"), item("d2", "deal_at_risk")),
+	}
+
+	ordered := rankAll(classifyDay(day, rankInstant, dayMoney{}))
+	summary := summarize(ordered, materialBar{})
+
+	if len(ordered) == 0 {
+		t.Fatal("the fixture produced no rows, so this proves nothing")
+	}
+	if inPlayOf(summary) != len(ordered) {
+		t.Fatalf("counted %d in play over a queue of %d at-risk deals",
+			inPlayOf(summary), len(ordered))
+	}
+	if summary.Urgent != 0 || summary.LowerPriority != 0 {
+		t.Fatalf("an at-risk deal is neither an interruption nor hygiene: urgent=%d routine=%d",
+			summary.Urgent, summary.LowerPriority)
 	}
 }
 
@@ -731,7 +778,7 @@ func TestAWaitingRowNamesTheMessageAReplyWouldAnswer(t *testing.T) {
 	if move.Action != "draft_reply" {
 		t.Fatalf("the move is %q, wanted the reply", move.Action)
 	}
-	if ids.UUID(move.ActivityId) != message {
+	if move.ActivityId == nil || ids.UUID(*move.ActivityId) != message {
 		t.Fatal("the move names the wrong message, so a reply would answer the wrong thing")
 	}
 }

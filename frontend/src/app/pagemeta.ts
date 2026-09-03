@@ -30,7 +30,14 @@ import type { Route } from "./router";
  * heading somewhere on it. A screen whose own heading is an h2 still wants the
  * shell to name the page.
  */
-export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set(["home"]);
+// Home greets the reader in its own h1. The tag page heads itself with the
+// TAG'S NAME, which the shell cannot know: "Tag" above a pill spelling
+// "Automation World 2026" names the page twice and names it worse both times —
+// a reader arriving from a search hit wants the word they searched at the top.
+export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
+  "home",
+  "tags",
+]);
 
 // Only a subtitle true of the WHOLE page qualifies. Copy that describes the
 // current tab, filter or segment belongs beside that control, where it changes
@@ -61,6 +68,12 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   // reached from the composer that put a message in it and from Today, which is
   // where the same rep's other waiting work already lives.
   scheduled: "nav.scheduled",
+  // Off the rail because a tag page is reached from a tag — a pill on a record,
+  // a search hit, the vocabulary in Settings — and never from a destination
+  // list. Absent from this map it fell through to `shell.unknownPage`, so the
+  // page that lists what carries a word was headed "Not found" above the
+  // results it had just found.
+  tags: "nav.tags",
 };
 
 export function resolveTitle(

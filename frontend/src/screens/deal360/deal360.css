@@ -26,10 +26,3 @@
   font-weight: var(--fw-regular);
   color: var(--textSecondary);
 }
-
-/* The readings band. The section owns its own interval; StatStrip owns the
- * plate, and a screen that reached into it would be a second author of that
- * geometry. */
-.d360-readings {
-  margin-top: var(--space-3);
-}
