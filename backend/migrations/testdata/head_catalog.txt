@@ -154,6 +154,7 @@ public.activity_participant.activity_participant_role_check CHECK ((role = ANY (
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.person_id uuid gen=- def=-
 public.activity_participant.role text NOT NULL gen=- def=-

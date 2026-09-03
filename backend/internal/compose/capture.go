@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -254,6 +255,11 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// briefly readable before a later pass narrows it has already been
 		// readable.
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
+		// The attendee naming, from the module that owns `person`. Inside the
+		// capture transaction for a plainer reason than the audience above: the
+		// name it completes is read off the participant rows this same
+		// transaction has just written.
+		WithParticipantNamer(people.FillParticipantNamesTx).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

@@ -65,7 +65,7 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		  WHERE p.person_id = $1`, nil},
 		{&pkg.ChannelIdentities, `SELECT provider, channel_user_id, username, blocked_at, source, created_at, archived_at
 		   FROM person_channel_identity WHERE person_id = $1`, nil},
-		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.created_at,
+		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.display_name, ap.created_at,
 		       a.kind, a.occurred_at, a.direction
 		   FROM activity_participant ap
 		   JOIN activity a ON a.id = ap.activity_id
