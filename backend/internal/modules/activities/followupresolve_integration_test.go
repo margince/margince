@@ -125,11 +125,12 @@ func (e *resolveEnv) seedTaskLinkedToPerson(t *testing.T, source, capturedBy str
 // leadPromotedEvent is the real shape people.QualifyLead emits — the payload
 // names the person the lead became, which is the only place, once
 // carryLeadActivities has run, that a caller can still learn where the lead's
-// tasks went.
-func leadPromotedEvent(t *testing.T, lead, person ids.UUID) workflow.Event {
+// tasks went. dedupeOutcome is "created" for a fresh person, "merged" for an
+// existing survivor — see promotedPersonID's doc for why the resolver reads it.
+func leadPromotedEvent(t *testing.T, lead, person ids.UUID, dedupeOutcome string) workflow.Event {
 	t.Helper()
 	payload, err := json.Marshal(map[string]string{
-		"promoted_person_id": person.String(), "dedupe_outcome": "created", "trigger": "human_qualify",
+		"promoted_person_id": person.String(), "dedupe_outcome": dedupeOutcome, "trigger": "human_qualify",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -298,7 +299,7 @@ func TestAPromotedLeadCompletesItsSystemTasksCarriedToThePerson(t *testing.T) {
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	result := fire(ctx, t, h, leadPromotedEvent(t, e.lead, person))
+	result := fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "created"))
 
 	if len(result.Applied) == 0 {
 		t.Fatal("a promoted lead resolved nothing — the follow-up loop stays open forever")
@@ -308,6 +309,32 @@ func TestAPromotedLeadCompletesItsSystemTasksCarriedToThePerson(t *testing.T) {
 	}
 	if e.isDone(t, humanTask) {
 		t.Error("the HUMAN's task was completed — the system claimed work a person may not consider done")
+	}
+}
+
+// A lead promoted into an EXISTING person (dedupe_outcome "merged") must not
+// claim work the person's own history already carries. promoteTarget only
+// merges into a survivor that could easily have its own open system-minted
+// reminder already (no_activity_reminder/check_in_cadence anchor on a person
+// the same way) — completing every open system task on the person, rather
+// than only the one this promotion carried, would tick off a reminder this
+// promotion has nothing to do with, with an audit row claiming the follow-up
+// happened. The resolver only completes the carried task on a genuinely NEW
+// person, where nothing else could exist to collide with yet.
+func TestAMergedPromotionDoesNotClaimThePersonsUnrelatedTasks(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	// Pre-existing, unrelated to this promotion: a check-in reminder the
+	// system minted against the SURVIVOR long before this lead ever promoted.
+	unrelatedReminder := e.seedTaskLinkedToPerson(t, "system", "system", person)
+
+	ctx := e.systemCtx()
+	h := handlerFor(t, store, "lead.promoted")
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged"))
+
+	if e.isDone(t, unrelatedReminder) {
+		t.Error("a merge completed a person's pre-existing system reminder that this promotion never touched")
 	}
 }
 

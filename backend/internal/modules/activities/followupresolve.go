@@ -161,16 +161,27 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 	// transaction that emits this event — so the lead-keyed completion above
 	// never finds it once a lead has genuinely promoted; only the payload
 	// still names where the task went.
+	//
+	// Only for a FRESH person (dedupe_outcome "created"). A promotion that
+	// MERGES into an existing survivor carries the same task, but the
+	// survivor can already carry its own open system-minted reminders —
+	// no_activity_reminder and check_in_cadence anchor on a person the same
+	// way a lead's follow-up does — and completing every open system task on
+	// the person would tick off work this promotion has nothing to do with.
+	// A newly minted person cannot yet carry anything else, so completing by
+	// person id is exact there and only there.
 	if w.trigger == leadPromotedTrigger {
-		personID, err := promotedPersonID(ev.Payload)
+		promoted, err := decodeLeadPromoted(ev.Payload)
 		if err != nil {
 			return workflow.RunResult{}, fmt.Errorf("decoding the promoted person: %w", err)
 		}
-		done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, personID)
-		if err != nil {
-			return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on person %s: %w", personID, err)
+		if promoted.DedupeOutcome == dedupeOutcomeCreated {
+			done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, promoted.PersonID)
+			if err != nil {
+				return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on person %s: %w", promoted.PersonID, err)
+			}
+			completed += done
 		}
-		completed += done
 	}
 	if completed == 0 {
 		return workflow.RunResult{}, nil
@@ -178,15 +189,30 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
 
-// promotedPersonID reads the person a lead.promoted payload names — the only
-// place, once carryLeadActivities has run, that still says where its tasks
-// went.
-func promotedPersonID(payload json.RawMessage) (ids.PersonID, error) {
+// dedupeOutcomeCreated is people.QualifyLead's own spelling
+// (promote.go) for "a fresh person, not a merge into a survivor" — the one
+// outcome where completing every open system task on the person cannot reach
+// anything this promotion did not itself just carry there.
+const dedupeOutcomeCreated = "created"
+
+// promotedLead is what a lead.promoted payload says about where a lead's
+// tasks went, and whether that person existed before this promotion.
+type promotedLead struct {
+	PersonID      ids.PersonID
+	DedupeOutcome string
+}
+
+// decodeLeadPromoted reads a lead.promoted payload — the only place, once
+// carryLeadActivities has run, that still says where its tasks went.
+func decodeLeadPromoted(payload json.RawMessage) (promotedLead, error) {
 	var body crmcontracts.PublicEventLeadPromoted
 	if err := json.Unmarshal(payload, &body); err != nil {
-		return ids.PersonID{}, fmt.Errorf("activities: decoding lead.promoted's payload: %w", err)
+		return promotedLead{}, fmt.Errorf("activities: decoding lead.promoted's payload: %w", err)
 	}
-	return ids.From[ids.PersonKind](ids.UUID(body.PromotedPersonId)), nil
+	return promotedLead{
+		PersonID:      ids.From[ids.PersonKind](ids.UUID(body.PromotedPersonId)),
+		DedupeOutcome: body.DedupeOutcome,
+	}, nil
 }
 
 func (w followUpAutoResolve) IdempotencyKey(ev workflow.Event) string {
@@ -245,7 +271,7 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // leaves a call that takes no read gate of its own; each completion's
 // write is gated inside UpdateActivity.
 func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
-	return s.completeOpenSystemTasksLinkedBy(ctx, "l.lead_id = $1", leadID.UUID)
+	return s.completeOpenSystemTasksLinkedBy(ctx, "lead_id", leadID.UUID)
 }
 
 // CompleteOpenSystemTasksForPerson is CompleteOpenSystemTasksForLead's
@@ -254,14 +280,16 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 // in the same transaction that emits lead.promoted, so a lead id can no
 // longer find it — only the person id it was carried to can.
 func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID ids.PersonID) (int, error) {
-	return s.completeOpenSystemTasksLinkedBy(ctx, "l.person_id = $1", personID.UUID)
+	return s.completeOpenSystemTasksLinkedBy(ctx, "person_id", personID.UUID)
 }
 
-// completeOpenSystemTasksLinkedBy is the one query and completion loop both
-// callers above share, differing only in which activity_link column names
-// the subject. `linkClause` is always a caller-supplied compile-time literal
-// ("l.lead_id = $1" / "l.person_id = $1"), never a value off a request body.
-func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, linkClause string, linkValue ids.UUID) (int, error) {
+// completeOpenSystemTasksLinkedBy is the query and completion loop both
+// callers above share, differing only in which activity_link column names the
+// subject. `column` is unexported and passed only by the two callers above,
+// each a compile-time literal ("lead_id" / "person_id") — never a value off a
+// request body. Its placeholder is spelled right here, beside the argument
+// that fills it, rather than split across a call boundary.
+func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column string, linkValue ids.UUID) (int, error) {
 	type openTask struct {
 		id      ids.ActivityID
 		version int64
@@ -271,10 +299,10 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, linkClause 
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
-			WHERE %s AND a.kind = $2 AND a.source = $3
+			WHERE l.%s = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, linkClause), linkValue, string(crmcontracts.ActivityKindTask), systemSource,
+			ORDER BY a.id`, column), linkValue, string(crmcontracts.ActivityKindTask), systemSource,
 			systemCapturedBy, systemCapturedByPattern)
 		if err != nil {
 			return err
