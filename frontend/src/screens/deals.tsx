@@ -47,6 +47,7 @@ import {
 } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
@@ -131,7 +132,6 @@ import {
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import { useOpenEmail, withEmailOpener } from "./openemail";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordEmailVerb } from "./recordemail";
@@ -3884,7 +3884,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // said "no reply since" because the reader had hidden emails would be false.
   // The two share one query whenever no filter is set.
   const threadQuery = useRecordTimeline("deal", id);
-  const [openEmail, setOpenEmail] = useOpenEmail(id);
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const rawTimelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,

@@ -22,6 +22,7 @@ import {
 } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -123,7 +124,6 @@ import {
 } from "./listquery";
 import { PersonMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import { PartnerTab } from "./partners";
 import {
   OverlayFallback,
@@ -1533,6 +1533,13 @@ function useChronologySlots({
 }>): {
   slots: ChronologySlots;
   showChanges: () => void;
+  // The open message and its setter travel OUT of this hook rather than the
+  // drawer being mounted in a timeline slot. A record-level dialog belongs to
+  // the page, not to a tab — the same rule the audit modal below states — and
+  // a drawer that unmounts with the Timeline tab leaves its id behind, so
+  // coming back to that tab can put a second dialog over an open one.
+  openEmail: string | null;
+  setOpenEmail: (activityId: string | null) => void;
 } {
   const t = useT();
   const { locale } = useLocale();
@@ -1566,7 +1573,7 @@ function useChronologySlots({
     firstPage: view?.activities,
   });
 
-  const [openEmail, setOpenEmail] = useOpenEmail(org.id);
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const history = useRecordChronology({
     onOpenEmail: setOpenEmail,
     kind: "organization",
@@ -1606,7 +1613,12 @@ function useChronologySlots({
   const showChanges = () => setFilter("changes");
 
   if (!active) {
-    return { slots: { timelineNotice: <span /> }, showChanges };
+    return {
+      slots: { timelineNotice: <span /> },
+      showChanges,
+      openEmail,
+      setOpenEmail,
+    };
   }
   // In overlay mode the refusal is stated once, in the body: repeating it over
   // the timeline would read as two separate things being unavailable rather
@@ -1615,10 +1627,14 @@ function useChronologySlots({
     return {
       slots: { timeline: history.entries, timelineNotice: <span /> },
       showChanges,
+      openEmail,
+      setOpenEmail,
     };
   }
   return {
     showChanges,
+    openEmail,
+    setOpenEmail,
     slots: {
       timeline: history.entries,
       // Conversations, not messages. The account's timeline is where the same
@@ -1637,18 +1653,7 @@ function useChronologySlots({
           )}
         </>
       ),
-      timelineFooter: (
-        <>
-          <ChronologyFooter filter={filter} chronology={history} />
-          {/* One drawer over the account, mounted beside the chronology it
-              opens from. */}
-          <OpenEmailDrawer
-            activityId={openEmail}
-            zone={recordZone}
-            onClose={() => setOpenEmail(null)}
-          />
-        </>
-      ),
+      timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
       // Every cut renders through the ONE chronicle: Changes draws the same
       // change rows the All view interleaves and Conversations the same
       // thread rows, so no cut is a second rendering of rows another cut
@@ -1861,7 +1866,12 @@ function CompanyPage({
       onTab={onTab}
     />
   );
-  const { slots, showChanges: filterToChanges } = useChronologySlots({
+  const {
+    slots,
+    showChanges: filterToChanges,
+    openEmail,
+    setOpenEmail,
+  } = useChronologySlots({
     org,
     view,
     overlay,
@@ -1992,6 +2002,15 @@ function CompanyPage({
         onOpenTask={setOpenTaskId}
         taskUpdate={taskUpdate}
         onOpenHistory={showChanges}
+      />
+      {/* The email drawer, on the same rule as the audit spine below: it
+          belongs to the RECORD. Mounted in the Timeline tab's own slot it
+          unmounted with that tab and left its id behind, so returning to
+          Timeline could put it over an already-open dialog. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={recordZone}
+        onClose={() => setOpenEmail(null)}
       />
       {/* The audit spine, opened from the header's overflow menu. It belongs
           to the RECORD, not to a tab, so it opens over whichever tab is up. */}

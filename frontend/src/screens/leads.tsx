@@ -21,6 +21,7 @@ import { ContactLink } from "../design-system/contactlink";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
@@ -77,7 +78,6 @@ import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
 import { LogActivity } from "./logactivity";
 import { useOpenEmail, withEmailOpener } from "./openemail";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import {
   CallCard,
   RecordReading,
@@ -1700,7 +1700,7 @@ function LeadRecord({
   // the two share one query whenever no filter is set.
   const threadQuery = useRecordTimeline("lead", id);
   const viewerId = useViewerId();
-  const [openEmail, setOpenEmail] = useOpenEmail(id);
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const rawTimelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,

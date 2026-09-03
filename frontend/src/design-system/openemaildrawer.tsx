@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { EmailDetail } from "../design-system/emaildetail";
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
+import { EmailDetail } from "./emaildetail";
 
 /**
  * The record page's one email drawer.

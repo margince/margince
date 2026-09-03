@@ -10,6 +10,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -25,7 +26,6 @@ import { NewDealAction } from "./companyactions";
 import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
 import { useOpenEmail } from "./openemail";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import { ProjectCompanies } from "./projectcompanies";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
@@ -420,7 +420,7 @@ function useProjectChronology(
     filters,
     firstPage: activities,
   });
-  const [openEmail, setOpenEmail] = useOpenEmail(view.project.id);
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const history = useRecordChronology({
     onOpenEmail: setOpenEmail,
     kind: "project",

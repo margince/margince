@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 /**
  * Which message a record page's drawer is showing.
@@ -10,22 +10,16 @@ import { useRef, useState } from "react";
  * rail's citations open into the same one, and the record stays legible behind
  * it because that is what the reader is working on.
  *
- * `recordId` is the identity, and a change in it CLOSES what was open. React
- * keeps this state across a move from one record to the next — the router does
- * not key these pages by the record they show — so a drawer left open would
- * reopen the previous record's mail over the new record. A reader would see
- * somebody else's message filed under a contact it was never on.
+ * It needs no reset when the record changes. `identityOfAddress` keys the
+ * routed subtree by the record id (app/router.tsx's IDENTITY_DEPTH, depth 2 for
+ * a contact, an account, a deal), so moving from one record to the next throws
+ * the page away and this state with it —
+ * App.tabkey.test.tsx's "still throws the page away when the record itself
+ * changes" is the proof. A tab change deliberately does NOT remount, and does
+ * not need to: the same reader is still on the same record.
  */
-export function useOpenEmail(recordId: string) {
-  const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const shownFor = useRef(recordId);
-  if (shownFor.current !== recordId) {
-    shownFor.current = recordId;
-    if (openEmail) {
-      setOpenEmail(null);
-    }
-  }
-  return [openEmail, setOpenEmail] as const;
+export function useOpenEmail() {
+  return useState<string | null>(null);
 }
 
 /**
