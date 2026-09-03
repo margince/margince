@@ -37099,7 +37099,11 @@ export interface operations {
                     "application/json": components["schemas"]["Taggable"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     removeTag: {
@@ -37125,8 +37129,10 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     runReport: {

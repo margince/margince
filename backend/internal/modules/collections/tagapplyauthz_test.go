@@ -3,13 +3,13 @@
 
 package collections
 
-// Tagging a record is a read of it, on BOTH doors. The tag_name path asked the
-// target's object type through EnsureTaggable and the direct tag_id path did
-// not, so a role holding tag.update without <type>.read could tag rows it may
-// not see. The refusal runs before any query, so this probe needs no database;
-// the admitting half — the same call succeeding under a principal that holds
-// the read — is every ApplyTag use in the integration lane, which turns red if
-// this gate ever over-refuses.
+// Tagging a record requires its object grant, on BOTH doors. The tag_name
+// path asked the target's object type through EnsureTaggable and the direct
+// tag_id path did not, so a role holding tag.update without <type>.update
+// could tag rows it may not change. The refusal runs before any query, so
+// this probe needs no database; the admitting half — the same call
+// succeeding under a principal that holds the grant — is every ApplyTag use
+// in the integration lane, which turns red if this gate ever over-refuses.
 
 import (
 	"context"
@@ -77,6 +77,20 @@ func TestRemovingATagNeedsUpdateOnTheTarget(t *testing.T) {
 	err := store.RemoveTag(ctx, ids.New[ids.TagKind](), "project", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a seat holding project.read but not project.update removed a tag: %v", err)
+	}
+}
+
+// EnsureTaggable is the apply-by-name path's pre-flight, and it moved from
+// ActionRead to ActionUpdate alongside ApplyTag itself: a caller who may only
+// see the target must be refused here too, before a ResolveTag lookup is
+// spent on their behalf.
+func TestEnsureTaggableNeedsUpdateOnTheTargetNotMerelyRead(t *testing.T) {
+	store := NewStore(nil)
+	ctx := taggerWith(map[string]principal.ObjectGrant{
+		"project": {Read: true},
+	})
+	if err := store.EnsureTaggable(ctx, "project", ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat holding project.read but not project.update passed EnsureTaggable: %v", err)
 	}
 }
 

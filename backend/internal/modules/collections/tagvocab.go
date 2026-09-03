@@ -389,6 +389,12 @@ type MergeResult struct {
 // deliberate product decision and it has a cost the caller has to be told
 // about: links to the old tag stop working, searching its name finds nothing,
 // and somebody can coin the same word again next month.
+// It carries no per-record row gate, unlike applyTagTx/RemoveTag: it rewrites
+// every taggable row across the workspace as one vocabulary operation. No
+// SEEDED role pairs tag.update with a bounded row scope — every role holding
+// it today is unbounded — but the pairing is an object grant an admin could
+// still set (identity.Service.SetRoleObjectGrant), which this gate does not
+// itself refuse.
 func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeResult, error) {
 	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
 		return MergeResult{}, err
