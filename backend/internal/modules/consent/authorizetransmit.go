@@ -115,6 +115,12 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	}
 	set := commsauthz.DecisionSet{}
 	now := g.store.now().UTC()
+	// Every address's cap lock, sorted, before the first recipient is counted.
+	// Taking them inside the loop would order them by the caller's To list, and
+	// two messages naming the same pair in opposite orders would deadlock.
+	if err := g.lockCapAddresses(ctx, tx, req.Recipients); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	for _, r := range req.Recipients {
 		d, err := g.decideOne(ctx, tx, r, req.PurposeKey)
 		if err != nil {

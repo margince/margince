@@ -67,6 +67,15 @@ var absoluteDenials = map[string]bool{
 	// objection and gets its own code, but it binds exactly as hard: no
 	// rollout mode may send to somebody who took their consent back.
 	ReasonConsentWithdrawn: true,
+	// A jurisdiction's ceiling on advertising is decided by that jurisdiction,
+	// not by how far along a rollout is. It is here for the same reason as the
+	// rest and one of its own: an installation that declares a country is
+	// asserting which law it sends under, so a mode setting that let it exceed
+	// that country's statutory limit would make the declaration false. It is
+	// also the one denial a sender can clear by waiting — the window rolls and
+	// the same message becomes lawful — so refusing costs a delay rather than
+	// the message.
+	ReasonFrequencyCapReached: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

@@ -85,8 +85,10 @@ func (e *capEnv) seedMarketingSubject(t *testing.T) {
 		VALUES ($1, $2, 'granted', 'consent', now(), 'test')`, personID, purposeID); err != nil {
 		t.Fatal(err)
 	}
-	// The delivery the transmit decisions attach to. Left 'pending' on purpose:
-	// it must never be counted as received.
+	// The delivery each authorization under test attaches its decision to. It
+	// stays 'pending' throughout, and the test moves it to 'parked' between
+	// authorizations so the previous decision stops counting as in-flight —
+	// which is what really happens when a delivery does not go out.
 	e.decisionDelivery = ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO comms_outbound
@@ -210,6 +212,20 @@ func (e *capEnv) plant(t *testing.T, spec plantSpec) {
 	}
 }
 
+// settleDecisionDelivery parks the delivery the previous authorization decided
+// against, so its decision stops counting as a message in flight. A real
+// dispatch settles the row the same way — either sent or parked — and leaving
+// it pending would make each authorization under test count its own
+// predecessor twice.
+func (e *capEnv) settleDecisionDelivery(t *testing.T) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE comms_outbound SET status = 'parked', reason = 'test' WHERE id = $1`,
+		e.decisionDelivery); err != nil {
+		t.Fatalf("settling the decision delivery: %v", err)
+	}
+}
+
 // received runs the counter the cap consults.
 func (e *capEnv) received(t *testing.T, window time.Duration) int {
 	t.Helper()
@@ -234,13 +250,13 @@ func TestADeliveredAdvertisingMessageCountsTowardTheCap(t *testing.T) {
 	}
 }
 
-// THE INVARIANT. A parked delivery and an observe-mode decision both describe a
-// message nobody received, and neither may consume the recipient's allowance.
+// THE INVARIANT. A parked delivery is a message nobody received, and it must
+// not consume the recipient's allowance.
 //
-// Mutation: count communication_decision rows instead of joining to a sent
-// comms_outbound row, and this fails — which is exactly the defect it exists to
-// catch, because the decision rows for both shapes look perfectly ordinary.
-func TestOnlyMailTheRecipientReceivedConsumesTheCap(t *testing.T) {
+// Mutation: count communication_decision rows instead of joining to the
+// delivery's own status, and this fails — which is exactly the defect it exists
+// to catch, because a parked row's decision looks perfectly ordinary.
+func TestAParkedDeliveryDoesNotConsumeTheCap(t *testing.T) {
 	e := setupCap(t)
 	sent := time.Now().Add(-time.Hour)
 
@@ -249,15 +265,16 @@ func TestOnlyMailTheRecipientReceivedConsumesTheCap(t *testing.T) {
 		status: "parked", phase: "transmit", verdict: "allow",
 		category: string(commsauthz.CategoryMarketing), mode: "enforce",
 	})
-	// Still queued: nothing has gone anywhere yet.
-	e.plant(t, plantSpec{
-		status: "pending", phase: "transmit", verdict: "allow",
-		category: string(commsauthz.CategoryMarketing), mode: "enforce",
-	})
 	// A refusal recorded against a delivery that never left.
 	e.plant(t, plantSpec{
 		status: "parked", phase: "transmit", verdict: "deny",
 		category: string(commsauthz.CategoryMarketing), mode: "enforce",
+	})
+	// An observe-mode row on a parked delivery: the engine recorded what it
+	// would have said while the old gate ruled, and nothing went out.
+	e.plant(t, plantSpec{
+		status: "parked", phase: "transmit", verdict: "allow",
+		category: string(commsauthz.CategoryMarketing), mode: "observe",
 	})
 
 	if got := e.received(t, 24*time.Hour); got != 0 {
@@ -268,6 +285,42 @@ func TestOnlyMailTheRecipientReceivedConsumesTheCap(t *testing.T) {
 	e.deliveredAdvertising(t, sent)
 	if got := e.received(t, 24*time.Hour); got != 1 {
 		t.Fatalf("counted %d, want 1 — only the delivered message counts", got)
+	}
+}
+
+// A message BETWEEN its authorization and its delivery counts, and it has to.
+//
+// The authorization commits before the provider is called, and 'sent' is
+// written afterwards by a different transaction. A counter that saw only
+// delivered mail would read the same number for every worker inside that
+// window, and each would send: the ceiling would be exceeded by however many
+// workers happened to be running. An allowing transmit decision on a still
+// pending delivery is that in-flight message.
+//
+// Mutation: drop the pending arm from the count and this fails, which is the
+// bug that made the whole cap unenforceable under any concurrency.
+func TestAMessageInFlightAlreadyConsumesTheCap(t *testing.T) {
+	e := setupCap(t)
+	e.plant(t, plantSpec{
+		status: "pending", phase: "transmit", verdict: "allow",
+		category: string(commsauthz.CategoryMarketing), mode: "enforce",
+	})
+	if got := e.received(t, 24*time.Hour); got != 1 {
+		t.Fatalf("counted %d, want 1 — an authorized message on its way out is one the recipient is getting", got)
+	}
+}
+
+// A queued delivery nothing has authorized yet does NOT count. Only the
+// transmit decision makes a pending row an in-flight message; the row alone is
+// a message that may still be refused.
+func TestAQueuedDeliveryWithNoTransmitDecisionDoesNotCount(t *testing.T) {
+	e := setupCap(t)
+	e.plant(t, plantSpec{
+		status: "pending", phase: "staging", verdict: "allow",
+		category: string(commsauthz.CategoryMarketing), mode: "enforce",
+	})
+	if got := e.received(t, 24*time.Hour); got != 0 {
+		t.Fatalf("counted %d, want 0 — nothing has authorized this delivery to go out", got)
 	}
 }
 
@@ -370,7 +423,11 @@ func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
 			return "zc", nil
 		}))
 
-	decide := func(t *testing.T, attempt int) commsauthz.Decision {
+	// Both halves of the answer: what the row records, and whether the
+	// dispatcher is actually allowed to send. Asserting only the row would pass
+	// with the ceiling recorded and the message going out anyway, which is
+	// exactly the shape a rollout mode could otherwise produce.
+	decide := func(t *testing.T, attempt int) (commsauthz.Decision, bool) {
 		t.Helper()
 		ticket, err := gate.AuthorizeTransmit(e.ctx, commsauthz.TransmitRequest{
 			DeliveryID: e.decisionDelivery, Attempt: attempt,
@@ -389,21 +446,37 @@ func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("reading back the decision: %v", err)
 		}
-		return out
+		return out, ticket.Allowed
 	}
 
 	for i := range 3 {
-		if got := decide(t, i+1); got.Verdict != commsauthz.VerdictAllow {
+		got, allowed := decide(t, i+1)
+		if got.Verdict != commsauthz.VerdictAllow {
 			t.Fatalf("message %d refused with %q, want an allow below the ceiling", i+1, got.ReasonCode)
 		}
+		if !allowed {
+			t.Fatalf("message %d was not ticketed, want it to go out below the ceiling", i+1)
+		}
+		// That message goes out, and the delivery it was decided against
+		// settles — so the next authorization sees three DELIVERED messages
+		// rather than its own predecessor still counted as in flight.
 		e.deliveredAdvertising(t, time.Now().Add(-time.Minute))
+		e.settleDecisionDelivery(t)
 	}
-	fourth := decide(t, 4)
+	fourth, allowed := decide(t, 4)
 	if fourth.Verdict != commsauthz.VerdictDeny {
-		t.Fatalf("the fourth message in 24h was allowed, want a refusal at the ceiling")
+		t.Fatalf("the fourth message in 24h was recorded as allowed, want a refusal at the ceiling")
 	}
 	if fourth.ReasonCode != commsauthz.ReasonFrequencyCapReached {
 		t.Errorf("refused with %q, want %q", fourth.ReasonCode, commsauthz.ReasonFrequencyCapReached)
+	}
+	// THE half that matters. Every category defaults to observe, so a ceiling
+	// that only wrote a deny row would let the fourth message go out on every
+	// installation that has not set a mode — the pack would claim an enforced
+	// limit and enforce nothing. The cap denies regardless of mode because it
+	// is in the absolute set.
+	if allowed {
+		t.Fatal("the fourth message was ticketed for sending despite the ceiling — the cap recorded a refusal and permitted the send")
 	}
 }
 

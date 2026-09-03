@@ -78,24 +78,31 @@ const advertisingLabel = "[QC]"
 // authorizes nothing here.
 //
 // THE [QC] PREFIX is Art. 12: an advertising message must be labelled as
-// advertising in its subject, and the decree fixes the label. The engine applies
-// it exactly once — a message that already carries it is not labelled twice —
-// and applies it to advertising only. An operational message wearing an
-// advertising label would misdescribe itself to the recipient in the other
-// direction.
+// advertising in its subject, and the decree fixes the label. It is DECLARED
+// here and applied by nothing yet — the renderer that would apply it, once, to
+// advertising only, needs the controller template catalog that has not landed.
+// Declaring it now is deliberate: the rule is what the decree says, and a pack
+// that waited would leave the obligation unrecorded until the machinery caught
+// up.
 //
 // ADVERTISER IDENTIFICATION is Art. 13: an advertising message names the
 // advertiser and gives a way to reach them. It is declared as an
 // AdvertiserContact disclosure alongside the Art. 13 GDPR-shaped controller
 // disclosures, because a Vietnamese recipient is owed BOTH — who is processing
 // their data and who is advertising to them are the same organisation here and
-// need not be, and the two obligations come from different instruments.
+// need not be, and the two obligations come from different instruments. Also
+// declared and not yet rendered, for the same reason as the prefix.
 //
 // THE ACKNOWLEDGED OPT-OUT is Art. 16: a recipient who refuses further
 // advertising is owed a confirmation that their refusal was received, sent
 // within twenty-four hours and carrying no advertising of its own. The flag says
-// one is owed; the engine's controller lane is what sends it, which is the only
-// lane that may write to somebody who has just suppressed themselves.
+// one is owed; the engine's controller lane is what will send it, which is the
+// only lane that may write to somebody who has just suppressed themselves. Also
+// declared and not yet wired.
+//
+// THE DAILY CEILING is the one rule here the engine applies today. It refuses
+// regardless of rollout mode, because an installation declaring a country is
+// asserting which law it sends under.
 //
 // THE WINDOWS are the core defaults, restated so this pack says what it applies
 // rather than inheriting silently. Neither bounds a same-thread reply.

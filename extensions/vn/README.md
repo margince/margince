@@ -56,13 +56,28 @@ from different instruments.
 At most **3** advertising emails reach one address in any rolling **24 hours**,
 unless that recipient has agreed to a different frequency.
 
-**The count is of messages the recipient actually received.** A staged message
-that parked and a decision taken in observe mode both describe a message nobody
-got, and counting either would silently consume somebody's allowance — so the
-engine counts sent deliveries joined to their advertising decision, never
-decision rows on their own. That invariant lives in core and is held by a test
-whose mutation is exactly "count decisions instead"; the pack only states the
+**The count is of messages the recipient got or is about to get.** A staged
+message that parked and a decision taken in observe mode both describe a message
+nobody received, and counting either would silently consume somebody's
+allowance — so the engine counts sent deliveries joined to their advertising
+decision, never decision rows on their own.
+
+It also counts messages in flight. An authorization commits before the provider
+is called, and a delivery is marked sent afterwards, so between the two there is
+a message going out that no sent row reports yet. Counting only delivered mail
+would let every worker in that window read the same number and each send, and
+the ceiling would be exceeded by however many workers were running.
+
+Both halves live in core and are held by tests whose mutations are exactly
+"count decisions instead" and "drop the in-flight arm"; the pack only states the
 bound.
+
+**The ceiling refuses regardless of rollout mode.** The engine's other rules can
+be run in observe while they are measured against the old consent gate; this one
+cannot, because an installation that declares a country is asserting which law
+it sends under, and a setting that let it exceed that country's statutory limit
+would make the declaration false. Waiting clears it — the window rolls and the
+same message becomes lawful — so refusing costs a delay rather than the message.
 
 ## An opt-out is acknowledged (Art. 16)
 
@@ -72,6 +87,12 @@ refusal was received, within 24 hours, carrying no advertising of its own.
 The acknowledgement goes out through the controller lane — the one lane that may
 write to somebody who has just suppressed themselves, because the message serves
 the subject rather than the sender.
+
+**Not yet built.** The flag is declared and nothing reads it: the controller
+template catalog it needs has not landed. Same for the `[QC]` label and the
+advertiser disclosure above — both are declared here and applied by nothing
+today. What this pack enforces right now is the ceiling and the absence of a
+marketing exception.
 
 ## Windows
 
