@@ -13,6 +13,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -48,8 +49,12 @@ func TestMicrosoftSignInConfigEnabled(t *testing.T) {
 // For SIGN-IN it is: an address vouched for by a directory this installation
 // does not know is not evidence of anything, because the administrator of any
 // Entra tenant can set any of their users' mail attribute to any string.
+//
+// An EMPTY list is not among the refusals: it leaves the directory to the
+// stored app's pin (TestAStoredMicrosoftAppSignsInOnItsOwnDirectory), and the
+// environment's pair then cannot sign anyone in on its own.
 func TestMicrosoftSignInRefusesAMultiTenantAuthority(t *testing.T) {
-	for _, tenant := range []string{"", "common", "organizations", "consumers", "contoso.onmicrosoft.com"} {
+	for _, tenant := range []string{"common", "organizations", "consumers", "contoso.onmicrosoft.com"} {
 		t.Run(tenant, func(t *testing.T) {
 			cfg := completeMicrosoftConfig()
 			cfg.Tenant = tenant
@@ -162,9 +167,11 @@ func TestMicrosoftIssuerBindsTheTokenToTheConfiguredDirectory(t *testing.T) {
 // token from another one.
 func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 	rig := newOIDCTestRig(t)
-	adapter := microsoftOIDCVerifierAdapter{v: newOIDCVerifier(
-		rig.jwksURL(), microsoftIssuer([]string{testTenant}), func(oidcClaims) error { return nil },
-	).withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base })}
+	adapter := microsoftOIDCVerifierAdapter{
+		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
+			withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base }),
+		matchIdentity: microsoftIssuer([]string{testTenant}),
+	}
 
 	tok := rig.mint(t, testKID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-1", "email": "carol@example.com",
@@ -302,9 +309,11 @@ func TestPersonalAccountsSignInOnlyWhenTheirTenantIsListed(t *testing.T) {
 func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	tenants := []string{testTenant, microsoftConsumerTenant}
-	adapter := microsoftOIDCVerifierAdapter{v: newOIDCVerifier(
-		rig.jwksURL(), microsoftIssuer(tenants), func(oidcClaims) error { return nil },
-	).withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base })}
+	adapter := microsoftOIDCVerifierAdapter{
+		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
+			withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base }),
+		matchIdentity: microsoftIssuer(tenants),
+	}
 
 	consumerIss := "https://login.microsoftonline.com/" + microsoftConsumerTenant + "/v2.0"
 	tok := rig.mint(t, testKID, "RS256", map[string]any{
@@ -378,9 +387,66 @@ func TestTheRoutingAuthorityWidensNoFurtherThanTheListDoes(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if got := (MicrosoftSignInConfig{Tenant: tc.tenant}).routingAuthority(); got != tc.want {
+			if got := routingAuthorityFor(tenantsOf(tc.tenant)); got != tc.want {
 				t.Errorf("routingAuthority = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// A stored Microsoft app signs people in on the directory it is pinned to —
+// the admin who pinned it said whose organization this is — and the endpoints,
+// the token binding and the exchanger all follow that directory. Pinned to
+// nothing, it names no directory and is withheld rather than run on `common`.
+// The deployment's own list, when an operator set one, wins over the pin.
+func TestAStoredMicrosoftAppSignsInOnItsOwnDirectory(t *testing.T) {
+	ctx := context.Background()
+	const second = "22222222-3333-4444-5555-666666666677"
+	pinned := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret", Tenant: testTenant}, true, nil
+	}
+	unpinned := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret"}, true, nil
+	}
+
+	p, ok, err := (&microsoftSignInSource{stored: pinned}).provider(ctx)
+	if err != nil || !ok {
+		t.Fatalf("pinned app: ok=%v err=%v", ok, err)
+	}
+	if want := microsoftAuthorityURL(testTenant, "/oauth2/v2.0/authorize"); p.Config.AuthURL != want || p.Config.ClientID != "stored-cid" {
+		t.Errorf("config = %+v, want the stored client on its own directory's authority", p.Config)
+	}
+	if ex, isAdapter := p.Exchanger.(oidcExchangerAdapter); !isAdapter || ex.ex.TokenURL != microsoftAuthorityURL(testTenant, "/oauth2/v2.0/token") {
+		t.Errorf("exchanger = %#v, want the token endpoint on the same directory", p.Exchanger)
+	}
+
+	if _, ok, err := (&microsoftSignInSource{stored: unpinned}).provider(ctx); ok || err != nil {
+		t.Fatalf("unpinned app: ok=%v err=%v, want withheld — nothing vouches for a directory", ok, err)
+	}
+
+	p, ok, err = (&microsoftSignInSource{stored: pinned, directories: second}).provider(ctx)
+	if err != nil || !ok || p.Config.AuthURL != microsoftAuthorityURL(second, "/oauth2/v2.0/authorize") {
+		t.Fatalf("with a deployment list: ok=%v err=%v auth=%q, want the operator's directory over the pin", ok, err, p.Config.AuthURL)
+	}
+
+	// The environment's pair alone is a client with no directory, which is the
+	// same nothing: the boot log tells the operator which flag names one.
+	envOnly := &microsoftSignInSource{env: signInClient{ClientID: "cid", ClientSecret: "secret"}}
+	if _, ok, err := envOnly.provider(ctx); ok || err != nil {
+		t.Fatalf("environment pair without a directory: ok=%v err=%v, want withheld", ok, err)
+	}
+}
+
+// One JWKS cache per authority: the keys a verifier has already fetched are its
+// worth, so a second flow on the same directory must reach the same verifier,
+// and a flow on another directory must not read that directory's keys.
+func TestMicrosoftSignInKeepsOneVerifierPerAuthority(t *testing.T) {
+	const second = "22222222-3333-4444-5555-666666666677"
+	src := &microsoftSignInSource{}
+	if src.verifierFor(testTenant) != src.verifierFor(testTenant) {
+		t.Fatal("the same authority was given two verifiers, and two JWKS caches")
+	}
+	if src.verifierFor(testTenant) == src.verifierFor(second) {
+		t.Fatal("two directories share one verifier, and one key endpoint")
 	}
 }

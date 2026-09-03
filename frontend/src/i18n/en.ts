@@ -6482,7 +6482,7 @@ export const en = {
   "oauthApp.clientSecret": "Client secret",
   "oauthApp.tenant": "Directory (tenant) ID",
   "oauthApp.tenantHint":
-    "Optional. Pins the app to one Entra directory, so only its members may authorize. Leave it empty to allow any organization.",
+    "Optional. Pins the app to one Entra directory: only its members may connect a mailbox, and Microsoft sign-in runs on it. Leave it empty to let any organization connect; sign-in then waits for the server to name your directories.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
@@ -8113,7 +8113,7 @@ export const en = {
   "firstRun.platform.imapWhat":
     "Each mailbox connects with its own IMAP app-password. Sign-in is email and password.",
   "firstRun.google.helpSignIn":
-    "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
+    "People sign in with Google through this same app: once it is saved here, the login page offers Continue with Google to everyone you invite, as long as the sign-in redirect URI above is registered on it.",
   "firstRun.google.helpToggle": "Where do I get these?",
   "firstRun.google.helpStep1":
     "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
@@ -8132,9 +8132,9 @@ export const en = {
   "firstRun.platform.foot":
     "Whatever you answer here can be changed later under Settings → Admin.",
   "firstRun.microsoft.note":
-    "Register an app in Microsoft Entra with the redirect URIs below, then paste its client id and secret here. Pin it to your directory if only your organization's mailboxes should connect through it.",
+    "Register an app in Microsoft Entra with the redirect URIs below, then paste its client id and secret here. Pin it to your directory: that is whose mailboxes connect through it, and whose people sign in with it.",
   "firstRun.microsoft.helpSignIn":
-    "For Microsoft sign-in, whoever runs the server also exports the same pair as MARGINCE_GRAPH_CLIENT_ID and MARGINCE_GRAPH_CLIENT_SECRET, names your directory id in MARGINCE_MICROSOFT_SIGNIN_TENANT, and restarts it. Sign-in reads them at startup, not from what is saved here.",
+    "People sign in with Microsoft through this same app, on the directory it is pinned to: once it is saved with a directory ID, the login page offers Continue with Microsoft to everyone you invite, as long as the sign-in redirect URI above is registered on it. Left unpinned, mailboxes still connect, but nobody signs in until whoever runs the server names your directories in MARGINCE_MICROSOFT_SIGNIN_TENANT.",
   "firstRun.ai.rankedHint":
     "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
   "firstRun.ai.rankedUnavailable":

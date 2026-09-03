@@ -6348,7 +6348,7 @@ export const vi = {
   "oauthApp.clientSecret": "Client secret",
   "oauthApp.tenant": "Directory (tenant) ID",
   "oauthApp.tenantHint":
-    "Tùy chọn. Gắn ứng dụng với một thư mục Entra duy nhất, chỉ thành viên của nó mới có thể uỷ quyền. Để trống để cho phép mọi tổ chức.",
+    "Tùy chọn. Gắn ứng dụng với một thư mục Entra duy nhất: chỉ thành viên của nó mới kết nối được hộp thư, và đăng nhập Microsoft chạy trên thư mục đó. Để trống để mọi tổ chức đều kết nối được; khi đó đăng nhập chờ server nêu tên các thư mục của bạn.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
@@ -7942,7 +7942,7 @@ export const vi = {
   "firstRun.platform.imapWhat":
     "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
   "firstRun.google.helpSignIn":
-    "Để đăng nhập bằng Google, người vận hành server cũng export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
+    "Mọi người đăng nhập bằng Google qua chính app này: lưu ở đây xong, trang đăng nhập sẽ hiện “Continue with Google” cho tất cả người bạn mời, miễn là redirect URI đăng nhập ở trên đã được đăng ký trong app.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
@@ -7961,9 +7961,9 @@ export const vi = {
   "firstRun.platform.foot":
     "Câu trả lời ở đây có thể đổi sau ở Cài đặt → Quản trị.",
   "firstRun.microsoft.note":
-    "Đăng ký một app trong Microsoft Entra với các redirect URI bên dưới, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn nếu chỉ hộp thư của tổ chức bạn được kết nối qua đó.",
+    "Đăng ký một app trong Microsoft Entra với các redirect URI bên dưới, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn: hộp thư của thư mục đó kết nối qua app, và người của thư mục đó đăng nhập bằng app.",
   "firstRun.microsoft.helpSignIn":
-    "Để đăng nhập bằng Microsoft, người vận hành server cũng export đúng cặp đó thành MARGINCE_GRAPH_CLIENT_ID và MARGINCE_GRAPH_CLIENT_SECRET, ghi ID thư mục vào MARGINCE_MICROSOFT_SIGNIN_TENANT rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
+    "Mọi người đăng nhập bằng Microsoft qua chính app này, trên thư mục nó được ghim vào: lưu ở đây kèm ID thư mục xong, trang đăng nhập sẽ hiện “Continue with Microsoft” cho tất cả người bạn mời, miễn là redirect URI đăng nhập ở trên đã được đăng ký trong app. Không ghim thì hộp thư vẫn kết nối được, nhưng không ai đăng nhập được cho đến khi người vận hành server nêu tên các thư mục của bạn trong MARGINCE_MICROSOFT_SIGNIN_TENANT.",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",

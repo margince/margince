@@ -99,6 +99,9 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 				"reason", err)
 		}
 		for _, p := range enabled {
+			if !h.oidcProviderOffered(r.Context(), p.Key) {
+				continue
+			}
 			caps.OidcProviders = append(caps.OidcProviders, struct {
 				Key   string `json:"key"`
 				Label string `json:"label"`
@@ -117,6 +120,31 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	// what an intermediary assigns heuristic freshness to.
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, caps)
+}
+
+// oidcProviderOffered reports whether a provider the policy allows has a client
+// to run on right now. The policy says what the admin permits; the source says
+// what the installation can actually do, and a button for a provider whose
+// client is not there yet is the dead button this probe exists to avoid.
+//
+// A provider with no source registered is offered on the policy's word alone,
+// the same posture the unwired policy takes for the routes: a handler set
+// built outside NewHandlers keeps working exactly as it did. A source that
+// FAILS withholds the button and says why in the log — the login screen still
+// renders, password remains, and the failure is not misread as "nothing
+// configured".
+func (h Handlers) oidcProviderOffered(ctx context.Context, key string) bool {
+	source, ok := h.oidcProviders[key]
+	if !ok {
+		return true
+	}
+	_, available, err := source(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "the sign-in provider's client could not be resolved; this login screen withholds it",
+			"provider", key, "reason", err)
+		return false
+	}
+	return available
 }
 
 // capabilitiesAllowed spends this caller's capabilities budget, and reports

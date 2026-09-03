@@ -200,9 +200,10 @@ describe("the first-run setup gate", () => {
     await user.click(
       await screen.findByRole("radio", { name: /Microsoft 365/ }),
     );
-    // The same app signs people in, but from the environment: the screen
-    // says so rather than letting the saved pair imply it.
-    expect(screen.getByText(/MARGINCE_MICROSOFT_SIGNIN_TENANT/)).toBeTruthy();
+    // The same app signs people in, on the directory it is pinned to: the
+    // screen says so, because an unpinned app connects mailboxes and signs
+    // nobody in, and nothing else would explain the missing button.
+    expect(screen.getByText(/Continue with Microsoft/)).toBeTruthy();
     await user.type(screen.getByLabelText("Client ID"), "entra-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));

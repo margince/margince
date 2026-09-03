@@ -6,12 +6,14 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -102,10 +104,10 @@ func TestTheAudienceCheckRefusesAnotherAppsToken(t *testing.T) {
 
 func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	rig := newOIDCTestRig(t)
-	v := newGoogleOIDCVerifier(rig.jwksURL(), func(oidcClaims) error { return nil }).
+	v := newGoogleOIDCVerifier(rig.jwksURL(), identityResolvedPerRequest).
 		withHTTPClient(rig.srv.Client()).
 		withClock(func() time.Time { return rig.base })
-	adapter := googleOIDCVerifierAdapter{v: v}
+	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidcClaims) error { return nil }}
 
 	tok := rig.mint(t, testKID, "RS256", map[string]any{"sub": "sub-1", "email": "carol@example.com"})
 	email, sub, verified, err := adapter.Verify(context.Background(), tok)
@@ -211,5 +213,76 @@ func TestOfferedProvidersOnlyEverNarrowsWhatTheDeploymentComposed(t *testing.T) 
 				}
 			}
 		})
+	}
+}
+
+// The client a flow runs on is resolved when the flow runs, the stored app
+// first: the app an admin saves during the first run reaches the login screen
+// without a restart, and the environment's pair is what a deployment without
+// one falls back to. A vault that will not open is neither — it is reported,
+// never quietly replaced by the older environment copy.
+func TestGoogleSignInRunsOnTheStoredAppBeforeTheEnvironmentsPair(t *testing.T) {
+	ctx := context.Background()
+	env := signInClient{ClientID: "env-cid", ClientSecret: "env-secret"}
+	verifier := newGoogleOIDCVerifier(googleJWKSURL, identityResolvedPerRequest)
+	stored := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret"}, true, nil
+	}
+	none := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{}, false, nil
+	}
+	sealed := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{}, false, errors.New("the vault root key moved")
+	}
+
+	p, ok, err := googleSignInSource{env: env, stored: stored, verifier: verifier}.provider(ctx)
+	if err != nil || !ok {
+		t.Fatalf("with a stored app: ok=%v err=%v", ok, err)
+	}
+	if p.Config.ClientID != "stored-cid" {
+		t.Errorf("client id = %q, want the stored app's", p.Config.ClientID)
+	}
+	// The exchanger redeems on the SAME client the browser was sent out with,
+	// or the token endpoint refuses a code minted for another app.
+	if ex, isAdapter := p.Exchanger.(oidcExchangerAdapter); !isAdapter || ex.ex.ClientSecret != "stored-secret" {
+		t.Errorf("exchanger = %#v, want the stored app's secret", p.Exchanger)
+	}
+
+	p, ok, err = googleSignInSource{env: env, stored: none, verifier: verifier}.provider(ctx)
+	if err != nil || !ok || p.Config.ClientID != "env-cid" {
+		t.Fatalf("without a stored app: ok=%v err=%v client=%q, want the environment's pair", ok, err, p.Config.ClientID)
+	}
+
+	if _, ok, err := (googleSignInSource{stored: none, verifier: verifier}).provider(ctx); ok || err != nil {
+		t.Fatalf("with no client from any source: ok=%v err=%v, want withheld without error", ok, err)
+	}
+
+	if _, _, err := (googleSignInSource{env: env, stored: sealed, verifier: verifier}).provider(ctx); err == nil {
+		t.Fatal("a secret that will not open fell back to the environment's pair, hiding a moved vault key")
+	}
+}
+
+// A deployment with the state key and the URLs but no pair mounts the routes
+// and offers nothing: the button appears the moment a client exists, and until
+// then the start route answers as for an absent provider rather than sending a
+// browser out with an empty client id. The settings screen still lists the
+// provider, because the app card beside it is where it is made to work.
+func TestGoogleSignInMountedWithoutAClientIsNotOffered(t *testing.T) {
+	var s Server
+	WithGoogleSignIn(GoogleSignInConfig{
+		StateKey:     "0123456789012345678901234567890123",
+		RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	})(&s, nil)
+
+	if got := oidcProviderKeys(t, &s); len(got) != 0 {
+		t.Fatalf("oidc_providers = %v, want none while no client exists", got)
+	}
+	rec := httptest.NewRecorder()
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("StartOidcSignIn = %d, want 404 for a mounted provider with no client", rec.Code)
+	}
+	if len(s.configuredProviders) != 1 || s.configuredProviders[0].Key != "google" {
+		t.Fatalf("configuredProviders = %+v, want google listed for the settings screen", s.configuredProviders)
 	}
 }

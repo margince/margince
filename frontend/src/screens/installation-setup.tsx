@@ -605,9 +605,10 @@ function VendorAppFields({
             uris={app.data?.redirect_uris}
             sub={t(vendorCopy.microsoft.redirectSub)}
           />
-          {/* Sign-in reads the pair from the environment, exactly as Google's
-              does, and the directory list besides: the tenant field above
-              narrows who may connect a mailbox, never who may sign in. */}
+          {/* The pin below is also the directory sign-in runs on, which the
+              Google form has no equivalent of: said here, beside the URIs,
+              because an admin who leaves it empty gets working mailboxes and
+              no sign-in, and nothing else on this screen would say why. */}
           <p className="ob-fr-help-note">
             {t("firstRun.microsoft.helpSignIn")}
           </p>

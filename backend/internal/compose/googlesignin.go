@@ -3,18 +3,20 @@
 
 package compose
 
-// Wires Google sign-in (login) using the SAME Google OAuth client Gmail
-// capture already uses (MARGINCE_GMAIL_CLIENT_ID/SECRET) — no second Google
-// Cloud app. Self-gates like WithGmailCapture: an incomplete cfg mounts
-// nothing and oidc_providers stays empty.
+// Wires Google sign-in (login) on the SAME Google OAuth client Gmail capture
+// uses — no second Google Cloud app. The client is the one Gmail capture
+// resolves: the app the installation stored under Settings, else the pair the
+// deployment composed (MARGINCE_GMAIL_CLIENT_ID/SECRET). Which one is decided
+// when a flow runs, so the app an admin saves during the first run puts the
+// button on the login screen without a restart.
 //
-// Unlike Gmail capture, this cannot also serve a Settings-stored app: the
-// state-signing key and the public redirect base are deployment properties
-// with no Settings equivalent (the same reason GmailConfig.canSignState
-// splits them out from the Google app's own credentials), so Enabled() is
-// the one condition that both mounts the routes and drives the capability —
-// advertising "google" from a resolver the routes did not also mount would
-// be exactly the dead-button bug WithGmailCapture's own design avoids.
+// What the deployment alone decides is whether the routes are mounted at all:
+// the state-signing key and the public redirect base have no Settings
+// equivalent (the same reason GmailConfig.canSignState splits them out from the
+// Google app's own credentials). Mounted routes with no client from either
+// source answer as an absent provider — the capability withholds the button and
+// the start route 404s — so nothing advertises what the routes cannot serve,
+// which is the dead-button bug WithGmailCapture's own design avoids.
 
 import (
 	"context"
@@ -41,12 +43,13 @@ const (
 	googleProviderLabel = "Continue with Google"
 )
 
-// GoogleSignInConfig carries what WithGoogleSignIn needs. ClientID/Secret
-// are the existing Gmail-capture pair (see cmd/api/googlesignin.go);
-// StateKey signs the login flow's own state/PKCE cookie (oidcloginstate.go)
-// — it may be the same key as the connector flow's, or a dedicated one;
-// either way it is injected here, never read from a second env var this file
-// owns.
+// GoogleSignInConfig carries what WithGoogleSignIn needs. ClientID/Secret are
+// the existing Gmail-capture pair (see cmd/api/googlesignin.go), and they are
+// the FALLBACK: a deployment may leave both empty and let the installation's
+// stored app serve sign-in. StateKey signs the login flow's own state/PKCE
+// cookie (oidcloginstate.go) — it may be the same key as the connector flow's,
+// or a dedicated one; either way it is injected here, never read from a second
+// env var this file owns.
 type GoogleSignInConfig struct {
 	ClientID     string
 	ClientSecret string
@@ -70,35 +73,86 @@ type GoogleSignInConfig struct {
 	FailureURL   string
 }
 
-// Enabled reports whether cfg is complete enough for WithGoogleSignIn to
-// mount the routes and report the capability — see MissingFields for which
-// fields that requires.
+// Enabled reports whether the DEPLOYMENT is complete enough for
+// WithGoogleSignIn to mount the routes — see MissingFields for which fields
+// that requires. Whether a button then appears is the client's question,
+// answered per request from the stored app or the environment's pair.
 func (cfg GoogleSignInConfig) Enabled() bool {
 	return len(cfg.MissingFields()) == 0
 }
 
 // MissingFields names what's absent — used by cmd/api/googlesignin.go for
-// the three-state boot-log line.
+// the boot-log line.
 func (cfg GoogleSignInConfig) MissingFields() []string {
-	// A conversion, not a field-by-field copy: this config IS the shared shape —
-	// Google's sign-in asks for no vendor knob of its own, where Microsoft's adds
-	// a directory. Spelling the fields out again would be a second place for the
-	// two to drift.
-	return signInFields(cfg).missingSignInFields()
+	return signInFields{
+		StateKey: cfg.StateKey, RedirectBase: cfg.RedirectBase,
+		PostLoginURL: cfg.PostLoginURL, FailureURL: cfg.FailureURL,
+	}.missingSignInFields()
+}
+
+// HasEnvClient reports whether the deployment composed a client of its own,
+// which is what the boot log tells an operator: with one, the button is there
+// from the first boot; without, it appears once an admin stores the app.
+func (cfg GoogleSignInConfig) HasEnvClient() bool {
+	return cfg.ClientID != "" && cfg.ClientSecret != ""
+}
+
+// envClient is the deployment's pair as the resolver's fallback, and the zero
+// client when the pair is incomplete: half a client resolves to nothing rather
+// than to a flow that fails at the token endpoint.
+func (cfg GoogleSignInConfig) envClient() signInClient {
+	if !cfg.HasEnvClient() {
+		return signInClient{}
+	}
+	return signInClient{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret}
 }
 
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
 // compose-level oidcTokenVerifier (generalized in oidcverify.go). Google's own
 // adapter because it reads Google's own `email_verified` claim; Microsoft
 // issues no such claim and carries its own adapter (microsoftsignin.go).
-type googleOIDCVerifierAdapter struct{ v *oidcTokenVerifier }
+//
+// The identity check rides the adapter rather than the verifier because it
+// names the client, and the client is resolved per request: the verifier
+// beneath is one JWKS cache for every flow, and the audience is what changes
+// between them.
+type googleOIDCVerifierAdapter struct {
+	v             *oidcTokenVerifier
+	matchIdentity func(oidcClaims) error
+}
 
 func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error) {
-	claims, err := a.v.Verify(ctx, idToken)
+	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
 		return "", "", false, err
 	}
 	return claims.Email, claims.Sub, claims.EmailVerified, nil
+}
+
+// googleSignInSource resolves the provider for one flow: the client from the
+// stored app or the environment, and the verifier and exchanger bound to it.
+type googleSignInSource struct {
+	env    signInClient
+	stored appResolver
+	// verifier is shared across flows for its JWKS cache; whose token it must
+	// be is said per call.
+	verifier *oidcTokenVerifier
+}
+
+func (g googleSignInSource) provider(ctx context.Context) (identity.OIDCProvider, bool, error) {
+	client, ok, err := resolveSignInClient(ctx, g.stored, g.env)
+	if !ok || err != nil {
+		return identity.OIDCProvider{}, false, err
+	}
+	return identity.OIDCProvider{
+		Config: identity.OIDCProviderConfig{
+			Key: googleProviderKey, Label: googleProviderLabel, ClientID: client.ClientID, AuthURL: googleAuthURL,
+		},
+		Verifier: googleOIDCVerifierAdapter{v: g.verifier, matchIdentity: audienceIs(client.ClientID)},
+		Exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{
+			ClientID: client.ClientID, ClientSecret: client.ClientSecret, TokenURL: googleTokenURL,
+		}},
+	}, true, nil
 }
 
 // loginStateSignerAdapter satisfies identity.OIDCStateSigner over
@@ -117,10 +171,12 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 	return st.Provider, st.Nonce, st.CodeVerifier, nil
 }
 
-// WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when cfg
-// is complete; an incomplete cfg still returns a valid Option, it just
-// injects nothing, so oidc_providers stays [] and the routes 404 (identity's
-// own per-provider lookup).
+// WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when the
+// deployment half of cfg is complete; an incomplete cfg still returns a valid
+// Option, it just injects nothing, so oidc_providers stays [] and the routes
+// 404 (identity's own per-provider lookup). It reads the stored-app resolver
+// WithKeyvault built, so it follows that option in cmd/api, as the capture
+// transports do.
 func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		// The redirect URI is published BEFORE the completeness gate, and that
@@ -141,10 +197,14 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		if !cfg.Enabled() {
 			return
 		}
+		source := googleSignInSource{
+			env:      cfg.envClient(),
+			stored:   installationSignInApp(pool, s.googleAppResolver),
+			verifier: newGoogleOIDCVerifier(googleJWKSURL, identityResolvedPerRequest),
+		}
 		registerSignInProvider(s, pool, signInProvider{
-			config:    identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
-			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, audienceIs(cfg.ClientID))},
-			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
+			config: identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel},
+			source: source.provider,
 		}, identity.OIDCRoutes{
 			RedirectBase: signInRedirectBase(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,

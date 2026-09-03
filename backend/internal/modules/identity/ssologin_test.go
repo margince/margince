@@ -9,6 +9,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -84,11 +85,9 @@ func TestStartOidcSignInUnknownProviderIs404(t *testing.T) {
 
 func TestStartOidcSignInRedirectsWithPKCEAndSetsStateCookie(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {
-			Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth",
-		}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth"}, Verifier: fixedVerifier{}, Exchanger: fixedExchanger{},
+		})},
 		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -157,9 +156,9 @@ func TestOidcSignInCallbackUnknownProviderIs404(t *testing.T) {
 // instead, which proves nothing about ordering.
 func TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSucceed(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{email: "carol@example.com", sub: "sub-carol", emailVerified: true}},
-		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused-because-denied"}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{email: "carol@example.com", sub: "sub-carol", emailVerified: true}, Exchanger: fixedExchanger{idToken: "unused-because-denied"},
+		})},
 		fixedStateSigner{provider: "google", nonce: "y", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -194,9 +193,9 @@ func TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSuc
 // Set-Cookie header here — which the assertion below catches.
 func TestOidcSignInCallbackProviderErrorWithNoCookieNeverClearsOneEither(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{}, Exchanger: fixedExchanger{},
+		})},
 		fixedStateSigner{},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -219,9 +218,9 @@ func TestOidcSignInCallbackProviderErrorWithNoCookieNeverClearsOneEither(t *test
 
 func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{}, Exchanger: fixedExchanger{},
+		})},
 		fixedStateSigner{},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -240,9 +239,9 @@ func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 
 func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{}, Exchanger: fixedExchanger{},
+		})},
 		fixedStateSigner{provider: "google", nonce: "expected-nonce", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -268,9 +267,9 @@ func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 // failed verification so the victim's real round trip can still complete.
 func TestOidcSignInCallbackStateMismatchNeverClearsTheCookie(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{}, Exchanger: fixedExchanger{},
+		})},
 		fixedStateSigner{provider: "google", nonce: "expected-nonce", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -289,9 +288,9 @@ func TestOidcSignInCallbackStateMismatchNeverClearsTheCookie(t *testing.T) {
 
 func TestOidcSignInCallbackExchangeFailureIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": erroringExchanger{}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{}, Exchanger: erroringExchanger{},
+		})},
 		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -308,9 +307,9 @@ func TestOidcSignInCallbackExchangeFailureIsRefused(t *testing.T) {
 
 func TestOidcSignInCallbackUnverifiedEmailIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": unverifiedEmailVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused"}},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google"}, Verifier: unverifiedEmailVerifier{}, Exchanger: fixedExchanger{idToken: "unused"},
+		})},
 		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
@@ -355,8 +354,8 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 		return []OIDCProviderConfig{}, nil
 	}
 	h := Handlers{
-		oidcProviders: map[string]OIDCProviderConfig{
-			"google": {Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"},
+		oidcProviders: map[string]OIDCProviderSource{
+			"google": FixedOIDCProvider(OIDCProvider{Config: OIDCProviderConfig{Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"}}),
 		},
 		oidcPerIP: ratelimit.New(30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(disabled)
@@ -393,8 +392,8 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 // fail() path writes to system_log, not the response.
 func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	h := Handlers{
-		oidcProviders: map[string]OIDCProviderConfig{
-			"google": {Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"},
+		oidcProviders: map[string]OIDCProviderSource{
+			"google": FixedOIDCProvider(OIDCProvider{Config: OIDCProviderConfig{Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"}}),
 		},
 		oidcPerIP: ratelimit.New(30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
@@ -409,4 +408,71 @@ func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	if rec.Code < 500 {
 		t.Errorf("a failed policy read = %d, want a server-side failure the operator can act on", rec.Code)
 	}
+}
+
+// A mounted provider whose source has no client right now is, to a caller, a
+// provider that was never composed: the capability withholds the button and the
+// start route 404s, so nothing is advertised the routes cannot serve. The
+// policy still says yes here — this is the source's answer alone.
+func TestAProviderWithoutAClientIsNeitherOfferedNorStarted(t *testing.T) {
+	none := func(context.Context) (OIDCProvider, bool, error) { return OIDCProvider{}, false, nil }
+	h := Handlers{
+		oidcProviders: map[string]OIDCProviderSource{"google": none},
+		oidcPerIP:     ratelimit.New(30, time.Minute),
+	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
+		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
+	})
+
+	if got := offeredProviderKeys(t, h); len(got) != 0 {
+		t.Errorf("oidc_providers = %v, want none while the provider has no client", got)
+	}
+	start := httptest.NewRecorder()
+	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	if start.Code != http.StatusNotFound {
+		t.Errorf("start without a client = %d, want 404", start.Code)
+	}
+}
+
+// A source that FAILS is an outage, not an absence: the start route answers a
+// server-side failure rather than the 404 that would send an operator to debug
+// a configuration that is fine, and the login screen withholds the button
+// rather than offering a flow that cannot complete.
+func TestAFailedClientResolutionDoesNotReadAsAnAbsentProvider(t *testing.T) {
+	sealed := func(context.Context) (OIDCProvider, bool, error) {
+		return OIDCProvider{}, false, errors.New("the sealed secret could not be opened")
+	}
+	h := Handlers{
+		oidcProviders: map[string]OIDCProviderSource{"google": sealed},
+		oidcPerIP:     ratelimit.New(30, time.Minute),
+	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
+		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
+	})
+
+	if got := offeredProviderKeys(t, h); len(got) != 0 {
+		t.Errorf("oidc_providers = %v, want the button withheld while the client cannot be read", got)
+	}
+	start := httptest.NewRecorder()
+	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	if start.Code == http.StatusNotFound || start.Code < 500 {
+		t.Errorf("start on a failed resolution = %d, want a server-side failure, never a 404", start.Code)
+	}
+}
+
+// offeredProviderKeys reads the login screen's own answer, so a test asserts
+// what a browser is told rather than what a field holds.
+func offeredProviderKeys(t *testing.T, h Handlers) []string {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.GetAuthCapabilities(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil))
+	var body struct {
+		OidcProviders []struct{ Key string } `json:"oidc_providers"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal capabilities: %v", err)
+	}
+	keys := make([]string, 0, len(body.OidcProviders))
+	for _, p := range body.OidcProviders {
+		keys = append(keys, p.Key)
+	}
+	return keys
 }

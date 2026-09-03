@@ -6415,7 +6415,7 @@ export const de = {
   "oauthApp.clientSecret": "Client-Secret",
   "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
   "oauthApp.tenantHint":
-    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis, sodass nur dessen Mitglieder zustimmen können. Leer lassen, um jede Organisation zuzulassen.",
+    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Organisation verbinden kann; die Anmeldung wartet dann darauf, dass der Server Ihre Verzeichnisse benennt.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
@@ -8043,7 +8043,7 @@ export const de = {
   "firstRun.platform.imapWhat":
     "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Anmeldung per E-Mail und Passwort.",
   "firstRun.google.helpSignIn":
-    "Für die Google-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
+    "Die Anmeldung mit Google läuft über dieselbe App: Sobald sie hier gespeichert ist, bietet die Anmeldeseite allen Eingeladenen „Continue with Google“ an, solange die Weiterleitungs-URI für die Anmeldung oben in der App registriert ist.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
   "firstRun.google.helpStep1":
     "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
@@ -8062,9 +8062,9 @@ export const de = {
   "firstRun.platform.foot":
     "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
   "firstRun.microsoft.note":
-    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs unten und fügen Sie hier Client-ID und Secret ein. Pinnen Sie sie auf Ihr Verzeichnis, wenn nur Postfächer Ihrer Organisation darüber verbunden werden sollen.",
+    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs unten und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
   "firstRun.microsoft.helpSignIn":
-    "Für die Microsoft-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GRAPH_CLIENT_ID und MARGINCE_GRAPH_CLIENT_SECRET, trägt die Verzeichnis-ID in MARGINCE_MICROSOFT_SIGNIN_TENANT ein und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
+    "Die Anmeldung mit Microsoft läuft über dieselbe App, in dem Verzeichnis, an das sie gebunden ist: Sobald sie hier mit einer Verzeichnis-ID gespeichert ist, bietet die Anmeldeseite allen Eingeladenen „Continue with Microsoft“ an, solange die Weiterleitungs-URI für die Anmeldung oben in der App registriert ist. Ohne Bindung verbinden sich Postfächer weiterhin, aber niemand meldet sich an, bis wer den Server betreibt Ihre Verzeichnisse in MARGINCE_MICROSOFT_SIGNIN_TENANT benennt.",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",

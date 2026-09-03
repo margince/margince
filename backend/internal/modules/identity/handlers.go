@@ -127,16 +127,15 @@ type Handlers struct {
 	// re-issues for 30 days is not short-lived.
 	oauthAccessTokenTTL time.Duration
 
-	// oidcProviders/oidcVerifiers/oidcExchangers/stateSigner/oidcRoutes wire
-	// /auth/oidc/{provider}/start and /callback (WithOIDCProviders). Absent
-	// from oidcProviders means unconfigured, and Start/Callback both 404 for
-	// it. oidcRoutes carries the fixed external base and SPA routes the flow
-	// redirects through — never derived from the request Host.
-	oidcProviders  map[string]OIDCProviderConfig
-	oidcVerifiers  map[string]OIDCVerifier
-	oidcExchangers map[string]OIDCExchanger
-	stateSigner    OIDCStateSigner
-	oidcRoutes     OIDCRoutes
+	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
+	// and /callback (WithOIDCProviders). Absent from oidcProviders means the
+	// deployment never composed the provider, and a source that answers "no
+	// client right now" means the same thing to a caller: Start/Callback both
+	// 404 for either. oidcRoutes carries the fixed external base and SPA routes
+	// the flow redirects through — never derived from the request Host.
+	oidcProviders map[string]OIDCProviderSource
+	stateSigner   OIDCStateSigner
+	oidcRoutes    OIDCRoutes
 	// oidcPerIP throttles the two unauthenticated OIDC edges — an exchange
 	// failure on /callback still drives one outbound token-exchange POST
 	// carrying the shared Gmail-capture client credentials, so an uncapped
