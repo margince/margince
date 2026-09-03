@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -358,7 +359,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		if err != nil {
 			return 0, err
 		}
-		weighted, err := deals.WeightedValue(baseMinor, d.winProbability)
+		weighted, err := values.WeightedValue(baseMinor, d.winProbability)
 		if err != nil {
 			return 0, err
 		}

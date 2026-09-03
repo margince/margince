@@ -272,33 +272,3 @@ func DivRoundHalfAwayFromZero(numerator, denominator *big.Int) *big.Int {
 func Pow10(exp int64) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(exp), nil)
 }
-
-// WeightedValue is formulas §6: baseMinor × winProbability/100, rounded half
-// away from zero.
-//
-// It lives here, beside the rounding it uses, because three surfaces need the
-// same figure — the account roll-up, the report engine's SQL aggregate, and a
-// forecast snapshot — and a money formula with three implementations is three
-// answers to one question. The SQL spelling cannot be folded away (an
-// aggregate has to compute in the database), so it is a declared mirror held
-// by TestTheTwoSpellingsOfWeightedValueAgree; every Go caller shares THIS one.
-//
-// EXACT big.Int arithmetic, never a native int64 multiply. amount_minor is
-// contract-unbounded, so baseMinor × winProbability can exceed int64 before
-// the division would have widened it back, and a silent wraparound there puts
-// a wrong number in a money total.
-func WeightedValue(baseMinor int64, winProbability int) (int64, error) {
-	product := new(big.Int).Mul(big.NewInt(baseMinor), big.NewInt(int64(winProbability)))
-	rounded := DivRoundHalfAwayFromZero(product, big.NewInt(100))
-	if !rounded.IsInt64() {
-		return 0, fmt.Errorf("%w: a %d-minor-unit amount at %d%%; correct the deal amount before retrying",
-			ErrWeightedValueOutOfRange, baseMinor, winProbability)
-	}
-	return rounded.Int64(), nil
-}
-
-// ErrWeightedValueOutOfRange marks the ARITHMETIC's own refusal, as distinct
-// from a caller rejecting an input before the multiply ever runs. A test that
-// accepted any error here would keep passing with the overflow check deleted,
-// as long as something else refused first.
-var ErrWeightedValueOutOfRange = errors.New("weighted pipeline value exceeds the representable money range")
