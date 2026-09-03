@@ -401,11 +401,21 @@ the verbs as callbacks; that stays).
   `room.*` and `roompage.*` key stays; `FINISHED_STATES` and `refusalFor` keep
   removing the composer and the verbs.
 - **Buyer** (`buyerroom.tsx`, `buyerroom.css`): **not the app shell.** Keep
-  the rail-less route and the credential handling exactly; restyle the page
-  to the lit ground with the one glow, a 720px `buyer-column`, the eyebrow,
-  the display-face title, `buyer.contact` in every state, the welcome, the
-  board with Download per document, the composers only for `comment`, the
-  foot with Sign out, the fixed "Powered by Margince" mark (`Wordmark`).
+  the rail-less route and the credential handling exactly; rebuild the page
+  as the small site in `DESIGN.md`: a 1040px frame on the lit ground, the
+  hero (mark, "Prepared for … by …", the live pill from `expires_at`, title,
+  welcome), the documents as a gallery of tiles (a page preview needs a
+  first-page thumbnail from the file store — new; until it exists the tile
+  draws the type mark on `--bg3`), the threads in place, the contact card,
+  the foot, the mark (`Wordmark`). Three of its pieces are **additions to
+  the contract**, one PR each after the restyle: "New since your last
+  visit" (derive from the participant's `last_seen_at` against document and
+  thread timestamps the view already carries — no schema change), **next
+  steps written by the contact** (a `next_steps` list on the room beside
+  `welcome_message`, edited on the seller page under Title and welcome), and
+  **"Book a call"** (a link to the steward's `#/book/<hostSlug>` page when
+  the steward has one; hidden otherwise). The composers stay only for
+  `comment`; a seller preview stays read-only.
   The four states keep their copy (`buyer.deadTitle` + the link-request
   form, `buyer.pausedTitle`, `buyer.expiredTitle`, `buyer.closedNote`) and the
   preview banner. `buyer-column > * { flex: none }` stays (the page grows,

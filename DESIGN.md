@@ -696,14 +696,29 @@ hidden, and the lifecycle.
 
 **The buyer's side is not a Margince screen.** It is a public page reached
 from a one-time link: no rail, no top bar, no seat, no pricing internals,
-nothing the link did not already name. One centred reading column of 720px
-on the lit ground with the top-left glow: the eyebrow "Deal Room", the
-room's title in the display face, "Your contact: {steward}" (present in every
-state, because a paused buyer needs it most), the welcome, then the same
-board with the same threads: Download on every document, a composer for
-those who may comment, and a room-wide thread with its composer. Sign out at
-the foot; "Powered by Margince" fixed at the bottom right is the only product
-mark. The page has four honest states of its own, each with its way back
+nothing the link did not already name. It is the one page a client ever
+sees, so it reads like a small, well-made site rather than a form, on the
+lit ground with both glows, in a 1040px frame:
+
+- **A hero.** The contact's mark and "Prepared for {company} by {steward}"
+  on the left, the live pill with the end date on the right; the eyebrow
+  "Deal Room", the room's title at 40px in the display face, the welcome at
+  16px. Under it, on the agent's tint, **"New since your last visit"**: the
+  answers that arrived and the revisions that replaced a file, drawn from
+  the participant's last-seen time.
+- **The documents as a gallery.** Two tiles per row: a page preview on
+  `--bg3` with the file-type tile and an "N unanswered" mark, the title,
+  group and page count, the thread count as a pill, Download. Hover lifts
+  nothing; the edge turns accent.
+- **Questions on the documents**, answered in place: each thread under its
+  document's tile, with the composer for those who may comment; then the
+  room-wide thread.
+- **On the right: the contact** as a card (mark, name, role, "Write to Tim",
+  **"Book a call"** into the product's booking page), **next steps written
+  by the contact** as a small ladder (done, now, ahead), and who is in the
+  room as chips.
+- Sign out at the foot with what the reader may do; "Powered by Margince"
+  fixed at the bottom right is the only product mark. The page has four honest states of its own, each with its way back
 and its contact: a dead link (with the one form: the invitation's email and
 "Send me a new link"), paused, ended, and closed (read-only, the record
 stands). A seller previewing sees the same page with a banner and can never
