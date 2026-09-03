@@ -148,3 +148,58 @@ components:
           maxLength: 2000
           description: The occurrence's own prose. Never the status line.
       additionalProperties: false
+    InternalEventBriefOpened:
+      type: object
+      x-event-type: brief.opened
+      x-entity-type: ""
+
+      description: >-
+        Payload for brief.opened — a rep read their morning Brief. The product
+        question behind it is whether the thing gets opened at all, and on the
+        days it says something worth acting on.
+
+        Emitted on the READ of an existing run, never on the pass that
+        assembles one: a night that ranked a queue nobody looked at is exactly
+        the case this event exists to make visible, and counting the assembly
+        as an open would hide it.
+
+        Counts only, no prose and no record data. What a rep's morning HOLDS is
+        already recoverable from the run itself, and what they DID with it from
+        the audit rows brief_item marks write. This payload answers one
+        question the other two cannot: whether they came and looked.
+
+        Entity-less, and that is what keeps it internal. Every catalogued type
+        that is NOT in the entity-less pipeline class is subscribable by an
+        outside consumer — publicevents_test.go derives the set exactly as
+        webhooks.validateEventTypes does — so naming brief_run here would make
+        "this rep opened their Brief at 06:42" a webhook anyone may select. The
+        run id stays on the system_log row the emit writes, where it is
+        attributable without being deliverable.
+      required:
+        - local_day
+        - items
+        - unread
+      properties:
+        local_day:
+          type: string
+          format: date
+          description: >-
+            The run's own local day, which is its identity — one run per rep per
+            day. Carried so a consumer can tell today's first open from a
+            re-open of yesterday's without reaching back into brief_run.
+        items:
+          type: integer
+          minimum: 0
+          description: >-
+            How many items the run held when it was opened, AFTER expired
+            snoozes resurfaced — what the rep actually saw, not what the night
+            ranked. Zero is a real and interesting reading: a quiet morning
+            that was still opened.
+        unread:
+          type: integer
+          minimum: 0
+          description: >-
+            How many of those carried no act, dismiss or snooze mark yet.
+            Together with items it separates a first open from a return visit
+            without needing a second event type for the difference.
+      additionalProperties: false

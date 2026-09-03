@@ -278,7 +278,13 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		}
 
 		run.Items, err = readRunItems(ctx, tx, run.ID)
-		return err
+		if err != nil {
+			return err
+		}
+		// The open is recorded here and not in the handler, so it rides the
+		// same transaction as the read and counts what the rep is actually
+		// about to see (briefopened.go).
+		return emitBriefOpened(ctx, tx, run)
 	})
 	if err != nil {
 		return BriefRun{}, err
