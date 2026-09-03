@@ -75,11 +75,19 @@ CREATE TABLE communication_decision (
         ]))
 );
 
--- One authoritative row per recipient per phase per attempt. Without this a
--- retry could write a second staging answer and leave two rows disagreeing
--- about the same moment, with nothing to say which one the send relied on.
-CREATE UNIQUE INDEX communication_decision_one_per_attempt
-    ON communication_decision (delivery_id, recipient_address, phase, attempt);
+-- One authoritative row per recipient per DECISION, not per attempt.
+--
+-- Keying on the attempt looks right and is not: a pacing policy that postpones
+-- a delivery hands the attempt number back (RecordDeferral decrements it), so
+-- the next dispatch re-authorizes under the same number. A uniqueness key on
+-- attempt would make that second, fresher decision collide with the first and
+-- be silently dropped — leaving the record asserting that an older verdict,
+-- taken before somebody objected, is what permitted the send.
+--
+-- The decision set is minted per evaluation, so it separates two answers about
+-- the same attempt while still refusing a duplicate row inside one evaluation.
+CREATE UNIQUE INDEX communication_decision_one_per_decision
+    ON communication_decision (decision_set_id, recipient_address, phase);
 CREATE INDEX communication_decision_by_subject
     ON communication_decision (subject_id) WHERE subject_id IS NOT NULL;
 CREATE INDEX communication_decision_disagreements

@@ -164,3 +164,35 @@ func (s DecisionSet) Denied() []Decision {
 	}
 	return out
 }
+
+// TransmitRequest is one delivery, about to reach a provider.
+type TransmitRequest struct {
+	DeliveryID ids.UUID
+	// Attempt is the dispatcher's own counter, already incremented for this
+	// try. It is the freshness clock: a ticket is current only for the attempt
+	// that wrote it, so a crash between the decision and the provider call
+	// leaves a row that cannot be mistaken for the next attempt's.
+	Attempt    int
+	Recipients []connector.Recipient
+	// PurposeKey is the legacy consent purpose the delivery was staged with.
+	PurposeKey string
+	Subject    string
+	Body       string
+}
+
+// TransmitTicket is what a dispatcher must hold before it calls a provider.
+type TransmitTicket struct {
+	DeliveryID    ids.UUID
+	Attempt       int
+	DecisionSetID ids.UUID
+	Allowed       bool
+	Reason        string
+}
+
+// Current reports whether this ticket authorizes THIS attempt of THIS
+// delivery. A zero set id means no decision was ever recorded; a stale attempt
+// means the decision belongs to an earlier try. Both are refusals, and the
+// dispatcher asks before it transmits.
+func (t TransmitTicket) Current(deliveryID ids.UUID, attempt int) bool {
+	return t.DecisionSetID != ids.UUID{} && t.DeliveryID == deliveryID && t.Attempt == attempt
+}

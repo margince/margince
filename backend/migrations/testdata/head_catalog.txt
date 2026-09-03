@@ -1358,7 +1358,7 @@ public.communication_decision.suppression text gen=- def=-
 public.communication_decision.verdict text NOT NULL gen=- def=-
 public.communication_decision_by_subject CREATE INDEX communication_decision_by_subject ON public.communication_decision USING btree (subject_id) WHERE (subject_id IS NOT NULL)
 public.communication_decision_disagreements CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))
-public.communication_decision_one_per_attempt CREATE UNIQUE INDEX communication_decision_one_per_attempt ON public.communication_decision USING btree (delivery_id, recipient_address, phase, attempt)
+public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication_decision_one_per_decision ON public.communication_decision USING btree (decision_set_id, recipient_address, phase)
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
