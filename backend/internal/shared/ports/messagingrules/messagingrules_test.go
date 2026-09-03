@@ -130,7 +130,144 @@ func TestAFoldedSetClaimsNoSingleJurisdiction(t *testing.T) {
 // Strictest reports that it found nothing rather than returning an empty set
 // that reads as "no obligations".
 func TestAnUnknownJurisdictionIsNotAnAnswer(t *testing.T) {
-	if _, ok := Strictest("zz"); ok {
+	_, unknown, ok := Strictest("zz")
+	if ok {
 		t.Error("an unknown jurisdiction reported rules — the caller would read the zero set as 'nothing required'")
+	}
+	if len(unknown) != 1 {
+		t.Errorf("unknown codes = %v, want the one that could not be resolved", unknown)
+	}
+}
+
+// The registry hands out copies, not its own slices.
+//
+// Rules is a struct of slices and a pointer, so a plain return aliases the
+// stored value. A caller that sorted or filtered what it got — an ordinary
+// thing to write — would rewrite the registered rules for every later send in
+// the process, silently dropping a statutory condition with nothing failing.
+func TestTheRegistryHandsOutCopies(t *testing.T) {
+	Register(Rules{
+		Jurisdiction: "qa", Version: 1,
+		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
+		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
+	})
+
+	got, ok := For("qa")
+	if !ok {
+		t.Fatal("the rules did not register")
+	}
+	got.MarketingExceptions[0].RequiresSimilarity = false
+	got.FrequencyCap.Messages = 1000
+
+	again, _ := For("qa")
+	if !again.MarketingExceptions[0].RequiresSimilarity {
+		t.Error("a caller erased a condition from the registry's own copy")
+	}
+	if again.FrequencyCap.Messages != 3 {
+		t.Errorf("a caller rewrote the registered cap to %d", again.FrequencyCap.Messages)
+	}
+}
+
+// Registering is a copy too, so a caller that keeps its literal and mutates it
+// afterwards does not reach in.
+func TestRegisteringTakesACopy(t *testing.T) {
+	exceptions := []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}}
+	Register(Rules{Jurisdiction: "qb", Version: 1, MarketingExceptions: exceptions})
+
+	exceptions[0].RequiresSaleEvidence = false
+
+	got, _ := For("qb")
+	if !got.MarketingExceptions[0].RequiresSaleEvidence {
+		t.Error("mutating the caller's own slice reached into the registry")
+	}
+}
+
+// The fold may never permit more than an input permits.
+//
+// This is the counterexample that proved it could: a set naming one kind twice,
+// where the weak duplicate overwrote the strong entry. The fold then required
+// none of the three conditions the first entry demanded — more permissive than
+// either side, which is the one thing a strictest-wins fold may not be.
+func TestADuplicateKindCannotErodeAnExceptionsConditions(t *testing.T) {
+	strong := MarketingException{
+		Kind: ExistingCustomer, RequiresSaleEvidence: true,
+		RequiresCollectionTimeOptOut: true, RequiresSimilarity: true, RequiresNoObjection: true,
+	}
+	weak := MarketingException{Kind: ExistingCustomer, RequiresNoObjection: true}
+
+	a := Rules{Jurisdiction: "aa", Version: 1, MarketingExceptions: []MarketingException{strong, weak}}
+	b := Rules{Jurisdiction: "bb", Version: 1, MarketingExceptions: []MarketingException{weak}}
+
+	got := stricter(a, b).MarketingExceptions
+	if len(got) != 1 {
+		t.Fatalf("%d exceptions survived, want 1 — a duplicate kind produced an order-dependent answer", len(got))
+	}
+	e := got[0]
+	if !e.RequiresSaleEvidence || !e.RequiresCollectionTimeOptOut || !e.RequiresSimilarity {
+		t.Errorf("the fold permits more than its input did: %+v", e)
+	}
+}
+
+// And the set that made it possible is refused outright.
+func TestARuleSetCannotNameOneExceptionKindTwice(t *testing.T) {
+	err := Rules{Jurisdiction: "aa", Version: 1, MarketingExceptions: []MarketingException{
+		{Kind: ExistingCustomer, RequiresSaleEvidence: true},
+		{Kind: ExistingCustomer, RequiresNoObjection: true},
+	}}.Validate()
+	if err == nil {
+		t.Error("a rule set naming one exception kind twice was accepted")
+	}
+}
+
+// A cap that cannot bind as written is the strictest thing there is, and it
+// does not depend on which side it sits on.
+//
+// A zero window over a zero count is NaN, which loses every comparison — so the
+// genuinely tighter cap lost whenever the degenerate one sat on the left, and
+// the fold's answer depended on the order the caller listed the countries in.
+func TestADegenerateCapDoesNotWinByArgumentOrder(t *testing.T) {
+	broken := &FrequencyCap{}
+	binding := &FrequencyCap{Messages: 1, Window: 24 * time.Hour}
+
+	if tighterCap(broken, binding) != broken || tighterCap(binding, broken) != broken {
+		t.Error("a cap that cannot bind lost to a real one, or won only from one side")
+	}
+}
+
+// Equal rates are not equal burst: {1, 1h} and {24, 24h} permit the same
+// average, and a 24-message burst is not the same restriction as one an hour.
+func TestEqualRatesBreakTowardTheSmallerBurst(t *testing.T) {
+	hourly := &FrequencyCap{Messages: 1, Window: time.Hour}
+	daily := &FrequencyCap{Messages: 24, Window: 24 * time.Hour}
+
+	if tighterCap(daily, hourly) != hourly || tighterCap(hourly, daily) != hourly {
+		t.Error("a 24-message burst beat a one-per-hour throttle at the same rate")
+	}
+}
+
+// Strictest must not report a complete answer over a partial fold.
+//
+// The intended call is Strictest(sender, recipient). With the German pack
+// compiled in and a recipient whose country has none, a silent skip returned
+// ok=true carrying Germany's existing-customer exception — applied to somebody
+// whose law the process knows nothing about, which is exactly the
+// laxest-country-decides failure the fold exists to prevent.
+func TestStrictestReportsTheJurisdictionsItCouldNotResolve(t *testing.T) {
+	Register(Rules{
+		Jurisdiction: "qc", Version: 1,
+		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}},
+	})
+
+	got, unknown, ok := Strictest("qc", "zz")
+	if !ok {
+		t.Fatal("a known jurisdiction reported nothing")
+	}
+	if len(unknown) != 1 || unknown[0] != "zz" {
+		t.Fatalf("unknown = %v, want the code that could not be resolved", unknown)
+	}
+	// The rules still come back — the caller decides what to do about a partial
+	// answer — but it can no longer mistake one for a complete fold.
+	if len(got.MarketingExceptions) != 1 {
+		t.Error("the resolvable jurisdiction's rules were lost")
 	}
 }

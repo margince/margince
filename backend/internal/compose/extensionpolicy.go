@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -60,6 +61,15 @@ func preflightMessagingRules(e extension.Extension, messagingCodes map[jurisdict
 		if owner, dup := messagingCodes[r.Jurisdiction]; dup {
 			return fmt.Errorf("compose: extensions %q and %q both declare messaging rules for jurisdiction %q",
 				owner, e.Name, r.Jurisdiction)
+		}
+		// The core-collision check its jurisdiction sibling carries. No core
+		// caller registers a rule set today, and the day one does an extension
+		// naming the same code must meet this composed error rather than the
+		// registry's panic — a boot that dies in a registry tells an operator
+		// far less than one that names both declarers.
+		if _, taken := messagingrules.For(r.Jurisdiction); taken {
+			return fmt.Errorf("compose: extension %q declares messaging rules for jurisdiction %q, which the core already registers",
+				e.Name, r.Jurisdiction)
 		}
 		messagingCodes[r.Jurisdiction] = e.Name
 	}

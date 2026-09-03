@@ -223,10 +223,21 @@ func (r Rules) Validate() error {
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))
 	}
+	// One rule set may name a kind once. A second entry for the same kind is
+	// refused rather than merged, for the reason a duplicate retention class
+	// is: the fold would have to pick, and a weaker duplicate silently
+	// replacing a stronger one is an exception applied on terms the pack never
+	// declared.
+	seen := map[ExceptionKind]bool{}
 	for _, e := range r.MarketingExceptions {
 		if err := e.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+		if seen[e.Kind] {
+			return fmt.Errorf("messaging rules for %q declare exception %q twice — two sets of conditions for one route is two answers",
+				string(r.Jurisdiction), string(e.Kind))
+		}
+		seen[e.Kind] = true
 	}
 	for _, d := range r.Disclosures {
 		if err := d.Validate(); err != nil {
