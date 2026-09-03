@@ -266,7 +266,7 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
     "Arbeitsliste",
     "Pipeline",
     "Projekte",
-    "Berichte",
+    "Analytics",
     "Margince fragen",
   ]);
 });
@@ -280,10 +280,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
     "aria-label",
     "Pipeline",
   );
-  await page.locator('nav.rail a[aria-label="Berichte"]').click();
+  await page.locator('nav.rail a[aria-label="Analytics"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Berichte",
+    "Analytics",
   );
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
 });
@@ -1361,6 +1361,7 @@ const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
   "analytics/forecast",
+  "analytics/pipeline",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and

@@ -240,6 +240,7 @@ export const en = {
   "search.group.activity": "Activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.tag.carriedBy": "On {count} records",
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 
@@ -3178,6 +3179,10 @@ export const en = {
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Deals by stage",
+  "analytics.sections": "Analytics sections",
+  "analytics.sectionForecast": "Forecast",
+  "analytics.sectionPipeline": "Pipeline",
+  "analytics.frame": "As of {asOf} · {zone} · {currency}",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
   "analytics.forecastBanner":
@@ -7736,7 +7741,12 @@ export const en = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Reading your day…",
   "worklist.queue": "What to do next",
-  "worklist.summary": "{urgent} urgent · {due} due · {lower} lower-priority",
+  "worklist.more": "Show more",
+  "worklist.more.failed": "Could not load more. Try again.",
+  "worklist.summary":
+    "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine — {total} in all",
+  "worklist.summary.noMiddle":
+    "{urgent} urgent · {due} due · {lower} routine — {total} in all",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",

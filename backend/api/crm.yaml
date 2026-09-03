@@ -4935,6 +4935,37 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /activities/{id}/email-presentation:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getEmailPresentation
+      summary: Everything one email needs to be read and acted on, in one read.
+      description: |
+        The composed read behind the canonical email viewer: the message, who it went to,
+        what came with it, and what this caller may do about who else reads it.
+
+        It answers 404 for an activity that is not `kind=email`, and for one held under a
+        statutory retention obligation — a held row is outside every ordinary read, so there
+        is no presentation of it to refuse. A caller who may discover the row but stands
+        outside its audience gets `content_state: withheld`: the markers, and nothing said.
+      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      parameters:
+        - name: thread_cursor
+          in: query
+          required: false
+          schema: { type: string }
+          description: |
+            Continue the thread's member page from a previous response's `thread.next_cursor`.
+      responses:
+        '200':
+          description: The email.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailPresentation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /activities/{id}/audience:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -20203,6 +20234,229 @@ components:
             deciding this sender is business cancels the deletion. Later mail from the same sender
             runs its own window, so this date names the next message to go rather than all of them.
 
+    EmailSummary:
+      type: object
+      x-email-presentation: entry
+      description: |
+        One retained email, reduced to what a row shows without opening it. Present on an
+        activity only when `kind=email`; every other kind carries none, and a reader that
+        branches on this field is asking the one question that decides the canonical row.
+
+        The preview is normalised by the server with the same splitter the detail uses, so a
+        row and the message it opens never disagree about where the sender's own words end.
+        A withheld email carries a summary whose `subject` and `preview` are null and whose
+        `display_status` says so — the row stays, the words do not.
+      required: [activity_id, occurred_at, display_status, attachment_count, move, version]
+      properties:
+        activity_id: { type: string, format: uuid }
+        subject:
+          type: [string, 'null']
+          description: Null when the message has none, and when the content is withheld.
+        preview:
+          type: [string, 'null']
+          description: |
+            One line of the sender's own text, signature and quoted history already removed.
+            Null when withheld, and when the message has no text of its own.
+        occurred_at: { type: string, format: date-time }
+        direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
+        counterparty:
+          type: [string, 'null']
+          description: |
+            Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
+            the exchange had more. Null when no participant resolves to a name this caller may
+            see — the row then says the direction alone rather than inventing a stranger.
+        attachment_count:
+          type: integer
+          description: How many files came with it. Zero when withheld, like every other count.
+        move:
+          type: string
+          enum: [needs_reply, waiting_for_them, none]
+          description: |
+            Whose move it is, derived from what this reader can see of the thread. `none` when
+            the question cannot be answered honestly — an unanswerable move is not a claim.
+        display_status:
+          $ref: '#/components/schemas/EmailAccessStatus'
+        version:
+          allOf: [{ $ref: '#/components/schemas/RowVersion' }]
+          description: |
+            The activity's version, carried so a row can open an editor that writes with
+            If-Match. A row without it can only read.
+
+    EmailAccessStatus:
+      type: string
+      x-email-presentation: exempt
+      x-email-presentation-reason: A status word, not email content.
+      enum: [team, participants, selected, withheld]
+      description: |
+        What a reader is allowed to know about who else reads this message, in one word the
+        badge can print. `team` never means the whole workspace: the linked record's own scope
+        still decides who may discover the row at all.
+
+        `withheld` is the only value that says the content is not this caller's, and it never
+        travels with a reason: why a message is private describes what it is about.
+
+        The captured-mail states a mailbox owner sees — held until classified, private by you,
+        shared but still held by another seat — are not here yet. They arrive with the thread
+        contribution editor that can act on them; a value no server can emit is one a client
+        would branch on and never reach.
+
+    EmailParty:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: A participant identity, gated with the content it belongs to.
+      description: One address on a message, resolved to a person or a seat when it is one.
+      required: [address]
+      properties:
+        address: { type: string }
+        display_name: { type: [string, 'null'] }
+        person_id:
+          type: [string, 'null']
+          format: uuid
+          description: Set when the address belongs to a contact this caller may see.
+        user_id:
+          type: [string, 'null']
+          format: uuid
+          description: Set when the address belongs to a seat in this workspace.
+
+    EmailAttachmentSummary:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: File metadata, gated with the message it came on.
+      description: One file that came with the message. Metadata only; bytes are fetched separately.
+      required: [id, filename]
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        byte_size: { type: [integer, 'null'] }
+        content_type: { type: [string, 'null'] }
+
+    EmailAccess:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: The access block, which is about the message rather than in it.
+      description: |
+        Who reads this message, and what this caller may do about that. `can_change` and
+        `change_mode` are decided by the same authority that would execute the write, so a
+        control this block offers is a control the write will accept.
+      required: [content_state, display_status, can_change, change_mode]
+      properties:
+        content_state:
+          type: string
+          enum: [available, withheld]
+        display_status:
+          $ref: '#/components/schemas/EmailAccessStatus'
+        audience:
+          allOf: [{ $ref: '#/components/schemas/ActivityAudience' }]
+          nullable: true
+        selected_members:
+          type: array
+          description: |
+            Who is named on a `selected` audience. Returned only to a caller who may both read
+            the content and change it — a reader with no standing to edit the set has no
+            standing to enumerate it either.
+          items: { $ref: '#/components/schemas/AudienceMember' }
+        can_change: { type: boolean }
+        change_mode:
+          type: string
+          enum: [thread_contribution, message_audience, none]
+          description: |
+            Which write this caller's Access control performs. `thread_contribution` changes
+            only this owner's contribution to a captured thread; `message_audience` sets a
+            hand-logged message's own audience. The browser never decides this by reading
+            `captured_by` — the server knows which write it would accept.
+        change_scope:
+          type: string
+          enum: [thread, message, none]
+          description: What the editor must say it is about to change, in the words the user reads.
+        explanation:
+          type: [string, 'null']
+          description: |
+            Why the message is limited, when the caller may know. Always null while the content
+            is withheld: the reason describes the message.
+
+    EmailThreadPage:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: A page of EmailSummary, each of which carries its own annotation.
+      description: |
+        The rest of the conversation, newest first, as summaries. Bounded and paged rather
+        than whole: a thread has no ceiling, and a drawer that fetched every message would
+        make opening the newest one cost the whole history.
+      required: [members]
+      properties:
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/EmailSummary' }
+        next_cursor:
+          type: [string, 'null']
+          description: Pass back as `thread_cursor` for the next page. Null when this is the last.
+
+    EmailPresentation:
+      type: object
+      x-email-presentation: entry
+      description: |
+        One email, composed for reading. The message and its parties come from the activity's
+        own store; the access block is assembled from the same authority that performs the
+        write, so what this says a caller may do is what the caller may do.
+
+        A withheld presentation carries the markers and refuses the rest: no subject, no body,
+        no parties, no attachments, no thread, no reason, no member names.
+      required: [id, lifecycle, occurred_at, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_relink]
+      properties:
+        id: { type: string, format: uuid }
+        lifecycle:
+          type: string
+          enum: [delivered]
+          description: |
+            What kind of message this is. One value today: this read serves delivered
+            correspondence. A scheduled send and a draft awaiting approval will borrow the
+            frame when the reads that serve them land, and they are not listed until then.
+        occurred_at: { type: string, format: date-time }
+        summary:
+          $ref: '#/components/schemas/EmailSummary'
+        body:
+          type: [string, 'null']
+          description: |
+            The message as plain text, normalised. Null when withheld. Provider payloads are
+            never handed to a browser to parse.
+        thread_key: { type: [string, 'null'] }
+        from:
+          type: array
+          items: { $ref: '#/components/schemas/EmailParty' }
+        to:
+          type: array
+          items: { $ref: '#/components/schemas/EmailParty' }
+        cc:
+          type: array
+          items: { $ref: '#/components/schemas/EmailParty' }
+        bcc:
+          type: array
+          description: |
+            Empty for every caller but the seat that sent or imported the message. Being
+            allowed to read what was written does not disclose who was copied blind.
+          items: { $ref: '#/components/schemas/EmailParty' }
+        bcc_withheld:
+          type: boolean
+          description: |
+            True when the message has blind recipients this caller may not see. The viewer says
+            that they exist rather than showing an empty list that reads as none.
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/EmailAttachmentSummary' }
+        links:
+          type: array
+          description: What the message is filed against, named for a reader.
+          items: { $ref: '#/components/schemas/ActivityLink' }
+        thread:
+          $ref: '#/components/schemas/EmailThreadPage'
+        access:
+          $ref: '#/components/schemas/EmailAccess'
+        can_reply: { type: boolean }
+        can_relink: { type: boolean }
+        version:
+          allOf: [{ $ref: '#/components/schemas/RowVersion' }]
+          description: The activity's version, for the If-Match its own actions send.
+
     ThreadAudienceOutcome:
       type: object
       description: What an owner's decision about a thread reached.
@@ -27643,6 +27897,14 @@ components:
             and the mailbox behind it is not on the row. Null on every other kind, and on a
             meeting nobody was recorded as hosting.
         direction: { type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.' }
+        email_summary:
+          allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            Present exactly when `kind=email`. What the canonical email row renders, so a list
+            does not have to fetch a message per visible line to draw one. Every other kind
+            carries none, and a reader branches on its presence rather than on the kind word.
         thread_key:
           type: [string, 'null']
           readOnly: true
@@ -27920,6 +28182,17 @@ components:
             A moment already past is refused rather than stored: it would write a row that hides
             nothing, and read to the rep as a snooze that did not take.
 
+    AudienceMember:
+      type: object
+      description: |
+        One user or team admitted to a message besides its participants. The same shape the
+        audience write takes and the presentation reads back, so an editor that renders the
+        current set submits it in the vocabulary it received.
+      required: [subject_type, subject_id]
+      properties:
+        subject_type: { type: string, enum: [user, team] }
+        subject_id: { type: string, format: uuid }
+
     SetActivityAudienceRequest:
       type: object
       required: [audience]
@@ -27931,12 +28204,7 @@ components:
           description: >-
             The users and teams admitted besides the participants. Read only when `audience` is
             `selected`; replaces the previous set.
-          items:
-            type: object
-            required: [subject_type, subject_id]
-            properties:
-              subject_type: { type: string, enum: [user, team] }
-              subject_id: { type: string, format: uuid }
+          items: { $ref: '#/components/schemas/AudienceMember' }
     UpdateActivityRequest:
       type: object
       properties:
@@ -31032,6 +31300,14 @@ components:
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
         score: { type: [number, 'null'], description: Relevance score. }
+        carried_by:
+          type: [integer, 'null']
+          description: >
+            For a `tag` hit only: how many people, companies and deals carry this word, as
+            THIS caller may see them — the same three types the tag page counts and the
+            filters offer, not every type `taggable` admits. It is what tells a searcher
+            whether the word is worth opening before they open it. Null on every other hit
+            type, and null when no count was taken.
         trust_tier:
           type: [string, 'null']
           enum: [authoritative, external, unverified, null]
@@ -35753,10 +36029,25 @@ components:
       description: |
         The day in figures, for the one line above the queue. Each count is of items the
         queue actually CARRIES, so a number here and the rows below it cannot disagree.
+
+        These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
+        `due` is asked of every item whatever its level, so an overdue promise counts in
+        both `urgent` and `due` — deliberately, because a reader wants both answers about
+        it. Read them as four questions about one day rather than four slices of it.
       required: [urgent, due, lower_priority, total]
       properties:
         urgent: { type: integer, minimum: 0, description: 'Items at the top two levels: somebody is waiting, or a promise is breaking.' }
         due: { type: integer, minimum: 0, description: 'Items carrying a date that has arrived or passed.' }
+        in_play:
+          type: integer
+          minimum: 0
+          description: |
+            The middle of the day: revenue at risk, work already agreed, and decisions that
+            block somebody. Neither an interruption nor hygiene.
+
+            Sent because without it those items reached no figure at all — a queue holding
+            nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
+            of rows, which is the one thing this line promises cannot happen.
         lower_priority: { type: integer, minimum: 0, description: 'Routine work: decisions that block nothing, and data hygiene.' }
         total: { type: integer, minimum: 0, description: 'How many items the queue carries.' }
         material_threshold_minor:

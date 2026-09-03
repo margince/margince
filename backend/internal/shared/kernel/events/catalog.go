@@ -53,6 +53,17 @@ const extensionStreamEntity = "extension"
 // purge does not unlink is one that outlives a data reset.
 const aiTaskStreamEntity = "aitask"
 
+// briefStreamEntity is the stream every brief.* product-telemetry event rides.
+//
+// Out of streamEntities for the same three reasons aiTaskStreamEntity is, and
+// they hold one at a time: the automation engine has no trigger for "a rep
+// opened their Brief", the webhook deliverer has no public type to name it by,
+// and the audit stream already carries what the rep DID — brief_item marks
+// write audit rows — so an all-stream consumer would gain nothing but volume.
+// What this stream answers is the one thing those cannot: whether the page was
+// opened at all. Enumerated by Streams() all the same, so the purge unlinks it.
+const briefStreamEntity = "brief"
+
 // ExtensionEventVersion is the payload schema version every extension event
 // carries, and it is 1 forever.
 //
@@ -108,11 +119,12 @@ var streamEntities = []string{
 // left out here is one the data reset does not unlink and no operator can see,
 // which is a worse outcome than the entries it would leave behind.
 func Streams() []string {
-	out := make([]string, 0, len(streamEntities)+2)
+	out := make([]string, 0, len(streamEntities)+3)
 	for _, e := range streamEntities {
 		out = append(out, StreamPrefix+e)
 	}
-	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity)
+	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity,
+		StreamPrefix+briefStreamEntity)
 	sort.Strings(out)
 	return out
 }
@@ -382,6 +394,10 @@ var catalog = map[string]struct {
 	// The AI-activity projection feed (ai_task_run). One type with the state
 	// inside, like voice.build_changed: a new state must never need a new type.
 	"ai_task.state_changed": {aiTaskStreamEntity, 1},
+
+	// Product telemetry: the morning Brief was read. Internal only — nothing
+	// subscribes to it, and api/internal-events.yaml says why that file exists.
+	"brief.opened": {briefStreamEntity, 1},
 }
 
 // pipelineEventTypes are the events that may ride the bus WITHOUT a subject
@@ -404,6 +420,11 @@ var pipelineEventTypes = map[string]struct{}{
 	"capture.failed":        {},
 	"capture.skipped":       {},
 	"ai_task.state_changed": {},
+	// A Brief open names no record it could hand a consumer: the subject is the
+	// READING, not the run, and the run is the reader's own queue. Entity-less
+	// is also what keeps it off the subscribable set — see its schema in
+	// api/internal-events.yaml.
+	"brief.opened": {},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

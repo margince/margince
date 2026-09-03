@@ -1507,6 +1507,24 @@ func (e AttentionSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for AudienceMemberSubjectType.
+const (
+	AudienceMemberSubjectTypeTeam AudienceMemberSubjectType = "team"
+	AudienceMemberSubjectTypeUser AudienceMemberSubjectType = "user"
+)
+
+// Valid indicates whether the value is a known member of the AudienceMemberSubjectType enum.
+func (e AudienceMemberSubjectType) Valid() bool {
+	switch e {
+	case AudienceMemberSubjectTypeTeam:
+		return true
+	case AudienceMemberSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuditHistoryEntryActorType.
 const (
 	AuditHistoryEntryActorTypeAgent     AuditHistoryEntryActorType = "agent"
@@ -4867,6 +4885,144 @@ func (e DemoteLeadResponseUnwind) Valid() bool {
 	case DemoteUnwindMergeLineageOnly:
 		return true
 	case DemoteUnwindReversed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessChangeMode.
+const (
+	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
+	EmailAccessChangeModeNone               EmailAccessChangeMode = "none"
+	EmailAccessChangeModeThreadContribution EmailAccessChangeMode = "thread_contribution"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessChangeMode enum.
+func (e EmailAccessChangeMode) Valid() bool {
+	switch e {
+	case EmailAccessChangeModeMessageAudience:
+		return true
+	case EmailAccessChangeModeNone:
+		return true
+	case EmailAccessChangeModeThreadContribution:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessChangeScope.
+const (
+	EmailAccessChangeScopeMessage EmailAccessChangeScope = "message"
+	EmailAccessChangeScopeNone    EmailAccessChangeScope = "none"
+	EmailAccessChangeScopeThread  EmailAccessChangeScope = "thread"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessChangeScope enum.
+func (e EmailAccessChangeScope) Valid() bool {
+	switch e {
+	case EmailAccessChangeScopeMessage:
+		return true
+	case EmailAccessChangeScopeNone:
+		return true
+	case EmailAccessChangeScopeThread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessContentState.
+const (
+	EmailAccessContentStateAvailable EmailAccessContentState = "available"
+	EmailAccessContentStateWithheld  EmailAccessContentState = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessContentState enum.
+func (e EmailAccessContentState) Valid() bool {
+	switch e {
+	case EmailAccessContentStateAvailable:
+		return true
+	case EmailAccessContentStateWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAccessStatus.
+const (
+	EmailAccessStatusParticipants EmailAccessStatus = "participants"
+	EmailAccessStatusSelected     EmailAccessStatus = "selected"
+	EmailAccessStatusTeam         EmailAccessStatus = "team"
+	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessStatus enum.
+func (e EmailAccessStatus) Valid() bool {
+	switch e {
+	case EmailAccessStatusParticipants:
+		return true
+	case EmailAccessStatusSelected:
+		return true
+	case EmailAccessStatusTeam:
+		return true
+	case EmailAccessStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailPresentationLifecycle.
+const (
+	EmailPresentationLifecycleDelivered EmailPresentationLifecycle = "delivered"
+)
+
+// Valid indicates whether the value is a known member of the EmailPresentationLifecycle enum.
+func (e EmailPresentationLifecycle) Valid() bool {
+	switch e {
+	case EmailPresentationLifecycleDelivered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSummaryDirection.
+const (
+	EmailSummaryDirectionInbound  EmailSummaryDirection = "inbound"
+	EmailSummaryDirectionOutbound EmailSummaryDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the EmailSummaryDirection enum.
+func (e EmailSummaryDirection) Valid() bool {
+	switch e {
+	case EmailSummaryDirectionInbound:
+		return true
+	case EmailSummaryDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSummaryMove.
+const (
+	EmailSummaryMoveNeedsReply     EmailSummaryMove = "needs_reply"
+	EmailSummaryMoveNone           EmailSummaryMove = "none"
+	EmailSummaryMoveWaitingForThem EmailSummaryMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the EmailSummaryMove enum.
+func (e EmailSummaryMove) Valid() bool {
+	switch e {
+	case EmailSummaryMoveNeedsReply:
+		return true
+	case EmailSummaryMoveNone:
+		return true
+	case EmailSummaryMoveWaitingForThem:
 		return true
 	default:
 		return false
@@ -9811,24 +9967,6 @@ func (e SearchResultType) Valid() bool {
 	}
 }
 
-// Defines values for SetActivityAudienceRequestMembersSubjectType.
-const (
-	SetActivityAudienceRequestMembersSubjectTypeTeam SetActivityAudienceRequestMembersSubjectType = "team"
-	SetActivityAudienceRequestMembersSubjectTypeUser SetActivityAudienceRequestMembersSubjectType = "user"
-)
-
-// Valid indicates whether the value is a known member of the SetActivityAudienceRequestMembersSubjectType enum.
-func (e SetActivityAudienceRequestMembersSubjectType) Valid() bool {
-	switch e {
-	case SetActivityAudienceRequestMembersSubjectTypeTeam:
-		return true
-	case SetActivityAudienceRequestMembersSubjectTypeUser:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
@@ -13089,25 +13227,25 @@ func (e StartOidcSignInParamsProvider) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
-	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
-	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
-	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
+	Blocked           ListAutomationRunsParamsOutcome = "blocked"
+	Failed            ListAutomationRunsParamsOutcome = "failed"
+	Fired             ListAutomationRunsParamsOutcome = "fired"
+	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	Skipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case ListAutomationRunsParamsOutcomeBlocked:
+	case Blocked:
 		return true
-	case ListAutomationRunsParamsOutcomeFailed:
+	case Failed:
 		return true
-	case ListAutomationRunsParamsOutcomeFired:
+	case Fired:
 		return true
-	case ListAutomationRunsParamsOutcomeQueuedForApproval:
+	case QueuedForApproval:
 		return true
-	case ListAutomationRunsParamsOutcomeSkipped:
+	case Skipped:
 		return true
 	default:
 		return false
@@ -13803,22 +13941,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -14594,6 +14732,9 @@ type Activity struct {
 
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
+
+	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
 	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
@@ -16117,6 +16258,17 @@ type AttentionSubject struct {
 
 // AttentionSubjectType defines model for AttentionSubject.Type.
 type AttentionSubjectType string
+
+// AudienceMember One user or team admitted to a message besides its participants. The same shape the
+// audience write takes and the presentation reads back, so an editor that renders the
+// current set submits it in the vocabulary it received.
+type AudienceMember struct {
+	SubjectId   openapi_types.UUID        `json:"subject_id"`
+	SubjectType AudienceMemberSubjectType `json:"subject_type"`
+}
+
+// AudienceMemberSubjectType defines model for AudienceMember.SubjectType.
+type AudienceMemberSubjectType string
 
 // AuditHistoryEntry One rendered history line for a record mutation. `before`/`after` are
 // masked to the viewer's readable fields — an absent key was hidden, not null.
@@ -19970,6 +20122,79 @@ type DisqualifyLeadRequest struct {
 	ReasonId *openapi_types.UUID `json:"reason_id,omitempty"`
 }
 
+// EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
+// `change_mode` are decided by the same authority that would execute the write, so a
+// control this block offers is a control the write will accept.
+type EmailAccess struct {
+	Audience  *ActivityAudience `json:"audience,omitempty"`
+	CanChange bool              `json:"can_change"`
+
+	// ChangeMode Which write this caller's Access control performs. `thread_contribution` changes
+	// only this owner's contribution to a captured thread; `message_audience` sets a
+	// hand-logged message's own audience. The browser never decides this by reading
+	// `captured_by` — the server knows which write it would accept.
+	ChangeMode EmailAccessChangeMode `json:"change_mode"`
+
+	// ChangeScope What the editor must say it is about to change, in the words the user reads.
+	ChangeScope  *EmailAccessChangeScope `json:"change_scope,omitempty"`
+	ContentState EmailAccessContentState `json:"content_state"`
+
+	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
+	// badge can print. `team` never means the whole workspace: the linked record's own scope
+	// still decides who may discover the row at all.
+	//
+	// `withheld` is the only value that says the content is not this caller's, and it never
+	// travels with a reason: why a message is private describes what it is about.
+	//
+	// The captured-mail states a mailbox owner sees — held until classified, private by you,
+	// shared but still held by another seat — are not here yet. They arrive with the thread
+	// contribution editor that can act on them; a value no server can emit is one a client
+	// would branch on and never reach.
+	DisplayStatus EmailAccessStatus `json:"display_status"`
+
+	// Explanation Why the message is limited, when the caller may know. Always null while the content
+	// is withheld: the reason describes the message.
+	Explanation *string `json:"explanation,omitempty"`
+
+	// SelectedMembers Who is named on a `selected` audience. Returned only to a caller who may both read
+	// the content and change it — a reader with no standing to edit the set has no
+	// standing to enumerate it either.
+	SelectedMembers *[]AudienceMember `json:"selected_members,omitempty"`
+}
+
+// EmailAccessChangeMode Which write this caller's Access control performs. `thread_contribution` changes
+// only this owner's contribution to a captured thread; `message_audience` sets a
+// hand-logged message's own audience. The browser never decides this by reading
+// `captured_by` — the server knows which write it would accept.
+type EmailAccessChangeMode string
+
+// EmailAccessChangeScope What the editor must say it is about to change, in the words the user reads.
+type EmailAccessChangeScope string
+
+// EmailAccessContentState defines model for EmailAccess.ContentState.
+type EmailAccessContentState string
+
+// EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
+// badge can print. `team` never means the whole workspace: the linked record's own scope
+// still decides who may discover the row at all.
+//
+// `withheld` is the only value that says the content is not this caller's, and it never
+// travels with a reason: why a message is private describes what it is about.
+//
+// The captured-mail states a mailbox owner sees — held until classified, private by you,
+// shared but still held by another seat — are not here yet. They arrive with the thread
+// contribution editor that can act on them; a value no server can emit is one a client
+// would branch on and never reach.
+type EmailAccessStatus string
+
+// EmailAttachmentSummary One file that came with the message. Metadata only; bytes are fetched separately.
+type EmailAttachmentSummary struct {
+	ByteSize    *int               `json:"byte_size,omitempty"`
+	ContentType *string            `json:"content_type,omitempty"`
+	Filename    string             `json:"filename"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
 // EmailDraft A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡).
 type EmailDraft struct {
 	// AiDisclosure The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
@@ -19989,6 +20214,83 @@ type EmailDraft struct {
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
 }
 
+// EmailParty One address on a message, resolved to a person or a seat when it is one.
+type EmailParty struct {
+	Address     string  `json:"address"`
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// PersonId Set when the address belongs to a contact this caller may see.
+	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
+
+	// UserId Set when the address belongs to a seat in this workspace.
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
+// EmailPresentation One email, composed for reading. The message and its parties come from the activity's
+// own store; the access block is assembled from the same authority that performs the
+// write, so what this says a caller may do is what the caller may do.
+//
+// A withheld presentation carries the markers and refuses the rest: no subject, no body,
+// no parties, no attachments, no thread, no reason, no member names.
+type EmailPresentation struct {
+	// Access Who reads this message, and what this caller may do about that. `can_change` and
+	// `change_mode` are decided by the same authority that would execute the write, so a
+	// control this block offers is a control the write will accept.
+	Access      EmailAccess              `json:"access"`
+	Attachments []EmailAttachmentSummary `json:"attachments"`
+
+	// Bcc Empty for every caller but the seat that sent or imported the message. Being
+	// allowed to read what was written does not disclose who was copied blind.
+	Bcc []EmailParty `json:"bcc"`
+
+	// BccWithheld True when the message has blind recipients this caller may not see. The viewer says
+	// that they exist rather than showing an empty list that reads as none.
+	BccWithheld bool `json:"bcc_withheld"`
+
+	// Body The message as plain text, normalised. Null when withheld. Provider payloads are
+	// never handed to a browser to parse.
+	Body      *string            `json:"body,omitempty"`
+	CanRelink bool               `json:"can_relink"`
+	CanReply  bool               `json:"can_reply"`
+	Cc        []EmailParty       `json:"cc"`
+	From      []EmailParty       `json:"from"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Lifecycle What kind of message this is. One value today: this read serves delivered
+	// correspondence. A scheduled send and a draft awaiting approval will borrow the
+	// frame when the reads that serve them land, and they are not listed until then.
+	Lifecycle EmailPresentationLifecycle `json:"lifecycle"`
+
+	// Links What the message is filed against, named for a reader.
+	Links      []ActivityLink `json:"links"`
+	OccurredAt time.Time      `json:"occurred_at"`
+
+	// Summary One retained email, reduced to what a row shows without opening it. Present on an
+	// activity only when `kind=email`; every other kind carries none, and a reader that
+	// branches on this field is asking the one question that decides the canonical row.
+	//
+	// The preview is normalised by the server with the same splitter the detail uses, so a
+	// row and the message it opens never disagree about where the sender's own words end.
+	// A withheld email carries a summary whose `subject` and `preview` are null and whose
+	// `display_status` says so — the row stays, the words do not.
+	Summary EmailSummary `json:"summary"`
+
+	// Thread The rest of the conversation, newest first, as summaries. Bounded and paged rather
+	// than whole: a thread has no ceiling, and a drawer that fetched every message would
+	// make opening the newest one cost the whole history.
+	Thread    *EmailThreadPage `json:"thread,omitempty"`
+	ThreadKey *string          `json:"thread_key,omitempty"`
+	To        []EmailParty     `json:"to"`
+
+	// Version The activity's version, for the If-Match its own actions send.
+	Version RowVersion `json:"version"`
+}
+
+// EmailPresentationLifecycle What kind of message this is. One value today: this read serves delivered
+// correspondence. A scheduled send and a draft awaiting approval will borrow the
+// frame when the reads that serve them land, and they are not listed until then.
+type EmailPresentationLifecycle string
+
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
@@ -19996,6 +20298,73 @@ type EmailSignature struct {
 	// written one.
 	Body      string     `json:"body"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// EmailSummary One retained email, reduced to what a row shows without opening it. Present on an
+// activity only when `kind=email`; every other kind carries none, and a reader that
+// branches on this field is asking the one question that decides the canonical row.
+//
+// The preview is normalised by the server with the same splitter the detail uses, so a
+// row and the message it opens never disagree about where the sender's own words end.
+// A withheld email carries a summary whose `subject` and `preview` are null and whose
+// `display_status` says so — the row stays, the words do not.
+type EmailSummary struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
+	AttachmentCount int `json:"attachment_count"`
+
+	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
+	// the exchange had more. Null when no participant resolves to a name this caller may
+	// see — the row then says the direction alone rather than inventing a stranger.
+	Counterparty *string                `json:"counterparty,omitempty"`
+	Direction    *EmailSummaryDirection `json:"direction,omitempty"`
+
+	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
+	// badge can print. `team` never means the whole workspace: the linked record's own scope
+	// still decides who may discover the row at all.
+	//
+	// `withheld` is the only value that says the content is not this caller's, and it never
+	// travels with a reason: why a message is private describes what it is about.
+	//
+	// The captured-mail states a mailbox owner sees — held until classified, private by you,
+	// shared but still held by another seat — are not here yet. They arrive with the thread
+	// contribution editor that can act on them; a value no server can emit is one a client
+	// would branch on and never reach.
+	DisplayStatus EmailAccessStatus `json:"display_status"`
+
+	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// the question cannot be answered honestly — an unanswerable move is not a claim.
+	Move       EmailSummaryMove `json:"move"`
+	OccurredAt time.Time        `json:"occurred_at"`
+
+	// Preview One line of the sender's own text, signature and quoted history already removed.
+	// Null when withheld, and when the message has no text of its own.
+	Preview *string `json:"preview,omitempty"`
+
+	// Subject Null when the message has none, and when the content is withheld.
+	Subject *string `json:"subject,omitempty"`
+
+	// Version The activity's version, carried so a row can open an editor that writes with
+	// If-Match. A row without it can only read.
+	Version RowVersion `json:"version"`
+}
+
+// EmailSummaryDirection defines model for EmailSummary.Direction.
+type EmailSummaryDirection string
+
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// the question cannot be answered honestly — an unanswerable move is not a claim.
+type EmailSummaryMove string
+
+// EmailThreadPage The rest of the conversation, newest first, as summaries. Bounded and paged rather
+// than whole: a thread has no ceiling, and a drawer that fetched every message would
+// make opening the newest one cost the whole history.
+type EmailThreadPage struct {
+	Members []EmailSummary `json:"members"`
+
+	// NextCursor Pass back as `thread_cursor` for the next page. Null when this is the last.
+	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
 // EmbedReindexPreview The scope before the spend (ADR-0020 preview-before-spend obligation): what running the reindex now would touch and roughly cost. MUST precede the confirm route — the estimate is what the operator consents to. An estimate, labeled as such — actual spend is metered per embed call.
@@ -27744,7 +28113,9 @@ type SearchResponse struct {
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	Id openapi_types.UUID `json:"id"`
+	// CarriedBy For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
+	CarriedBy *int               `json:"carried_by,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
 
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
@@ -28000,14 +28371,8 @@ type SetActivityAudienceRequest struct {
 	Audience ActivityAudience `json:"audience"`
 
 	// Members The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set.
-	Members *[]struct {
-		SubjectId   openapi_types.UUID                           `json:"subject_id"`
-		SubjectType SetActivityAudienceRequestMembersSubjectType `json:"subject_type"`
-	} `json:"members,omitempty"`
+	Members *[]AudienceMember `json:"members,omitempty"`
 }
-
-// SetActivityAudienceRequestMembersSubjectType defines model for SetActivityAudienceRequest.Members.SubjectType.
-type SetActivityAudienceRequestMembersSubjectType string
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
@@ -30131,6 +30496,11 @@ type Worklist struct {
 
 	// Summary The day in figures, for the one line above the queue. Each count is of items the
 	// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+	//
+	// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
+	// `due` is asked of every item whatever its level, so an overdue promise counts in
+	// both `urgent` and `due` — deliberately, because a reader wants both answers about
+	// it. Read them as four questions about one day rather than four slices of it.
 	Summary WorklistSummary `json:"summary"`
 }
 
@@ -30639,12 +31009,25 @@ type WorklistSourceUnavailableReason string
 
 // WorklistSummary The day in figures, for the one line above the queue. Each count is of items the
 // queue actually CARRIES, so a number here and the rows below it cannot disagree.
+//
+// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
+// `due` is asked of every item whatever its level, so an overdue promise counts in
+// both `urgent` and `due` — deliberately, because a reader wants both answers about
+// it. Read them as four questions about one day rather than four slices of it.
 type WorklistSummary struct {
 	// BaseCurrency The currency every expected-revenue figure here is converted to.
 	BaseCurrency *string `json:"base_currency,omitempty"`
 
 	// Due Items carrying a date that has arrived or passed.
 	Due int `json:"due"`
+
+	// InPlay The middle of the day: revenue at risk, work already agreed, and decisions that
+	// block somebody. Neither an interruption nor hygiene.
+	//
+	// Sent because without it those items reached no figure at all — a queue holding
+	// nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
+	// of rows, which is the one thing this line promises cannot happen.
+	InPlay *int `json:"in_play,omitempty"`
 
 	// LowerPriority Routine work: decisions that block nothing, and data hygiene.
 	LowerPriority int `json:"lower_priority"`
@@ -30997,6 +31380,12 @@ type ClearActivityDispositionParamsScope string
 type DraftEmailJSONBody struct {
 	// Intent Optional steering, e.g. "polite follow-up referencing Friday".
 	Intent *string `json:"intent,omitempty"`
+}
+
+// GetEmailPresentationParams defines parameters for GetEmailPresentation.
+type GetEmailPresentationParams struct {
+	// ThreadCursor Continue the thread's member page from a previous response's `thread.next_cursor`.
+	ThreadCursor *string `form:"thread_cursor,omitempty" json:"thread_cursor,omitempty"`
 }
 
 // GetMeetingBriefParams defines parameters for GetMeetingBrief.
@@ -43731,6 +44120,9 @@ type ServerInterface interface {
 	// Draft a reply/follow-up email for context (the `draft_email` MCP verb).
 	// (POST /activities/{id}/draft-email)
 	DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Everything one email needs to be read and acted on, in one read.
+	// (GET /activities/{id}/email-presentation)
+	GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams)
 	// The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
 	// (GET /activities/{id}/meeting-brief)
 	GetMeetingBrief(w http.ResponseWriter, r *http.Request, id Id, params GetMeetingBriefParams)
@@ -45438,6 +45830,12 @@ func (_ Unimplemented) SetActivityDisposition(w http.ResponseWriter, r *http.Req
 // Draft a reply/follow-up email for context (the `draft_email` MCP verb).
 // (POST /activities/{id}/draft-email)
 func (_ Unimplemented) DraftEmail(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Everything one email needs to be read and acted on, in one read.
+// (GET /activities/{id}/email-presentation)
+func (_ Unimplemented) GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49446,6 +49844,56 @@ func (siw *ServerInterfaceWrapper) DraftEmail(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftEmail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEmailPresentation operation middleware
+func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetEmailPresentationParams
+
+	// ------------- Optional query parameter "thread_cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "thread_cursor", r.URL.Query(), &params.ThreadCursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "thread_cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "thread_cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEmailPresentation(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -72948,6 +73396,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/draft-email", wrapper.DraftEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/email-presentation", wrapper.GetEmailPresentation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/meeting-brief", wrapper.GetMeetingBrief)

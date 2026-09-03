@@ -52,6 +52,34 @@ export function stub(day: Worklist, approval?: unknown) {
   );
 }
 
+/**
+ * A walk: one response per page, served in order, keyed by the cursor.
+ *
+ * The queue pages with a `cursor`, and a stub that answers the same body to
+ * every request would let a "load more" test pass while loading the same rows
+ * again. This serves page N+1 only when the request carries page N's cursor,
+ * so a client that drops the cursor gets page one forever and the test fails.
+ */
+export function stubWalk(pages: readonly Worklist[]) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes("/worklist")) {
+        return jsonResponse({ data: [] });
+      }
+      const cursor = new URL(url, "http://localhost").searchParams.get(
+        "cursor",
+      );
+      if (!cursor) {
+        return jsonResponse(pages[0]);
+      }
+      const at = pages.findIndex((page) => page.next_cursor === cursor);
+      return jsonResponse(at >= 0 ? pages[at + 1] : pages[0]);
+    }),
+  );
+}
+
 export function renderWorklist(
   locale: Locale = "en",
   opensOn?: string,

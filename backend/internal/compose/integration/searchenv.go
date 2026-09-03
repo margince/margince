@@ -77,6 +77,10 @@ func SetupSearch(t *testing.T) *SearchEnv {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
 		t.Fatal(err)
 	}
+	// This harness builds its installation by raw SQL, so bootstrap never wrote
+	// the settings rows — the case seedInstallationIdentity exists for. A report
+	// resolves the basis it reports money in, and the zone it buckets dates by,
+	// so a suite without them is refused before any rule under test is reached.
 	seedInstallationIdentity(ctx, t, owner)
 	for i, u := range []ids.UUID{e.Rep1, e.Rep3} {
 		if _, err := owner.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, u, fmt.Sprintf("rep%d@search.test", i)); err != nil {
@@ -136,20 +140,22 @@ func (e *SearchEnv) SeedID(t *testing.T, sql string, args ...any) ids.UUID {
 // principal without it sees no employer-derived account at all, which is a
 // different suite's question (TestASubjectTypeTheCallerMayNotReadIsNeverNamed
 // asks it deliberately, by naming its own grants).
-var searchObjects = []string{objPerson, objOrg, objDeal, "lead", objActivity, objRelationship}
+// installation_settings joins the record types, and it is not a record type:
+// a report resolves the basis it reports money in, so every seeded role holds
+// this read and every other report suite's fixture already grants it
+// (report_fieldmask, report_forecast, report_projectgrant). Without it a
+// principal here is refused before any row-scope rule is reached, which is a
+// fixture that cannot ask the question its suite exists to ask.
+var searchObjects = []string{
+	objPerson, objOrg, objDeal, "lead", objActivity, objRelationship, objInstallSettings,
+}
 
 // searchReadGrants is read on every record type this fixture's principals can
 // reach. Read-only on purpose: the suites riding it assert what a caller may SEE,
 // so a grant that could write would let a fixture change the rows under its own
 // assertion.
-//
-// installation_settings is added outside the searchObjects loop: it is not a
-// record type, it is the basis (timezone, base currency) every report resolves
-// regardless of entity — 0191 grants it to all five seeded roles, so a fixture
-// standing in for a seeded human should too, or a caller this suite treats as
-// unbounded gets refused a read production always admits.
 func searchReadGrants() map[string]principal.ObjectGrant {
-	grants := map[string]principal.ObjectGrant{objInstallSettings: {Read: true}}
+	grants := map[string]principal.ObjectGrant{}
 	for _, object := range searchObjects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}

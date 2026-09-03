@@ -59,6 +59,12 @@ function run(report: string, rows: Record<string, unknown>[]) {
     plan: {},
     columns: [],
     rows,
+    // The frame every result carries, so the story shows the caption a reader
+    // actually meets under each report.
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+    fiscal_year_start_month: 1,
     derivation_url: `/v1/reports/${report}/derivation?by=stage_id&agg=sum:amount_minor:raw_minor&stage_id=pl-s1`,
   });
 }

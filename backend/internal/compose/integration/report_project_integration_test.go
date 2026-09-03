@@ -55,10 +55,11 @@ func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID
 	actor := principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
-			// installation_settings.read too: every RunReport plan resolves the
-			// installation's timezone and base currency as its framing (0191
-			// grants this to all five seeded roles), whatever the entity —
-			// a project-only report still pays that basis read.
+			// The record type under test, and the installation's own settings
+			// beside it: a report resolves the basis it reports money in, so
+			// this read is held by every seeded role and refusing it stops the
+			// caller before any row-scope rule is reached. Same pairing
+			// searchReadGrants makes, for the same reason.
 			Objects: map[string]principal.ObjectGrant{
 				object:             {Read: true},
 				objInstallSettings: {Read: true},

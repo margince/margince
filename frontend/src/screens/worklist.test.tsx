@@ -631,7 +631,7 @@ describe("an introduction ask on the queue", () => {
     // Wait for the queue itself to render before asserting an absence: a
     // findBy on a link that must NOT exist would pass against a page that had
     // not drawn anything yet.
-    await screen.findByText("0 urgent · 0 due · 1 lower-priority");
+    await screen.findByText(/0 urgent/);
     // A "Decide" LINK beside an inline decision card would ask the reader to
     // choose between answering here and going somewhere to answer.
     expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();

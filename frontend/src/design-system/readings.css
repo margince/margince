@@ -111,3 +111,35 @@
     border-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
+
+/* A ranked set of bars. The rows share one grid so the three columns line up
+   down the list — a label column that takes what it needs, a bar that takes
+   the rest, and an amount column sized to its own digits. Three independent
+   rows each sizing themselves is what makes a list stop reading as a ranking. */
+.barlist-rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.barlist-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* The label may be longer than its column — a stage name, a company. It
+   ellipsizes rather than wrapping, because a row that grows to two lines
+   breaks the horizontal scan the list exists for. */
+.barlist-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--textMuted);
+}
+/* Right-aligned so the digits form a column the eye can run down, which is
+   the same reason the figures take the mono face through `num`. */
+.barlist-amount {
+  text-align: right;
+}

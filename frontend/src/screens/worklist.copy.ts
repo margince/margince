@@ -528,12 +528,18 @@ export function completenessText(
   filter: WorklistFilter,
   t: T,
   locale: Locale,
+  // How many rows are on screen NOW. `counts[].shown` describes one response
+  // page, and the reader can have walked past several — reading it after a
+  // "show more" would report the first page's rows over the whole day's
+  // candidates and call a growing list incomplete for ever.
+  loaded?: number,
 ): string | null {
   const counted =
     filter === "all"
       ? day.counts
       : day.counts.filter((count) => count.category === filter);
-  const shown = counted.reduce((total, count) => total + count.shown, 0);
+  const shown =
+    loaded ?? counted.reduce((total, count) => total + count.shown, 0);
   const considered = counted.reduce(
     (total, count) => total + count.considered,
     0,

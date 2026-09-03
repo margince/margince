@@ -225,6 +225,7 @@ export const vi = {
   "search.group.activity": "Hoạt động",
   "search.group.lead": "Lead",
   "search.group.tag": "Tag",
+  "search.tag.carriedBy": "Trên {count} bản ghi",
   "search.tier.mirrored": "từ hệ thống đã kết nối",
   "search.tier.unverified": "chưa xác minh",
 
@@ -3098,6 +3099,10 @@ export const vi = {
   "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
   "analytics.reportDeals": "Deal theo giai đoạn",
+  "analytics.sections": "Các mục phân tích",
+  "analytics.sectionForecast": "Dự báo",
+  "analytics.sectionPipeline": "Kênh bán",
+  "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
   "analytics.reportForecast": "Nhóm dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
   "analytics.forecastBanner":
@@ -7571,8 +7576,12 @@ export const vi = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Việc cần làm tiếp theo",
+  "worklist.more": "Xem thêm",
+  "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
-    "{urgent} khẩn cấp · {due} đến hạn · {lower} ưu tiên thấp",
+    "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ — tổng {total}",
+  "worklist.summary.noMiddle":
+    "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",

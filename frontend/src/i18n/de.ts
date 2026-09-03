@@ -220,6 +220,7 @@ export const de = {
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.tag.carriedBy": "Auf {count} Datensätzen",
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 
@@ -3131,6 +3132,10 @@ export const de = {
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
   "analytics.reportDeals": "Deals nach Phase",
+  "analytics.sections": "Analytics-Bereiche",
+  "analytics.sectionForecast": "Forecast",
+  "analytics.sectionPipeline": "Pipeline",
+  "analytics.frame": "Stand {asOf} · {zone} · {currency}",
   "analytics.reportForecast": "Forecast-Kategorien",
   "analytics.reportOpenByCompany": "Offene Deals pro Firma",
   "analytics.forecastBanner":
@@ -7659,7 +7664,12 @@ export const de = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Dein Tag wird gelesen…",
   "worklist.queue": "Was als Nächstes zu tun ist",
-  "worklist.summary": "{urgent} dringend · {due} fällig · {lower} nachrangig",
+  "worklist.more": "Mehr anzeigen",
+  "worklist.more.failed": "Konnte nicht mehr laden. Bitte erneut versuchen.",
+  "worklist.summary":
+    "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} nachrangig — {total} insgesamt",
+  "worklist.summary.noMiddle":
+    "{urgent} dringend · {due} fällig · {lower} nachrangig — {total} insgesamt",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.completeness.bounded":
     "{shown} angezeigt · {sources} Quellen haben mehr",
