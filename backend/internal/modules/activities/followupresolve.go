@@ -329,8 +329,10 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 			WHERE l.%s = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL`, column)
-		args := []any{linkValue, string(crmcontracts.ActivityKindTask), systemSource,
-			systemCapturedBy, systemCapturedByPattern}
+		args := []any{
+			linkValue, string(crmcontracts.ActivityKindTask), systemSource,
+			systemCapturedBy, systemCapturedByPattern,
+		}
 		if before != nil {
 			query += " AND a.created_at <= $6"
 			args = append(args, *before)

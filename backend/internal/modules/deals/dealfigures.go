@@ -150,7 +150,8 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		query := storekit.SQLf(
 			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date
 			   FROM deal d
-			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos)
+			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos,
+		)
 		if scope != "" {
 			query += storekit.SQLf(" AND %s", scope)
 		}
