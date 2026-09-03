@@ -469,7 +469,7 @@ export function PersonPageV2({
                 onOpenTasks={() => navigate({ screen: "worklist" })}
               />
               <RecordReadingPair>
-                <PersonMemory view={view.data} />
+                <PersonMemory view={view.data} onOpenEmail={setOpenEmail} />
                 <PersonCommitmentsCard view={view.data} firstName={firstName} />
               </RecordReadingPair>
             </RecordReading>

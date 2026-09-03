@@ -4159,7 +4159,6 @@ export const vi = {
   "heldThreads.release": "Chia sẻ với nhóm",
   "heldThreads.released": "Đã chia sẻ với nhóm",
   "heldThreads.noSubject": "thư mở đầu đã bị xóa",
-  "heldThreads.blankSubject": "không có tiêu đề",
   "heldThreads.nothingToShare":
     "Không còn thư nào để chia sẻ — thư đầu tiên của chuỗi này đã bị xóa. Việc giữ lại vẫn tiếp tục để một thư trả lời sau không đến ở trạng thái mở.",
   "heldThreads.pending": "Đang chờ phán quyết",

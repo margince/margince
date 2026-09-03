@@ -4205,7 +4205,6 @@ export const de = {
   "heldThreads.release": "Mit dem Team teilen",
   "heldThreads.released": "Mit dem Team geteilt",
   "heldThreads.noSubject": "die ursprüngliche Nachricht ist gelöscht",
-  "heldThreads.blankSubject": "kein Betreff",
   "heldThreads.nothingToShare":
     "Es ist keine Nachricht mehr da, die geteilt werden könnte — die erste Nachricht dieser Konversation wurde gelöscht. Die Zurückhaltung bleibt, damit eine spätere Antwort nicht offen eintrifft.",
   "heldThreads.pending": "Wartet auf Beurteilung",

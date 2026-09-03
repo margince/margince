@@ -14027,15 +14027,19 @@ export interface components {
              */
             readonly activity_id?: string | null;
             /**
-             * @description The message this thread began with is still readable by you. False where it was erased
-             *     while the verdict stood — which the ledger deliberately survives, because losing the
-             *     verdict would re-open a thread a classifier already held — and false where its content
-             *     is withheld from you.
+             * @description The message this thread began with still EXISTS. False only where it was erased while
+             *     the verdict stood — which the ledger deliberately survives, because losing the verdict
+             *     would re-open a thread a classifier already held.
              *
-             *     Separate from `subject` because absence has two causes that read differently: no
-             *     message to name, versus a message somebody sent with a blank subject line. It also
-             *     decides whether releasing is offered at all: the release works on your own messages on
-             *     the thread, so with none left there is nothing to share.
+             *     Existence, not readability: it stays true for a message whose content is withheld from
+             *     you, and that is the point. Read through the content gate it reported a withheld
+             *     message as erased, which told a holder their evidence had been destroyed while it was
+             *     sitting in the thread they are holding.
+             *
+             *     So `subject` absent with this true is a message you may not read, or one sent with a
+             *     blank subject line; this false is no message at all. It also decides whether releasing
+             *     is offered: the release works on your own messages on the thread, so with none left
+             *     there is nothing to share.
              */
             has_message: boolean;
             /**

@@ -29,6 +29,27 @@ package gates
 // canonical renderer, and a canonical renderer that has stopped consuming any
 // `entry` schema at all.
 //
+// A surface reaches an email by EITHER route, and the census must see both.
+// Naming the generated type is one. Reading the property that carries it off a
+// record already in hand — `row.email_summary.subject` on an Activity — is the
+// other, and it names no type at all. An earlier version of this gate looked
+// only for the type name and argued in a comment that there was no other way
+// in. Three surfaces were drawing their own email rows while it reported PASS:
+// the person page's memory card, the account page's recent list and the held
+// threads table. Under-recognition is the one way a census must not break,
+// because a smaller corpus fails silently and reads exactly like a clean tree.
+//
+// What this still cannot see, stated so the next reader does not assume
+// otherwise: a surface that draws an email from the ACTIVITY's own scalars —
+// `activity.subject`, `activity.body` — without ever touching the carrier
+// field. It reads a message and names nothing an email, so no derivation
+// reaches it. The account page's recent list and the held threads table were
+// both in that shape. They are fixed, and what holds them is a rendering test
+// each rather than this census; a fourth such surface would arrive unseen.
+// Widening to activity scalars would put `.subject` — which notes, calls and
+// tasks all carry — in front of a rule about email, and a census that flags
+// every kind teaches a reader to waive it.
+//
 // The second direction is the one worth having. A gate that only checked
 // "nothing else renders an email" would report PASS over a tree where the
 // canonical row had been deleted and every surface had gone back to its own
@@ -76,11 +97,20 @@ var emailRenderers = map[string]bool{
 	"design-system/emaildetail.tsx": true,
 }
 
-// emailPassthroughs hold an `entry` type without rendering it: they declare a
-// prop and hand it to a canonical component. Each is a sentence somebody wrote
-// rather than an omission nobody noticed.
+// emailPassthroughs hold an `entry` type without rendering it: they carry the
+// message toward a canonical component without drawing any part of it. Each is
+// a sentence somebody wrote rather than an omission nobody noticed.
+//
+// A file that MOUNTS a canonical component needs no entry here — it discharges
+// the obligation by doing the thing, and is admitted by rendersCanonically.
+// These are the ones that never mount anything: builders, mappers and the
+// surfaces whose only act is to suppress their own title in favour of the row.
 var emailPassthroughs = gatekit.Waive(map[string]string{
-	"design-system/composed.tsx": "declares TimelineEntry.emailSummary and passes it to EmailEntry; the timeline row chooses WHICH component draws a kind, and drawing none itself is what keeps that choice in one place",
+	"design-system/activitytimeline.tsx": "maps an Activity onto a TimelineEntry, email_summary included, for composed.tsx to draw; it builds the entry and renders nothing",
+	"screens/openemail.ts":               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
+	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
+	"screens/worklist.focus.tsx":         "suppresses its own title when the item carries a summary, leaving the row to WaitingEmailLine; the branch is the whole of its involvement",
+	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
 })
 
 // entrySchemas reads the schemas the contract marks as an email.
@@ -111,14 +141,83 @@ func entrySchemas(t *testing.T) []string {
 	return names
 }
 
-// consumersOf answers every frontend file naming this schema's generated type.
+// carrierFields answers the property names under which an `entry` schema hangs
+// off another object — `email_summary` today, and whatever a later property is
+// called, because the names are read from the contract rather than written here.
 //
-// The generated spelling is `components["schemas"]["Name"]`, which is how a
-// TypeScript file reaches a contract type — there is no other way in, so a
-// consumer this misses is a consumer that cannot exist.
-func consumersOf(t *testing.T, schema string) []string {
+// This is the half a name-only census cannot see. A surface reaches an email
+// through the record it is already holding — `row.email_summary.subject` off an
+// Activity — and never writes the generated type at all, so it consumes a
+// message while naming nothing this gate was looking for.
+func carrierFields(t *testing.T, schemas []string) []string {
+	t.Helper()
+	source, err := os.ReadFile(emailContractPath)
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	marked := map[string]bool{}
+	for _, schema := range schemas {
+		marked[schema] = true
+	}
+	// A carrier is a property at the schema's OWN property depth holding a ref
+	// to a marked schema, on a schema the contract says nothing about.
+	//
+	// Each half of that excludes a different thing. A response body's
+	// `content:` is not a property, and admitting it would put `.content` — a
+	// word half the tree writes — before the census as an email. A schema that
+	// carries an annotation of its own is already judged: `EmailPresentation`
+	// holding its `summary`, and the `exempt` EmailThreadPage holding its
+	// `members`, are the drawer reading its own parts rather than a foreign
+	// record carrying a message.
+	schemaLine := regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
+	propertyLine := regexp.MustCompile(`^        ([a-z][a-z0-9_]*):\s*$`)
+	refLine := regexp.MustCompile(`#/components/schemas/([A-Za-z][A-Za-z0-9]*)`)
+	seen := map[string]bool{}
+	var fields []string
+	var current string
+	judged := false
+	for _, line := range strings.Split(string(source), "\n") {
+		if schemaLine.MatchString(line) {
+			current, judged = "", false
+			continue
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "x-email-presentation:") {
+			judged = true
+			continue
+		}
+		if match := propertyLine.FindStringSubmatch(line); match != nil {
+			current = match[1]
+			continue
+		}
+		match := refLine.FindStringSubmatch(line)
+		if match == nil || current == "" || judged || !marked[match[1]] || seen[current] {
+			continue
+		}
+		seen[current] = true
+		fields = append(fields, current)
+	}
+	return fields
+}
+
+// consumersOf answers every frontend file that reaches this schema, by either
+// route: naming its generated type, or reading a property that carries one.
+//
+// The camelCase spelling is searched alongside the contract's snake_case,
+// because a file that maps the wire shape onto its own props keeps rendering
+// the same message under the other spelling.
+func consumersOf(t *testing.T, schema string, fields []string) []string {
 	t.Helper()
 	needle := fmt.Sprintf(`components["schemas"]["%s"]`, schema)
+	// The field as a WHOLE word, in both spellings. Anchoring on the boundary
+	// is what separates reading `entry.emailSummary` from calling
+	// `emailSummaryText`, the shared preview splitter, whose name merely starts
+	// with the field's — a census matching the bare prefix would report on a
+	// function's spelling rather than on what the file does with a message.
+	alternatives := make([]string, 0, len(fields)*2)
+	for _, field := range fields {
+		alternatives = append(alternatives, regexp.QuoteMeta(field), regexp.QuoteMeta(camelCase(field)))
+	}
+	access := regexp.MustCompile(`\b(` + strings.Join(alternatives, "|") + `)\b`)
 	var found []string
 	err := filepath.WalkDir(emailFrontendSource, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
@@ -131,19 +230,33 @@ func consumersOf(t *testing.T, schema string) []string {
 		if readErr != nil {
 			return readErr
 		}
-		if strings.Contains(string(source), needle) {
-			rel, relErr := filepath.Rel(emailFrontendSource, path)
-			if relErr != nil {
-				return relErr
-			}
-			found = append(found, filepath.ToSlash(rel))
+		text := string(source)
+		if !strings.Contains(text, needle) && !access.MatchString(text) {
+			return nil
 		}
+		rel, relErr := filepath.Rel(emailFrontendSource, path)
+		if relErr != nil {
+			return relErr
+		}
+		found = append(found, filepath.ToSlash(rel))
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walking the frontend sources: %v", err)
 	}
 	return found
+}
+
+// camelCase is the contract's snake_case as a TypeScript property.
+func camelCase(field string) string {
+	parts := strings.Split(field, "_")
+	for i := 1; i < len(parts); i++ {
+		if parts[i] == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	}
+	return strings.Join(parts, "")
 }
 
 // describesRatherThanRenders is a file that talks ABOUT the components: a test,
@@ -167,19 +280,61 @@ func TestAnEmailIsDrawnOnlyByTheCanonicalComponents(t *testing.T) {
 			"either the annotation was removed or its spelling drifted, and this census " +
 			"is now judging nothing")
 	}
+	fields := carrierFields(t, schemas)
+	// The same floor for the other half of the corpus. With no carrier field
+	// the census sees only the files that name a generated type, which is the
+	// shape of the miss this gate was widened to catch.
+	if len(fields) == 0 {
+		t.Fatal("no property in the contract carries a schema marked " +
+			"`x-email-presentation: entry` — this census can no longer see a surface " +
+			"that reads an email off the record holding it")
+	}
+	// Reported once per file rather than once per schema it reaches: the two
+	// entry schemas travel together on the same records, so a surface drawing
+	// its own row is one defect with one fix, and naming it twice makes a
+	// reader look for a second.
+	reported := map[string]bool{}
 	for _, schema := range schemas {
-		for _, consumer := range consumersOf(t, schema) {
-			if emailRenderers[consumer] || describesRatherThanRenders(consumer) {
+		for _, consumer := range consumersOf(t, schema, fields) {
+			if emailRenderers[consumer] || describesRatherThanRenders(consumer) || reported[consumer] {
+				continue
+			}
+			// Holding the data is not the offence; drawing it yourself is. A
+			// surface that hands what it read to EmailEntry or EmailReference
+			// has done the thing this gate asks for, and most of them must
+			// touch the field to decide an email is what they have.
+			if rendersCanonically(t, consumer) {
 				continue
 			}
 			if emailPassthroughs.Waived(t, consumer) {
 				continue
 			}
-			t.Errorf("%s consumes %s and is not a canonical renderer — render EmailEntry "+
+			reported[consumer] = true
+			t.Errorf("%s reads %s and draws it with its own markup — render EmailEntry "+
 				"or EmailReference instead, or ratify the file in emailPassthroughs with "+
 				"what it does with the type", consumer, schema)
 		}
 	}
+}
+
+// rendersCanonically is a file that mounts one of the canonical components.
+//
+// Matched as a JSX opening tag rather than as the bare word, so that naming a
+// component in a comment or importing it and never mounting it does not
+// discharge the obligation.
+func rendersCanonically(t *testing.T, consumer string) bool {
+	t.Helper()
+	source, err := os.ReadFile(filepath.Join(emailFrontendSource, consumer))
+	if err != nil {
+		t.Fatalf("reading %s: %v", consumer, err)
+	}
+	text := string(source)
+	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail"} {
+		if strings.Contains(text, "<"+component) {
+			return true
+		}
+	}
+	return false
 }
 
 // And the other direction: each canonical renderer still consumes one.
@@ -191,9 +346,10 @@ func TestAnEmailIsDrawnOnlyByTheCanonicalComponents(t *testing.T) {
 func TestEachCanonicalRendererStillDrawsAnEmail(t *testing.T) {
 	t.Parallel()
 	schemas := entrySchemas(t)
+	fields := carrierFields(t, schemas)
 	drawing := map[string]bool{}
 	for _, schema := range schemas {
-		for _, consumer := range consumersOf(t, schema) {
+		for _, consumer := range consumersOf(t, schema, fields) {
 			drawing[consumer] = true
 		}
 	}
