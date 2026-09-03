@@ -2448,6 +2448,7 @@ export const en = {
   // never model-written, so it cannot say what the rows contradict.
   "brief.eyebrow": "Your morning",
   "brief.eyebrow.weekly": "Your week",
+  "brief.eyebrow.asOf": "{scope} · as of {at}",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Which brief",
   "brief.view.morning": "Morning",

@@ -2375,6 +2375,7 @@ export const vi = {
   // không do mô hình viết.
   "brief.eyebrow": "Buổi sáng của bạn",
   "brief.eyebrow.weekly": "Tuần của bạn",
+  "brief.eyebrow.asOf": "{scope} · tính đến {at}",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
   "brief.view.label": "Bản tóm tắt nào",
   "brief.view.morning": "Buổi sáng",
