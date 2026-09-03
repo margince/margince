@@ -6701,11 +6701,15 @@ export interface paths {
          *     who to talk to, then opens that person's own day with `GET /worklist?owner=`,
          *     which is the drill-down this board exists to route to.
          *
-         *     Every count is read under the CALLER's visibility, never the teammate's. A number
-         *     summing rows the reader may not open would publish a colleague's volume to
-         *     somebody with no access to any of it, so what this reports is "how much of their
-         *     load you can see" — the only honest answer available without giving one person a
-         *     licence to read another's records.
+         *     Every count is read under the CALLER's visibility, which in this product is nearly
+         *     everything: work is shared across the workspace, so a teammate's deals, companies
+         *     and tasks all count. What does NOT count is correspondence narrowed to an audience
+         *     the reader is not on, and mail captured into a colleague's mailbox that nobody has
+         *     promoted — the one boundary the access model keeps.
+         *
+         *     So a figure here is the teammate's real load minus any private mail the reader is
+         *     not party to. It is not a partial view of their work, and a reader may open every
+         *     record behind a count they can see.
          *
          *     Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
          *     rather than shown a board of one. The teammates listed are the live human seats
