@@ -142,7 +142,7 @@ export function CompanyRail({
           summary={<SectionSummary title={t("tags.panelTitle")} />}
         >
           <CompanyTagsSection
-            organization={view?.organization}
+            organization={view?.organization ?? org}
             orgId={orgId}
             bare
           />
