@@ -137,6 +137,16 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 	if err != nil {
 		return SendEmailInput{}, err
 	}
+	// A category reserved for the installation's own notices can never
+	// legitimately be in a scheduled payload: the door that wrote it refuses
+	// one, and freezePayload has a single caller behind that door. Refusing it
+	// again here costs a live send nothing and removes the assumption — a
+	// second payload writer added later cannot smuggle one past the fire.
+	if commsauthz.Category(p.Context).ServesTheSubject() {
+		return SendEmailInput{}, &CommunicationContextError{
+			Reason: "that category is reserved for the installation's own notices and cannot be claimed by a send",
+		}
+	}
 	return SendEmailInput{
 		Recipients:     p.Recipients,
 		Cc:             p.Cc,

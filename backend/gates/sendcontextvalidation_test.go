@@ -30,50 +30,102 @@ import (
 	"testing"
 )
 
-// sendInputTypes are the two structs a send door fills in. Named by their bare
-// type name because a composite literal writes them either qualified
-// (activities.SendEmailInput, from compose) or bare (from inside the module).
-var sendInputTypes = map[string]bool{
-	"SendEmailInput":   true,
-	"SendMessageInput": true,
+// sendChokepoints are the two store methods every outbound message passes
+// through. The corpus is derived from THEM rather than from a syntactic tell,
+// because they are the owner this gate protects: a function calling one is
+// sending a message, whatever shape it used to build the input and wherever it
+// lives.
+//
+// An earlier version of this gate looked for a composite literal with a Context
+// key inside two named directories. Three probes walked straight past it — a
+// door in cmd/, an assignment after the literal, and a method that sets the
+// field — so it defended the shape of the code that existed rather than the
+// obligation.
+var sendChokepoints = map[string]bool{
+	"SendOrSchedule": true,
+	"SendMessage":    true,
 }
 
-// validators are the entry points that apply the shared refusals. A door
-// reaching any of them has asked the one validator; sendContextFrom is the
-// HTTP spelling, the two Apply… functions the typed one.
+// sendStoreReceivers are the expressions the chokepoint is called ON. Bound
+// because "SendMessage" is a common method name — the Telegram connector, the
+// fenced channel sender, the dispatcher's own seam and the generated HTTP
+// wrapper all have one, and none of them decodes a caller's claim. What this
+// gate is about is the ACTIVITIES store, the one object that turns a request
+// into an outbound message.
+//
+// Matched on the selector's base expression rather than by resolving types,
+// because a gate that needed type information would need the whole program
+// loaded. The names below are what the store is called at its call sites.
+var sendStoreReceivers = map[string]bool{
+	"store": true, "s": true, "h.store": true, "c.store": true, "t.comms": true,
+}
+
+// callsTheSendStore reports whether this selector is the chokepoint called on
+// something that looks like the activities store.
+func callsTheSendStore(sel *ast.SelectorExpr) bool {
+	if !sendChokepoints[sel.Sel.Name] {
+		return false
+	}
+	return sendStoreReceivers[receiverText(sel.X)]
+}
+
+// receiverText renders the expression a method was called on, for the two shapes a
+// store reaches a call site in: a bare identifier and one field selection.
+func receiverText(e ast.Expr) string {
+	switch v := e.(type) {
+	case *ast.Ident:
+		return v.Name
+	case *ast.SelectorExpr:
+		if base, ok := v.X.(*ast.Ident); ok {
+			return base.Name + "." + v.Sel.Name
+		}
+	}
+	return ""
+}
+
+// validators are the entry points that apply the shared refusals. A caller
+// reaching any of them has asked the one validator; sendContextFrom is the HTTP
+// spelling, the two Apply… functions the typed one, and the two decoders wrap
+// sendContextFrom for the handlers.
 var validators = map[string]bool{
 	"sendContextFrom":     true,
 	"ApplyContext":        true,
 	"ApplyChannelContext": true,
-	// The two HTTP decoders wrap sendContextFrom and are what the handlers
-	// actually call, so a handler reaching one has reached the validator.
-	"replySendInput":   true,
-	"accountSendInput": true,
+	"replySendInput":      true,
+	"accountSendInput":    true,
 }
 
-// revalidationExempt is the one shape that restores a claim rather than
-// accepting one. thaw reads back what freezePayload wrote, and what it wrote
-// was validated at schedule time by the door that took it — so re-running the
-// refusals here would judge the same claim twice and, worse, would make a
-// scheduled send fail at FIRE time for a claim the rep was told was accepted
-// hours earlier, with nobody at the keyboard to correct it.
+// forwardsAnAlreadyValidatedInput are the callers that take a send input as a
+// PARAMETER rather than building one from a caller's claim. They cannot
+// validate what they did not decode, and requiring them to would ask the same
+// claim to be judged twice.
 //
-// Keyed on the exact function, so moving the restore somewhere else re-arms
-// the gate rather than inheriting the exemption.
-var revalidationExempt = map[string]bool{
-	"internal/modules/activities/scheduledpayload.go:scheduledPayload.thaw": true,
+// Keyed on the exact function, so moving the call re-arms the gate rather than
+// inheriting the exemption. Each entry names why it is safe.
+var forwardsAnAlreadyValidatedInput = map[string]bool{
+	// Test-only drivers: they take the send input their caller already built,
+	// so there is no claim here to decode.
+	"internal/compose/commsscheduled_integration.go:DriveScheduledSendForTest": true,
+	"internal/compose/commsscheduled_integration.go:ScheduleAsAgentForTest":    true,
+	// The tool hands its raw arguments to commsAdapter.SendMessage, which is
+	// what runs ApplyChannelContext. Validating here too would decode the same
+	// claim twice, and the adapter is the seam every channel caller shares.
+	"internal/modules/agents/tools_comms.go:sendMessageTool.Handle": true,
+	// The store's own methods are the chokepoint, not callers of it.
+	"internal/modules/activities/sendcore.go:Store.SendOrSchedule": true,
+	"internal/modules/activities/channelsend.go:Store.SendMessage": true,
 }
 
 func TestEverySendDoorValidatesTheClaimedContext(t *testing.T) {
 	t.Parallel()
 
 	fset := token.NewFileSet()
-	building := map[string]string{}    // doors that set a context field themselves
-	buildsInput := map[string]string{} // every function that builds a send input
-	readsClaim := map[string]bool{}    // functions that read the caller's claim
-	validating := map[string]bool{}    // functions that reach a validator
+	sending := map[string]bool{}    // functions that send a message
+	validating := map[string]bool{} // functions that reach a validator
 
-	for _, root := range []string{"internal/compose", "internal/modules/activities"} {
+	// The whole backend tree, because a send door is wherever somebody calls
+	// the chokepoint — cmd/ included, which already owns an outbound mail lane.
+	for _, root := range []string{"internal", "cmd"} {
 		for path, file := range parseTreeFiles(t, fset, root) {
 			for _, decl := range file.Decls {
 				fn, ok := decl.(*ast.FuncDecl)
@@ -82,37 +134,18 @@ func TestEverySendDoorValidatesTheClaimedContext(t *testing.T) {
 				}
 				name := path + ":" + receiverQualified(fn)
 				ast.Inspect(fn, func(n ast.Node) bool {
-					switch node := n.(type) {
-					case *ast.CompositeLit:
-						// A door is a function that puts a claim ON a send
-						// input: it either fills a context field itself, or it
-						// builds an input in a function that also reads the
-						// caller's claim. The three that rebuild an
-						// already-validated input — the held-draft release, the
-						// scheduled thaw and its replay — do neither, and a gate
-						// that failed them would ask them to judge a claim
-						// nobody made twice.
-						if sendInputTypes[bareTypeName(literalTypeName(node))] {
-							buildsInput[name] = path
-						}
-						if sendInputTypes[bareTypeName(literalTypeName(node))] && setsAContextField(node) {
-							building[name] = path
-						}
-					case *ast.SelectorExpr:
-						if validators[node.Sel.Name] {
+					sel, ok := n.(*ast.SelectorExpr)
+					if !ok {
+						if id, ok := n.(*ast.Ident); ok && validators[id.Name] {
 							validating[name] = true
 						}
-						// Reading the caller's own claim is what makes a
-						// function a door. A door that then hands the input
-						// straight to the validator sets no field itself, so
-						// the composite-literal test alone cannot see it.
-						if node.Sel.Name == claimArgsField {
-							readsClaim[name] = true
-						}
-					case *ast.Ident:
-						if validators[node.Name] {
-							validating[name] = true
-						}
+						return true
+					}
+					if callsTheSendStore(sel) {
+						sending[name] = true
+					}
+					if validators[sel.Sel.Name] {
+						validating[name] = true
 					}
 					return true
 				})
@@ -122,83 +155,18 @@ func TestEverySendDoorValidatesTheClaimedContext(t *testing.T) {
 
 	// Under-recognition is the one way this gate must not break: a scan that
 	// found nothing would report PASS over an empty corpus.
-	if len(building) == 0 {
-		t.Fatal("found no send input construction — the scan is looking in the wrong place")
+	if len(sending) == 0 {
+		t.Fatal("found no send call — the scan is looking in the wrong place")
 	}
-	// Both shapes of door, judged the same way.
-	for door, path := range buildsInput {
-		if readsClaim[door] {
-			building[door] = path
-		}
-	}
-	for door := range building {
-		if revalidationExempt[door] {
+	for door := range sending {
+		if forwardsAnAlreadyValidatedInput[door] {
 			continue
 		}
 		if !validating[door] {
-			t.Errorf("%s builds a send input and never validates the claimed context — "+
+			t.Errorf("%s sends a message and never validates the claimed context — "+
 				"a door that judges its own claims can name a category reserved for controller mail", door)
 		}
 	}
-}
-
-// claimArgsField is the embedded struct a transport reads a caller's claim out
-// of. A function naming it is accepting a claim, whatever it does next.
-const claimArgsField = "SendContextArgs"
-
-// contextFields are the four a caller's claim lands in. A literal setting any
-// of them is accepting a claim and owes it the validator.
-var contextFields = map[string]bool{
-	"Context": true, "MarketingPurpose": true, "OperatorReason": true, "Evidence": true,
-}
-
-// setsAContextField reports whether this literal fills in a claim.
-func setsAContextField(lit *ast.CompositeLit) bool {
-	for _, elt := range lit.Elts {
-		kv, ok := elt.(*ast.KeyValueExpr)
-		if !ok {
-			continue
-		}
-		if key, ok := kv.Key.(*ast.Ident); ok && contextFields[key.Name] {
-			return true
-		}
-	}
-	return false
-}
-
-// bareTypeName drops a package qualifier, because a send input is written
-// activities.SendEmailInput from compose and SendEmailInput inside the module,
-// and both are the same door.
-func bareTypeName(name string) string {
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		return name[i+1:]
-	}
-	return name
-}
-
-// parseTreeFiles parses every hand-written Go file under a directory, keyed by
-// path so a finding can say where the door lives.
-func parseTreeFiles(t *testing.T, fset *token.FileSet, root string) map[string]*ast.File {
-	t.Helper()
-	out := map[string]*ast.File{}
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
-		if parseErr != nil {
-			return parseErr
-		}
-		out[path] = file
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking %s: %v", root, err)
-	}
-	return out
 }
 
 // The tool surface declares the four context arguments in exactly one place.
@@ -255,4 +223,29 @@ func literalOf(spec *ast.ValueSpec) string {
 		})
 	}
 	return out.String()
+}
+
+// parseTreeFiles parses every hand-written Go file under a directory, keyed by
+// path so a finding can say where the door lives.
+func parseTreeFiles(t *testing.T, fset *token.FileSet, root string) map[string]*ast.File {
+	t.Helper()
+	out := map[string]*ast.File{}
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		out[path] = file
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking %s: %v", root, err)
+	}
+	return out
 }

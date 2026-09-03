@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1621 | 6% | 15787 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2453 | 9% | 14955 | 15 | 8 |
-| _whole served catalog, for scale_ | 70 | 20552 | 83% | — | — | — |
+| _whole served catalog, for scale_ | 70 | 20230 | 82% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 262 tokens, mean 293, across 70 served tools.
+Median 262 tokens, mean 288, across 70 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -139,16 +139,16 @@ a term in an addition.
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
 | `run_report` | 786 | 3 scenarios |
-| `send_account_email` | 762 | — |
-| `send_email` | 695 | 1 scenario |
 | `preview_import` | 677 | — |
+| `send_account_email` | 655 | — |
 | `log_activity` | 635 | 1 scenario |
+| `send_email` | 588 | 1 scenario |
 | `update_record` | 572 | 4 scenarios |
-| `send_message` | 538 | — |
 | `resolve_entities` | 498 | — |
 | `list_records` | 494 | — |
 | `query_workspace` | 484 | 3 scenarios |
 | `advance_deal` | 443 | 1 scenario |
+| `send_message` | 431 | — |
 | `annotate_brief` | 418 | — |
 | `progress_deal` | 404 | 3 scenarios |
 | `review_commitments` | 401 | — |

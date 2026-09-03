@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // sendAccepted is what a send answers with: the delivery path took it. It is
@@ -275,29 +274,6 @@ func sendContextOf(in agents.SendContextArgs) activities.SendContextInput {
 		Context:          in.CommunicationContext,
 		MarketingPurpose: in.MarketingPurpose,
 		OperatorReason:   in.OperatorReason,
-		Evidence:         evidenceOf(in.Evidence),
-	}
-}
-
-// evidenceOf flattens the optional evidence block. An unnamed record stays
-// zero, which is what the engine reads as "the caller named none".
-func evidenceOf(in *agents.SendEvidence) commsauthz.Evidence {
-	if in == nil {
-		return commsauthz.Evidence{}
-	}
-	id := func(p *ids.UUID) ids.UUID {
-		if p == nil {
-			return ids.UUID{}
-		}
-		return *p
-	}
-	return commsauthz.Evidence{
-		ActivityID:     id(in.ActivityID),
-		DealID:         id(in.DealID),
-		InvoiceID:      id(in.InvoiceID),
-		ContractID:     id(in.ContractID),
-		ConsentEventID: id(in.ConsentEventID),
-		BasisID:        id(in.BasisID),
 	}
 }
 

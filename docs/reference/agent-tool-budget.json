@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 70,
     "system_frame_tokens": 353,
-    "tokens": 20552,
+    "tokens": 20230,
     "median_tool_tokens": 262,
-    "mean_tool_tokens": 293
+    "mean_tool_tokens": 288
   },
   "agents": [
     {
@@ -75,28 +75,24 @@
       "tokens": 786
     },
     {
-      "name": "send_account_email",
-      "tokens": 762
-    },
-    {
-      "name": "send_email",
-      "tokens": 695
-    },
-    {
       "name": "preview_import",
       "tokens": 677
+    },
+    {
+      "name": "send_account_email",
+      "tokens": 655
     },
     {
       "name": "log_activity",
       "tokens": 635
     },
     {
-      "name": "update_record",
-      "tokens": 572
+      "name": "send_email",
+      "tokens": 588
     },
     {
-      "name": "send_message",
-      "tokens": 538
+      "name": "update_record",
+      "tokens": 572
     },
     {
       "name": "resolve_entities",
@@ -113,6 +109,10 @@
     {
       "name": "advance_deal",
       "tokens": 443
+    },
+    {
+      "name": "send_message",
+      "tokens": 431
     },
     {
       "name": "annotate_brief",

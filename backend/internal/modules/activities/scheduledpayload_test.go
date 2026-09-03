@@ -103,3 +103,38 @@ func TestAnUnnamedRecordDoesNotBecomeAZeroID(t *testing.T) {
 		t.Errorf("evidence = %+v, want zero after a round trip that named nothing", out.Evidence)
 	}
 }
+
+// A reserved category cannot be restored from a scheduled payload.
+//
+// It can never legitimately be in one: the door that writes the payload refuses
+// it, and freezePayload has a single caller behind that door. Refusing it again
+// at the restore costs a live send nothing and removes the assumption — the
+// exemption this shape holds in the send-door gate rests on there being exactly
+// one payload writer, and nothing fails today if somebody adds a second.
+func TestAReservedCategoryCannotBeRestoredFromAScheduledPayload(t *testing.T) {
+	for _, c := range commsauthz.Categories() {
+		if !c.ServesTheSubject() {
+			continue
+		}
+		payload := freezePayload(SendEmailInput{Subject: "Anything"})
+		payload.Context = string(c)
+		if _, err := payload.thaw(); err == nil {
+			t.Errorf("a scheduled payload restored %q, which no send may claim", c)
+		}
+	}
+}
+
+// And an ordinary category still restores, or the refusal above would be
+// indistinguishable from a thaw that rejects every category.
+func TestAnOrdinaryCategoryStillRestores(t *testing.T) {
+	payload := freezePayload(SendEmailInput{
+		Subject: "Anything", Context: commsauthz.CategoryReplyToInbound,
+	})
+	out, err := payload.thaw()
+	if err != nil {
+		t.Fatalf("an ordinary category was refused at restore: %v", err)
+	}
+	if out.Context != commsauthz.CategoryReplyToInbound {
+		t.Errorf("context = %q, want reply_to_inbound", out.Context)
+	}
+}

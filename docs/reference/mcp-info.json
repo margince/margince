@@ -10,16 +10,16 @@
   "totals": {
     "tools": 70,
     "resources": 10,
-    "tool_catalog_bytes": 200824,
+    "tool_catalog_bytes": 199450,
     "resource_catalog_bytes": 3915,
-    "approx_wire_tokens_total": 51184,
+    "approx_wire_tokens_total": 50841,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 47770,
-      "input_schema_bytes": 42041,
+      "input_schema_bytes": 40667,
       "output_schema_bytes": 95916,
-      "description_plus_input_schema_bytes": 89811
+      "description_plus_input_schema_bytes": 88437
     }
   },
   "tools": {
@@ -11740,7 +11740,7 @@
               "type": "array"
             },
             "communication_context": {
-              "description": "What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured.",
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
               "enum": [
                 "reply_to_inbound",
                 "requested_followup",
@@ -11757,37 +11757,6 @@
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
-            },
-            "evidence": {
-              "additionalProperties": false,
-              "description": "Records supporting this send, by id. Checked, never trusted.",
-              "properties": {
-                "activity_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "basis_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "consent_event_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "contract_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "deal_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "invoice_id": {
-                  "format": "uuid",
-                  "type": "string"
-                }
-              },
-              "type": "object"
             },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
@@ -11998,7 +11967,7 @@
               "type": "array"
             },
             "communication_context": {
-              "description": "What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured.",
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
               "enum": [
                 "reply_to_inbound",
                 "requested_followup",
@@ -12015,37 +11984,6 @@
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
-            },
-            "evidence": {
-              "additionalProperties": false,
-              "description": "Records supporting this send, by id. Checked, never trusted.",
-              "properties": {
-                "activity_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "basis_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "consent_event_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "contract_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "deal_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "invoice_id": {
-                  "format": "uuid",
-                  "type": "string"
-                }
-              },
-              "type": "object"
             },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
@@ -12221,7 +12159,7 @@
               "type": "string"
             },
             "communication_context": {
-              "description": "What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured.",
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
               "enum": [
                 "reply_to_inbound",
                 "requested_followup",
@@ -12238,37 +12176,6 @@
             "consent_purpose": {
               "description": "Purpose key the recipient must have granted",
               "type": "string"
-            },
-            "evidence": {
-              "additionalProperties": false,
-              "description": "Records supporting this send, by id. Checked, never trusted.",
-              "properties": {
-                "activity_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "basis_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "consent_event_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "contract_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "deal_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "invoice_id": {
-                  "format": "uuid",
-                  "type": "string"
-                }
-              },
-              "type": "object"
             },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",

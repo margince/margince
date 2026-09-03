@@ -84,26 +84,15 @@ type SendEmailArgs struct {
 // SendContextArgs is what a caller says about WHY it is writing, shared by the
 // three send tools so the surface asks one question one way.
 //
-// An agent may PROPOSE a category and name evidence; it cannot set a basis, an
-// exception, or one of the five categories reserved for the installation's own
-// notices — the send door refuses those from any caller, agent or human.
-// Nothing here authorizes: the engine reads the named records and resolves the
-// category the evidence supports.
+// An agent may PROPOSE a category; it cannot set a basis, an exception, or one
+// of the five categories reserved for the installation's own notices — the send
+// door refuses those from any caller, agent or human. Nothing here authorizes:
+// the claim is recorded beside the category the engine resolved, so a claim the
+// engine disagrees with is visible rather than honoured.
 type SendContextArgs struct {
-	CommunicationContext string        `json:"communication_context,omitempty"`
-	MarketingPurpose     string        `json:"marketing_purpose,omitempty"`
-	OperatorReason       string        `json:"operator_reason,omitempty"`
-	Evidence             *SendEvidence `json:"evidence,omitempty"`
-}
-
-// SendEvidence names records in support of a send, by id and never by content.
-type SendEvidence struct {
-	ActivityID     *ids.UUID `json:"activity_id,omitempty"`
-	DealID         *ids.UUID `json:"deal_id,omitempty"`
-	InvoiceID      *ids.UUID `json:"invoice_id,omitempty"`
-	ContractID     *ids.UUID `json:"contract_id,omitempty"`
-	ConsentEventID *ids.UUID `json:"consent_event_id,omitempty"`
-	BasisID        *ids.UUID `json:"basis_id,omitempty"`
+	CommunicationContext string `json:"communication_context,omitempty"`
+	MarketingPurpose     string `json:"marketing_purpose,omitempty"`
+	OperatorReason       string `json:"operator_reason,omitempty"`
 }
 
 // SendMessageArgs is one channel reply. It carries no subject and no
@@ -259,8 +248,17 @@ type sendEmailTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
-// sendContextProperties is the four context arguments, spelled once for the
-// three send tools. One question asked one way, and one place to change it.
+// sendContextProperties is the context arguments, spelled once for the three
+// send tools. One question asked one way, and one place to change it.
+//
+// There is deliberately no `evidence` here. The HTTP contract has one, and
+// nothing in the engine reads it yet — the validators that will resolve a
+// category FROM the named records land with the jurisdiction packs. A tool
+// description is text a model reads and reasons about, so advertising a check
+// the system does not perform teaches it something false, and the next author
+// to wire evidence up would read it and skip writing the validation. It also
+// costs the catalog budget on every step of every run that carries one of
+// these tools.
 //
 // Held by: TestTheToolSurfaceSpellsTheSendContextOnce
 // (backend/gates/sendcontextvalidation_test.go)
@@ -274,16 +272,9 @@ const sendContextProperties = `,
 	"communication_context":{"type":"string","enum":["reply_to_inbound","requested_followup",` +
 	`"precontract_quote","active_deal_followup","customer_service","account_notice",` +
 	`"contract_notice","invoice_or_payment","marketing"],` +
-	`"description":"What kind of message this is. Omit to let the server resolve it from the thread; a claim the evidence does not support is recorded, not honoured."},
+	`"description":"What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing."},
 	"marketing_purpose":{"type":"string","description":"For marketing, the purpose key naming the topic"},
-	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."},
-	"evidence":{"type":"object","additionalProperties":false,"description":"Records supporting this send, by id. Checked, never trusted.","properties":{
-		"activity_id":{"type":"string","format":"uuid"},
-		"deal_id":{"type":"string","format":"uuid"},
-		"invoice_id":{"type":"string","format":"uuid"},
-		"contract_id":{"type":"string","format":"uuid"},
-		"consent_event_id":{"type":"string","format":"uuid"},
-		"basis_id":{"type":"string","format":"uuid"}}}`
+	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."}`
 
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
