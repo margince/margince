@@ -316,8 +316,8 @@ one present, none at full depth:
   figure at 30px in the mono face, one line of basis at the foot, and empty
   space between them. When the details panel is open they shrink to 21px
   figures and never wrap.
-- **The 360 as the first pane**, full width, under its indigo-to-emerald
-  rule: the record's name and "· 360" as the pane title, the agent's word
+- **The 360 as the first pane**, full width, on the same hairline as every
+  other pane: the record's name and "· 360" as the pane title, the agent's word
   at 40px, one sentence beside it whose claims are hoverable sources (the
   chip sits inline on the agent's tint; hover opens what it rests on), the
   three rated dimensions, then the spine. The thread is folded — "Read the
@@ -351,9 +351,9 @@ the agent proposes. Whatever those ten seconds do not need goes to the depth.
    then the verdict word in the display face with its because-sentence and
    its sources, then the readings as cells, then the stage stepper or the
    ladder where the record has one, then the spine and the thread, newest
-   first, and a foot that says who wrote it. A two-pixel indigo-to-emerald
-   rule along its top edge and a faint indigo wash in one corner are its whole
-   ornament. Every claim in it is hoverable: a source chip opens the quote it
+   first, and a foot that says who wrote it. Its edge is the same
+   hairline as every other pane — no thicker border, no coloured rule; the
+   indigo tile and a faint indigo wash in one corner are its whole ornament. Every claim in it is hoverable: a source chip opens the quote it
    rests on and where the quote came from.
 3. **What needs you.** One list. The move the call names is its lead row; the
    agent's finds, staged approvals, the reply that is owed, overdue and due
