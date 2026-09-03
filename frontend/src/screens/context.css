@@ -1,11 +1,11 @@
 .record-context {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 .context-sections {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 /* --space-2, the same rung `.fgroup-head` and `.search-group h2` take: this is
    the same relationship on three screens — a group's label directly above the
@@ -17,11 +17,11 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .context-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }

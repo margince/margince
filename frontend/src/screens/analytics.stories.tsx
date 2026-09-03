@@ -163,12 +163,19 @@ function screenStory() {
   );
 }
 
-const clickButton =
-  (name: string) =>
+// Press each named button in turn, waiting for it to exist first.
+//
+// A LIST rather than one name, because the screen's two sections are a tab
+// apart: the report cards live under Pipeline and the Forecast tab is the
+// default, so anything inside a report card takes two presses to reach.
+const clickButtons =
+  (...names: readonly string[]) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    await userEvent.click(
-      await within(canvasElement).findByRole("button", { name }),
-    );
+    for (const name of names) {
+      await userEvent.click(
+        await within(canvasElement).findByRole("button", { name }),
+      );
+    }
   };
 
 const meta: Meta = { title: "Records/Reports" };
@@ -184,19 +191,24 @@ export const DealsByStage: Story = { render: screenStory };
 // callout that says how to read the second figure in each slot.
 export const Forecast: Story = {
   render: screenStory,
-  play: clickButton("Forecast"),
+  play: clickButtons("Forecast"),
 };
 
+// The company table, which is a CARD in the Pipeline section rather than a
+// segment of its own — there is no per-report picker, so the tab is the whole
+// selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Open deals per company"),
+  play: clickButtons("Pipeline"),
 };
 
 // "Explain this number" open: the report card above, the derivation card below
 // it, both the same titled-card surface.
 export const Explain: Story = {
   render: screenStory,
-  play: clickButton("Explain this number"),
+  // Pipeline first: the explain verb belongs to a report card's action row, and
+  // the Forecast section the screen opens on draws no report cards at all.
+  play: clickButtons("Pipeline", "Explain this number"),
 };
 
 // The three absences a slot has to tell apart, side by side, because they are
