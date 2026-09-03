@@ -339,4 +339,49 @@ describe("a record timeline you can work in", () => {
     await user.click(screen.getByRole("button", { name: "Open" }));
     expect(screen.getAllByText(/Cutover plan/)).toHaveLength(4);
   });
+
+  it("draws a collapsed conversation of emails with the canonical row", async () => {
+    // The defect this holds: a group wrote its own subject-and-preview markup
+    // for the newest message while a lone email beside it drew EmailEntry, so
+    // one page showed two readings of a message. The preview differs from the
+    // body on purpose — a row rendering the body where the server's preview
+    // belongs is the drift, and a fixture whose two texts agreed could not tell
+    // them apart.
+    const thread = ["a-1", "a-2"].map((id, index) =>
+      activity({
+        id,
+        subject: "Cutover plan",
+        body: "Long body with a signature the server already trimmed",
+        occurred_at: `2026-08-1${index}T09:00:00Z`,
+        thread_key: "t-1",
+        email_summary: {
+          activity_id: id,
+          occurred_at: `2026-08-1${index}T09:00:00Z`,
+          version: 1,
+          subject: "Cutover plan",
+          preview: "Are we still moving on the 14th?",
+          counterparty: "Dana Buyer",
+          direction: "inbound",
+          display_status: "team",
+          move: "needs_reply",
+          attachment_count: 0,
+        },
+      }),
+    );
+    const feed = activityFeed({
+      first: { data: thread, page: { has_more: false } },
+    });
+    vi.stubGlobal("fetch", feed.fetcher);
+    mount();
+
+    expect(await screen.findByText("2 messages")).toBeTruthy();
+    // The canonical row's own parts, on the COLLAPSED group: the server's
+    // preview and the access badge. Asserting the preview alone would pass over
+    // a hand-written span that happened to print the same string.
+    expect(screen.getByText("Are we still moving on the 14th?")).toBeTruthy();
+    expect(document.querySelector(".emailentry")).not.toBeNull();
+    // And not the body: the group must not fall back to the raw text when the
+    // server composed a preview for it.
+    expect(screen.queryByText(/Long body with a signature/)).toBeNull();
+  });
 });
