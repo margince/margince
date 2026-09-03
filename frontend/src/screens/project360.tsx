@@ -22,7 +22,6 @@ import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
-import { TimelineActions } from "./compose";
 import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
 import { ProjectCompanies } from "./projectcompanies";
@@ -54,6 +53,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { ShareAction } from "./share";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./projects.css";
 

@@ -13774,6 +13774,16 @@ export interface components {
              *     whose mail a person keeps private is itself private.
              */
             held_by_others: number;
+            /**
+             * @description Which of your own messages the decision reached, so a client can refresh exactly
+             *     them. A thread decision changes several messages at once and they are filed against
+             *     different records; a caller refreshing only the record it was looking at leaves the
+             *     others showing the audience they had before the press.
+             *
+             *     These are messages you imported, so naming them discloses nothing you could not
+             *     already read.
+             */
+            activity_ids: string[];
         };
         /**
          * @description What a purge destroyed, or what a preview says it would. The four counts are disjoint and

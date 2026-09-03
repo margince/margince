@@ -29120,6 +29120,15 @@ type TechnicalEnrichStatus struct {
 
 // ThreadAudienceOutcome What an owner's decision about a thread reached.
 type ThreadAudienceOutcome struct {
+	// ActivityIds Which of your own messages the decision reached, so a client can refresh exactly
+	// them. A thread decision changes several messages at once and they are filed against
+	// different records; a caller refreshing only the record it was looking at leaves the
+	// others showing the audience they had before the press.
+	//
+	// These are messages you imported, so naming them discloses nothing you could not
+	// already read.
+	ActivityIds []openapi_types.UUID `json:"activity_ids"`
+
 	// HeldByOthers How many other seats still ask for this thread to be held. A count and never a name:
 	// whose mail a person keeps private is itself private.
 	HeldByOthers int `json:"held_by_others"`

@@ -101,7 +101,7 @@ import {
   hasWorkInFlight,
   sinceLastVisitFooter,
 } from "./companywork";
-import { ComposeModal, TimelineActions } from "./compose";
+import { ComposeModal } from "./compose";
 import {
   CreateAction,
   type CreateField,
@@ -153,6 +153,7 @@ import {
   TaskQuickActions,
   useTaskUpdate,
 } from "./taskactions";
+import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:

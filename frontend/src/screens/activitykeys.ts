@@ -126,3 +126,10 @@ export function dealWinKeys(
   }
   return keys;
 }
+
+// The canonical email read for one message, as its own key so a decision that
+// changed a message can refresh it wherever it is mounted — a drawer open over
+// one record, a row on another.
+export function emailPresentationKey(activityId: string): QueryKey {
+  return ["email-presentation", activityId];
+}
