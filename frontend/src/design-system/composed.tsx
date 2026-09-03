@@ -1305,7 +1305,10 @@ function TimelineGroupRow({
             {/* Never for a withheld entry — a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText text={newest.body} email={newest.kind === "email"} />
+              <TimelineText
+                text={newest.body}
+                email={newest.kind === "email"}
+              />
             )}
           </>
         )}

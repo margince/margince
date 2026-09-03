@@ -29,10 +29,12 @@ func FromView(view crmcontracts.Person360, req Request) Input {
 		Recipient:       recipientOf(view),
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}
+	if view.Activities != nil {
+		in.Recent = FoldRecent(view.Activities.Data)
+	}
 	foldCommercial(&in, view)
 	foldProject(&in, view, req.ProjectID)
 	foldClaims(&in, view, req.Envelope.At())
-	foldRecent(&in, view)
 	foldMeeting(&in, view, req.Envelope.At())
 	return in
 }
@@ -305,13 +307,6 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 		}
 	}
 	return out
-}
-
-func foldRecent(in *Input, view crmcontracts.Person360) {
-	if view.Activities == nil {
-		return
-	}
-	in.Recent = FoldRecent(view.Activities.Data)
 }
 
 // FoldRecent turns a record's newest-first activities into the conversation the

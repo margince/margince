@@ -116,10 +116,16 @@ const trailingScanLines = 15
 // "show quoted history" on every message that had no history.
 type EmailBodyTail string
 
+// The three tails a body can have. Mirrored in frontend/src/format/emailtext.ts
+// and held to one table of cases by gates/frontendemailtext_test.go.
 const (
-	TailNone      EmailBodyTail = "none"
+	// TailNone: the whole body is the message, with nothing trimmed.
+	TailNone EmailBodyTail = "none"
+	// TailSignature: a sign-off. The sender still speaking, so the viewer shows
+	// it under the message rather than folding it away.
 	TailSignature EmailBodyTail = "signature"
-	TailQuote     EmailBodyTail = "quote"
+	// TailQuote: an older message underneath this one, which the viewer folds.
+	TailQuote EmailBodyTail = "quote"
 )
 
 // EmailBodyParts is a mail body read for display.

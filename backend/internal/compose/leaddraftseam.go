@@ -19,6 +19,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// leadLinkType is what an activity_link row calls a lead. Named here rather
+// than reusing captureCollisionTarget, which holds the same characters for a
+// different question — which entity type capture stages a collision against —
+// and would tie this read to a decision about capture.
+const leadLinkType = "lead"
+
 // leadCorrespondence answers one lead's timeline through the activities store's
 // own gate, so a draft can only stand on messages this caller could open.
 type leadCorrespondence struct{ store *activities.Store }
@@ -30,7 +36,7 @@ type leadCorrespondence struct{ store *activities.Store }
 // larger than that would carry a lead's whole history across the seam for the
 // drafter to throw away.
 func (c leadCorrespondence) ForLead(ctx context.Context, id ids.LeadID) ([]crmcontracts.Activity, error) {
-	entityType := "lead"
+	entityType := leadLinkType
 	entityID := ids.UUID(id.UUID)
 	limit := persondraft.DraftInputActivities
 	rows, _, err := c.store.ListActivities(ctx, activities.ListActivitiesInput{

@@ -158,7 +158,6 @@ func TestWithNoModelLaneTheFloorWrites(t *testing.T) {
 
 	draft, err := leaddraft.NewService(leads, &correspondence{}, nil).
 		Draft(humanCtx(), someLead, leaddraft.Request{})
-
 	if err != nil {
 		t.Fatalf("the floor refused: %v", err)
 	}

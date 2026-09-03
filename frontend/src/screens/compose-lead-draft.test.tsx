@@ -124,19 +124,17 @@ describe("drafting to a lead", () => {
     );
 
     expect(
-      await screen.findByDisplayValue(
-        "Following up on your pricing question",
-      ),
+      await screen.findByDisplayValue("Following up on your pricing question"),
     ).toBeTruthy();
     // The endpoint, named. A lead that reached the ACCOUNT endpoint would be
     // asking the server to ground a message in an organization it has no link
     // to, and a lead that reached none would fill nothing at all.
-    expect(sent.some((call) => call.key === "POST /leads/l-1/draft-email")).toBe(
-      true,
-    );
     expect(
-      sent.some((call) => call.key.includes("/organizations/")),
-    ).toBe(false);
+      sent.some((call) => call.key === "POST /leads/l-1/draft-email"),
+    ).toBe(true);
+    expect(sent.some((call) => call.key.includes("/organizations/"))).toBe(
+      false,
+    );
   });
 
   it("carries the reader's own steering and nothing else", async () => {
@@ -217,8 +215,8 @@ describe("drafting to a lead", () => {
     await waitFor(() =>
       expect(screen.getByText(/AI drafting is unavailable/i)).toBeTruthy(),
     );
-    expect(sent.some((call) => call.key === "POST /leads/l-1/draft-email")).toBe(
-      true,
-    );
+    expect(
+      sent.some((call) => call.key === "POST /leads/l-1/draft-email"),
+    ).toBe(true);
   });
 });

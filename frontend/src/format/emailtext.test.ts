@@ -266,7 +266,9 @@ describe("the bodies the server's table holds", () => {
       "Ja, gerne.\n\nAm 1. September schrieb Ana:\n> Passt Dienstag?",
     );
     expect(parts.main).toBe("Ja, gerne.");
-    expect(parts.trimmed).toBe("Am 1. September schrieb Ana:\n> Passt Dienstag?");
+    expect(parts.trimmed).toBe(
+      "Am 1. September schrieb Ana:\n> Passt Dienstag?",
+    );
     expect(parts.tail).toBe("quote");
   });
 
