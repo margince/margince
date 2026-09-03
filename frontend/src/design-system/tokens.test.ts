@@ -39,6 +39,7 @@ const canonical: Record<string, string> = {
   "--bgElevated": "#fbfcfb",
   "--bgCard": "#eaedeb",
   "--bgHover": "#edf0ee",
+  "--bgSidebarHover": "#dde1de",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
@@ -474,6 +475,13 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       for (const name of Object.keys(dark)) {
         expect(light[name], `${name} exists only in dark`).toBeDefined();
       }
+    });
+
+    it("pins the dark grounds the ladder is measured from", () => {
+      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
+      expect(normalize(dark["--bgPage"])).toBe("#0c1311");
+      expect(normalize(dark["--bgSidebar"])).toBe("#030504");
+      expect(normalize(dark["--bgSidebarHover"])).toBe("#0a100e");
     });
 
     it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {
