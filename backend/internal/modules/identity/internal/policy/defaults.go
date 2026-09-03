@@ -83,11 +83,11 @@ var (
 // and migrate-in screens are admin surfaces.
 // managerObjects is the grid a team lead (`manager`) and the whole-organization
 // `management` seat share; only their row scope differs.
-var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, readOnly, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly, writeNoDelete, crud, createRead)
+var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, readOnly, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly, writeNoDelete, crud, createRead, grant{})
 
 var defaults = map[string]Document{
 	"admin": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete, crud, createRead),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete, crud, createRead, readOnly),
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
@@ -229,7 +229,13 @@ var defaults = map[string]Document{
 			// number, and a rep asserting one would be calling a figure they
 			// are not accountable for. The reading itself is derived, so there
 			// is no update or delete surface for any seat to hold.
-			readOnly),
+			readOnly,
+			// data_coverage — nothing. Source health is connector freshness,
+			// permission-limited checks and import backlog: an OPERATOR's
+			// view. A rep shown their installation's connector health has been
+			// handed somebody else's job, and the screen that would tell them
+			// is one they cannot act on.
+			grant{}),
 		// Own scope, not team: membership of a team is not by itself permission
 		// to rewrite a teammate's records. Writing somebody else's customer
 		// record takes an explicit share — a record_grant naming the user or
@@ -245,11 +251,11 @@ var defaults = map[string]Document{
 		// A read-only role still owns its personal view state: saved views
 		// are P1-exempt per-user prefs (runtime-config-surface.md §3), not
 		// shared records, so full self-service is correct even here.
-		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly),
+		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, grant{}),
 		RowScope: principal.RowScopeAll,
 	},
 	"ops": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete, crud, createRead),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete, crud, createRead, readOnly),
 		RowScope: principal.RowScopeAll,
 	},
 }
@@ -262,7 +268,7 @@ var defaults = map[string]Document{
 // and rbacfixture_test.go holds the result to the matrix the server seeds. Five
 // map literals of every key is what this replaced. Shortening it is a refactor of
 // the seed rather than of this call.
-func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom, knowledgeCorpus, knowledgeDocument, introduction, weeklyPlan, forecast grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
+func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom, knowledgeCorpus, knowledgeDocument, introduction, weeklyPlan, forecast, dataCoverage grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
 	return map[string]grant{
 		"person": person, "organization": organization, "deal": deal,
 		"lead": lead, "activity": activity, "pipeline": pipeline,
@@ -378,9 +384,10 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		// update are a rep's: asking is the job, and answering an ask made OF
 		// you is answering for yourself — the row's own party check decides
 		// which of the two you are, and a grant cannot substitute for it.
-		"introduction": introduction,
-		"weekly_plan":  weeklyPlan,
-		"forecast":     forecast,
+		"introduction":  introduction,
+		"weekly_plan":   weeklyPlan,
+		"forecast":      forecast,
+		"data_coverage": dataCoverage,
 	}
 }
 
