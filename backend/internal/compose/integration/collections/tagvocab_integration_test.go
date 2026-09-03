@@ -290,6 +290,58 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 	}
 }
 
+// A description sent to the create door survives it. The field is part of
+// CreateTagRequest, so dropping it is the server throwing away a value the
+// published contract accepted, with a 201 that says nothing went wrong.
+func TestCreatingATagKeepsTheDescriptionItWasGiven(t *testing.T) {
+	e := tagEnv(t)
+
+	var created struct {
+		ID          string  `json:"id"`
+		Name        string  `json:"name"`
+		Description *string `json:"description"`
+	}
+	if status := e.Call(t, "POST", "/v1/tags", integration.AnyMap{
+		"name": "Key Account", "color": "teal", "description": "Buys across more than one team",
+	}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("creating: status=%d body=%+v", status, created)
+	}
+	if created.Description == nil || *created.Description != "Buys across more than one team" {
+		t.Fatalf("the 201 carries description = %v, want the text sent", created.Description)
+	}
+
+	// Read it back, because a handler that echoed its own request body would
+	// pass the assertion above without ever writing the column.
+	var detail struct {
+		Description *string `json:"description"`
+	}
+	if status := e.Call(t, "GET", "/v1/tags/"+created.ID, nil, nil, &detail); status != http.StatusOK {
+		t.Fatalf("reading back: status=%d body=%+v", status, detail)
+	}
+	if detail.Description == nil || *detail.Description != "Buys across more than one team" {
+		t.Errorf("stored description = %v, want the text sent", detail.Description)
+	}
+}
+
+// An empty description means the same thing at both doors: no description.
+// The update door spells clearing as "", and a create that stored the empty
+// string would leave a tag whose description reads as present and says nothing.
+func TestCreatingATagWithAnEmptyDescriptionStoresNone(t *testing.T) {
+	e := tagEnv(t)
+
+	var created struct {
+		Description *string `json:"description"`
+	}
+	if status := e.Call(t, "POST", "/v1/tags", integration.AnyMap{
+		"name": "Undescribed", "description": "",
+	}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("creating: status=%d body=%+v", status, created)
+	}
+	if created.Description != nil {
+		t.Errorf("description = %q, want absent", *created.Description)
+	}
+}
+
 // The rename path itself, which the conflict test above cannot reach: a
 // handler that always answered 409 would pass that one.
 func TestRenamingRecolouringAndDescribingATag(t *testing.T) {
