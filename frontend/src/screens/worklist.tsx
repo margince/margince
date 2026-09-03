@@ -308,8 +308,21 @@ function WorklistBody({
       {owner !== "" && <CoachControl owner={owner} />}
       {/* What the queue is NOT showing. Beside the team board because it is the
           same reader's question — a lead asking whether the day their team sees
-          is the day their team has — and on the same tier for the same reason. */}
-      <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
+          is the day their team has — and on the same tier for the same reason.
+
+          On the reader's OWN day only, exactly as the board above it is. The
+          endpoint takes no owner and derives its subject from the authenticated
+          principal, so under a drill-down this panel answered about the MANAGER
+          while standing on a page headed with somebody else's name: "412 hidden
+          from you" read as Lena's backlog when it was the reader's own, on the
+          one surface whose whole job is to say what a queue is hiding.
+
+          Answering it FOR Lena is a different feature needing a different
+          endpoint. Until that exists, saying nothing beats saying the wrong
+          person's number under her name. */}
+      {owner === "" && (
+        <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
+      )}
       {/* A day cannot read as clear while something that would have filled it
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}

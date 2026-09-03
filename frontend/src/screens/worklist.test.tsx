@@ -836,6 +836,20 @@ describe("the one thing to do next", () => {
 });
 
 describe("the address opens a queue", () => {
+  // Every request for the hidden-backlog figures, told apart from the day's own
+  // read: `/worklist/hidden` starts with `/worklist`, so a filter on the prefix
+  // alone counts the queue itself and can never report zero.
+  function hiddenRequests(): string[] {
+    const mock = globalThis.fetch as unknown as {
+      mock: { calls: readonly (readonly unknown[])[] };
+    };
+    return mock.mock.calls
+      .map(([input]) =>
+        String(input instanceof Request ? input.url : (input as string)),
+      )
+      .filter((url) => url.includes("/worklist/hidden"));
+  }
+
   function requestedUrls(): string[] {
     const mock = globalThis.fetch as unknown as {
       mock: { calls: readonly (readonly unknown[])[] };
@@ -857,6 +871,46 @@ describe("the address opens a queue", () => {
         url.includes("owner=11111111-1111-4111-8111-111111111111"),
       ),
     ).toBe(true);
+  });
+
+  // The hidden-backlog panel answers about the READER, always.
+  //
+  // The endpoint takes no owner and derives its subject from the authenticated
+  // principal, so under a drill-down the panel stood on a page headed with a
+  // colleague's name and reported the MANAGER's own hidden work: "412 hidden
+  // from you" read as Lena's backlog. On the one surface whose whole job is to
+  // say what a queue is not showing, that is the worst place in the product to
+  // attribute a figure to the wrong person.
+  it("draws no hidden-backlog panel on a colleague's queue", async () => {
+    stub(day({ scope_options: ["mine", "team"] }));
+    renderWorklist("en", "11111111-1111-4111-8111-111111111111");
+
+    // The panel is absent, and — the half that actually holds — it never ASKS.
+    // The endpoint answers about the authenticated principal, so a request made
+    // from a colleague's page is already the wrong question; the drawn panel is
+    // only where the wrong answer would have shown up.
+    // Wait for the day itself to land, THEN give the panel its chance. The
+    // day's read resolving is not the moment the panel would have asked, so an
+    // assertion made right after it reports silence from a component that has
+    // not run yet — a test that passes with the guard removed, which is what
+    // this one did before the pause was added.
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText("What the queue is not showing")).toBeNull();
+    expect(hiddenRequests()).toEqual([]);
+  });
+
+  // And it IS drawn on the reader's own day, where the figure is about them.
+  // Without this the assertion above passes on a panel deleted outright.
+  it("draws the hidden-backlog panel on the reader's own day", async () => {
+    stub(day({ scope_options: ["mine", "team"] }));
+    renderWorklist("en");
+
+    expect(
+      await screen.findByText("What the queue is not showing"),
+    ).toBeTruthy();
+    // It asked, which is what makes the silence above mean something.
+    await waitFor(() => expect(hiddenRequests().length).toBeGreaterThan(0));
   });
 
   // The scope word is not an owner. Passing it as one would ask the server for
