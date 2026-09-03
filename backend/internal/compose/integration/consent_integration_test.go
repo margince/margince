@@ -157,12 +157,18 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 
 	// Withdrawal re-blocks, and it does so through the objection rule that
 	// overrides every other basis.
+	//
+	// The SAME purpose that was granted above. Withdrawing a different one —
+	// marketing_email, which setupConsent never granted — would leave this
+	// passing whether the withdrawal did anything or not: that purpose was
+	// already suppressed, so the 409 below would be the default deny answering
+	// again rather than the objection taking effect.
 	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
-		"purpose_id": c.purposes["marketing_email"], "new_state": "withdrawn",
+		"purpose_id": newsletter, "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
 	}
-	if status, code := c.send(t, "marketing_email"); status != http.StatusConflict || code != "consent_not_granted" {
+	if status, code := c.send(t, "product_newsletter"); status != http.StatusConflict || code != "consent_not_granted" {
 		t.Fatalf("post-withdrawal send → %d %q, want 409", status, code)
 	}
 }
