@@ -24,6 +24,7 @@ import {
   quietDeals,
   useHomeDeals,
   useMorningBrief,
+  useWeeklyReview,
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
@@ -257,6 +258,11 @@ export function HomeScreen() {
   // Worklist's "dials stay state" choice deliberately excluded.
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params, teamOffered);
+  // The closed week, for the weekly's opening sentence. The SAME query key
+  // WeeklySection uses for the latest week, so the header band and the panel
+  // below it read one answer rather than two that could differ — and the read
+  // is served from cache, not made twice.
+  const weeklyReview = useWeeklyReview();
 
   const approvals = approvalsQuery.data?.data ?? [];
   const items = useMemo(() => deckItems(approvals), [approvals]);
@@ -291,6 +297,7 @@ export function HomeScreen() {
       <HomeGlance
         view={address.view}
         day={worklistQuery.data}
+        week={weeklyReview.data}
         firstName={firstNameOf(me.data?.user?.display_name)}
         now={new Date(nowMs)}
       />

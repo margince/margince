@@ -2422,6 +2422,16 @@ export const de = {
   "brief.sentence.manyWithCost":
     "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
 
+  // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
+  "brief.week.won": "Sie haben {count} Abschlüsse gemacht.",
+  "brief.week.moved": "Sie haben {count} Deals vorangebracht.",
+  "brief.week.met": "Sie hatten {count} Termine.",
+  "brief.week.carryPromises": "{count} Zusagen sind offen geblieben.",
+  "brief.week.carryTasks": "{count} Aufgaben sind offen geblieben.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet":
+    "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
+
   "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
   "brief.donext.loading": "Was auf dich wartet, wird gelesen",
   "brief.donext.clear": "Gerade wartet nichts auf dich.",

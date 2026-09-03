@@ -331,6 +331,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
           // right value for them: the sentence is then absent, and the greeting
           // is what the assertion reads.
           day={undefined}
+          week={undefined}
         />
       </LocaleProvider>,
     );
@@ -366,6 +367,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
           day={undefined}
+          week={undefined}
         />
       </LocaleProvider>,
     );
@@ -376,6 +378,78 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
     // panels — so an unread queue leaves the header saying only the greeting.
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+});
+
+// ── The weekly speaks about its own week ──
+
+describe("HomeGlance — the weekly's sentence comes from the closed week", () => {
+  // Only what the sentence reads. A fuller review would let this suite pass
+  // over a composer reaching for a figure the weekly does not actually carry.
+  const CLOSED_WEEK = {
+    local_week_start: "2026-06-29",
+    counts: {
+      tasks_due: 0,
+      tasks_done: 0,
+      tasks_carried_over: 0,
+      deals_moved: 0,
+      deals_won: 2,
+      deals_lost: 0,
+      proposals_accepted: 0,
+      proposals_rejected: 0,
+      brief_items_acted: 0,
+      brief_items_dismissed: 0,
+      commitments_due: 3,
+      commitments_kept: 1,
+      leads_routed: 0,
+      leads_answered_in_target: 0,
+      leads_breached: 0,
+      meetings_held: 0,
+      meetings_with_next_step: 0,
+    },
+  } as unknown as Parameters<typeof HomeGlance>[0]["week"];
+
+  function sentenceOf(
+    view: BriefView,
+    week: Parameters<typeof HomeGlance>[0]["week"],
+  ): string | null {
+    const rendered = rtlRender(
+      <LocaleProvider initial="en">
+        <HomeGlance
+          view={view}
+          firstName="Ada"
+          now={new Date(2026, 6, 5, 9, 0, 0)}
+          // A read day, so the MORNING case has a sentence of its own to draw.
+          // Without it both views would fall silent and the assertion that they
+          // say different things would pass over a component saying neither.
+          day={readingsDay({})}
+          week={week}
+        />
+      </LocaleProvider>,
+    );
+    const text = screen.queryByTestId("glance-sentence")?.textContent ?? null;
+    rendered.unmount();
+    return text;
+  }
+
+  it("states the week's result and what it left behind", () => {
+    const said = sentenceOf("weekly", CLOSED_WEEK);
+    expect(said).toContain("closed 2");
+    expect(said).toContain("2 promises");
+  });
+
+  // The two views compose from different reads. Over the weekly the morning's
+  // sentence would be describing today under a heading about a closed week.
+  it("does not put the morning's sentence under the weekly's heading", () => {
+    expect(sentenceOf("weekly", CLOSED_WEEK)).not.toBe(
+      sentenceOf("morning", CLOSED_WEEK),
+    );
+  });
+
+  // A week still in flight, or one that failed to read. The heading names the
+  // view and claims nothing about it.
+  it("draws no sentence at all over a week it has not read", () => {
+    expect(sentenceOf("weekly", undefined)).toBeNull();
   });
 });
 
@@ -390,6 +464,7 @@ describe("HomeGlance — the eyebrow says when the queue was read", () => {
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
           day={day}
+          week={undefined}
         />
       </LocaleProvider>,
     );
