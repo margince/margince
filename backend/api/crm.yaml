@@ -36341,13 +36341,26 @@ components:
     TeamWeeklyCounts:
       type: object
       additionalProperties: false
-      required: [reps_counted, deals_won, deals_lost, leads_routed, leads_answered_in_target,
+      required: [reps_counted, deals_won, deals_lost, deals_moved, leads_routed,
+                 leads_answered_in_target,
                  leads_breached, meetings_held, meetings_with_next_step,
                  commitments_due, commitments_kept]
       properties:
         reps_counted: { type: integer, minimum: 0, description: 'Members whose week was read and totalled.' }
         deals_won: { type: integer, minimum: 0 }
         deals_lost: { type: integer, minimum: 0 }
+        deals_moved:
+          type: integer
+          minimum: 0
+          description: |
+            Deals that changed stage in the week without closing — what the team ADVANCED.
+
+            A count and never an amount. Advancing is a stage fact: a deal moving from
+            Proposal to Negotiation did not change price, so a "value advanced" figure would
+            count the deal's whole worth a second time beside the pipeline it already sits in.
+
+            Snapshots written before this figure existed carry zero. A count of zero is a
+            count, unlike a money sum of zero over deals nobody could price.
         leads_routed: { type: integer, minimum: 0 }
         leads_answered_in_target: { type: integer, minimum: 0 }
         leads_breached: { type: integer, minimum: 0 }

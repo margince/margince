@@ -2539,6 +2539,7 @@ export const en = {
   "teamweekly.movement.title": "What the week did",
   "teamweekly.movement.won": "Won",
   "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.moved": "Advanced",
   "teamweekly.movement.meetings": "Meetings held",
   "teamweekly.movement.leads": "Leads routed",
   "teamweekly.coach.title": "Coach this week",

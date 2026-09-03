@@ -2490,6 +2490,7 @@ export const de = {
   "teamweekly.movement.title": "Was die Woche bewegt hat",
   "teamweekly.movement.won": "Gewonnen",
   "teamweekly.movement.lost": "Verloren",
+  "teamweekly.movement.moved": "Vorangebracht",
   "teamweekly.movement.meetings": "Gehaltene Termine",
   "teamweekly.movement.leads": "Zugewiesene Leads",
   "teamweekly.coach.title": "Diese Woche begleiten",

@@ -27256,6 +27256,17 @@ export interface components {
             reps_counted: number;
             deals_won: number;
             deals_lost: number;
+            /**
+             * @description Deals that changed stage in the week without closing — what the team ADVANCED.
+             *
+             *     A count and never an amount. Advancing is a stage fact: a deal moving from
+             *     Proposal to Negotiation did not change price, so a "value advanced" figure would
+             *     count the deal's whole worth a second time beside the pipeline it already sits in.
+             *
+             *     Snapshots written before this figure existed carry zero. A count of zero is a
+             *     count, unlike a money sum of zero over deals nobody could price.
+             */
+            deals_moved: number;
             leads_routed: number;
             leads_answered_in_target: number;
             leads_breached: number;
