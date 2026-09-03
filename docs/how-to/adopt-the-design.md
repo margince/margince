@@ -393,7 +393,11 @@ the verbs as callbacks; that stays).
   labels and a `dcard` per document, room-wide threads below, and on the
   right `DealRoomAccess` (rows with capability, state, last seen, downloads,
   the row menu: issue a new link, change capability, revoke; the one-time
-  link dialog with mailed/copied), what is shared, the lifecycle. Every
+  link dialog with mailed/copied), what is shared, the lifecycle, and — new,
+  not on main today — **the deal behind this room**: the deal's standing word,
+  stage, value, whose move, committee coverage and next meeting, read from
+  the deal's own `useDealStatusCard`/`useDealCoverage` and drawn seller-only
+  (the buyer projection never carries it). Every
   `room.*` and `roompage.*` key stays; `FINISHED_STATES` and `refusalFor` keep
   removing the composer and the verbs.
 - **Buyer** (`buyerroom.tsx`, `buyerroom.css`): **not the app shell.** Keep
