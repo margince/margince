@@ -240,3 +240,38 @@ func TestAMergeIntoItselfIsRefusedBeforeAHumanIsAsked(t *testing.T) {
 		t.Errorf("the refusal is %T, want a bad-arguments answer the caller can act on", err)
 	}
 }
+
+// A merge naming a RETIRED word is refused before anything is staged, on
+// either side and for two different reasons.
+//
+// The retired TARGET is the case that costs most to miss. The approvals
+// surface only lets a human decide a staging whose target row is live, so an
+// approval staged against a retired tag is written, reaches nobody's inbox and
+// can never be released — an authority object with no reader, which is the
+// shape this confirm-first path exists to prevent rather than create.
+func TestAMergeNamingARetiredWordIsRefusedBeforeStaging(t *testing.T) {
+	t.Parallel()
+	live, retired := ids.NewV7(), ids.NewV7()
+	tags := stubTags{retired: map[ids.UUID]bool{retired: true}}
+	for _, tc := range []struct {
+		name           string
+		source, target ids.UUID
+	}{
+		{"the word being folded is retired", retired, live},
+		{"the surviving word is retired", live, retired},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := (mergeTags{tags: tags}).StageInfo(
+				context.Background(),
+				json.RawMessage(`{"tag_id":"`+tc.source.String()+`","into_tag_id":"`+tc.target.String()+`"}`))
+			if err == nil {
+				t.Fatal("the merge staged an approval, want a refusal before a human is asked")
+			}
+			var bad *BadArgsError
+			if !errors.As(err, &bad) {
+				t.Errorf("the refusal is %T, want a bad-arguments answer the caller can act on", err)
+			}
+		})
+	}
+}

@@ -33,6 +33,9 @@ type stubTags struct {
 	// tell the two apart. Empty falls back to knownTagName for every id, which
 	// is right for every verb that names one.
 	names map[ids.UUID]string
+	// retired answers Archived per id, so a verb that must refuse a retired
+	// word can be shown one. Absent means live, which is right everywhere else.
+	retired map[ids.UUID]bool
 }
 
 type createTagArgs struct {
@@ -121,7 +124,7 @@ func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
 		name = given
 	}
 	return TagDetail{
-		Tag:    Tag{TagID: tagID, Name: name},
+		Tag:    Tag{TagID: tagID, Name: name, Archived: s.retired[tagID]},
 		People: 2, Companies: 1, Deals: 0,
 	}, nil
 }

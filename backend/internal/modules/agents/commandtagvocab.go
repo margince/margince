@@ -72,23 +72,39 @@ func (r *mergeTagsResolver) Subject(ctx context.Context, cmd MergeTagsCommand) (
 	}, nil
 }
 
-// Guards refuses, before anything is staged, the two merges that were never
-// going to run: one whose tags the caller cannot see — GetTag answers a
-// row-scope miss as not-found, the existence-hiding answer the merge itself
-// would give — and one folding a tag into itself, which the store refuses at
-// the end of its own transaction (collections/tagvocab.go MergeTags).
+// Guards refuses, before anything is staged, every merge that was never going
+// to run: one whose tags the caller cannot see — GetTag answers a row-scope
+// miss as not-found, the existence-hiding answer the merge itself would give —
+// one folding a tag into itself, and one naming a RETIRED word on either side.
 //
-// The self-merge check is here rather than only in the store for the reason
-// every Guards states: a staging that reached a human would ask them to
-// release an act that dies on redemption, and the card would be gone with
-// nothing done.
+// The retired case is the one that costs most to miss, and it is not merely a
+// refusal arriving late. A staging whose target row is archived is refused by
+// approvals' own decidability probe (`targetVisible` requires
+// `archived_at IS NULL`), so the approval is written, appears in NOBODY's
+// inbox, and cannot be released by anyone — the zombie authority object this
+// whole confirm-first path exists to avoid. It has to be refused HERE, because
+// once the row is written there is no reader left to complain to.
+//
+// The source's own archived state is checked for the reason the self-merge is:
+// the store refuses it at the end of its transaction, so a human's one-shot
+// approval would be spent reaching that refusal with the card gone.
 func (r *mergeTagsResolver) Guards(ctx context.Context, cmd MergeTagsCommand) error {
 	if cmd.SourceID == cmd.TargetID {
 		return &BadArgsError{Cause: fmt.Errorf("a tag cannot be folded into itself")}
 	}
-	if _, err := r.tags.GetTag(ctx, cmd.SourceID); err != nil {
+	source, err := r.tags.GetTag(ctx, cmd.SourceID)
+	if err != nil {
 		return err
 	}
-	_, err := r.tags.GetTag(ctx, cmd.TargetID)
-	return err
+	if source.Archived {
+		return &BadArgsError{Cause: fmt.Errorf("the word being folded is already retired")}
+	}
+	target, err := r.tags.GetTag(ctx, cmd.TargetID)
+	if err != nil {
+		return err
+	}
+	if target.Archived {
+		return &BadArgsError{Cause: fmt.Errorf("the surviving word is retired, so it cannot take the records")}
+	}
+	return nil
 }
