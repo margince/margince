@@ -87,6 +87,14 @@ func (h Handlers) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request
 	httperr.WriteJSON(w, http.StatusCreated, commitmentToWire(out))
 }
 
+// The two literals only this file needs: the wire's null, and the code every
+// malformed value here answers with. The field names and the refusal codes the
+// STORE shares with its callers live in store.go.
+const (
+	jsonNull    = "null"
+	codeInvalid = "invalid"
+)
+
 // EditWeeklyPlanCommitment corrects one of the caller's own commitments.
 //
 // DECODED AS RAW KEYS, not into the generated struct, and that is forced by the
@@ -124,13 +132,13 @@ func editFromBody(body map[string]json.RawMessage) (CommitmentEdit, error) {
 		var label string
 		if err := json.Unmarshal(raw, &label); err != nil {
 			return edit, &values.ParseError{
-				Field: "label", Code: "invalid", Message: "a label is text",
+				Field: fieldLabel, Code: codeInvalid, Message: "a label is text",
 			}
 		}
 		edit.Label = &label
 	}
 	if raw, ok := body["due_on"]; ok {
-		due, err := parseEditDate(raw)
+		due, _, err := parseEditDate(raw)
 		if err != nil {
 			return edit, err
 		}
@@ -146,24 +154,28 @@ func editFromBody(body map[string]json.RawMessage) (CommitmentEdit, error) {
 	return edit, nil
 }
 
-// parseEditDate reads a date or an explicit null.
-func parseEditDate(raw json.RawMessage) (*time.Time, error) {
-	if string(raw) == "null" {
-		return nil, nil
+// parseEditDate reads a date, or an explicit null meaning "clear it".
+//
+// A nil day with a nil error is the ANSWER here, not a missing one: JSON null
+// on this field is a request to clear the date. Reported as a separate `ok`
+// rather than as (nil, nil), which reads at a call site as a value nobody
+// checked.
+func parseEditDate(raw json.RawMessage) (*time.Time, bool, error) {
+	if string(raw) == jsonNull {
+		return nil, true, nil
+	}
+	badDate := &values.ParseError{
+		Field: "due_on", Code: codeInvalid, Message: "a due date is a calendar day",
 	}
 	var text string
 	if err := json.Unmarshal(raw, &text); err != nil {
-		return nil, &values.ParseError{
-			Field: "due_on", Code: "invalid", Message: "a due date is a calendar day",
-		}
+		return nil, false, badDate
 	}
 	day, err := time.Parse(time.DateOnly, text)
 	if err != nil {
-		return nil, &values.ParseError{
-			Field: "due_on", Code: "invalid", Message: "a due date is a calendar day",
-		}
+		return nil, false, badDate
 	}
-	return &day, nil
+	return &day, true, nil
 }
 
 // parseEditLink reads a record link or an explicit null.
@@ -171,13 +183,13 @@ func parseEditDate(raw json.RawMessage) (*time.Time, error) {
 // A null unlinks, which reaches the store as the empty pair — the same shape
 // the store already treats as "this commitment is about no record".
 func parseEditLink(raw json.RawMessage) (string, ids.UUID, error) {
-	if string(raw) == "null" {
+	if string(raw) == jsonNull {
 		return "", ids.Nil, nil
 	}
 	var link crmcontracts.WeeklyPlanLink
 	if err := json.Unmarshal(raw, &link); err != nil {
 		return "", ids.Nil, &values.ParseError{
-			Field: "linked_record", Code: "invalid",
+			Field: "linked_record", Code: codeInvalid,
 			Message: "a linked record is a type and an id",
 		}
 	}

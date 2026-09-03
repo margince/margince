@@ -11007,6 +11007,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-plans/commitments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct what a commitment says, when it is due, or what it is about.
+         * @description The CALLER's own commitment, on an open week. A rep types a commitment on Monday and
+         *     finds the typo on Tuesday; without this the only way out is to drop the row and write
+         *     a new one, which discards the manager's answer and any help already asked for — the
+         *     two fields on the row that were never the rep's to throw away.
+         *
+         *     Every field is optional and only what is PRESENT changes. `due_on: null` clears the
+         *     date, which is a real state: something to do this week rather than by a day. Sending
+         *     `linked_record: null` unlinks the record.
+         *
+         *     State is not settable here. `PUT .../state` owns the move between open, done and
+         *     dropped because it ties `completed_at` to the state the schema's CHECK binds them
+         *     with, and two writers of that pair would drift.
+         */
+        patch: operations["editWeeklyPlanCommitment"];
+        trace?: never;
+    };
     "/weekly-plans/commitments/{id}/state": {
         parameters: {
             query?: never;
@@ -22734,6 +22765,24 @@ export interface components {
             /** @description Both halves or neither — a type with no id names nothing. */
             linked_record?: components["schemas"]["WeeklyPlanLink"];
             /** Format: date */
+            due_on?: string | null;
+        };
+        /**
+         * @description What a rep may correct about their own commitment. Only the fields PRESENT change —
+         *     an absent field is left alone, which is what lets a client send a new label without
+         *     also having to restate the due date it is not touching.
+         */
+        WeeklyPlanCommitmentEdit: {
+            label?: string;
+            /**
+             * @description Both halves or neither, as on create. Null unlinks the record, which is how a
+             *     commitment stops being about one without being rewritten.
+             */
+            linked_record?: components["schemas"]["WeeklyPlanLink"] | null;
+            /**
+             * Format: date
+             * @description Null clears the date — something to do this week, rather than by a day.
+             */
             due_on?: string | null;
         };
         /**
@@ -46268,6 +46317,34 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    editWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPlanCommitmentEdit"];
+            };
+        };
+        responses: {
+            /** @description Corrected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

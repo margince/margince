@@ -24,7 +24,26 @@ import (
 // a request for help is a paragraph, not a document.
 const (
 	labelBound = 500
-	proseBound = 2000
+)
+
+// The parse-error vocabulary this module answers with, and the field name its
+// update event carries.
+//
+// Named rather than typed at each site because a refusal code is what a client
+// BRANCHES on: two spellings of one code is a client that stops recognising
+// half of it. `week_closed` is the same refusal whether it comes from settling
+// a commitment or correcting one, and a reader of either path should land on
+// the same constant.
+const (
+	codeRequired   = "required"
+	codeWeekClosed = "week_closed"
+	fieldLabel     = "label"
+	fieldWeek      = "week"
+
+	// changedCommitments is the field name every write to a plan's commitments
+	// reports, so a consumer filtering on it sees all of them.
+	changedCommitments = "commitments"
+	proseBound         = 2000
 	// planCap bounds one week's list. A plan is what a person means to do in
 	// five days; past this it is a backlog, and a backlog belongs in tasks.
 	planCap = 50

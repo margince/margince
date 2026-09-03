@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // teammates is the membership seam, over the REAL identity service.
@@ -327,7 +328,7 @@ func countRows(t *testing.T, conn *pgx.Conn, ctx context.Context, query string, 
 // assertion is not only that the label moved: it is that the answer survived.
 func TestCorrectingACommitmentKeepsWhatItWasNotAbout(t *testing.T) {
 	e := setupPlan(t)
-	id := planCommitment(t, e, e.rep1Ctx, "Call the Aster buyer bakc")
+	id := planCommitment(t, e, e.rep1Ctx, "Call the Aster buyer on Monday")
 
 	if err := e.store.AskForHelp(e.rep1Ctx, id, "need the Q3 discount sheet"); err != nil {
 		t.Fatalf("asking for help: %v", err)
@@ -336,7 +337,7 @@ func TestCorrectingACommitmentKeepsWhatItWasNotAbout(t *testing.T) {
 		t.Fatalf("the lead answering: %v", err)
 	}
 
-	label := "Call the Aster buyer back"
+	label := "Call the Aster buyer on Tuesday"
 	if err := e.store.EditCommitment(e.rep1Ctx, id,
 		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
 		t.Fatalf("correcting the label: %v", err)
@@ -474,4 +475,28 @@ func commitmentByID(t *testing.T, plan weeklyplan.Plan, id ids.UUID) weeklyplan.
 	}
 	t.Fatalf("commitment %s is not on the plan", id)
 	return weeklyplan.Commitment{}
+}
+
+// A closed week is frozen into a review that has already been counted, so its
+// commitments stop being editable — the same refusal the settle path makes.
+func TestCorrectingACommitmentOnAClosedWeekIsRefused(t *testing.T) {
+	e := setupPlan(t)
+	id := planCommitment(t, e, e.rep1Ctx, "written while the week was open")
+
+	// CloseWeek settles the week BEFORE the instant it is given — the same
+	// window the review covers — so closing the week this commitment lives in
+	// means standing a week later.
+	if _, err := e.store.CloseWeek(e.rep1Ctx, planClock.AddDate(0, 0, 7)); err != nil {
+		t.Fatalf("closing the week: %v", err)
+	}
+
+	label := "rewritten after the close"
+	err := e.store.EditCommitment(e.rep1Ctx, id, weeklyplan.CommitmentEdit{Label: &label})
+	if err == nil {
+		t.Fatal("a commitment on a closed week was edited — the review's counts no longer agree with the rows they were counted from")
+	}
+	var parse *values.ParseError
+	if !errors.As(err, &parse) || parse.Code != "week_closed" {
+		t.Errorf("editing a closed week gave %v, wanted a week_closed refusal", err)
+	}
 }

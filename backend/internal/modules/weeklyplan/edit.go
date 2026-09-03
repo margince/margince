@@ -100,7 +100,7 @@ func (s *Store) EditCommitment(
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, owner, crmcontracts.PublicEventWeeklyPlanUpdated{
 			PlanId: openapi_types.UUID(planID), OwnerUserId: openapi_types.UUID(owner),
-			ChangedFields: []string{"commitments"},
+			ChangedFields: []string{changedCommitments},
 		})
 	})
 }
@@ -109,25 +109,25 @@ func (s *Store) EditCommitment(
 func (e CommitmentEdit) check() error {
 	if e.Label == nil && e.DueOn == nil && e.LinkedRecordType == nil {
 		return &values.ParseError{
-			Field: "label", Code: "required",
+			Field: fieldLabel, Code: codeRequired,
 			Message: "an edit has to change something",
 		}
 	}
 	if e.Label != nil {
-		label, err := bounded("label", *e.Label, labelBound)
+		label, err := bounded(fieldLabel, *e.Label, labelBound)
 		if err != nil {
 			return err
 		}
 		if label == "" {
 			return &values.ParseError{
-				Field: "label", Code: "required", Message: "a commitment needs saying in words",
+				Field: fieldLabel, Code: codeRequired, Message: "a commitment needs saying in words",
 			}
 		}
 	}
 	if e.LinkedRecordType != nil {
 		if e.LinkedRecordID == nil {
 			return &values.ParseError{
-				Field: "linked_record_id", Code: "required",
+				Field: "linked_record_id", Code: codeRequired,
 				Message: "a linked record needs both a type and an id",
 			}
 		}
@@ -135,7 +135,7 @@ func (e CommitmentEdit) check() error {
 	}
 	if e.LinkedRecordID != nil {
 		return &values.ParseError{
-			Field: "linked_record_type", Code: "required",
+			Field: "linked_record_type", Code: codeRequired,
 			Message: "a linked record needs both a type and an id",
 		}
 	}
@@ -153,7 +153,7 @@ func (e CommitmentEdit) check() error {
 func (e CommitmentEdit) patch(current Commitment) *storekit.Patch {
 	patch := storekit.NewPatch()
 	if e.Label != nil {
-		label, _ := bounded("label", *e.Label, labelBound)
+		label, _ := bounded(fieldLabel, *e.Label, labelBound)
 		if label != current.Label {
 			patch.Set("label", current.Label, label)
 		}
@@ -237,9 +237,9 @@ func ownEditableCommitmentTx(
 		return ids.Nil, Commitment{}, fmt.Errorf("weeklyplan: reading the commitment: %w", err)
 	}
 	// A closed week is frozen into a review that has already been counted.
-	if status != "open" {
+	if status != StateOpen {
 		return ids.Nil, Commitment{}, &values.ParseError{
-			Field: "week", Code: "week_closed",
+			Field: fieldWeek, Code: codeWeekClosed,
 			Message: "that week is closed and its outcome is recorded",
 		}
 	}
