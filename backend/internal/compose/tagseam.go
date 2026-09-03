@@ -175,12 +175,27 @@ func tagOf(id ids.TagID, name string, color *string, archived bool) agents.Tag {
 	return out
 }
 
+// The description is nil because `create_tag`'s schema does not offer one: a
+// tool that advertised the field would have to explain a word in a sentence
+// the model invented, and the HTTP door is where a curator writes that.
 func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (agents.Tag, error) {
-	row, err := a.store.CreateTag(ctx, name, color)
+	row, err := a.store.CreateTag(ctx, name, color, nil)
 	if err != nil {
 		return agents.Tag{}, err
 	}
 	return tagOf(row.ID, row.Name, row.Color, row.ArchivedAt != nil), nil
+}
+
+// MergeTags hands the store the two ids and nothing else: which tag survives is
+// the caller's decision, already made and already approved by a human, and the
+// store owns every refusal that remains (a self-merge, an archived target, a
+// word the caller may not read).
+func (a tagAdapter) MergeTags(ctx context.Context, source, target ids.UUID) (agents.TagMergeResult, error) {
+	out, err := a.store.MergeTags(ctx, ids.From[ids.TagKind](source), ids.From[ids.TagKind](target))
+	if err != nil {
+		return agents.TagMergeResult{}, err
+	}
+	return agents.TagMergeResult{Moved: out.Moved, Collapsed: out.Collapsed}, nil
 }
 
 func (a tagAdapter) UpdateTag(ctx context.Context, tagID ids.UUID, in agents.TagEdit) (agents.Tag, error) {

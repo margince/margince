@@ -1,6 +1,8 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { formatTimeOfDay } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meetingRow, readingsDay } from "./home.fixtures";
@@ -58,6 +60,36 @@ describe("the schedule panel", () => {
     draw(<SchedulePanel day={day} state="ready" />);
 
     expect(screen.getAllByText(en["worklist.needsPrep"])).toHaveLength(1);
+  });
+
+  // The panel is a list of TIMES. Without them it is the meetings count from
+  // the readings strip again, in a wider column — and a rep is told they have a
+  // meeting today and never told when.
+  //
+  // The start rides `due_at`, which is where the meeting lane puts it; the rows
+  // carry no `occurred_at` at all, because a meeting on today's schedule has
+  // not occurred yet. Reading that field drew every row with a blank gutter,
+  // and no fixture gave a meeting a time, so the panel's own suite rendered the
+  // empty branch and asserted around it.
+  it("draws each meeting's start time", () => {
+    const zone = viewerZone();
+    const day = readingsDay({}, [
+      meetingRow("m1", true, "2026-09-03T03:40:00Z"),
+      meetingRow("m2", true, "2026-09-03T13:15:00Z"),
+    ]);
+    draw(<SchedulePanel day={day} state="ready" />);
+
+    const times = screen
+      .getByRole("region")
+      .querySelectorAll(".rail-schedule-when");
+    expect(Array.from(times, (cell) => cell.textContent)).toEqual([
+      formatTimeOfDay("2026-09-03T03:40:00Z", "en", zone),
+      formatTimeOfDay("2026-09-03T13:15:00Z", "en", zone),
+    ]);
+    // Two DIFFERENT times, so a cell that rendered a constant — or the same
+    // row twice — cannot pass the comparison above.
+    expect(times[0].textContent).not.toBe(times[1].textContent);
+    expect(times[0].textContent).not.toBe("");
   });
 
   it("says the day is clear rather than drawing an empty panel", () => {

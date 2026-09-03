@@ -549,7 +549,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/stages":                                                    {Op: "createStage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/tags":                                                      {Op: "createTag", Access: "tool", Tool: "create_tag", RecordType: "tag", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/tags/{id}/apply":                                           {Op: "applyTag", Access: "tool", Tool: "apply_tag", RecordType: "tag", Tier: "auto_execute", Scope: "write"},
-	"POST /v1/tags/{id}/merge":                                           {Op: "mergeTags", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/tags/{id}/merge":                                           {Op: "mergeTags", Access: "tool", Tool: "merge_tags", RecordType: "tag", Tier: "confirmation_required", Scope: "write"},
 	"POST /v1/tags/{id}/restore":                                         {Op: "restoreTag", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/tasks":                                                     {Op: "createTask", Access: "tool", Tool: "create_task", RecordType: "activity", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/teams":                                                     {Op: "createTeam", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

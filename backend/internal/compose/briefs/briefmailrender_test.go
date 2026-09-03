@@ -144,8 +144,17 @@ func TestTheLinkIsOmittedRatherThanMailedBroken(t *testing.T) {
 	if strings.Contains(body, english().MorningOpenDay) {
 		t.Errorf("the closing line was drawn over an empty origin:\n%s", body)
 	}
+	// The WHOLE address, not the origin: the origin alone appears in every
+	// wrong answer too, so a substring check cannot tell the morning's link
+	// from one pointing at a view this message is not about.
 	withLink := MailBody(run(item(briefStateNew, "x")), "https://crm.example", english())
-	if !strings.Contains(withLink, "https://crm.example") {
+	if !strings.Contains(withLink, "https://crm.example/#/home") {
 		t.Errorf("the link is missing when there is a usable one:\n%s", withLink)
+	}
+	// And the morning is the Brief's DEFAULT view, so its address carries no
+	// parameter. One that named a view would be a second spelling of the
+	// default, which the frontend's own writer refuses to produce.
+	if strings.Contains(withLink, "view=") {
+		t.Errorf("the morning link named a view it did not need:\n%s", withLink)
 	}
 }

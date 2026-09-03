@@ -56,7 +56,7 @@ func TestThePersonListNarrowsByTagID(t *testing.T) {
 
 	tags := collections.NewStore(e.DB())
 	curator := tagCurator(e)
-	vip, err := tags.CreateTag(curator, "VIP", nil)
+	vip, err := tags.CreateTag(curator, "VIP", nil, nil)
 	if err != nil {
 		t.Fatalf("creating the tag: %v", err)
 	}

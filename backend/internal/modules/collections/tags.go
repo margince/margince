@@ -80,7 +80,10 @@ func (s *Store) ListTags(ctx context.Context, archived storekit.ArchivedFilter) 
 	return out, truncated, err
 }
 
-func (s *Store) CreateTag(ctx context.Context, name string, color *string) (tagRow, error) {
+// CreateTag coins a word. Colour and description are both optional and both
+// nullable, so a nil pointer is the column's own NULL rather than a default
+// this store invented.
+func (s *Store) CreateTag(ctx context.Context, name string, color, description *string) (tagRow, error) {
 	if err := auth.Require(ctx, "tag", principal.ActionCreate); err != nil {
 		return tagRow{}, err
 	}
@@ -91,9 +94,9 @@ func (s *Store) CreateTag(ctx context.Context, name string, color *string) (tagR
 	var out tagRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			INSERT INTO tag (name, color)
-			VALUES ($1, $2)
-			RETURNING `+tagColumns, name, color)
+			INSERT INTO tag (name, color, description)
+			VALUES ($1, $2, $3)
+			RETURNING `+tagColumns, name, color, description)
 		var err error
 		if out, err = scanTag(row); err != nil {
 			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "uq_tag_name" {
@@ -448,7 +451,7 @@ func (s *Store) NewTag(ctx context.Context, name, color string) (TagSummary, err
 	if color != "" {
 		colorArg = &color
 	}
-	row, err := s.CreateTag(ctx, name, colorArg)
+	row, err := s.CreateTag(ctx, name, colorArg, nil)
 	if err != nil {
 		return TagSummary{}, err
 	}

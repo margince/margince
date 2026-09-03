@@ -250,14 +250,26 @@ export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
 export type Worklist = components["schemas"]["Worklist"];
 type Readings = components["schemas"]["WorklistReadings"];
 
-/** One meeting row, prepared or not, as the queue would carry it. */
-export function meetingRow(id: string, prepared: boolean): WorklistItem {
+/**
+ * One meeting row, prepared or not, as the queue would carry it.
+ *
+ * `due_at` is the start, and it is not optional in the fixture because it is
+ * not optional on the wire: the meeting lane sets it on every row it produces.
+ * A fixture that left it off was the reason a panel which could never draw a
+ * time had a green test suite.
+ */
+export function meetingRow(
+  id: string,
+  prepared: boolean,
+  startsAt = "2026-09-03T09:30:00Z",
+): WorklistItem {
   return {
     id,
     source: "meeting",
     level: 3,
     category: "meetings",
     title: "Weber GmbH · quarterly review",
+    due_at: startsAt,
     because: prepared ? [] : [{ kind: "meeting_unprepared" }],
     consequence: prepared ? "none" : "meeting_unprepared",
     actions: ["open"],
