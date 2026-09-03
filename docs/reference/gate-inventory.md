@@ -87,7 +87,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (90)
+## Census (91)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -126,6 +126,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
+| `fliponehandle_test.go` | H2 | The overlay flip runs on ONE workspace binding, and this is what keeps it so. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
