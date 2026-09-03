@@ -208,6 +208,23 @@ var (
 			// narrower than AccountRepPerms, which already carries both.
 			"tag":  {Create: true, Read: true, Update: true, Delete: true},
 			"list": {Create: true, Read: true, Update: true, Delete: true},
+			// forecast is create+read for admin in the real seed and nothing
+			// else: a reading is written by the nightly pass and never edited,
+			// which is what createRead means there. The same drift tag and list
+			// had, found the same way — three forecast tools were unreachable
+			// in the conformance lane for want of a grant production gives.
+			"forecast": {Create: true, Read: true},
+			// data_coverage is read-only for admin in the real seed — how much
+			// of the pipeline a forecast could see is computed, never edited.
+			//
+			// Nothing exercises this one yet: its tool answers not-found until
+			// the nightly pass has run, so the conformance lane waives it. It
+			// is here because this file's premise is mirroring the seed, and it
+			// is the fourth drift found the same way after tag, list and
+			// forecast. Each was found by a puzzling ANSWER rather than by a
+			// refusal, which is what makes a fixture narrower than the seat it
+			// stands in for worth fixing on sight.
+			"data_coverage": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
