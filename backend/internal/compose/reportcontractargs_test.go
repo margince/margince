@@ -16,6 +16,9 @@ package compose
 // nobody reviewed.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"regexp"
 	"sort"
@@ -24,7 +27,13 @@ import (
 )
 
 // contractAggregateFns reads the fn enum out of RunReportRequest.
-var contractAggregateFns = regexp.MustCompile(`fn: \{ type: string, enum: \[([^\]]+)\] \}`)
+//
+// It matches the enum in EITHER YAML shape — inline on the `fn:` line, or as a
+// block under it. The first version matched only the inline form, and adding a
+// description to that property reformatted it into a block: the census then
+// found nothing and said so, which is the one thing it must do rather than
+// report a vacuous pass.
+var contractAggregateFns = regexp.MustCompile(`(?s)fn:.{0,200}?enum: \[([^\]]+)\]`)
 
 // contractPlanSlots reads the property names RunReportRequest declares.
 func TestTheContractOffersExactlyWhatTheEngineServes(t *testing.T) {
@@ -44,7 +53,12 @@ func TestTheContractOffersExactlyWhatTheEngineServes(t *testing.T) {
 		for _, fn := range strings.Split(m[1], ",") {
 			published = append(published, strings.TrimSpace(fn))
 		}
-		served := []string{aggFnCount, aggFnSum, aggFnAvg, aggFnMin, aggFnMax}
+		// The constants themselves, not a second list beside them. Written out
+		// here, this line is one more place the vocabulary is spelled — and it
+		// is the place that goes stale silently, because a function added to
+		// the engine and to the contract would leave this test passing on the
+		// pair it still remembers.
+		served := servedAggregateFns()
 		sort.Strings(published)
 		sort.Strings(served)
 		if strings.Join(published, ",") != strings.Join(served, ",") {
@@ -123,4 +137,37 @@ func requireNonEmptyCensus(t *testing.T, what string, found []string) {
 			"reindented under this test's pattern, and every assertion below "+
 			"would pass without comparing anything", what)
 	}
+}
+
+// servedAggregateFns is the aggregate vocabulary the engine actually switches
+// on, derived from aggregateSelect's own cases.
+//
+// Read from the source rather than restated: a function added to the switch and
+// forgotten here is exactly what this gate exists to notice, and a hand-kept
+// list would go stale in the direction that reads as success.
+func servedAggregateFns() []string {
+	const path = "report.go"
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		panic("compose: reading the aggregate vocabulary: " + err.Error())
+	}
+	var out []string
+	ast.Inspect(file, func(node ast.Node) bool {
+		spec, ok := node.(*ast.ValueSpec)
+		if !ok {
+			return true
+		}
+		for i, name := range spec.Names {
+			if !strings.HasPrefix(name.Name, "aggFn") || i >= len(spec.Values) {
+				continue
+			}
+			lit, ok := spec.Values[i].(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				continue
+			}
+			out = append(out, strings.Trim(lit.Value, `"`))
+		}
+		return true
+	})
+	return out
 }

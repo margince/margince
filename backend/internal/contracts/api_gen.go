@@ -10083,11 +10083,13 @@ func (e RowTagColor) Valid() bool {
 
 // Defines values for RunReportRequestAggregatesFn.
 const (
-	RunReportRequestAggregatesFnAvg   RunReportRequestAggregatesFn = "avg"
-	RunReportRequestAggregatesFnCount RunReportRequestAggregatesFn = "count"
-	RunReportRequestAggregatesFnMax   RunReportRequestAggregatesFn = "max"
-	RunReportRequestAggregatesFnMin   RunReportRequestAggregatesFn = "min"
-	RunReportRequestAggregatesFnSum   RunReportRequestAggregatesFn = "sum"
+	RunReportRequestAggregatesFnAvg    RunReportRequestAggregatesFn = "avg"
+	RunReportRequestAggregatesFnCount  RunReportRequestAggregatesFn = "count"
+	RunReportRequestAggregatesFnMax    RunReportRequestAggregatesFn = "max"
+	RunReportRequestAggregatesFnMedian RunReportRequestAggregatesFn = "median"
+	RunReportRequestAggregatesFnMin    RunReportRequestAggregatesFn = "min"
+	RunReportRequestAggregatesFnP75    RunReportRequestAggregatesFn = "p75"
+	RunReportRequestAggregatesFnSum    RunReportRequestAggregatesFn = "sum"
 )
 
 // Valid indicates whether the value is a known member of the RunReportRequestAggregatesFn enum.
@@ -10099,7 +10101,11 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 		return true
 	case RunReportRequestAggregatesFnMax:
 		return true
+	case RunReportRequestAggregatesFnMedian:
+		return true
 	case RunReportRequestAggregatesFnMin:
+		return true
+	case RunReportRequestAggregatesFnP75:
 		return true
 	case RunReportRequestAggregatesFnSum:
 		return true
@@ -28708,9 +28714,11 @@ type RowVersion = int64
 // reports"). Saved reports are not served; a UUID here is refused.
 type RunReportRequest struct {
 	Aggregates *[]struct {
-		As    *string                      `json:"as,omitempty"`
-		Field *string                      `json:"field,omitempty"`
-		Fn    RunReportRequestAggregatesFn `json:"fn"`
+		As    *string `json:"as,omitempty"`
+		Field *string `json:"field,omitempty"`
+
+		// Fn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
+		Fn RunReportRequestAggregatesFn `json:"fn"`
 	} `json:"aggregates,omitempty"`
 
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
@@ -28718,7 +28726,7 @@ type RunReportRequest struct {
 	GroupBy *[]string               `json:"group_by,omitempty"`
 }
 
-// RunReportRequestAggregatesFn defines model for RunReportRequest.Aggregates.Fn.
+// RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
 
 // SaveEmailSignatureRequest defines model for SaveEmailSignatureRequest.

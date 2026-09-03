@@ -23191,8 +23191,11 @@ export interface components {
             };
             group_by?: string[];
             aggregates?: {
-                /** @enum {string} */
-                fn: "count" | "sum" | "avg" | "min" | "max";
+                /**
+                 * @description `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
+                 * @enum {string}
+                 */
+                fn: "count" | "sum" | "avg" | "min" | "max" | "median" | "p75";
                 field?: string | null;
                 as?: string | null;
             }[];
