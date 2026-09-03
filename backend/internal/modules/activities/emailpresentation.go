@@ -390,7 +390,16 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	}
 	defer rows.Close()
 
-	var out emailParties
+	// Empty, not nil. Every one of these four is `required` in the contract, and
+	// a nil slice marshals to `null` rather than `[]` — so a message with
+	// nobody in copy served a null the viewer is entitled to treat as a list.
+	// It read `.length` off it and the drawer died where the message should be.
+	out := emailParties{
+		from: emptyParties(),
+		to:   emptyParties(),
+		cc:   emptyParties(),
+		bcc:  emptyParties(),
+	}
 	for rows.Next() {
 		var role, address string
 		var personID, userID *ids.UUID
