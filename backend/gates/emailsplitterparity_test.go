@@ -22,8 +22,12 @@ package gates
 // EMPTY rather than agreeing with a file it could not read.
 
 import (
+	"maps"
+	"slices"
 	"sort"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -63,10 +67,7 @@ func TestTheTwoEmailSplittersReadTheSameVocabulary(t *testing.T) {
 	inGo := goSplitterTables(t)
 	inTS := tsSplitterTables(t)
 
-	if len(splitterTables) != 8 {
-		t.Fatalf("splitterTables names %d vocabularies and the splitters carry 8 — a list that "+
-			"shrank reports PASS over a table nobody compares", len(splitterTables))
-	}
+	assertEverySplitterDeclarationIsPaired(t, inGo, inTS)
 	for _, table := range splitterTables {
 		goSide, ok := inGo[table.goName]
 		if !ok {
@@ -124,6 +125,49 @@ func compareVocabularies(t *testing.T, goName, tsName string, goSide, tsSide []s
 		}
 	}
 }
+
+// assertEverySplitterDeclarationIsPaired closes the direction the pair list
+// cannot see on its own.
+//
+// Comparing splitterTables against a count catches an entry DELETED from it. It
+// cannot catch one that was never added: a vocabulary declared on one side and
+// paired with nothing is a table this gate simply does not read, and a gate that
+// does not read a table agrees with it — which is the whole failure this file
+// exists to prevent, one level up.
+//
+// So the population is the parsed declarations themselves, and every one of them
+// is either paired here or ratified below with the reason it is not a
+// vocabulary at all.
+func assertEverySplitterDeclarationIsPaired(t *testing.T, inGo, inTS map[string][]string) {
+	t.Helper()
+	paired := map[string]bool{}
+	for _, table := range splitterTables {
+		paired[table.goName] = true
+		paired[table.tsName] = true
+	}
+	for side, declarations := range map[string]map[string][]string{goSplitter: inGo, tsSplitter: inTS} {
+		for _, name := range sortedEntries(slices.Collect(maps.Keys(declarations))) {
+			if paired[name] || notASharedVocabulary.Waived(t, name) {
+				continue
+			}
+			t.Errorf("%s declares %s and splitterTables pairs it with nothing, so this gate never reads it. "+
+				"Pair it with the other side's name, or say in notASharedVocabulary why it is not a shared "+
+				"vocabulary — an unpaired table is one the two splitters may already disagree about",
+				side, name)
+		}
+	}
+	notASharedVocabulary.AssertAllMatched(t)
+}
+
+// notASharedVocabulary names the declarations the readers can parse that are NOT
+// half of a mirrored pair, each with the reason. Ratified rather than filtered
+// out in the readers: a reader that skipped them would decide for itself what
+// counts as a vocabulary, and this is the file where that judgement belongs.
+var notASharedVocabulary = gatekit.Waive(map[string]string{
+	"collapseWhitespace": "the one-line collapse for a row preview, and the browser spells it inline in " +
+		"emailSummaryText's own replace rather than as a named const — there is no second declaration to " +
+		"pair it with, and the behaviour it drives is held by the summary tests on both sides",
+})
 
 func sortedEntries(entries []string) []string {
 	out := append([]string(nil), entries...)
