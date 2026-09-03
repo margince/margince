@@ -2483,6 +2483,8 @@ export const vi = {
   "plan.empty": "Chưa có gì trong kế hoạch.",
   "plan.none": "Bạn chưa lập kế hoạch cho tuần này.",
   "plan.start": "Lập kế hoạch tuần của tôi",
+  "plan.readOnly":
+    "Chế độ chỉ đọc \u2014 bạn không có quyền lập kế hoạch tuần hay chốt một cam kết ở đây.",
   "plan.add": "Thêm cam kết",
   "plan.saveRefused_one":
     "Không lưu được một cam kết. Mục này vẫn được tick — hãy thử lại.",

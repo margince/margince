@@ -2556,6 +2556,8 @@ export const en = {
   "plan.empty": "Nothing on the plan yet.",
   "plan.none": "You have not planned this week yet.",
   "plan.start": "Plan my week",
+  "plan.readOnly":
+    "Read-only view \u2014 planning a week and settling a commitment are not yours to do here.",
   "plan.add": "Add commitment",
   "plan.saveRefused_one":
     "One commitment could not be saved. It is still ticked — try again.",

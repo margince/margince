@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -17,6 +18,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMe } from "./common";
 import { EntityRef } from "./entityref";
 import {
   type SettableState,
@@ -87,6 +89,14 @@ export function PlanSection() {
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
   const plural = usePlural();
+  const me = useMe();
+  // Bound to the grant each CONTROL asks for, because the two diverge: opening
+  // a week is `weekly_plan.create` and everything after it is `update`. A seat
+  // the server refuses is offered nothing — a control that exists in order to
+  // fail is worse than no control, and this panel's writes reach nothing that
+  // draws when they are refused.
+  const canStart = useCanWrite("weekly_plan", "create");
+  const canEdit = useCanWrite("weekly_plan", "update");
   // Ticking a box stages it; nothing reaches the wire until Save. The design
   // system's rule is that a control which IS the write is a Switch and one that
   // stages a choice is a Checkbox, so this set is what makes the checkbox
@@ -107,7 +117,12 @@ export function PlanSection() {
   // A closed week is history. The weekly job settles it and freezes its outcome
   // into the review, so accepting an edit afterwards would make the review's
   // counts disagree with the rows they were counted from.
-  const editable = plan.data?.status === "open";
+  const editable = canEdit && plan.data?.status === "open";
+  // The posture, said once, rather than a refusal repeated on every row. It
+  // waits on the probe: /me in flight is not a denial, and branching before it
+  // answers would flash the sentence at every reader. A closed week says
+  // nothing here — it is not this seat that the plan is shut to.
+  const readOnly = me.isSuccess && !canEdit && !canStart;
 
   function toggle(id: string) {
     setStaged((current) => {
@@ -200,12 +215,25 @@ export function PlanSection() {
           loadingLabel={t("plan.loading")}
           detail={{ onRetry: () => void plan.refetch() }}
         >
+          {readOnly && (
+            <PanelBody>
+              <p className="t-caption plan-readonly">{t("plan.readOnly")}</p>
+            </PanelBody>
+          )}
           {plan.isSuccess && plan.data === null && (
             <PanelBody>
               <p>{t("plan.none")}</p>
-              <Button onClick={() => start.mutate()} disabled={start.isPending}>
-                {t("plan.start")}
-              </Button>
+              {/* The sentence above is a fact about the week and stays for
+                  every reader. The button is only an act, so a seat that may
+                  not perform it is shown none. */}
+              {canStart && (
+                <Button
+                  onClick={() => start.mutate()}
+                  disabled={start.isPending}
+                >
+                  {t("plan.start")}
+                </Button>
+              )}
             </PanelBody>
           )}
           {plan.data && (

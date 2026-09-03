@@ -2507,6 +2507,8 @@ export const de = {
   "plan.empty": "Noch nichts auf dem Plan.",
   "plan.none": "Du hast diese Woche noch nicht geplant.",
   "plan.start": "Meine Woche planen",
+  "plan.readOnly":
+    "Nur-Lese-Ansicht \u2014 eine Woche zu planen und eine Zusage abzuschlie\u00dfen ist hier nicht deine Aufgabe.",
   "plan.add": "Vorhaben hinzufügen",
   "plan.saveRefused_one":
     "Eine Zusage konnte nicht gespeichert werden. Sie ist weiterhin angehakt — bitte erneut versuchen.",
