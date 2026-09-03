@@ -18,7 +18,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { humanizeToken } from "./audit";
 import {
@@ -166,6 +166,7 @@ function OverrideModal({
 
 export function RestrictedRecordsCard() {
   const t = useT();
+  const plural = usePlural();
   const me = useMe();
   const { locale } = useLocale();
   const tz = viewerZone();
@@ -271,9 +272,13 @@ export function RestrictedRecordsCard() {
       render: (row: RestrictedRecord) =>
         (row.redacted_fields ?? []).length === 0
           ? t("restricted.nothingRedacted")
-          : t("restricted.redactedCount", {
-              count: formatNumber((row.redacted_fields ?? []).length, locale),
-            }),
+          : plural(
+              "restricted.redactedCount",
+              (row.redacted_fields ?? []).length,
+              {
+                count: formatNumber((row.redacted_fields ?? []).length, locale),
+              },
+            ),
     },
   ];
   if (canDecide) {
