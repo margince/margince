@@ -131,14 +131,34 @@ const firstResponseSQL = `
 // snooze that lifted and a not_mine somebody withdrew have left no trace in it.
 // The audit row is the only record that the judgement was ever made, which is
 // what a rate over a window needs.
+//
+// The states are NAMED, and the earlier `IS NOT NULL` is the reason. Four verbs
+// write this column and two of them are UNDO — `picked_up` takes back a
+// not_mine, `sales_again` takes back a not_sales — so counting every non-null
+// value scored a rep who set a row aside and then thought better of it at TWO
+// dispositions rather than none. The figure ran backwards for exactly the
+// behaviour it should reward, and read as more judgement the more of it was
+// withdrawn.
 const dispositionsSQL = `
-	SELECT count(*) FILTER (WHERE a.after->>'disposition' IS NOT NULL),
-	       count(*) FILTER (WHERE a.after->>'disposition' = 'not_sales')
+	SELECT count(*) FILTER (WHERE a.after->>'disposition' = ANY($3)),
+	       count(*) FILTER (WHERE a.after->>'disposition' = $4)
 	  FROM audit_log a
 	 WHERE a.entity_type = 'activity'
 	   AND a.action = 'update'
 	   AND a.occurred_at >= $1
 	   AND a.occurred_at < $2`
+
+// puttingDown is the set of verbs that PUT a row down, as against the two that
+// pick one back up.
+//
+// A function rather than a package var so no caller can append to the answer
+// another caller is about to read — the shape every enumerated set in this tree
+// takes. `stateNotSales` is spelled beside its siblings here rather than only
+// inside the writer, because a figure counting a state nothing writes is a
+// silent zero and reads exactly like a quiet fortnight.
+func puttingDown() []string {
+	return []string{stateSnoozed, stateNotMine, stateNotSales}
+}
 
 // ResponseWindow reads both figures over one window.
 //
@@ -186,7 +206,7 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 		// audit row records that a JUDGEMENT was made, not what the message
 		// said, and the count is over the workspace's own bookkeeping. The
 		// workspace binding is the transaction's.
-		if err := tx.QueryRow(ctx, dispositionsSQL, from, to).
+		if err := tx.QueryRow(ctx, dispositionsSQL, from, to, puttingDown(), stateNotSales).
 			Scan(&out.Disposed, &out.DisposedNotSales); err != nil {
 			return fmt.Errorf("activities: reading disposition counts: %w", err)
 		}

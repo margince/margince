@@ -332,3 +332,86 @@ func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
 			before.Answered, after.Answered)
 	}
 }
+
+// Putting a row down and picking it back up counts as NOTHING.
+//
+// Four verbs write this column and two of them are UNDO. Counting every
+// non-null value scored the rep who set a message aside and then thought better
+// of it at TWO dispositions rather than none — so the figure ran backwards for
+// exactly the behaviour it should reward, and the careful self-correcting rep
+// scored worst on a number a manager reads.
+//
+// Written through the STORE's own verbs rather than by inserting audit rows.
+// The defect is in which states the reader counts, so a test that hand-writes
+// the audit row is a test agreeing with itself about what the writer produces.
+func TestSettingARowAsideAndTakingItBackCountsAsNoDisposition(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "Second thoughts", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := metricsStore(e)
+	id := ids.From[ids.ActivityKind](activity)
+	if err := store.SetMessageNotMine(e.as(), id); err != nil {
+		t.Fatalf("setting the message aside: %v", err)
+	}
+	// The undo, through the verb a rep actually presses.
+	if err := store.ClearMessageDisposition(e.as(), id); err != nil {
+		t.Fatalf("taking it back: %v", err)
+	}
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ONE, not two and not zero: the not_mine really happened and is counted,
+	// and the picked_up that undid it is not a second act of judgement.
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("a set-aside and its undo counted %d dispositions, want the one "+
+			"judgement — the undo is not a second one",
+			after.Disposed-before.Disposed)
+	}
+}
+
+// The same for the workspace-wide judgement, which has its own undo verb.
+func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "Not sales after all", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := metricsStore(e)
+	id := ids.From[ids.ActivityKind](activity)
+	if err := store.SetThreadNotSales(e.as(), id); err != nil {
+		t.Fatalf("judging the thread: %v", err)
+	}
+	if err := store.ClearThreadNotSales(e.as(), id); err != nil {
+		t.Fatalf("taking the judgement back: %v", err)
+	}
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("a not_sales and its undo counted %d dispositions, want the one",
+			after.Disposed-before.Disposed)
+	}
+	// And the sales_again does not inflate the figure that costs everybody.
+	if after.DisposedNotSales != before.DisposedNotSales+1 {
+		t.Fatalf("the workspace-wide figure counted %d, want the one judgement",
+			after.DisposedNotSales-before.DisposedNotSales)
+	}
+}
