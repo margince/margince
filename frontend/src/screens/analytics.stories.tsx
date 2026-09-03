@@ -162,6 +162,20 @@ const derivation = {
   ],
 };
 
+// The source rows behind the first stage of the pipeline table — the cell that
+// section's own handle is bound to. Same obligation as the forecast one: the
+// rows reconcile to the figure the card was opened from.
+const stageDerivation = {
+  report: "deals-by-stage",
+  definition: "Sum of open-deal amounts in the Qualified stage, in EUR",
+  plan: {},
+  columns: ["deal", "amount"],
+  rows: [
+    { deal: "BÄR Pharma — Packaging QA", amount: "€146.86" },
+    { deal: "Brandt — Line QA Retrofit", amount: "€100.00" },
+  ],
+};
+
 const routes: RouteMap = {
   "GET /me": meRoute({}),
   "GET /pipelines": () => jsonResponse(pipelines),
@@ -174,6 +188,13 @@ const routes: RouteMap = {
   // — both required of a ReportDerivation — so a missing route here reaches the
   // explain card as a 200 the screen has every right to trust.
   "GET /reports/forecast/derivation": () => jsonResponse(derivation),
+  // EVERY report whose card a story opens needs its own derivation routed, for
+  // the same reason. The pipeline section carries three explain verbs and none
+  // of them was routed, so opening one reached the card with a body that had no
+  // `rows` at all and the card threw reading their length.
+  "GET /reports/deals-by-stage/derivation": () => jsonResponse(stageDerivation),
+  "GET /reports/open-deals-per-company/derivation": () =>
+    jsonResponse({ ...stageDerivation, report: "open-deals-per-company" }),
 };
 
 function screenStory() {
@@ -216,11 +237,30 @@ export const Pipeline: Story = {
   play: clickButton("Pipeline"),
 };
 
-// "Explain this number" open on the section the screen opens on: the report
-// card above, the derivation card below it, both the same titled-card surface.
+// "Explain this number" open, with the report card above it and the derivation
+// card below — both the same titled-card surface.
+//
+// On the PIPELINE section, and reached by opening it first. The Forecast
+// section the screen opens on has no explain verb of its own any more: it is
+// the period's current call and the readings behind it, which state their own
+// basis rather than deriving a figure. Clicking blind on whatever section
+// happened to be open is what left this story pressing a button that was no
+// longer there.
+//
+// The FIRST of the section's three verbs. Each report card carries one, so a
+// lookup by name alone matches three buttons and resolves to none.
 export const Explain: Story = {
   render: screenStory,
-  play: clickButton("Explain this number"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Pipeline" }),
+    );
+    const verbs = await canvas.findAllByRole("button", {
+      name: "Explain this number",
+    });
+    await userEvent.click(verbs[0]);
+  },
 };
 
 // The three absences a slot has to tell apart, side by side, because they are

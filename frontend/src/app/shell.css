@@ -533,19 +533,15 @@
    a heading and a divider do the same job, and stacking both says it twice. */
 .rail .navheading {
   position: relative;
-<<<<<<< HEAD
   font-size: 11px;
   font-weight: var(--fw-medium);
   color: var(--textMeta);
   margin: 0 0 var(--space-1);
   padding: 0 14px; /* ds:ignore the nav rows' own inset, which this label stands on */
-=======
-  padding: 0 var(--railTextInset);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
      the text cursor, which offers a selection nobody wants over a word that
      answers no press. */
   cursor: default;
->>>>>>> c4e104d12 (fix(deals): the stage head holds its place and says how much is in it)
 }
 /* Collapsed: the heading keeps its exact box (same font metrics, same margins)
    so the rows below never re-space; the text goes transparent and a hairline is
