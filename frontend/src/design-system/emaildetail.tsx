@@ -171,9 +171,21 @@ function EmailBody({
     <div className="emaildetail__body">
       <Parties presentation={presentation} />
       <p className="emaildetail__main">{parts.main}</p>
-      {/* Kept and folded rather than dropped: a splitter that guesses wrong
-          must stay one press from being wrong in public. */}
-      {parts.trimmed && (
+      {/* A SIGN-OFF is the sender still speaking, and it is two lines. It is
+          shown, quietly, under the message it belongs to.
+
+          Folding it away was the defect: the tail was one field for two
+          different things, so a message ending "Viele Grüße / Bảo" and no
+          quoted reply at all put the sender's own name behind a control
+          promising history that was not there. A reader pressed nothing,
+          because the label said the thing they did not want. */}
+      {parts.tail === "signature" && (
+        <p className="emaildetail__signoff">{parts.trimmed}</p>
+      )}
+      {/* An older message under this one. Kept and folded rather than dropped:
+          a splitter that guesses wrong must stay one press from being wrong in
+          public. */}
+      {parts.tail === "quote" && (
         <details className="emaildetail__quoted">
           <summary>{t("email.detail.showQuoted")}</summary>
           <p>{parts.trimmed}</p>
