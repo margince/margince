@@ -62,6 +62,11 @@ type Verdict struct {
 	// one did. Recording WHICH event is what makes the Art 6(1)(f) balancing
 	// accountable rather than merely asserted.
 	Qualifying *QualifyingEvent
+	// Code names the block in a form code can read, because the engine has to
+	// tell an Art. 21 objection from a withdrawal from a deployment fact — and
+	// matching on Reason, which is an operator-facing sentence, means an
+	// ordinary copy edit silently reclassifies a legal fact.
+	Code string
 	// QualifyingDerived marks a Qualifying that was READ OFF the timeline
 	// rather than read from a stored row.
 	//
@@ -118,7 +123,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{}, err
 	}
 	if suppressed {
-		return Verdict{State: VerdictBlocked, Reason: objectionReason(at)}, nil
+		return Verdict{State: VerdictBlocked, Reason: objectionReason(at), Code: BlockObjection}, nil
 	}
 
 	switch purpose.Class {
@@ -150,7 +155,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
 		// surface that offered it would offer a path nothing implements.
-		return Verdict{State: VerdictBlocked, Reason: "no call path is configured"}, nil
+		return Verdict{State: VerdictBlocked, Reason: "no call path is configured", Code: BlockNoChannel}, nil
 
 	default:
 		return marketingVerdict(ctx, tx, personID, purpose)
@@ -171,7 +176,7 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{State: VerdictAllowed, Reason: "they gave consent, with the confirmation on file"}, nil
 	}
 	if state == string(StateWithdrawn) {
-		return Verdict{State: VerdictBlocked, Reason: "they withdrew consent for this purpose"}, nil
+		return Verdict{State: VerdictBlocked, Reason: "they withdrew consent for this purpose", Code: BlockWithdrawn}, nil
 	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed. The BGH evidence standard is the whole
@@ -180,6 +185,7 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{
 			State:  VerdictBlocked,
 			Reason: "consent was recorded but never confirmed by the double opt-in",
+			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
 	flagged, err := existingCustomerFlag(ctx, tx, personID)

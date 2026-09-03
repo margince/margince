@@ -26,11 +26,18 @@ const (
 	ReasonNoSubject = "recipient_resolves_to_no_single_subject"
 	// ReasonNoMarketingConsent is marketing without a grant or an exception.
 	ReasonNoMarketingConsent = "no_marketing_consent"
+	// ReasonConsentWithdrawn is Art. 7(3): the subject took a consent back.
+	// Distinct from an objection because they are different legal facts, and a
+	// proof row that called one the other would misstate what somebody did.
+	ReasonConsentWithdrawn = "consent_withdrawn"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 )
 
 // absoluteDenials are the refusals no rollout mode may soften.
+//
+// Held by: TestAbsoluteDenialsSurviveEveryMode (commsauthz_test.go), which
+// fails if any member stops denying under observe or warn.
 //
 // Observe mode exists so a new engine can be measured against the old gate
 // without blocking legitimate mail while the two are compared. It does NOT
@@ -43,6 +50,18 @@ var absoluteDenials = map[string]bool{
 	ReasonRestricted:     true,
 	ReasonHardBounce:     true,
 	ReasonUnconfirmedDOI: true,
+	// A recipient the engine cannot resolve to exactly one subject is the
+	// fifth, and it belongs here for a different reason than the other four:
+	// they are refusals ABOUT somebody, this one is the admission that nobody
+	// knows who the message is going to. No suppression, objection or consent
+	// state can be read for a subject that was never identified, so letting a
+	// rollout mode soften it would send precisely the messages nothing was
+	// able to check.
+	ReasonNoSubject: true,
+	// A withdrawal is the subject saying stop. It is a different act from an
+	// objection and gets its own code, but it binds exactly as hard: no
+	// rollout mode may send to somebody who took their consent back.
+	ReasonConsentWithdrawn: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

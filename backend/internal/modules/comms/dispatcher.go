@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -171,7 +172,8 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 	// Gate: suppression and consent, which are one step — one-click
 	// unsubscribe writes a per-purpose consent withdrawal, so this gate IS
 	// the suppression mechanism.
-	if outcome, wait, err := d.gateConsent(ctx, del); outcome != outcomeUndecided {
+	ticket, outcome, wait, err := d.gateConsent(ctx, del)
+	if outcome != outcomeUndecided {
 		return outcome, wait, err
 	}
 
@@ -204,7 +206,7 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 		return d.park(ctx, del.ID, fmt.Sprintf("the retry ladder is exhausted after %d attempts", del.Attempts))
 	}
 
-	return d.transmit(ctx, del, seam)
+	return d.transmit(ctx, del, seam, ticket)
 }
 
 // pace applies the policy chain. The chain is ordered and the first non-zero
@@ -234,7 +236,15 @@ func (d *Dispatcher) pace(ctx context.Context, del Delivery) (Outcome, time.Dura
 // transmit hands the message to the provider and records what came back. The
 // seam already carries the shape-specific half (sendseam.go), so what follows is
 // the same for a mail message and a channel one.
-func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam) (Outcome, time.Duration, error) {
+func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam, ticket commsauthz.TransmitTicket) (Outcome, time.Duration, error) {
+	// The last thing checked before the wire, and the reason the ticket is
+	// threaded down here rather than trusted from three frames up: a send that
+	// reaches a provider without a decision recorded for THIS delivery and THIS
+	// attempt is a send nobody can account for afterwards. A stale attempt is
+	// as bad as none — it belongs to a try whose world may already have moved.
+	if !ticket.Current(del.ID, del.Attempts) {
+		return d.park(ctx, del.ID, "no current authorization decision covers this attempt")
+	}
 	// The attachment BYTES, resolved before the marker below and not inside the
 	// provider call.
 	//

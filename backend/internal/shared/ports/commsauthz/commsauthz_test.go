@@ -34,6 +34,7 @@ func TestAnEmptySetIsNotAllowed(t *testing.T) {
 func TestAbsoluteDenialsSurviveEveryMode(t *testing.T) {
 	for _, reason := range []string{
 		ReasonObjection, ReasonRestricted, ReasonHardBounce, ReasonUnconfirmedDOI,
+		ReasonNoSubject, ReasonConsentWithdrawn,
 	} {
 		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
 		for _, mode := range []Mode{ModeObserve, ModeWarn, ModeEnforce} {
