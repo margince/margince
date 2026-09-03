@@ -72,20 +72,25 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                 })}
               </span>
             )}
+            {/* The RECORD'S OWN NAME in the verb, not "Keep this one" twice.
+                Two identically named buttons over an irreversible merge leave
+                a reader who is not looking at the layout — a screen reader,
+                a keyboard walking the controls — no way to tell which record
+                they are about to archive. */}
             <Button
               small
               variant="primary"
-              disabled={decide.isPending}
+              pending={decide.isPending}
               onClick={() => answer("merge", side.id)}
             >
-              {t("worklist.pair.keep")}
+              {t("worklist.pair.keep", { name: side.label })}
             </Button>
           </li>
         ))}
       </ul>
       <Button
         small
-        disabled={decide.isPending}
+        pending={decide.isPending}
         onClick={() => answer("not_a_duplicate")}
       >
         {t("worklist.pair.notDuplicate")}

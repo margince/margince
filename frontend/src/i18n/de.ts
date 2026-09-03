@@ -7684,7 +7684,7 @@ export const de = {
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
   "worklist.pair.ask": "Welcher Datensatz soll bleiben?",
-  "worklist.pair.keep": "Diesen behalten",
+  "worklist.pair.keep": "{name} behalten",
   "worklist.pair.notDuplicate": "Nicht dieselben",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":

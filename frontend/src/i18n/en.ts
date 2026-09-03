@@ -7761,7 +7761,7 @@ export const en = {
   "worklist.partial": "{sources}, so this is not the whole day.",
   "worklist.overdue": "Overdue",
   "worklist.pair.ask": "Which record should survive?",
-  "worklist.pair.keep": "Keep this one",
+  "worklist.pair.keep": "Keep {name}",
   "worklist.pair.notDuplicate": "Not the same",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",

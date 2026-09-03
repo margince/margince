@@ -101,6 +101,16 @@ describe("deciding a duplicate pair on the row", () => {
     expect(screen.getByText("1 linked")).toBeTruthy();
   });
 
+  // Each verb NAMES the record it keeps. Two buttons reading alike over an
+  // irreversible merge leave a reader who is not looking at the layout no way
+  // to tell which record they are about to archive — and a test picking one by
+  // index would not notice, which is how the identical pair got this far.
+  it("names the record each verb would keep", () => {
+    draw(pairRow());
+    expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
+  });
+
   // THE case this component exists for. Merging KEEPS one record and archives
   // the other, so the winner must be the one the reader pressed — picking for
   // them would be the product deciding which of a customer's records is real.
@@ -108,9 +118,10 @@ describe("deciding a duplicate pair on the row", () => {
     const fetched = stubOk();
     draw(pairRow());
 
-    // The second side's button: the reader kept the one with fewer links.
+    // BY NAME, not by position: this is the assertion that the button the
+    // reader believes they pressed is the record that survives.
     await userEvent.click(
-      screen.getAllByRole("button", { name: "Keep this one" })[1],
+      screen.getByRole("button", { name: "Keep ACME Gmbh" }),
     );
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());

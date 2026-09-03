@@ -7595,7 +7595,7 @@ export const vi = {
   "worklist.partial": "{sources}, nên đây chưa phải cả ngày.",
   "worklist.overdue": "Quá hạn",
   "worklist.pair.ask": "Giữ lại bản ghi nào?",
-  "worklist.pair.keep": "Giữ bản này",
+  "worklist.pair.keep": "Giữ {name}",
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
