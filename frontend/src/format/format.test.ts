@@ -10,6 +10,7 @@ import {
   formatMoney,
   formatMoneyOrAbsent,
   formatNumber,
+  formatSignedMoney,
   formatTimeOfDay,
   formatUsdPerMTok,
   identifierNumber,
@@ -38,6 +39,35 @@ describe("money formatting (B-EP09.17)", () => {
   it("respects the currency's minor-unit scale", () => {
     // JPY has zero minor digits — 1234 minor units is ¥1,234, not ¥12.34
     expect(formatMoney(1234, "JPY", "en")).toContain("1,234");
+  });
+
+  // The SIGNED money formatter takes the same minor-unit scale. It is a second
+  // function doing the conversion, so a regression here is invisible to every
+  // formatMoney case above — and a yen delta rendered with two decimals is
+  // wrong by a factor of a hundred.
+  it("respects the currency's minor-unit scale for a change too", () => {
+    // EXACT strings, not `toContain`. The amount is converted by
+    // `toMajorUnits`, which reads the currency itself, so a wrong digit count
+    // does not move the figure — it appends decimals a currency with no
+    // subunit does not have. "+¥1,234.00" contains "1,234" and is still wrong,
+    // which is how a looser assertion passed over exactly this defect.
+    expect(formatSignedMoney(1234, "JPY", "en")).toBe("+JP¥1,234");
+    expect(formatSignedMoney(1_284_000, "VND", "vi")).toBe("+1.284.000\u00a0₫");
+  });
+
+  // The sign always shows: a bare figure beside last week's leaves the reader
+  // to work out which way it moved, and half of them will guess.
+  it("always draws the direction a money change moved", () => {
+    expect(formatSignedMoney(250000, "EUR", "en")).toContain("+");
+    expect(formatSignedMoney(-250000, "EUR", "en")).toMatch(/[-−]/);
+  });
+
+  // A week that matched the one before is a real answer. "+0" dresses it as
+  // growth, which is a small lie repeated weekly.
+  it("marks an exactly level change with ± rather than +", () => {
+    const level = formatSignedMoney(0, "EUR", "en");
+    expect(level).toContain("±");
+    expect(level).not.toContain("+");
   });
 
   // VND is a zero-decimal currency: formatMoney divides by

@@ -2552,6 +2552,7 @@ export const de = {
   "home.weekly.queueWorked": "Morgen-Liste",
   "home.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
   "home.weekly.sincePrior": "{delta} ggü. Vorwoche",
+  "home.weekly.wonVsPrior": "{value} · {delta} zur Vorwoche",
   "home.weekly.leadsAnswered": "Leads rechtzeitig beantwortet",
   "home.weekly.ofRouted": "{answered} von {routed}",
   "home.weekly.planCommitmentsKept": "Planzusagen eingehalten",

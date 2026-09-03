@@ -245,6 +245,37 @@ export function formatSignedNumber(value: number, locale: Locale): string {
 }
 
 /**
+ * A CHANGE in money: "+€3,000", "-€1,200", "±€0".
+ *
+ * The money counterpart to `formatSignedNumber`, and it keeps both of that
+ * function's rules — the sign always shows, because a bare figure beside last
+ * week's leaves the direction to be guessed; and an exactly level result prints
+ * "±" rather than "+", because a week that matched the one before is a real
+ * answer and dressing it as growth is a small lie repeated weekly.
+ *
+ * It goes through the same minor-unit conversion `formatMoney` uses rather than
+ * dividing by a hundred: the fraction digits differ by currency, and a yen
+ * delta rendered with two decimals is off by a factor of a hundred.
+ */
+export function formatSignedMoney(
+  amountMinor: number,
+  currency: string,
+  locale: Locale,
+): string {
+  const digits = minorUnitDigits(currency);
+  const formatted = new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: "always",
+  }).format(toMajorUnits(amountMinor, currency));
+  // Intl has no "±", so the zero case is spelled here — over the FORMATTED
+  // string, so the currency symbol keeps whatever position the locale gives it.
+  return amountMinor === 0 ? formatted.replace("+", "±") : formatted;
+}
+
+/**
  * A number that NAMES something rather than measuring it — a version, a
  * revision, an invoice number, a record's own number.
  *

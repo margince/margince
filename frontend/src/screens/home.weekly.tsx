@@ -15,9 +15,10 @@ import {
   formatDateTime,
   formatMoney,
   formatNumber,
+  formatSignedMoney,
   formatSignedNumber,
 } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   useWeeklyReview,
@@ -245,24 +246,50 @@ function readState(
 }
 
 /**
- * What the week's wins were worth, or nothing.
+ * What the week's wins were worth, and whether that beat the week before.
  *
- * NOTHING, not a zero, when the review carries no pipeline block. That block is
- * optional on the wire: a week assembled before the money columns existed, or
- * one where an FX rate was missing, has no honest figure — and "€0 won" is a
- * claim about a week nobody measured, which is the opposite of what happened.
+ * THE PACE NUMBER, and it lives here rather than on the morning for a reason
+ * the morning's own contract states: every figure in that strip describes the
+ * same set — today's queue, before filtering — which is what keeps those
+ * numbers stable as a rep works down the page. Money closed over a week is a
+ * different population, and standing it beside four same-set figures would put
+ * two measurements in one row with nothing saying they differ.
  *
- * The currency comes from the review, never from the installation's current
- * setting. Base currency is operator-mutable, so re-reading it later would
- * re-label an old week with a currency its numbers were never in. The contract
- * stores it beside the figures for exactly this reason.
+ * Here the whole panel is already about one closed week, so a week-on-week
+ * comparison is the question the surface exists to answer.
+ *
+ * BOTH WEEKS OR NEITHER for the delta. A prior week with no pipeline block is
+ * one nobody could price, not one that earned nothing — so it yields no
+ * comparison rather than a change measured against a zero that was never a
+ * figure. The value still draws; only the comparison is withheld.
+ *
+ * The currencies must MATCH. Each week is stored in the currency it was
+ * measured in, and an operator who changed the base currency mid-quarter leaves
+ * two weeks whose numbers are not comparable. Subtracting across them would
+ * print a change nobody can act on.
  */
-function wonValue(review: WeeklyReview, locale: Locale): string | undefined {
+function wonPace(
+  review: WeeklyReview,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
   const pipeline = review.pipeline;
   if (pipeline === undefined) {
     return undefined;
   }
-  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+  const value = formatMoney(pipeline.won_minor, pipeline.currency, locale);
+  const before = review.prior?.pipeline;
+  if (before === undefined || before.currency !== pipeline.currency) {
+    return value;
+  }
+  return t("home.weekly.wonVsPrior", {
+    value,
+    delta: formatSignedMoney(
+      pipeline.won_minor - before.won_minor,
+      pipeline.currency,
+      locale,
+    ),
+  });
 }
 
 function WeeklyBody({
@@ -348,11 +375,12 @@ function WeeklyBody({
           //
           // It rides the won slot rather than taking a sixth: five is what a
           // strip can be read across as one comparison, and a tenth slot folded
-          // the row into two ranks at 1280 (#3709). The delta line gives way to
-          // it, because "what it was worth" is the fact a reader wants first
-          // and the strip has one detail line to give.
+          // the row into two ranks at 1280 (#3709). The one detail line carries
+          // the value AND its change against the week before, which is the
+          // pace reading — it belongs here rather than on the morning, whose
+          // strip is bound to one same-set population.
           detail={
-            wonValue(review, locale) ?? since(c.deals_won, prior?.deals_won)
+            wonPace(review, locale, t) ?? since(c.deals_won, prior?.deals_won)
           }
         />
         <StatCard

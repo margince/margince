@@ -2528,6 +2528,7 @@ export const vi = {
   "home.weekly.queueWorked": "Danh sách buổi sáng",
   "home.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "home.weekly.sincePrior": "{delta} so với tuần trước",
+  "home.weekly.wonVsPrior": "{value} · {delta} so với tuần trước",
   "home.weekly.leadsAnswered": "Lead được trả lời đúng hạn",
   "home.weekly.ofRouted": "{answered} trên {routed}",
   "home.weekly.planCommitmentsKept": "Cam kết kế hoạch đã giữ",
