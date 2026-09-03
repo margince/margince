@@ -1526,6 +1526,11 @@ export const de = {
   "compose.audienceParticipants": "Nur Beteiligte",
   "compose.audienceParticipantsHint":
     "Nur die Personen auf dieser Nachricht lesen Betreff und Inhalt. Andere sehen nur, dass an diesem Tag eine Nachricht gewechselt wurde.",
+  "compose.audienceSelected": "Benannte Personen",
+  "compose.audienceSelectedHint":
+    "nur die Personen und Teams, die Sie benennen, sowie alle, die bereits auf der Nachricht stehen.",
+  "compose.audienceMembersLegend": "Wer sie lesen darf",
+  "compose.audienceMembersLoading": "Personenliste wird gelesen…",
   "compose.audienceConfirm": "Sichtbarkeit speichern",
   "compose.audienceNote":
     "Gilt nur f\u00fcr diese Nachricht \u2014 nicht f\u00fcr den Thread und nicht f\u00fcr den Kontakt.",

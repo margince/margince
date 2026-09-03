@@ -1579,6 +1579,11 @@ export const en = {
   "compose.audienceParticipants": "Participants only",
   "compose.audienceParticipantsHint":
     "Only the people on this message read its subject and body. Others see that a message was exchanged that day, nothing more.",
+  "compose.audienceSelected": "Named people",
+  "compose.audienceSelectedHint":
+    "only the people and teams you name, plus anyone already on the message.",
+  "compose.audienceMembersLegend": "Who may read it",
+  "compose.audienceMembersLoading": "Reading the list of people…",
   "compose.audienceConfirm": "Save visibility",
   "compose.audienceNote":
     "Applies to this message only \u2014 not to the thread and not to the contact.",
