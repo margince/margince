@@ -284,3 +284,70 @@ type ForecastAssuranceSourceResult struct {
 	// unread one would claim coverage that did not happen.
 	CheckedThrough string `json:"checked_through,omitempty"`
 }
+
+// InputChecksReader answers the open findings this caller may see.
+type InputChecksReader func(ctx context.Context) (json.RawMessage, error)
+
+// RegisterInputChecksTool joins list_input_checks to the surface.
+func RegisterInputChecksTool(r *Registry, read InputChecksReader) {
+	r.Register(listInputChecks{read: read})
+}
+
+type listInputChecks struct {
+	read InputChecksReader
+}
+
+func (t listInputChecks) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "list_input_checks", Title: "What the forecast's inputs still need",
+		Version: toolVersionV1,
+		Description: "The open findings from the nightly input check, most material first. " +
+			"Read them before quoting a forecast figure: a close date that went by, or an " +
+			"amount that disagrees with the offer that was sent, makes a total wrong " +
+			"without making the arithmetic wrong. " +
+			"Scoped to what this caller can open, with no count of what was withheld — a " +
+			"count of what somebody may not read is itself a statement about how much " +
+			"there is. `affected_minor` absent means the money at stake cannot be said, " +
+			"not that nothing is at stake.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "listInputChecks",
+		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OutputSchema: schemaFor[InputChecksResult](),
+	}
+}
+
+func (t listInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+	noteDerivedContent(ctx)
+	return t.read(ctx)
+}
+
+// InputChecksResult is what list_input_checks answers with.
+type InputChecksResult struct {
+	// Data are the open findings this caller can see, most material first.
+	Data []InputCheckResult `json:"data"`
+}
+
+// InputCheckResult is one finding.
+type InputCheckResult struct {
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	SubjectKind string `json:"subject_kind"`
+	SubjectID   string `json:"subject_id"`
+	Severity    string `json:"severity"`
+	// AffectedMinor is the money in question. Absent means it cannot be said,
+	// which is not the same as nothing being at stake.
+	AffectedMinor *int64 `json:"affected_minor,omitempty"`
+	Currency      string `json:"currency,omitempty"`
+	// Claim and Observed hold structured values whose keys depend on Type.
+	//
+	// Raw rather than a map: the key set is the exception TYPE's, not this
+	// struct's, and a schema generator has nothing to describe a free-form
+	// object with. Passing the stored bytes through also keeps this from
+	// becoming a second place that knows what each type stores.
+	Claim       json.RawMessage `json:"claim"`
+	Observed    json.RawMessage `json:"observed"`
+	FirstSeenAt string          `json:"first_seen_at"`
+	// LastSeenAt is the most recent run that still found it. Something seen for
+	// weeks is a different problem from something that appeared last night.
+	LastSeenAt string `json:"last_seen_at"`
+}

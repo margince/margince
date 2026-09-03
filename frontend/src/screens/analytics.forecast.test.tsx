@@ -75,6 +75,21 @@ function forecastStub(opts: StubOpts = {}) {
       opts.onCall?.(body);
       return jsonResponse({ id: "c1", ...body }, 201);
     }
+    if (url.includes("/forecast/assurance/exceptions")) {
+      return jsonResponse({ data: [] });
+    }
+    if (url.includes("/forecast/assurance")) {
+      // The run the review panel reads. Its own endpoint, so a test about the
+      // call editor does not depend on what the check happened to find.
+      return jsonResponse({
+        run_id: "r1",
+        as_of: "2026-05-14T09:00:00Z",
+        status: "complete",
+        readiness: "ready",
+        eligible_deals: 12,
+        sources: [{ source: "mail", state: "checked" }],
+      });
+    }
     return jsonResponse(opts.readings ?? readings());
   });
 }
