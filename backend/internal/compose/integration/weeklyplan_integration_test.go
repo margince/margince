@@ -435,29 +435,31 @@ func TestCorrectingSomebodyElsesCommitmentIsNotFound(t *testing.T) {
 // a row a concurrent reader is holding.
 func TestACorrectionLandsOneAuditRowAndANoOpLandsNone(t *testing.T) {
 	e := setupPlan(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
 	id := planCommitment(t, e, e.rep1Ctx, "the original")
 
 	const audits = `SELECT count(*) FROM audit_log
 	                 WHERE entity_type = 'weekly_plan_commitment' AND entity_id = $1
 	                   AND action = 'update'`
-	before := countRows(t, e.Conn, e.OwnerCtx, audits, id)
+	before := countRows(t, owner, ctx, audits, id)
 
 	label := "the corrected"
 	if err := e.store.EditCommitment(e.rep1Ctx, id,
 		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
 		t.Fatalf("correcting: %v", err)
 	}
-	if got := countRows(t, e.Conn, e.OwnerCtx, audits, id) - before; got != 1 {
+	if got := countRows(t, owner, ctx, audits, id) - before; got != 1 {
 		t.Errorf("one correction filed %d audit rows, wanted 1", got)
 	}
 
 	// The same label again changes nothing.
-	after := countRows(t, e.Conn, e.OwnerCtx, audits, id)
+	after := countRows(t, owner, ctx, audits, id)
 	if err := e.store.EditCommitment(e.rep1Ctx, id,
 		weeklyplan.CommitmentEdit{Label: &label}); err != nil {
 		t.Fatalf("re-sending the same label: %v", err)
 	}
-	if got := countRows(t, e.Conn, e.OwnerCtx, audits, id) - after; got != 0 {
+	if got := countRows(t, owner, ctx, audits, id) - after; got != 0 {
 		t.Errorf("a correction that changed nothing filed %d audit rows", got)
 	}
 }

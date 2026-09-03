@@ -142,29 +142,42 @@ func (e CommitmentEdit) check() error {
 	return nil
 }
 
-// patch is the columns this edit actually moves.
+// patch is the columns this edit actually MOVES.
+//
+// Each field is compared before it is set, because storekit.Patch records an
+// assignment unconditionally — comparing is the caller's job, and every other
+// writer here changes a column it already knows differs. An edit does not: a
+// client may send back the label it read, and setting it anyway would file an
+// audit row saying a rep changed something they did not and bump the version a
+// concurrent reader is holding.
 func (e CommitmentEdit) patch(current Commitment) *storekit.Patch {
 	patch := storekit.NewPatch()
 	if e.Label != nil {
 		label, _ := bounded("label", *e.Label, labelBound)
-		patch.Set("label", current.Label, label)
+		if label != current.Label {
+			patch.Set("label", current.Label, label)
+		}
 	}
 	if e.DueOn != nil {
 		// SetDate, not Set: due_on is a `date` column, and storekit's own rule
 		// is that a date goes in as its own text so the audit image round-trips
 		// back into the column an undo would write it to.
-		patch.SetDate("due_on", current.DueOn, *e.DueOn)
+		if !sameDay(current.DueOn, *e.DueOn) {
+			patch.SetDate("due_on", current.DueOn, *e.DueOn)
+		}
 	}
 	if e.LinkedRecordType != nil {
 		// Both columns move together or neither does. An empty type clears the
 		// pair, which is how a commitment stops being about a record without
 		// being rewritten.
-		var nextType, nextID any
-		if *e.LinkedRecordType != "" {
-			nextType, nextID = *e.LinkedRecordType, *e.LinkedRecordID
+		nextType, nextID := *e.LinkedRecordType, *e.LinkedRecordID
+		if nextType == "" {
+			nextID = ids.Nil
 		}
-		patch.Set("linked_record_type", stringOrNil(current.LinkedRecordType), nextType)
-		patch.Set("linked_record_id", uuidOrNil(current.LinkedRecordID), nextID)
+		if nextType != current.LinkedRecordType || nextID != current.LinkedRecordID {
+			patch.Set("linked_record_type", stringOrNil(current.LinkedRecordType), stringOrNil(nextType))
+			patch.Set("linked_record_id", uuidOrNil(current.LinkedRecordID), uuidOrNil(nextID))
+		}
 	}
 	return patch
 }
@@ -173,6 +186,16 @@ func (e CommitmentEdit) patch(current Commitment) *storekit.Patch {
 // has to be compared as nil rather than as a zero value, or clearing an already
 // empty link would report the empty string changing to the empty string and
 // file an audit row saying a rep changed something they did not.
+// sameDay compares two optional calendar days as days, which is what the column
+// stores. Comparing the time.Time values would call a date read back from
+// Postgres different from the one written, on the instant alone.
+func sameDay(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Format(time.DateOnly) == b.Format(time.DateOnly)
+}
+
 func stringOrNil(value string) any {
 	if value == "" {
 		return nil
