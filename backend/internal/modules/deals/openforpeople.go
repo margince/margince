@@ -50,7 +50,7 @@ func OpenDealPeople(ctx context.Context, tx pgx.Tx, people []ids.PersonID) (map[
 	if err != nil {
 		return nil, err
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {
 		return nil, err
 	}

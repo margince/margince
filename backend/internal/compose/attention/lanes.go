@@ -363,8 +363,10 @@ type QuietRelationship struct {
 	// than only measure it.
 	LastAt time.Time
 	// Strength is what the relationship was WORTH before it went quiet, scored
-	// at the read instant through §4 — the same arithmetic the contact's own
-	// page shows, so the two cannot disagree about who this person is.
+	// at the read instant through §4 — relstrength.Compute, which is what the
+	// contact's own page reads too. The band comes back off that call rather
+	// than being derived here: bucketFor is unexported, so there is no second
+	// way to turn a score into the word a rep reads.
 	//
 	// The lane already holds the edge this is computed from and used to discard
 	// it. Without the band every lapsed contact reads alike, and the rep's

@@ -159,6 +159,8 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 				},
 			},
 		},
+		map[ids.UUID]bool{oldest: true},
+		readInstantForDecay,
 	)
 
 	if len(quiet) != 2 {
@@ -178,14 +180,38 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	if !quiet[0].LastAt.Equal(oldestDerived) {
 		t.Errorf("the card dates the silence at %s, want the derived %s", quiet[0].LastAt, oldestDerived)
 	}
+	// What the relationship was worth, carried from the two sources that hold
+	// it: the band scored off the EDGE the projection loaded, and the deal from
+	// the batched read. Both were already in the lane's hand and discarded, so
+	// every lapsed contact ranked alike.
+	if quiet[0].Strength.Bucket == "" {
+		t.Errorf("the lane scored no band for %q — the edge it loaded was discarded", quiet[0].Name)
+	}
+	if !quiet[0].HasOpenDeal {
+		t.Errorf("the funded contact %q is not reported as carrying a deal", quiet[0].Name)
+	}
+	// And the contact the funded set does NOT name carries none. Without this
+	// the assertion above would pass on a lane that marked everybody funded.
+	if quiet[1].HasOpenDeal {
+		t.Errorf("%q carries no open deal and the lane says it does", quiet[1].Name)
+	}
 }
+
+// readInstantForDecay is the moment the lane's derivations are scored at. Fixed
+// rather than time.Now(), because a band is a function of how long ago the last
+// exchange was and a wall clock would make the same fixture answer differently
+// on two runs.
+var readInstantForDecay = time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC)
 
 // A contact the caller may not read never reaches the derivation, so the lane
 // simply has nothing to say about them — no row, and no empty-handed entry that
 // would disclose the pair exists.
 func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
 	edge := search.InteractionEdge{PersonID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
-	if quiet := quietRelationships([]search.InteractionEdge{edge}, nil); len(quiet) != 0 {
+	quiet := quietRelationships(
+		[]search.InteractionEdge{edge}, nil, map[ids.UUID]bool{}, readInstantForDecay,
+	)
+	if len(quiet) != 0 {
 		t.Errorf("the lane invented %d relationships from an empty derivation", len(quiet))
 	}
 }
