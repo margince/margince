@@ -119,6 +119,70 @@ describe("ComposeModal recipient", () => {
     expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
   });
 
+  // A FIRST message to a record. Every path into the To field ran through an
+  // activity, so a lead nobody has written to yet opened its composer empty
+  // over a record whose address was on screen behind the drawer.
+  it("addresses a first message to the record's own address", async () => {
+    stubRoutes();
+    render(
+      <ComposeModal
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@example.test"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("dung.ly@example.test")).toBeTruthy();
+  });
+
+  // The thread outranks the record. An address recorded on the message being
+  // answered is who THAT conversation is with; the record's primary address is
+  // not, and a reply sent to it would leave the thread it answers.
+  it("prefers the thread's counterparty over the record's own address", async () => {
+    stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@example.test"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
+    expect(screen.queryByText("dung.ly@example.test")).toBeNull();
+  });
+
+  // A record with no address on file offers nothing, rather than an empty chip
+  // the reader has to notice and delete.
+  it("offers nothing when the record has no address", async () => {
+    stubRoutes();
+    render(
+      <ComposeModal
+        entityType="lead"
+        entityId="l-1"
+        recordAddress={undefined}
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("To");
+    // The committed recipients are the chips in the To row. Read as elements
+    // rather than as text: an assertion on the absence of one particular
+    // address would pass over a chip carrying any other.
+    expect(
+      document.querySelectorAll(".recipient-field .chips li"),
+    ).toHaveLength(0);
+  });
+
   // The offer follows the conversation. A reader who picks a different one is
   // owed ITS counterparty, and the previous one leaves on the change itself —
   // not when the new address happens to resolve, because a lookup still out

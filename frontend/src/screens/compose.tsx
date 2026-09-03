@@ -2181,6 +2181,7 @@ export function ComposeModal({
   entityType,
   entityId,
   personId,
+  recordAddress,
   kind,
   open,
   onClose,
@@ -2196,6 +2197,18 @@ export function ComposeModal({
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  /**
+   * The record's own email address, for a FIRST message to it — a lead or a
+   * contact nobody has written to yet, where there is no thread to resolve a
+   * counterparty from.
+   *
+   * The caller's, because the record is already on screen behind this drawer
+   * and its address came with it: a lookup here would ask the server for a
+   * field the page is holding. Offered only when nothing is being answered,
+   * and offered the same way a thread's address is — into an empty field,
+   * once, and never over what the reader typed.
+   */
+  recordAddress?: string;
   // Undefined (or any non-channel kind) keeps the mail behaviour this modal
   // already had before a channel existed — every mail test renders this
   // component without ever naming a kind.
@@ -2300,9 +2313,21 @@ export function ComposeModal({
     activityId ?? (offeringThreads ? chosen : latest.activity?.id);
   // Addressing the reply before a draft is asked for. A channel reply resolves
   // its recipient server-side and shows no To field, so it asks nothing.
-  const threadRecipient = useReplyRecipient(
+  const replyRecipient = useReplyRecipient(
     open && !isChannelReply ? answering : undefined,
   );
+  // What the composer offers as the recipient: the thread's counterparty where
+  // there is a thread, and otherwise the record's own address.
+  //
+  // The fallback is what a FRESH mail needs. Every path into this field ran
+  // through an activity, so a first message to a record — a lead nobody has
+  // written to yet — opened with To empty over a record whose address was on
+  // screen behind the drawer. The thread still wins where both exist: an
+  // address recorded on the message being answered is who that conversation is
+  // with, which the record's primary address is not.
+  const threadRecipient =
+    replyRecipient ??
+    (open && !isChannelReply && !answering ? recordAddress : undefined);
   // Offered ONCE, when the lookup first answers, and never again.
   //
   // Keyed on the recipient rather than on the field being empty, because an

@@ -1510,7 +1510,15 @@ function LeadOverviewPane({
         </SurfaceState>
       )}
       {!lead.archived_at && !overlay && (
-        <RecordEmailAside entityType="lead" entityId={id} detectWaitingReply />
+        <RecordEmailAside
+          entityType="lead"
+          entityId={id}
+          // A lead IS the recipient: the address is on the record itself
+          // rather than on a contact behind it, and a first message to one
+          // has no thread to resolve a counterparty from.
+          recordAddress={lead.email ?? undefined}
+          detectWaitingReply
+        />
       )}
       <CustomFieldsCard object="lead" record={lead} />
     </div>
@@ -1566,6 +1574,7 @@ function LeadActions({
         <RecordEmailVerb
           entityType="lead"
           entityId={id}
+          recordAddress={lead.email ?? undefined}
           disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
         />
       )}
