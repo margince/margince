@@ -179,6 +179,7 @@ export const en = {
   "nav.offers": "Offer",
   "nav.share": "Sharing",
   "nav.search": "Search results",
+  "nav.tags": "Tag",
 
   "shell.railAria": "Primary navigation",
   "shell.aside.hide": "Hide",
@@ -1873,8 +1874,12 @@ export const en = {
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
   "tagResult.viewAll": "View all {count} {kind}",
-  "tagResult.carry": "{count} carry this tag",
-  "tagResult.none": "None carry this tag",
+  "tagResult.resultsTitle": "Records with this tag",
+  "tagResult.nothingCarries":
+    "Nothing carries this tag yet. Apply it from any contact, company or deal.",
+  "tagResult.loadingRows": "Loading {kind}…",
+  "tagResult.rowsWithheld": "You cannot see these records",
+  "tagResult.unnamed": "Unnamed",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",

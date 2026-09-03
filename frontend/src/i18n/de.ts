@@ -172,6 +172,7 @@ export const de = {
   "nav.offers": "Angebot",
   "nav.share": "Freigabe",
   "nav.search": "Suchergebnisse",
+  "nav.tags": "Tag",
 
   "shell.railAria": "Hauptnavigation",
   "shell.aside.hide": "Ausblenden",
@@ -1825,8 +1826,12 @@ export const de = {
   "tagResult.companies": "Unternehmen",
   "tagResult.deals": "Deals",
   "tagResult.viewAll": "Alle {count} {kind} anzeigen",
-  "tagResult.carry": "{count} tragen dieses Tag",
-  "tagResult.none": "Niemand trägt dieses Tag",
+  "tagResult.resultsTitle": "Datensätze mit diesem Tag",
+  "tagResult.nothingCarries":
+    "Noch kein Datensatz trägt dieses Tag. Vergeben Sie es auf einem Kontakt, einem Unternehmen oder einem Deal.",
+  "tagResult.loadingRows": "{kind} werden geladen…",
+  "tagResult.rowsWithheld": "Sie können diese Datensätze nicht sehen",
+  "tagResult.unnamed": "Ohne Namen",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",

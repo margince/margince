@@ -6,22 +6,32 @@ import type { LucideIcon } from "lucide-react";
 import { Building2, Contact, Handshake } from "lucide-react";
 
 import { api } from "../api/client";
-import { Badge, Button } from "../design-system/atoms";
-import { Panel, PanelRow } from "../design-system/panel";
-import { TagPill } from "../design-system/tagpill";
+import { navigate } from "../app/router";
+import { Button } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
+import { SurfaceState } from "../design-system/surfacestate";
+import { isTagTone } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import "./tagresult.css";
 
 /**
- * The page behind every tag pill: what carries this word, grouped by type.
+ * The page behind every tag pill: the records carrying this word, named.
  *
- * A preview, not a list. Two rows per group and a link into the record view
- * the reader already knows — building a fourth table here would be a second
- * answer to a question three screens answer well, and it would drift from them
- * the first time a column changed.
+ * A RESULT LIST, which is what a reader arriving from a search hit is looking
+ * for. It once drew three cards reporting counts — "1 carry this tag" — which
+ * answered how many and never which, so the one question the page exists for
+ * needed three more clicks to answer.
+ *
+ * The rows are the real records, read through the same `tag_id` filter the
+ * three record lists offer, so this page and "View all" cannot disagree about
+ * what carries the word. Each group shows the first few and hands the rest to
+ * the list screen that already pages, sorts and filters them properly — the
+ * page names records, it does not become a fourth table.
  */
+const PREVIEW_ROWS = 5;
+
 export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -52,12 +62,26 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
 
   return (
     <div className="wrap tagresult">
+      {/* The page heads ITSELF, with the word. The shell steps aside for this
+          screen (SELF_HEADED_SCREENS) because it cannot know a tag's name, and
+          "Tag" above a pill spelling the name is the page named twice.
+
+          The name is heading TEXT rather than a pill: a pill carries its own
+          small type, so a page title drawn as one renders chip-sized. The
+          tag's colour still reads, as the pill's own dot. */}
       <header className="tagresult-head">
-        <TagPill
-          name={tag.data.name}
-          tone={tag.data.color}
-          archived={Boolean(tag.data.archived_at)}
-        />
+        <h1 className="tagresult-title">
+          {isTagTone(tag.data.color) && !tag.data.archived_at && (
+            <span
+              className={`tagpill-dot tagpill-dot-${tag.data.color}`}
+              aria-hidden
+            />
+          )}
+          {tag.data.name}
+          {tag.data.archived_at && (
+            <span className="tagresult-retired">{t("tags.archived")}</span>
+          )}
+        </h1>
         <span className="t-small">
           {t("tagResult.totalVisible", { count: formatNumber(total, locale) })}
         </span>
@@ -65,77 +89,164 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
       {tag.data.description && (
         <p className="tagresult-note">{tag.data.description}</p>
       )}
-      <div className="tagresult-grid">
-        <ResultGroup
-          title={t("tagResult.people")}
-          icon={Contact}
-          count={usage.people}
-          href={`#/contacts?tag_id=${tagID}`}
-        />
-        <ResultGroup
-          title={t("tagResult.companies")}
-          icon={Building2}
-          count={usage.companies}
-          href={`#/companies?tag_id=${tagID}`}
-        />
-        <ResultGroup
-          title={t("tagResult.deals")}
-          icon={Handshake}
-          count={usage.deals}
-          href={`#/deals?tag_id=${tagID}`}
-        />
-      </div>
+      {total === 0 ? (
+        <Panel title={t("tagResult.resultsTitle")}>
+          <PanelBody>
+            <p className="tagresult-note">{t("tagResult.nothingCarries")}</p>
+          </PanelBody>
+        </Panel>
+      ) : (
+        <div className="tagresult-groups">
+          <ResultGroup
+            kind="person"
+            title={t("tagResult.people")}
+            icon={Contact}
+            count={usage.people}
+            tagID={tagID}
+          />
+          <ResultGroup
+            kind="organization"
+            title={t("tagResult.companies")}
+            icon={Building2}
+            count={usage.companies}
+            tagID={tagID}
+          />
+          <ResultGroup
+            kind="deal"
+            title={t("tagResult.deals")}
+            icon={Handshake}
+            count={usage.deals}
+            tagID={tagID}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
+/** What each record type is called on the wire, and where its rows live. */
+const GROUPS = {
+  person: { path: "/people", screen: "contacts" },
+  organization: { path: "/organizations", screen: "companies" },
+  deal: { path: "/deals", screen: "deals" },
+} as const;
+
+// "View all" carries a FILTER, and a filter is not part of a Route — the type
+// deliberately holds screen and ids only, and the list screens read `tag_id`
+// off the address. So the whole-list link is written as an address rather than
+// navigated as a route; `tagfilter.ts` owns the parameter's spelling.
+function allRecordsHref(screen: string, tagID: string): string {
+  return `#/${screen}?tag_id=${encodeURIComponent(tagID)}`;
+}
+
+type GroupKind = keyof typeof GROUPS;
+
 /**
- * One record type's share of a tag: how many carry it, and the way in.
+ * One record type's rows: the records themselves, by name, each opening its
+ * own page.
  *
- * The count comes from the tag read rather than from a page of rows, because a
- * reader deciding whether to open a group needs the size before the rows —
- * and a group of zero says so without a request nobody needs.
+ * A group the tag is not on draws nothing at all rather than a card reporting
+ * zero. The count came from the tag read, so an absent group costs no request —
+ * and three cards, two of them saying "none", is the shape this page had when
+ * it told a reader nothing.
  */
 function ResultGroup({
+  kind,
   title,
   icon: Icon,
   count,
-  href,
+  tagID,
 }: Readonly<{
+  kind: GroupKind;
   title: string;
   icon: LucideIcon;
   count: number;
-  href: string;
+  tagID: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const group = GROUPS[kind];
+  const rows = useQuery({
+    queryKey: ["tag-records", kind, tagID],
+    queryFn: async () => {
+      const { data, error } = await api.GET(group.path, {
+        params: { query: { tag_id: [tagID], limit: PREVIEW_ROWS } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data ?? [];
+    },
+  });
+
+  if (count === 0) {
+    return null;
+  }
+
   const shown = formatNumber(count, locale);
+  const listed = rows.data ?? [];
   return (
-    <Panel
-      title={title}
-      titleAction={<Badge>{shown}</Badge>}
-      footer={
-        count > 0 ? (
+    <Panel title={`${title} (${shown})`}>
+      <PanelBody>
+        <SurfaceState
+          label={undefined}
+          state={
+            rows.isPending ? "loading" : listed.length > 0 ? "ready" : "empty"
+          }
+          loadingLabel={t("tagResult.loadingRows", { kind: title })}
+          loadingLines={Math.min(count, PREVIEW_ROWS)}
+          emptyLabel={t("tagResult.rowsWithheld")}
+        >
+          <ul className="tagresult-rows">
+            {listed.map((row) => (
+              <li key={row.id}>
+                <button
+                  type="button"
+                  className="tagresult-row"
+                  onClick={() => navigate({ screen: group.screen, id: row.id })}
+                >
+                  <Icon aria-hidden />
+                  <span className="tagresult-name">{recordName(row, t)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </SurfaceState>
+        {count > listed.length && (
           <Button
             small
             variant="ghost"
-            onClick={() => (window.location.hash = href.slice(1))}
+            onClick={() => {
+              window.location.hash = allRecordsHref(group.screen, tagID).slice(
+                1,
+              );
+            }}
           >
             {t("tagResult.viewAll", { count: shown, kind: title })}
           </Button>
-        ) : undefined
-      }
-    >
-      <PanelRow>
-        <span className="tagresult-row">
-          <Icon aria-hidden />
-          <span>
-            {count > 0
-              ? t("tagResult.carry", { count: shown })
-              : t("tagResult.none")}
-          </span>
-        </span>
-      </PanelRow>
+        )}
+      </PanelBody>
     </Panel>
   );
+}
+
+/**
+ * What to call one record.
+ *
+ * The three types name themselves differently on the wire — a person carries
+ * `full_name`, a company `display_name`, a deal `name` — and a row whose name
+ * is empty is named as unnamed rather than rendered as a blank line nobody can
+ * press with confidence.
+ */
+function recordName(
+  row: Readonly<Record<string, unknown>>,
+  t: ReturnType<typeof useT>,
+): string {
+  for (const field of ["full_name", "display_name", "name"]) {
+    const value = row[field];
+    if (typeof value === "string" && value.trim() !== "") {
+      return value;
+    }
+  }
+  return t("tagResult.unnamed");
 }

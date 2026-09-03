@@ -26,7 +26,7 @@ import { useState, useSyncExternalStore } from "react";
 // dispatch be an exhaustive Record. A `Screen` admitting `x-${string}` could
 // not be exhausted, and that exhaustiveness is the thing stopping a destination
 // existing in the router and being missing from the dispatch.
-const SCREENS = [
+export const SCREENS = [
   "home",
   "contacts",
   "companies",
