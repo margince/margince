@@ -114,10 +114,18 @@ func (e *resolveEnv) seedPerson(t *testing.T) ids.UUID {
 // the lead id finds nothing.
 func (e *resolveEnv) seedTaskLinkedToPerson(t *testing.T, source, capturedBy string, person ids.UUID) ids.UUID {
 	t.Helper()
+	return e.seedTaskLinkedToPersonAt(t, source, capturedBy, person, time.Now())
+}
+
+// seedTaskLinkedToPersonAt is seedTaskLinkedToPerson with an explicit
+// created_at, for proving the resolver bounds its completion to tasks that
+// existed by a given instant rather than every open task it can find.
+func (e *resolveEnv) seedTaskLinkedToPersonAt(t *testing.T, source, capturedBy string, person ids.UUID, createdAt time.Time) ids.UUID {
+	t.Helper()
 	id := ids.NewV7()
-	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by)
-		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3)`,
-		id, source, capturedBy)
+	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by, created_at)
+		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3, $4)`,
+		id, source, capturedBy, createdAt)
 	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, id, person)
 	return id
 }
@@ -126,7 +134,11 @@ func (e *resolveEnv) seedTaskLinkedToPerson(t *testing.T, source, capturedBy str
 // names the person the lead became, which is the only place, once
 // carryLeadActivities has run, that a caller can still learn where the lead's
 // tasks went. dedupeOutcome is "created" for a fresh person, "merged" for an
-// existing survivor — see promotedPersonID's doc for why the resolver reads it.
+// existing survivor — see decodeLeadPromoted's doc for why the resolver reads
+// it. OccurredAt is real "now", not a fixed date: the resolver bounds its
+// person-keyed completion to tasks that existed by this instant, and a
+// fixture date fixed in the past would exclude every task this same test run
+// just seeded.
 func leadPromotedEvent(t *testing.T, lead, person ids.UUID, dedupeOutcome string) workflow.Event {
 	t.Helper()
 	payload, err := json.Marshal(map[string]string{
@@ -138,7 +150,7 @@ func leadPromotedEvent(t *testing.T, lead, person ids.UUID, dedupeOutcome string
 	return workflow.Event{
 		ID:         ids.NewV7(),
 		Type:       "lead.promoted",
-		OccurredAt: time.Date(2026, 8, 28, 9, 0, 0, 0, time.UTC),
+		OccurredAt: time.Now(),
 		Entity:     datasource.EntityRef{Type: "lead", ID: lead},
 		Payload:    payload,
 	}
@@ -335,6 +347,36 @@ func TestAMergedPromotionDoesNotClaimThePersonsUnrelatedTasks(t *testing.T) {
 
 	if e.isDone(t, unrelatedReminder) {
 		t.Error("a merge completed a person's pre-existing system reminder that this promotion never touched")
+	}
+}
+
+// A person created by THIS promotion is not immune to the same collision:
+// the resolver runs off the outbox, asynchronously, and anything that mints
+// a system task against the freshly-created person in the window between the
+// promotion committing and this handler actually running — no_activity_reminder,
+// check_in_cadence — is not the follow-up this promotion carried. Bounding
+// completion to tasks that existed by the event's own OccurredAt is what
+// keeps "a fresh person cannot yet carry anything else" true instead of
+// merely assumed.
+func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotionEvent(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	carried := e.seedTaskLinkedToPerson(t, "system", "system", person)
+
+	ctx := e.systemCtx()
+	h := handlerFor(t, store, "lead.promoted")
+	ev := leadPromotedEvent(t, e.lead, person, "created")
+	// A task minted a second AFTER the promotion's own instant — the exact
+	// shape of a sibling automation catching up before this handler runs.
+	lateTask := e.seedTaskLinkedToPersonAt(t, "system", "system", person, ev.OccurredAt.Add(time.Second))
+	fire(ctx, t, h, ev)
+
+	if !e.isDone(t, carried) {
+		t.Error("the task actually carried by the promotion is still open")
+	}
+	if e.isDone(t, lateTask) {
+		t.Error("a task minted AFTER the promotion event was completed as if the promotion carried it")
 	}
 }
 

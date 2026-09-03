@@ -196,15 +196,7 @@ func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
 // comparison, and a deal due today is due today, not late.
 func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
 	e := Setup(t)
-	// The DB's own "today", not Go's: Figures compares against Postgres's
-	// now() in the installation's zone, and seeding from the wall clock this
-	// process reads would race a UTC-midnight rollover between the seed and
-	// the query.
-	var today time.Time
-	if err := OwnerConn(t).QueryRow(context.Background(),
-		`SELECT (timezone('UTC', now()))::date`).Scan(&today); err != nil {
-		t.Fatalf("reading the database's own today: %v", err)
-	}
+	today := time.Now().UTC()
 	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, today)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 

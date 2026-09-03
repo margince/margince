@@ -41,7 +41,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	// re-derive from `because`/`above_next` — set only once conversion actually
 	// ran and priced this item, so a raw amount (no FX seam bound) or an
 	// unpriced deal never claims to be a base-currency figure it is not.
-	if row.Deal != nil && money.converted() && known {
+	if row.Deal != nil && money.converted() && money.base != "" && known {
 		row.Deal.ExpectedMinorBase = &expected
 	}
 	// The reason carries the figure the verdict actually weighed, in the units
