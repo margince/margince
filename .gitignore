@@ -82,8 +82,11 @@ coverage-extensions.out
 /docs/explanation/company-record-page-v2-implementation-plan.md
 /docs/explanation/assets/company-record-page-v2/
 
-# Local secrets — never commit
-.env.local
+# Local secrets — never commit. Globbed rather than the bare name: a hand or
+# editor backup (.env.local.bak) is the same secrets file under a name the
+# exact rule never matched, and one was committed that way — where it then went
+# stale as a second copy of .env.example.
+.env.local*
 
 # A local routing file, if you keep one. Nothing seeds it any more — the
 # installation's binding is a stored setting, declared for a fresh stack under
