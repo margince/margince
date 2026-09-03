@@ -130,57 +130,41 @@ function waiversIn(source: string): Map<string, string | null> {
 }
 
 /**
- * Identifiers bound to a screen id, so a link written through a constant counts.
+ * What one module contributes: the doors it opens, and the constants it binds.
  *
- * `navigate({ screen: SCHEDULED_SCREEN })` is a door, and a gate reading only
- * quoted ids would call that screen unreached and be wrong in the one direction
- * a census must never fail: quietly, over a smaller subject than it claims.
- */
-function screenAliases(
-  sources: ReadonlyArray<readonly [string, string]>,
-  screens: ReadonlySet<string>,
-): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const [path, source] of sources) {
-    const walk = (node: ts.Node): void => {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.initializer
-      ) {
-        const value = literal(node.initializer);
-        if (value !== null && screens.has(value)) {
-          out.set(node.name.text, value);
-        }
-      }
-      ts.forEachChild(node, walk);
-    };
-    walk(parse(path, source));
-  }
-  return out;
-}
-
-/**
- * The screens this module links to.
+ * Both in ONE walk, because the corpus is the whole shipped tree and the cost
+ * of this gate is the parse. Two passes meant parsing every file twice, which
+ * is what took it past its budget on a loaded runner while passing locally.
  *
- * Two spellings, because the product uses both: an `#/…` address in markup, and
- * a `screen:` property handed to `navigate` or held as a route. The property is
- * read wherever it appears rather than only inside a call named `navigate` — a
- * gate that named its subject's spellings would be defeated by a rename, which
- * is the mistake this tree's gates keep being written to avoid.
+ * A door has two spellings, because the product uses both: an `#/…` address in
+ * markup, and a `screen:` property handed to `navigate` or held as a route. The
+ * property is read wherever it appears rather than only inside a call named
+ * `navigate` — a gate that named its subject's spellings would be defeated by a
+ * rename, which is the mistake this tree's gates keep being written to avoid.
+ *
+ * A `screen:` written as an IDENTIFIER cannot be resolved yet: the constant may
+ * be declared in a file this walk has not reached. So the name travels out as a
+ * name, and `doorsIn` resolves it once every alias is known. Resolving inline
+ * would make the answer depend on the order the files were read, which is the
+ * quiet half of a census failing short.
  */
-function linksIn(
+function readModule(
   path: string,
   source: string,
   screens: ReadonlySet<string>,
-  aliases: ReadonlyMap<string, string>,
-): Set<string> {
-  const found = new Set<string>();
+): Readonly<{
+  linked: Set<string>;
+  viaName: Set<string>;
+  aliases: Map<string, string>;
+}> {
+  const linked = new Set<string>();
+  const viaName = new Set<string>();
+  const aliases = new Map<string, string>();
   const address = (text: string): void => {
     for (const match of text.matchAll(/#\/([a-z-]+)/g)) {
       const id = match[1];
       if (id !== undefined && screens.has(id)) {
-        found.add(id);
+        linked.add(id);
       }
     }
   };
@@ -198,26 +182,88 @@ function linksIn(
       }
     }
     if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer
+    ) {
+      const value = literal(node.initializer);
+      if (value !== null && screens.has(value)) {
+        aliases.set(node.name.text, value);
+      }
+    }
+    if (
       ts.isPropertyAssignment(node) &&
       ts.isIdentifier(node.name) &&
       node.name.text === "screen"
     ) {
       const value = literal(node.initializer);
       if (value !== null && screens.has(value)) {
-        found.add(value);
+        linked.add(value);
       }
       if (ts.isIdentifier(node.initializer)) {
-        const aliased = aliases.get(node.initializer.text);
-        if (aliased !== undefined) {
-          found.add(aliased);
-        }
+        viaName.add(node.initializer.text);
       }
     }
     ts.forEachChild(node, walk);
   };
   walk(parse(path, source));
-  return found;
+  return { linked, viaName, aliases };
 }
+
+/** Every screen the shipped tree opens a door to. */
+function doorsIn(
+  sources: ReadonlyArray<readonly [string, string]>,
+  screens: ReadonlySet<string>,
+): Set<string> {
+  const linked = new Set<string>();
+  const viaName = new Set<string>();
+  const aliases = new Map<string, string>();
+  for (const [path, source] of sources) {
+    const read = readModule(path, source, screens);
+    for (const id of read.linked) {
+      linked.add(id);
+    }
+    for (const name of read.viaName) {
+      viaName.add(name);
+    }
+    for (const [name, id] of read.aliases) {
+      aliases.set(name, id);
+    }
+  }
+  // Resolved last, against every alias the tree declares — so a door written
+  // through a constant counts wherever that constant is declared.
+  for (const name of viaName) {
+    const id = aliases.get(name);
+    if (id !== undefined) {
+      linked.add(id);
+    }
+  }
+  return linked;
+}
+
+/**
+ * This gate's own ceiling, for the reason `one-plural-rule.test.ts` states at
+ * length: the default timeout is arithmetic over WAITING, and this test waits
+ * for nothing. Its cost is the CORPUS — it type-parses every shipped module in
+ * the tree — and the two numbers have no relationship. It passed locally in
+ * about a second and died at `Test timed out in 10437ms` on a CI runner
+ * saturated by the rest of the suite.
+ *
+ * Derived per FILE and multiplied out, not picked whole, and written as the
+ * product so the derivation is in the code: `scripts/test-budget.test.ts`
+ * refuses a ceiling it cannot statically fold, correctly, since one no reader
+ * can evaluate is one no reader can audit.
+ *
+ * 40ms a file is an order of magnitude over the local measurement, matching the
+ * allowance the plural gate arrived at empirically on the same corpus with the
+ * same parser. 1400 files is that gate's budgeted corpus too, chosen against
+ * this tree's merge rate; the corpus is asserted in the body rather than read
+ * into the constant, so outgrowing it fails by name and count instead of
+ * returning as an opaque timeout.
+ */
+const PARSE_BUDGET_PER_FILE_MS = 40;
+const BUDGETED_CORPUS_FILES = 1_400;
+const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("every screen has a door", () => {
   const screens: ReadonlySet<Screen> = new Set(SCREENS);
@@ -229,6 +275,10 @@ describe("every screen has a door", () => {
     // Fail closed. A walk pointed at the wrong tree reports PASS over nothing,
     // and under-recognition is the one way a gate must not break.
     expect(sources.length).toBeGreaterThan(100);
+    // And fail LOUDLY when the tree outgrows the ceiling's premise, which the
+    // ceiling itself cannot do: it is a literal because the budget gate has to
+    // read it, so it cannot scale with the corpus it is a budget for.
+    expect(sources.length).toBeLessThanOrEqual(BUDGETED_CORPUS_FILES);
   });
 
   it("reads router.tsx's own list, so the subject cannot drift from it", () => {
@@ -239,40 +289,38 @@ describe("every screen has a door", () => {
     expect([...declared.keys()].sort()).toEqual([...SCREENS].sort());
   });
 
-  it("names no screen nothing can reach", () => {
-    const waivers = waiversIn(readFileSync(routerModule, "utf8"));
-    const aliases = screenAliases(sources, screens);
-    const linked = new Set<string>();
-    for (const [path, source] of sources) {
-      for (const id of linksIn(path, source, screens, aliases)) {
-        linked.add(id);
-      }
-    }
-    const carried = new Set(NAV.map((item) => item.screen));
+  it(
+    "names no screen nothing can reach",
+    () => {
+      const waivers = waiversIn(readFileSync(routerModule, "utf8"));
+      const linked = doorsIn(sources, screens);
+      const carried = new Set(NAV.map((item) => item.screen));
 
-    const unreached = [...SCREENS].filter(
-      (screen) =>
-        !carried.has(screen) &&
-        !linked.has(screen) &&
-        // A reason is required. A waiver without one is not a waiver.
-        !waivers.get(screen),
-    );
+      const unreached = [...SCREENS].filter(
+        (screen) =>
+          !carried.has(screen) &&
+          !linked.has(screen) &&
+          // A reason is required. A waiver without one is not a waiver.
+          !waivers.get(screen),
+      );
 
-    expect(
-      unreached,
-      "A screen the router answers that the nav does not carry and nothing " +
-        "links to is reachable only by typing its address. Give it a nav row " +
-        "or a link — or, if it is genuinely opened from outside the app, say " +
-        "so beside its entry in router.tsx: `// reach:external <reason>`.",
-    ).toEqual([]);
-  });
+      expect(
+        unreached,
+        "A screen the router answers that the nav does not carry and nothing " +
+          "links to is reachable only by typing its address. Give it a nav row " +
+          "or a link — or, if it is genuinely opened from outside the app, say " +
+          "so beside its entry in router.tsx: `// reach:external <reason>`.",
+      ).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 
   // The gate's own census. It reads a smaller tree than it claims, or matches a
   // shape the real defect does not take, and it reports PASS either way.
   it("sees a screen with no door, in every spelling a door takes", () => {
     const screens = new Set(["planted", "other"]);
     const linkedBy = (source: string) =>
-      linksIn(join(srcRoot, "planted.ts"), source, screens, new Map());
+      doorsIn([[join(srcRoot, "planted.ts"), source] as const], screens);
 
     expect(linkedBy(`const href = "#/planted";`)).toContain("planted");
     expect(linkedBy(`const href = \`#/planted/\${id}\`;`)).toContain("planted");
@@ -296,23 +344,25 @@ describe("every screen has a door", () => {
     ).toBe(0);
   });
 
-  it("follows a door written through a constant", () => {
+  // The constant is declared in ONE file and used in ANOTHER, in that order and
+  // in the reverse, because a walk that resolved a name the moment it met it
+  // would answer differently depending on which file it read first — and the
+  // wrong answer is the quiet one: the screen reported as having no door.
+  it("follows a door written through a constant, whichever file comes first", () => {
     const screens = new Set(["planted"]);
-    const alias = `const PLANTED_SCREEN = "planted";`;
-    const aliases = screenAliases(
-      [[join(srcRoot, "a.ts"), alias] as const],
-      screens,
-    );
+    const declares = [
+      join(srcRoot, "a.ts"),
+      `export const PLANTED_SCREEN = "planted";`,
+    ] as const;
+    const uses = [
+      join(srcRoot, "b.ts"),
+      `navigate({ screen: PLANTED_SCREEN });`,
+    ] as const;
 
-    expect(aliases.get("PLANTED_SCREEN")).toBe("planted");
-    expect(
-      linksIn(
-        join(srcRoot, "b.ts"),
-        `navigate({ screen: PLANTED_SCREEN });`,
-        screens,
-        aliases,
-      ),
-    ).toContain("planted");
+    expect(doorsIn([declares, uses], screens)).toContain("planted");
+    expect(doorsIn([uses, declares], screens)).toContain("planted");
+    // And a name nothing binds to a screen is not a door.
+    expect(doorsIn([uses], screens).size).toBe(0);
   });
 
   it("does not accept a waiver with no reason", () => {
