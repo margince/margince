@@ -260,9 +260,17 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   It is the application's one bar and every screen has it. Nothing that
   belongs to a record sits in it: the Details toggle is in the page.
 - **Record head**: a 40px mark, the name in the display face with its badges
-  on the same line, one line of facts under it, the verbs on the right — the
-  outlined verbs, the one filled verb the call names, then the **more** button
-  (an outlined 40px square with the ellipsis) for everything else. The
+  on the same line, one line of facts under it, the verbs on the right. **The
+  verbs are the record type's base actions and never the task of the day**:
+  a company shows Write email · Log activity · Add task · more on every
+  company; a contact Write email · Call · Add task · more; a deal Write email
+  · Log activity · Edit deal · more; a lead Qualify · Write email · Edit ·
+  Disqualify · more; a project Log activity · Edit project · more. The
+  filled one is the transport (Write email; Qualify on a lead). The move the
+  call names ("Confirm the rate", "Reply on her thread") is the filled verb
+  inside What needs you, where its reason sits beside it. The **more** button
+  (an outlined 36px square with the ellipsis) holds Archive, Share, Merge and
+  the rest. The
   **Details** control sits at the right end of the tab row, in the page.
 - **Details panel**: 300px on the right of the reading, one pane, closed
   until the Details control at the end of the tab row opens it. It holds Ask, the attributes as label and
@@ -359,7 +367,7 @@ glance line for line; what changes is the content of each slot.
 |---|---|---|---|---|
 | Live dot | In conversation | Your move (warn) | Your move (warn) | In motion |
 | Facts | city · industry · size · owner · way in | title · employer · email · phone · way in | account · value · stage · close · owner · partner | title · company · email · source · owner |
-| Filled verb | New deal | Reply on her thread | Confirm the rate | Qualify |
+| Verbs (base, never the task) | Write email · Log activity · Add task · more | Write email · Call · Add task · more | Write email · Log activity · Edit deal · more | Qualify · Write email · Edit · Disqualify · more |
 | Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The people · Momentum | Company · Score · First response · Next · Your move |
 | 360 word | Good | Promise overdue | Live | In motion |
 | In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
@@ -687,7 +695,8 @@ inventory. The structure above holds; these are the facts it now carries.
   lists (two visible, not sortable), a tag on the board card, and a "Tags ·
   Any tag" filter chip. Leads are not tagged.
 - **The email verb is an outlined button on every record**, in the same
-  place, with the same word. The filled verb is the move the call names,
+  place, with the same word. In the head the filled verb is the transport;
+  in the needs list it is the move the call names,
   inside the needs list. Qualify stays filled on a lead, because it is the
   lead's whole point.
 - **The timeline thread has a failed state** ("The thread could not be read",
