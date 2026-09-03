@@ -862,7 +862,7 @@ function PersonActivityDrawer({
     <LogActivityAction
       entityType="person"
       entityId={personId}
-      initialKind={asTask ? "task" : undefined}
+      askedKind={asTask ? "task" : undefined}
       triggerLabel={asTask ? "log.addTask" : undefined}
       openOnMount
       onClose={onClose}

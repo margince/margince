@@ -154,7 +154,7 @@ export function CompanyPrimaryActions({
       <LogActivityAction
         entityType="organization"
         entityId={org.id}
-        initialKind="task"
+        askedKind="task"
         triggerLabel="log.addTask"
         disabled={logPending}
         disabledReasonId={logRefused}

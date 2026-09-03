@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -38,10 +38,22 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-// The seat the tab is read as. `/me` answers the grant map every capability
-// hook consults, and the default fixture grants nothing — so a case about a
-// write control has to say which seat is looking.
+/**
+ * The seat the tab is read as, and a signal for when it has answered.
+ *
+ * `/me` answers the grant map every capability hook consults, and the default
+ * fixture grants nothing — so a case about a write control has to say which
+ * seat is looking. `seatAnswered` is what a case asserting a control is ABSENT
+ * waits on: every capability hook reads false while the snapshot is in flight,
+ * so an ungranted seat and an unanswered one draw the identical page, and a
+ * query run before the answer lands would pass against a page that has not yet
+ * consulted the grants at all.
+ */
 function stub(graph: PersonGraph, allow: GrantSpec = {}) {
+  let answered: () => void = () => {};
+  const seatAnswered = new Promise<void>((resolve) => {
+    answered = resolve;
+  });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -53,11 +65,13 @@ function stub(graph: PersonGraph, allow: GrantSpec = {}) {
         return jsonResponse([]);
       }
       if (url.includes("/me")) {
+        answered();
         return jsonResponse(meFixture({ roles: ["rep"], allow }));
       }
       return jsonResponse({ data: [] });
     }),
   );
+  return { seatAnswered };
 }
 
 function renderTab(
@@ -65,17 +79,18 @@ function renderTab(
   locale: Locale = "en",
   allow: GrantSpec = {},
 ) {
-  stub(graph, allow);
+  const { seatAnswered } = stub(graph, allow);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
         <PersonNetworkTab personId={PERSON} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return { seatAnswered };
 }
 
 const anchor: PersonGraph["nodes"][number] = {
@@ -276,9 +291,16 @@ describe("a peer the graph observed but nothing has recorded", () => {
   // stopped being visible from any screen.
   it("offers no write to a seat that may not create a relationship", async () => {
     const user = userEvent.setup();
-    renderTab(withPeer(), "en", {});
+    const { seatAnswered } = renderTab(withPeer(), "en", {});
 
     await user.click(await screen.findByRole("button", { name: /Rui Peer/ }));
+
+    // The seat has spoken, and React has drawn its answer. Without both, this
+    // is a query against a page that has not read the grants yet, which is
+    // absent for the same reason a loading page is — and would keep passing if
+    // the control stopped consulting them.
+    await seatAnswered;
+    await act(async () => {});
 
     expect(
       screen.queryByRole("button", {

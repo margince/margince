@@ -1408,6 +1408,31 @@ describe("LeadScreen — arriving to log a call", () => {
     );
   });
 
+  // A link pressed on the record the reader is ALREADY on changes the address
+  // and nothing else — no remount, so a kind read once at mount stays put and
+  // the reader is handed the composer they asked for set to the wrong verb.
+  it("follows a call the address asks for after the composer is already open", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
+    );
+
+    // What a second link does: the hash moves under a mounted screen. The
+    // event is dispatched rather than waited for, because jsdom delivers its
+    // own a task later and the assertion is about the render, not the delay.
+    act(() => {
+      window.location.hash = "#/leads/l-1?action=call";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Call"),
+    );
+  });
+
   // The composer is absent in overlay for every reader, because every write it
   // makes answers unsupported_by_sor. For a reader who followed a link TO it
   // that absence reads as a broken page, so the address is answered instead.

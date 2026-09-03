@@ -160,12 +160,16 @@ function readModule(
   const linked = new Set<string>();
   const viaName = new Set<string>();
   const aliases = new Map<string, string>();
+  // An address, and not a MENTION of one. The chunk has to BEGIN with the
+  // address — bare, or joined to an origin — because that is what every href in
+  // this tree looks like and a sentence that merely names a screen is not a
+  // door somebody can press. Counting a mention would excuse exactly the screen
+  // most likely to have no door: the one the copy tells you to type.
   const address = (text: string): void => {
-    for (const match of text.matchAll(/#\/([a-z-]+)/g)) {
-      const id = match[1];
-      if (id !== undefined && screens.has(id)) {
-        linked.add(id);
-      }
+    const found = /^\/?#\/([a-z-]+)/.exec(text);
+    const id = found?.[1];
+    if (id !== undefined && screens.has(id)) {
+      linked.add(id);
     }
   };
   const walk = (node: ts.Node): void => {
@@ -336,6 +340,10 @@ describe("every screen has a door", () => {
     );
     // And nothing at all for a module that merely mentions the word.
     expect(linkedBy(`const label = "planted";`).size).toBe(0);
+    // Nor for prose that names the address. A sentence telling a reader to
+    // type one is not a door, and reading it as one would excuse the screen
+    // most likely to have none.
+    expect(linkedBy(`const help = "Open #/planted to see it";`).size).toBe(0);
     // Membership in a set of screens is not a door. `RAIL_LESS_SCREENS` lists
     // ids to describe how they are FRAMED, and reading that as a link would
     // excuse exactly the screens most likely to have no door.

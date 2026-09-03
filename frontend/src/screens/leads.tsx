@@ -1488,7 +1488,7 @@ function LeadOverviewPane({
           <LogActivity
             entityType="lead"
             entityId={id}
-            initialKind={askedToLogCall ? "call" : undefined}
+            askedKind={askedToLogCall ? "call" : undefined}
             onLogged={onTouchLogged}
           />
         </div>

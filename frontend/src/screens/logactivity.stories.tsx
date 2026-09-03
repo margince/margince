@@ -66,7 +66,7 @@ export const OpenedOnACall: Story = {
     installFetchStub({ "GET /me": admin() });
     return (
       <StoryProviders>
-        <LogActivity entityType="lead" entityId="l1" initialKind="call" />
+        <LogActivity entityType="lead" entityId="l1" askedKind="call" />
       </StoryProviders>
     );
   },

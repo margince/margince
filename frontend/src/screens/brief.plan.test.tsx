@@ -70,6 +70,7 @@ function planner(allow: readonly ("read" | "create" | "update")[]): Routes {
 
 const KEEPS_A_PLAN = planner(["read", "create", "update"]);
 const READS_ONLY = planner(["read"]);
+const OPENS_BUT_CANNOT_EDIT = planner(["read", "create"]);
 
 describe("the week ahead", () => {
   // The rep has not planned yet. A read that created a plan would put an empty
@@ -329,6 +330,37 @@ describe("the week ahead", () => {
     expect(
       screen.queryByRole("button", { name: en["plan.help.ask"] }),
     ).toBeNull();
+  });
+
+  // A seat's posture is about the write THIS week needs, and the two are not
+  // one grant. This reader may open a week and may not edit one, so a week
+  // already open is read-only to them however freely they could have started it.
+  it("says so to a seat that may open a week but not edit the one it has", async () => {
+    stubApi({
+      ...OPENS_BUT_CANNOT_EDIT,
+      "GET /weekly-plans/current": () => jsonResponse(plan()),
+    });
+    render(<PlanSection />);
+
+    expect(await screen.findByText("Call the Aster buyer back")).toBeTruthy();
+    expect(screen.getByText(en["plan.readOnly"])).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: en["plan.add"] })).toBeNull();
+  });
+
+  // And the mirror of it: nothing to open the week with is the case the
+  // sentence was written for, and holding `update` does not answer it.
+  it("says so to a seat that may edit a week but not open one", async () => {
+    stubApi({
+      ...planner(["read", "update"]),
+      "GET /weekly-plans/current": () =>
+        jsonResponse({ title: "Not Found" }, 404),
+    });
+    render(<PlanSection />);
+
+    expect(await screen.findByText(en["plan.none"])).toBeTruthy();
+    expect(screen.getByText(en["plan.readOnly"])).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en["plan.start"] })).toBeNull();
   });
 
   // An empty date is an absence, not an empty string: the contract types

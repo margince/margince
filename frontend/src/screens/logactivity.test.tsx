@@ -292,7 +292,7 @@ describe("log activity from a 360", () => {
   // over, rather than opening on a note they have to change.
   it("opens on the kind the caller named", async () => {
     stubApi({ "GET /people/p1": () => jsonResponse(person) });
-    render(<LogActivity entityType="lead" entityId="l1" initialKind="call" />);
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
 
     expect(screen.getByLabelText("Type").textContent).toContain("Call");
     // A call's date is the day it happened, not a deadline — the same field

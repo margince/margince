@@ -82,6 +82,33 @@ function stagedState(
   return commitment.state === "done" ? "open" : "done";
 }
 
+/**
+ * Whether the panel states its read-only posture, said once rather than as a
+ * refusal repeated on every row.
+ *
+ * The grant this reading needs is not the union of the two: a week with no plan
+ * asks for `create`, and a week with one asks for `update`. A seat holding
+ * create and not update reads an existing plan with every control gone and,
+ * under a test for both, no sentence saying why.
+ *
+ * Both answers are waited for. Neither a seat nor a week in flight is a denial,
+ * and branching before they land would flash the sentence at every reader.
+ */
+function statesReadOnly(
+  reading: Readonly<{
+    seatKnown: boolean;
+    weekKnown: boolean;
+    hasPlan: boolean;
+    mayStart: boolean;
+    mayEdit: boolean;
+  }>,
+): boolean {
+  if (!reading.seatKnown || !reading.weekKnown) {
+    return false;
+  }
+  return reading.hasPlan ? !reading.mayEdit : !reading.mayStart;
+}
+
 export function PlanSection() {
   const t = useT();
   const { locale } = useLocale();
@@ -118,11 +145,15 @@ export function PlanSection() {
   // into the review, so accepting an edit afterwards would make the review's
   // counts disagree with the rows they were counted from.
   const editable = canEdit && plan.data?.status === "open";
-  // The posture, said once, rather than a refusal repeated on every row. It
-  // waits on the probe: /me in flight is not a denial, and branching before it
-  // answers would flash the sentence at every reader. A closed week says
-  // nothing here — it is not this seat that the plan is shut to.
-  const readOnly = me.isSuccess && !canEdit && !canStart;
+  // A closed week says nothing about posture — it is not this seat that the
+  // plan is shut to, and `editable` above is what closes it.
+  const readOnly = statesReadOnly({
+    seatKnown: me.isSuccess,
+    weekKnown: plan.isSuccess,
+    hasPlan: plan.data !== null,
+    mayStart: canStart,
+    mayEdit: canEdit,
+  });
 
   function toggle(id: string) {
     setStaged((current) => {
