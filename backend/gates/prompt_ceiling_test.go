@@ -67,6 +67,7 @@ func goConstValue(t *testing.T, path, name string) int {
 }
 
 func TestThePromptCeilingIsTheLocalWindowMinusOneCompletion(t *testing.T) {
+	t.Parallel()
 	localCap := goConstValue(t, ollamaSource, "ollamaMaxContext")
 	completion := goConstValue(t, runnerWindowSource, "perCallOutputCeiling")
 	ceiling := goConstValue(t, runnerWindowSource, "PromptTokenCeiling")
@@ -85,6 +86,7 @@ func TestThePromptCeilingIsTheLocalWindowMinusOneCompletion(t *testing.T) {
 // that fills it rounds UP to a window past the cap — which the adapter then
 // clamps, silently handing the run less room than the ceiling promised.
 func TestThePromptCeilingLandsOnABucketBoundary(t *testing.T) {
+	t.Parallel()
 	bucket := goConstValue(t, ollamaSource, "ollamaContextBucket")
 	ceiling := goConstValue(t, runnerWindowSource, "PromptTokenCeiling")
 
