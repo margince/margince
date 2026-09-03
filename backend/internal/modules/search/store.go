@@ -37,10 +37,6 @@ type Store struct {
 	carriedBy TagReachCounter
 }
 
-// TagReachCounter counts, inside the caller's own transaction, how many records
-// carry one tag under that caller's row scope.
-type TagReachCounter func(ctx context.Context, tx pgx.Tx, tagID ids.TagID) (int, error)
-
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
 func NewStore(db *database.DB) *Store {
@@ -69,6 +65,10 @@ func (s *Store) bounded(budget time.Duration) *Store {
 // Only the index-maintenance passes that walk every workspace use it; a
 // request-path caller already holds the handle for the tenant it serves.
 func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
+	// carriedBy is deliberately NOT carried across: these passes rebuild the
+	// index and answer nobody, so there is no caller whose row scope a count
+	// would be taken under. A lane that starts serving hits from here owes
+	// itself the counter, and would otherwise report every tag as uncounted.
 	return &Store{db: s.db.ForWorkspace(ws)}
 }
 
@@ -317,33 +317,6 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		return Page{}, err
 	}
 	return page, nil
-}
-
-// countTagReach fills CarriedBy on the tag hits of one page.
-//
-// It runs in the SAME transaction as the ranking query, so the number a hit
-// reports and the rows the search admitted are one consistent read: counting
-// afterwards could answer from a tree somebody changed in between.
-//
-// A counting failure fails the search rather than answering with a silent
-// gap. The counter runs the caller's own row scope, so an error here is that
-// scope refusing to render — and a page that quietly drops the number in that
-// case would show a searcher a smaller world without saying so.
-func (s *Store) countTagReach(ctx context.Context, tx pgx.Tx, hits []Hit) error {
-	if s.carriedBy == nil {
-		return nil
-	}
-	for i := range hits {
-		if hits[i].Type != "tag" {
-			continue
-		}
-		n, err := s.carriedBy(ctx, tx, ids.From[ids.TagKind](hits[i].ID))
-		if err != nil {
-			return fmt.Errorf("search: counting what tag %s is on: %w", hits[i].ID, err)
-		}
-		hits[i].CarriedBy = &n
-	}
-	return nil
 }
 
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted
