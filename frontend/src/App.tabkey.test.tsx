@@ -19,14 +19,12 @@ import {
 // lives above every screen: that suite mounts the page with a `tab` prop and can
 // never see the router decide.
 //
-// KNOWN GAP, #3675: these two cases pass alone and fail when another App suite
-// has run first. The person page then never leaves "Loading…" — the address is
-// right and the record's name resolves, so the /360 read is what does not
-// settle, and something above this file is holding a react-query cache across
-// suites that `renderApp`'s fresh client does not clear. It is not this file's
-// stubs: it reproduces on an unmodified tree. Until that is found, treat a
-// failure here as the leak rather than as a broken identity key, and check by
-// running this file alone.
+// A second mount is a case of its own below, because the failure this file used
+// to carry was not about the key at all: the person page sat at "Loading…"
+// whenever another App suite had mounted first, so something above the fresh
+// `QueryClient` was answering with a settled cache from a previous mount. A
+// leak of that shape survives inside one file too, which is why it is asserted
+// here rather than left to whichever suite happens to run before this one.
 
 type Person360 = components["schemas"]["Person360"];
 
@@ -161,6 +159,24 @@ describe("the routed subtree's key", () => {
     // both, and every block between them would have re-animated with them.
     expect(recordHead()).toBe(chromeBefore);
     expect(tabStrip()).toBe(stripBefore);
+  });
+
+  // The app mounted, unmounted, and mounted again — the shape of a suite that
+  // runs after another one. A `QueryClient` is built per mount, so nothing may
+  // survive it: a module-level cache that did would answer the second mount
+  // from the first one's reads, and the page would sit at its loading state
+  // over a record whose name had already resolved.
+  it("resolves the record again on a second mount of the whole app", async () => {
+    window.location.hash = "#/contacts/p-1/overview";
+    renderApp();
+    await waitFor(() => expect(currentTab()).toBe("Overview"));
+
+    cleanup();
+    window.location.hash = "#/contacts/p-2/overview";
+    renderApp();
+
+    await waitFor(() => expect(currentTab()).toBe("Overview"));
+    expect(recordHead().textContent).toContain("Person p-2");
   });
 
   it("still throws the page away when the record itself changes", async () => {
