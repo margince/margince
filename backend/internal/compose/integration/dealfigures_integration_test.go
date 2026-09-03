@@ -31,6 +31,11 @@ func seedFiguresDeal(t *testing.T, owner ids.UUID, amount int64) ids.UUID {
 // seedFiguresDealClosing writes one deal with the given expected close date —
 // the workspace's own timezone setting is what Figures reads it against
 // (UTC, the fresh-installation default this harness never overrides).
+//
+// closes is bound as a plain calendar-date string, not the time.Time itself:
+// a date literal parses to the exact day named, with no session TimeZone GUC
+// in between, so a caller stating "today" in UTC gets that same day in the
+// column whatever the connection's zone happens to be.
 func seedFiguresDealClosing(t *testing.T, owner ids.UUID, amount int64, closes time.Time) ids.UUID {
 	t.Helper()
 	conn := OwnerConn(t)
@@ -41,8 +46,8 @@ func seedFiguresDealClosing(t *testing.T, owner ids.UUID, amount int64, closes t
 	return SeedIDRow(t, conn, `INSERT INTO deal
 		(id, owner_id, name, pipeline_id, stage_id, amount_minor, currency, expected_close_date,
 		 source, captured_by)
-		VALUES ($1, $2, 'Northstar renewal', $3, $4, $5, 'EUR', $6, 'manual', 'human:x')`,
-		owner, pipeline, stage, amount, closes)
+		VALUES ($1, $2, 'Northstar renewal', $3, $4, $5, 'EUR', $6::date, 'manual', 'human:x')`,
+		owner, pipeline, stage, amount, closes.Format(time.DateOnly))
 }
 
 // A deal the reader may see comes back with the figures a card states.

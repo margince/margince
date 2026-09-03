@@ -39,9 +39,11 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	row := base(item, level, "deals_at_risk", consequence)
 	// The contract's own per-row figure, sent rather than left for a client to
 	// re-derive from `because`/`above_next` — set only once conversion actually
-	// ran and priced this item, so a raw amount (no FX seam bound) or an
-	// unpriced deal never claims to be a base-currency figure it is not.
-	if row.Deal != nil && money.converted() && money.base != "" && known {
+	// ran and priced this item. expectedRevenue already answers known=false
+	// for a raw amount (no FX seam bound), an unpriced deal, or a converted
+	// figure with no base currency named, so this is the one place that
+	// answer is spent rather than a second copy of any of its three reasons.
+	if row.Deal != nil && money.converted() && known {
 		row.Deal.ExpectedMinorBase = &expected
 	}
 	// The reason carries the figure the verdict actually weighed, in the units

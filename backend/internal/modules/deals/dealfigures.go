@@ -128,17 +128,17 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			len(dealIDs), figuresScanCap)
 	}
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		// The installation's zone, read the same way installationToday and the
-		// nightly corrector read it — CloseIsOverdue below is what actually
-		// answers "is this deal overdue", asked once per row rather than
-		// re-spelled in SQL.
+		// The installation's zone, read the same way the nightly corrector
+		// reads it (closedatesweep.go) — CloseIsOverdue below is what
+		// actually answers "is this deal overdue", asked once per row
+		// rather than re-spelled in SQL.
 		tzName, err := s.installation.Timezone(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("read the installation's timezone: %w", err)
 		}
-		loc, err := time.LoadLocation(tzName)
+		loc, err := installationZone(tzName)
 		if err != nil {
-			return fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+			return err
 		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
@@ -197,4 +197,18 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		return nil, fmt.Errorf("deals: reading the figures behind a page of deals: %w", err)
 	}
 	return out, nil
+}
+
+// installationZone turns the raw IANA zone name installation.Timezone
+// answers into a *time.Location, for a caller that compares a wall-clock
+// instant to a DATE column in Go rather than asking Postgres to
+// (closedatesweep.go's nightly pass, this file's batched overdue read).
+// Split from the Timezone fetch itself: closedatesweep.go still needs the
+// raw name on its own, to bind into the same transaction's pre-filter query.
+func installationZone(tzName string) (*time.Location, error) {
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		return nil, fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+	}
+	return loc, nil
 }

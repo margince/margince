@@ -323,19 +323,19 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 	}
 	var open []openTask
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		args := []any{
+			linkValue, string(crmcontracts.ActivityKindTask), systemSource,
+			systemCapturedBy, systemCapturedByPattern,
+		}
+		arg := func(v any) int { args = append(args, v); return len(args) }
 		query := storekit.SQLf(`
 			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.%s = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL`, column)
-		args := []any{
-			linkValue, string(crmcontracts.ActivityKindTask), systemSource,
-			systemCapturedBy, systemCapturedByPattern,
-		}
 		if before != nil {
-			query += " AND a.created_at <= $6"
-			args = append(args, *before)
+			query += storekit.SQLf(" AND a.created_at <= $%d", arg(*before))
 		}
 		query += " ORDER BY a.id"
 		rows, err := tx.Query(ctx, query, args...)
