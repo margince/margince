@@ -175,8 +175,11 @@ func tagOf(id ids.TagID, name string, color *string, archived bool) agents.Tag {
 	return out
 }
 
+// The description is nil because `create_tag`'s schema does not offer one: a
+// tool that advertised the field would have to explain a word in a sentence
+// the model invented, and the HTTP door is where a curator writes that.
 func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (agents.Tag, error) {
-	row, err := a.store.CreateTag(ctx, name, color)
+	row, err := a.store.CreateTag(ctx, name, color, nil)
 	if err != nil {
 		return agents.Tag{}, err
 	}
