@@ -286,8 +286,13 @@ function WeeklyBody({
   if (review === null) {
     // A rep whose first Monday has not come round yet. Saying so is the honest
     // answer; a page of zeroes would claim a week that was measured and empty.
+    // Drawn through the same arm the branch above uses for the same sentence —
+    // hand-rolled here, it was the one line on the card set as a caption while
+    // every other absence on the page read as prose.
     return (
-      <p className="home-weekly-none t-caption">{t("home.weekly.none")}</p>
+      <SurfaceState state="empty" emptyLabel={t("home.weekly.none")}>
+        {null}
+      </SurfaceState>
     );
   }
 

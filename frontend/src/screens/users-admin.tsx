@@ -177,7 +177,7 @@ function MembersCard({
           {(list) =>
             list.length === 0 ? (
               <EmptyState>
-                <p className="t-small">{t("users.empty")}</p>
+                <p>{t("users.empty")}</p>
               </EmptyState>
             ) : (
               // One SettingRow per member, so nine members read as nine lines

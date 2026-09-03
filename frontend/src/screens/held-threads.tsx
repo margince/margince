@@ -66,7 +66,7 @@ export function HeldThreadsCard() {
               // withholding nothing right now" is exactly what an owner opens
               // this card to confirm.
               <EmptyState>
-                <p className="t-small">{t("heldThreads.empty")}</p>
+                <p>{t("heldThreads.empty")}</p>
               </EmptyState>
             ) : (
               <>

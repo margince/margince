@@ -15,6 +15,7 @@ import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
+import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import {
   formatDateTime,
@@ -528,7 +529,9 @@ function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
       {derivation.rows.length === 0 ? (
-        <p className="t-caption">{t("common.empty")}</p>
+        <SurfaceState state="empty" emptyLabel={t("common.empty")}>
+          {null}
+        </SurfaceState>
       ) : (
         <DataTable
           label={t("explain.sources")}

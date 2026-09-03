@@ -1028,7 +1028,7 @@ function MailRoster({
           label={t("connectors.rosterLabel")}
           control={
             <EmptyState>
-              <p className="t-small">{t("connectors.empty")}</p>
+              <p>{t("connectors.empty")}</p>
             </EmptyState>
           }
         />

@@ -237,7 +237,7 @@ export function PlanSection() {
               {canStart && (
                 <Button
                   onClick={() => start.mutate()}
-                  disabled={start.isPending}
+                  pending={start.isPending}
                 >
                   {t("plan.start")}
                 </Button>
@@ -317,8 +317,11 @@ function PlanFoot({
           })}
         </Callout>
       )}
+      {/* `pending`, not `disabled`: a write in flight is not a precondition the
+          reader can meet, and `disabled` is native — it drops focus from the
+          control they just pressed. */}
       {editable && staged > 0 && (
-        <Button onClick={onSave} disabled={saving}>
+        <Button onClick={onSave} pending={saving}>
           {plural("plan.save", staged, { count: formatNumber(staged, locale) })}
         </Button>
       )}
@@ -421,7 +424,7 @@ function HelpExchange({
               { onSuccess: () => setEditing(false) },
             );
           }}
-          disabled={ask.isPending}
+          pending={ask.isPending}
         >
           {t("plan.help.send")}
         </Button>

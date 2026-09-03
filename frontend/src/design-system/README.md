@@ -329,8 +329,14 @@ in `title` reaches exactly nobody who needed it; `Button`'s `reasonId` points
 several refused controls at ONE sentence already on the page, for a surface
 where one fact refuses all of them. And `FieldGuard` covers a withheld VALUE
 rather than a withheld surface. What is left hand-rolls
-`<EmptyState><p className="t-small">{t(…)}</p></EmptyState>` as the card body,
-which is the shape to match where `SurfaceState` does not fit.
+`<EmptyState><p>{t(…)}</p></EmptyState>` as the card body, which is the shape to
+match where `SurfaceState` does not fit. **The sentence carries no type class of
+its own**: `EmptyState` owns the size and the ink, and a `t-small` or `t-caption`
+inside it overrides the primitive from the call site — which is how one screen
+came to say "there is none" at 12px while the card beside it said the same thing
+at 14px. A sentence a card shows INSTEAD of content is card body text
+(`--fs-body`) in `--textSecondary`, and `SurfaceState`, `EmptyState` and the
+`.empty` plate all draw it that way.
 
 `Switch` versus `Checkbox` follows from the same honesty: a `Checkbox` states an
 intent that something later submits, a `Switch` **is** the action. A control that

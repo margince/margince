@@ -200,7 +200,7 @@ export function BlockedDomainsCard() {
                     // that failed. The states that are not this one are the
                     // query gate's above.
                     <EmptyState>
-                      <p className="t-small">{t("blockedDomains.none")}</p>
+                      <p>{t("blockedDomains.none")}</p>
                     </EmptyState>
                   ) : (
                     <div className="form-stack settingrow-measure">
