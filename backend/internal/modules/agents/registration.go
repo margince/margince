@@ -155,157 +155,6 @@ func envelopedSpec(spec mcp.ToolSpec) mcp.ToolSpec {
 	return spec
 }
 
-// assertObjectSchemas holds two promises tools/list and tools/call have to
-// keep, at the one door every tool comes through.
-//
-// The first is ENCODABILITY. Both schemas are hand-written JSON literals
-// spliced together from constants, and they reach the client by being embedded
-// verbatim into the tools/list response — so ONE misplaced brace does not
-// break one tool, it makes the whole listing unencodable and every tool
-// disappears behind a 500. That is a boot-time defect discovered on a client's
-// first request, which is exactly the wrong end.
-//
-// The second is that both are OBJECT schemas. MCP requires an object input
-// schema, and a declared outputSchema obliges the server to answer with
-// structured content conforming to it — which the dispatcher can only do for
-// an object, because structuredContent is typed as one. A schema written some
-// other way (a $ref, a bare allOf) fails here on purpose: not wrong, but not
-// something the dispatcher has been taught to honour, and failing at boot
-// beats advertising a shape the results miss.
-func assertObjectSchemas(spec mcp.ToolSpec) error {
-	if spec.InputSchema == nil {
-		// The protocol requires one. A tool taking no arguments still declares
-		// `{"type":"object"}`; nil would put a bare null on tools/list.
-		return fmt.Errorf("%s declares no InputSchema; MCP requires every tool to advertise an object input schema", spec.Name)
-	}
-	for _, s := range []struct {
-		field string
-		raw   json.RawMessage
-	}{
-		{field: "InputSchema", raw: spec.InputSchema},
-		// Optional: a tool promising no output shape owes tools/call no
-		// structured content.
-		{field: "OutputSchema", raw: spec.OutputSchema},
-	} {
-		if s.raw == nil {
-			continue
-		}
-		// Decoded ONCE, as members, because two things are judged from it: the
-		// declared type and whether the schema composes. Decoding twice would
-		// mean a second error to either report redundantly or swallow.
-		var declared map[string]json.RawMessage
-		if err := json.Unmarshal(s.raw, &declared); err != nil {
-			return fmt.Errorf("%s has an %s that is not valid JSON, which makes the whole tools/list response unencodable: %w",
-				spec.Name, s.field, err)
-		}
-		var declaredType string
-		if raw, stated := declared["type"]; stated {
-			if err := json.Unmarshal(raw, &declaredType); err != nil {
-				return fmt.Errorf("%s's %s declares a `type` that is not a string: %w", spec.Name, s.field, err)
-			}
-		}
-		if declaredType != "object" {
-			return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
-				spec.Name, s.field, declaredType)
-		}
-		// A COMPOSING schema is refused for EVERY served spec, mutating or not.
-		// The runner's listing renderer reaches an object schema through
-		// `properties` and `items` and nowhere else, so a composed branch keeps
-		// its closed form and the headroom the budget page publishes is larger
-		// than the headroom that exists — with nothing failing.
-		if err := assertNoSchemaComposition(spec.Name, s.field, declared); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// composingKeywords are the JSON Schema branches this surface cannot follow:
-// the retry-key splice cannot reach inside one, the runner's listing renderer
-// does not walk one, and the response assembler cannot read a result shape
-// behind one.
-//
-// TestAComposedInputSchemaIsRefusedAtBoot iterates this list rather than naming
-// keywords, so a branch added here is refused and exercised in the same commit.
-var composingKeywords = []string{"allOf", "anyOf", "oneOf", "$ref"}
-
-// assertNoSchemaComposition refuses a schema this surface cannot reason about,
-// AT EVERY DEPTH.
-//
-// Three things need an object schema to be reachable by walking `properties` and
-// `items`, and each breaks silently rather than loudly without this:
-//
-//   - spliceRetryKey cannot add a top-level member to a schema whose closed
-//     branch would then reject it, so a schema-aware client would be told to
-//     send an argument its own validator refuses.
-//   - the runner's listing renderer walks those two keys and no others, so a
-//     composed branch keeps its `"additionalProperties":false` and the headroom
-//     the budget page publishes is larger than the headroom that exists.
-//   - the dispatcher can only honour an object `structuredContent`, which is
-//     why this binds OutputSchema too: a result shape behind a `$ref` is a
-//     promise the response assembler cannot read.
-//
-// RECURSIVE, because a root-only check holds none of the three. A branch spelled
-// `properties.foo.allOf` passes a root check, and then the renderer copies
-// `allOf` through verbatim without ever entering it. That is the same
-// fail-short shape as a census that reads a smaller tree and reports PASS.
-//
-// It takes the DECODED members rather than the bytes, so there is one decode of
-// each object and no second error to swallow.
-func assertNoSchemaComposition(tool, field string, shape map[string]json.RawMessage) error {
-	for _, keyword := range composingKeywords {
-		if _, composed := shape[keyword]; composed {
-			return fmt.Errorf("%s's %s uses `%s`, which this surface cannot reason about: "+
-				"the retry-key splice cannot reach inside it, the runner's listing renderer "+
-				"would not walk it, and the response assembler cannot read a result shape "+
-				"behind it", tool, field, keyword)
-		}
-	}
-	// The same keys the renderer walks, so the refusal covers exactly what the
-	// renderer can reach and nothing it cannot. `additionalProperties` belongs
-	// here as much as the other two: it can be a full object schema, and
-	// qualify_lead nests a `properties` tree under one.
-	for _, nested := range []string{"properties", "items", "additionalProperties"} {
-		raw, present := shape[nested]
-		if !present {
-			continue
-		}
-		if err := assertNoCompositionUnder(tool, field, nested, raw); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// assertNoCompositionUnder descends one `properties` map or one `items` schema.
-//
-// A value that is not an object schema is not an error here: `properties` is a
-// map of them, `items` is one, and JSON Schema allows `items` to be an array
-// (the tuple form) which this surface does not serve and the renderer leaves
-// alone. Anything that does not decode as an object simply carries no branch to
-// refuse.
-func assertNoCompositionUnder(tool, field, keyword string, raw json.RawMessage) error {
-	var decoded map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &decoded); err != nil {
-		return nil //nolint:nilerr // not an object: `items` in tuple form, or a bool schema. It carries no branch, and assertObjectSchemas has already judged the root's shape.
-	}
-	// `items` and `additionalProperties` hold ONE schema; `properties` holds a
-	// map of them.
-	if keyword != "properties" {
-		return assertNoSchemaComposition(tool, field, decoded)
-	}
-	for name, property := range decoded {
-		var member map[string]json.RawMessage
-		if err := json.Unmarshal(property, &member); err != nil {
-			continue
-		}
-		if err := assertNoSchemaComposition(tool, field+"."+name, member); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // retryKeyProperty is the advertised member, served in the tools/list catalog.
 //
 // Keep it short: a client holds this catalogue for a whole session. The runner's
@@ -468,6 +317,45 @@ func assertNoRequiredReservedArgument(spec mcp.ToolSpec) error {
 				"sees it — every caller would be refused for omitting what they sent. Name the tool's own "+
 				"argument something else", spec.Name, field)
 		}
+	}
+	return assertNoDeclaredRetryKey(spec)
+}
+
+// assertNoDeclaredRetryKey refuses a tool that declares `idempotency_key` at the
+// ROOT of its own schema, whoever the tool is.
+//
+// spliceRetryKey already refuses it for a MUTATING CORE tool, because two
+// definitions of one member cannot both survive a splice. This is the rest of
+// that rule, and it exists because the argument is not declarable by anyone:
+// splitReserved pops the name from every call before any handler sees it, and
+// refuseUnkeyableCall then refuses it outright on a read-only tool and on an
+// extension unit's tool. So a tool declaring it is advertising an argument it
+// can never receive.
+//
+// It also removes a divergence rather than documenting one. withRetryKey splices
+// iff the tool is mutating AND core; the runner's listing compaction strips the
+// member's description iff the tool is mutating. Those two predicates disagree
+// for an extension's mutating tool, and the disagreement was invisible: the
+// equivalence gate compares the listing against the same compaction, so both
+// sides move together. With no tool able to declare the member, the only root
+// `idempotency_key` anywhere is the one the surface spliced, and there is
+// nothing left for the two predicates to disagree about.
+//
+// `approval_id` stays declarable: several tools name it in their own schemas
+// with their own per-tool meaning, which is why the compaction leaves it alone.
+func assertNoDeclaredRetryKey(spec mcp.ToolSpec) error {
+	var shape struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	//nolint:nilerr // the unreadable-schema refusal belongs to assertObjectSchemas, which runs right after this
+	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
+		return nil
+	}
+	if _, declared := shape.Properties[idempotencyKeyArg]; declared {
+		return fmt.Errorf("%s declares `%s` at the root of its own schema. The surface owns that "+
+			"argument: it is popped from every call before the tool sees it, and refused outright for a "+
+			"read-only or extension-owned tool — so this advertises an argument the tool can never "+
+			"receive. Name the tool's own argument something else", spec.Name, idempotencyKeyArg)
 	}
 	return nil
 }

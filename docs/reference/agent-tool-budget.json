@@ -5,7 +5,7 @@
   "whole_catalog_floor": 21504,
   "catalog": {
     "tools": 70,
-    "system_frame_tokens": 351,
+    "system_frame_tokens": 353,
     "tokens": 19785,
     "median_tool_tokens": 262,
     "mean_tool_tokens": 282

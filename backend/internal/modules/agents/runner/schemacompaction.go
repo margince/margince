@@ -59,12 +59,13 @@ func CompactSchema(spec mcp.ToolSpec) string {
 	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
 		return string(spec.InputSchema)
 	}
-	// The surface splices the retry key into MUTATING core tools only, so only
-	// those have a root member of that name it owns. A read-only tool that
-	// declared one would have written it itself, and its description is that
-	// tool's own meaning.
-	root := atSchemaRoot && !spec.ReadOnly()
-	compacted, err := json.Marshal(compactSchemaShape(shape, root))
+	// No predicate on the tool. assertNoDeclaredRetryKey refuses ANY tool that
+	// declares the member at its own root, so the only root `idempotency_key` on
+	// the surface is the one spliceRetryKey put there — and stripping the
+	// description of the surface's own member is what this is for. Deciding it
+	// from the spec instead would mean a second predicate beside withRetryKey's,
+	// and the two disagreed on extension-owned tools.
+	compacted, err := json.Marshal(compactSchemaShape(shape, atSchemaRoot))
 	if err != nil {
 		return string(spec.InputSchema)
 	}

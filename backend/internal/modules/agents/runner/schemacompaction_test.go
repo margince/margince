@@ -13,17 +13,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// mutating wraps a bare schema as a MUTATING tool, which is the only kind whose
-// root `idempotency_key` the surface owns.
+// mutating wraps a bare schema as a MUTATING tool — the only kind the surface
+// splices its retry key into, and so the only kind whose rendered schema can
+// carry one at the root at all (assertNoDeclaredRetryKey refuses any tool that
+// declares the member itself).
 func mutating(schema json.RawMessage) mcp.ToolSpec {
 	return mcp.ToolSpec{Name: "probe", RequiredScope: principal.ScopeWrite, InputSchema: schema}
-}
-
-// readOnly wraps a bare schema as a READ-ONLY tool. The surface splices the
-// retry key into mutating tools only, so a root member of that name on a
-// read-only one is the tool's own and its description is the tool's meaning.
-func readOnly(schema json.RawMessage) mcp.ToolSpec {
-	return mcp.ToolSpec{Name: "probe", RequiredScope: principal.ScopeRead, InputSchema: schema}
 }
 
 // mutatingSpec is a tool shaped the way the surface splices one: a closed
@@ -254,30 +249,6 @@ func TestAPropertyNamedLikeAKeywordIsStillAProperty(t *testing.T) {
 	}
 }
 
-// A READ-ONLY tool's own root `idempotency_key` keeps its description.
-//
-// The surface splices the retry key into MUTATING core tools only, and refuses a
-// mutating tool that declares the member itself — so a read-only tool carrying
-// one wrote it, and the frame's sentence is not about it. Stripping it there
-// would take away per-tool meaning on the strength of a name the surface never
-// claimed for that tool. No such tool exists today, which is what makes this a
-// planted case rather than a repair.
-func TestAReadOnlyToolsOwnRetryKeyKeepsItsDescription(t *testing.T) {
-	const own = "A caller-chosen cursor; repeats are cheap and this is not the surface's key."
-	schema := json.RawMessage(`{"type":"object","properties":{` +
-		`"idempotency_key":{"type":"string","description":"` + own + `"}},` +
-		`"additionalProperties":false}`)
-	if compacted := CompactSchema(readOnly(schema)); !strings.Contains(compacted, own) {
-		t.Errorf("a read-only tool's own root %q lost its description, which the surface never wrote:\n%s",
-			mcp.ReservedIdempotencyKeyArg, compacted)
-	}
-	// The same schema on a MUTATING tool IS the surface's, and is compacted —
-	// otherwise this passes by the level rule having stopped working.
-	if compacted := CompactSchema(mutating(schema)); strings.Contains(compacted, own) {
-		t.Errorf("a mutating tool's root retry key kept its description:\n%s", compacted)
-	}
-}
-
 // The shared rule has to survive being pasted into a JSON string literal.
 //
 // registration.go builds the member's `description` by concatenating this
@@ -287,9 +258,14 @@ func TestAReadOnlyToolsOwnRetryKeyKeepsItsDescription(t *testing.T) {
 // response with it. The runtime enforcement is a boot-time panic in a code path
 // no test exercises by name, so the character set is asserted here instead.
 func TestTheSharedRetryKeyRuleIsSafeInAJSONLiteral(t *testing.T) {
-	if strings.ContainsAny(mcp.ReservedIdempotencyKeyRule, "\"\\\n\r\t") {
-		t.Errorf("mcp.ReservedIdempotencyKeyRule contains a character that needs JSON escaping, and "+
-			"the surface pastes it into a JSON string literal unescaped: %q",
+	// Asserted by ENCODING it the way the surface does, not by listing forbidden
+	// characters: JSON requires every one of U+0000-U+001F escaped, and a
+	// hand-written set of five will always be an incomplete version of that.
+	spliced := json.RawMessage(`{"type":"string","description":"Optional. ` +
+		mcp.ReservedIdempotencyKeyRule + `"}`)
+	if !json.Valid(spliced) {
+		t.Errorf("mcp.ReservedIdempotencyKeyRule does not survive being pasted into a JSON string "+
+			"literal, which is what the surface does to it with no encoder in the path: %q",
 			mcp.ReservedIdempotencyKeyRule)
 	}
 	if mcp.ReservedIdempotencyKeyRule == "" {

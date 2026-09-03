@@ -20,7 +20,7 @@ The window is 24576 tokens. An agent's listing may take 17408 of them (17/24). T
 served catalog is held to 21504 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
-Before any tool is listed the frame itself costs **351 tokens** — the output contract,
+Before any tool is listed the frame itself costs **353 tokens** — the output contract,
 the rules and the prompt fence. It is published here because a rule moved OUT of the
 per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence,
 and only the first half is held by a bound: the floor above measures the LISTING

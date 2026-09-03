@@ -50,6 +50,26 @@ func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.Reso
 	// So there is no installation that serves run_report and lacks the
 	// vocabulary it refuses against, and a conditionally-absent document would
 	// leave the tool naming a document some build does not publish.
+	//
+	// THE DOOR BESIDE IT *IS* OVERLAY-GUARDED, and the asymmetry is deliberate.
+	// It was read as a bug in review, so the reasoning is here rather than in a
+	// PR nobody will find:
+	//
+	//   - A RESOURCE is fetched by a client that asked for it by URI and is
+	//     reading documentation. A TOOL call is a step a run spends, and
+	//     teaching a name for a verb this workspace refuses spends it for
+	//     nothing — which is the whole reason the query vocabulary's door is
+	//     guarded too.
+	//   - It discloses nothing. The document is the ENGINE's compile-time table,
+	//     identical in every installation, so serving it says nothing about this
+	//     workspace that run_report's own refusal does not say outright.
+	//
+	// margince://schema/query splits exactly this way — unguarded resource,
+	// guarded door — and it is the precedent this follows.
+	// margince://schema/record-fields is NOT a clean precedent for it, though it
+	// looks like one: the overlay provider serves no CREATE but does serve some
+	// UPDATE, so that document describes verbs a caller may partly still use.
+	// This one describes a verb that is refused outright.
 	providers := []mcp.ResourceProvider{
 		capabilities, vocabulary,
 		agents.RecordFieldsResource{},

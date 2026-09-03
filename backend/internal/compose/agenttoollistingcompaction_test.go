@@ -21,6 +21,7 @@ package compose
 import (
 	"bufio"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -31,8 +32,20 @@ import (
 // listingSchemaPrefix is how ToolListing introduces a rendered schema.
 const listingSchemaPrefix = "  input schema: "
 
-// For every served spec, the listing's schema is exactly the compaction applied
-// to the served one — nothing else moved.
+// For every served spec, the listing's schema is exactly the two declared
+// omissions applied to the served one — nothing else moved.
+//
+// THE SECOND SIDE IS COMPUTED HERE, not by calling runner.CompactSchema. That is
+// the whole strength of this gate. Comparing the listing against the same
+// function the listing calls is f(x) == f(x): a mutation INSIDE the compaction —
+// `case "enum": continue`, dropping every `description`, dropping `required` —
+// moves both sides together and stays green, with only the budget page's byte
+// count going red as a "regenerate the page" message a reader obeys.
+//
+// So this walks the served JSON itself and removes exactly two things: every
+// `"additionalProperties": false` at any depth, and the ROOT
+// `properties.idempotency_key.description`. Then it compares PARSED TREES, so
+// key order and whitespace are the renderer's business and not this gate's.
 //
 // Derived from the served surface, so a tool added tomorrow is measured without
 // anybody remembering this test.
@@ -49,13 +62,96 @@ func TestTheListingIsTheDeclaredCompactionOfEveryServedSchema(t *testing.T) {
 			t.Errorf("%s is served but the listing renders no schema for it", spec.Name)
 			continue
 		}
-		if want := runner.CompactSchema(spec); got != want {
-			t.Errorf("%s: the listing renders\n\t%s\nand the declared compaction of the served schema is\n\t%s\n"+
-				"The two must be the same string. If the renderer has started changing something else — "+
-				"member order, an enum, a required list, a nested object — that change is invisible to "+
-				"mcp-info.md and is being paid for on every step of every run.", spec.Name, got, want)
+		var listedTree, wantTree any
+		if err := json.Unmarshal([]byte(got), &listedTree); err != nil {
+			t.Errorf("%s: the listing rendered a schema that is not valid JSON: %v\n%s", spec.Name, err, got)
+			continue
+		}
+		if err := json.Unmarshal(spec.InputSchema, &wantTree); err != nil {
+			t.Errorf("%s: the served schema is not valid JSON: %v", spec.Name, err)
+			continue
+		}
+		wantTree = withoutTheDeclaredOmissions(wantTree, atRoot)
+		if !reflect.DeepEqual(listedTree, wantTree) {
+			listedJSON, _ := json.Marshal(listedTree)
+			wantJSON, _ := json.Marshal(wantTree)
+			t.Errorf("%s: the listing renders\n\t%s\nand the served schema minus the two declared "+
+				"omissions is\n\t%s\nThe two must be the same tree. If the renderer has started changing "+
+				"something else — an enum, a required list, a nested member — that change is invisible to "+
+				"mcp-info.md and is paid for on every step of every run.",
+				spec.Name, listedJSON, wantJSON)
 		}
 	}
+}
+
+// atRoot / belowRoot mark the level for withoutTheDeclaredOmissions, because the
+// retry key's description is a surface fact only at the root of a schema.
+const (
+	atRoot    = true
+	belowRoot = false
+)
+
+// withoutTheDeclaredOmissions removes, from a parsed schema tree, exactly what
+// the listing is allowed to omit — and nothing else.
+//
+// Deliberately a generic walk over `any` rather than a mirror of the
+// implementation's structure: it descends EVERY object and array it finds, so it
+// does not share the implementation's idea of which keywords nest a schema. If
+// the compaction ever stops walking a keyword this walk still reaches, or starts
+// removing something this walk keeps, the trees differ.
+//
+//craft:ignore naked-any a decoded JSON document HAS no concrete Go type, and this walk's independence from the implementation's own structure is exactly what makes this side of the gate worth having
+func withoutTheDeclaredOmissions(node any, root bool) any {
+	switch typed := node.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, value := range typed {
+			if key == "additionalProperties" {
+				if closed, isBool := value.(bool); isBool && !closed {
+					continue
+				}
+			}
+			if root && key == "properties" {
+				if properties, isObject := value.(map[string]any); isObject {
+					out[key] = withoutRootRetryKeyDescription(properties)
+					continue
+				}
+			}
+			out[key] = withoutTheDeclaredOmissions(value, belowRoot)
+		}
+		return out
+	case []any:
+		out := make([]any, 0, len(typed))
+		for _, value := range typed {
+			out = append(out, withoutTheDeclaredOmissions(value, belowRoot))
+		}
+		return out
+	default:
+		return node
+	}
+}
+
+// withoutRootRetryKeyDescription drops the description of the ONE member the
+// surface owns at a schema's root, leaving every sibling and the member's own
+// type and bound in place.
+func withoutRootRetryKeyDescription(properties map[string]any) map[string]any {
+	out := make(map[string]any, len(properties))
+	for name, value := range properties {
+		member, isObject := value.(map[string]any)
+		if name != mcp.ReservedIdempotencyKeyArg || !isObject {
+			out[name] = withoutTheDeclaredOmissions(value, belowRoot)
+			continue
+		}
+		stripped := make(map[string]any, len(member))
+		for key, inner := range member {
+			if key == "description" {
+				continue
+			}
+			stripped[key] = withoutTheDeclaredOmissions(inner, belowRoot)
+		}
+		out[name] = stripped
+	}
+	return out
 }
 
 // The compaction actually REMOVES something from the real catalog.

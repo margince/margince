@@ -144,17 +144,6 @@ func TestAToolWithNoPropertiesStillGetsTheRetryKey(t *testing.T) {
 	}
 }
 
-// Two definitions of one member, and only one can survive a splice — refused at
-// boot rather than resolved silently, because they could disagree about type or
-// bound and the surface would enforce whichever this happened to keep.
-func TestAToolDeclaringTheRetryKeyItselfIsRefusedAtBoot(t *testing.T) {
-	spec := mutatingSpec("create_record")
-	spec.InputSchema = json.RawMessage(`{"type":"object","properties":{"idempotency_key":{"type":"integer"}}}`)
-	mustPanic(t, "a tool declared the surface's own argument", func() {
-		NewRegistry(nil, nil).Register(&fakeTool{spec: spec})
-	})
-}
-
 func TestSpliceRetryKeyRefusesSchemasItCannotRead(t *testing.T) {
 	for _, tc := range []struct{ name, schema string }{
 		{name: "not an object", schema: `["nope"]`},
@@ -209,6 +198,56 @@ func TestAComposedInputSchemaIsRefusedAtBoot(t *testing.T) {
 	}
 }
 
+// ANY tool declaring `idempotency_key` at its own root is refused at boot —
+// read-only and extension-owned included, not just the mutating core tools
+// spliceRetryKey walks.
+//
+// The argument is not declarable by anyone: splitReserved pops the name from
+// every call before a handler sees it, and refuseUnkeyableCall then refuses it
+// outright on a read-only or unit-owned tool. So declaring it advertises an
+// argument the tool can never receive.
+//
+// It also removes a divergence the equivalence gate could not see. withRetryKey
+// splices iff mutating AND core; the runner's compaction strips the member's
+// description iff mutating. Those disagree for an extension's mutating tool, and
+// the gate compares the listing against the same compaction, so both sides moved
+// together. With no tool able to declare the member, the only root
+// `idempotency_key` is the surface's own.
+func TestAnyToolDeclaringTheRetryKeyItselfIsRefusedAtBoot(t *testing.T) {
+	declared := `{"type":"object","properties":{"` + idempotencyKeyArg +
+		`":{"type":"string","description":"my own key"}},"additionalProperties":false}`
+	for _, tc := range []struct {
+		name string
+		spec mcp.ToolSpec
+	}{
+		{"mutating core", mutatingSpec("declares_own_key")},
+		{"read-only", readOnlySpec("readonly_declares_own_key")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.spec.InputSchema = json.RawMessage(declared)
+			mustPanic(t, "a tool declaring the surface's own argument was registered", func() {
+				NewRegistry(nil, nil).Register(&fakeTool{spec: tc.spec})
+			})
+		})
+	}
+	// An extension unit's mutating tool, which withRetryKey skips entirely — the
+	// case the divergence was about.
+	t.Run("extension-owned mutating", func(t *testing.T) {
+		spec := mutatingSpec("unit_declares_own_key")
+		spec.InputSchema = json.RawMessage(declared)
+		mustPanic(t, "an extension tool declaring the surface's own argument was registered", func() {
+			NewRegistry(nil, nil).Register(unitTool{fakeTool: &fakeTool{spec: spec}, unit: "probe-unit"})
+		})
+	})
+	// `approval_id` STAYS declarable: several tools name it with their own
+	// per-tool meaning, which is why the compaction leaves it alone.
+	ownApproval := mutatingSpec("declares_approval_id")
+	ownApproval.InputSchema = json.RawMessage(`{"type":"object","properties":{"` + approvalIDArg +
+		`":{"type":"string","description":"Set on retry after a human approved."}},` +
+		`"additionalProperties":false}`)
+	NewRegistry(nil, nil).Register(&fakeTool{spec: ownApproval})
+}
+
 // A composed schema is refused AT ANY DEPTH, and on a READ-ONLY tool too.
 //
 // A root-only check holds neither thing that depends on it. The runner's listing
@@ -231,6 +270,11 @@ func TestAComposedBranchIsRefusedAtEveryDepthAndOnReadOnlyTools(t *testing.T) {
 		// boot — and qualify_lead's own output schema nests a `properties` tree
 		// under one, which is what makes this reachable.
 		{"under additionalProperties", `{"type":"object","additionalProperties":{"oneOf":[{}]}}`},
+		// The TUPLE form of `items` is refused outright, not skipped: neither
+		// walk descends into an array of schemas, so anything nested there is
+		// invisible to both the refusal and the listing renderer.
+		{"tuple-form items", `{"type":"object","properties":{"pair":{"type":"array",` +
+			`"items":[{"type":"string"},{"type":"object","additionalProperties":false}]}}}`},
 		{"deep under additionalProperties", `{"type":"object","properties":{"filled":{"type":"object",` +
 			`"additionalProperties":{"type":"object","properties":{"v":{"$ref":"#/x"}}}}}}`},
 	} {
