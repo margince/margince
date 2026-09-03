@@ -76,7 +76,7 @@ type ConfirmRef struct {
 // link completes with no confirmation mail, on the claim that the link reached
 // the subject's own mailbox — so a caller who could name the address could name
 // somebody else's, hand out the plaintext, and produce a consent that looks
-// defensible against a mailbox the subject never held. IssueDoubleOptIn is
+// defensible against a mailbox the subject never held. The retired double-opt-in issuance was
 // structurally immune for the same reason: it takes no address at all.
 //
 // A fresh issuance supersedes any unspent prior token for the same person:
@@ -94,7 +94,7 @@ func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID) (I
 	var out IssuedConfirm
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Live, and HELD before this transaction takes any other row lock — the
-		// same ordering IssueDoubleOptIn takes and for the same reason. What
+		// same ordering the erasure path takes and for the same reason. What
 		// this mints is a working link to one person's record; an erasure
 		// committing after an unheld probe would leave the installation posting
 		// it to somebody it had just been told to forget.

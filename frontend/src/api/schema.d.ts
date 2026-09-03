@@ -8599,15 +8599,16 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
-         * @description Issues the token that `recordConsent` later redeems (feedback/11 — the contract previously
-         *     defined only redemption). Mints a **single-use, 72h-TTL** double-opt-in token for `purpose_id`
-         *     and, when `deliver=true`, queues the confirmation message through the outbound surface for
-         *     delivery to the data subject. Only the token's **SHA-256 hash is stored** (`consent_doi_token`,
-         *     data-model §3.4); the plaintext is returned **once** here (and in the delivered message) and
-         *     never again. A new issuance **supersedes** any unredeemed prior token for the same
-         *     `(person, purpose)`. Requires the purpose to have `requires_double_opt_in=true` (else `422`).
-         *     🟢 — an internal issuance; the confirmation send rides the outbound/consent gate like any message.
+         * Double-opt-in issuance — not available until the confirmation mail is durable.
+         * @description Answers `409` and mints nothing. A double opt-in is only evidence when the data subject
+         *     completes it from their own mailbox, and this installation has no durable path to deliver
+         *     that link yet. The earlier behaviour returned the plaintext token to the operator, who could
+         *     paste it straight back into `recordConsent` — a round trip in which the subject's mailbox
+         *     never participated, recorded as though it had.
+         *
+         *     Marketing opt-in meanwhile is captured through the confirm-details link
+         *     (`requestDetailsConfirmation`), which mails a single-use link to the person's own live
+         *     primary address and records their answer when they submit it.
          */
         post: operations["issueDoubleOptIn"];
         delete?: never;
@@ -8641,12 +8642,13 @@ export interface paths {
          *     consent that looks defensible against a mailbox the subject never held. A contact with no
          *     live address is a 422 rather than a silent no-op.
          *
-         *     The token is never returned. Unlike the double-opt-in token, which a rep pastes back in, this
-         *     one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
+         *     The token is never returned. It is only ever mailed — returning it would defeat the
+         *     mailbox-as-evidence property above, and this link IS how a double-opt-in purpose gets
+         *     confirmed now that no operator-held token exists.
          *     A fresh request supersedes any unspent earlier link for the same person.
          *
-         *     `delivered` reports whether the mail actually left, and `sendable` says whether this
-         *     installation can send at all. Both, because they are different facts and a reader's next
+         *     `provider_accepted` reports whether the relay took the message, and `sendable` says whether
+         *     this installation can send at all. Both, because they are different facts and a reader's next
          *     move differs: configure a relay, or try again. An installation with no relay still mints
          *     the token and answers 201, because the write happened and reporting it as a failure would
          *     invite a second request that mints another token and supersedes the first.
@@ -23787,9 +23789,10 @@ export interface components {
             /**
              * @description Whether the relay accepted the message. False while `sendable` is true means the send
              *     was attempted and failed, which is a different fact from an installation that cannot
-             *     send at all.
+             *     send at all. It is deliberately not called `delivered`: a relay returns before any
+             *     mailbox has seen the message, and a later bounce cannot travel back to change this.
              */
-            delivered: boolean;
+            provider_accepted: boolean;
             /**
              * @description Whether this installation has an outbound relay and a link origin configured. False
              *     means nothing was attempted — the link exists and must be passed on by hand.
@@ -24457,8 +24460,6 @@ export interface components {
             new_state: "granted" | "withdrawn";
             lawful_basis?: string | null;
             source?: string | null;
-            /** @description Required to make a grant effective when the purpose has requires_double_opt_in=true. */
-            double_opt_in_token?: string | null;
         };
         RecordClaim: {
             /** @enum {string} */
@@ -24578,8 +24579,6 @@ export interface components {
             policy_version: string;
             /** @description The exact wording shown, stored with the consent event for demonstrability. */
             wording?: string | null;
-            /** @description Present when the surface delivered its own DOI confirmation (issueDoubleOptIn with deliver=false). */
-            double_opt_in_token?: string | null;
         };
         /**
          * @description The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
@@ -41449,30 +41448,12 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     purpose_id: string;
-                    /**
-                     * @description When true, queues the confirmation message; false mints only (for a capture surface that delivers its own — feedback/14 booking/forms).
-                     * @default true
-                     */
-                    deliver?: boolean;
                 };
             };
         };
         responses: {
-            /** @description Token issued (plaintext shown once); confirmation queued when deliver=true. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description The single-use DOI token — shown once; redeem via recordConsent.double_opt_in_token. */
-                        token: string;
-                        /** Format: date-time */
-                        expires_at: string;
-                    };
-                };
-            };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

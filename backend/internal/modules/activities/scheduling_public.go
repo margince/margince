@@ -86,10 +86,9 @@ type PersonEnsurer interface {
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
 // exact wording/version the anonymous booker was shown.
 type BookingConsent struct {
-	PurposeID        ids.UUID
-	PolicyVersion    string
-	Wording          *string
-	DoubleOptInToken *string
+	PurposeID     ids.UUID
+	PolicyVersion string
+	Wording       *string
 }
 
 // ConsentCapturer records the booker's consent grant (the consent
@@ -177,10 +176,9 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 	if err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
-		PurposeID:        purposeID,
-		PolicyVersion:    req.Consent.PolicyVersion,
-		Wording:          req.Consent.Wording,
-		DoubleOptInToken: req.Consent.DoubleOptInToken,
+		PurposeID:     purposeID,
+		PolicyVersion: req.Consent.PolicyVersion,
+		Wording:       req.Consent.Wording,
 	}); err != nil {
 		writeStoreErr(w, r, err)
 		return

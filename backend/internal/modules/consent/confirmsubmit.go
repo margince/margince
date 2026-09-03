@@ -77,8 +77,8 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// subject's confirm_token rows; a transaction taking the token first
 		// and the person second closes a cycle, and nothing in this tree
 		// retries a deadlock — when the eraser is the one that loses, an
-		// erasure fulfilment fails. Same ordering IssueDoubleOptIn takes, for
-		// the same reason.
+		// erasure fulfilment fails. IssueConfirmToken takes the same ordering
+		// beside this, for the same reason.
 		//
 		// Naming the subject costs one extra read and buys the ordering: it
 		// takes no row lock, so it can say who this link belongs to without

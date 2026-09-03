@@ -405,6 +405,20 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (Qu
 
 // recordedState reads the person's own decision for this purpose, and whether
 // it satisfies the DOI round-trip when the purpose demands one.
+//
+// issuance_trigger IS NOT NULL is what separates a confirmation from a claim of
+// one. It is set where a mailbox proof stood in for the round trip: the subject
+// spent a link that had been mailed to their own live primary address. That
+// proof can only be claimed by the confirm submit, past the spend of the link
+// that earns it.
+//
+// Held by: TestOnlyTheConfirmSubmitClaimsAProvenMailbox
+// (backend/gates/mailboxproofwriters_test.go)
+//
+// It is NULL on the rows the retired operator-token endpoint produced, which
+// returned the plaintext to the operator and accepted it straight back, so one
+// person could mint and redeem a confirmation the subject never saw. Those rows
+// stay on the proof log as the history they are, and authorize no send.
 func recordedState(ctx context.Context, tx pgx.Tx, personID, purposeID string, requiresDOI bool) (string, bool, error) {
 	var state string
 	var granted bool
@@ -413,7 +427,8 @@ func recordedState(ctx context.Context, tx pgx.Tx, personID, purposeID string, r
 		       pc.state = 'granted' AND (NOT $3::boolean OR EXISTS (
 		         SELECT 1 FROM consent_event ce
 		         WHERE ce.person_id = pc.person_id AND ce.purpose_id = pc.purpose_id
-		           AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL))
+		           AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL
+		           AND ce.issuance_trigger IS NOT NULL))
 		FROM person_consent pc
 		WHERE pc.person_id = $1 AND pc.purpose_id = $2`,
 		personID, purposeID, requiresDOI).Scan(&state, &granted)

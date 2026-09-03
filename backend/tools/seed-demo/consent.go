@@ -32,6 +32,9 @@ func seedConsent(c *client, cfg demoConfig, companies []company, refs pipelineRe
 	}
 
 	recorded := 0
+	// Purposes the dataset wanted granted but nothing may grant. Collected so
+	// the run says so once at the end rather than seeding a silent gap.
+	var skippedDOI []string
 	for _, want := range cfg.Consent {
 		people := peopleByDomain[strings.ToLower(want.Company)]
 		if want.PersonIndex >= len(people) {
@@ -62,14 +65,16 @@ func seedConsent(c *client, cfg demoConfig, companies []company, refs pipelineRe
 			return recorded, fmt.Errorf("consent names purpose %q, which this workspace does not define", want.Purpose)
 		}
 
-		body := jsonBody{"purpose_id": purpose.id, "new_state": want.State, "source": seedSource}
+		// A double-opt-in purpose cannot be granted from here at all: the only
+		// thing that confirms one is the subject spending a link mailed to
+		// their own address, and a seeder has no mailbox to spend it from.
+		// Seeding one anyway would need a forged proof row, which is the exact
+		// claim this product refuses to let anybody make.
 		if want.State == "granted" && purpose.requiresDOI {
-			token, err := issueDoubleOptIn(c, personID, purpose.id)
-			if err != nil {
-				return recorded, fmt.Errorf("consent for %s: %w", email, err)
-			}
-			body["double_opt_in_token"] = token
+			skippedDOI = append(skippedDOI, want.Purpose)
+			continue
 		}
+		body := jsonBody{"purpose_id": purpose.id, "new_state": want.State, "source": seedSource}
 		// Recording the state a person is already in is a no-op the API
 		// accepts, so the count reflects what CHANGED rather than what was
 		// sent — otherwise every run reports the same six as fresh.
@@ -84,6 +89,10 @@ func seedConsent(c *client, cfg demoConfig, companies []company, refs pipelineRe
 			return recorded, fmt.Errorf("consent for %s: %w", email, err)
 		}
 		recorded++
+	}
+	if len(skippedDOI) > 0 {
+		fmt.Printf("  consent: %d double-opt-in grant(s) not seeded (%s) — only the data subject can confirm one\n",
+			len(skippedDOI), strings.Join(skippedDOI, ", "))
 	}
 	return recorded, nil
 }
@@ -152,23 +161,6 @@ func loadPurposes(c *client, mode runMode) (map[string]consentPurpose, error) {
 		out[row.Key] = consentPurpose{id: row.ID, requiresDOI: row.RequiresDoubleOptIn}
 	}
 	return out, nil
-}
-
-// issueDoubleOptIn mints the confirmation token a marketing grant redeems.
-// deliver=false: the demo has no mailbox to receive it, and sending real
-// confirmation mail to a synthesized address is exactly what must not happen.
-func issueDoubleOptIn(c *client, personID, purposeID string) (string, error) {
-	var out struct {
-		Token string `json:"token"`
-	}
-	body := jsonBody{"purpose_id": purposeID, "deliver": false}
-	if err := c.post("/v1/people/"+personID+"/consent/double-opt-in", body, &out); err != nil {
-		return "", fmt.Errorf("minting the double-opt-in token: %w", err)
-	}
-	if out.Token == "" {
-		return "", fmt.Errorf("the double-opt-in mint returned no token")
-	}
-	return out.Token, nil
 }
 
 // seedFinanceLinks marks which customers have a billing relationship.

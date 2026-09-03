@@ -785,9 +785,8 @@ export const en = {
   "person.consent": "Consent",
   "consent.grant": "Grant",
   "consent.withdraw": "Withdraw",
-  "consent.doubleOptIn": "Issue double opt-in",
-  "consent.doiIssued": "One-time token (shown once):",
-  "consent.doiExpires": "Expires",
+  "consent.doiBySubject":
+    "This purpose is confirmed by the contact themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
@@ -805,9 +804,6 @@ export const en = {
   "consent.proofEmpty":
     "No consent decision recorded for this purpose. An empty log is honest, not a gap.",
   "consent.sourceUnknown": "source not recorded",
-  "consent.tokenLabel": "Confirmation token",
-  "consent.tokenHint":
-    "This purpose needs a double opt-in: paste the one-time token to make the grant effective.",
   "consent.actorHuman": "Human",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "System",

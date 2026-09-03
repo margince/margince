@@ -6,8 +6,8 @@ package consent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -133,12 +134,11 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	state, err := h.store.Record(r.Context(), RecordInput{
-		PersonID:         pathID[ids.PersonKind](id),
-		PurposeID:        pathID[ids.PurposeKind](req.PurposeId),
-		NewState:         string(req.NewState),
-		LawfulBasis:      req.LawfulBasis,
-		Source:           req.Source,
-		DoubleOptInToken: req.DoubleOptInToken,
+		PersonID:    pathID[ids.PersonKind](id),
+		PurposeID:   pathID[ids.PurposeKind](req.PurposeId),
+		NewState:    string(req.NewState),
+		LawfulBasis: req.LawfulBasis,
+		Source:      req.Source,
 	})
 	if err != nil {
 		writeConsentErr(w, r, err)
@@ -147,28 +147,39 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, wireState(state))
 }
 
-// IssueDoubleOptIn implements (POST /people/{id}/consent/double-opt-in):
-// the issuance half of the DOI round-trip. The plaintext appears in
-// this 201 exactly once; a fresh issuance supersedes the prior
-// unredeemed token for the (person, purpose).
-func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+// IssueDoubleOptIn implements (POST /people/{id}/consent/double-opt-in) by
+// refusing, and mints nothing.
+//
+// A double opt-in is evidence only because the data subject completed it from
+// their own mailbox. This endpoint returned the plaintext token to the
+// authenticated operator, who could paste it back into RecordConsent — so the
+// round trip the proof stands on could be closed without the subject's mailbox
+// ever taking part, and the resulting consent_event recorded a confirmation
+// that had not happened. Nothing here delivered the token either: the deliver
+// flag reached an audit payload and no mailer.
+//
+// It refuses rather than being deleted because the operation is in the public
+// contract and a caller deserves an answer that says why. It returns when the
+// confirmation mail has a durable path to the subject; until then marketing
+// opt-in is captured through the confirm-details link, which mails a single-use
+// link to the person's own live primary address.
+func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
 	var req crmcontracts.IssueDoubleOptInJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	deliver := true
-	if req.Deliver != nil {
-		deliver = *req.Deliver
-	}
-	issued, err := h.store.IssueDoubleOptIn(r.Context(), pathID[ids.PersonKind](id), pathID[ids.PurposeKind](req.PurposeId), deliver)
-	if err != nil {
-		writeConsentErr(w, r, err)
+	// The body id is still probed before the refusal. A caller who omitted the
+	// purpose has a malformed request whichever way this endpoint answers, and
+	// requiredbodyids holds every required id to a probe — an endpoint that
+	// refuses for its own reasons must not become the one place a missing id
+	// goes unnamed.
+	if err := httperr.RequireBodyID(purposeIDField, ids.UUID(req.PurposeId)); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusCreated, struct {
-		Token     string    `json:"token"`
-		ExpiresAt time.Time `json:"expires_at"`
-	}{Token: issued.Token, ExpiresAt: issued.ExpiresAt})
+	httperr.Write(w, r, fmt.Errorf(
+		"a double opt-in link can only be completed by the data subject, and this installation "+
+			"cannot yet mail one: %w", apperrors.ErrConflict))
 }
 
 // RecordQualifyingEvent serves POST /people/{id}/consent/qualifying-events: the

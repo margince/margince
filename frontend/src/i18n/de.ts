@@ -740,9 +740,8 @@ export const de = {
   "person.consent": "Einwilligung",
   "consent.grant": "Erteilen",
   "consent.withdraw": "Widerrufen",
-  "consent.doubleOptIn": "Double-Opt-in anfordern",
-  "consent.doiIssued": "Einmal-Token (nur einmal sichtbar):",
-  "consent.doiExpires": "Läuft ab",
+  "consent.doiBySubject":
+    "Diesen Zweck best\u00e4tigt der Kontakt selbst \u2013 \u00fcber einen Link an seine eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
@@ -761,9 +760,6 @@ export const de = {
   "consent.proofEmpty":
     "Für diesen Zweck ist keine Einwilligungsentscheidung erfasst. Ein leeres Protokoll ist ehrlich, keine Lücke.",
   "consent.sourceUnknown": "Quelle nicht erfasst",
-  "consent.tokenLabel": "Bestätigungs-Token",
-  "consent.tokenHint":
-    "Dieser Zweck benötigt ein Double-Opt-in: Einmal-Token hier einfügen, damit die Einwilligung wirksam wird.",
   "consent.actorHuman": "Mensch",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "System",

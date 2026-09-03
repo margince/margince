@@ -212,7 +212,11 @@ func resolvePerson(ctx context.Context, tx pgx.Tx, r connector.Recipient) (strin
 // with no subject — which default-deny refuses rather than guesses at.
 //
 // The predicate is the recorded grant, the named purpose, and the DOI
-// round-trip where the purpose demands one. A lead carries no qualifying
+// round-trip where the purpose demands one — and for the round trip, the same
+// discriminator the person arm uses: issuance_trigger IS NOT NULL, which is set
+// only where the subject spent a link mailed to their own address. A row an
+// operator produced through the old mint-and-paste endpoint has it NULL and
+// authorizes nothing. A lead carries no qualifying
 // events and no §7(3) flag, so there is nothing here for the class model to
 // add.
 func grantedForLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, purposeID string, requiresDOI bool) (bool, error) {
@@ -230,7 +234,8 @@ func grantedForLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpo
 		    AND (NOT $3::boolean OR EXISTS (
 		      SELECT 1 FROM consent_event ce
 		      WHERE ce.lead_id = l.id AND ce.purpose_id = $2
-		        AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL))
+		        AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL
+		        AND ce.issuance_trigger IS NOT NULL))
 		)`, r.Email, purposeID, requiresDOI).Scan(&granted)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the lead's grant: %w", err)
