@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -913,6 +914,10 @@ export function CompanyAct({
       allRows.filter((row) => row.field === field),
       [],
     )[0];
+  // The mark at the head of the record, for both of its faces: the site the
+  // read ran on. Undefined before a read exists, and the digest draws the
+  // monogram.
+  const identity = read === null ? undefined : { rootUrl: read.root_url };
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
       artifactMode === "dossier" ? (
@@ -924,17 +929,23 @@ export function CompanyAct({
             setDraft((current) => changeDraftField(current, field, value))
           }
           onDone={() => confirm.mutate()}
-          onReadWhole={() => {
-            // A manual ask to read the whole record, not a settle — any
-            // earlier "Settle it" target is stale the moment the reader
-            // leaves the deck this way.
-            setGoToField(null);
-            setArtifactMode("profile");
-          }}
           // EVERY row, not just the outstanding ones: the article is what the
           // record says, and a version of it that showed only the unanswered
           // half would be the deck's own list again in prose.
-          digest={(active) => <ProfileDigest rows={allRows} active={active} />}
+          digest={(active) => (
+            <ProfileDigest
+              rows={allRows}
+              active={active}
+              identity={identity}
+              onReadWhole={() => {
+                // A manual ask to read the whole record, not a settle — any
+                // earlier "Settle it" target is stale the moment the reader
+                // leaves the deck this way.
+                setGoToField(null);
+                setArtifactMode("profile");
+              }}
+            />
+          )}
           pending={confirm.isPending}
           disabled={confirmRefused}
           goTo={goToField ?? undefined}
@@ -965,14 +976,40 @@ export function CompanyAct({
           <ProfileDigest
             rows={allRows}
             read={read ?? undefined}
+            identity={identity}
             onSettle={settleField}
+            onField={(field, value) =>
+              setDraft((current) => changeDraftField(current, field, value))
+            }
           />
-          {/* Editing is its own act, and the wall is where it happens: a field
-              changed freely and a fact unticked are both things the server
-              wants, and neither is something the article does. */}
+          {/* Which of the crawl's facts become company context is the one
+              decision the article does not take; the board is where a fact is
+              ticked, so that is what its door is called. */}
           <Button variant="ghost" onClick={() => setArtifactMode("record")}>
-            {t("ob.deck.editRecord")}
+            {t("ob.digest.pickFacts")}
           </Button>
+          {/* One Save for every line corrected in place, and only once one
+              has been: the deck's own Confirm is the way onward for a reader
+              who changed nothing, and a second button saying the same thing
+              beside an untouched record would be a choice with no difference. */}
+          {draft.edited.size > 0 && (
+            <div className="pdigest-save">
+              <p className="pdigest-save-note">
+                {t("ob.digest.changed", {
+                  count: formatNumber(draft.edited.size, locale),
+                })}
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => confirm.mutate()}
+                disabled={confirmRefused || confirm.isPending}
+              >
+                {t(
+                  confirm.isPending ? "ob.s1.saving" : "ob.digest.saveChanges",
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="ob-scene">

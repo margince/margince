@@ -421,7 +421,7 @@ describe("arriving at the review scene", () => {
       await screen.findByRole("button", { name: "Read the whole profile" }),
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Edit the record" }),
+      await screen.findByRole("button", { name: "Choose the facts to keep" }),
     );
     await screen.findByRole("heading", { level: 2, name: /Correct me/ });
 

@@ -254,7 +254,12 @@ function Digest({
   return (
     <StoryProviders>
       <div className="ob-scene">
-        <ProfileDigest rows={rows} read={read} onSettle={() => {}} />
+        <ProfileDigest
+          rows={rows}
+          read={read}
+          onSettle={() => {}}
+          onField={() => {}}
+        />
       </div>
     </StoryProviders>
   );
@@ -275,7 +280,12 @@ export const Companion: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: "26rem" }}>
-        <ProfileDigest rows={OPEN_ROWS} active="usp" />
+        <ProfileDigest
+          rows={OPEN_ROWS}
+          active="usp"
+          identity={{ rootUrl: SITE }}
+          onReadWhole={() => {}}
+        />
       </div>
     </StoryProviders>
   ),

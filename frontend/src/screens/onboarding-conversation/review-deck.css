@@ -207,7 +207,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin: 0;
+  /* The count on the left, the way onward on the right, nothing between: the
+     door to the whole record moved onto the record itself. */
+  margin: 0 auto 0 0;
   color: var(--textPrimary);
   font-size: var(--fs-sm);
 }
@@ -217,23 +219,6 @@
 .rdeck-settled {
   color: var(--textMeta);
   font-size: var(--fs-meta);
-}
-
-.rdeck-whole {
-  margin-inline-start: auto;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--textMeta);
-  cursor: pointer;
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  text-decoration: underline;
-  text-decoration-color: var(--borderStrong);
-  text-underline-offset: 3px;
-}
-.rdeck-whole:hover {
-  color: var(--textPrimary);
 }
 
 .rdeck-clear {

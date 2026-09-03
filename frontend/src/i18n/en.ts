@@ -8061,6 +8061,10 @@ export const en = {
   "ob.digest.settle": "Settle it",
   "ob.digest.deciding": "you are deciding this now",
   "ob.digest.yours": "yours",
+  "ob.digest.editLine": "Edit {label}",
+  "ob.digest.saveChanges": "Save changes",
+  "ob.digest.changed": "{count} lines changed, not saved yet",
+  "ob.digest.pickFacts": "Choose the facts to keep",
   "ob.digest.referenceNote":
     "A later re-read may propose changes to this record. It will never overwrite a line a person has already touched.",
   "ob.digest.sidebarLabel": "Facts about the company",
@@ -8087,7 +8091,6 @@ export const en = {
   "ob.deck.leaveOut": "Leave it out",
   "ob.deck.readWhole": "Read the whole profile",
   "ob.deck.backToOpen": "Back to the open ones",
-  "ob.deck.editRecord": "Edit the record",
   "ob.deck.backToRecord": "Back to the record",
   "ob.deck.confirm": "Confirm the profile",
   "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",

@@ -80,7 +80,6 @@ export function ReviewDeck({
   settled,
   onField,
   onDone,
-  onReadWhole,
   pending,
   disabled,
   digest,
@@ -100,8 +99,6 @@ export function ReviewDeck({
   settled: number;
   onField: (field: CompanyFieldName, value: string) => void;
   onDone: () => void;
-  /** The way to the whole profile, for a reader who wants the wall after all. */
-  onReadWhole: () => void;
   pending: boolean;
   disabled: boolean;
   /**
@@ -174,7 +171,6 @@ export function ReviewDeck({
           settled={settled}
           locale={locale}
           onDone={onDone}
-          onReadWhole={onReadWhole}
           pending={pending}
           disabled={disabled}
         />
@@ -212,7 +208,6 @@ export function ReviewDeck({
         settled={settled}
         locale={locale}
         onDone={onDone}
-        onReadWhole={onReadWhole}
         pending={pending}
         disabled={disabled}
       />
@@ -324,7 +319,6 @@ function DeckFoot({
   settled,
   locale,
   onDone,
-  onReadWhole,
   pending,
   disabled,
 }: Readonly<{
@@ -333,7 +327,6 @@ function DeckFoot({
   settled: number;
   locale: Locale;
   onDone: () => void;
-  onReadWhole: () => void;
   pending: boolean;
   disabled: boolean;
 }>) {
@@ -349,9 +342,6 @@ function DeckFoot({
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>
-      <button type="button" className="rdeck-whole" onClick={onReadWhole}>
-        {t("ob.deck.readWhole")}
-      </button>
       <Button variant="primary" onClick={onDone} disabled={disabled || pending}>
         {t(pending ? "ob.s1.saving" : "ob.deck.confirm")}
       </Button>

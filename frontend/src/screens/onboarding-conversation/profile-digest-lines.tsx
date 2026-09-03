@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Button } from "../../design-system/atoms";
+import { type KeyboardEvent, useState } from "react";
+import { Button, Textarea, TextInput } from "../../design-system/atoms";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
@@ -29,11 +30,16 @@ export function DigestLine({
   n,
   active,
   onSettle,
+  onField,
 }: Readonly<{
   row: ReviewRow;
   n?: number;
   active?: boolean;
   onSettle?: (field: CompanyFieldName) => void;
+  /** Lets the value be corrected where it stands. The document passes it;
+   * the companion beside the deck never does, since the deck is already
+   * the control for the field it is asking about. */
+  onField?: (field: CompanyFieldName, value: string) => void;
 }>) {
   const t = useT();
   const empty = row.value.trim() === "";
@@ -49,7 +55,11 @@ export function DigestLine({
         </span>
       ) : (
         <>
-          <span className="pdigest-value">{row.value}</span>
+          {onField === undefined ? (
+            <span className="pdigest-value">{row.value}</span>
+          ) : (
+            <EditableValue row={row} onField={onField} />
+          )}
           {n === undefined ? (
             // Typed by a person, or carried in from a profile that already
             // existed. It gets no number because there is no page to open, and
@@ -61,6 +71,79 @@ export function DigestLine({
         </>
       )}
     </p>
+  );
+}
+
+/**
+ * A value a reader can correct in place: the text itself is the control, and
+ * pressing it opens the one field under the caret. No pencil, no mode — the
+ * article stays an article until a line is touched, and the change lands in
+ * the same draft the deck writes to, so the one Save under the document
+ * carries every correction at once.
+ *
+ * Committed on blur and on Enter (Escape puts the old value back); a
+ * multiline field takes a box, as the deck's own card for it does, because a
+ * paragraph edited in a one-line field is edited blind.
+ */
+function EditableValue({
+  row,
+  onField,
+}: Readonly<{
+  row: ReviewRow;
+  onField: (field: CompanyFieldName, value: string) => void;
+}>) {
+  const t = useT();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(row.value);
+  const commit = () => {
+    setEditing(false);
+    if (text !== row.value) {
+      onField(row.field, text);
+    }
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      setText(row.value);
+      setEditing(false);
+    }
+    if (event.key === "Enter" && !(row.multiline && !event.metaKey)) {
+      event.preventDefault();
+      commit();
+    }
+  };
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="pdigest-value pdigest-editable"
+        aria-label={t("ob.digest.editLine", { label: row.label })}
+        onClick={() => {
+          setText(row.value);
+          setEditing(true);
+        }}
+      >
+        {row.value}
+      </button>
+    );
+  }
+  // Focus follows the press that opened the field: the reader asked for the
+  // caret to be here, so this is the one autofocus that is not a hijack.
+  const control = {
+    autoFocus: true,
+    className: "pdigest-edit-control",
+    "aria-label": row.label,
+    value: text,
+    onBlur: commit,
+    onKeyDown,
+  };
+  return row.multiline ? (
+    <Textarea
+      {...control}
+      rows={3}
+      onChange={(event) => setText(event.target.value)}
+    />
+  ) : (
+    <TextInput {...control} onChange={(event) => setText(event.target.value)} />
   );
 }
 

@@ -7874,6 +7874,10 @@ export const vi = {
   "ob.digest.settle": "Điền ngay",
   "ob.digest.deciding": "bạn đang quyết điều này",
   "ob.digest.yours": "của bạn",
+  "ob.digest.editLine": "Sửa {label}",
+  "ob.digest.saveChanges": "Lưu thay đổi",
+  "ob.digest.changed": "{count} dòng đã đổi, chưa lưu",
+  "ob.digest.pickFacts": "Chọn các sự thật cần giữ",
   "ob.digest.referenceNote":
     "Một lần đọc lại sau này có thể đề xuất thay đổi cho hồ sơ này. Nó sẽ không bao giờ ghi đè lên dòng mà một người đã từng sửa.",
   "ob.digest.sidebarLabel": "Thông tin về công ty",
@@ -7900,7 +7904,6 @@ export const vi = {
   "ob.deck.leaveOut": "Bỏ qua",
   "ob.deck.readWhole": "Đọc toàn bộ hồ sơ",
   "ob.deck.backToOpen": "Quay lại các mục còn mở",
-  "ob.deck.editRecord": "Chỉnh sửa hồ sơ",
   "ob.deck.backToRecord": "Quay lại hồ sơ",
   "ob.deck.confirm": "Xác nhận hồ sơ",
   "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",

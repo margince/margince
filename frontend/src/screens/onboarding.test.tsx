@@ -394,18 +394,18 @@ const DOSSIER_TEST_MS =
   SLOWEST_MEASURED_TEST_MS;
 
 /**
- * Walk from the deck to the board that edits.
+ * Walk from the deck to the board that ticks facts and edits every row.
  *
- * Reading the whole record and editing it are separate acts with separate
- * doors, so a test that acts on a field goes through both rather than assuming
- * the board is what a review opens on.
+ * Reading the whole record and picking its facts are separate acts with
+ * separate doors, so a test that acts on the board goes through both rather
+ * than assuming the board is what a review opens on.
  */
 async function openTheEditingBoard(): Promise<void> {
   await userEvent.click(
     await screen.findByRole("button", { name: "Read the whole profile" }),
   );
   await userEvent.click(
-    await screen.findByRole("button", { name: "Edit the record" }),
+    await screen.findByRole("button", { name: "Choose the facts to keep" }),
   );
 }
 

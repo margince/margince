@@ -44,7 +44,6 @@ function Deck({ card }: Readonly<{ card: DeckCard }>) {
         settled={6}
         onField={(_field, next) => setValue(next)}
         onDone={() => {}}
-        onReadWhole={() => {}}
         pending={false}
         disabled={false}
         digest={() => null}

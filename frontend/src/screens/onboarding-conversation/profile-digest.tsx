@@ -49,6 +49,11 @@ import "./profile-digest.css";
  * reader to that field's card in the deck. The companion never renders that
  * action — the deck asking about the same field is already the surface it is
  * beside, so a button pointed at the card behind it would aim at itself.
+ *
+ * A WRITTEN LINE IN THE DOCUMENT IS EDITABLE where it stands (`onField`), and
+ * the companion carries the door to the document (`onReadWhole`) in its own
+ * head: the record is what a reader wants to read whole, so the way to it
+ * sits on the record rather than in the deck's tray two panels away.
  */
 
 /** What the site read carries beyond the profile fields the deck asks about. */
@@ -64,7 +69,10 @@ export function ProfileDigest({
   rows,
   active,
   read,
+  identity,
   onSettle,
+  onField,
+  onReadWhole,
 }: Readonly<{
   rows: readonly ReviewRow[];
   /** The field the deck is asking about, marked in the companion as it is
@@ -74,14 +82,65 @@ export function ProfileDigest({
   /** The rest of the crawl, and the document layout, shown only where a
    * reader asked for the whole record. */
   read?: ProfileDigestRead;
+  /** Whose record this is, for the mark at the head of either face: the site
+   * it was read from, and the logo the read resolved when it found one. */
+  identity?: ProfileIdentity;
   /** Where "Settle it" on an unanswered line goes. Only read in the document
    * face — see the docblock above for why the companion never wires it. */
   onSettle?: (field: CompanyFieldName) => void;
+  /** Lets the document's written lines be corrected where they stand. */
+  onField?: (field: CompanyFieldName, value: string) => void;
+  /** The companion's door to the whole record. */
+  onReadWhole?: () => void;
 }>) {
   if (read === undefined) {
-    return <DigestCompanion rows={rows} active={active} />;
+    return (
+      <DigestCompanion
+        rows={rows}
+        active={active}
+        identity={identity}
+        onReadWhole={onReadWhole}
+      />
+    );
   }
-  return <DigestDocument rows={rows} read={read} onSettle={onSettle} />;
+  return (
+    <DigestDocument
+      rows={rows}
+      read={read}
+      identity={identity}
+      onSettle={onSettle}
+      onField={onField}
+    />
+  );
+}
+
+/** The company as the head of the record shows it. */
+export type ProfileIdentity = Readonly<{
+  /** The site the record was read from; what the monogram's tint derives from. */
+  rootUrl: string;
+  /** Where the mark the read resolved is served from, when it found one. */
+  logoUrl?: string;
+}>;
+
+// The record's mark: the logo the read resolved from the company's own site,
+// or the deterministic monogram every other surface draws for it. Named from
+// the record's own display name, so what the reader corrected shows.
+function ProfileMark({
+  rows,
+  identity,
+}: Readonly<{ rows: readonly ReviewRow[]; identity?: ProfileIdentity }>) {
+  const name =
+    rows.find((row) => row.field === "display_name")?.value.trim() ||
+    (identity === undefined ? "" : hostOf(identity.rootUrl));
+  return (
+    <Avatar
+      shape="organization"
+      size="md"
+      name={name}
+      identity={identity?.rootUrl}
+      src={identity?.logoUrl}
+    />
+  );
 }
 
 // The companion: the record's own lines, in the record's own order, nothing
@@ -89,7 +148,14 @@ export function ProfileDigest({
 function DigestCompanion({
   rows,
   active,
-}: Readonly<{ rows: readonly ReviewRow[]; active?: CompanyFieldName }>) {
+  identity,
+  onReadWhole,
+}: Readonly<{
+  rows: readonly ReviewRow[];
+  active?: CompanyFieldName;
+  identity?: ProfileIdentity;
+  onReadWhole?: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const cites = citationsOf(rows);
@@ -98,13 +164,23 @@ function DigestCompanion({
 
   return (
     <aside className="pdigest">
-      <Eyebrow className="pdigest-eyebrow">{t("ob.digest.where")}</Eyebrow>
-      <p className="pdigest-count">
-        {t("ob.digest.written", {
-          n: formatNumber(written, locale),
-          m: formatNumber(rows.length, locale),
-        })}
-      </p>
+      <div className="pdigest-head">
+        <ProfileMark rows={rows} identity={identity} />
+        <div className="pdigest-head-text">
+          <Eyebrow className="pdigest-eyebrow">{t("ob.digest.where")}</Eyebrow>
+          <p className="pdigest-count">
+            {t("ob.digest.written", {
+              n: formatNumber(written, locale),
+              m: formatNumber(rows.length, locale),
+            })}
+          </p>
+        </div>
+        {onReadWhole === undefined ? null : (
+          <button type="button" className="pdigest-whole" onClick={onReadWhole}>
+            {t("ob.deck.readWhole")}
+          </button>
+        )}
+      </div>
       <div className="pdigest-body">
         {rows.map((row) => (
           <DigestLine
@@ -124,11 +200,15 @@ function DigestCompanion({
 function DigestDocument({
   rows,
   read,
+  identity,
   onSettle,
+  onField,
 }: Readonly<{
   rows: readonly ReviewRow[];
   read: ProfileDigestRead;
+  identity?: ProfileIdentity;
   onSettle?: (field: CompanyFieldName) => void;
+  onField?: (field: CompanyFieldName, value: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -168,11 +248,9 @@ function DigestDocument({
         </Eyebrow>
         <div className="pdigest-hero-row">
           <div className="pdigest-hero-identity">
-            <Avatar
-              shape="organization"
-              size="md"
-              name={companyName}
-              identity={read.root_url}
+            <ProfileMark
+              rows={rows}
+              identity={identity ?? { rootUrl: read.root_url }}
             />
             <div>
               <p className="pdigest-hero-name">{companyName}</p>
@@ -214,6 +292,7 @@ function DigestDocument({
           people={people}
           cites={cites}
           onSettle={onSettle}
+          onField={onField}
         />
         <ProfileSidebar
           rows={rows}

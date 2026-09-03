@@ -334,3 +334,79 @@
   font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
+
+/* ---- the companion's head ---- */
+
+/* The mark, the count and the door to the whole record on one line: the door
+   sits on the record it opens rather than in the deck's tray, where a reader
+   looking at the record had to look away to find it. */
+.pdigest-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pdigest-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.pdigest-whole {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textMeta);
+  cursor: pointer;
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  text-decoration: underline;
+  text-decoration-color: var(--borderStrong);
+}
+.pdigest-whole:hover {
+  color: var(--textPrimary);
+}
+
+/* ---- a line corrected where it stands ---- */
+
+/* The value IS the control: same type, no chrome until it is hovered, so the
+   article reads as an article and only tells a hand that it can be edited. */
+.pdigest-editable {
+  padding: 0 var(--space-1);
+  margin: 0 calc(var(--space-1) * -1);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: text;
+  font: inherit;
+  text-align: start;
+}
+.pdigest-editable:hover,
+.pdigest-editable:focus-visible {
+  background: var(--bgCard);
+  outline: 1px solid var(--borderStrong);
+}
+.pdigest-edit-control {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+/* The one Save for every correction, held at the foot of the document so it
+   is reachable from whichever line was touched last. */
+.pdigest-save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
+}
+.pdigest-save-note {
+  margin: 0 auto 0 0;
+  color: var(--textMeta);
+  font-size: var(--fs-sm);
+}

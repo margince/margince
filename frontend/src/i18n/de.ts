@@ -7975,6 +7975,10 @@ export const de = {
   "ob.digest.settle": "Jetzt klären",
   "ob.digest.deciding": "das entscheidest du gerade",
   "ob.digest.yours": "von dir",
+  "ob.digest.editLine": "{label} bearbeiten",
+  "ob.digest.saveChanges": "Änderungen speichern",
+  "ob.digest.changed": "{count} Zeilen geändert, noch nicht gespeichert",
+  "ob.digest.pickFacts": "Fakten auswählen, die bleiben sollen",
   "ob.digest.referenceNote":
     "Ein späteres erneutes Lesen kann Änderungen an diesem Datensatz vorschlagen. Eine Zeile, die du schon bearbeitet hast, wird dabei nie überschrieben.",
   "ob.digest.sidebarLabel": "Fakten zum Unternehmen",
@@ -8001,7 +8005,6 @@ export const de = {
   "ob.deck.leaveOut": "Weglassen",
   "ob.deck.readWhole": "Das ganze Profil lesen",
   "ob.deck.backToOpen": "Zurück zu den offenen Punkten",
-  "ob.deck.editRecord": "Eintrag bearbeiten",
   "ob.deck.backToRecord": "Zurück zum Eintrag",
   "ob.deck.confirm": "Profil bestätigen",
   "ob.deck.clear": "Nichts mehr zu klären. {count} Fakten stehen im Profil.",

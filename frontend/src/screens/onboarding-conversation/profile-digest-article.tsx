@@ -41,6 +41,7 @@ export function ProfileArticle({
   people,
   cites,
   onSettle,
+  onField,
 }: Readonly<{
   rows: readonly ReviewRow[];
   number: ReadonlyMap<string, number>;
@@ -55,6 +56,8 @@ export function ProfileArticle({
   /** Undefined draws every unanswered row as a plain blank rather than an
    * action — the digest's own optional contract, kept the same here. */
   onSettle?: (field: CompanyFieldName) => void;
+  /** Lets every written line be corrected in place — see DigestLine. */
+  onField?: (field: CompanyFieldName, value: string) => void;
 }>) {
   const t = useT();
   const byField = new Map(rows.map((row) => [row.field, row]));
@@ -80,6 +83,7 @@ export function ProfileArticle({
                 row={row}
                 n={citationOf(row, number)}
                 onSettle={onSettle}
+                onField={onField}
               />
             ))}
             {entities.map((entity) => (
