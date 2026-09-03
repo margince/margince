@@ -320,3 +320,74 @@ func TestTheEngineAndTheLegacyGateAgreeAboutALead(t *testing.T) {
 		}
 	}
 }
+
+// A lead who withdrew is told they withdrew.
+//
+// A withdrawal and an absence are different things that happened — Art. 7(3)
+// against default-deny — and the reason code is what the subject reads when
+// they ask. The lead arm first reported every refusal as an absence, so a lead
+// who had exercised their right to withdraw would have been told the
+// installation merely never held consent: a false statement in a record Art. 15
+// discloses. It is also the difference between a refusal a rollout mode may
+// soften and one it may not.
+func TestAWithdrawnLeadIsNotReportedAsNeverGranted(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	recipient := connector.Recipient{Email: e.leadEmail}
+
+	for _, state := range []string{"granted", "withdrawn"} {
+		if _, err := e.store.Record(e.ctx, RecordInput{
+			LeadID: e.lead, PurposeID: e.newsletter, NewState: state,
+		}); err != nil {
+			t.Fatalf("recording %s: %v", state, err)
+		}
+	}
+
+	tx, err := e.store.db.Pool().Begin(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	d, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+	if err != nil {
+		t.Fatalf("deciding about a withdrawn lead: %v", err)
+	}
+	if d.Verdict != commsauthz.VerdictDeny {
+		t.Fatalf("verdict = %q, want deny after a withdrawal", d.Verdict)
+	}
+	if d.ReasonCode != commsauthz.ReasonConsentWithdrawn {
+		t.Errorf("reason = %q, want %q — the subject is shown this, and they did withdraw",
+			d.ReasonCode, commsauthz.ReasonConsentWithdrawn)
+	}
+}
+
+// And the converse, or the test above would pass with every refusal renamed: a
+// lead who never granted anything is still an absence.
+func TestALeadWhoNeverGrantedIsReportedAsAnAbsence(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+
+	tx, err := e.store.db.Pool().Begin(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	d, err := gate.decideOne(e.ctx, tx, connector.Recipient{Email: e.leadEmail}, "newsletter")
+	if err != nil {
+		t.Fatalf("deciding: %v", err)
+	}
+	if d.ReasonCode != commsauthz.ReasonNoMarketingConsent {
+		t.Errorf("reason = %q, want %q for a lead who granted nothing",
+			d.ReasonCode, commsauthz.ReasonNoMarketingConsent)
+	}
+}
