@@ -35348,7 +35348,9 @@ type SubmitConfirmDetailsJSONBody struct {
 	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
 	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
 
-	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant.
+	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+	// grant. Bounded because it is stored on the proof row and read back through the subject
+	// access export — the same bound is enforced server-side, and the two are one rule.'
 	MarketingWording *string `json:"marketing_wording,omitempty"`
 
 	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.

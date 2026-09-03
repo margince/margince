@@ -1480,17 +1480,23 @@ public.communication_suppression_live_person CREATE INDEX communication_suppress
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
 public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
+public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text])))
 public.confirm_token.confirm_token_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
+public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.confirm_token.confirm_token_purpose_is_consents CHECK (((kind = 'consent_confirmation'::text) = (purpose_id IS NOT NULL)))
 public.confirm_token.consumed_at timestamp with time zone gen=- def=-
 public.confirm_token.delivered_to text NOT NULL gen=- def=-
 public.confirm_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.confirm_token.id uuid NOT NULL gen=- def=uuidv7()
 public.confirm_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
+public.confirm_token.kind text NOT NULL gen=- def='record_confirmation'::text
 public.confirm_token.opened_at timestamp with time zone gen=- def=-
 public.confirm_token.person_id uuid NOT NULL gen=- def=-
+public.confirm_token.purpose_id uuid gen=- def=-
 public.confirm_token.token_hash text NOT NULL gen=- def=-
 public.confirm_token_hash_key CREATE UNIQUE INDEX confirm_token_hash_key ON public.confirm_token USING btree (token_hash)
+public.confirm_token_live_by_kind CREATE INDEX confirm_token_live_by_kind ON public.confirm_token USING btree (person_id, kind, purpose_id) WHERE (consumed_at IS NULL)
 public.confirm_token_pkey CREATE UNIQUE INDEX confirm_token_pkey ON public.confirm_token USING btree (id)
 public.connector_connection_pkey CREATE UNIQUE INDEX connector_connection_pkey ON public.capture_connection USING btree (id)
 public.consent_doi_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -3869,6 +3875,23 @@ public.person.trg_person_updated CREATE TRIGGER trg_person_updated BEFORE UPDATE
 public.person.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.person.version bigint NOT NULL gen=- def=1
 public.person.visibility text NOT NULL gen=- def='workspace'::text
+public.person_acquisition_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.person_acquisition_evidence.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.person_acquisition_evidence.captured_by text NOT NULL gen=- def=-
+public.person_acquisition_evidence.id uuid NOT NULL gen=- def=uuidv7()
+public.person_acquisition_evidence.kind text NOT NULL gen=- def=-
+public.person_acquisition_evidence.note text gen=- def=-
+public.person_acquisition_evidence.occurred_at timestamp with time zone gen=- def=-
+public.person_acquisition_evidence.person_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text])))
+public.person_acquisition_evidence.person_acquisition_evidence_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.person_acquisition_evidence.person_acquisition_evidence_pkey PRIMARY KEY (id)
+public.person_acquisition_evidence.person_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
+public.person_acquisition_evidence.person_id uuid NOT NULL gen=- def=-
+public.person_acquisition_evidence.purpose_claimed text gen=- def=-
+public.person_acquisition_evidence.source_entity_id uuid gen=- def=-
+public.person_acquisition_evidence.source_entity_type text gen=- def=-
+public.person_acquisition_evidence_by_person CREATE INDEX person_acquisition_evidence_by_person ON public.person_acquisition_evidence USING btree (person_id, captured_at DESC)
+public.person_acquisition_evidence_pkey CREATE UNIQUE INDEX person_acquisition_evidence_pkey ON public.person_acquisition_evidence USING btree (id)
 public.person_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.person_brief.fingerprint text NOT NULL gen=- def=-
 public.person_brief.generated_at timestamp with time zone NOT NULL gen=- def=now()

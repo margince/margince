@@ -24,6 +24,22 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
+	// A consent link is answered with the subscription question and nothing
+	// else. Its mail said "confirm this subscription"; serving the record card
+	// here would hand whoever holds the link the person's name, employer,
+	// address, phone and the whole provenance trail — wider than the mail
+	// described, and wider than the write side of this same link allows.
+	//
+	// The read is the disclosure, so it carries the same gate the submit does.
+	if ref.Kind == LinkConsentConfirmation {
+		card, err := h.store.consentCardFor(r.Context(), ref)
+		if err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
+		httperr.WriteJSON(w, http.StatusOK, card)
+		return
+	}
 	card, err := h.store.confirmCardFor(r.Context(), ref.PersonID)
 	if err != nil {
 		writeConsentErr(w, r, err)
