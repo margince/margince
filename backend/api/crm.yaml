@@ -20467,6 +20467,18 @@ components:
             What the classifier concluded the thread is ABOUT — legal, personnel,
             financial_corporate, personal, security_incident, explicitly_confidential. Absent while
             pending, because nothing has concluded anything yet.
+        activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: |
+            The message that opened this thread, where this caller may read it — what a
+            client opens to show the correspondence rather than only naming it.
+
+            Null when the message was erased while the hold stood (the ledger deliberately
+            outlives it) AND null when the content is not this caller's: it is read from the
+            joined activity row, which carries the content gate, rather than from the
+            ledger's own column. `has_message` says which of the two it is.
         has_message:
           type: boolean
           description: |

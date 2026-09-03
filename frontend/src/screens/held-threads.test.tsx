@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -64,6 +64,49 @@ function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
+      }
+      // The drawer's own read. Served here so opening a thread does not throw
+      // on a body with no access block; what the drawer draws from it is
+      // emaildetail's contract, tested there.
+      if (key.endsWith("/email-presentation")) {
+        return new Response(
+          JSON.stringify({
+            id: "01a05500-0000-7000-8000-0000000000b1",
+            lifecycle: "delivered",
+            occurred_at: "2026-08-29T15:40:00Z",
+            summary: {
+              activity_id: "01a05500-0000-7000-8000-0000000000b1",
+              occurred_at: "2026-08-29T15:40:00Z",
+              version: 1,
+              subject: "Entwurf Aufhebungsvertrag",
+              display_status: "participants",
+              move: "none",
+              attachment_count: 0,
+            },
+            body: "…",
+            from: [],
+            to: [],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            thread: { members: [], next_cursor: null },
+            access: {
+              content_state: "available",
+              audience: "participants",
+              selected_members: [],
+              display_status: "participants",
+              can_change: false,
+              change_mode: "message",
+              held_by_others: false,
+            },
+            can_reply: false,
+            can_relink: false,
+            version: 1,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
       if (key.startsWith("POST /activities/threads/")) {
         return new Response(JSON.stringify(share ?? { shared: true }), {
@@ -170,4 +213,49 @@ describe("held threads", () => {
       await screen.findByText(/withholding nothing right now/i),
     ).toBeInTheDocument();
   });
+});
+
+// A held thread whose message this reader may read opens it. The server sends
+// `activity_id` only for those — it reads the id off the gated join — so the
+// presence of the field IS the permission.
+it("opens the message a held thread is about", async () => {
+  const openable: HeldThread = {
+    ...JUDGED,
+    thread_key: "t-openable",
+    activity_id: "01a05500-0000-7000-8000-0000000000b1",
+  };
+  renderCard([openable]);
+
+  const button = await screen.findByRole("button", {
+    name: "Entwurf Aufhebungsvertrag",
+  });
+  expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+  // Pressing it asks for THIS message's presentation — the screen's half of
+  // the job. What the drawer then draws is emaildetail's own contract.
+  await userEvent.click(button);
+  await waitFor(() => {
+    const asked = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.some((call) => {
+      const [input] = call;
+      const url = input instanceof Request ? input.url : String(input);
+      return url.includes(
+        "/activities/01a05500-0000-7000-8000-0000000000b1/email-presentation",
+      );
+    });
+    expect(asked).toBe(true);
+  });
+});
+
+// And a thread whose message it may NOT read names itself and offers nothing.
+// The server withholds the id for a message outside the caller's audience, so
+// this row must not become a control — a button that opened nothing would be
+// worse than the plain text it replaced.
+it("names a thread it cannot open without offering to", async () => {
+  renderCard([JUDGED]);
+
+  expect(await screen.findByText("Entwurf Aufhebungsvertrag")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Entwurf Aufhebungsvertrag" }),
+  ).toBeNull();
 });
