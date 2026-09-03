@@ -7010,6 +7010,7 @@ export const en = {
   "person.intro.stepPending": "Later",
   "person.intro.laneOurs": "Our team",
   "person.intro.laneTheirs": "Their company",
+  "person.intro.lanePeers": "Who they talk to",
   "person.intro.laneTarget": "Target",
   "person.intro.useThisRoute": "Use this route",
   "person.intro.mapRegion": "Who can reach this contact, and through whom",

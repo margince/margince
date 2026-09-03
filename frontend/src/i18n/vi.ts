@@ -6887,6 +6887,7 @@ export const vi = {
   "person.intro.stepPending": "Sau",
   "person.intro.laneOurs": "Đội của ta",
   "person.intro.laneTheirs": "Công ty của họ",
+  "person.intro.lanePeers": "Những người họ trao đổi",
   "person.intro.laneTarget": "Người cần gặp",
   "person.intro.useThisRoute": "Dùng hướng này",
   "person.intro.mapRegion": "Ai tiếp cận được người này, và qua ai",

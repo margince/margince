@@ -6963,6 +6963,7 @@ export const de = {
   "person.intro.stepPending": "Später",
   "person.intro.laneOurs": "Unser Team",
   "person.intro.laneTheirs": "Ihr Unternehmen",
+  "person.intro.lanePeers": "Mit wem sie sprechen",
   "person.intro.laneTarget": "Zielperson",
   "person.intro.useThisRoute": "Diesen Weg nutzen",
   "person.intro.mapRegion": "Wer diesen Kontakt erreicht, und über wen",
