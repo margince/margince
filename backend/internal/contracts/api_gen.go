@@ -1543,6 +1543,30 @@ func (e AttentionPairEvidenceSignal) Valid() bool {
 	}
 }
 
+// Defines values for AttentionRelationshipFactsStrength.
+const (
+	AttentionRelationshipFactsStrengthModerate AttentionRelationshipFactsStrength = "moderate"
+	AttentionRelationshipFactsStrengthNone     AttentionRelationshipFactsStrength = "none"
+	AttentionRelationshipFactsStrengthStrong   AttentionRelationshipFactsStrength = "strong"
+	AttentionRelationshipFactsStrengthWeak     AttentionRelationshipFactsStrength = "weak"
+)
+
+// Valid indicates whether the value is a known member of the AttentionRelationshipFactsStrength enum.
+func (e AttentionRelationshipFactsStrength) Valid() bool {
+	switch e {
+	case AttentionRelationshipFactsStrengthModerate:
+		return true
+	case AttentionRelationshipFactsStrengthNone:
+		return true
+	case AttentionRelationshipFactsStrengthStrong:
+		return true
+	case AttentionRelationshipFactsStrengthWeak:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionSubjectType.
 const (
 	AttentionSubjectTypeActivity     AttentionSubjectType = "activity"
@@ -11181,22 +11205,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber TagDetailColor = "amber"
+	TagDetailColorRose  TagDetailColor = "rose"
+	TagDetailColorSlate TagDetailColor = "slate"
+	TagDetailColorTeal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
 	default:
 		return false
@@ -16916,6 +16940,19 @@ type AttentionItem struct {
 	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
 	Rank *int `json:"rank,omitempty"`
 
+	// Relationship What the lapsed relationship behind a `relationship_decay` item was WORTH before
+	// it went quiet. Sent only for `source: relationship_decay`.
+	//
+	// Without it every lapsed contact reads alike, and the rep's strongest relationship
+	// going quiet is the row that most deserves to be told apart from a cc who has
+	// drifted. Both facts were already in the lane's hand and discarded: the band is
+	// scored from the edge the lane loads, and the deal is one batched read over the
+	// candidates it already narrowed to.
+	//
+	// The band travels rather than the raw score, because a number between 0 and 100
+	// invites a client to draw a precision the §4 arithmetic does not claim.
+	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
 
@@ -17009,6 +17046,34 @@ type AttentionPairSide struct {
 	// different fact from not having asked.
 	RelatedCount *int `json:"related_count,omitempty"`
 }
+
+// AttentionRelationshipFacts What the lapsed relationship behind a `relationship_decay` item was WORTH before
+// it went quiet. Sent only for `source: relationship_decay`.
+//
+// Without it every lapsed contact reads alike, and the rep's strongest relationship
+// going quiet is the row that most deserves to be told apart from a cc who has
+// drifted. Both facts were already in the lane's hand and discarded: the band is
+// scored from the edge the lane loads, and the deal is one batched read over the
+// candidates it already narrowed to.
+//
+// The band travels rather than the raw score, because a number between 0 and 100
+// invites a client to draw a precision the §4 arithmetic does not claim.
+type AttentionRelationshipFacts struct {
+	// HasOpenDeal Whether money this reader can see still rests on this contact. Absent is not
+	// "no": a contact with an open deal the reader may not see reads the same as one
+	// with none, which is the answer every row-scoped read gives.
+	HasOpenDeal *bool `json:"has_open_deal,omitempty"`
+
+	// Strength The relationship's band at the read instant, from the same §4 scoring the
+	// contact's own page shows — computed on read rather than stored, so the two
+	// surfaces cannot come to disagree about who this person is.
+	Strength *AttentionRelationshipFactsStrength `json:"strength,omitempty"`
+}
+
+// AttentionRelationshipFactsStrength The relationship's band at the read instant, from the same §4 scoring the
+// contact's own page shows — computed on read rather than stored, so the two
+// surfaces cannot come to disagree about who this person is.
+type AttentionRelationshipFactsStrength string
 
 // AttentionStagedFacts What the verdict engine already worked out about a staged contact decision, so a
 // surface can group alike questions without reading the proposal a second time.

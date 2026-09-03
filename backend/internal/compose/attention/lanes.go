@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // What each lane READS, and the shape it reads it into.
@@ -354,6 +355,19 @@ type QuietRelationship struct {
 	// LastAt is when they last spoke, so the card can date the silence rather
 	// than only measure it.
 	LastAt time.Time
+	// Strength is what the relationship was WORTH before it went quiet, scored
+	// at the read instant through §4 — the same arithmetic the contact's own
+	// page shows, so the two cannot disagree about who this person is.
+	//
+	// The lane already holds the edge this is computed from and used to discard
+	// it. Without the band every lapsed contact reads alike, and the rep's
+	// strongest relationship going quiet is the row that most deserves to be
+	// told apart from a cc who has drifted.
+	Strength relstrength.Score
+	// HasOpenDeal reports whether money this reader can see still rests on this
+	// contact. Same fact the waiting lane carries and for the same reason: a
+	// silence with a deal behind it is not the same work as one without.
+	HasOpenDeal bool
 }
 
 // DealFacts answers the figures behind deals a row names but does not carry.

@@ -177,7 +177,15 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		if err != nil {
 			return err
 		}
-		lapsed = quietRelationships(quiet, changed)
+		// Which of them still carries money, read once for the whole candidate
+		// set. In the SAME transaction as the derivation above, so a deal
+		// closing mid-read cannot make the lane say a contact is worth chasing
+		// for a reason that stopped being true between two statements.
+		funded, err := deals.OpenDealPeople(ctx, tx, candidates)
+		if err != nil {
+			return err
+		}
+		lapsed = quietRelationships(quiet, changed, funded, now)
 		return nil
 	})
 	if err != nil {
@@ -201,6 +209,8 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 func quietRelationships(
 	quiet []search.InteractionEdge,
 	changed []people.PersonChanges,
+	funded map[ids.UUID]bool,
+	now time.Time,
 ) []attention.QuietRelationship {
 	byPerson := make(map[ids.UUID]people.PersonChanges, len(changed))
 	for _, row := range changed {
@@ -225,11 +235,18 @@ func quietRelationships(
 			// <120 days ago>": a card disagreeing with itself, and with the
 			// contact's own page. `change.At` is the touch `change.Days`
 			// counts from, so the two agree by construction.
+			// The strength comes off the EDGE, scored at the read instant, and
+			// the edge is the one the projection already loaded. Scoring it
+			// here rather than storing a band means the lane and the contact's
+			// own page answer from the same arithmetic at the same moment,
+			// which is the property §4 is pure for.
 			lapsed = append(lapsed, attention.QuietRelationship{
-				PersonID:  row.PersonID.UUID,
-				Name:      row.DisplayName,
-				QuietDays: change.Days,
-				LastAt:    change.At,
+				PersonID:    row.PersonID.UUID,
+				Name:        row.DisplayName,
+				QuietDays:   change.Days,
+				LastAt:      change.At,
+				Strength:    edge.StrengthOf(now),
+				HasOpenDeal: funded[edge.PersonID],
 			})
 			break
 		}

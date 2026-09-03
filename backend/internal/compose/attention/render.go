@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // One item's shape, per producer.
@@ -374,6 +375,7 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 	name := quiet.Name
 	days := quiet.QuietDays
 	lastAt := quiet.LastAt
+	funded := quiet.HasOpenDeal
 	return crmcontracts.AttentionItem{
 		Id:     quiet.PersonID.String(),
 		Source: crmcontracts.AttentionItemSource("relationship_decay"),
@@ -381,11 +383,45 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 		// Typed, for the reason riskItem's is: `detail` is a sentence on every
 		// other source, and the client writes "quiet N days" in the reader's
 		// own language rather than rendering a decimal the server chose.
-		QuietDays:  &days,
+		QuietDays: &days,
+		// What the relationship was worth before it lapsed. Typed for the same
+		// reason: the client writes the phrase, and the queue READS the band —
+		// a weak, unfunded silence is routine work and a strong or funded one
+		// is not.
+		Relationship: &crmcontracts.AttentionRelationshipFacts{
+			Strength:    relationshipBand(quiet.Strength.Bucket),
+			HasOpenDeal: &funded,
+		},
 		Subject:    subjectOf("person", quiet.PersonID),
 		OccurredAt: &lastAt,
 		Actions:    []crmcontracts.AttentionItemActions{},
 	}
+}
+
+// relationshipBand carries the §4 bucket onto the wire, answering nothing for a
+// word this contract does not declare.
+//
+// A mapping rather than a cast, because the two vocabularies are declared in
+// different places: §4 owns the bands and the contract owns what a client is
+// promised. A cast would widen the wire silently the day either grows a term,
+// and the reader would get a band their client cannot translate. An unmapped
+// bucket is ABSENT, which the client already draws the way it draws a lane that
+// scored none.
+func relationshipBand(bucket string) *crmcontracts.AttentionRelationshipFactsStrength {
+	var band crmcontracts.AttentionRelationshipFactsStrength
+	switch bucket {
+	case relstrength.BucketNone:
+		band = crmcontracts.AttentionRelationshipFactsStrengthNone
+	case relstrength.BucketWeak:
+		band = crmcontracts.AttentionRelationshipFactsStrengthWeak
+	case relstrength.BucketModerate:
+		band = crmcontracts.AttentionRelationshipFactsStrengthModerate
+	case relstrength.BucketStrong:
+		band = crmcontracts.AttentionRelationshipFactsStrengthStrong
+	default:
+		return nil
+	}
+	return &band
 }
 
 // receiptItem renders one thing the system did on its own.
