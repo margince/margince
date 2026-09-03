@@ -3191,6 +3191,29 @@ export const en = {
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "forecast.question": "Where will we land this quarter?",
+  "forecast.answerWithCall":
+    "The current call is {call}. Evidence supports {evidence}.",
+  "forecast.answerNoCall":
+    "Nobody has called this period yet. Evidence supports {evidence}.",
+  "forecast.partialTitle": "Not every deal is priced",
+  "forecast.partial":
+    "{priced} of {eligible} deals carry an amount. The rest are real pipeline contributing nothing to the totals above.",
+  "forecast.currentCall": "Current call",
+  "forecast.evidence": "Supported by evidence",
+  "forecast.alreadyWon": "Already won",
+  "forecast.updateCall": "Update the current call",
+  "forecast.callExplains":
+    "A call is what you believe will close. It records your number and changes no deal.",
+  "forecast.expectedTotal": "Expected total for this period",
+  "forecast.supportingNote": "Supporting note",
+  "forecast.cancel": "Cancel",
+  "forecast.saveCall": "Save call",
+  "forecast.receipt": "Data and evidence checked",
+  "forecast.eligible": "Eligible deals",
+  "forecast.priced": "Priced",
+  "forecast.confirmed": "Close date confirmed",
+  "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
   "analytics.forecastBanner":

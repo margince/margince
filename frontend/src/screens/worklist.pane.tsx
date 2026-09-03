@@ -31,7 +31,7 @@ import type { WorklistItem } from "./worklist.queries";
 // about neither draws nothing rather than an empty frame.
 export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
   const subject = item.subject;
-  if (!subject || subject.type !== "person") {
+  if (subject?.type !== "person") {
     return null;
   }
   return <PersonContext id={subject.id} label={subject.label} />;

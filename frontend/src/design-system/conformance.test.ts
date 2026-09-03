@@ -1,3 +1,8 @@
+// biome-ignore-all lint/suspicious/noTemplateCurlyInString: these strings are
+// FIXTURES of source code, and the ${...} in them is the subject under test —
+// a template literal the sweep has to recognize, not one this file meant to
+// interpolate.
+
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";

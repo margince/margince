@@ -3142,6 +3142,29 @@ export const de = {
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.frame": "Stand {asOf} · {zone} · {currency}",
+  "forecast.question": "Wo landen wir dieses Quartal?",
+  "forecast.answerWithCall":
+    "Der aktuelle Call liegt bei {call}. Durch Belege gestützt sind {evidence}.",
+  "forecast.answerNoCall":
+    "Für diesen Zeitraum gibt es noch keinen Call. Durch Belege gestützt sind {evidence}.",
+  "forecast.partialTitle": "Nicht jeder Deal hat einen Betrag",
+  "forecast.partial":
+    "{priced} von {eligible} Deals führen einen Betrag. Die übrigen sind echte Pipeline und tragen nichts zu den Summen oben bei.",
+  "forecast.currentCall": "Aktueller Call",
+  "forecast.evidence": "Durch Belege gestützt",
+  "forecast.alreadyWon": "Bereits gewonnen",
+  "forecast.updateCall": "Aktuellen Call aktualisieren",
+  "forecast.callExplains":
+    "Ein Call ist das, was Sie erwarten. Er hält Ihre Zahl fest und ändert keinen Deal.",
+  "forecast.expectedTotal": "Erwartete Summe für diesen Zeitraum",
+  "forecast.supportingNote": "Begründung",
+  "forecast.cancel": "Abbrechen",
+  "forecast.saveCall": "Call speichern",
+  "forecast.receipt": "Daten und Belege geprüft",
+  "forecast.eligible": "Berücksichtigte Deals",
+  "forecast.priced": "Mit Betrag",
+  "forecast.confirmed": "Abschlussdatum bestätigt",
+  "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Forecast-Kategorien",
   "analytics.reportOpenByCompany": "Offene Deals pro Firma",
   "analytics.forecastBanner":

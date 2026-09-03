@@ -23,6 +23,7 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ForecastView } from "./analytics.forecast";
 import {
   OverlayUnavailable,
   problemMessageOf,
@@ -71,8 +72,14 @@ type Section = "forecast" | "pipeline";
 // and the bodies both read this, so a section cannot come to list a report it
 // does not draw.
 const SECTION_REPORTS = {
-  forecast: ["forecast"],
-  pipeline: ["deals-by-stage", "open-deals-per-company"],
+  // The forecast section draws its own view — readings, a call and a receipt,
+  // none of which is a row set — so it lists no report card.
+  forecast: [],
+  // The forecast-category breakdown moves HERE rather than being deleted. It
+  // is a real report and still the only place a reader sees how the pipeline
+  // divides by category; what it is not is the forecast, which is now an
+  // answer rather than a table.
+  pipeline: ["deals-by-stage", "forecast", "open-deals-per-company"],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -85,7 +92,7 @@ function isSection(value: string | undefined): value is Section {
 // The old address named a report. Those links are in bookmarks and in sent
 // mail, so each one still answers, with the section that now holds it.
 const SECTION_OF_REPORT = {
-  forecast: "forecast",
+  forecast: "pipeline",
   "deals-by-stage": "pipeline",
   "open-deals-per-company": "pipeline",
 } as const satisfies Record<ReportKey, Section>;
@@ -759,14 +766,18 @@ export function AnalyticsScreen() {
   return (
     <div className="wrap">
       {header}
-      {SECTION_REPORTS[section].map((report) => (
-        <ReportCard
-          key={report}
-          report={report}
-          stages={pipelineQuery.data?.stages ?? []}
-          locale={locale}
-        />
-      ))}
+      {section === "forecast" ? (
+        <ForecastView />
+      ) : (
+        SECTION_REPORTS[section].map((report) => (
+          <ReportCard
+            key={report}
+            report={report}
+            stages={pipelineQuery.data?.stages ?? []}
+            locale={locale}
+          />
+        ))
+      )}
     </div>
   );
 }
