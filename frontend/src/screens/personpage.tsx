@@ -26,6 +26,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
+import { primaryEmail } from "../format/primaryemail";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -390,6 +391,7 @@ export function PersonPageV2({
               />
               <PersonEmailPanel
                 personId={id}
+                recordAddress={primaryEmail(person.emails)}
                 overlay={overlay}
                 archived={Boolean(person.archived_at)}
               />
@@ -532,6 +534,7 @@ export function PersonPageV2({
         />
         <PersonMailDrawer
           personId={id}
+          recordAddress={primaryEmail(person.emails)}
           open={drawer === "mail"}
           onClose={() => setDrawer(null)}
         />
@@ -807,9 +810,15 @@ function writeRefusal(
 // page offers no writes.
 function PersonEmailPanel({
   personId,
+  recordAddress,
   overlay,
   archived,
-}: Readonly<{ personId: string; overlay: boolean; archived: boolean }>) {
+}: Readonly<{
+  personId: string;
+  recordAddress?: string;
+  overlay: boolean;
+  archived: boolean;
+}>) {
   if (overlay || archived) {
     return null;
   }
@@ -818,6 +827,7 @@ function PersonEmailPanel({
       entityType="person"
       entityId={personId}
       personId={personId}
+      recordAddress={recordAddress}
       detectWaitingReply
     />
   );
@@ -832,9 +842,18 @@ function PersonEmailPanel({
 // another.
 function PersonMailDrawer({
   personId,
+  recordAddress,
   open,
   onClose,
-}: Readonly<{ personId: string; open: boolean; onClose: () => void }>) {
+}: Readonly<{
+  personId: string;
+  // Which of the contact's addresses a FIRST message goes to. A person carries
+  // a list, so this is the shared decision rather than a field — see
+  // format/primaryemail.ts, mirrored by the drafter.
+  recordAddress?: string;
+  open: boolean;
+  onClose: () => void;
+}>) {
   if (!open) {
     return null;
   }
@@ -844,6 +863,7 @@ function PersonMailDrawer({
       entityType="person"
       entityId={personId}
       personId={personId}
+      recordAddress={recordAddress}
       open
       onClose={onClose}
     />
