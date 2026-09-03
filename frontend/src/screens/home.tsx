@@ -309,7 +309,12 @@ export function HomeScreen() {
       {/* Screen-level so it survives the deck re-rendering under it. */}
       {decidedNote}
       <PageZones
-        shape="aside"
+        // The SHAPE moves with the aside, not just its contents. A grid track
+        // does not collapse when its item is missing (pagezones.tsx says so in
+        // as many words), so leaving this at "aside" would draw the weekly at
+        // seventy per cent width with an empty third beside it — a column that
+        // reads as a rail which failed to load.
+        shape={address.view === "weekly" ? "single" : "aside"}
         mainClassName="home-main"
         main={
           <HomeWork
@@ -332,30 +337,50 @@ export function HomeScreen() {
         }
         asideClassName="home-rail"
         asideLabel={t("home.rail")}
+        // THE RAIL BELONGS TO THE VIEW IT IS BESIDE.
+        //
+        // Every panel below answers a question about TODAY: what the day is
+        // booked with, what is owed now, what arrived overnight, which deals
+        // have gone quiet. Beside the weekly they sat next to a week that had
+        // closed, so a rep reading their retrospective was shown "Today's
+        // schedule" against it and the page read as two screens overlaid.
+        //
+        // The work column has switched on the view since the dials shipped.
+        // The rail did not, because it is drawn once outside that branch —
+        // and nothing asserted it, so the mismatch was invisible.
+        //
+        // The weekly draws NO rail rather than a substitute one. Its three
+        // planned panels each need something that is not there: the manager's
+        // answer already renders on the commitment row it belongs to, and
+        // "carried into this week" is a COUNT on the wire with no rows behind
+        // it. A rail invented from what is available would be a region that
+        // says less than the column beside it.
         aside={
-          <>
-            {/* The day's own shape leads the rail: what it is booked with, then
-                what is owed. Both are cuts of the SAME worklist answer the work
-                column is drawn from, so the rail cannot name a meeting the
-                queue has already dropped. */}
-            <SchedulePanel
-              day={worklistQuery.data}
-              state={readState(worklistQuery)}
-            />
-            <PromisesPanel
-              day={worklistQuery.data}
-              state={readState(worklistQuery)}
-            />
-            <OvernightPanel />
-            <PositionPanel />
-            <section id="home-watch">
-              <WatchPanel
-                deals={quiet}
-                more={beyondPage}
-                state={readState(dealsQuery)}
+          address.view === "weekly" ? undefined : (
+            <>
+              {/* The day's own shape leads the rail: what it is booked with,
+                  then what is owed. Both are cuts of the SAME worklist answer
+                  the work column is drawn from, so the rail cannot name a
+                  meeting the queue has already dropped. */}
+              <SchedulePanel
+                day={worklistQuery.data}
+                state={readState(worklistQuery)}
               />
-            </section>
-          </>
+              <PromisesPanel
+                day={worklistQuery.data}
+                state={readState(worklistQuery)}
+              />
+              <OvernightPanel />
+              <PositionPanel />
+              <section id="home-watch">
+                <WatchPanel
+                  deals={quiet}
+                  more={beyondPage}
+                  state={readState(dealsQuery)}
+                />
+              </section>
+            </>
+          )
         }
       />
     </div>
