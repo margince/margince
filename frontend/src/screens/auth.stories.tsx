@@ -75,9 +75,8 @@ function AuthStory({
   // at the render boundary and leaves the wire alone.
   oidcProviders = [],
   locale = "en",
-  // Absent by default, matching the server: the welcome is the exception a
-  // story has to ask for, never something every other story here accidentally
-  // renders.
+  // False by default, matching a configured installation: first run is the
+  // exception a story has to ask for.
   firstRun = false,
 }: Readonly<{
   profile: AssistantProfile;
@@ -94,9 +93,6 @@ function AuthStory({
         profileStatus,
       ),
     "GET /auth/capabilities": () =>
-      // `first_run` is not in `schema.d.ts` yet (see the same field in
-      // auth.tsx) — `jsonResponse` takes `unknown`, so the stub can already
-      // send the wire shape the backend is adding without a cast.
       jsonResponse({
         password: true,
         password_reset: true,
@@ -116,12 +112,11 @@ export const ConfiguredHybrid: Story = {
 };
 
 /**
- * The installation's very first sign-in, `first_run` true (WelcomeSignIn):
- * one centred column with the Core as the subject, the SAME sign-in form
- * underneath it. Every other story on this page renders the ordinary
- * two-region surface, because none of them sets this flag.
+ * The installation's very first sign-in, `first_run` true: the same surface,
+ * with a handover line that does not claim to recognise somebody this
+ * installation has never met.
  */
-export const FirstRunWelcome: Story = {
+export const FirstRun: Story = {
   render: () => <AuthStory profile={configured} firstRun />,
 };
 
@@ -278,36 +273,21 @@ export const SignedOut: Story = {
 // these two in Storybook itself, or by narrowing the browser.
 
 /**
- * Below 960 the two regions become two ROWS, and the story earns its place
- * because the change is not "the aside moved down".
- *
- * Both rows are centred on the SAME 440px measure the form uses, so the page
- * reads as one column down its middle rather than as a form above a full-bleed
- * band, and the identity region drops its card chrome for a hairline — at this
- * width it is a band of the page, not an inset card. The Core stays in flow
- * above the identity words, as it is on desktop: the sphere and the sentences it
- * is speaking are one cluster, and the layout that lifted it into the opposite
- * corner separated them. It costs the form nothing, because it is in the second
- * row.
+ * The same column on a tablet: the wordmark still in the corner, the Core and
+ * its sentences over the form on the one 400px measure.
  */
-export const StackedTablet: Story = {
+export const Tablet: Story = {
   globals: { viewport: { value: "stacked" } },
   render: () => <AuthStory profile={configured} />,
 };
 
 /**
- * At 560 and below the surface is the task alone: `aside.auth-identity` is gone,
- * the Core sits in the LEFT lane of the phone disclosure lining up with the
- * sentence it belongs to, and the card centres vertically in what is left.
- *
- * What to check here is not the sphere — it is `aria-hidden` decoration
- * (WDS-CORE-4) and carries nothing. It is that the disclosure SENTENCE is
- * present, because with the aside hidden it is the only thing still telling a
- * phone user, and every screen-reader user on one, that there is an AI here at
- * all. Exactly one of the two copies of that sentence is ever in the
- * accessibility tree; the e2e case pins the split in both directions.
+ * On a phone the identity region STAYS: it is the one thing this surface is
+ * for, so it is never the region a narrow screen drops. What to check is that
+ * the whole column still reads top to bottom with nothing clipped, and that
+ * the wordmark, tighter to the corner here, stays clear of the Core's halo.
  */
-export const TaskOnlyPhone: Story = {
+export const Phone: Story = {
   globals: { viewport: { value: "taskOnly" } },
   render: () => <AuthStory profile={configured} />,
 };

@@ -22,8 +22,8 @@ import { isTechnicalFact } from "./companytechnical";
 import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";
 import {
-  factCategoryLabelKey,
   type FactGroup,
+  factCategoryLabelKey,
   factFieldLabelKey,
   listFacts,
 } from "./factview";

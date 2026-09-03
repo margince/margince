@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { webUrl } from "../../format/weburl";
 import type { MessageKey } from "../../i18n/en";
 import { FACT_CATEGORY_ORDER } from "../factview";
 import type { ReviewRow } from "./company-review-state";
@@ -12,6 +13,9 @@ import type { ReviewRow } from "./company-review-state";
 // layout rather than about renumbering the same list twice.
 
 export type Fact = components["schemas"]["CompanySiteReadFact"];
+export type Person = components["schemas"]["CompanySiteReadPerson"];
+export type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
+export type Page = components["schemas"]["CompanySiteReadPage"];
 
 /** One page the profile cites, and the number it is cited by. */
 export type Citation = Readonly<{ url: string; n: number }>;
@@ -50,27 +54,35 @@ export function citationsOf(
 }
 
 /**
+ * The number a record line prints, or none: a row typed by a person or carried
+ * in from an existing profile has no page behind it. One spelling, because the
+ * companion, the article and the sidebar all print the same superscript.
+ */
+export function citationOf(
+  row: ReviewRow,
+  number: ReadonlyMap<string, number>,
+): number | undefined {
+  return row.evidence === null ? undefined : number.get(row.evidence.source);
+}
+
+/**
  * The address a reference entry prints: host and path, no scheme. The
  * references list is the one place the host is worth repeating per row —
  * unlike a page strip read one crawl at a time, this is a list a reader
  * copies an address out of, and a bare path is not one.
  */
 export function referenceAddressOf(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
-  } catch {
+  const parsed = webUrl(url);
+  if (parsed === null) {
     return url;
   }
+  return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
 }
 
-/** The host a page is read from, for the header's own sentence. */
+/** The host a page is read from, for the header's own sentence. A value that
+ * is not a web address prints as it came, which is honest rather than blank. */
 export function hostOf(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
+  return webUrl(url)?.host ?? url;
 }
 
 type PageKind = NonNullable<
@@ -127,6 +139,6 @@ export function bestFact(
 ): Fact | undefined {
   return facts
     .filter((fact) => fact.field === field)
-    .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
+    .sort((a, b) => b.confidence - a.confidence)
     .at(0);
 }

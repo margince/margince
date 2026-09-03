@@ -114,11 +114,15 @@
   background: var(--aiLight);
   font-size: var(--fs-sm);
 }
+/* Text on --aiLight takes --aiText (design-system/README.md): the label's
+   meta grey and the blank's tertiary grey both fail AA on this ground. */
 .pdigest-open .pdigest-label {
   flex: none;
+  color: var(--aiText);
 }
 .pdigest-open .pdigest-blank {
   flex: 1 1 auto;
+  color: var(--aiText);
 }
 
 /* ---- the document ---- */

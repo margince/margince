@@ -11,8 +11,9 @@
  * behind the page. `position: relative` alone does NOT open one.
  *
  * The canvas is deliberately not sized here beyond filling the box: its drawing
- * buffer is smaller than its display size (see RENDER_SCALE) and the browser
- * scales it up, which is the whole cost saving.
+ * buffer is sized in CSS pixels rather than device pixels (see RENDER_SCALE),
+ * and on a high-density panel the browser scales it up, which is the whole
+ * cost saving.
  */
 .ambient-waves {
   position: absolute;

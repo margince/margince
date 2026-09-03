@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { useT } from "../../i18n";
 import { factCategoryLabelKey, factFieldLabelKey } from "../factview";
@@ -9,7 +8,11 @@ import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import {
   type Citation,
+  citationOf,
   type Fact,
+  type LegalEntity,
+  type Page,
+  type Person,
   pageKindLabelKey,
   pageOf,
   referenceAddressOf,
@@ -27,10 +30,6 @@ import { articleSections } from "./profile-digest-sections";
 // — see profile-digest-sections.ts for why the grouping is the form's own
 // four clusters under different words — followed by what the crawl found
 // beyond those fields, and the numbered pages every line above cited.
-
-type Person = components["schemas"]["CompanySiteReadPerson"];
-type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
-type Page = components["schemas"]["CompanySiteReadPage"];
 
 export function ProfileArticle({
   rows,
@@ -78,17 +77,15 @@ export function ProfileArticle({
               <DigestLine
                 key={row.field}
                 row={row}
-                n={
-                  row.evidence === null
-                    ? undefined
-                    : number.get(row.evidence.source)
-                }
+                n={citationOf(row, number)}
                 onSettle={onSettle}
               />
             ))}
             {entities.map((entity) => (
               <LegalEntityLine
-                key={entity.name}
+                // The name alone collides when two pages print the same
+                // entity; the page it came from is what tells them apart.
+                key={`${entity.name}@${entity.source_url}`}
                 entity={entity}
                 n={number.get(entity.source_url)}
               />
@@ -125,7 +122,7 @@ export function ProfileArticle({
           </Eyebrow>
           {people.map((person) => (
             <PersonLine
-              key={`${person.name}:${person.role}`}
+              key={`${person.name}:${person.role}@${person.evidence_url}`}
               person={person}
               n={number.get(person.evidence_url)}
             />

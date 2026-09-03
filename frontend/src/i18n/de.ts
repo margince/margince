@@ -4921,11 +4921,6 @@ export const de = {
   "auth.coreDisclosure": "Margince · KI-System",
   "auth.coreGreeting": "Hallo, ich bin Margince.",
   "auth.corePurpose": "Ich kümmere mich um die Arbeit rund um deine Arbeit.",
-  // Gedankenstrich mit Leerzeichen, nicht der englische Geviertstrich ohne:
-  // im Deutschen ist das die einzige Setzung, die nicht wie ein Bindestrich
-  // zwischen zwei Wörtern liest.
-  "auth.coreWork":
-    "Ich halte dein CRM aktuell, erkenne, was Aufmerksamkeit braucht, und bereite den nächsten Schritt vor – damit du dich um Kunden kümmern kannst.",
   "auth.corePromise":
     "Und keine Sorge: Ich sende nie eine E-Mail oder Nachricht, ohne dich vorher zu fragen.",
   "auth.coreHandover": "Zuerst stelle ich sicher, dass du es wirklich bist …",

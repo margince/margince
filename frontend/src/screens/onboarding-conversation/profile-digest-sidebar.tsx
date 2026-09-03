@@ -5,7 +5,13 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ReviewRow } from "./company-review-state";
-import { bestFact, type Fact, hostOf } from "./profile-digest-data";
+import {
+  bestFact,
+  citationOf,
+  type Fact,
+  hostOf,
+  type LegalEntity,
+} from "./profile-digest-data";
 
 // The whole-record document's right column: a fixed set of facts a reader
 // scans without opening the article, each sourced from data the record or the
@@ -14,11 +20,6 @@ import { bestFact, type Fact, hostOf } from "./profile-digest-data";
 // a pair backed by a record field always shows, "not written down" and all,
 // because that field's slot exists on every record whether or not this one
 // filled it.
-
-type LegalEntity = {
-  name: string;
-  registered_address?: string | null;
-};
 
 /** One sidebar row, before it is known whether it has anything to show. */
 type Candidate = Readonly<{
@@ -53,19 +54,26 @@ export function ProfileSidebar({
 }>) {
   const t = useT();
   const byField = new Map(rows.map((row) => [row.field, row]));
-  const primaryEntity = legalEntities.at(0);
+  // Only a notice that names ONE entity can stand in for a blank record line.
+  // A group's notice names several, and the read does not decide which one
+  // this installation is (LegalEntityLine says the same), so the sidebar
+  // must not either: printing the first would state another company's name
+  // as a fact about this record.
+  const soleEntity = legalEntities.length === 1 ? legalEntities[0] : undefined;
+  const entityValue = (value: string | undefined): EntityValue | undefined =>
+    soleEntity === undefined || value === undefined
+      ? undefined
+      : { value, n: number.get(soleEntity.source_url) };
 
-  const legalNameRow = byField.get("legal_name");
   const legalName = rowOrEntity(
-    legalNameRow,
-    primaryEntity?.name,
+    byField.get("legal_name"),
+    entityValue(soleEntity?.name),
     number,
     "ob.digest.sidebar.legalName",
   );
-  const headquartersRow = byField.get("registered_address");
   const headquarters = rowOrEntity(
-    headquartersRow,
-    primaryEntity?.registered_address ?? undefined,
+    byField.get("registered_address"),
+    entityValue(soleEntity?.registered_address),
     number,
     "ob.digest.sidebar.headquarters",
   );
@@ -96,10 +104,7 @@ export function ProfileSidebar({
     {
       labelKey: "ob.field.industry",
       value: industryRow?.value,
-      n:
-        industryRow?.evidence === null || industryRow?.evidence === undefined
-          ? undefined
-          : number.get(industryRow.evidence.source),
+      n: industryRow && citationOf(industryRow, number),
       omitWhenAbsent: false,
     },
     {
@@ -137,9 +142,15 @@ export function ProfileSidebar({
   );
 }
 
+/** What the legal notice says, and the number of the page that says it —
+ * cited on the same rule as every other line here. */
+type EntityValue = Readonly<{ value: string; n: number | undefined }>;
+
+/** The record's own line first; the notice's entity only where the record is
+ * still blank. Either way the slot exists, so the row always shows. */
 function rowOrEntity(
   row: ReviewRow | undefined,
-  entityValue: string | undefined,
+  entity: EntityValue | undefined,
   number: ReadonlyMap<string, number>,
   labelKey: MessageKey,
 ): Candidate {
@@ -148,13 +159,14 @@ function rowOrEntity(
     return {
       labelKey,
       value: row.value,
-      n: row.evidence === null ? undefined : number.get(row.evidence.source),
+      n: citationOf(row, number),
       omitWhenAbsent: false,
     };
   }
   return {
     labelKey,
-    value: entityValue,
+    value: entity?.value,
+    n: entity?.n,
     omitWhenAbsent: false,
   };
 }

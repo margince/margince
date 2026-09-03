@@ -4,3 +4,8 @@ dist/
 test-results/
 playwright-report/
 coverage
+# Scratch left behind by a design-review session: a screenshot script or a
+# review tool's cache at the package root carries the author's machine paths,
+# which never belong in a public tree.
+/.*.mjs
+/.impeccable/

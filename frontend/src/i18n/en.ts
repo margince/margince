@@ -4992,8 +4992,6 @@ export const en = {
   // the other half of the screen.
   "auth.coreGreeting": "Hi, I’m Margince.",
   "auth.corePurpose": "I’m here to take care of the work around your work.",
-  "auth.coreWork":
-    "I’ll keep your CRM up to date, spot what needs attention, and prepare the next step—so you can focus on customers.",
   // The one limit left, and the only sentence here a reader has to be able to
   // rely on: nothing leaves the installation until a person says so. It keeps
   // the icon badge the four older limits carried, because it is the same

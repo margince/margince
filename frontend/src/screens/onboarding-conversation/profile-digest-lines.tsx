@@ -5,7 +5,7 @@ import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
-import type { Fact } from "./profile-digest-data";
+import type { Fact, LegalEntity, Person } from "./profile-digest-data";
 
 // The line types the article and the companion both draw from, kept apart
 // from their layout: a record line (with or without a value), a fact the
@@ -110,15 +110,7 @@ export function FactLine({
 export function PersonLine({
   person,
   n,
-}: Readonly<{
-  person: {
-    name: string;
-    role: string;
-    published_email?: string | null;
-    linkedin_url?: string | null;
-  };
-  n?: number;
-}>) {
+}: Readonly<{ person: Person; n?: number }>) {
   return (
     <p className="pdigest-line">
       <span className="pdigest-value">{person.name}</span>{" "}
@@ -142,15 +134,7 @@ export function PersonLine({
 export function LegalEntityLine({
   entity,
   n,
-}: Readonly<{
-  entity: {
-    name: string;
-    registered_address?: string | null;
-    register_number?: string | null;
-    vat_number?: string | null;
-  };
-  n?: number;
-}>) {
+}: Readonly<{ entity: LegalEntity; n?: number }>) {
   const details = [
     entity.registered_address,
     entity.register_number,

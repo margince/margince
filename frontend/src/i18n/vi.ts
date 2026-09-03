@@ -4872,8 +4872,6 @@ export const vi = {
   "auth.coreDisclosure": "Margince · hệ thống AI",
   "auth.coreGreeting": "Xin chào, tôi là Margince.",
   "auth.corePurpose": "Tôi ở đây để lo phần việc xung quanh công việc của bạn.",
-  "auth.coreWork":
-    "Tôi sẽ giữ CRM của bạn luôn cập nhật, phát hiện điều cần chú ý và chuẩn bị bước tiếp theo — để bạn tập trung vào khách hàng.",
   "auth.corePromise":
     "Và đừng lo: tôi sẽ không bao giờ gửi email hay tin nhắn mà chưa hỏi bạn trước.",
   "auth.coreHandover": "Trước tiên, hãy để tôi xác minh đúng là bạn…",

@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
 import { Avatar } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import { ProfileArticle } from "./profile-digest-article";
-import { citationsOf, factsByCategory, hostOf } from "./profile-digest-data";
+import {
+  citationOf,
+  citationsOf,
+  type Fact,
+  factsByCategory,
+  hostOf,
+  type LegalEntity,
+  type Page,
+  type Person,
+} from "./profile-digest-data";
 import { DigestLine } from "./profile-digest-lines";
 import { ProfileSidebar } from "./profile-digest-sidebar";
 import "./profile-digest.css";
@@ -43,11 +51,6 @@ import "./profile-digest.css";
  * beside, so a button pointed at the card behind it would aim at itself.
  */
 
-type Fact = components["schemas"]["CompanySiteReadFact"];
-type Person = components["schemas"]["CompanySiteReadPerson"];
-type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
-type Page = components["schemas"]["CompanySiteReadPage"];
-
 /** What the site read carries beyond the profile fields the deck asks about. */
 export type ProfileDigestRead = Readonly<{
   root_url: string;
@@ -75,26 +78,14 @@ export function ProfileDigest({
    * face — see the docblock above for why the companion never wires it. */
   onSettle?: (field: CompanyFieldName) => void;
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-
   if (read === undefined) {
     return <DigestCompanion rows={rows} active={active} />;
   }
-  return (
-    <DigestDocument
-      rows={rows}
-      read={read}
-      onSettle={onSettle}
-      t={t}
-      locale={locale}
-    />
-  );
+  return <DigestDocument rows={rows} read={read} onSettle={onSettle} />;
 }
 
 // The companion: the record's own lines, in the record's own order, nothing
-// beyond it. Unchanged from before this file grew a document face — see the
-// top-level docblock for why it stays this plain.
+// beyond it — see the top-level docblock for why it stays this plain.
 function DigestCompanion({
   rows,
   active,
@@ -119,11 +110,7 @@ function DigestCompanion({
           <DigestLine
             key={row.field}
             row={row}
-            n={
-              row.evidence === null
-                ? undefined
-                : number.get(row.evidence.source)
-            }
+            n={citationOf(row, number)}
             active={row.field === active}
           />
         ))}
@@ -133,22 +120,18 @@ function DigestCompanion({
 }
 
 // The document: header, article, sidebar — the whole record a reader asked
-// to see. `t`/`locale` arrive from the caller rather than being read again
-// here, since the header is the only part of this face that needs them
-// directly; the article and the sidebar read their own.
+// to see.
 function DigestDocument({
   rows,
   read,
   onSettle,
-  t,
-  locale,
 }: Readonly<{
   rows: readonly ReviewRow[];
   read: ProfileDigestRead;
   onSettle?: (field: CompanyFieldName) => void;
-  t: ReturnType<typeof useT>;
-  locale: Locale;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
   const factGroups = factsByCategory(read.facts);
   const legalEntities = read.legal_entities ?? [];
   const people = read.people;

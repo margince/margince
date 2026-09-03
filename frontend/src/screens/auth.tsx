@@ -255,10 +255,9 @@ export function AuthScreen({
     <AuthExperience
       profile={assistantProfile.data}
       phase={view.kind === "login" ? authPhase : "quiet"}
-      // The welcome presentation of THIS frame, not a second one: it applies
-      // only to the login view of a first-run installation, so every other
-      // view and every non-first-run login render exactly as they do today.
-      welcome={view.kind === "login" && firstRun}
+      // Only the login view of a first-run installation says its handover
+      // differently; every other view and every later sign-in do not.
+      firstRun={view.kind === "login" && firstRun}
     >
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (
@@ -719,8 +718,14 @@ function LoginForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <h1>{t("auth.loginTitle")}</h1>
-      <p className="card-sub">{t("auth.loginSub")}</p>
+      {/* The page says its name once. The greeting above IS this page's
+          heading, so the form's own title and sub-line would repeat it in a
+          larger voice than the sentence they follow. Both stay in the
+          accessibility tree, where a form still wants its name, and leave the
+          composition. The other views keep theirs: nothing above a password
+          reset form says what it is. */}
+      <h1 className="sr-only">{t("auth.loginTitle")}</h1>
+      <p className="card-sub sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
         disabled={login.isPending}

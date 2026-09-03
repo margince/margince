@@ -9,16 +9,17 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { AuthScreen } from "./auth";
 
 // Split out of auth.test.tsx (frontend/AGENTS.md: test files split at 1000
 // lines, and that file was already over it) rather than sharing its helpers:
 // same pattern as company-act-refusal.test.tsx beside company-act.test.tsx.
-// This file pins ONE thing: `AuthExperience`'s `welcome` presentation
-// (auth-core.tsx), which renders only for the login view of a first-run
-// installation (`capabilities.data.first_run === true`) and otherwise leaves
-// every view of every installation exactly as auth.test.tsx already pins it.
+// This file pins ONE thing: the handover sentence a first-run installation
+// (`capabilities.data.first_run === true`) says instead of the returning one,
+// on the login view only, with every other sentence and the frame around
+// them exactly as auth.test.tsx already pins them.
 
 afterEach(() => {
   cleanup();
@@ -38,16 +39,14 @@ const render = (ui: ReactNode) => {
 };
 
 // Same shape as auth.test.tsx's own stubApi, duplicated rather than imported
-// (see the split note above) and carrying only what this file's cases need:
-// `first_run`, which is not in schema.d.ts yet (see the same field read in
-// auth.tsx) and is typed here on the test's own local shape, which is what
-// lets this stub send the wire shape the backend is adding without a cast.
+// (see the split note above). `first_run` is optional here so the first case
+// can send the probe WITHOUT it: absence is a real wire state, and the
+// presentation must decay to the ordinary sign-in on it.
 function stubApi(
-  capabilities: {
-    password: boolean;
-    password_reset: boolean;
-    first_run?: boolean;
-  },
+  capabilities: Omit<
+    components["schemas"]["AuthCapabilities"],
+    "oidc_providers" | "first_run"
+  > & { first_run?: boolean },
   respond: (request: Request) => Response | Promise<Response>,
   profile: Response = ok(200, {
     name: "Margince",
@@ -94,54 +93,47 @@ function precedes(a: Element | null, b: Element | null): boolean {
   );
 }
 
-describe("AuthScreen first-run welcome", () => {
-  it("renders the ordinary presentation when first_run is absent or false", async () => {
+const RETURNING = "First, let me make sure it’s really you…";
+const FIRST_RUN = "Sign in and we’ll get started.";
+
+describe("AuthScreen on a first-run installation", () => {
+  it("says the returning handover when first_run is absent or false", async () => {
     stubApi({ password: true, password_reset: false }, () => ok(200));
-    const { container } = render(<AuthScreen onAuthed={vi.fn()} />);
-    expect(await screen.findByText("Sign in to Margince")).toBeTruthy();
-    expect(
-      container.querySelector<HTMLElement>(".auth-surface")?.dataset
-        .authWelcome,
-    ).toBe("false");
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    expect(await screen.findByText(RETURNING)).toBeTruthy();
+    expect(screen.queryByText(FIRST_RUN)).toBeNull();
     cleanup();
 
     stubApi({ password: true, password_reset: false, first_run: false }, () =>
       ok(200),
     );
-    const second = render(<AuthScreen onAuthed={vi.fn()} />);
-    expect(await screen.findByText("Sign in to Margince")).toBeTruthy();
-    expect(
-      second.container.querySelector<HTMLElement>(".auth-surface")?.dataset
-        .authWelcome,
-    ).toBe("false");
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    expect(await screen.findByText(RETURNING)).toBeTruthy();
+    expect(screen.queryByText(FIRST_RUN)).toBeNull();
   });
 
-  it("presents the SAME frame (task first in the DOM, the identity copy still the closed list of sentences) with the welcome attribute set", async () => {
+  it("says a handover that claims no recognition, on the SAME frame", async () => {
     stubApi({ password: true, password_reset: false, first_run: true }, () =>
       ok(200, { user: {}, roles: [], teams: [] }),
     );
     const { container } = render(<AuthScreen onAuthed={vi.fn()} />);
 
-    // `welcome` derives from the anonymous capabilities probe, which has not
-    // resolved on the first render: the ordinary presentation is what
-    // renders while it is in flight, by design (absent decays to false), so
-    // this waits for the probe rather than reading the attribute
-    // synchronously.
-    const surface = container.querySelector<HTMLElement>(".auth-surface");
-    await waitFor(() => expect(surface?.dataset.authWelcome).toBe("true"));
-    // ADR-0076 Decision 1 still holds: the task is first in the DOM whichever
-    // presentation renders.
+    // `first_run` derives from the anonymous capabilities probe, which has
+    // not resolved on the first render: the returning line is what renders
+    // while it is in flight, by design (absent decays to false), so this waits
+    // for the probe rather than reading the sentence synchronously.
+    expect(await screen.findByText(FIRST_RUN)).toBeTruthy();
+    expect(screen.queryByText(RETURNING)).toBeNull();
+    // ADR-0076 Decision 1 still holds: the task is first in the DOM.
     const task = container.querySelector(".auth-task");
     const identity = container.querySelector(".auth-identity-col");
     expect(task).toBeTruthy();
     expect(identity).toBeTruthy();
-    // `DOCUMENT_POSITION_FOLLOWING` on the identity column means the task
-    // node precedes it.
     expect(precedes(task, identity)).toBe(true);
-    // The task's own h1 is unchanged: no second, welcome-only heading.
+    // The task's own h1 is unchanged: no second, first-run-only heading.
     expect(await screen.findByText("Sign in to Margince")).toBeTruthy();
     // The identity region says what it always says (ADR-0076 Decision 2's
-    // closed list); the welcome sets it larger, it does not replace it.
+    // closed list); first run swaps one sentence, it does not add a voice.
     expect(
       screen.getByText("Hi, I’m Margince.", { selector: ".sr-only" }),
     ).toBeTruthy();
@@ -160,14 +152,12 @@ describe("AuthScreen first-run welcome", () => {
       ok(200, { user: {}, roles: [], teams: [] }),
     );
     render(<AuthScreen onAuthed={onAuthed} />);
+    const user = userEvent.setup();
 
-    // No "Begin" or similar gate between the welcome and the form: the fields
-    // are on the page from the first render.
-    await userEvent.type(
-      await screen.findByLabelText("Email"),
-      "ada@example.com",
-    );
-    await userEvent.type(
+    // No "Begin" or similar gate between the greeting and the form: the
+    // fields are on the page from the first render.
+    await user.type(await screen.findByLabelText("Email"), "ada@example.com");
+    await user.type(
       screen.getByLabelText("Password"),
       "correct-horse-battery{enter}",
     );

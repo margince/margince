@@ -114,25 +114,20 @@ export function AuthExperience({
   children,
   profile,
   phase,
-  welcome = false,
+  firstRun = false,
 }: Readonly<{
   children: ReactNode;
   profile?: AssistantProfile;
   phase: AuthPhase;
   /**
-   * The installation's very first sign-in: the same two regions, presented as
-   * one centred column with the Core as the page's subject rather than a
-   * companion beside the form. NOT `AuthPhase`: a first-run reader who
-   * mistypes their password still needs `phase="error"` while this stays
-   * true, so the two axes have to be able to vary independently. A data
-   * attribute on this same root, the way `data-auth-intro` already is,
-   * rather than a class this component would then also have to keep in sync.
-   *
-   * Callers assert it positively (`view.kind === "login" && firstRun`); it
-   * defaults to false, which is what every other view and every
-   * non-first-run login render.
+   * The installation's very first sign-in, which changes ONE sentence: the
+   * handover. NOT `AuthPhase`: a first-run reader who mistypes their password
+   * still needs `phase="error"` while this stays true, so the two axes vary
+   * independently. Callers assert it positively (`view.kind === "login" &&
+   * firstRun`); it defaults to false, which is what every other view and
+   * every later sign-in render.
    */
-  welcome?: boolean;
+  firstRun?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -143,7 +138,6 @@ export function AuthExperience({
       className="auth-surface"
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
-      data-auth-welcome={welcome}
     >
       {/* The ground, on EVERY sign-in and behind everything on it. Signing in
           is the one moment in the product that is a place rather than a task:
@@ -162,7 +156,7 @@ export function AuthExperience({
         <div className="auth-task-in">{children}</div>
         <LegalFooter />
       </div>
-      <IdentityRegion profile={profile} phase={phase} welcome={welcome} />
+      <IdentityRegion profile={profile} phase={phase} firstRun={firstRun} />
     </div>
   );
 }
@@ -216,23 +210,26 @@ function LegalFooter() {
  * The identity region: the system introducing itself, in its own voice.
  *
  * ORDER, top to bottom, and every row of it is load-bearing: the Core, the
- * disclosure, the greeting, what the system is for, what it does, the one
- * promise, the handover, then the server-read runtime line. The Core leads
- * because it is the thing that is PRESENT; the copy explains what is present. An
- * earlier order opened with a sentence and buried the Core in the middle, which
- * is a paragraph with an illustration rather than a system introducing itself.
+ * disclosure, the greeting, what the system is for, the one promise, the
+ * handover, then the server-read runtime line. The Core leads because it is
+ * the thing that is PRESENT; the copy explains what is present. An earlier
+ * order opened with a sentence and buried the Core in the middle, which is a
+ * paragraph with an illustration rather than a system introducing itself.
  *
- * The five copy rows are ONE paragraph somebody is saying, not a list of claims,
- * so they are read in sequence or not at all — the greeting means nothing after
- * the promise. That is why they are five sibling paragraphs in a fixed order
- * rather than a collection something could reorder or filter.
+ * The four copy rows are ONE paragraph somebody is saying, not a list of
+ * claims, so they are read in sequence or not at all — the greeting means
+ * nothing after the promise. That is why they are four sibling paragraphs in
+ * a fixed order rather than a collection something could reorder or filter.
+ * What the system does all day is deliberately not among them: on a screen
+ * whose whole job is the introduction and the field, it was the fourth
+ * sentence read while a form waited underneath. The reader meets that at the
+ * first connector, where it is load-bearing.
  *
  * Two bounds this region used to hold and deliberately no longer does: it
  * admitted only limits on the system's own behaviour plus server-read facts
  * about the installation, so there was no greeting; and it carried no copy the
  * task depended on, so there was no handover. The handover line's whole job is
- * to point at the form in the other half of the screen, which is why it is the
- * last thing said.
+ * to point at the form under it, which is why it is the last thing said.
  *
  * STILL NO CONTROLS. That is what keeps the region from competing with the form,
  * and it is structural rather than a matter of taste.
@@ -240,26 +237,20 @@ function LegalFooter() {
 export function IdentityRegion({
   profile,
   phase,
-  welcome,
+  firstRun = false,
 }: Readonly<{
   profile?: AssistantProfile;
   phase: AuthPhase;
-  welcome: boolean;
+  firstRun?: boolean;
 }>) {
   const t = useT();
   const identityId = useId();
   return (
     /*
-     * The column is a plain wrapper and the ASIDE is the region — the split is
-     * what lets the mobile layout put the Core above the form and the words below
-     * it. Below 960 the wrapper becomes `display: contents`, so the Core and the
-     * aside become rows of the surface grid and the task can sit between them. A
-     * wrapper with no role can dissolve like that; the aside cannot, because a
-     * landmark that stops being a box stops being reliably reported.
-     *
-     * The Core moving out of the aside costs nothing semantically: it is
-     * decoration (WDS-CORE-4, `aria-hidden`), and every state it shows is also
-     * stated in words inside the region.
+     * The column is a plain wrapper and the ASIDE is the region: the Core sits
+     * outside the landmark, which costs nothing semantically — it is decoration
+     * (WDS-CORE-4, `aria-hidden`), and every state it shows is also stated in
+     * words inside the region.
      */
     <div className="auth-identity-col">
       <MarginceCoreScene state={coreState(phase)} />
@@ -279,8 +270,6 @@ export function IdentityRegion({
 
           <p className="auth-purpose">{t("auth.corePurpose")}</p>
 
-          <p className="auth-scope">{t("auth.coreWork")}</p>
-
           {/* The badge marks the promise as the one absolute on this screen, and
               it is the treatment the region's older list of limits carried,
               because this sentence is that same register. A paragraph rather
@@ -299,7 +288,7 @@ export function IdentityRegion({
               opened for the first time it has met nobody. The first-run line
               points at the same form without claiming that. */}
           <p className="auth-handover">
-            {t(welcome ? "auth.coreHandoverFirstRun" : "auth.coreHandover")}
+            {t(firstRun ? "auth.coreHandoverFirstRun" : "auth.coreHandover")}
           </p>
         </div>
 

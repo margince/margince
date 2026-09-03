@@ -7,6 +7,10 @@ import type { CompanyFieldName } from "../onboarding";
 import { StoryProviders } from "../story-utils";
 import type { ReviewRow, RowState } from "./company-review-state";
 import { ProfileDigest, type ProfileDigestRead } from "./profile-digest";
+// `.ob-scene` is a container (`conversation.css`), and the document's
+// two-column fold answers to it; without the sheet the story shows one column
+// at every width and the fold is never reviewed.
+import "./conversation.css";
 
 // The digest's two faces: the deck's narrow companion, and the whole-record
 // document a reader reaches through "Read the whole profile". The document
@@ -42,8 +46,8 @@ function cited(page: string, snippet: string): Evidence {
 }
 
 // A full board: every field of the four groups, some answered from the read,
-// some typed, two left open (one required, one advisory) so "Settle it"
-// has something to point at.
+// some typed, five left open (`usp` required, the rest advisory) so "Settle
+// it" has something to point at.
 const OPEN_ROWS: ReviewRow[] = [
   row(
     "display_name",
@@ -277,9 +281,9 @@ export const Companion: Story = {
   ),
 };
 
-// The whole-record document with two lines still open: `usp` (required) and
-// `customer_pains` / `common_objections` (advisory), each drawn as its own
-// dashed row with "Settle it".
+// The whole-record document with lines still open — `usp` (required), the
+// two legal register lines and two customer lines (advisory) — each drawn as
+// its own dashed row with "Settle it".
 export const OpenItemsPresent: Story = {
   render: () => <Digest rows={OPEN_ROWS} read={READ_FULL} />,
 };
@@ -321,9 +325,7 @@ export const SidebarValuesMissing: Story = {
 };
 
 // The kind of each of the ten pages the ManyReferences story cites, in the
-// same order they are listed below — a lookup rather than a chain of
-// ternaries, which is what pushed this story's complexity past the linter's
-// ceiling the first time it was written.
+// same order they are listed below.
 const MANY_PAGE_KINDS: Readonly<
   Record<string, "home" | "about" | "impressum" | "team" | "contact" | "other">
 > = {

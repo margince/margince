@@ -145,16 +145,11 @@ describe("AuthScreen login", () => {
     expect(
       screen.getByText("Hi, I’m Margince.", { selector: ".sr-only" }),
     ).toBeTruthy();
-    // The rest of the region's paragraph, in the order it is said. All four,
+    // The rest of the region's paragraph, in the order it is said. All three,
     // because the copy is one voice speaking and a region that lost the promise
     // or the handover would still pass an assertion on the first line alone.
     expect(
       screen.getByText("I’m here to take care of the work around your work."),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "I’ll keep your CRM up to date, spot what needs attention, and prepare the next step—so you can focus on customers.",
-      ),
     ).toBeTruthy();
     expect(
       screen.getByText(

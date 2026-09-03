@@ -3,55 +3,27 @@
 
 import type { MessageKey } from "../../i18n/en";
 import type { CompanyFieldName } from "../onboarding";
-import {
-  CUSTOMER_FIELDS,
-  LEGAL_IDENTITY_FIELDS,
-  OFFER_FIELDS,
-  SALES_FIELDS,
-} from "../onboarding";
+import { type ReviewGroupKey, reviewGroups } from "./company-review-state";
 
-// The article's own grouping of the record's fields, read as prose sections
-// rather than as the form's four clusters. It is the SAME four groups
-// `reviewFields()` already flattens and confirm-card.tsx's `reviewGroups()`
-// already names for the form — this is not a second idea of what belongs
-// where, only a second set of words for it, because a reader skimming their
-// own record reads "How they write" where a reader filling in a form reads
-// "Positioning and sales context". confirm-card.tsx keeps its own map rather
-// than this one importing it: it sits on the same `../onboarding` import
-// cycle this file does, and a cross-import between two modules already on
-// that cycle is exactly the crash risk company-review-state.ts's own comment
-// warns against.
-//
-// A function rather than a module-level constant for the same reason
-// `reviewGroups()` is one: this module and `../onboarding` sit on an import
-// cycle (`../onboarding` → `onboarding-conversation/index` → `company-act` →
-// `profile-digest` → this file → `../onboarding`), so the field arrays only
-// exist by the time a render calls this, never at module load.
+// The article's words for the record's four groups: a reader skimming their
+// own record reads "How they write" where a reader filling in the form reads
+// "Positioning and sales context". Only the words are the article's; which
+// field sits under which heading is `reviewGroups()`'s, so the article and
+// the form can never file one field in two places.
+const SECTION_LABELS: Readonly<Record<ReviewGroupKey, MessageKey>> = {
+  identity: "ob.digest.section.identity",
+  offer: "ob.digest.section.offer",
+  customer: "ob.digest.section.customer",
+  sales: "ob.digest.section.sales",
+};
+
 export function articleSections(): readonly Readonly<{
-  key: string;
+  key: ReviewGroupKey;
   labelKey: MessageKey;
   fields: readonly CompanyFieldName[];
 }>[] {
-  return [
-    {
-      key: "identity",
-      labelKey: "ob.digest.section.identity",
-      fields: LEGAL_IDENTITY_FIELDS,
-    },
-    {
-      key: "offer",
-      labelKey: "ob.digest.section.offer",
-      fields: OFFER_FIELDS,
-    },
-    {
-      key: "customer",
-      labelKey: "ob.digest.section.customer",
-      fields: CUSTOMER_FIELDS,
-    },
-    {
-      key: "sales",
-      labelKey: "ob.digest.section.sales",
-      fields: SALES_FIELDS,
-    },
-  ];
+  return reviewGroups().map((group) => ({
+    ...group,
+    labelKey: SECTION_LABELS[group.key],
+  }));
 }

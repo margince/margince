@@ -9,13 +9,12 @@ import type { CompanyFieldName } from "../onboarding";
  * decides — the same shape `coldFieldLabel`'s map already keeps for the
  * label, one level up.
  *
- * Keyed loosely rather than on `CompanyFieldName` so a field this product
- * does not ask the deck about (`website`) is not forced to carry an entry.
+ * Partial on purpose: a field the deck never asks about (`website`) carries no
+ * entry, and a key outside the field union is still a type error.
  */
-const FIELD_GUIDANCE: Record<
-  string,
-  { hint: MessageKey; example: MessageKey }
-> = {
+type Guidance = { hint: MessageKey; example: MessageKey };
+
+const FIELD_GUIDANCE: Partial<Record<CompanyFieldName, Guidance>> = {
   display_name: {
     hint: "ob.fieldHint.display_name",
     example: "ob.fieldEg.display_name",
@@ -82,8 +81,6 @@ const FIELD_GUIDANCE: Record<
   history: { hint: "ob.fieldHint.history", example: "ob.fieldEg.history" },
 };
 
-export function fieldGuidance(
-  field: CompanyFieldName,
-): { hint: MessageKey; example: MessageKey } | undefined {
+export function fieldGuidance(field: CompanyFieldName): Guidance | undefined {
   return FIELD_GUIDANCE[field];
 }

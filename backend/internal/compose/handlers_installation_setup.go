@@ -148,12 +148,12 @@ func stepsComplete(steps []crmcontracts.InstallationSetupStep) bool {
 // the SAME steps GetInstallationSetup reads, so the anonymous probe and a
 // signed-in reader's full report can never disagree about one installation.
 //
-// It reads s.installationSetupHandlers LAZILY (at request time, through the
-// closure), not a copy taken now — the same reason resolveOverlayIncumbent
-// reads s.vault lazily: WithKeyvault installs the underlying AI/connector
-// stores after this is wired, and WithGmailCapture/WithGraphCapture mutate
-// envConnectorApp on it later still, so a snapshot taken at wiring time would
-// read every one of those as unconfigured forever.
+// It reads s.installationSetupHandlers at request time, through the closure,
+// rather than copying it now — the same reason resolveOverlayIncumbent reads
+// s.vault lazily. WithKeyvault installs the underlying AI/connector stores and
+// WithGmailCapture/WithGraphCapture set envConnectorApp, and New wires this
+// only after every option has run; reading through the pointer keeps that
+// true even if the wiring ever moves ahead of an option.
 //
 // svc is the ONE identity.Service New() builds for the whole process, passed
 // in rather than constructed again here, so this shares its singleton
