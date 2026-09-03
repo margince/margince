@@ -49,6 +49,21 @@ type Page struct {
 	// leaving the page's own registrable domain. A caller follows it only
 	// after finding nothing else to read — see MetaRefreshOnly.
 	Refresh string
+	// HeadText is what the <head> says this page is ABOUT, in document order:
+	// the meta description and the Open Graph title and description, each at
+	// most headTextRunes long.
+	//
+	// Kept apart from Text, and that separation is the point. Text is
+	// StripTags' output and evidence snippets are matched against it, so
+	// folding head prose in would silently invalidate every stored snippet.
+	// This is the same page's own claim about itself, offered to a caller that
+	// wants it — which for a client-rendered site is the only prose the server
+	// ever sends.
+	HeadText []string
+	// ExternalScripts counts the <script src=…> tags the page loads. It says
+	// nothing on its own; a caller pairs it with a text floor to tell a
+	// client-rendered application shell from an empty document.
+	ExternalScripts int
 }
 
 // MetaRefreshOnly reports whether this page is a redirect trampoline: it
@@ -127,24 +142,28 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	body := string(got.body)
 	head := extractHeadAssets(body, base)
 	return Page{
-		URL:         rawURL,
-		FinalURL:    base.String(),
-		Text:        StripTags(body),
-		Links:       extractLinks(body, base),
-		Bytes:       len(body),
-		OGImage:     head.ogImage,
-		Icons:       head.icons,
-		Refresh:     head.refresh,
-		Fingerprint: fingerprintOf(got.header, body, base),
+		URL:             rawURL,
+		FinalURL:        base.String(),
+		Text:            StripTags(body),
+		Links:           extractLinks(body, base),
+		Bytes:           len(body),
+		OGImage:         head.ogImage,
+		Icons:           head.icons,
+		Refresh:         head.refresh,
+		HeadText:        head.text,
+		ExternalScripts: countExternalScripts(body),
+		Fingerprint:     fingerprintOf(got.header, body, base),
 	}, nil
 }
 
 // headAssets is what a page's <head> declared about itself: its visual
-// identity, and where it says the reader should go instead.
+// identity, what it says it is about, and where it says the reader should go
+// instead.
 type headAssets struct {
 	ogImage string
 	icons   []IconRef
 	refresh string
+	text    []string
 }
 
 // extractHeadAssets harvests what a page's <head> declares about itself: its
@@ -156,6 +175,7 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 	tokenizer := html.NewTokenizer(strings.NewReader(rawHTML))
 	var head headAssets
 	seen := map[string]bool{}
+	seenText := map[string]bool{}
 	for {
 		tokenType := tokenizer.Next()
 		if tokenType == html.ErrorToken {
@@ -185,6 +205,9 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			}
 			if found, ok := refreshFrom(attrs, base); ok && head.refresh == "" {
 				head.refresh = found
+			}
+			if found, ok := headTextFrom(attrs, seenText); ok {
+				head.text = append(head.text, found)
 			}
 		case "link":
 			if icon, ok := iconFrom(tokenizer, base); ok && !seen[icon.URL] {

@@ -65,6 +65,11 @@ type fakeSitePage struct {
 	// refresh is the meta-refresh target this page declares, which the real
 	// parser only reports for a same-site target it could resolve.
 	refresh string
+	// headText is what this page's <head> declares it is about, and scripts
+	// how many bundles it loads. Together they are what tells a
+	// client-rendered application shell from an empty document.
+	headText []string
+	scripts  int
 }
 
 func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, error) {
@@ -101,6 +106,7 @@ func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, er
 	return webread.Page{
 		URL: rawURL, FinalURL: finalURL, Text: page.text, Links: page.links, Bytes: len(page.text),
 		OGImage: page.ogImage, Icons: page.icons, Refresh: page.refresh,
+		HeadText: page.headText, ExternalScripts: page.scripts,
 	}, nil
 }
 
@@ -436,6 +442,65 @@ func TestCrawlSkipsADuplicateTextPageSilently(t *testing.T) {
 			t.Fatalf("the duplicate-text page was reported as a skip (%s)", skip.Reason)
 		}
 	}
+}
+
+// The same catch-all, serving a SHORT document — which is what a
+// client-rendered site actually sends. The duplicate was recognised only after
+// the text floor had already reported it, so one loader shell became
+// thirty-one `unreadable` skips and the report read as a site that could not be
+// read rather than one page seen many times.
+func TestADuplicateShellIsSilentEvenThoughItIsShort(t *testing.T) {
+	shell := fakeSitePage{text: "Acme", scripts: 2}
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		seedURL: {text: readable("Welcome to Acme."), links: []string{
+			seedURL + "/about", seedURL + "/team", seedURL + "/kontakt",
+		}},
+	}}
+	// The catch-all: every path a probe guesses at answers 200 with the same
+	// loader, which is what a client-rendered site does and why the probes all
+	// come back looking like separate unreadable pages.
+	for _, probe := range wellKnownProbes {
+		site.pages[seedURL+probe.path] = shell
+	}
+	for _, path := range []string{"/about", "/team", "/kontakt"} {
+		site.pages[seedURL+path] = shell
+	}
+
+	crawl, err := testSiteCrawler(site).Crawl(context.Background(), seedURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unreadable := 0
+	for _, skip := range crawl.Skipped {
+		if skip.Reason == crmcontracts.SiteReadSkipReasonUnreadable {
+			unreadable++
+		}
+	}
+	// One document, said once. The first shell is honest degradation and
+	// belongs in the report; the repeats are the same fact again, and it was
+	// repeating them thirty-one times that made a readable site look unread.
+	if unreadable != 1 {
+		t.Fatalf("unreadable skips = %d, want 1 — one repeated document is one fact: %+v",
+			unreadable, crawl.Skipped)
+	}
+}
+
+// A short page nobody has seen before is still honest degradation, and still
+// belongs in the report.
+func TestAShortPageSeenOnceIsStillReportedUnreadable(t *testing.T) {
+	site := &fakeSite{pages: seedOnly("/about")}
+	site.pages[seedURL+"/about"] = fakeSitePage{text: "Thin", scripts: 1}
+
+	crawl, err := testSiteCrawler(site).Crawl(context.Background(), seedURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, skip := range crawl.Skipped {
+		if skip.URL == seedURL+"/about" && skip.Reason == crmcontracts.SiteReadSkipReasonUnreadable {
+			return
+		}
+	}
+	t.Fatalf("a unique unreadable page vanished from the report: %+v", crawl.Skipped)
 }
 
 func TestCrawlClassifiesPageKinds(t *testing.T) {
