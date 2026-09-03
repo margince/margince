@@ -7994,7 +7994,7 @@ export const en = {
   "worklist.because.overdue": "overdue",
   "worklist.because.due_today": "due today",
   "worklist.because.closing_soon": "has a close date",
-  "worklist.because.expected_revenue": "expected revenue",
+  "worklist.because.expected_revenue": "an open deal rests on this",
   "worklist.because.expected_revenue.value": "worth {value}",
   "worklist.because.material": "above the typical open deal",
   "worklist.because.material.value":

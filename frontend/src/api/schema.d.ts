@@ -27684,6 +27684,7 @@ export interface components {
              *     sentence, and every one of those uses would go quietly wrong together.
              */
             quiet_days?: number | null;
+            relationship?: components["schemas"]["AttentionRelationshipFacts"];
             /**
              * @description Which underlying CONDITION this row reports, for a surface that groups repeated
              *     failures of one thing into one row. Two failures of one broken automation carry
@@ -27724,6 +27725,16 @@ export interface components {
             subject?: components["schemas"]["AttentionSubject"];
             pair?: components["schemas"]["AttentionPair"];
             deal?: components["schemas"]["AttentionDealFacts"];
+            /**
+             * Format: uuid
+             * @description Who holds this task, null when nobody has taken it. Sent by `task`.
+             *
+             *     The lane serves three scopes and only one is the reader's own queue: an
+             *     unassigned sweep and a named colleague's queue both put work on the page that
+             *     is not the reader's. Without this those rows read identically to their own,
+             *     and the row nobody owns — the whole point of that scope — cannot say so.
+             */
+            assignee_id?: string | null;
             /**
              * Format: date-time
              * @description When this is due (tasks), or when it lapses (approvals).
@@ -27807,6 +27818,34 @@ export interface components {
             currency?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+        };
+        /**
+         * @description What the lapsed relationship behind a `relationship_decay` item was WORTH before
+         *     it went quiet. Sent only for `source: relationship_decay`.
+         *
+         *     Without it every lapsed contact reads alike, and the rep's strongest relationship
+         *     going quiet is the row that most deserves to be told apart from a cc who has
+         *     drifted. Both facts were already in the lane's hand and discarded: the band is
+         *     scored from the edge the lane loads, and the deal is one batched read over the
+         *     candidates it already narrowed to.
+         *
+         *     The band travels rather than the raw score, because a number between 0 and 100
+         *     invites a client to draw a precision the §4 arithmetic does not claim.
+         */
+        AttentionRelationshipFacts: {
+            /**
+             * @description The relationship's band at the read instant, from the same §4 scoring the
+             *     contact's own page shows — computed on read rather than stored, so the two
+             *     surfaces cannot come to disagree about who this person is.
+             * @enum {string}
+             */
+            strength?: "none" | "weak" | "moderate" | "strong";
+            /**
+             * @description Whether money this reader can see still rests on this contact. Absent is not
+             *     "no": a contact with an open deal the reader may not see reads the same as one
+             *     with none, which is the answer every row-scoped read gives.
+             */
+            has_open_deal?: boolean;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {

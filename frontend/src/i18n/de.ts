@@ -7916,7 +7916,7 @@ export const de = {
   "worklist.because.overdue": "überfällig",
   "worklist.because.due_today": "heute fällig",
   "worklist.because.closing_soon": "hat ein Abschlussdatum",
-  "worklist.because.expected_revenue": "erwarteter Umsatz",
+  "worklist.because.expected_revenue": "ein offener Deal hängt daran",
   "worklist.because.expected_revenue.value": "Wert {value}",
   "worklist.because.material": "über dem üblichen offenen Deal",
   "worklist.because.material.value":
