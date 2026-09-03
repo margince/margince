@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -57,6 +58,16 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	for _, e := range exts {
 		for _, p := range e.Jurisdictions {
 			jurisdiction.Register(p)
+		}
+		// Beside the packs and for the same reason: the authorization engine
+		// asks the registry what the applicable jurisdiction requires, and a
+		// declared rule set that never reached it would leave the engine
+		// applying its own defaults while the manifest says the country pack
+		// is composed in. The preflight above already refused an invalid or
+		// duplicate set, so Register's own panics are unreachable here and
+		// stay as the wiring-defect backstop they are for a core caller.
+		for _, r := range e.Messaging {
+			messagingrules.Register(r)
 		}
 	}
 	// After the jurisdiction packs, and still in the apply phase: the RBAC
@@ -177,6 +188,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 	seen := make(map[extension.Name]bool, len(exts))
 	namespaces := make(map[string]extension.Name, len(exts))
 	packCodes := make(map[jurisdiction.Code]extension.Name, len(exts))
+	messagingCodes := make(map[jurisdiction.Code]extension.Name, len(exts))
 	// Which provider each unit has claimed — a fact about the composed SET, so
 	// it is accumulated across the loop rather than asked of one declaration.
 	//
@@ -207,6 +219,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 		}
 		if err := preflightJurisdictions(e, packCodes); err != nil {
+			return err
+		}
+		if err := preflightMessagingRules(e, messagingCodes); err != nil {
 			return err
 		}
 		if err := preflightTools(e); err != nil {
@@ -441,58 +456,6 @@ func preflightTools(e extension.Extension) error {
 			return fmt.Errorf("compose: extension %q declares tool %q twice", e.Name, tool.Name)
 		}
 		seen[tool.Name] = true
-	}
-	return nil
-}
-
-// preflightJurisdictions checks one unit's declared packs for grammar,
-// duplicates within the composed set, collisions with core packs, and
-// retention classes outside the closed vocabularies — an unknown class
-// (or anchor, or a negative period) would be a statutory floor that
-// looks registered while the engine misreads or ignores it.
-func preflightJurisdictions(e extension.Extension, packCodes map[jurisdiction.Code]extension.Name) error {
-	for _, p := range e.Jurisdictions {
-		code := p.Code()
-		if err := code.Validate(); err != nil {
-			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
-		}
-		if owner, dup := packCodes[code]; dup {
-			return fmt.Errorf("compose: extensions %q and %q both declare jurisdiction %q", owner, e.Name, code)
-		}
-		if _, taken := jurisdiction.For(code); taken {
-			return fmt.Errorf("compose: extension %q declares jurisdiction %q, which a core pack already registers", e.Name, code)
-		}
-		if err := preflightRetentionClasses(e.Name, code, p.Retention()); err != nil {
-			return err
-		}
-		packCodes[code] = e.Name
-	}
-	return nil
-}
-
-// preflightRetentionClasses validates one pack's declared floors: class
-// name, period, and anchor each carry their own published grammar, and a
-// class may be declared once — two floors for the same class with
-// different Keep/Anchor would leave the engine picking one silently.
-func preflightRetentionClasses(unit extension.Name, code jurisdiction.Code, ret jurisdiction.Retention) error {
-	if ret == nil {
-		return nil
-	}
-	seen := make(map[jurisdiction.RetentionClassName]bool)
-	for _, class := range ret.Classes() {
-		if err := class.Name.Validate(); err != nil {
-			return fmt.Errorf("compose: extension %q, jurisdiction %q: %w", unit, code, err)
-		}
-		if seen[class.Name] {
-			return fmt.Errorf("compose: extension %q, jurisdiction %q declares retention class %q twice", unit, code, class.Name)
-		}
-		seen[class.Name] = true
-		if err := class.Keep.Validate(); err != nil {
-			return fmt.Errorf("compose: extension %q, jurisdiction %q, class %q: %w", unit, code, class.Name, err)
-		}
-		if err := class.Anchor.Validate(); err != nil {
-			return fmt.Errorf("compose: extension %q, jurisdiction %q, class %q: %w", unit, code, class.Name, err)
-		}
 	}
 	return nil
 }
