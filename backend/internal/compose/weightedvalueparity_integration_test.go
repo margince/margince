@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"math"
 	"os"
 	"testing"
@@ -86,9 +87,9 @@ func TestTheTwoSpellingsOfWeightedValueAgree(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			want, err := weightedValue(tc.amountMinor, tc.probability)
+			want, err := deals.WeightedValue(tc.amountMinor, tc.probability)
 			if err != nil {
-				t.Fatalf("weightedValue(%d, %d): %v", tc.amountMinor, tc.probability, err)
+				t.Fatalf("deals.WeightedValue(%d, %d): %v", tc.amountMinor, tc.probability, err)
 			}
 			var got int64
 			if err := conn.QueryRow(context.Background(), query, tc.amountMinor, tc.probability).Scan(&got); err != nil {
@@ -118,10 +119,10 @@ func TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit(t *testing.T
 		weightedAmountMinorExpr)
 
 	const beyondTheColumn = 300
-	// errWeightedValueOutOfRange specifically, not any error: a domain guard
+	// deals.ErrWeightedValueOutOfRange specifically, not any error: a domain guard
 	// added in front of the multiply would refuse this input too, and the test
 	// would stay green with the overflow check itself deleted.
-	if _, err := weightedValue(math.MaxInt64, beyondTheColumn); !errors.Is(err, errWeightedValueOutOfRange) {
+	if _, err := deals.WeightedValue(math.MaxInt64, beyondTheColumn); !errors.Is(err, deals.ErrWeightedValueOutOfRange) {
 		t.Errorf("the Go spelling answered %v for a weighted value that cannot fit int64; expected its own "+
 			"out-of-range refusal, so what is proven is the arithmetic and not a guard in front of it", err)
 	}

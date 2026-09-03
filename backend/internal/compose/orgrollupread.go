@@ -338,7 +338,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	if err != nil {
 		return 0, err
 	}
-	deals, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
+	openRows, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
 		var d openDealRow
 		err := row.Scan(&d.amountMinor, &d.currency, &d.winProbability)
 		return d, err
@@ -348,7 +348,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	}
 
 	var total int64
-	for _, d := range deals {
+	for _, d := range openRows {
 		if d.amountMinor == nil {
 			continue // an amountless deal contributes a real 0, never an error
 		}
@@ -358,7 +358,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		if err != nil {
 			return 0, err
 		}
-		weighted, err := weightedValue(baseMinor, d.winProbability)
+		weighted, err := deals.WeightedValue(baseMinor, d.winProbability)
 		if err != nil {
 			return 0, err
 		}

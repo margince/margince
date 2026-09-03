@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"math"
 	"testing"
 	"time"
@@ -184,12 +185,12 @@ func TestWeightedValue(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := weightedValue(tc.baseMinor, tc.winPercent)
+			got, err := deals.WeightedValue(tc.baseMinor, tc.winPercent)
 			if err != nil {
-				t.Fatalf("weightedValue(%d, %d): %v", tc.baseMinor, tc.winPercent, err)
+				t.Fatalf("deals.WeightedValue(%d, %d): %v", tc.baseMinor, tc.winPercent, err)
 			}
 			if got != tc.want {
-				t.Errorf("weightedValue(%d, %d) = %d, want %d", tc.baseMinor, tc.winPercent, got, tc.want)
+				t.Errorf("deals.WeightedValue(%d, %d) = %d, want %d", tc.baseMinor, tc.winPercent, got, tc.want)
 			}
 		})
 	}
@@ -204,7 +205,7 @@ func TestWeightedValue(t *testing.T) {
 // money total honest, the same belt-and-suspenders posture
 // deals.ConvertToBase takes for a rate that "should never" be non-finite.
 func TestWeightedValueRefusesOverflow(t *testing.T) {
-	if _, err := weightedValue(math.MaxInt64, 300); err == nil {
+	if _, err := deals.WeightedValue(math.MaxInt64, 300); err == nil {
 		t.Error("overflowing weighted value returned no error — must refuse, a wrapped total would be a lie about money")
 	}
 }
