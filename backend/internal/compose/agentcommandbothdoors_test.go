@@ -704,8 +704,10 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 
 	req, body := fixture.rest(primary, secondary)
 	call, err := restCommands[op](pol,
-		restCommandDeps{records: channelAnchor{}, channels: channelKinds{}, imports: bothDoorsImports{},
-			tags: bothDoorsTags{}}, req, body)
+		restCommandDeps{
+			records: channelAnchor{}, channels: channelKinds{}, imports: bothDoorsImports{},
+			tags: bothDoorsTags{},
+		}, req, body)
 	if err != nil {
 		t.Fatalf("the REST door refused the request its own route declares: %v", err)
 	}

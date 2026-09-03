@@ -1333,6 +1333,7 @@ export const en = {
   "approval.kind.promote_lead": "Promote a lead",
   "approval.kind.archive_record": "Archive a record",
   "approval.kind.merge_records": "Merge two records",
+  "approval.kind.merge_tags": "Fold one tag into another",
   "approval.kind.update_record": "Update a record",
   "approval.kind.create_record": "Create a record",
   "approval.kind.send_email": "Send an email",
