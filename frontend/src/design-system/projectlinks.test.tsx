@@ -46,7 +46,7 @@ describe("ProjectLinks", () => {
   it("stands as a group inside a pane when the caller holds the pane", () => {
     const { container } = draw({}, true);
     expect(container.querySelector(".panel")).toBeNull();
-    expect(container.querySelector(".panel-grouphead h4")?.textContent).toBe(
+    expect(container.querySelector(".panel-grouphead h3")?.textContent).toBe(
       "Projects",
     );
     expect(

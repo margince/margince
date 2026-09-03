@@ -97,7 +97,7 @@ export function CompanyWorkCard({
     <>
       <WorkGroup
         label={t("co.work.deals")}
-        level={bare ? "h4" : "h3"}
+        level="h3"
         state={dealState}
         emptyLabel={t("co.work.noDeals")}
         emptyDetail={t("co.work.noDealsDetail")}
@@ -273,10 +273,10 @@ function WorkGroup({
   children,
 }: Readonly<{
   label: string;
-  // Deals and Projects sit one level under whatever names this card. Standing
-  // alone that is the card title, an h2, so they are h3; as a section of the
-  // Company 360 card they are h4 — the outline nests rather than flattening
-  // into a row of equal siblings a screen reader cannot walk.
+  // One level under whatever names the pane: this card's own title standing
+  // alone, or the money pane's when the group is bare — an h2 either way, so
+  // the group is an h3 and the outline nests rather than flattening into a
+  // row of equal siblings a screen reader cannot walk.
   level: "h3" | "h4";
   state: ReturnType<typeof sectionState>;
   emptyLabel: string;

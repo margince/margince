@@ -118,10 +118,10 @@ export function ProjectLinks({
   // dialog's accessible name.
   words?: LinkWords;
   // Render the section as a GROUP inside a pane the caller holds — a group
-  // head with the verbs, then the rows — rather than as a pane of its own. The
-  // company glance does: the projects stand under the deals in the one pane
-  // that holds the money, and a pane inside a pane is two borders around one
-  // list.
+  // head one level under the pane's own title, with the verbs, then the rows —
+  // rather than as a pane of its own. The company glance does: the projects
+  // stand under the deals in the one pane that holds the money, and a pane
+  // inside a pane is two borders around one list.
   bare?: boolean;
 }>) {
   const t = useT();
@@ -274,7 +274,7 @@ export function ProjectLinks({
   if (bare) {
     return (
       <div ref={section}>
-        <PanelGroupHead title={t(titleKey)} level="h4" action={verbs} />
+        <PanelGroupHead title={t(titleKey)} level="h3" action={verbs} />
         {rows}
         {dialogs}
       </div>
