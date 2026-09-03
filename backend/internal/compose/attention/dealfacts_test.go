@@ -72,19 +72,26 @@ func TestABriefRowGainsItsDealsFigures(t *testing.T) {
 	}
 }
 
-// A deal the reader may not see leaves the row as it was. The refusal is an
-// absent answer, not an error, so one withheld deal cannot take the page down.
-func TestAWithheldDealLeavesTheRowUnchanged(t *testing.T) {
+// A deal Figures cannot answer for — withheld from this reader, or gone
+// entirely — leaves the row as it was: named, and saying no more. Whether
+// such a row belongs on the day at all is attentionBriefing.Queue's own
+// question, asked at its source over the SAME DealFacts reader; a second
+// answer here would be a second place the same invariant could drift from
+// the first.
+func TestAnUnresolvedDealLeavesTheRowUnchanged(t *testing.T) {
 	dealID := ids.NewV7()
 	svc := (&Service{}).WithDealFacts(&stubDealFacts{figures: map[ids.UUID]DealFigures{}})
 	day := crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{briefRow(dealID)}}
 
 	if err := svc.nameTheMoney(context.Background(), &day); err != nil {
-		t.Fatalf("a deal the reader may not see failed the whole read: %v", err)
+		t.Fatalf("an unresolved deal failed the whole read: %v", err)
 	}
 
+	if len(day.ThisMorning) != 1 {
+		t.Fatalf("ThisMorning carries %d row(s), wanted the row left in place", len(day.ThisMorning))
+	}
 	if day.ThisMorning[0].Deal != nil {
-		t.Fatal("a withheld deal put figures on the row anyway")
+		t.Fatal("an unresolved deal put figures on the row anyway")
 	}
 }
 
@@ -142,5 +149,48 @@ func TestAnUnboundReaderLeavesEveryRowAlone(t *testing.T) {
 	}
 	if day.ThisMorning[0].Deal != nil {
 		t.Fatal("an unbound reader invented figures")
+	}
+}
+
+// A brief row carries the SAME overdue verdict the at-risk lane gives the
+// identical deal — deals.Store.Figures now answers it calendar-date, workspace-
+// zone aware, the same way deals.CloseIsOverdue does for that sibling lane, so
+// the two rows for one deal state one verdict about whether it is late.
+func TestABriefRowCarriesTheDealsOverdueVerdict(t *testing.T) {
+	dealID := ids.NewV7()
+	closes := time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC)
+	svc := (&Service{}).WithDealFacts(&stubDealFacts{figures: map[ids.UUID]DealFigures{
+		dealID: {ExpectedCloseDate: &closes, CloseOverdue: true},
+	}})
+	day := crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{briefRow(dealID)}}
+
+	if err := svc.nameTheMoney(context.Background(), &day); err != nil {
+		t.Fatalf("naming the money: %v", err)
+	}
+
+	got := day.ThisMorning[0]
+	if got.Overdue == nil || !*got.Overdue {
+		t.Fatalf("Overdue = %v, wanted the deal's own overdue verdict (true)", got.Overdue)
+	}
+}
+
+// A close date that has not passed carries no overdue verdict — the false is
+// as load-bearing as the true, and a row that always answered true once a close
+// date existed would badge every dated deal late.
+func TestABriefRowCarriesAFutureCloseDateAsNotOverdue(t *testing.T) {
+	dealID := ids.NewV7()
+	closes := time.Date(2027, 3, 1, 0, 0, 0, 0, time.UTC)
+	svc := (&Service{}).WithDealFacts(&stubDealFacts{figures: map[ids.UUID]DealFigures{
+		dealID: {ExpectedCloseDate: &closes, CloseOverdue: false},
+	}})
+	day := crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{briefRow(dealID)}}
+
+	if err := svc.nameTheMoney(context.Background(), &day); err != nil {
+		t.Fatalf("naming the money: %v", err)
+	}
+
+	got := day.ThisMorning[0]
+	if got.Overdue == nil || *got.Overdue {
+		t.Fatalf("Overdue = %v, wanted false for a close date that has not passed", got.Overdue)
 	}
 }

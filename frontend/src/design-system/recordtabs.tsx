@@ -16,8 +16,9 @@
 // their props and nothing else, and folding this in as a `variant` would put
 // two unrelated layouts behind one name for the sake of one shared signature.
 
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import type { ReactNode } from "react";
+import { useT } from "../i18n";
+import { OptionCount } from "./atoms";
 import "./recordtabs.css";
 
 /**
@@ -37,6 +38,7 @@ export function RecordTabs<Option extends string>({
   counts,
   marks,
   label,
+  trailing,
 }: Readonly<{
   options: readonly Option[];
   value: Option;
@@ -61,9 +63,14 @@ export function RecordTabs<Option extends string>({
   // What this strip chooses BETWEEN, for a reader who meets the buttons
   // without the record around them.
   label?: string;
+  // What sits at the row's far end, outside the strip: the control that opens
+  // the record's details column. It rides the tab row because it chooses what
+  // stands BESIDE the body the tabs choose, and a control for the page's
+  // columns belongs in the page, not among the record's verbs.
+  trailing?: ReactNode;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
+
   return (
     <div className="recordtabs">
       <div className="recordtabs-row">
@@ -87,9 +94,7 @@ export function RecordTabs<Option extends string>({
               >
                 {labels[option]}
                 {count !== undefined && (
-                  <span className="recordtabs-count t-mono">
-                    {formatNumber(count, locale)}
-                  </span>
+                  <OptionCount count={count} className="recordtabs-count" />
                 )}
                 {marks?.[option] && (
                   <span className="recordtabs-mark" aria-hidden="true" />
@@ -98,6 +103,9 @@ export function RecordTabs<Option extends string>({
             );
           })}
         </fieldset>
+        {trailing != null && (
+          <div className="recordtabs-trailing">{trailing}</div>
+        )}
       </div>
     </div>
   );

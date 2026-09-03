@@ -50,12 +50,25 @@ var ErrOriginNotPublic = errors.New("public origin is not reachable by a recipie
 // stack's http://localhost default keeps working. Any other posture —
 // including an unrecognised one, which runtimeenv parses as production —
 // gets the full rule, so the carve-out fails closed.
+//
+// The development/test exemption is checked BEFORE bareOrigin for an UNSET
+// value specifically: a caller that never wired an origin at all is not a
+// broken configuration under a posture that needs no real link to work. Any
+// OTHER value — whitespace included — still goes through the full shape
+// check in every posture: exact emptiness is the only claim this exemption
+// makes, because the sending caller's own "is this configured" check
+// compares untrimmed, and a value that reads as configured there must not
+// read as unset here.
 func RequirePublicOrigin(label, raw string, env runtimeenv.Environment) error {
+	devOrTest := env == runtimeenv.Development || env == runtimeenv.Test
+	if devOrTest && raw == "" {
+		return nil
+	}
 	parsed, err := bareOrigin(label, raw)
 	if err != nil {
 		return err
 	}
-	if env == runtimeenv.Development || env == runtimeenv.Test {
+	if devOrTest {
 		return nil
 	}
 	if parsed.Scheme != "https" {

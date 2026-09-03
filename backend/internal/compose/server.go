@@ -16,8 +16,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
@@ -124,7 +126,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
-		searchHandlers:      search.NewHandlers(InstallationDB(pool), collections.CountTagReachBatch),
+		searchHandlers:      search.NewHandlers(InstallationDB(pool), collections.CountTagReachBatch, activities.EmailSummariesByIDBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
@@ -170,7 +172,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
-		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool).
+		// The membership seam decides which team's week a lead may open: the
+		// team id arrives from the request, and nothing on the row narrows it
+		// to the reader.
+		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool, newTeammatesSeam(pool)).
 			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)})),
 		// ONE spelling of "which Monday": the plan and the review beside it must
 		// be about the same seven days, and weekly owns that answer. A module
@@ -185,11 +190,25 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(
 			assurance.NewStore(InstallationDB(pool)),
+			AssuranceExceptions,
 			func() time.Time { return time.Now().UTC() },
 		),
 		forecastHandlers: forecasting.NewHandlers(
 			forecasting.NewStore(InstallationDB(pool)),
 			ForecastDeals, ForecastPeriodAt,
+			func() time.Time { return time.Now().UTC() },
+		),
+		// The floor comes from the constant rather than a setting for now:
+		// one number, and moving it to installation settings is a migration
+		// plus a reader, which is its own change.
+		analyticsQueryHandlers: newAnalyticsQueryHandlers(
+			InstallationDB(pool), analyticsquery.DefaultFloor),
+		// The share routes run in the FORECAST store's transaction, whose InTx
+		// gates on forecast:read — so the whole surface, issuing included, is
+		// behind the grant that reads the thing being shared.
+		analyticsShareHandlers: newAnalyticsShareHandlers(
+			NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
+			forecasting.NewStore(InstallationDB(pool)),
 			func() time.Time { return time.Now().UTC() },
 		),
 		// One assembler, shared with the test that drives this handler: the

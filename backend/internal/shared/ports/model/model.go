@@ -257,6 +257,29 @@ type Response struct {
 	// back to the configured tier binding, which may differ from what actually
 	// served if the vendor silently substitutes a model).
 	ServedModel string
+	// ServedProvider is the UPSTREAM that generated the completion, as distinct
+	// from the vendor we sent the request to. Only a broker reports one: a
+	// gateway fronting many inference hosts answers for whichever one served,
+	// and that choice is remade per request. Empty on every direct vendor,
+	// where the provider we called is the provider that served.
+	//
+	// It is a separate field from ServedModel rather than a refinement of it
+	// because the two have different trustworthiness on the same wire. A broker
+	// on the OpenAI wire echoes our own `model` back (so ServedModel is not a
+	// confirmation of what ran) while naming the upstream independently — we
+	// learn WHO served without learning WHAT they served, and collapsing the
+	// two would launder the echo into a confirmation.
+	ServedProvider string
+	// FinishReason is the provider's normalized stop reason ("stop", "length",
+	// "content_filter", …), empty when the provider reports none.
+	//
+	// Worth carrying because a truncated answer and a complete one are
+	// otherwise indistinguishable to a caller: a reasoning model can spend its
+	// whole output budget before the answer begins, and the text that arrives
+	// is then empty or half-formed through no fault of the prompt. A caller
+	// that validates a schema needs to be able to tell "the model wrote
+	// something invalid" from "the model was cut off mid-sentence".
+	FinishReason string
 }
 
 // TokenStream delivers incremental completion tokens; Close releases the

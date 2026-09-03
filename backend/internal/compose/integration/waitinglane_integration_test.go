@@ -423,3 +423,45 @@ func TestWaitingReplyListFilterRefusesAnOutOfScopeEntity(t *testing.T) {
 		t.Fatalf("waiting_reply on an out-of-scope entity = %v, want ErrNotFound", err)
 	}
 }
+
+// One message filed under two records is ONE row, and it carries its kind.
+//
+// The select folds the multiple activity_link rows with array_agg, and the
+// GROUP BY is what makes that fold happen. A column added to the select without
+// being added to the group is a syntax error Postgres catches; one added to the
+// GROUP BY that VARIES across the joined rows silently splits the fold, and a
+// rep would see the same waiting customer twice. `kind` cannot vary — it is a
+// column of the grouped activity itself — and this is the test that says so
+// rather than leaving it to be re-derived.
+func TestAMessageFiledUnderTwoRecordsIsOneWaitingRowCarryingItsKind(t *testing.T) {
+	e := Setup(t)
+	first := seedWaitingPerson(t, e)
+	id := seedWaitingMessageLinked(t, e, "thread-two-links", "inbound", "Filed twice",
+		waitingInstant.Add(-3*24*time.Hour), first)
+	second := seedWaitingPerson(t, e)
+	if _, err := OwnerConn(t).Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, id, second); err != nil {
+		t.Fatalf("filing the message under a second person: %v", err)
+	}
+
+	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+
+	var seen int
+	for _, row := range waiting {
+		if row.ActivityID != id {
+			continue
+		}
+		seen++
+		if row.Kind != "email" {
+			t.Errorf("the row carried kind %q, want email — the canonical row rides this field", row.Kind)
+		}
+	}
+	if seen != 1 {
+		t.Errorf("a message filed under two records came back %d times; the reader would see one "+
+			"waiting customer twice", seen)
+	}
+}

@@ -204,3 +204,48 @@ func aiFailure(seq int, taskKind string) crmcontracts.AttentionItem {
 		OccurredAt: rankInstant,
 	})
 }
+
+// The words the group is drawn from, through the whole path a row travels.
+//
+// The renderer mints the label, base() forwards it, and batchRow lifts it onto
+// the group. Every step is a place it can be dropped or replaced, and the
+// per-renderer test cannot see any of them: it stops at the item. A gate that
+// judged only the renderer stayed green while batchRow assigned the identity.
+//
+// The automation lane, because it is the one that HAS a name to mint — the
+// rule's own — and it is the case the whole split exists for: the identity must
+// be the immutable id, so without the label the group can only be drawn from
+// "automation_run:<uuid>".
+func TestAnIncidentGroupIsDrawnFromTheRulesNameNotItsIdentity(t *testing.T) {
+	automationID := ids.New[ids.AutomationKind]()
+	failures := []crmcontracts.AttentionItem{}
+	for i := 0; i < 6; i++ {
+		failures = append(failures, automationItem(TroubledAutomationRun{
+			ID:           ids.MustParse(fmt.Sprintf("01a05500-0000-7000-8000-0000000%05x", i)),
+			AutomationID: automationID,
+			Name:         "Notify sales on a new lead",
+			Outcome:      "failed",
+			Reason:       "The webhook target answered 500.",
+			OccurredAt:   rankInstant,
+		}))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: &failures}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	if len(got) != 1 || got[0].Batch == nil {
+		t.Fatalf("six failures of one rule drew %d rows, want one group", len(got))
+	}
+	// The identity still groups them — that is what it is for, and asserting it
+	// here keeps the label from being "fixed" by making the cause readable.
+	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "automation_run:"+automationID.String() {
+		t.Fatalf("the group's identity is %v, want the rule's id", got[0].Batch.Cause)
+	}
+	if got[0].Batch.Label == nil {
+		t.Fatal("the group carries no words, so a client can only draw it from the identity — " +
+			"which is a uuid in front of a rep")
+	}
+	if *got[0].Batch.Label != "Notify sales on a new lead" {
+		t.Fatalf("the group is named %q, want the rule's own name", *got[0].Batch.Label)
+	}
+}

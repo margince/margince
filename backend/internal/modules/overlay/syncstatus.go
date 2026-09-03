@@ -85,7 +85,8 @@ func (s *Service) requireOverlayMode(ctx context.Context) error {
 func (s *Service) resolveOverlayMode(ctx context.Context) (incumbent string, err error) {
 	var mode string
 	err = database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`SELECT sor_mode, coalesce(incumbent, '') FROM overlay_mode`,
 		).Scan(&mode, &incumbent)
 	})
@@ -177,7 +178,8 @@ func (s *Service) SyncStatus(ctx context.Context) ([]ObjectSyncStatus, error) {
 
 		// The freeze is workspace-level: one read fills every entry.
 		var frozen bool
-		if err := tx.QueryRow(ctx,
+		if err := tx.QueryRow(
+			ctx,
 			`SELECT EXISTS (SELECT 1 FROM overlay_sync_state WHERE mirror_frozen_at IS NOT NULL)`,
 		).Scan(&frozen); err != nil {
 			return fmt.Errorf("overlay: reading the flip freeze for sync status: %w", err)
@@ -255,7 +257,8 @@ func (s *Service) backfillCompleteFor(ctx context.Context, tx pgx.Tx, canonicalO
 	}
 	for _, incumbentClass := range incumbentClasses {
 		var done, truncated bool
-		err := tx.QueryRow(ctx,
+		err := tx.QueryRow(
+			ctx,
 			`SELECT done, truncated FROM overlay_backfill_cursor WHERE object_class = $1`, incumbentClass,
 		).Scan(&done, &truncated)
 		if errors.Is(err, pgx.ErrNoRows) {

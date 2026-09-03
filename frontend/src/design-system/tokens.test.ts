@@ -34,11 +34,12 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // are the ordering and the contrast pairs further down, which a wrong tint
 // fails whether or not the arithmetic is repeated.
 const canonical: Record<string, string> = {
-  "--bgPage": "#f4f8f6",
-  "--bgSidebar": "#e5ebe8",
-  "--bgElevated": "#fafffd",
-  "--bgCard": "#e6ece9",
-  "--bgHover": "#e9efec",
+  "--bgPage": "#f1f5f2",
+  "--bgSidebar": "#e6eae7",
+  "--bgElevated": "#fbfcfb",
+  "--bgCard": "#eaedeb",
+  "--bgHover": "#edf0ee",
+  "--bgSidebarHover": "#dde1de",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
@@ -69,12 +70,13 @@ const canonical: Record<string, string> = {
   "--danger": "#b91c1c",
   "--dangerBg": "rgba(239,68,68,.1)",
   "--r-sm": "8px",
-  "--r-md": "12px",
-  "--r-lg": "20px",
+  "--r-control": "10px",
+  "--r-md": "14px",
+  "--r-lg": "18px",
   "--r-full": "9999px",
   "--f-display": '"Outfit",system-ui,sans-serif',
-  "--f-body": '"DM Sans",system-ui,sans-serif',
-  "--f-mono": '"JetBrains Mono",ui-monospace,monospace',
+  "--f-body": '"Geist",system-ui,sans-serif',
+  "--f-mono": '"Geist Mono",ui-monospace,monospace',
 };
 
 function normalize(value: string): string {
@@ -395,10 +397,21 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ...light,
         ...parseBlock(tokenDecls, '[data-theme="dark"]'),
       };
+      // The three families with a Text token, plus the three STATUS families,
+      // which were absent from this list for the reason that is worth stating:
+      // the list was the families that HAD a *Text token, so the ones whose ink
+      // is the family colour itself were never measured. That is a corpus short
+      // of its subject — --success on --successBg is 4.48:1 and shipped, in two
+      // writers, until axe caught one of them on one route. Warn and danger
+      // clear AA on their own tints today and are here so a retune cannot
+      // quietly take that away.
       const pairs = [
         ["--accentText", "--accentLight"],
         ["--tealText", "--tealLight"],
         ["--aiText", "--aiLight"],
+        ["--successText", "--successBg"],
+        ["--warn", "--warnBg"],
+        ["--dangerText", "--dangerBg"],
       ] as const;
       const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
       const failures: string[] = [];
@@ -473,6 +486,13 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       for (const name of Object.keys(dark)) {
         expect(light[name], `${name} exists only in dark`).toBeDefined();
       }
+    });
+
+    it("pins the dark grounds the ladder is measured from", () => {
+      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
+      expect(normalize(dark["--bgPage"])).toBe("#0c1311");
+      expect(normalize(dark["--bgSidebar"])).toBe("#030504");
+      expect(normalize(dark["--bgSidebarHover"])).toBe("#0a100e");
     });
 
     it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {

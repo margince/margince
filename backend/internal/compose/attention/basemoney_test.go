@@ -274,3 +274,98 @@ func TestADayOfUnitlessDealsIsConvertedWithNothingPriced(t *testing.T) {
 		t.Fatalf("a bar of %d was taken from amounts in no currency", *out.Summary.MaterialThresholdMinor)
 	}
 }
+
+// The contract promises a per-row base-currency figure
+// (WorklistDealFacts.ExpectedMinorBase) and the projection must actually send
+// one: a client wanting to show or total the converted amount otherwise finds
+// null and either shows nothing or re-derives the conversion itself, a second
+// answer to "what is this deal worth here" of exactly the kind this seam
+// exists to prevent.
+func TestTheDealFactsCarryTheConvertedExpectedRevenue(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen))),
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	deal := out.Queue[0].Deal
+	if deal == nil {
+		t.Fatal("the row carries no deal facts at all")
+	}
+	if deal.ExpectedMinorBase == nil || *deal.ExpectedMinorBase != 3_000_000 {
+		t.Fatalf("expected_minor_base = %v, wanted 3000000 (the converted €30,000)", deal.ExpectedMinorBase)
+	}
+}
+
+// A converted figure with no base currency named states no base-currency
+// figure — the same guard dayMoney.value already holds for the reason
+// field, over a misbehaving FX seam that priced a deal without naming what
+// currency the price is in. A number is not a smaller error than none.
+func TestAConvertedDealWithNoNamedBaseCarriesNoExpectedMinorBase(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen))),
+	}
+	fx := stubFX{base: "", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	if deal := out.Queue[0].Deal; deal != nil && deal.ExpectedMinorBase != nil {
+		t.Fatalf("expected_minor_base = %v with no base currency named", *deal.ExpectedMinorBase)
+	}
+}
+
+// The same unnamed conversion must not drive a material verdict either: an
+// amount with no named currency is not a smaller error than none, whether it
+// reaches the reader as the row's ExpectedMinorBase or as the "material" /
+// "below_material" reason classifyRisk states over it.
+func TestAConvertedDealWithNoNamedBaseStatesNoMaterialVerdict(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen))),
+	}
+	fx := stubFX{base: "", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	for _, because := range out.Queue[0].Because {
+		if because.Kind == "material" || because.Kind == "below_material" {
+			t.Fatalf("stated %q over a figure converted with no base currency named", because.Kind)
+		}
+	}
+}
+
+// A deal the estate cannot price states no base-currency figure: null means
+// "could not be priced", the same null a client already reads for an unpriced
+// deal's other money fields, not a second and different meaning of null.
+func TestAnUnpricedDealCarriesNoExpectedMinorBase(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("no-rate", "deal_at_risk", withPricedDeal(CurrencyAmount{Minor: 9_000_000, Currency: "GBP"}))),
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{}}
+
+	out := pricedWorklist(t, fx, day)
+
+	if deal := out.Queue[0].Deal; deal != nil && deal.ExpectedMinorBase != nil {
+		t.Fatalf("expected_minor_base = %v on a deal the estate holds no rate for", *deal.ExpectedMinorBase)
+	}
+}
+
+// Without the FX seam bound there is no base currency at all, so the raw
+// amount must never be sent AS IF it were a base-currency figure — that would
+// silently misprice every currency but the base's own.
+func TestAnUnboundSeamCarriesNoExpectedMinorBase(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("d", "deal_at_risk", withDeal(40_000))),
+	}
+
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+
+	if deal := out.Queue[0].Deal; deal != nil && deal.ExpectedMinorBase != nil {
+		t.Fatalf("expected_minor_base = %v with no FX seam bound at all", *deal.ExpectedMinorBase)
+	}
+}

@@ -113,8 +113,12 @@ func base(
 		Title:       item.Title,
 		Detail:      item.Detail,
 		CauseRef:    item.CauseRef,
-		Subject:     item.Subject,
-		Deal:        dealFactsOf(item),
+		// The identity AND the words for it. The identity groups the row; the
+		// label is what the group says. Forwarding only the first is how the
+		// client came to interpolate an identity into a sentence.
+		CauseLabel: item.CauseLabel,
+		Subject:    item.Subject,
+		Deal:       dealFactsOf(item),
 		// Forwarded, never re-derived here. The lane already applied the
 		// both-sides-visible rule and set `merge` only where it held, so
 		// carrying the payload keeps the verb and the records it acts on
@@ -272,6 +276,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if subject != "" {
 		row.Title = &subject
 	}
+	// Present exactly when this wait is an email the reader may read. A client
+	// branches on the field rather than on the kind word: the lane also carries
+	// channel messages, and each keeps the plain title it had.
+	row.EmailSummary = waiting.EmailSummary
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
 	switch {
@@ -374,6 +382,12 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	} else if item.DueAt != nil {
 		row.Because = append(row.Because, reason("due_today", nil))
 	}
+	// Nobody has taken it. The same fact the lead lane states, and this lane
+	// has a whole scope devoted to surfacing it — a sweep of unowned work whose
+	// rows could not say that was what they were.
+	if item.AssigneeId == nil {
+		row.Because = append(row.Because, reason("unassigned", nil))
+	}
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -403,18 +417,6 @@ func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked
 	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// classifyDecay: a relationship going quiet. Nobody is waiting on the reader
-// for it, which is exactly why it goes unnoticed — and why it sits low rather
-// than not at all.
-func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelRoutine, "system", "data_drifts")
-	quiet := quietDaysOf(item)
-	if quiet > 0 {
-		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
-	}
-	return ranked{item: row, waitingDays: quiet, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifySystem: the pipes. A mailbox that stopped capturing makes every quiet
@@ -467,19 +469,18 @@ func occurredOf(item crmcontracts.AttentionItem, asOf time.Time) time.Time {
 	return asOf
 }
 
-// quietDaysOf reads the idle count the risk and decay cards carry as their
-// detail. A detail that is not a number is a different kind of supporting line,
-// and reading it as zero is the honest answer rather than a guess.
+// quietDaysOf reads the idle count the risk and decay lanes measure.
+//
+// From the TYPED field, not parsed out of the supporting sentence. It used to
+// read `detail` a digit at a time and answer zero for anything else, which made
+// the ordering depend on a display string: a lane that made its sentence
+// friendlier — "quiet for 90 days" instead of "90" — would have dropped every
+// such row to the bottom of the queue, and nothing would have failed.
+//
+// A lane that measures no idle time sends none, and zero is what that means.
 func quietDaysOf(item crmcontracts.AttentionItem) int {
-	if item.Detail == nil {
+	if item.QuietDays == nil {
 		return 0
 	}
-	days := 0
-	for _, r := range *item.Detail {
-		if r < '0' || r > '9' {
-			return 0
-		}
-		days = days*10 + int(r-'0')
-	}
-	return days
+	return *item.QuietDays
 }

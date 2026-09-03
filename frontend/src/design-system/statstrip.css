@@ -1,29 +1,14 @@
-/* StatStrip — the readings row as one plate of ruled slots. See statstrip.tsx
-   for what the shape claims; this sheet is how it draws. */
+/* StatStrip — the readings ROW: one comparison of equal slots, each a reading
+   pane of its own, with air between them and no plate around them. See
+   statstrip.tsx for what the shape claims; this sheet is how it draws. */
 
 .stat-strip {
   display: grid;
   grid-template-columns: repeat(var(--stat-strip-slots, 6), 1fr);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  /* The page's own card surface rather than a tint: filled darker the plate
-     reads as a band decorating the header instead of the first thing on the
-     page worth reading. White also has nothing to leak — a row of four slots
-     in a wider template ends in white space, which is simply where the row
-     ends. */
-  /* The RULES, drawn once by the plate rather than by each slot. The grid's
-     gaps expose this ground between the slots, so a divider exists wherever two
-     slots meet and nowhere else — no slot has to know whether it begins a row,
-     which is the arithmetic that only worked while the slot count divided the
-     column count. The slots paint `--bgElevated` back over everything else. */
-  background: var(--borderSubtle);
-  gap: 1px;
-  /* The plate is a CARD: the same ground, border, radius and shadow `.card` and
-     `Panel` stand on, because a readings plate on a page of cards that had no
-     shadow read as a table drawn on the page rather than as a surface sitting
-     on it. */
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+  /* The slots stretch to the tallest, so a row of readings keeps one line
+     whatever each one carries; the gap between them is the only divider. */
+  align-items: stretch;
+  gap: var(--space-4);
   --stat-strip-tail: var(--stat-strip-tail-6, 1);
 }
 
@@ -51,16 +36,6 @@
   }
 }
 
-/* A slot draws no divider of its own: it paints the plate's ground back over
-   its own cell, and what it does NOT cover is the gap, which is the rule. */
-.stat-strip > * {
-  border: 0;
-  border-radius: 0;
-  background: var(--bgElevated);
-  margin: 0;
-  box-shadow: none;
-}
-
 /* The last slot takes whatever is left of its row, so a fold never leaves the
    row half-drawn. `tailSpan` in statstrip.tsx says why the component computes
    this rather than the sheet: `span var()` resolves, `:nth-child(var() n + 1)`
@@ -73,104 +48,59 @@
 
 /* A SLOT MAY BE A CONTROL. A strip of filters is still one comparison — the
  * reader is choosing between the same readings they are comparing — so the
- * press target is the slot itself rather than something inside it.
- *
- * The reset therefore has to reach the card a control wraps, or the two chrome
- * sets stack: the plate's seamless rules PLUS the card's own border and 12px
- * radius, which is five bordered rounded boxes nested inside a plate built to
- * draw none. The capture-activity funnel shipped exactly that, and answered it
- * with `all: unset` on the wrapper — a declaration that ties `.stat-strip > *`
- * on specificity, so which one won was decided by stylesheet import order
- * rather than by intent. The chrome a button brings is reset HERE, where the
- * plate's other chrome is, so a caller has nothing left to unset. */
+ * press target is the slot itself rather than something inside it. The button
+ * brings no chrome of its own: the card inside it is the whole of what a
+ * reader sees, and the state lands on that card. */
 .stat-strip > button {
   font: inherit;
   color: inherit;
   text-align: inherit;
   padding: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--r-lg);
   cursor: pointer;
 }
-.stat-strip > * > .stat-card {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+.stat-strip > button > .stat-card {
+  block-size: 100%;
 }
 
-/* A pressed slot fills the SLOT, not the button around the card inside it: a
- * fill painted on the wrapper is repainted by the card's own `--bgElevated`
- * directly over it, which left the selected filter showing an accent ring and
- * almost no fill. Both halves land on the slot now.
- *
- * A tint and an underline rather than a RING, because the plate clips: it is
- * `overflow: hidden` with a corner radius, so a rectangular 2px ring drawn at a
- * corner slot's own edge lost its corners to the plate's curve and read as a
- * broken box. An underline has no corners to lose — only the two extreme
- * bottom corners of the plate trim it at all, and a straight line trimmed by a
- * curve still reads as a straight line. The tint carries the state at a glance;
- * the line is what makes it unambiguous next to `--bgHover`. */
-.stat-strip > [aria-pressed="true"] {
+/* A pressed slot is the card lit in the accent: its ground takes the accent
+ * wash and its edge the accent, which reads as chosen beside its plain
+ * neighbours without a ring drawn around the pane. */
+.stat-strip > [aria-pressed="true"] > .stat-card {
   background: var(--accentLight);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  border-color: var(--accentMed);
 }
 .stat-strip > *:focus-visible {
   outline: var(--focus-ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
-/* The plate's own corners, on the slots that sit in them. A slot is square, so
- * a fill painted in a corner slot squared off the plate's curve — visible the
- * moment any slot is pressed or hovered. `- 1px` because the plate's border
- * takes one of those pixels; the inner curve is one pixel tighter than the
- * outer one. First and last are the plate's leading and trailing corners at
- * every column count, including after the fold to three and to two. */
-.stat-strip > *:first-child {
-  border-start-start-radius: calc(var(--r-md) - 1px);
-  border-end-start-radius: calc(var(--r-md) - 1px);
-}
-.stat-strip > *:last-child {
-  border-start-end-radius: calc(var(--r-md) - 1px);
-  border-end-end-radius: calc(var(--r-md) - 1px);
-}
-
-/* ONE size for every slot in the row, sized to the SLOT rather than to a
-   mockup's absolute pixels: the value has to hold a short sentence on one line
-   in the narrowest slot, so it sits below the size figures alone could have
-   carried. The clamp lets it shrink with the column instead of wrapping. */
+/* ONE size for every slot in the row, and a step under the free-standing
+   card's: a slot is a fifth of the page and some readings are a short
+   sentence rather than a figure, so the figure sits where the sentence still
+   holds one line in the narrowest slot. */
 .stat-strip .stat-card-value {
-  font-size: clamp(13px, 0.9vw, 15px);
-  line-height: 1.3;
-  letter-spacing: -0.01em;
+  font-size: clamp(17px, 1.5vw, 22px);
+  line-height: 1.2;
 }
 
-/* A strip slot is narrower than a free-standing stat card, so a label that
-   does not fit wraps to a second line rather than colliding with the figure.
-   Small caps say "label" at a glance the way sentence case says "sentence" —
-   scoped here rather than on StatCard, which free-standing cards also use. */
+/* A slot's label wraps rather than colliding with the source badge beside it:
+   a slot is narrower than a free-standing card. */
 .stat-strip .stat-card-label {
   flex-wrap: wrap;
   justify-content: flex-start;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-size: 11px;
 }
 
-/* A strip of figures where one is selectable: the selected slot arrived with its
-   fill and its shadow in a single frame. */
-.stat-strip > button {
+/* A strip of figures where one is selectable: the selected slot arrived with
+   its wash in a single frame. */
+.stat-strip > button > .stat-card {
   transition:
     background-color var(--dur-state) var(--ease-out),
-    box-shadow var(--dur-state) var(--ease-out);
+    border-color var(--dur-state) var(--ease-out);
 }
-.stat-strip > button:active:not(:disabled) {
+.stat-strip > button:active:not(:disabled) > .stat-card {
   background-color: var(--bgCard);
   transition-duration: var(--dur-tap);
-}
-
-/* The caveat under the whole plate: a source was read to its limit, so every
-   figure above is a floor. Quiet on purpose — this is the surface reporting on
-   its own limits rather than a reading, and it must not compete with the row. */
-.stat-strip-floor {
-  color: var(--textSecondary);
-  margin: var(--space-2) 0 0;
 }

@@ -137,6 +137,16 @@ var opPhrases = map[string]string{
 	opTechnicalEnrichCompany:   "Look up what this company publicly runs",
 	opRetireCustomField:        "Retire a custom field",
 	opUpdateCustomFieldOptions: "Change a custom field's options",
+	// "Merge tags" alone reads as reversible, which this is not, and the head is
+	// the half a triaging approver reads first. The routed tag — the word being
+	// RETIRED — appears nowhere in the body, so unlike the tool door's sentence
+	// this summary cannot name it: the head says what the act costs instead.
+	//
+	// It is not replaced by the resolver's prose, deliberately. This summary is
+	// built from the same bytes diff_hash covers and redemption re-checks, so
+	// the text a human reads and the call that runs cannot disagree; prose
+	// resolved from a separate read would break that.
+	opMergeTags: "Fold one tag into another and release its name",
 }
 
 // The operations whose headline this file names.
@@ -151,6 +161,7 @@ const (
 	opTechnicalEnrichCompany   = "technicalEnrichCompany"
 	opRetireCustomField        = "retireCustomField"
 	opUpdateCustomFieldOptions = "updateCustomFieldOptions"
+	opMergeTags                = "mergeTags"
 )
 
 // genericVerbs are the tools whose name carries no record: they act on

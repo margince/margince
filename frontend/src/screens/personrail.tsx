@@ -39,9 +39,11 @@ import { normalizeProfileUrl } from "../format/profileurl";
 import { linkedinUrl } from "../format/weburl";
 import {
   type Locale,
+  type PluralTranslator,
   type Translator,
   translatePlural,
   useLocale,
+  usePlural,
   useT,
 } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
@@ -1206,11 +1208,13 @@ function WhoKnows({
 
 function SignalsAndRisks({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const { signals, skipped } = derivedSignals(
     view,
     withheldSections(view),
     t,
+    plural,
     locale,
   );
   return (
@@ -1258,6 +1262,7 @@ function derivedSignals(
   view: Person360,
   hidden: Withheld,
   t: ReturnType<typeof useT>,
+  plural: PluralTranslator,
   locale: Locale,
 ): Readonly<{ signals: ReadonlyArray<Signal>; skipped: boolean }> {
   const out: Signal[] = [];
@@ -1272,7 +1277,7 @@ function derivedSignals(
     });
   } else if (quiet != null) {
     out.push({
-      text: t("person.rail.repliedDaysAgo", {
+      text: plural("person.rail.repliedDaysAgo", quiet, {
         count: formatNumber(quiet, locale),
       }),
       tone: "good",

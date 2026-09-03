@@ -691,6 +691,7 @@ export type ListState<Row> = Readonly<{
  * them.
  */
 export function ListTable<Row>({
+  title,
   state,
   columns,
   rowKey,
@@ -710,8 +711,15 @@ export function ListTable<Row>({
   scopeKey,
   body,
   bodyOwnsPaging = false,
+  bodyCount,
   selection,
 }: Readonly<{
+  /**
+   * The page's own name, for a screen where this table IS the page. Handed
+   * through to the design-system surface, which documents the obligation that
+   * comes with it: the screen also joins `SELF_HEADED_SCREENS`.
+   */
+  title?: ReactNode;
   state: ListState<Row>;
   columns: readonly ListColumn<Row>[];
   rowKey: (row: Row) => string;
@@ -725,6 +733,8 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body renders its own complete-count/load-more contract. */
   bodyOwnsPaging?: boolean;
+  /** The count for a body that pages itself — see the design-system table. */
+  bodyCount?: ReactNode;
   /**
    * Where a row's record lives. One declaration drives both ways in: clicking
    * the row navigates, and the identity cell becomes a real link that opens in
@@ -1021,6 +1031,7 @@ export function ListTable<Row>({
 
   return (
     <ListSurface<Row>
+      title={title}
       rows={rows}
       columns={columns}
       rowKey={rowKey}
@@ -1100,6 +1111,7 @@ export function ListTable<Row>({
       widthsKey={unit}
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
+      bodyCount={bodyCount}
       selection={selection}
       pending={isPending}
       problem={problem}

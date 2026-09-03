@@ -142,9 +142,7 @@ export function LinkedInReachCard() {
               // table's full width and push the card sideways instead.
               control={
                 accounts.length === 0 ? (
-                  <EmptyState>
-                    <p className="t-small">{t("linkedinReach.empty")}</p>
-                  </EmptyState>
+                  <EmptyState>{t("linkedinReach.empty")}</EmptyState>
                 ) : (
                   <div className="settingrow-measure">
                     <ReachTable accounts={accounts} />

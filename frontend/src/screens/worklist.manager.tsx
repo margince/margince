@@ -184,7 +184,7 @@ export function CoachControl({ owner }: Readonly<{ owner: string }>) {
         }}
       />
       <label className="field">
-        <span className="t-meta">{t("worklist.manager.note")}</span>
+        <span className="t-label">{t("worklist.manager.note")}</span>
         <textarea
           className="input"
           value={note}

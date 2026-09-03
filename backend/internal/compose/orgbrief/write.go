@@ -212,7 +212,10 @@ func ParseBrief(text, orgID string, in Input) ([]Sentence, error) {
 
 func writeWithModel(ctx context.Context, lane Completer, orgID string, in Input, lang string) ([]Section, error) {
 	req := BriefRequest(in, lang)
-	resp, err := lane.Complete(ctx, req)
+	resp, err := ai.Ask(ctx, lane, req, func(text string) error {
+		_, err := ParseBriefSections(text, orgID, in)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

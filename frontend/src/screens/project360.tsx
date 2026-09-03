@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
@@ -29,7 +29,11 @@ import { useOpenEmail } from "./openemail";
 import { ProjectCompanies } from "./projectcompanies";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
-import { RollupsStrip } from "./projectreadings";
+import {
+  PROJECT_COMMITMENTS_ANCHOR,
+  PROJECT_DEALS_ANCHOR,
+  RollupsStrip,
+} from "./projectreadings";
 import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
 import {
   mapProjectUpdate,
@@ -96,6 +100,7 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
 
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const recordZone = useRecordZone();
+  const details = usePageAside();
   const project = view.project;
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
@@ -114,6 +119,36 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const readOnly = Boolean(readOnlyReason);
   return (
     <RecordView
+      // WHO is on this work comes first, then the paperwork. The column used
+      // to open with the phase history — a log of moves the stepper above
+      // already shows the current state of — so a reader scanning for "whose
+      // project is this" read a changelog first. The three record-keeping
+      // cards below answer questions a reader comes looking for on purpose;
+      // the two above answer the one they arrive with.
+      //
+      // The details pane beside the work: the same pane, fold and memory of
+      // it as every other record page.
+      aside={
+        details.open ? (
+          <>
+            <div className="project-rail">
+              <ProjectCompanies
+                projectId={project.id}
+                companies={project.organizations}
+                readOnly={readOnly}
+              />
+              <StakeholdersCard
+                view={view}
+                projectId={project.id}
+                readOnly={readOnly}
+              />
+              <ProjectContractsCard view={view} />
+              <ProjectDocumentsCard view={view} />
+              <PhaseHistoryCard view={view} />
+            </div>
+          </>
+        ) : undefined
+      }
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
       zone={recordZone}
@@ -158,55 +193,32 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       {...chronology}
     >
-      {/* WHO is on this work comes first, then the paperwork. The column used
-          to open with the phase history — a log of moves the stepper above
-          already shows the current state of — so a reader scanning for "whose
-          project is this" read a changelog first. The three record-keeping
-          cards below answer questions a reader comes looking for on purpose;
-          the two above answer the one they arrive with.
-
-          It is the PAGE's own column, beside the work rather than inside the
-          record's grid: same column, same fold and same memory of it as every
-          other record page. */}
-      <PageAside>
-        <div className="project-rail">
-          <ProjectCompanies
-            projectId={project.id}
-            companies={project.organizations}
-            readOnly={readOnly}
-          />
-          <StakeholdersCard
-            view={view}
-            projectId={project.id}
-            readOnly={readOnly}
-          />
-          <ProjectContractsCard view={view} />
-          <ProjectDocumentsCard view={view} />
-          <PhaseHistoryCard view={view} />
-        </div>
-      </PageAside>
       <div className="project-main">
-        <ProjectDealsCard
-          view={view}
-          actions={
-            // New Deal from HERE binds the deal to this project, and binding is
-            // held to project WRITE authority rather than deal permission
-            // alone: winning the deal later advances the project's phase
-            // without re-checking, so `EnsureAttachable` proves the authority
-            // at the moment of attaching. A caller who may read this project
-            // but not write it can still work deals — just not born into it.
-            !overlay &&
-            !readOnly &&
-            project.organization_id && (
-              <NewDealAction
-                orgId={project.organization_id}
-                orgName={project.name}
-                projectId={project.id}
-              />
-            )
-          }
-        />
-        <CommitmentsCard view={view} />
+        <div id={PROJECT_DEALS_ANCHOR}>
+          <ProjectDealsCard
+            view={view}
+            actions={
+              // New Deal from HERE binds the deal to this project, and binding is
+              // held to project WRITE authority rather than deal permission
+              // alone: winning the deal later advances the project's phase
+              // without re-checking, so `EnsureAttachable` proves the authority
+              // at the moment of attaching. A caller who may read this project
+              // but not write it can still work deals — just not born into it.
+              !overlay &&
+              !readOnly &&
+              project.organization_id && (
+                <NewDealAction
+                  orgId={project.organization_id}
+                  orgName={project.name}
+                  projectId={project.id}
+                />
+              )
+            }
+          />
+        </div>
+        <div id={PROJECT_COMMITMENTS_ANCHOR}>
+          <CommitmentsCard view={view} />
+        </div>
       </div>
       <AdvanceProjectModal
         projectId={project.id}

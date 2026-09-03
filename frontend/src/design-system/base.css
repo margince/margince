@@ -41,7 +41,9 @@
 
 .btn {
   font-family: var(--f-body);
-  font-weight: 600;
+  /* Medium, not semibold: a verb in a row of verbs is read, not shouted, and
+     the head of a record carries four of them beside a 32px name. */
+  font-weight: var(--fw-medium);
   font-size: 13.5px;
   /* Transparent rather than absent, so the ghost variant RECOLOURS a border
      every variant already reserves space for. When only the ghost declared one,
@@ -49,8 +51,8 @@
      in the product was 2px uneven. */
   border: 1px solid transparent;
   cursor: pointer;
-  border-radius: var(--r-sm);
-  padding: 9px 14px;
+  border-radius: var(--r-control);
+  padding: 8px 14px;
   /* Pinned rather than inherited: the control's height is derived from it, and
      an inherited line-height makes that height a property of whatever the button
      happens to sit inside. */
@@ -112,23 +114,24 @@
   inline-size: 14px;
   block-size: 14px;
 }
+/* The filled tones are FLAT: a fill and its ink, no shadow under it and no
+   lift on hover. A button that casts a shadow sits above the pane it belongs
+   to, and the panes of this language are translucent ground that nothing
+   floats over. The hover is a shade of the same fill, which is feedback
+   without a third dimension. */
 .btn-primary {
   background: var(--accent);
   color: var(--textOnAccentControl);
-  box-shadow: 0 2px 8px var(--accentMed);
 }
 .btn-primary:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
+  filter: brightness(1.06);
 }
 .btn-danger {
   background: var(--danger);
   color: var(--textOnStatusControl);
-  box-shadow: 0 2px 8px var(--dangerBg);
 }
 .btn-danger:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
+  filter: brightness(1.06);
 }
 /* The agent's own verb. Filled indigo rather than outlined, because it is the
    move the card is recommending and an outlined control beside a bordered
@@ -137,11 +140,9 @@
 .btn-ai {
   background: var(--ai);
   color: var(--textOnAccentControl);
-  box-shadow: 0 2px 8px var(--aiMed);
 }
 .btn-ai:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
+  filter: brightness(1.06);
 }
 /* The agent's own verb where it is ONE of several equal offers — the four
    rewrites of a draft, where no single one is the move. Tinted and outlined
@@ -157,14 +158,21 @@
   background: var(--aiChip);
 }
 
+/* The outlined verb: the pane's own ground with a hairline, in the primary
+   ink. Not transparent — on the glow behind a record head a see-through
+   button reads as a label, and four of them as a sentence. */
 .btn-ghost {
-  background: transparent;
-  color: var(--textMeta);
+  background: var(--pane);
+  color: var(--textContent);
+  /* The hairline, not the control boundary: an outlined verb is a pane with
+     a word on it, and the darker edge drew a row of them as a strip of
+     cartoon buttons. The word is what identifies the control (WCAG 1.4.11
+     asks the boundary to clear 3:1 only where it is the sole cue), so the
+     edge can be as quiet as every other pane's. */
   border-color: var(--borderSubtle);
 }
 .btn-ghost:hover {
   background: var(--bgHover);
-  color: var(--textPrimary);
 }
 /* A button that TOGGLES has to show which way it is set. `aria-pressed` is the
    fact — it is already on every toggle in the tree — but nothing drew it, so a
@@ -225,7 +233,7 @@
      `nowrap` on `.btn`; this one has to be allowed to take a second line rather
      than push its own box past the column it fills. */
   white-space: normal;
-  border-radius: var(--r-md);
+  border-radius: var(--r-control);
   border-color: var(--borderControl);
   background: var(--bgElevated);
   color: var(--textPrimary);
@@ -282,9 +290,9 @@
  * having received the press — which on a slow write is exactly when a reader
  * presses again.
  *
- * One pixel DOWN, and it is one pixel for a reason: the primary and danger
- * tones lift a pixel on hover, so pressing travels two and lands below where
- * the control rests. `--dur-tap` on the way in because that is the floor of
+ * One pixel DOWN: the filled tones are flat, so a pixel is the whole of the
+ * travel and the control lands just below where it rests. `--dur-tap` on the
+ * way in because that is the floor of
  * perceptible response, and the spring on the base rule for the way out —
  * the finger left, the control comes back. That is the one place a bounce is
  * honest here.
@@ -494,7 +502,7 @@ a:not([class]):focus-visible {
 }
 
 .t-small {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -536,38 +544,43 @@ a:not([class]):focus-visible {
  * across the app (record headings, field labels, captions, mono figures) —
  * no new sizes invented, just named. */
 .t-display {
-  font-size: 22px;
-  font-weight: 700;
+  font-family: var(--f-display);
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 .t-h2 {
-  font-size: 18px;
-  font-weight: 600;
+  font-family: var(--f-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 /* The step between a heading and body text, which StatCard's reading has asked
    for since it was written — the class was named there but never declared, so
    the figure a tile exists to show was rendering at body size. */
 .t-h3 {
-  font-size: 16px;
-  font-weight: 600;
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 .t-label {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
   color: var(--textMeta);
 }
 .t-caption {
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 .t-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 .t-body {
-  font-size: 14px;
+  font-size: var(--fs-body);
   color: var(--textContent);
 }
 .t-mono {
@@ -627,18 +640,10 @@ a:not([class]):focus-visible {
  * outright would leave the readers who asked for less motion as the only ones
  * who get no feedback from a press at all.
  *
- * The hover lift on the primary and danger tones is answered here too. It never
- * had an answer: those two have moved a pixel under every pointer since they
- * were written, including for the readers who asked them not to.
- *
  * After the rules it removes, deliberately: a media query adds no specificity,
  * so document order is what settles the tie.
  */
 @media (prefers-reduced-motion: reduce) {
-  .btn-primary:hover,
-  .btn-danger:hover {
-    transform: none;
-  }
   .btn:active:not(:disabled),
   .iconbtn:active:not(:disabled) {
     transform: none;

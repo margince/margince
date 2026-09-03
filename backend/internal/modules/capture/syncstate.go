@@ -179,10 +179,10 @@ func (r *Registry) recordSyncFailure(ctx context.Context, connectionID ids.UUID,
 		// The class is on the row; the detail belongs to the operational
 		// ledger (0078's rationale, kept).
 		if _, err := storekit.LogSystem(ctx, tx, "capture_sync_error", map[string]any{
-			"connection_id": connectionID.String(),
-			"class":         string(class),
-			"failures":      failures,
-			"detail":        syncErr.Error(),
+			detailConnectionID: connectionID.String(),
+			"class":            string(class),
+			"failures":         failures,
+			"detail":           syncErr.Error(),
 		}); err != nil {
 			return err
 		}

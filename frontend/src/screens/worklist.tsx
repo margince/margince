@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useOpenEmail } from "./openemail";
 import { TeamBoard } from "./worklist.board";
 import {
   completenessText,
@@ -56,6 +60,23 @@ const FILTERS: readonly WorklistFilter[] = [
   "system",
 ];
 
+/** The dial's name in the address. One spelling, read and written. */
+export const WORKLIST_FILTER_PARAM = "filter";
+
+/**
+ * The lane the address asks for, or the default.
+ *
+ * An unknown value reads as `all` rather than as an error: the vocabulary grows
+ * on the server, and a pasted link naming a lane this build has not learnt
+ * should show the day rather than an empty screen or a crash.
+ */
+export function worklistFilterFrom(
+  params: ReadonlyMap<string, string>,
+): WorklistFilter {
+  const asked = params.get(WORKLIST_FILTER_PARAM);
+  return FILTERS.find((value) => value === asked) ?? "all";
+}
+
 // Which narrowing actually CONTAINS this group's members.
 //
 // Every group used to send the reader to `decisions`, which excludes system
@@ -76,16 +97,6 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
 // One function now, read by both, so they cannot drift apart again.
 function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
-}
-
-// How much work the day holds, as opposed to how much one response carried.
-//
-// `summary.total` counts the rows in ONE page — it is computed after the page
-// cut — so it is the wrong number to print beside a queue the reader can page
-// through: it would stay at 25 while the list grew past it. `counts[].
-// considered` is the figure taken before the cut, which is what "in all" means.
-function dayTotal(day: Worklist): number {
-  return day.counts.reduce((total, count) => total + count.considered, 0);
 }
 
 // Whether this row opens its band — the first banded row, or the first after a
@@ -144,6 +155,11 @@ function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded);
   return (
     <div className="worklist-header">
+      {/* Five figures, ONE scope: the whole assembled day. All five come off
+          `summary`, which the server counts over every candidate it weighed
+          rather than over the page it cut — so the sentence stays still as the
+          reader pages, and a total the browser derived a second way cannot
+          disagree with the bands beside it. */}
       <p className="t-h2 worklist-lead">
         {t(
           // `in_play` is optional, and a server that does not send it has not
@@ -158,17 +174,14 @@ function WorklistHeader({
             due: formatNumber(day.summary.due, locale),
             inPlay: formatNumber(day.summary.in_play ?? 0, locale),
             lower: formatNumber(day.summary.lower_priority, locale),
-            // The DAY's candidates, not this page's rows. `summary.total`
-            // counts what one response carried, so printing it beside a queue
-            // the reader has paged past would shrink as they read further in.
-            total: formatNumber(dayTotal(day), locale),
+            total: formatNumber(day.summary.total, locale),
           },
         )}
       </p>
       {/* What the day is WORTH, above the controls that narrow it. The figures
           describe the whole day rather than the page or the filter, so they sit
           above both rather than beside the pills they would be confused with. */}
-      <WorklistReadings day={day} />
+      <WorklistReadings day={day} onLane={onFilter} />
       {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
       {scopes.length > 1 && owner === "" && (
@@ -206,7 +219,7 @@ function WorklistHeader({
       {/* What the page is NOT showing. Drawn only when there is a difference to
           report: on a day the queue carries whole, "12 of 12" is noise. */}
       {completeness !== null && (
-        <p className="t-meta worklist-completeness">{completeness}</p>
+        <p className="t-caption worklist-completeness">{completeness}</p>
       )}
     </div>
   );
@@ -231,6 +244,7 @@ function WorklistBody({
   onFilter,
   onOwner,
   onSelect,
+  onOpenEmail,
   hasMore,
   loadingMore,
   moreFailed,
@@ -246,6 +260,8 @@ function WorklistBody({
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
   onSelect: (next: string) => void;
+  // Opens a waiting email into the page's one drawer.
+  onOpenEmail: (activityId: string) => void;
   hasMore: boolean;
   loadingMore: boolean;
   moreFailed: boolean;
@@ -309,7 +325,7 @@ function WorklistBody({
       {/* The one thing to do next, said rather than implied. The row stays in
           the queue below: removing it would make the rank numbers lie and the
           counts disagree with the page. */}
-      {focus && <FocusCard item={focus} />}
+      {focus && <FocusCard item={focus} onOpenEmail={onOpenEmail} />}
       {/* And then? A finite list a reader can see the end of, so a morning has a
           shape rather than a backlog. Drawn only under a focus card: without
           one there is no "next", only the queue. */}
@@ -377,6 +393,7 @@ function WorklistBody({
                               )
                           : undefined
                       }
+                      onOpenEmail={onOpenEmail}
                       onReview={() => onFilter(reviewFilter(item))}
                     />
                   </li>
@@ -455,7 +472,30 @@ export function WorklistScreen({
   const [scope, setScope] = useState<WorklistScope>(
     opensOn === UNASSIGNED ? UNASSIGNED : "mine",
   );
-  const [filter, setFilter] = useState<WorklistFilter>("all");
+  // The one dial of the four that lives in the ADDRESS, and the reason is a
+  // figure on another screen: Home's readings each count one of these lanes,
+  // and a reading that names a set is the way into it — which it cannot be
+  // unless the lane is nameable. `?filter=` is the query half, which
+  // `routeIdentity` ignores by design, so this does not disturb the
+  // `#/worklist/<owner>` remount that applies `opensOn`. It also makes a
+  // narrowed queue a link somebody can paste, which is what the address is for.
+  //
+  // Scope, owner and the selected row stay state. Moving all four is still its
+  // own change; this moves the one that another surface has to be able to say.
+  const [params, setParams] = useUrlParams();
+  const filter = worklistFilterFrom(params);
+  const setFilter = (next: WorklistFilter) => {
+    const query = new Map(params);
+    // "all" is the default, so it is spelled by the parameter's ABSENCE — an
+    // address carrying `?filter=all` describes the same view as one carrying
+    // nothing and would be a second spelling of it.
+    if (next === "all") {
+      query.delete(WORKLIST_FILTER_PARAM);
+    } else {
+      query.set(WORKLIST_FILTER_PARAM, next);
+    }
+    setParams(query);
+  };
   // Whose queue, when it is not the reader's own. Empty means their own day,
   // which is what every seat sees and the only thing most seats may ask for.
   const [owner, setOwner] = useState(
@@ -466,6 +506,7 @@ export function WorklistScreen({
   // would make the address describe a fraction of what the reader is looking
   // at. Moving them all there is its own change.
   const [selectedId, setSelectedId] = useState("");
+  const [openEmail, setOpenEmail] = useOpenEmail();
   // Changing a dial drops the selection. A row chosen under one question is
   // not a row the reader chose under the next one, and keeping the id means a
   // row that comes back — a filter switched away and back, a snooze that lifts
@@ -524,6 +565,7 @@ export function WorklistScreen({
             onFilter={answerWith(setFilter)}
             onOwner={answerWith(setOwner)}
             onSelect={setSelectedId}
+            onOpenEmail={setOpenEmail}
             hasMore={day.hasNextPage}
             loadingMore={day.isFetchingNextPage}
             moreFailed={day.isError && day.data !== undefined}
@@ -531,6 +573,14 @@ export function WorklistScreen({
           />
         )}
       </SurfaceState>
+      {/* One drawer over the whole queue, at page level rather than inside a
+          row: two mounted dialogs would be two `aria-modal` elements, and the
+          day stays legible behind the message being read. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
     </div>
   );
 }

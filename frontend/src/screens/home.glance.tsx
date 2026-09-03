@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Eyebrow } from "../design-system/eyebrow";
-import { hourInZone } from "../format/format";
+import { formatTimeOfDay, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { briefSentence } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
+import { weekSentence } from "./brief.weeksentence";
+import type { WeeklyReview } from "./home.queries";
 import type { Worklist } from "./worklist.queries";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
@@ -70,15 +72,43 @@ export type GlanceFacts = Readonly<{
    *  while it is in flight or after it failed — the sentence is then absent
    *  rather than guessed at. */
   day: Worklist | undefined;
-  /** Which Brief this is. The eyebrow names it, and the sentence belongs to the
-   *  morning: it is composed from the ranked queue, which says nothing about a
-   *  week that has closed. */
+  /** The week that closed, for the weekly's opening sentence. Null when no week
+   *  has been written yet; undefined while the read is in flight or after it
+   *  failed — a quiet week and an unread one are different sentences. */
+  week: WeeklyReview | null | undefined;
+  /** Which Brief this is. The eyebrow names it, and each view composes its own
+   *  sentence: the morning's from the ranked queue, the weekly's from the
+   *  counts the week was frozen with. Neither can describe the other. */
   view: BriefView;
 }>;
 
 export type GlanceProps = GlanceFacts;
 
-export function HomeGlance({ firstName, now, day, view }: GlanceProps) {
+// The eyebrow names the view and, for the morning, the moment the queue below
+// was read. The as-of is the morning's alone: the weekly's numbers were frozen
+// when the week closed, and a time-of-day against them would date the reading
+// rather than the week. A morning whose queue has not arrived yet says the
+// scope by itself instead of naming a moment it does not know.
+function eyebrowText(
+  view: BriefView,
+  day: Worklist | undefined,
+  t: Translator,
+  locale: Locale,
+): string {
+  if (view === "weekly") {
+    return t("brief.eyebrow.weekly");
+  }
+  const scope = t("brief.eyebrow");
+  if (day === undefined) {
+    return scope;
+  }
+  return t("brief.eyebrow.asOf", {
+    scope,
+    at: formatTimeOfDay(day.as_of, locale, viewerZone()),
+  });
+}
+
+export function HomeGlance({ firstName, now, day, week, view }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
   // No name yet is not a reason to greet nobody: the hour is known either way,
@@ -91,17 +121,19 @@ export function HomeGlance({ firstName, now, day, view }: GlanceProps) {
   // THE DAY IN ONE SENTENCE, from the rows the page is already showing. The
   // lines below say the same facts as separate counts; this says what to do
   // about the first one, which a column of figures cannot.
-  // MORNING ONLY. It is composed from the ranked queue, which is what waits
-  // TODAY — over the weekly it would be describing this morning under a heading
-  // about the week that closed.
-  const sentence = view === "morning" ? briefSentence(day, t, locale) : null;
+  // EACH VIEW COMPOSES ITS OWN. The morning's comes from the ranked queue,
+  // which is what waits TODAY; over the weekly it would be describing this
+  // morning under a heading about the week that closed. The weekly's comes from
+  // the frozen counts, which is what the week is now a record of.
+  const sentence =
+    view === "morning" ? briefSentence(day, t, locale) : weekSentence(week, t);
 
   return (
     <header className="glance arrive" data-testid="home-glance">
       {/* Scope and date, above the greeting. A span rather than a heading: the
           page has ONE h1 and this is its label, not a level of its own. */}
       <Eyebrow className="glance-eyebrow">
-        {t(view === "weekly" ? "brief.eyebrow.weekly" : "brief.eyebrow")}
+        {eyebrowText(view, day, t, locale)}
       </Eyebrow>
       <h1 className="glance-greeting t-display">{greeting}</h1>
       {sentence ? (
@@ -109,10 +141,16 @@ export function HomeGlance({ firstName, now, day, view }: GlanceProps) {
           {t(sentence.key, sentence.values)}
         </p>
       ) : (
-        // The weekly has no composed sentence, so the fallback is the only line
-        // under its heading — and the morning's "this is your day" read as the
-        // wrong week entirely beneath "YOUR WEEK". Each view says its own.
-        <p className="glance-intro t-caption">
+        // Neither view could compose a sentence: the queue or the week has not
+        // arrived, or the read failed. The fallback names the view rather than
+        // describing it, because there is nothing yet to describe — and the
+        // morning's "this is your day" read as the wrong week entirely beneath
+        // "YOUR WEEK". Each view says its own.
+        //
+        // ONE FACE either way. It is the same slot the morning's composed
+        // sentence fills, and drawn as a caption it read as a footnote where
+        // the composed one read as the page's opening.
+        <p className="glance-sentence">
           {t(
             view === "weekly" ? "home.glance.introWeekly" : "home.glance.intro",
           )}

@@ -17,15 +17,18 @@
    an `order` is exactly what makes reading order and visual order disagree
    (WCAG 2.2 §1.3.2). Nothing in this file may use one. */
 .page-zones-both {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 3fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) 300px;
   grid-template-areas: "rail main aside";
 }
 .page-zones-rail {
   grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
   grid-template-areas: "rail main";
 }
+/* The details column is one pane at a fixed 300px: the attribute rows inside
+   it are label and value, and a column that widened with the page put the
+   value a hand's width from its label. The work column takes the rest. */
 .page-zones-aside {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  grid-template-columns: minmax(0, 1fr) 300px;
   grid-template-areas: "main aside";
 }
 .page-zones > .page-zones-main {
@@ -67,6 +70,12 @@
      a rep opening an account reads what is happening, not the firmographics. */
   .page-zones > .page-zones-main {
     grid-column: 1 / -1;
+  }
+  /* One rail under the story takes the whole width: half a column for the
+     details pane and the other half empty is a 300px stack at the edge of a
+     region several times wider. */
+  .page-zones-aside {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 720px) {

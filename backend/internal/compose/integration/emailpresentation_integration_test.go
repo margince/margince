@@ -7,7 +7,11 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -23,6 +27,10 @@ import (
 // each kind of reader, and then the state machines that are not audiences at
 // all — statutory retention, a non-email row, blind recipients — kept separate
 // because folding them into the matrix would multiply cases that share no rule.
+
+// The contract, from this package's directory: the wire-shape test below reads
+// which properties it declares required rather than keeping its own list.
+const contractPathForLists = "../../../api/crm.yaml"
 
 // logEmailActivity logs one email against a contact and answers its id.
 func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.UUID, subject, body string) ids.ActivityID {
@@ -306,4 +314,115 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 	if call.EmailSummary != nil {
 		t.Error("a call carries an email_summary; only an email has an email's shape")
 	}
+}
+
+// TestEveryRequiredListReachesTheWireAsAList holds the difference between an
+// empty list and a missing one, ON THE WIRE.
+//
+// The contract makes `from`, `to`, `cc`, `bcc`, `attachments` and `links`
+// required, so a viewer is entitled to treat each as a list and read its
+// length without asking whether it is there. A nil Go slice marshals to `null`,
+// which satisfies neither the contract nor that reader.
+//
+// It went wrong exactly where nothing was appended: a message with nobody in
+// copy left `cc` nil, and the drawer crashed on `parties.length` the moment
+// anybody opened one. Every unit test passed — they assert Go structs, where a
+// nil slice and an empty one both have length zero and read identically. Only
+// the encoded bytes tell them apart, so this test encodes.
+func TestEveryRequiredListReachesTheWireAsAList(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+
+	// A message with no CC, no BCC and no attachments — the ordinary shape,
+	// and the one whose empty lists are all built by appending nothing.
+	id := logEmailActivity(author, t, e, contact, "Q3 renewal terms",
+		"Können wir Dienstag sprechen?")
+	got, err := e.Activities.GetEmailPresentation(author, id, nil)
+	if err != nil {
+		t.Fatalf("presentation: %v", err)
+	}
+
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("encoding the presentation: %v", err)
+	}
+	var wire map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &wire); err != nil {
+		t.Fatalf("decoding the presentation: %v", err)
+	}
+
+	// Derived from the contract's own `required` rather than typed out here:
+	// a seventh required list would otherwise be added with nothing checking
+	// it, which is how the sixth arrived.
+	for _, field := range requiredListFields(t, "EmailPresentation") {
+		raw, ok := wire[field]
+		if !ok {
+			t.Errorf("%s is required and was not sent at all", field)
+			continue
+		}
+		if string(raw) == "null" {
+			t.Errorf("%s reached the wire as null; the contract requires a list, "+
+				"and a viewer reading its length crashes on this", field)
+		}
+	}
+}
+
+// requiredListFields answers the ARRAY properties a schema marks required.
+//
+// Derived from the contract rather than listed here on purpose: a list typed
+// out in a test only holds the fields somebody remembered, and the field that
+// broke the drawer would have been exactly the one nobody added.
+func requiredListFields(t *testing.T, schema string) []string {
+	t.Helper()
+	source, err := os.ReadFile(contractPathForLists)
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	schemaLine := regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
+	requiredLine := regexp.MustCompile(`^      required:\s*\[(.*)\]\s*$`)
+	propertyLine := regexp.MustCompile(`^        ([a-z][a-z0-9_]*):\s*$`)
+	var required []string
+	arrays := map[string]bool{}
+	inSchema := false
+	current := ""
+	for _, line := range strings.Split(string(source), "\n") {
+		if match := schemaLine.FindStringSubmatch(line); match != nil {
+			inSchema = match[1] == schema
+			current = ""
+			continue
+		}
+		if !inSchema {
+			continue
+		}
+		if match := requiredLine.FindStringSubmatch(line); match != nil {
+			for _, name := range strings.Split(match[1], ",") {
+				required = append(required, strings.TrimSpace(name))
+			}
+			continue
+		}
+		if match := propertyLine.FindStringSubmatch(line); match != nil {
+			current = match[1]
+			continue
+		}
+		if current != "" && strings.TrimSpace(line) == "type: array" {
+			arrays[current] = true
+		}
+	}
+	if len(required) == 0 {
+		t.Fatalf("%s declares no required properties — this test is judging nothing", schema)
+	}
+	var out []string
+	for _, name := range required {
+		if arrays[name] {
+			out = append(out, name)
+		}
+	}
+	// A census that can fail short has already failed: with the parse broken
+	// this would walk an empty set and report PASS over every field at once.
+	if len(out) == 0 {
+		t.Fatalf("%s declares no required ARRAY property — either the contract "+
+			"changed shape or this parse no longer reads it", schema)
+	}
+	return out
 }

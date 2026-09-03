@@ -42,12 +42,17 @@ type eventDateTime struct {
 	Date     string `json:"date"`
 }
 
-// eventActor is one organizer/attendee: the email is all the mapping needs to
-// resolve the counterparty, plus Google's resource flag, which marks a booked
-// room or device rather than a person.
+// eventActor is one organizer/attendee: the email the mapping resolves the
+// counterparty by, Google's resource flag marking a booked room or device
+// rather than a person, and the name the organizer typed for them.
+//
+// The display name is the only place an attendee is named in full. A person
+// minted from a bare invitation address is otherwise named by its local part,
+// and no later pass has better evidence to correct it with.
 type eventActor struct {
-	Email    string `json:"email"`
-	Resource bool   `json:"resource"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	Resource    bool   `json:"resource"`
 }
 
 // roomResourceDomain is where Google Calendar homes every booked room and
@@ -82,7 +87,7 @@ func decodeEvent(raw []byte) (meetingmap.Event, error) {
 func decode(ev rawEvent) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
-		attendees = append(attendees, meetingmap.Actor{Email: a.Email, Room: a.isRoom()})
+		attendees = append(attendees, meetingmap.Actor{Email: a.Email, Name: a.DisplayName, Room: a.isRoom()})
 	}
 	return meetingmap.Event{
 		ID:          ev.ID,
@@ -90,7 +95,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		Subject:     ev.Summary,
 		Description: ev.Description,
 		StartsAt:    parseStart(ev.Start),
-		Organizer:   meetingmap.Actor{Email: ev.Organizer.Email},
+		Organizer:   meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:   attendees,
 	}
 }

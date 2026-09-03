@@ -13,7 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import {
@@ -46,6 +46,11 @@ function testRows(count: number): Row[] {
     region: "EU",
   }));
 }
+
+// The sort dial names the order in force ("Sort: Name"), so a lookup pinned to
+// the bare word only found it while the list was unsorted. Anchored, because a
+// column header's own control is named "Sort by <column>".
+const SORT_DIAL = /^Sort(:|$)/;
 
 const columns: readonly ListColumn<Row>[] = [
   {
@@ -164,7 +169,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const menu = sortMenu();
     expect(menu.getByRole("button", { name: "Name" })).toBeTruthy();
     expect(menu.getByRole("button", { name: "Value" })).toBeTruthy();
@@ -193,7 +198,7 @@ describe("the sort menu", () => {
     );
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     expect(sortMenu().getByRole("button", { name: "Value" })).toBeTruthy();
   });
 
@@ -208,7 +213,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     await userEvent.click(sortMenu().getByRole("button", { name: "Name" }));
     expect(onChange).toHaveBeenCalledWith("name");
 
@@ -230,7 +235,7 @@ describe("the sort menu", () => {
       );
     }
     render(<Harness />);
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const entry = sortMenu().getByRole("button", { name: /^Name/ });
     expect(entry.getAttribute("aria-pressed")).toBe("true");
     expect(entry.textContent).toContain("ascending");
@@ -239,6 +244,63 @@ describe("the sort menu", () => {
     expect(
       sortMenu().getByRole("button", { name: /^Name/ }).textContent,
     ).toContain("descending");
+  });
+
+  // A sort arrives from three places a reader did not press — a saved view, a
+  // column header, an address they pasted — so the dial is the one control where
+  // all three are visible. Labelled only "Sort" it made them open it to find
+  // out.
+  it("names the order in force on the dial itself", async () => {
+    const { rerender } = render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: SORT_DIAL }).textContent).toBe(
+      "Sort",
+    );
+
+    rerender(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "-value", onChange: () => {} }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: SORT_DIAL }).textContent).toBe(
+      "Sort: Value",
+    );
+  });
+
+  // ONE order at a time, so the entry in force wears a checkmark rather than a
+  // tick box: a box is the shape of a set a reader adds to, and five of them
+  // over five orderings promised a combination this list cannot be in.
+  it("marks the order in force without offering a set to build", async () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    const menu = sortMenu();
+
+    expect(
+      menu.getByRole("button", { name: /^Name/ }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      menu.getByRole("button", { name: "Value" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(menu.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
   it("offers the server's own order, which is a state a saved view can ask for", async () => {
@@ -252,7 +314,7 @@ describe("the sort menu", () => {
         sort={{ value: "name", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const fallback = sortMenu().getByRole("button", { name: "Default order" });
     expect(fallback.getAttribute("aria-pressed")).toBe("false");
     await userEvent.click(fallback);
@@ -269,7 +331,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+    expect(screen.queryByRole("button", { name: SORT_DIAL })).toBeNull();
   });
 
   it("is not drawn without a sort control at all", () => {
@@ -281,7 +343,7 @@ describe("the sort menu", () => {
         unit="rows"
       />,
     );
-    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+    expect(screen.queryByRole("button", { name: SORT_DIAL })).toBeNull();
   });
 });
 
@@ -861,6 +923,91 @@ describe("views", () => {
     expect(onViewChange).toHaveBeenCalledWith(1);
     expect(sortOnChange).toHaveBeenCalledWith("name");
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
+  });
+});
+
+// A list screen is a table and nothing else, so the page's own name belongs in
+// the header that already carries the tabs and the count rather than on a line
+// of its own above the card. What the tests hold is the ARITHMETIC of headings:
+// exactly one h1 when a title is given, and none at all when it is not — the
+// shell prints the heading for every screen that does not pass one, and a
+// surface that drew its own unconditionally would name those pages twice.
+describe("the page's name in the header", () => {
+  it("names the page in the header's own level-1 heading", () => {
+    const { container } = render(
+      <ListTable
+        title="Contacts"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    const heading = screen.getByRole("heading", { level: 1, name: "Contacts" });
+    expect(container.querySelector(".lt-head")?.contains(heading)).toBe(true);
+  });
+
+  it("draws no heading for a surface that is not the page", () => {
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  });
+});
+
+// A header whose verbs have folded into one menu still has to BEHAVE like the
+// row of verbs it replaced. The menu defers its children to the first open by
+// default, which is right per row and wrong here: a verb that reads its own
+// opening state once, at mount, is dead until somebody presses the menu — and
+// `#/deals/new` is exactly that, an address whose whole meaning is "the create
+// form is open". It opened nothing below this width, and pressing the menu then
+// opened a form nobody had asked for.
+function MountReporter({ onMount }: Readonly<{ onMount: () => void }>) {
+  // A verb that does its work at MOUNT, which is the shape `CreateAction`'s
+  // `startOpen` has: read once in `useState`, so a late mount reads it late.
+  useEffect(() => {
+    onMount();
+  }, [onMount]);
+  return <button type="button">New thing</button>;
+}
+
+describe("a folded header's verbs are live", () => {
+  function stubNarrowViewport() {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: /max-width:\s*1100px/.test(query),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  }
+
+  it("mounts the action without the menu being opened", async () => {
+    stubNarrowViewport();
+    const mounted = vi.fn();
+    render(
+      <ListTable
+        title="Deals"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        action={<MountReporter onMount={mounted} />}
+      />,
+    );
+    // The fold happened: the verbs are behind one menu rather than in the row.
+    expect(
+      await screen.findByRole("button", { name: "More actions" }),
+    ).toBeTruthy();
+    // And the verb is mounted anyway. Asserted on the MOUNT rather than on the
+    // button being visible, because `hidden` is exactly what the fold does to
+    // it — visible is the wrong question and would pass on a dead control.
+    expect(mounted).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 });
 

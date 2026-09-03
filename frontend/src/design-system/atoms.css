@@ -6,8 +6,11 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  font-weight: 600;
-  padding: 2px 9px;
+  /* Medium at 20px: the pill states one standing fact beside a name and must
+     not outweigh the name. Semibold at this size reads as a warning. */
+  font-weight: var(--fw-medium);
+  min-block-size: 20px;
+  padding: 0 8px;
   border-radius: var(--r-full);
   background: var(--bgCard);
   color: var(--textMeta);
@@ -29,7 +32,10 @@
 .badge-success {
   background:
     linear-gradient(var(--successBg), var(--successBg)), var(--bgElevated);
-  color: var(--success);
+  /* --successText for the reason FieldDiff's new value takes it: --success on
+     --successBg is 4.48:1 at this size. The warn and danger tones keep their
+     own ink, which clears AA on their own tints. */
+  color: var(--successText);
 }
 .badge-warn {
   background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
@@ -38,7 +44,9 @@
 .badge-danger {
   background:
     linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
-  color: var(--danger);
+  /* --dangerText, the ink role, not --danger, which is also a fill: over this
+     tint the dark theme's --danger is 3.88:1 on the darker card grounds. */
+  color: var(--dangerText);
 }
 .badge-ai {
   background: var(--aiLight);
@@ -172,6 +180,13 @@
 .avatar-lg {
   width: 46px;
   height: 46px;
+  font-size: var(--fs-h2);
+}
+/* The mark of a record PAGE, the mock's 56px: the one picture in the head,
+   beside a display-size name. */
+.avatar-xl {
+  width: 56px;
+  height: 56px;
   font-size: var(--fs-h2);
 }
 
@@ -310,11 +325,18 @@
   width: 75%;
 }
 
+/* Left-aligned in its pane: an empty zone is one sentence and one verb in the
+   place the content will be, not an announcement centred in a void.
+
+   It draws at the same size and in the same ink as the sentence `SurfaceState`
+   shows for the same absence: the two stand in the same place for the same
+   reason, and a reader who met one at 13px and the other at 14px read two
+   kinds of statement where there is one. */
 .empty {
-  text-align: center;
-  padding: 36px 20px;
-  color: var(--textMeta);
-  font-size: 13px;
+  text-align: start;
+  padding: var(--space-5) 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -323,17 +345,48 @@
 .empty-instructional {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: 48px 20px;
+  padding: var(--space-6) 0;
 }
 .empty-title {
   color: var(--textPrimary);
   margin: 0;
 }
+/* An empty group as a plate: the dashed edge says the space is waiting, the
+   recessed ground keeps it under the pane's own rows. */
+.empty-plate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgHover);
+}
+.empty-plate-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--textContent);
+}
+/* What this kind of thing is FOR, under the line saying there is none of it.
+   Held to a measure: a definition set across the full pane width reads as body
+   copy the reader has to work through, and this one is meant to be taken in a
+   glance. */
+.empty-plate-note {
+  margin: 0;
+  max-inline-size: 46ch;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--textMeta);
+  text-wrap: pretty;
+}
 .empty-body {
   max-width: 52ch;
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 .empty-body p {
@@ -380,7 +433,7 @@
   place-items: stretch end;
 }
 .modal-drawer {
-  width: clamp(320px, 24vw, 460px);
+  width: clamp(320px, 36vw, 560px);
   height: 100dvh;
   max-height: 100dvh;
   border-radius: 0;
@@ -735,7 +788,12 @@
   color: var(--textSecondary);
 }
 .section-header h2 {
-  font-size: 15px;
+  /* --fs-lead IS 15px: the same value the raw number held, now named. The
+     app's section titles and the token ramp's --fs-h2 (20px) disagree, and
+     that disagreement is a decision about the house scale rather than
+     something to settle inside one rule — so this names the size it draws
+     and does not change it. */
+  font-size: var(--fs-lead);
   font-weight: 600;
   color: var(--textPrimary);
 }
@@ -762,7 +820,7 @@
 /* A measure, not a width: a description that runs the whole width of a wide
    card is a line the eye loses its place in. */
 .section-header .sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   line-height: var(--lh-snug);
   max-width: 78ch;
@@ -939,8 +997,8 @@
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  padding: 9px 11px;
+  border-radius: var(--r-control);
+  padding: 8px 11px;
   min-block-size: var(--control-h);
   width: 100%;
   outline: none;
@@ -1487,7 +1545,7 @@
 }
 .overflow-menu-items .btn-danger:hover:not(:disabled) {
   background: var(--dangerBg);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 /* A row that is SET — an item holding a region open, a toggle that is on. It
    arrives as `aria-expanded`, as `aria-pressed`, or as the primary variant a
@@ -1528,22 +1586,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  /* Tight on purpose. A reading is four short lines — what it is, the figure,
-     what the figure is drawn from, and a bar — and generous padding around
-     that much text turns a row a reader takes in at a glance into four boxes
-     they have to travel down. ReadingsGrid, whose cards stand free, gives its
-     own more room (readingsgrid.css). */
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  /* The pane, not the card: a reading sits on translucent ground with a
+     hairline, the same surface every zone of a record uses, so a row of them
+     reads as five panes of one page rather than five boxes on it. */
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  background: var(--pane);
   min-width: 0;
   /* A floor under the shortest card, so a reading carrying only a number still
-     keeps the row's line. The row itself stretches every card to the tallest
-     (see .co-readings-grid), which is what makes them equal; this only stops
-     a lone card from collapsing to its text. */
-  min-block-size: 5rem;
+     keeps the row's line. The row itself stretches every card to the tallest,
+     which is what makes them equal; this only stops a lone card from
+     collapsing to its text. 138px is the label, the figure and one basis line
+     with the figure's own air around it. */
+  min-block-size: 138px;
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
@@ -1556,7 +1612,6 @@
 
 /* --textMeta, not --textMuted: this is 11-13px meta/caption text, and
  * --textMeta is the token tuned to hold AA contrast at that size. */
-.stat-card-label,
 .stat-card-detail {
   display: flex;
   flex-direction: column;
@@ -1566,29 +1621,40 @@
   text-wrap: pretty;
 }
 
-/* The label owns the row, and the source badge sits at its far end — beside
- * the name of the reading rather than under the figure, so it qualifies the
- * label without competing with the number. */
+/* The label is the reading's eyebrow (`.t-eyebrow` sets its type) and owns
+ * the row; the source badge sits at its far end — beside the name of the
+ * reading rather than under the figure, so it qualifies the label without
+ * competing with the number. */
 .stat-card-label {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
+  text-wrap: pretty;
 }
 .stat-card-source {
   flex-shrink: 0;
 }
 
-/* The figure, in the display face: it is the one thing on the card a reader
-   compares across the row, and comparing means finding it in the same place at
-   the same weight every time. */
+/* The figure: it is the one thing on the card a reader compares across the
+   row, and comparing means finding it in the same place at the same weight
+   every time. A word (a verdict) takes the display face; a figure takes the
+   mono face through `numeric`, where digits share one width. Both sit at the
+   same size so a row of mixed readings keeps one line. */
 .stat-card-value {
   font-family: var(--f-display);
-  font-size: var(--fs-h2);
+  /* 26px on a wide page, down to 20px where five readings share a narrow row:
+     a money figure with its cents is the widest reading, and a figure that
+     wraps mid-number is worse than one set a little smaller. */
+  font-size: clamp(20px, 1.8vw, 26px);
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-display);
-  line-height: 1.2;
+  line-height: 1.15;
   overflow-wrap: anywhere;
+}
+.stat-card-value.t-mono {
+  font-family: var(--f-mono);
+  letter-spacing: -0.02em;
 }
 
 /* The receipt under a reading. Not a fourth line of it — it is what the
@@ -1608,6 +1674,17 @@
   color: var(--accent);
   white-space: nowrap;
   cursor: pointer;
+  /* 24px tall, which is the AA target floor (WCAG 2.5.8) — the same rung the
+     worklist's rank button takes. A text-only control on a 13px line boxes to
+     about 21px, and axe found this one at 20.9px on the project rollups: under
+     the floor, and with the receipt trigger close enough beside it that the
+     spacing exception does not rescue it either.
+     Centred in an inline-flex rather than padded, so the words stay on the
+     baseline the label opposite them sits on — padding would push the text off
+     that line to buy the same height. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-6);
 }
 .stat-card-open:hover {
   text-decoration: underline;

@@ -10785,6 +10785,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How current the sources behind the numbers are.
+         * @description Source health: which connectors the nightly check could read, how far back each
+         *     reaches, and what it could not open.
+         *
+         *     Gated on `data_coverage`, which admin and ops hold and nobody else does. That is a
+         *     decision rather than an oversight: a rep shown their installation's connector
+         *     health has been handed somebody else's job, and a screen reporting a problem they
+         *     cannot act on teaches them to ignore the screen.
+         *
+         *     Only a `checked` source carries `checked_through`. A date on a stale or unavailable
+         *     one would read as "checked up to then" when nothing was read at all — which is the
+         *     difference between a quiet week and a broken connector.
+         */
+        get: operations["getDataCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open findings this caller can see.
+         * @description What the nightly check found, ordered the way a manager with ten minutes before a
+         *     call needs it: high severity first, then by the money at stake.
+         *
+         *     The list is SCOPED to what the caller can open. The scan itself reads the whole
+         *     pipeline — a duplicate-detection rule seeing one rep's deals would report no
+         *     duplicates — and that decision is paid for here: a finding about a deal the caller
+         *     cannot see is a finding they never meet. There is deliberately no count of what was
+         *     withheld, because a count of what somebody may not read is itself a statement about
+         *     how much of it there is.
+         *
+         *     `claim` and `observed` hold structured values whose keys depend on the exception
+         *     type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
+         *     body: a frozen copy of a protected sentence outlives the protection on its source.
+         */
+        get: operations["listInputChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/assurance/exceptions/{id}/resolve": {
         parameters: {
             query?: never;
@@ -10896,6 +10958,226 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a link that shows a forecast reading to a colleague.
+         * @description Two kinds, and they make different promises. A `live` share re-runs the reading
+         *     under the RECIPIENT's own grants every time it is opened, so it answers what they
+         *     may see today. A `snapshot` share serves a state frozen at a moment, re-summed over
+         *     the rows that recipient may read.
+         *
+         *     A snapshot share never serves the stored totals. The frozen headline covers every
+         *     deal the issuer could see, and handing that number to somebody narrower discloses a
+         *     total about deals they may not read. The recompute is what the kind promises.
+         *
+         *     The token comes back ONCE, in `token`, and is never returned again — the table
+         *     holds only its digest, so a database dump opens nothing. A caller that loses it
+         *     issues another share.
+         *
+         *     `expires_at` is capped server-side. An expiry beyond the ceiling is REFUSED rather
+         *     than quietly shortened: a link the caller believes lasts a year, silently cut to a
+         *     month, fails in front of whoever they sent it to.
+         */
+        post: operations["createForecastShare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/shares/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Close a share link before it expires.
+         * @description Idempotent: revoking a revoked share is the outcome the caller asked for, and
+         *     answers 204 either way.
+         *
+         *     Revocation and expiry are both real and neither replaces the other. An expiry alone
+         *     means a link sent to the wrong address stays open until it lapses; a revocation
+         *     alone means a link nobody remembers stays open forever.
+         */
+        delete: operations["revokeForecastShare"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/shared/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Open a shared forecast view.
+         * @description Answers the reading the share names, computed for the CALLER rather than for whoever
+         *     issued it. A live share re-runs the reading; a snapshot share re-sums the frozen
+         *     contributions the caller may read.
+         *
+         *     Every refusal is the same 404 — an unknown token, an expired one, a revoked one, and
+         *     a share whose issuer has left or lost `forecast:read`. Distinguishing them would tell
+         *     somebody working through guessed tokens which guesses were closer.
+         *
+         *     `withheld` says something was kept back and never how much. A count of what a reader
+         *     may not see is itself a statement about how much of it there is.
+         */
+        get: operations["openForecastShare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/shared/{token}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The rows behind a shared reading, as CSV.
+         * @description One row per deal the CALLER may read, which is the same set the headline above it
+         *     was summed from. A file whose rows and whose total disagree is worse than no file:
+         *     somebody reconciles it by hand and concludes the product is wrong about one of them.
+         *
+         *     A live share exports the rows as they stand; a snapshot share exports the frozen
+         *     contributions. Refusals are the same 404 the read is, for the same reason.
+         *
+         *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
+         *     opening the file reads them as the text the record holds rather than evaluating them.
+         */
+        get: operations["exportForecastShare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What questions this caller may ask, and in what words.
+         * @description The vocabulary a generic analytics question is written in: the populations, the
+         *     fields each can be grouped by, and the fields each can measure.
+         *
+         *     DERIVED from the report catalog and narrowed by the caller's own grants. A field
+         *     somebody may not read is ABSENT here rather than listed and refused later — a
+         *     refusal that says "you may not read that" tells them the column exists.
+         *
+         *     `version` changes when the vocabulary does, including when one seat's grants change.
+         *     A query planned against an older version is refused rather than run, because a plan
+         *     naming a field that has since moved would render SQL against a column that is gone.
+         */
+        get: operations["getAnalyticsSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a question nobody wrote a report for.
+         * @description A typed query over the vocabulary `/analytics/schema` returns. The caller names a
+         *     population, what to group by, what to measure and how to narrow — never SQL, and
+         *     never a field that is not in their own schema.
+         *
+         *     THE ANSWER IS COMPUTED BY THE DATABASE. Nothing here asks a model to add up a
+         *     column: a model's total is plausible and wrong in a way nobody can see, and the
+         *     value of a figure on a revenue screen is that it traces to rows.
+         *
+         *     A group covering fewer records than the installation's floor is WITHHELD, and so is
+         *     enough of the remainder that the withheld group cannot be recovered by subtracting
+         *     the rest from the total. `total_safe` says whether a total may be shown at all;
+         *     `withheld` says something was kept back and never how much.
+         *
+         *     Refusals are typed and each carries the smallest thing that would have worked:
+         *     the fields that exist, the measure that applies, the grouping that clears the floor.
+         */
+        post: operations["runAnalyticsQuery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records one cell of an analytics answer was computed from.
+         * @description A number is worth having only if somebody can open it, and opening it means the
+         *     ROWS rather than a restatement of the formula.
+         *
+         *     The request carries the QUESTION unchanged plus the cell's own group keys. The
+         *     question rather than a handle, because an explanation of a different query than the
+         *     one that produced the number is not an explanation and nothing downstream could
+         *     tell.
+         *
+         *     The explanation reads the identical row set the answer read: same population, same
+         *     filters, same authority narrowings. It never out-sees the number it explains.
+         *
+         *     A cell the privacy floor withheld answers `withheld` with no rows. Handing over
+         *     those records one at a time is the same disclosure at a slower pace.
+         */
+        post: operations["explainAnalyticsCell"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/current": {
         parameters: {
             query?: never;
@@ -10975,6 +11257,37 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct what a commitment says, when it is due, or what it is about.
+         * @description The CALLER's own commitment, on an open week. A rep types a commitment on Monday and
+         *     finds the typo on Tuesday; without this the only way out is to drop the row and write
+         *     a new one, which discards the manager's answer and any help already asked for — the
+         *     two fields on the row that were never the rep's to throw away.
+         *
+         *     Every field is optional and only what is PRESENT changes. `due_on: null` clears the
+         *     date, which is a real state: something to do this week rather than by a day. Sending
+         *     `linked_record: null` unlinks the record.
+         *
+         *     State is not settable here. `PUT .../state` owns the move between open, done and
+         *     dropped because it ties `completed_at` to the state the schema's CHECK binds them
+         *     with, and two writers of that pair would drift.
+         */
+        patch: operations["editWeeklyPlanCommitment"];
         trace?: never;
     };
     "/weekly-plans/commitments/{id}/state": {
@@ -13015,6 +13328,13 @@ export interface components {
              *     The label spells both calendar years a non-January year spans — `FY2026/27` — so
              *     a reader can tell which twelve months a bucket covers without knowing the
              *     convention. A January year is not a span and keeps the plain `2026`.
+             *
+             *     One thing it does NOT carry, and a client storing report filters should know it:
+             *     a SAVED report view holds the bucket's text, so a view saved under one fiscal
+             *     start names a different span after the start moves — or no span at all, since a
+             *     calendar year maps onto parts of two fiscal years. The report still runs and
+             *     still looks right. Whether such a view is re-pointed, invalidated or merely
+             *     warned about is undecided: margince/margince#2569.
              */
             fiscal_year_start_month: number;
             /**
@@ -13073,6 +13393,11 @@ export interface components {
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
              *     once and re-means no stored row.
+             *
+             *     It does not re-point a SAVED report view, which holds the bucket's TEXT and so
+             *     names a different span afterwards. Sending this field is enough to leave those
+             *     views filtering on a span nobody asked for; nothing here reports how many.
+             *     margince/margince#2569.
              */
             fiscal_year_start_month?: number;
             /**
@@ -13749,15 +14074,30 @@ export interface components {
              */
             kind?: string;
             /**
-             * @description The message this thread began with is still readable by you. False where it was erased
-             *     while the verdict stood — which the ledger deliberately survives, because losing the
-             *     verdict would re-open a thread a classifier already held — and false where its content
-             *     is withheld from you.
+             * Format: uuid
+             * @description The message that opened this thread, where this caller may read it — what a
+             *     client opens to show the correspondence rather than only naming it.
              *
-             *     Separate from `subject` because absence has two causes that read differently: no
-             *     message to name, versus a message somebody sent with a blank subject line. It also
-             *     decides whether releasing is offered at all: the release works on your own messages on
-             *     the thread, so with none left there is nothing to share.
+             *     Null when the message was erased while the hold stood (the ledger deliberately
+             *     outlives it) AND null when the content is not this caller's: it is read from the
+             *     joined activity row, which carries the content gate, rather than from the
+             *     ledger's own column. `has_message` says which of the two it is.
+             */
+            readonly activity_id?: string | null;
+            /**
+             * @description The message this thread began with still EXISTS. False only where it was erased while
+             *     the verdict stood — which the ledger deliberately survives, because losing the verdict
+             *     would re-open a thread a classifier already held.
+             *
+             *     Existence, not readability: it stays true for a message whose content is withheld from
+             *     you, and that is the point. Read through the content gate it reported a withheld
+             *     message as erased, which told a holder their evidence had been destroyed while it was
+             *     sitting in the thread they are holding.
+             *
+             *     So `subject` absent with this true is a message you may not read, or one sent with a
+             *     blank subject line; this false is no message at all. It also decides whether releasing
+             *     is offered: the release works on your own messages on the thread, so with none left
+             *     there is nothing to share.
              */
             has_message: boolean;
             /**
@@ -20758,6 +21098,48 @@ export interface components {
             label: string;
             evidence_ref?: components["schemas"]["OrganizationBriefEvidence"];
         };
+        /**
+         * @description Records the caller can name in support of a send, each by id. Evidence is
+         *     CHECKED, never trusted: the engine reads the named record and asks whether it
+         *     actually supports the category claimed — a deal id that is closed, an invoice
+         *     belonging to another organization, or a record the caller cannot see supports
+         *     nothing. Naming a record therefore never widens what a caller may do.
+         *
+         *     Every field is optional. A caller that can name nothing says nothing, and the
+         *     engine resolves the send from its origin instead.
+         */
+        CommunicationEvidence: {
+            /**
+             * Format: uuid
+             * @description The inbound message this send answers.
+             */
+            activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live opportunity this send moves along.
+             */
+            deal_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The invoice or payment event this send is about.
+             */
+            invoice_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live contract whose notice this send carries.
+             */
+            contract_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The recorded consent this send relies on.
+             */
+            consent_event_id?: string | null;
+            /**
+             * Format: uuid
+             * @description A recorded communication basis this send relies on.
+             */
+            basis_id?: string | null;
+        };
         SendEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
@@ -20810,6 +21192,41 @@ export interface components {
              *     outcome is inferred without a valid reference.
              */
             draft_ref?: string | null;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
              *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
@@ -20997,6 +21414,41 @@ export interface components {
              */
             draft_ref?: string | null;
             /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
              *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
              *     `person_consent` for THIS purpose.
@@ -21050,6 +21502,41 @@ export interface components {
              *     (422 `empty_message_body`) rather than staged for a delivery that could only park.
              */
             body: string;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories exist to serve the recipient — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation` — and are refused (422 `invalid`) from an
+             *     ordinary send. They are reserved for the installation's own controller mail,
+             *     which rides a registered template; a caller that could claim one could dress
+             *     marketing as a security warning and reach somebody who has objected.
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`). The send is
              *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
@@ -22489,6 +22976,44 @@ export interface components {
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
         };
+        /** @description One finding from the nightly input check. */
+        InputCheck: {
+            /** Format: uuid */
+            id: string;
+            /** @description Which question noticed it. The key set in `claim` and `observed` depends on this. */
+            type: string;
+            /** @enum {string} */
+            subject_kind: "deal" | "signal" | "offer" | "contract";
+            /** Format: uuid */
+            subject_id: string;
+            /** @enum {string} */
+            severity: "low" | "medium" | "high";
+            /**
+             * Format: int64
+             * @description How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+             */
+            affected_minor?: number;
+            currency?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** @enum {string} */
+            status: "open" | "resolved" | "expired";
+            /** @description What the record says, as structured values only. */
+            claim?: {
+                [key: string]: unknown;
+            };
+            /** @description What the check found, as structured values only. */
+            observed?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            first_seen_at: string;
+            /**
+             * Format: date-time
+             * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+             */
+            last_seen_at: string;
+        };
         ResolveInputCheck: {
             /**
              * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
@@ -22509,6 +23034,15 @@ export interface components {
              * @description When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
              */
             expires_at?: string;
+        };
+        /** @description How current the sources behind the forecast's numbers are. */
+        DataCoverage: {
+            /** Format: uuid */
+            run_id: string;
+            /** Format: date-time */
+            as_of: string;
+            /** @description The sources the run tried, and how far it reached into each. A source absent from this list is one the run did not attempt — different from one it attempted and could not read, which the state field says. */
+            sources: components["schemas"]["ForecastAssuranceSource"][];
         };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
@@ -22633,6 +23167,154 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description A request to issue a share link. */
+        NewForecastShare: {
+            /**
+             * @description `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
+             * @enum {string}
+             */
+            kind: "live" | "snapshot";
+            /** @description Which reading the link opens. */
+            target: string;
+            /**
+             * @default workspace
+             * @enum {string}
+             */
+            scope_kind: "workspace" | "team" | "owner";
+            /**
+             * Format: uuid
+             * @description Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+             */
+            scope_id?: string;
+            /**
+             * Format: uuid
+             * @description The frozen state a snapshot share serves. Required for `snapshot` and refused for `live`, which has none — a snapshot share with no snapshot would fall back to serving live data, a different promise from the one its kind makes.
+             */
+            snapshot_id?: string;
+            /**
+             * Format: date-time
+             * @description When it stops serving. Capped server-side; an expiry beyond the ceiling is refused rather than shortened. Omitted takes the ceiling.
+             */
+            expires_at?: string;
+        };
+        /** @description A share as issued, carrying its token for the only time. */
+        IssuedForecastShare: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "live" | "snapshot";
+            target: string;
+            /** @enum {string} */
+            scope_kind?: "workspace" | "team" | "owner";
+            /** Format: uuid */
+            scope_id?: string;
+            /** Format: uuid */
+            snapshot_id?: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Shown ONCE. The table holds only its digest, so this value cannot be recovered — a caller that loses it issues another share. */
+            token: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description What one caller reads through a share.
+         *
+         *     The numbers are about THEM. A snapshot share re-sums the frozen contributions this
+         *     caller may read rather than serving the stored totals, so two colleagues opening
+         *     the same link can correctly see different figures.
+         */
+        SharedForecastView: {
+            /**
+             * @description Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+             * @enum {string}
+             */
+            kind: "live" | "snapshot";
+            target: string;
+            /**
+             * Format: date-time
+             * @description The instant a snapshot share's state describes. Absent on a live share.
+             */
+            as_of?: string;
+            readings: components["schemas"]["ForecastReadings"];
+            /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
+            withheld: boolean;
+        };
+        /** @description The populations and fields one caller may ask about. */
+        AnalyticsSchema: {
+            /** @description Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run. */
+            version: string;
+            entities: components["schemas"]["AnalyticsEntity"][];
+        };
+        AnalyticsEntity: {
+            /** @description The population, by name. */
+            name: string;
+            /** @description The fields this population can be grouped by. */
+            group_by: string[];
+            /** @description The fields this population can be aggregated over. */
+            measures: string[];
+        };
+        /** @description One question, in the vocabulary the schema returned. */
+        AnalyticsQuery: {
+            /** @description The population, by name. */
+            entity: string;
+            /** @description The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one. */
+            group_by?: string[];
+            /** @description What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question. */
+            measures: components["schemas"]["AnalyticsMeasure"][];
+            filters?: components["schemas"]["AnalyticsFilter"][];
+            /** @description How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record. */
+            limit?: number;
+        };
+        AnalyticsMeasure: {
+            /**
+             * @description The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+             * @enum {string}
+             */
+            fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+            /** @description What to aggregate. Required for every fn but `count`. */
+            field?: string;
+            /** @description The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL. */
+            as?: string;
+        };
+        AnalyticsFilter: {
+            field: string;
+            /** @enum {string} */
+            op: "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "is_null" | "is_not_null";
+            /** @description The value to compare against, bound as a parameter. Omitted exactly for `is_null` and `is_not_null`; given to either, the query is refused rather than having it silently dropped. */
+            value?: unknown;
+        };
+        AnalyticsAnswer: {
+            /** @description What each value in a row means, in order. */
+            columns: string[];
+            /** @description One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own. */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** @description Whether anything was kept back. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
+            withheld: boolean;
+            /** @description Whether a total over these rows may be shown. False once anything is withheld, because the total minus the shown groups is the withheld remainder. */
+            total_safe: boolean;
+            /** @description The vocabulary this was asked in. */
+            schema_version: string;
+        };
+        /** @description One cell of an answer, named by the question and its group keys. */
+        AnalyticsExplainRequest: {
+            query: components["schemas"]["AnalyticsQuery"];
+            /** @description The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none. */
+            group?: unknown[];
+        };
+        AnalyticsExplanation: {
+            columns: string[];
+            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** @description The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all. */
+            withheld: boolean;
+            /** @description The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why. */
+            truncated: boolean;
+        };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
          *     WeeklyReview beside it.
@@ -22702,12 +23384,30 @@ export interface components {
             due_on?: string | null;
         };
         /**
+         * @description What a rep may correct about their own commitment. Only the fields PRESENT change —
+         *     an absent field is left alone, which is what lets a client send a new label without
+         *     also having to restate the due date it is not touching.
+         */
+        WeeklyPlanCommitmentEdit: {
+            label?: string;
+            /**
+             * @description Both halves or neither, as on create. Null unlinks the record, which is how a
+             *     commitment stops being about one without being rewritten.
+             */
+            linked_record?: components["schemas"]["WeeklyPlanLink"] | null;
+            /**
+             * Format: date
+             * @description Null clears the date — something to do this week, rather than by a day.
+             */
+            due_on?: string | null;
+        };
+        /**
          * @description The closed set of RBAC-governed object types (features/04 §1).
          *     The web client types every capability check against this enum, which openapi-typescript renders as a string union — so a misspelled object is a compile error there.
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -23156,8 +23856,11 @@ export interface components {
             };
             group_by?: string[];
             aggregates?: {
-                /** @enum {string} */
-                fn: "count" | "sum" | "avg" | "min" | "max";
+                /**
+                 * @description `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
+                 * @enum {string}
+                 */
+                fn: "count" | "sum" | "avg" | "min" | "max" | "median" | "p75";
                 field?: string | null;
                 as?: string | null;
             }[];
@@ -23233,6 +23936,8 @@ export interface components {
             score?: number | null;
             /** @description For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
+            /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /**
              * @description Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
              * @enum {string|null}
@@ -26975,8 +27680,9 @@ export interface components {
              *
              *     The idle window here is DELIBERATELY shorter than the product-wide `stalled`
              *     threshold: a queue that only speaks once a deal meets the stalled bar is
-             *     reporting a two-month-old fact rather than warning. `detail` names the window
-             *     actually used, so the card never implies a patience the server did not apply.
+             *     reporting a two-month-old fact rather than warning. `quiet_days` carries the
+             *     window actually used, so the card never implies a patience the server did not
+             *     apply.
              *
              *     Absent — not empty — on an installation whose feed does not read deals.
              */
@@ -26987,9 +27693,9 @@ export interface components {
              *
              *     A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
              *     a contact carrying no open deal never reaches that lane, and those are exactly
-             *     the relationships that lapse unnoticed. `detail` carries the silence in days,
-             *     from the same §4 derivation the contact's own page shows, so the two surfaces
-             *     cannot come to disagree about when somebody went quiet.
+             *     the relationships that lapse unnoticed. `quiet_days` carries the silence, from
+             *     the same §4 derivation the contact's own page shows, so the two surfaces cannot
+             *     come to disagree about when somebody went quiet.
              *
              *     Only relationships this reader actually had: a contact nobody here ever spoke
              *     to has not gone quiet, and a lane that said otherwise would report every
@@ -27242,8 +27948,40 @@ export interface components {
              *     and the client writes the line in the reader's own.
              */
             title?: string;
-            /** @description One supporting line: what changed, or what the evidence said. */
+            /**
+             * @description One supporting line: what changed, or what the evidence said. PROSE, in a
+             *     language a reader reads — a bounce reason, a park reason, the mailbox that
+             *     stopped syncing, what an AI task was about.
+             *
+             *     It is not a channel for anything else. Three producers used the field as one,
+             *     each with its own reader parsing the value back out: two wrote a bare day count
+             *     and one wrote internal marker words. So the field meant "a sentence" on twelve
+             *     sources and something else on three, and a client drawing it faithfully printed
+             *     a naked "90" under one title and "machine_sender" under another.
+             *
+             *     Both now travel typed — `quiet_days` and `staged` below — and the client writes
+             *     the sentence in the reader's own language.
+             *
+             *     ONE source is still an exception, and a client must know it: `sync_health` fills
+             *     this field with its own vocabulary — the affected object classes, the failure
+             *     class, or the budget band — for a client to write a sentence from. Those are
+             *     words like `shed` and `deal, person`. A client that has not written that
+             *     sentence draws nothing for that source rather than the value.
+             */
             detail?: string;
+            staged?: components["schemas"]["AttentionStagedFacts"];
+            /**
+             * @description How many days a deal or a relationship has been idle, where the producing lane
+             *     measures one. Sent by `deal_at_risk` and `relationship_decay`.
+             *
+             *     Typed rather than written into `detail` because it is a number the queue READS
+             *     and not only something it shows: it becomes the row's `quiet_days` reason, the
+             *     deal card's own figure, and the age each row carries into the ordering. A number
+             *     parsed back out of a sentence reads as zero the day somebody rewords the
+             *     sentence, and every one of those uses would go quietly wrong together.
+             */
+            quiet_days?: number | null;
+            relationship?: components["schemas"]["AttentionRelationshipFacts"];
             /**
              * @description Which underlying CONDITION this row reports, for a surface that groups repeated
              *     failures of one thing into one row. Two failures of one broken automation carry
@@ -27253,8 +27991,30 @@ export interface components {
              *     meaning. A row that reports no shared condition omits it. Present only on the
              *     system-health sources, where "the same thing broke again" is a question a reader
              *     has.
+             *
+             *     `cause_label` is the half a reader sees. The two are separate because they must
+             *     be able to disagree: a rule's NAME is mutable and not unique, so an identity
+             *     built from it would merge two rules that happen to share a name and split one
+             *     that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
              */
             cause_ref?: string;
+            /**
+             * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
+             *     stopped.
+             *
+             *     Minted by the LANE that mints the cause, because only that lane knows which of
+             *     the records it read is the condition's name. It is deliberately not derived from
+             *     a sampled member's title: the members of a group are alike, not identical, and
+             *     one member's subject describes that member rather than the thing they share.
+             *
+             *     ABSENT is a real answer, not a gap. A lane whose only candidate is a vocabulary
+             *     key sends nothing rather than a plausible-looking one — the AI-work lane is that
+             *     case, since its task kinds are generated enum keys, and a rep reading
+             *     "site_triage failed 8 times" is being shown the vocabulary this field exists to
+             *     replace. A group with no words is named by its kind alone, and a client never
+             *     falls back to rendering `cause_ref`.
+             */
+            cause_label?: string;
             /** @description Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first. */
             rank?: number;
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
@@ -27262,6 +28022,16 @@ export interface components {
             subject?: components["schemas"]["AttentionSubject"];
             pair?: components["schemas"]["AttentionPair"];
             deal?: components["schemas"]["AttentionDealFacts"];
+            /**
+             * Format: uuid
+             * @description Who holds this task, null when nobody has taken it. Sent by `task`.
+             *
+             *     The lane serves three scopes and only one is the reader's own queue: an
+             *     unassigned sweep and a named colleague's queue both put work on the page that
+             *     is not the reader's. Without this those rows read identically to their own,
+             *     and the row nobody owns — the whole point of that scope — cannot say so.
+             */
+            assignee_id?: string | null;
             /**
              * Format: date-time
              * @description When this is due (tasks), or when it lapses (approvals).
@@ -27310,6 +28080,24 @@ export interface components {
             evidence: components["schemas"]["AttentionPairEvidence"][];
         };
         /**
+         * @description What the verdict engine already worked out about a staged contact decision, so a
+         *     surface can group alike questions without reading the proposal a second time.
+         *
+         *     Read from the payload the engine staged rather than re-derived, because a second
+         *     opinion would put one decision in two groups across two reads.
+         *
+         *     Typed because these are FLAGS a client tests, not words a reader sees. They used to
+         *     ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+         *     a reader doing a substring match to get them back — which made the supporting line
+         *     undrawable on this source and would have shown a rep an internal token.
+         */
+        AttentionStagedFacts: {
+            /** @description The address is a sending system rather than a person. */
+            machine_sender?: boolean;
+            /** @description The address's domain already names a company in this workspace. */
+            known_company?: boolean;
+        };
+        /**
          * @description The deal behind a `deal_at_risk` item: the facts its card states, so a client
          *     draws value and ownership without a second read per row. Sent only for
          *     `source: deal_at_risk`. The stage travels as its id rather than a label — the
@@ -27327,6 +28115,34 @@ export interface components {
             currency?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+        };
+        /**
+         * @description What the lapsed relationship behind a `relationship_decay` item was WORTH before
+         *     it went quiet. Sent only for `source: relationship_decay`.
+         *
+         *     Without it every lapsed contact reads alike, and the rep's strongest relationship
+         *     going quiet is the row that most deserves to be told apart from a cc who has
+         *     drifted. Both facts were already in the lane's hand and discarded: the band is
+         *     scored from the edge the lane loads, and the deal is one batched read over the
+         *     candidates it already narrowed to.
+         *
+         *     The band travels rather than the raw score, because a number between 0 and 100
+         *     invites a client to draw a precision the §4 arithmetic does not claim.
+         */
+        AttentionRelationshipFacts: {
+            /**
+             * @description The relationship's band at the read instant, from the same §4 scoring the
+             *     contact's own page shows — computed on read rather than stored, so the two
+             *     surfaces cannot come to disagree about who this person is.
+             * @enum {string}
+             */
+            strength?: "none" | "weak" | "moderate" | "strong";
+            /**
+             * @description Whether money this reader can see still rests on this contact. Absent is not
+             *     "no": a contact with an open deal the reader may not see reads the same as one
+             *     with none, which is the answer every row-scoped read gives.
+             */
+            has_open_deal?: boolean;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {
@@ -27605,8 +28421,11 @@ export interface components {
             more_available: boolean;
         };
         /**
-         * @description The day in figures, for the one line above the queue. Each count is of items the
-         *     queue actually CARRIES, so a number here and the rows below it cannot disagree.
+         * @description The day in figures, for the one line above the queue. Every count is over the
+         *     candidates this read WEIGHED — the whole assembled day, before the page cut and
+         *     before any category narrowing — so the sentence is one scope and does not move as
+         *     the reader pages. A page-scoped band beside a day-scoped `total` read as a
+         *     breakdown of that total and was not one.
          *
          *     These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
          *     `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -27629,7 +28448,7 @@ export interface components {
             in_play?: number;
             /** @description Routine work: decisions that block nothing, and data hygiene. */
             lower_priority: number;
-            /** @description How many items the queue carries. */
+            /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
             total: number;
             /**
              * Format: int64
@@ -27880,7 +28699,27 @@ export interface components {
              *     parsed. Absent on a row that reports no shared condition.
              */
             cause_ref?: string;
-            /** @description One supporting line. */
+            /**
+             * @description What `cause_ref` identifies, in words — the automation's name, the mailbox that
+             *     stopped. This is the half a reader sees; the identity beside it is not drawable.
+             *
+             *     Present wherever the producing lane named the condition. A row whose lane named
+             *     none is described by its kind alone.
+             */
+            cause_label?: string;
+            /**
+             * @description One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
+             *     stopped, what an AI task was about.
+             *
+             *     Not a channel for anything else. A value the queue itself reads travels typed
+             *     beside this field, never inside it: a figure parsed back out of a sentence reads
+             *     as zero the day somebody rewords the sentence.
+             *
+             *     ONE source is an exception a client must know: `sync_health` fills this with its
+             *     own vocabulary — the affected object classes, the failure class, the budget band
+             *     — for a client to write a sentence from. Those are words like `shed`. A client
+             *     that has not written that sentence draws nothing for that source.
+             */
             detail?: string;
             /** @description The facts that put this item at this level, in the order they were weighed. */
             because: components["schemas"]["WorklistReason"][];
@@ -27893,6 +28732,8 @@ export interface components {
              */
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
+            /** @description The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             deal?: components["schemas"]["WorklistDealFacts"];
             batch?: components["schemas"]["WorklistBatch"];
             /**
@@ -28119,16 +28960,34 @@ export interface components {
             /** @description A few members, named, so the group can be checked before it is answered. */
             sample?: string[];
             /**
-             * @description What the members have in common, for a `system_incident`: the rule's name,
-             *     the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
-             *     rather than only how often.
+             * @description WHICH condition the members share, for a `system_incident` — the identity the
+             *     group was formed on, carried so a client can tell two groups apart and find
+             *     the same row again on a re-read.
+             *
+             *     An opaque identity, never rendered. It is a `cause_ref` and reads like one
+             *     (`automation_run:<uuid>`), so a client that put it on screen would show a rep
+             *     "automation_run:01a0… failed 12 times". `label` is the half to draw.
              */
             cause?: string;
+            /**
+             * @description What `cause` identifies, in words — the automation's name, the mailbox that
+             *     stopped. This is what a row says.
+             *
+             *     Absent where the lane that formed the group minted no name for the condition.
+             *     A client then names the group by its kind alone and NEVER falls back to
+             *     `cause`, because an identity on screen is worse than a vaguer sentence: the
+             *     reader cannot act on it and cannot tell it from a bug.
+             */
+            label?: string;
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
-         *     `amount_minor × win_probability`, converted to the installation's base currency —
-         *     the only figure by which two deals in different currencies may be compared.
+         *     `amount_minor` converted to the installation's base currency — the only figure by
+         *     which two deals in different currencies may be compared. It is not weighted by
+         *     `win_probability`: the pipeline this row comes from does not read a deal's stage,
+         *     so the two fields are independent facts rather than one computed from the other,
+         *     and a reader must not multiply them together expecting the product to equal a
+         *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
             /** Format: uuid */
@@ -28141,7 +29000,7 @@ export interface components {
             win_probability?: number | null;
             /**
              * Format: int64
-             * @description Expected revenue in the base currency. Null when the amount or the rate is unknown.
+             * @description The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
              */
             expected_minor_base?: number | null;
             /** Format: date */
@@ -45932,6 +46791,59 @@ export interface operations {
             };
         };
     };
+    getDataCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The most recent run's source health. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataCoverage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No run has completed yet. A fresh installation has not been checked. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listInputChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open findings, most material first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InputCheck"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     resolveInputCheck: {
         parameters: {
             query?: never;
@@ -46011,6 +46923,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastCall"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewForecastShare"];
+            };
+        };
+        responses: {
+            /** @description The share, with its token shown for the only time. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedForecastShare"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revokeForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The share no longer serves. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    openForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reading, as this caller may read it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedForecastView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportForecastShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token handed out when the share was issued. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rows, as CSV. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getAnalyticsSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsSchema"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    runAnalyticsQuery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyticsQuery"];
+            };
+        };
+        responses: {
+            /** @description The answer, as this caller may read it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsAnswer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainAnalyticsCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyticsExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this caller may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -46113,6 +47203,34 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    editWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPlanCommitmentEdit"];
+            };
+        };
+        responses: {
+            /** @description Corrected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

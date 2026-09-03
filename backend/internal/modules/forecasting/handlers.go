@@ -23,7 +23,11 @@ import (
 // composition layer. The boolean says whether anything was withheld — and it is
 // a boolean and never a count, because a count of what a caller may not read is
 // itself a statement about how much of it there is.
-type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope) ([]Deal, bool, error)
+//
+// asOf and baseCurrency travel with the request because the conversion needs
+// both: a rate is looked up as of a DAY, and there is no base amount without a
+// currency to convert into.
+type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, bool, error)
 
 // PeriodFunc resolves the installation's window for a day, and the currency its
 // money is counted in. Injected for the same reason: the fiscal settings belong
@@ -71,7 +75,7 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		deals, limited, err := h.deals(ctx, tx, period, scope)
+		deals, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
@@ -83,7 +87,7 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		out = readingsToWire(period, scope, readings, baseCurrency, at)
+		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
 		out.ScopeLimited = &limited
 
 		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
@@ -182,7 +186,11 @@ func callScopeFromBody(body crmcontracts.NewForecastCall) (Scope, error) {
 	return scope, nil
 }
 
-func readingsToWire(
+// ReadingsToWire is exported so a share can render the SAME envelope a direct
+// read renders. A second converter would be a second answer to "what does a
+// reading look like on the wire", and the two would drift the first time a
+// field was added.
+func ReadingsToWire(
 	period Period, scope Scope, in Readings, baseCurrency string, asOf time.Time,
 ) crmcontracts.ForecastReadings {
 	out := crmcontracts.ForecastReadings{

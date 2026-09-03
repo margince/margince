@@ -36,6 +36,12 @@ type Store struct {
 	// address and queues nothing; the coordinates are what an installation can
 	// offer, the address is what the caller asked for.
 	geocodeEnqueue GeocodeEnqueue
+	// recomputeAudience re-derives a captured activity's audience after this
+	// store has filed it under a record. The activities module owns the
+	// activity table and so owns that derivation; compose injects it, because
+	// people never imports a sibling. Nil files links and derives nothing —
+	// which is what every fixture is until it says otherwise.
+	recomputeAudience AudienceRecompute
 	// vatCheckEnqueue queues a VIES consultation when a VAT number is written.
 	// Nil is a real composition, for geocodeEnqueue's reason: the number is
 	// what the page stated, the verification is what an installation can offer.
@@ -101,6 +107,17 @@ func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
 // every writer gets it without any of them having to remember.
 func (s *Store) WithGeocodeEnqueue(enqueue GeocodeEnqueue) *Store {
 	s.geocodeEnqueue = enqueue
+	return s
+}
+
+// AudienceRecompute re-derives one captured activity's audience. See the
+// field above for why it is injected rather than called directly.
+type AudienceRecompute func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error
+
+// WithAudienceRecompute wires the derivation the cohort repair runs over the
+// activities it has just filed under a person.
+func (s *Store) WithAudienceRecompute(recompute AudienceRecompute) *Store {
+	s.recomputeAudience = recompute
 	return s
 }
 

@@ -426,25 +426,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (Qu
 // person could mint and redeem a confirmation the subject never saw. Those rows
 // stay on the proof log as the history they are, and authorize no send.
 func recordedState(ctx context.Context, tx pgx.Tx, personID, purposeID string, requiresDOI bool) (string, bool, error) {
-	var state string
-	var granted bool
-	err := tx.QueryRow(ctx, `
-		SELECT pc.state,
-		       pc.state = 'granted' AND (NOT $3::boolean OR EXISTS (
-		         SELECT 1 FROM consent_event ce
-		         WHERE ce.person_id = pc.person_id AND ce.purpose_id = pc.purpose_id
-		           AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL
-		           AND ce.issuance_trigger IS NOT NULL))
-		FROM person_consent pc
-		WHERE pc.person_id = $1 AND pc.purpose_id = $2`,
-		personID, purposeID, requiresDOI).Scan(&state, &granted)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return string(StateUnknown), false, nil
-	}
-	if err != nil {
-		return "", false, fmt.Errorf("read the recorded consent state: %w", err)
-	}
-	return state, granted, nil
+	return recordedStateFor(ctx, tx, subjectColumnPerson, personID, purposeID, requiresDOI)
 }
 
 // existingCustomerFlag reads the UWG §7(3) flag. The DDL already refuses a row

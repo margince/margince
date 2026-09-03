@@ -5,10 +5,7 @@ package webread
 
 import (
 	"context"
-	"encoding/xml"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -49,6 +46,26 @@ type Page struct {
 	// leaving the page's own registrable domain. A caller follows it only
 	// after finding nothing else to read — see MetaRefreshOnly.
 	Refresh string
+	// HeadText is what the <head> says this page is ABOUT, in document order:
+	// the meta description and the Open Graph title and description, each at
+	// most headTextRunes long.
+	//
+	// Kept apart from Text, and that separation is the point. Text is
+	// StripTags' output and evidence snippets are matched against it, so
+	// folding head prose in would silently invalidate every stored snippet.
+	// This is the same page's own claim about itself, offered to a caller that
+	// wants it — which for a client-rendered site is the only prose the server
+	// ever sends.
+	HeadText []string
+	// ExternalScripts counts the <script src=…> tags the page loads, and
+	// ModuleScripts how many of those are ES modules.
+	//
+	// The module count is the one that answers "is this an application shell":
+	// a parked domain carries analytics and registrar scripts too, so the plain
+	// count cannot separate a squatter's placeholder from a real site whose
+	// words a browser assembles. A caller pairs ModuleScripts with a text floor.
+	ExternalScripts int
+	ModuleScripts   int
 }
 
 // MetaRefreshOnly reports whether this page is a redirect trampoline: it
@@ -126,25 +143,31 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	}
 	body := string(got.body)
 	head := extractHeadAssets(body, base)
+	external, modules := countScripts(body)
 	return Page{
-		URL:         rawURL,
-		FinalURL:    base.String(),
-		Text:        StripTags(body),
-		Links:       extractLinks(body, base),
-		Bytes:       len(body),
-		OGImage:     head.ogImage,
-		Icons:       head.icons,
-		Refresh:     head.refresh,
-		Fingerprint: fingerprintOf(got.header, body, base),
+		URL:             rawURL,
+		FinalURL:        base.String(),
+		Text:            StripTags(body),
+		Links:           extractLinks(body, base),
+		Bytes:           len(body),
+		OGImage:         head.ogImage,
+		Icons:           head.icons,
+		Refresh:         head.refresh,
+		HeadText:        head.text,
+		ExternalScripts: external,
+		ModuleScripts:   modules,
+		Fingerprint:     fingerprintOf(got.header, body, base),
 	}, nil
 }
 
 // headAssets is what a page's <head> declared about itself: its visual
-// identity, and where it says the reader should go instead.
+// identity, what it says it is about, and where it says the reader should go
+// instead.
 type headAssets struct {
 	ogImage string
 	icons   []IconRef
 	refresh string
+	text    []string
 }
 
 // extractHeadAssets harvests what a page's <head> declares about itself: its
@@ -156,6 +179,7 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 	tokenizer := html.NewTokenizer(strings.NewReader(rawHTML))
 	var head headAssets
 	seen := map[string]bool{}
+	seenText := map[string]bool{}
 	for {
 		tokenType := tokenizer.Next()
 		if tokenType == html.ErrorToken {
@@ -185,6 +209,9 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			}
 			if found, ok := refreshFrom(attrs, base); ok && head.refresh == "" {
 				head.refresh = found
+			}
+			if found, ok := headTextFrom(attrs, seenText); ok {
+				head.text = append(head.text, found)
 			}
 		case "link":
 			if icon, ok := iconFrom(tokenizer, base); ok && !seen[icon.URL] {
@@ -383,72 +410,6 @@ func resolveLink(base *url.URL, href string) (string, bool) {
 	}
 	abs.Fragment = ""
 	return abs.String(), true
-}
-
-// FetchSitemap retrieves <origin>/sitemap.xml (robots-checked like any path)
-// and returns its <loc> entries. Both shapes parse: a urlset yields page URLs;
-// a sitemapindex yields the CHILD SITEMAP URLs as-is — deliberately not
-// recursed, the crawl's discovery budget does not chase nested indexes, and
-// the caller is expected to ignore entries that are sitemaps rather than
-// pages. A missing sitemap (4xx) is an empty list with no error: most sites
-// have none, absence is normal.
-func (f *Fetcher) FetchSitemap(ctx context.Context, origin string) ([]string, error) {
-	sitemapURL := strings.TrimSuffix(origin, "/") + "/sitemap.xml"
-	parsed, err := url.Parse(sitemapURL)
-	if err != nil || parsed.Host == "" {
-		return nil, fmt.Errorf("webread: %q is not a fetchable origin", origin)
-	}
-	allowed, err := f.pathAllowed(ctx, parsed)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, fmt.Errorf("%w: %s", ErrRobotsDisallowed, parsed.Path)
-	}
-
-	body, status, _, err := f.getRaw(ctx, sitemapURL, "")
-	if err != nil {
-		return nil, err
-	}
-	switch {
-	case status == http.StatusOK:
-		return parseSitemapLocs(body)
-	case status >= 400 && status < 500:
-		return nil, nil // no sitemap declared — absence is normal
-	default:
-		return nil, fmt.Errorf("webread: sitemap.xml answered %d", status)
-	}
-}
-
-// parseSitemapLocs collects every <loc>'s text. Walking the token stream
-// instead of unmarshalling a struct lets one pass read both the urlset and
-// sitemapindex shapes — the element carrying a <loc> differs, the <loc> does
-// not.
-func parseSitemapLocs(body string) ([]string, error) {
-	decoder := xml.NewDecoder(strings.NewReader(body))
-	var locs []string
-	inLoc := false
-	for {
-		token, err := decoder.Token()
-		if errors.Is(err, io.EOF) {
-			return locs, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("webread: sitemap.xml is not XML: %w", err)
-		}
-		switch element := token.(type) {
-		case xml.StartElement:
-			inLoc = element.Name.Local == "loc"
-		case xml.EndElement:
-			inLoc = false
-		case xml.CharData:
-			if inLoc {
-				if loc := strings.TrimSpace(string(element)); loc != "" {
-					locs = append(locs, loc)
-				}
-			}
-		}
-	}
 }
 
 // SameRegistrableDomain reports whether two URLs' hostnames share an eTLD+1

@@ -15,15 +15,18 @@ import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
+import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import {
   formatDateTime,
   formatMoneyOrAbsent,
+  formatNumber,
   MONEY_ABSENT,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ForecastView } from "./analytics.forecast";
+import { ShareViewButton } from "./analytics.share";
 import {
   OverlayUnavailable,
   problemMessageOf,
@@ -31,7 +34,9 @@ import {
   throwProblem,
   useSorMode,
 } from "./common";
+import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
+import "./analytics.css";
 
 // Analytics (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
 // (unweighted next to weighted), forecast (category readings, each showing
@@ -110,6 +115,22 @@ export function sectionFromAddress(segment: string | undefined): Section {
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 type Derivation = components["schemas"]["ReportDerivation"];
 type Stage = components["schemas"]["Stage"];
+
+// A figure that names a set, drawn as the way into it. The count stays the
+// text — a reader is looking for the number, not for a verb — and the link is
+// what the number now is.
+function CountLink({
+  count,
+  href,
+  title,
+}: Readonly<{ count: number; href: string; title: string }>) {
+  const { locale } = useLocale();
+  return (
+    <a className="link-button" href={href} title={title}>
+      {formatNumber(count, locale)}
+    </a>
+  );
+}
 
 // The report engine's own name for the currency dimension. Spelled once: it
 // reaches the request, every row read and the column header, and a typo in any
@@ -359,11 +380,47 @@ function ForecastStrip({
   );
 }
 
+/**
+ * The group keys the report answered with exactly ONE currency row.
+ *
+ * Every money report groups by currency as well as by its own dimension, so a
+ * company trading in two currencies is two rows with two counts. `/deals` reads
+ * no `currency` dial — the parameter does not exist on the endpoint — so a link
+ * beside such a row can narrow to the company but not to the row, and it opens
+ * the union of both. The figure promises one set and the door opens a larger
+ * one, which is the defect a figure-as-door has to avoid to be worth drawing.
+ *
+ * So the door survives exactly where it is exact. A key with a single currency
+ * row has no sibling row to be confused with, and `organization_id` alone
+ * addresses precisely the deals that row counted. A key with two or more gets
+ * the plain number — the same answer this table already gives a row whose
+ * company is "none".
+ *
+ * Sound because a report result is complete: `ReportResult` carries no cursor
+ * and no truncation flag, so the rows in hand are all the rows there are. Were
+ * it ever paged, a key whose second currency row fell off the page would look
+ * single-currency here and get a door that lies.
+ */
+function singleCurrencyKeys(keys: readonly string[]): ReadonlySet<string> {
+  const rowsPerKey = new Map<string, number>();
+  for (const key of keys) {
+    rowsPerKey.set(key, (rowsPerKey.get(key) ?? 0) + 1);
+  }
+  return new Set(
+    [...rowsPerKey].filter(([, rows]) => rows === 1).map(([key]) => key),
+  );
+}
+
 function CompanyTable({
   rows,
   locale,
 }: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
   const t = useT();
+  const addressable = singleCurrencyKeys(
+    rows
+      .map((row) => row.organization_id)
+      .filter((id): id is string => typeof id === "string"),
+  );
   return (
     <DataTable
       label={t("analytics.reportOpenByCompany")}
@@ -381,7 +438,11 @@ function CompanyTable({
             typeof row.organization_id === "string" ? (
               <EntityRef kind="organization" id={row.organization_id} />
             ) : (
-              ""
+              // Deals with no company at all, grouped into one row. An empty
+              // cell read as a rendering fault; this says what the row is, and
+              // it is a fact about the data rather than a permission — so it
+              // says "none", which no other state is allowed to claim.
+              <span className="t-caption">{t("analytics.noCompany")}</span>
             ),
         },
         {
@@ -394,7 +455,24 @@ function CompanyTable({
         {
           key: "count",
           header: t("analytics.openDeals"),
-          render: (row: ReportRow) => String(rowCount(row, "deal_count")),
+          render: (row: ReportRow) =>
+            typeof row.organization_id === "string" &&
+            addressable.has(row.organization_id) ? (
+              // `status`, because this report counts OPEN deals and the list
+              // otherwise answers with every status the company ever had.
+              <CountLink
+                count={rowCount(row, "deal_count")}
+                href={dealsFilteredBy("organization_id", row.organization_id, {
+                  status: "open",
+                })}
+                title={t("analytics.openCompanyDeals")}
+              />
+            ) : (
+              // The same figure as the link branch above, in the same notation:
+              // whether a row can be opened is not a reason for its count to be
+              // written differently.
+              formatNumber(rowCount(row, "deal_count"), locale)
+            ),
         },
         {
           key: "raw",
@@ -469,6 +547,9 @@ function StageTable({
 }>) {
   const t = useT();
   const aggregates = buildStageAggregates(rows, stages);
+  const addressable = singleCurrencyKeys(
+    aggregates.map((aggregate) => aggregate.stageId),
+  );
   return (
     <DataTable
       label={t("analytics.reportDeals")}
@@ -488,7 +569,20 @@ function StageTable({
         {
           key: "count",
           header: t("analytics.count"),
-          render: (row: StageAgg) => String(row.count),
+          // No `status` dial here, unlike the company table: a won or lost
+          // deal keeps the stage_id it closed in, so this report's stage rows
+          // are not open deals by construction and narrowing to `open` would
+          // hand back a shorter list than the figure counted.
+          render: (row: StageAgg) =>
+            addressable.has(row.stageId) ? (
+              <CountLink
+                count={row.count}
+                href={dealsFilteredBy("stage_id", row.stageId)}
+                title={t("analytics.openStageDeals", { stage: row.stageName })}
+              />
+            ) : (
+              formatNumber(row.count, locale)
+            ),
         },
         {
           key: "raw",
@@ -526,7 +620,9 @@ function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
       {derivation.rows.length === 0 ? (
-        <p className="t-caption">{t("common.empty")}</p>
+        <SurfaceState state="empty" emptyLabel={t("common.empty")}>
+          {null}
+        </SurfaceState>
       ) : (
         <DataTable
           label={t("explain.sources")}
@@ -741,17 +837,23 @@ export function AnalyticsScreen() {
     },
   });
 
+  // Sharing sits beside the tabs rather than inside a section, because the
+  // thing being shared is the SECTION the reader is on — a button that moved
+  // with the content would read as sharing one card.
   const header = (
-    <RecordTabs
-      options={SECTIONS}
-      value={section}
-      onChange={setSection}
-      labels={{
-        forecast: t("analytics.sectionForecast"),
-        pipeline: t("analytics.sectionPipeline"),
-      }}
-      label={t("analytics.sections")}
-    />
+    <div className="analytics-header">
+      <RecordTabs
+        options={SECTIONS}
+        value={section}
+        onChange={setSection}
+        labels={{
+          forecast: t("analytics.sectionForecast"),
+          pipeline: t("analytics.sectionPipeline"),
+        }}
+        label={t("analytics.sections")}
+      />
+      {section === "forecast" && <ShareViewButton target="forecast" />}
+    </div>
   );
 
   if (overlay) {

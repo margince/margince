@@ -359,7 +359,13 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		}}
 	}
 	id, err := createPerson(ctx, tx, match, PersonSpec{
-		FullName:            name,
+		FullName: name,
+		// A promoted lead was acquired however the LEAD was, and a lead
+		// carries no acquisition record yet. Claiming one here would invent
+		// the fact; unknown_legacy says plainly that nobody has established
+		// it, which is what the person's file should show until a lead
+		// carries its own.
+		Acquisition:         Acquisition{Kind: AcquiredUnknownLegacy},
 		Title:               lead.Title,
 		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
 		ConvertedFromLeadID: &leadID,

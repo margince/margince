@@ -169,9 +169,7 @@ function IdentityRows({
     // what a reader opens this card to confirm.
     return (
       <EmptyState>
-        <p className="t-small" data-testid="owner-identities-empty">
-          {t("ownerIdentities.empty")}
-        </p>
+        <p data-testid="owner-identities-empty">{t("ownerIdentities.empty")}</p>
       </EmptyState>
     );
   }

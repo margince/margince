@@ -92,6 +92,10 @@ type DealFigures struct {
 	AmountMinor       *int64
 	Currency          string
 	ExpectedCloseDate *time.Time
+	// CloseOverdue is CloseIsOverdue's own verdict for this deal — the ONE
+	// place that comparison is made (closedate.go), called here rather than
+	// re-spelled. Meaningless where ExpectedCloseDate is nil.
+	CloseOverdue bool
 }
 
 // figuresScanCap bounds one read. A page names as many deals as it has rows,
@@ -124,6 +128,18 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			len(dealIDs), figuresScanCap)
 	}
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		// The installation's zone, read the same way the nightly corrector
+		// reads it (closedatesweep.go) — CloseIsOverdue below is what
+		// actually answers "is this deal overdue", asked once per row
+		// rather than re-spelled in SQL.
+		tzName, err := s.installation.Timezone(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("read the installation's timezone: %w", err)
+		}
+		loc, err := installationZone(tzName)
+		if err != nil {
+			return err
+		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		idsPos := arg(dealIDs)
@@ -134,7 +150,8 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		query := storekit.SQLf(
 			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date
 			   FROM deal d
-			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos)
+			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos,
+		)
 		if scope != "" {
 			query += storekit.SQLf(" AND %s", scope)
 		}
@@ -143,6 +160,7 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		defer rows.Close()
+		now := s.clock()
 		for rows.Next() {
 			var (
 				id     ids.UUID
@@ -156,6 +174,9 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 				return err
 			}
 			figures := DealFigures{AmountMinor: amount, ExpectedCloseDate: closes}
+			if closes != nil {
+				figures.CloseOverdue = CloseIsOverdue(*closes, now, loc)
+			}
 			if stage != nil {
 				figures.StageID = *stage
 			}
@@ -176,4 +197,18 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		return nil, fmt.Errorf("deals: reading the figures behind a page of deals: %w", err)
 	}
 	return out, nil
+}
+
+// installationZone turns the raw IANA zone name installation.Timezone
+// answers into a *time.Location, for a caller that compares a wall-clock
+// instant to a DATE column in Go rather than asking Postgres to
+// (closedatesweep.go's nightly pass, this file's batched overdue read).
+// Split from the Timezone fetch itself: closedatesweep.go still needs the
+// raw name on its own, to bind into the same transaction's pre-filter query.
+func installationZone(tzName string) (*time.Location, error) {
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		return nil, fmt.Errorf("the installation's timezone %q: %w", tzName, err)
+	}
+	return loc, nil
 }

@@ -8,6 +8,7 @@ package attention
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -51,6 +52,18 @@ func rowFor(t *testing.T, day crmcontracts.Worklist, title string) crmcontracts.
 	}
 	t.Fatalf("no row titled %q on the queue", title)
 	return crmcontracts.WorklistItem{}
+}
+
+// The band a named row landed in. A band is optional on the wire, and an absent
+// one is not "now" — it is a row that made no claim, so the caller must not read
+// a missing band as the unpromoted case.
+func bandOf(t *testing.T, day crmcontracts.Worklist, title string) string {
+	t.Helper()
+	row := rowFor(t, day, title)
+	if row.Band == nil {
+		t.Fatalf("row %q carries no band at all", title)
+	}
+	return string(*row.Band)
 }
 
 func kindsOf(row crmcontracts.WorklistItem) []string {
@@ -245,5 +258,134 @@ func TestAnUntrackedLanePublishesNoReachRow(t *testing.T) {
 			t.Fatalf("the lane published a reach row (considered=%d shown=%d) with nothing measuring first response",
 				reach.Considered, reach.Shown)
 		}
+	}
+}
+
+// One late reply is ONE row.
+//
+// The SLA escalation writes a task about the lead as well, and both reached the
+// page before this lane existed. Without the fold a rep who missed one deadline
+// meets the same fact twice — the lead, and a task describing the lead — and
+// the second one carries neither the deadline nor a verb that opens the record.
+func TestTheEscalationTaskForAnOwedLeadFoldsIntoTheLeadRow(t *testing.T) {
+	lead := ids.NewV7()
+	tasks := &stubTasks{rows: []Task{{
+		ID: ids.NewV7(), Subject: "Follow up with the new lead",
+		LinkType: string(subjectLead), LinkID: lead,
+	}}}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		fixedClock).WithLeadResponses(&stubLeads{tracked: true, rows: []OwedLead{
+		{ID: lead, Name: "the late one", DeadlineAt: readInstant.Add(-time.Hour), State: "breached"},
+	}})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	rowFor(t, day, "the late one")
+	for _, row := range day.Queue {
+		if row.Source == sourceTask {
+			t.Errorf("the escalation's own task about an owed lead stayed on the page as %q", *row.Title)
+		}
+	}
+}
+
+// And a task about a lead the queue is NOT showing survives.
+//
+// The fold matches on the link, so a rule that dropped every lead-linked task
+// would take the ordinary follow-up somebody filed by hand along with the
+// escalation's. Without this half the test above passes over a lane that
+// silences lead work generally.
+func TestATaskAboutALeadTheQueueDoesNotShowSurvives(t *testing.T) {
+	tasks := &stubTasks{rows: []Task{{
+		ID: ids.NewV7(), Subject: "Ring the other lead back",
+		LinkType: string(subjectLead), LinkID: ids.NewV7(),
+	}}}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		fixedClock).WithLeadResponses(&stubLeads{tracked: true, rows: []OwedLead{
+		{ID: ids.NewV7(), Name: "the owed one", DeadlineAt: readInstant.Add(-time.Hour), State: "breached"},
+	}})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	rowFor(t, day, "Ring the other lead back")
+}
+
+// Past the eighth, an overdue lead sorts BELOW the other kinds without ceasing
+// to be one.
+//
+// leadLead is not a cap on the source — every lead stays on the page and keeps
+// its level. It bounds how much of ONE kind a reader meets before they see the
+// others, so a morning of nine late leads does not bury the meeting that starts
+// in ten minutes.
+//
+// The lane sorts by deadline ASCENDING, so the LONGEST wait sorts first and the
+// SHORTEST is ninth. Seeded backwards from that: "lead 0" is the oldest.
+func TestPastTheEighthAnOverdueLeadStopsLeadingThePage(t *testing.T) {
+	rows := make([]OwedLead, 0, leadLead+1)
+	for i := range leadLead + 1 {
+		rows = append(rows, OwedLead{
+			ID: ids.NewV7(), Name: fmt.Sprintf("lead %d", i),
+			DeadlineAt: readInstant.Add(-time.Duration(leadLead+1-i) * time.Hour),
+			State:      "breached",
+		})
+	}
+	svc := leadLaneService(&stubLeads{tracked: true, rows: rows})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	// All nine are still on the page — the cut demotes, it does not drop.
+	if got := len(day.Queue); got != leadLead+1 {
+		t.Fatalf("the page carried %d rows, wanted all %d leads", got, leadLead+1)
+	}
+	// The BAND is what crowding decides: a crowded row stops claiming to need
+	// answering today. Asserting position instead proves nothing here — nine
+	// leads alike differ in nothing else, so their order is unchanged either
+	// way and the test passes with the cut deleted.
+	if got := bandOf(t, day, fmt.Sprintf("lead %d", leadLead-1)); got != bandNow {
+		t.Errorf("the eighth lead landed in band %q, wanted %q — it still leads the page", got, bandNow)
+	}
+	if got := bandOf(t, day, fmt.Sprintf("lead %d", leadLead)); got != bandKeepMomentum {
+		t.Errorf("the ninth lead landed in band %q, wanted %q — the crowding cut did not bite", got, bandKeepMomentum)
+	}
+}
+
+// A read that came back FULL says so, so the page can tell a reader it is not
+// showing everything. Without it a rep reads eight of ninety late leads as
+// eight late leads.
+func TestALeadReadAtItsBoundReportsMoreAvailable(t *testing.T) {
+	rows := make([]OwedLead, 0, leadResponseBound)
+	for i := range leadResponseBound {
+		rows = append(rows, OwedLead{
+			ID: ids.NewV7(), Name: fmt.Sprintf("lead %d", i),
+			DeadlineAt: readInstant.Add(-time.Hour), State: "breached",
+		})
+	}
+	svc := leadLaneService(&stubLeads{tracked: true, rows: rows})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	reach := slices.IndexFunc(day.Reach, func(r crmcontracts.WorklistReach) bool {
+		return string(r.Source) == sourceLeadResponse
+	})
+	if reach < 0 {
+		t.Fatalf("no reach row for %s at all", sourceLeadResponse)
+	}
+	if !day.Reach[reach].MoreAvailable {
+		t.Error("a lead read that filled its bound reported more_available false — the page would claim to show every late lead")
 	}
 }

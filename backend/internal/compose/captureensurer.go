@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,8 +38,14 @@ func newCounterpartyStore(pool *pgxpool.Pool) *people.Store {
 	// that holds a job runner. A site read's accepted fields land through the
 	// approval effect's store, so without it the lane's main trigger queued
 	// nothing — see BindVatChecking.
+	// The audience derivation rides here for a reason of the same shape: the
+	// cohort repair FILES a captured meeting under the person it has just
+	// resolved, and a meeting the capture limiter held for having no record is
+	// no longer that record-less thing once it does. activities owns the
+	// derivation, people may not import it, so compose hands it over.
 	return people.NewStore(InstallationDB(pool)).
 		WithConsumerMail(capture.MatcherTx).
+		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue())
 }
 
@@ -72,6 +79,7 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
 		SuppressOrg: in.SuppressOrg,
+		Replied:     in.Replied,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.

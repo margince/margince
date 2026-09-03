@@ -11,6 +11,14 @@
   padding-bottom: 8px;
 }
 .board-col {
+  /* The containing block for anything absolutely positioned inside a column.
+     `.sr-only` takes itself out of flow at its static position, and an absolute
+     box is clipped by a scroller only when its containing block is INSIDE that
+     scroller — so without this the sixth stage's screen-reader count resolved
+     against an ancestor above the board, escaped the board's own horizontal
+     scroll, and dragged the shell's content scroller 807px past a 390px
+     viewport. */
+  position: relative;
   background: var(--bgCard);
   border-radius: var(--r-md);
   padding: 10px;
@@ -23,17 +31,50 @@
   outline: 2px dashed var(--accent);
   outline-offset: -2px;
 }
+/* STUCK TO THE TOP OF ITS COLUMN. A stage is the only thing that says which
+ * pile a card belongs to, and a reader scrolled halfway down a long stage had
+ * lost it, because each column scrolls on its own.
+ *
+ * It carries the column's own ground, or the cards would slide visibly behind a
+ * transparent strip. NO negative margin to bleed that ground to the column's
+ * edges: a flex item wider than its container contributes that extra width to
+ * the container's max-content size, and the board is a grid of `1fr` tracks
+ * inside a scroller — so a 20px bleed per column widened the whole board past
+ * the viewport and the page scrolled sideways at 390px. The 10px of column
+ * padding either side of the band is the price of the page not panning. */
 .board-col-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 2px 4px;
+  padding: 2px 4px 4px;
+  background: var(--bgCard);
 }
 .board-col-head .stage {
   font-size: 13px;
   font-weight: 600;
   color: var(--textPrimary);
   flex: 1;
+  /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
+     count. Without `min-width: 0` a flex item cannot shrink below its longest
+     word, so the name set the column's min-content width, the column set the
+     board's, and the board — a flex item with no floor of its own — pushed the
+     whole page sideways rather than scrolling. The NAME is what gives way. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* HOW MUCH IS IN THE STAGE, and it never truncates: it is the figure a reader
+   compares across the board, three characters wide against a name that can be
+   any length. `flex: none` is what keeps the name's ellipsis from eating it. */
+.board-col-head .board-col-count {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--textPrimary);
 }
 .board-col-head .prob {
   font-family: var(--f-mono);
@@ -67,6 +108,12 @@
 }
 
 .deal-card {
+  /* An anchor now rather than a button (composed.tsx says why), so it takes the
+     two things the platform gives a link and this card must not have: the UA's
+     own ink and an underline. `a:not([class])` in base.css does not reach a
+     classed anchor, so they are stated here. */
+  color: inherit;
+  text-decoration: none;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
@@ -204,7 +251,8 @@
 .record-head h1 {
   font-family: var(--f-display);
   font-size: 22px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
   min-width: 0;
   overflow: hidden;
@@ -218,10 +266,10 @@
 .record-head-wide h1 {
   font-size: var(--fs-display);
   line-height: 1.1;
-  letter-spacing: -0.025em;
 }
 .record-head .record-sub {
   font-size: 13px;
+  line-height: 1.5;
   color: var(--textMeta);
 }
 /* One quiet line under the name, at the same size as the facts beside it. Set
@@ -405,19 +453,15 @@
   margin-bottom: var(--space-5);
 }
 
-/* The bar that chooses which part of the record is drawn under it. It scrolls
-   sideways on a narrow screen rather than wrapping: wrapped tabs read as two
-   rows of navigation, which is a different thing from one row that continues.
-   The scrollbar is hidden because the row is short, its overflow is obvious
-   from the clipped tab, and a scrollbar under it would read as a divider. */
+/* The bar that chooses which part of the record is drawn under it. The strip
+   inside scrolls sideways on a narrow screen rather than wrapping
+   (design-system/recordtabs.css); this wrapper owns only the interval under
+   it. It must NOT scroll itself: the strip breaks out past the reading column
+   by half the work column's slack, and a scroller around it turned that
+   overhang into scroll room — the Details control at the row's end taking
+   focus dragged the whole row sideways by it. */
 .record-tabs {
   margin-bottom: var(--space-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.record-tabs::-webkit-scrollbar {
-  display: none;
 }
 
 /* One vertical stack of full-width panels, which is what a record's work
@@ -466,12 +510,12 @@
   margin-top: var(--space-2);
   /* Air on all four sides. With none at the top the first row's date and badge
      sat on the card's own border, which reads as content clipped by the edge
-     rather than as the start of a list. */
+     rather than as the start of a list. The chronology's pane is the same pane
+     every zone of the record stands on. */
   padding: var(--space-2) var(--space-5);
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
 }
 
 .timeline {
@@ -498,10 +542,16 @@
      `auto`, so the dates and the rail hold one line down the whole list
      however wide a single date renders — an axis that stepped left and right
      row by row is not an axis. */
-  grid-template-columns: 4.5rem 1rem minmax(0, 1fr) auto;
+  grid-template-columns: 76px 20px minmax(0, 1fr) auto;
   align-items: stretch;
   column-gap: var(--space-3);
   padding: 0;
+  /* A hairline under each entry is the only divider: no day headings, the
+     date column is the axis. */
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.timeline li:last-child {
+  border-block-end: 0;
 }
 
 /* A record's CHANGE history carries its date inside the body, under the
@@ -567,14 +617,25 @@
   background: var(--bgElevated);
   border-color: var(--borderStrong);
 }
+/* A change the AGENT made: indigo, because the hue is a fact about who did
+   it, and a reader following the rail sees where the machine wrote. */
+.timeline .tl-dot-agent {
+  background: var(--ai);
+  border-color: var(--ai);
+}
 
 /* The kind, set as a label rather than as a word: a chronology is scanned down
    this column, and small caps at a fixed size give the eye one shape per kind
-   to find. */
+   to find. Quiet — no pill: the kind is an eyebrow on the entry, and a filled
+   pill on every row read as a column of statuses. */
 .timeline .tl-head .badge {
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  background: none;
+  padding: 0;
+  min-block-size: 0;
 }
 
 /* What kind of thing it was and which way it went, over the headline. */
@@ -603,12 +664,12 @@
   position: absolute;
   inset-block-start: 0.4rem;
   inset-inline-start: 50%;
-  margin-inline-start: -0.8125rem;
-  width: 26px;
-  height: 26px;
+  margin-inline-start: -12px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--r-full);
-  background: var(--bgCard);
-  border: 2px solid var(--bgElevated);
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
   display: grid;
   place-items: center;
   color: var(--textMeta);
@@ -630,7 +691,7 @@
    with, what changed — qualifies this line, and set at the same weight as its
    qualifiers the reader had to read all four to find out what happened. */
 .timeline .tl-title {
-  font-size: var(--fs-sm);
+  font-size: 13.5px;
   font-weight: var(--fw-semibold);
   line-height: 1.35;
   color: var(--textPrimary);
@@ -786,7 +847,7 @@
 
 .tl-text-clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-wrap;
@@ -865,12 +926,15 @@
   font-weight: 500;
 }
 
-/* Members sit inside the group's own body, indented enough to read as
-   contained rather than as siblings that happen to follow. */
+/* A thread's members are a card on the body side of the rail: the
+   conversation is one entry on the axis, and its messages sit inside it on the
+   recessed ground, each with its own mark, newest first. */
 .tl-group-members {
-  margin-block-start: 0.4rem;
-  padding-inline-start: 0.6rem;
-  border-inline-start: 2px solid var(--borderSubtle);
+  margin-block-start: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
 }
 
 /*

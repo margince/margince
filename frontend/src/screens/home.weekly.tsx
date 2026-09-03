@@ -3,14 +3,21 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { StatCard } from "../design-system/atoms";
+import { routeHash } from "../app/router";
+import { Badge, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
-import { formatDate, formatNumber, formatSignedNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatSignedNumber,
+} from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   useWeeklyReview,
@@ -61,18 +68,48 @@ export function WeeklySection() {
               })
             : undefined
         }
+        // The mark and the way out of the week, in that order.
+        //
+        // FROZEN is the claim that separates this panel from every other on
+        // Home: the numbers under it were written when the week closed and can
+        // no longer move, so a rep who acts on Tuesday and re-reads on Thursday
+        // is not looking at a stale figure — they are looking at a record. The
+        // team weekly has said so since it shipped; the rep's, which is the one
+        // a rep actually opens, did not.
+        //
+        // Drawn only over a review that exists, so an empty or failed read does
+        // not certify a week nobody wrote.
         titleAction={
-          index.data && index.data.length > 1 ? (
-            <Select
-              aria-label={t("home.weekly.pickWeek")}
-              value={week ?? index.data[0]}
-              onChange={(next) => setWeek(next)}
-              options={index.data.map((start) => ({
-                value: start,
-                label: formatDate(start, locale, recordZone),
-              }))}
-            />
-          ) : undefined
+          <span className="home-weekly-mark">
+            {review.data && (
+              <>
+                <Badge quiet>{t("home.weekly.frozen")}</Badge>
+                {/* When it was written, which is what makes the badge a fact
+                    rather than a decoration — a reader can tell a week closed
+                    an hour ago from one closed on Monday. */}
+                <span className="t-caption home-weekly-written">
+                  {t("home.weekly.written", {
+                    at: formatDateTime(
+                      review.data.generated_at,
+                      locale,
+                      recordZone,
+                    ),
+                  })}
+                </span>
+              </>
+            )}
+            {index.data && index.data.length > 1 && (
+              <Select
+                aria-label={t("home.weekly.pickWeek")}
+                value={week ?? index.data[0]}
+                onChange={(next) => setWeek(next)}
+                options={index.data.map((start) => ({
+                  value: start,
+                  label: formatDate(start, locale, recordZone),
+                }))}
+              />
+            )}
+          </span>
         }
       >
         <PanelBody>
@@ -105,7 +142,7 @@ function WeeklyWorkings({
   return (
     <dl className="home-weekly-workings">
       <Working
-        label={t("home.weekly.promised")}
+        label={t("home.weekly.tasksDelivered")}
         value={t("home.weekly.ofDue", {
           done: n(counts.tasks_done),
           due: n(counts.tasks_due),
@@ -207,6 +244,27 @@ function readState(
   return query.isPending ? "loading" : "ready";
 }
 
+/**
+ * What the week's wins were worth, or nothing.
+ *
+ * NOTHING, not a zero, when the review carries no pipeline block. That block is
+ * optional on the wire: a week assembled before the money columns existed, or
+ * one where an FX rate was missing, has no honest figure — and "€0 won" is a
+ * claim about a week nobody measured, which is the opposite of what happened.
+ *
+ * The currency comes from the review, never from the installation's current
+ * setting. Base currency is operator-mutable, so re-reading it later would
+ * re-label an old week with a currency its numbers were never in. The contract
+ * stores it beside the figures for exactly this reason.
+ */
+function wonValue(review: WeeklyReview, locale: Locale): string | undefined {
+  const pipeline = review.pipeline;
+  if (pipeline === undefined) {
+    return undefined;
+  }
+  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+}
+
 function WeeklyBody({
   review,
   state,
@@ -229,8 +287,13 @@ function WeeklyBody({
   if (review === null) {
     // A rep whose first Monday has not come round yet. Saying so is the honest
     // answer; a page of zeroes would claim a week that was measured and empty.
+    // Drawn through the same arm the branch above uses for the same sentence —
+    // hand-rolled here, it was the one line on the card set as a caption while
+    // every other absence on the page read as prose.
     return (
-      <p className="home-weekly-none t-caption">{t("home.weekly.none")}</p>
+      <SurfaceState state="empty" emptyLabel={t("home.weekly.none")}>
+        {null}
+      </SurfaceState>
     );
   }
 
@@ -258,15 +321,15 @@ function WeeklyBody({
       {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
           is a table wearing a strip's clothes — at 1280 the row folded to two
           ranks of five and stopped being one reading at all (#3709).
-          These five are the week's outcomes: what was promised and kept, what
-          closed, how fast new business was answered, whether meetings led
+          These five are the week's outcomes: what the rep planned and kept,
+          what closed, how fast new business was answered, whether meetings led
           anywhere, and what did not get finished. The other five are workings
           — how the queue was worked, how proposals were decided — and they
           read as a list under the strip, where they are still available to
           anyone who wants them and no longer compete with the outcomes. */}
       <StatStrip testId="weekly-strip">
         <StatCard
-          label={t("home.weekly.promisesKept")}
+          label={t("home.weekly.planCommitmentsKept")}
           value={t("home.weekly.ofDue", {
             done: formatNumber(c.commitments_kept, locale),
             due: formatNumber(c.commitments_due, locale),
@@ -276,7 +339,21 @@ function WeeklyBody({
         <StatCard
           label={t("home.weekly.dealsWon")}
           value={formatNumber(c.deals_won, locale)}
-          detail={since(c.deals_won, prior?.deals_won)}
+          // What those wins were WORTH, at each deal's own close-time rate.
+          //
+          // The count alone says a week of five small renewals and a week of
+          // one company-making deal are the same week. The money was computed,
+          // FX-converted, stored with the currency it is in, and served — and
+          // read by nothing until now.
+          //
+          // It rides the won slot rather than taking a sixth: five is what a
+          // strip can be read across as one comparison, and a tenth slot folded
+          // the row into two ranks at 1280 (#3709). The delta line gives way to
+          // it, because "what it was worth" is the fact a reader wants first
+          // and the strip has one detail line to give.
+          detail={
+            wonValue(review, locale) ?? since(c.deals_won, prior?.deals_won)
+          }
         />
         <StatCard
           label={t("home.weekly.leadsAnswered")}
@@ -310,8 +387,17 @@ function WeeklyBody({
             <li key={`${deal.deal_id}-${deal.occurred_at}`}>
               {/* The LABEL, not a lookup. It was frozen when the review was
                   written, so a deal renamed or deleted since still reads as it
-                  did that week. */}
-              <span className="home-weekly-deal-name">{deal.label}</span>
+                  did that week — which is why this is a plain anchor and not
+                  `EntityRef`: resolving the name would undo the freeze. The
+                  ADDRESS is safe to build from the frozen id either way; a deal
+                  that has since gone answers 404, which is the honest outcome
+                  for a week that is over. */}
+              <a
+                className="home-weekly-deal-name link-button"
+                href={routeHash({ screen: "deals", id: deal.deal_id })}
+              >
+                {deal.label}
+              </a>
               <span className="home-weekly-deal-outcome t-caption">
                 {outcomeWord(t, deal.outcome)}
                 {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}

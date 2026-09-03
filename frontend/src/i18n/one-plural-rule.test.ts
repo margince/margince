@@ -218,10 +218,16 @@ function findingsIn(path: string, source: string): Finding[] {
  * to hold, and stopped when the tree grew: `Test timed out in 13437ms` on main,
  * on two consecutive runs, with every assertion in it passing.
  *
- * Derived per FILE and then multiplied out, not picked whole: 1600 files at
- * 40ms each. The corpus is ~1410 today, so the headroom is ~190 files — chosen
+ * Derived per FILE and then multiplied out, not picked whole: 1750 files at
+ * 40ms each. The corpus is 1415 today, so the headroom is ~335 files — chosen
  * against this tree's merge rate rather than as a round margin, because a
- * budget with thirty files of slack is one that fails next week. Measured at ~3.3ms per file on an idle ten-core machine and
+ * budget with thirty files of slack is one that fails next week. It has now
+ * been raised twice from 1400, and both times the assertion below is what made
+ * the ceiling arrive as a named count rather than as a timeout, which is the
+ * whole reason it is there. The second raise happened on two branches at once
+ * — one to 1500, this one to 1750 — which is itself the argument for the wider
+ * of the two: a ceiling this tree reaches every few weeks is one that should be
+ * set past the next few weeks, not up to them. Measured at ~3.3ms per file on an idle ten-core machine and
  * unchanged under eight spinners — the cost is the parse, not contention for a
  * core. A CI runner is smaller and saturated by the rest of the suite running
  * in parallel, and needed more than 12.5ms per file there, so the allowance is
@@ -239,7 +245,7 @@ function findingsIn(path: string, source: string): Finding[] {
  * fails by name and count rather than returning as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-const BUDGETED_CORPUS_FILES = 1_600;
+const BUDGETED_CORPUS_FILES = 1_750;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("one plural rule", () => {

@@ -483,11 +483,7 @@ export function RetentionCard() {
         <PanelBody>
           <p className="settings-panel-sub">{t("retention.sub")}</p>
           <QueryGate query={me}>
-            {() => (
-              <EmptyState>
-                <p className="t-small">{t("retention.withheld")}</p>
-              </EmptyState>
-            )}
+            {() => <EmptyState>{t("retention.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
       </Panel>

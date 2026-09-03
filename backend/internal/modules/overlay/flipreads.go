@@ -136,7 +136,8 @@ func (s *MirrorStore) ResolveMirrorOwner(ctx context.Context, incumbentUserID st
 	var id ids.UUID
 	found := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx,
+		err := tx.QueryRow(
+			ctx,
 			`SELECT app_user_id FROM mirror_user_map WHERE incumbent_user_id = $1`, incumbentUserID,
 		).Scan(&id)
 		if err != nil {

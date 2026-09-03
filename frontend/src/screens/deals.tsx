@@ -9,6 +9,7 @@ import {
   type ComponentProps,
   type Dispatch,
   type DragEvent,
+  type MouseEvent,
   type ReactNode,
   type SetStateAction,
   useId,
@@ -21,9 +22,10 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord } from "../app/capability";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, routeHash } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -433,7 +435,18 @@ function OverlayDealsTable({
   // re-enables the Load-more button to retry.
   const pages = query.data?.pages ?? [];
   if (pages.length === 0) {
-    return <QueryStates query={query}>{null}</QueryStates>;
+    return (
+      <QueryStates
+        query={query}
+        pendingLabel={t("deals.loading")}
+        // A table's worth of rows. The default placeholder is three lines, and
+        // a list that arrives into a third of the room the placeholder held
+        // pushes the page down under the reader as it lands.
+        pendingLines={8}
+      >
+        {null}
+      </QueryStates>
+    );
   }
   const deals = pages.flatMap((p) => p.data);
   if (deals.length === 0) {
@@ -1740,24 +1753,41 @@ function DealViewTools({
       {/* Both views read one pipeline: the table binds the same query the
           board does, and its stage chip offers that pipeline's stages. So the
           picker stands in both — hidden on the table it locked the reader to a
-          pipeline they could neither see nor change. */}
-      <Select
-        className="input"
-        aria-label={t("deals.pipeline")}
-        placeholder={t("deals.pipeline")}
-        value={pipelineId}
-        onChange={(next) => {
-          // A stage belongs to one pipeline; switching pipeline strands any
-          // stage_id filter (the chip blanks out but useDeals would still
-          // forward the old id and filter a foreign stage → 0 rows).
-          setPipelineId(next);
-          setOrClearFilter(setQuery, "stage_id", "");
-        }}
-        options={pipelines.map((pipeline) => ({
-          value: pipeline.id,
-          label: pipeline.name,
-        }))}
-      />
+          pipeline they could neither see nor change.
+          A CHOICE OF ONE IS NOT A CHOICE. An installation with a single
+          pipeline was offered a menu whose only entry was the pipeline already
+          showing, which is a dial that refuses every press. The NAME still
+          stands, as text: the reader keeps the fact and loses only the control,
+          which is what they lost nothing by. */}
+      {pipelines.length > 1 ? (
+        <Select
+          className="input"
+          aria-label={t("deals.pipeline")}
+          placeholder={t("deals.pipeline")}
+          value={pipelineId}
+          onChange={(next) => {
+            // A stage belongs to one pipeline; switching pipeline strands any
+            // stage_id filter (the chip blanks out but useDeals would still
+            // forward the old id and filter a foreign stage → 0 rows).
+            setPipelineId(next);
+            setOrClearFilter(setQuery, "stage_id", "");
+          }}
+          options={pipelines.map((pipeline) => ({
+            value: pipeline.id,
+            label: pipeline.name,
+          }))}
+        />
+      ) : (
+        pipelines.length === 1 && (
+          <span className="lt-scope">
+            {/* The reader SEES a name where the dial was and infers what it
+                names from the place; a screen reader gets no place, so the
+                field says its own name to it. */}
+            <span className="sr-only">{`${t("deals.pipeline")}: `}</span>
+            {pipelines[0].name}
+          </span>
+        )
+      )}
     </>
   );
 }
@@ -1792,8 +1822,6 @@ function DealBoardBody({
     typeof PipelineBoard
   >["columnDropHandlers"];
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useOrgMarks), so no card is left
   // standing over a company the board simply failed to look up.
@@ -1804,13 +1832,6 @@ function DealBoardBody({
   const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
   return (
     <>
-      {dealsQuery.data && (
-        <p className="t-caption">
-          {t("board.count", {
-            count: formatNumber(loadedDeals.length, locale),
-          })}
-        </p>
-      )}
       <QueryGate query={pipelinesQuery}>
         {() =>
           effectivePipeline ? (
@@ -1826,6 +1847,9 @@ function DealBoardBody({
             ) : (
               <>
                 <PipelineBoard
+                  cardHref={(deal) =>
+                    routeHash({ screen: "deals", id: deal.id })
+                  }
                   columns={buildColumns(
                     effectivePipeline.stages ?? [],
                     loadedDeals,
@@ -1864,10 +1888,14 @@ function useBoardInteractions({
   advance: ReturnType<typeof useAdvanceDeal>;
   setPending: (pending: PendingAdvance) => void;
 }>) {
-  // Which card is in flight, and when the last drag ended — a drop and a click
-  // arrive as the same event pair, so the board tells them apart by time.
+  // Which card is in flight, and WHICH card a drag last ended on, with when —
+  // a drop and a click arrive as the same event pair, so the board tells them
+  // apart by time. The id travels with the timestamp because the window is
+  // board-wide otherwise: a reader who drops one card and reaches straight for
+  // another would have that second click swallowed, and a link that does
+  // nothing is indistinguishable from a broken one.
   const dragging = useRef<string | null>(null);
-  const lastDragEnd = useRef(0);
+  const lastDrop = useRef<{ dealId: string; at: number } | null>(null);
 
   const requestAdvance = (dealId: string, stageId: string) => {
     const toStage = stages.find((stage) => stage.id === stageId);
@@ -1889,9 +1917,14 @@ function useBoardInteractions({
 
   // Board interactions are hoisted here so the render-prop tree below doesn't
   // nest their event callbacks past the readable depth.
-  const openDeal = (deal: BoardDeal) => {
-    if (Date.now() - lastDragEnd.current > 250) {
-      navigate({ screen: "deals", id: deal.id });
+  // The card is a LINK now, so this no longer navigates — the href does. What
+  // is left is the one thing a link cannot know: the click that ends a drag is
+  // not a click on the card, and following it would open a deal the reader was
+  // only moving.
+  const openDeal = (deal: BoardDeal, event: MouseEvent) => {
+    const drop = lastDrop.current;
+    if (drop?.dealId === deal.id && Date.now() - drop.at <= 250) {
+      event.preventDefault();
     }
   };
 
@@ -1917,8 +1950,8 @@ function useBoardInteractions({
       const dealId =
         event.dataTransfer.getData("text/plain") || dragging.current;
       dragging.current = null;
-      lastDragEnd.current = Date.now();
       if (dealId) {
+        lastDrop.current = { dealId, at: Date.now() };
         requestAdvance(dealId, column.stage);
       }
     },
@@ -2363,6 +2396,7 @@ export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
+  const pageName = usePageName("deals");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("deal");
@@ -2491,10 +2525,12 @@ export function DealsScreen({
   // leaving the reader looking at a narrowed pipeline with nothing on screen
   // saying what narrowed it, or how to widen it again.
   //
-  // It carries its own count and its own continuation control, because
-  // `bodyOwnsPaging` withholds the surface's: those two belong to the paged grid
-  // this body does not draw, and the board holds every card loaded so far at
-  // once rather than a page of them.
+  // It carries its own continuation control, because `bodyOwnsPaging` withholds
+  // the surface's: that belongs to the paged grid this body does not draw, and
+  // the board holds every card loaded so far at once rather than a page of
+  // them. Its COUNT goes to the surface's head all the same (`bodyCount`) — a
+  // reader looks for how much is here beside the page's name, and under the
+  // toolbar it read as a caption about the dials above it.
   const boardBody =
     view === "board" ? (
       <DealBoardBody
@@ -2525,6 +2561,7 @@ export function DealsScreen({
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={dealsListState}
         unit="deals.unit"
         columns={dealColumns(t, locale, recordZone, stageName)}
@@ -2535,6 +2572,16 @@ export function DealsScreen({
         tools={tools}
         body={overlayBody ?? boardBody}
         bodyOwnsPaging={overlay || view === "board"}
+        bodyCount={
+          view === "board" &&
+          dealsQuery.data && (
+            <>
+              {t("board.count", {
+                count: formatNumber(loadedDeals.length, locale),
+              })}
+            </>
+          )
+        }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
@@ -3816,6 +3863,7 @@ function dealBand({
 
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const details = usePageAside();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const queryClient = useQueryClient();
@@ -3875,6 +3923,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // requests for facts the page already holds.
   const statusQuery = useDealStatusCard(id);
   const coverageRead = useDealCoverage(id, !overlay);
+  // The pane's content, or nothing while it is folded: an aside handed to the
+  // view reserves its column, so a closed pane hands it none.
+  const dealContext = (deal: Deal) =>
+    details.open ? (
+      <DealContext deal={deal} coverage={coverageRead} overlay={overlay} />
+    ) : undefined;
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
   const timelineQuery = useRecordTimeline("deal", id, {
     filters: timelineFilters,
@@ -3956,6 +4010,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           );
           return (
             <RecordView
+              // Context first: who these people are, before the verbs that act
+              // on them. The seats moved out of the main column when the
+              // readings band started counting them — the same two facts were
+              // reaching a reader three times on one screen. The pane is the
+              // one every record page draws, with the same fold and the same
+              // memory of it.
+              aside={dealContext(deal)}
               name={deal.name}
               subtitle={<DealSubtitle deal={deal} />}
               zone={recordZone}
@@ -4014,41 +4075,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 t,
               )}
             >
-              {/* Context first: who these people are, before the verbs that act
-                  on them. The seats moved out of the main column when the
-                  readings band started counting them — the same two facts were
-                  reaching a reader three times on one screen.
-
-                  DealSeats is present in overlay mode too, stating the refusal.
-                  Dropping the whole column there took the seats away silently,
-                  which reads as "nobody is on this deal" — the deal rooms and
-                  the mail aside stay out because they are actions rather than a
-                  withheld fact.
-
-                  It is the PAGE's own column, beside the work rather than
-                  inside the record's grid: same column, same fold and same
-                  memory of it as every other record page. */}
-              <PageAside>
-                <DealSeats
-                  coverage={coverageRead.coverage}
-                  withheld={coverageRead.withheld}
-                  pending={coverageRead.pending}
-                  overlay={overlay}
-                />
-                {/* How this deal is filed, in the rail with the rest of its
-                    context — the same card a person and a company draw, in the
-                    same column of their pages. It sat full-width in the
-                    overview before, between the readings and the stage
-                    stepper, where a reader looking for the record's context
-                    was not looking. */}
-                <DealTagsSection deal={deal} />
-                {!overlay && (
-                  <>
-                    <DealRoomAside dealId={id} dealName={deal.name} />
-                    <DealEmailAside dealId={id} />
-                  </>
-                )}
-              </PageAside>
               {/* The same strip every record carries: a place a reader
                   navigates, drawn as a rule with the open body underlined. */}
               <RecordTabs
@@ -4163,5 +4189,38 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         }}
       </QueryGate>
     </div>
+  );
+}
+
+// The deal's context, for the details pane: the seats first, then how the deal
+// is filed, then the deal rooms and the mail card. DealSeats is present in
+// overlay mode too, stating the refusal — dropping it there took the seats
+// away silently, which reads as "nobody is on this deal"; the rooms and the
+// mail aside stay out because they are actions rather than a withheld fact.
+function DealContext({
+  deal,
+  coverage,
+  overlay,
+}: Readonly<{
+  deal: Deal;
+  coverage: ReturnType<typeof useDealCoverage>;
+  overlay: boolean;
+}>) {
+  return (
+    <>
+      <DealSeats
+        coverage={coverage.coverage}
+        withheld={coverage.withheld}
+        pending={coverage.pending}
+        overlay={overlay}
+      />
+      <DealTagsSection deal={deal} />
+      {!overlay && (
+        <>
+          <DealRoomAside dealId={deal.id} dealName={deal.name} />
+          <DealEmailAside dealId={deal.id} />
+        </>
+      )}
+    </>
   );
 }

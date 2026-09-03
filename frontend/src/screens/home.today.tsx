@@ -82,7 +82,7 @@ export function FocusSection({
             <Button
               small
               pending={refresh.isPending}
-              busyLabel={t("home.refreshing")}
+              busyLabel={t("home.generating")}
               onClick={() => refresh.mutate()}
               data-testid="brief-refresh"
             >
@@ -230,7 +230,14 @@ function TodayNarrative({ brief }: Readonly<{ brief: MorningBrief }>) {
   );
 }
 
-/** What the ranked run left out, said out loud. */
+/**
+ * What the ranked run left out, said out loud.
+ *
+ * In the reader's words, not the ranker's. "The honest-short top slice" is this
+ * team's name for the rule and means nothing to a rep reading their morning: the
+ * sentence has to say which deals these are (the highest-ranked) and how many
+ * qualified, because that is what decides whether they go looking for the rest.
+ */
 function honestCountLine(
   t: (key: MessageKey, params?: Record<string, string>) => string,
   brief: MorningBrief,

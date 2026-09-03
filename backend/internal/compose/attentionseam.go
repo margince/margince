@@ -13,7 +13,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -294,49 +293,6 @@ func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attent
 	return out, nil
 }
 
-// attentionBriefing binds the briefing lane to the same engine entry point Home
-// and the agent tool read, so all three read one queue rather than three
-// readings of it.
-type attentionBriefing struct {
-	engine *briefs.BriefEngine
-	now    attention.Clock
-}
-
-// Queue serves the acting rep's unanswered briefing entries for today, and
-// whether a run exists at all.
-//
-// No run for today reads as an EMPTY lane with ran=false, not a refusal.
-// LatestRun answers ErrNotFound both when the night has not produced one and
-// when a rep is new, and neither is a permission problem — reporting them as
-// a withheld lane would tell the rep something was hidden from her when
-// nothing was. ran is what lets the feed tell that emptiness from a morning
-// the rep finished: a found run counts as ran even with zero unanswered
-// entries.
-//
-// Answered entries are dropped here rather than in the feed, because what the
-// states mean belongs to the brief. The engine already resolves an expired
-// snooze on this read, so an item whose set-aside has run out comes back
-// actionable without anything here knowing that rule either.
-func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, error) {
-	run, err := a.engine.LatestRun(ctx, a.now())
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, err
-	}
-	entries := make([]attention.BriefEntry, 0, len(run.Items))
-	for _, item := range run.Items {
-		if !briefs.Unanswered(item) {
-			continue
-		}
-		entries = append(entries, attention.BriefEntry{
-			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
-		})
-	}
-	return entries, true, nil
-}
-
 // newAttentionHandlers assembles the surface for the API role. meter is the
 // Server's shared OVB meter (rebindable; overlay.go), which the sync-health
 // lane's budget concern reads.
@@ -358,7 +314,13 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		attentionDuplicates{store: people.NewStore(db)},
 		attentionTasks{store: activities.NewStore(db)},
 		attentionReceipts{svc: svc},
-		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
+		attentionBriefing{
+			engine: briefs.NewBriefEngine(pool, people.NewStore(db)),
+			// The same reader WithDealFacts binds below, so the lane keeps an
+			// entry exactly when the figures pass can state its deal.
+			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
+			now:     now,
+		},
 		// Commitments is bound now that claims have a writer. It was nil while
 		// nothing could put a row behind the lane: a lane fed only by demo
 		// seeds would have shown every real customer an empty promise list

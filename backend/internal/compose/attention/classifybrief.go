@@ -25,22 +25,20 @@ import (
 // due date: closing_soon whenever a date is set, never due_today, because a
 // close date three months out is a forecast and not work owed for today.
 //
-// Overdue is set directly here rather than through stampDeadline: that
-// helper's own contract is a date the READER owes, which a forecast close
-// date is not — this computes the identical overdueAt the ordering already
-// uses, so a passed close date still orders and badges as overdue, just
-// without invoking a helper whose documented purpose is the opposite case.
+// Overdue is never recomputed here — it arrives on item.Overdue from the SAME
+// deal-figures read that supplied DueAt (applyDealFigures, dealfacts.go),
+// stating deals.CloseIsOverdue's own verdict, the identical rule the sibling
+// "deals_at_risk" row for the same deal is judged by. base() already carries
+// item.Overdue onto row.Overdue; there is nothing left to set here.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
 	if item.DueAt != nil {
 		row.Because = append(row.Because, reason("closing_soon", nil))
-		past := overdueAt(item.DueAt, asOf)
-		row.Overdue = &past
 	}
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    overdueAt(item.DueAt, asOf),
+		overdue:    item.Overdue != nil && *item.Overdue,
 		occurredAt: occurredOf(item, asOf),
 	}
 }

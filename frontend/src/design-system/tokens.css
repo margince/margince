@@ -11,37 +11,24 @@
  */
 :root {
   /*
-   * The GROUNDS carry the brand hue at a whisper: every light rung below sits
-   * on --accent's own hue, at --accent's own chroma multiplied by 0.08, at the
-   * LIGHTNESS the neutral rung already had. Two halves, and both are load-
-   * bearing. Taking the hue is what stops the application reading as a grey
-   * chassis with a green sticker on it — the dark theme has always been tinted
-   * (its grounds are ink-green, and so is --bgRail in BOTH themes), so a
-   * neutral-grey light theme was the product disagreeing with itself between
-   * two settings of one switch. Holding the lightness is what keeps the tint
-   * from becoming a colour: the ladder's steps, every contrast ratio a reader
-   * depends on, and the neutrality of anything laid ON these grounds — a
-   * screenshot pasted into a record, a monogram fill, another company's logo —
-   * are all functions of lightness, and none of them moves.
-   *
-   * 0.08 rather than more because the failure mode in the other direction is
-   * real: a page mixed far enough toward the accent stops being a ground and
-   * starts being a surface with an opinion, and every neutral above it inherits
-   * the opinion. 0.08 is also the floor that DOES something — --borderSubtle
-   * already sat at 0.05 of the accent's chroma while every ground beside it was
-   * cool grey, which is how the two families came to disagree in the first place.
+   * The GROUNDS are the design's paper (DESIGN.md §3): a near-neutral page
+   * one hair off white, with the lit corners (--glowA / --glowB, app/shell.css)
+   * carrying whatever colour the chrome has. The grounds themselves stay
+   * neutral so that anything laid ON them — a screenshot pasted into a record,
+   * a monogram fill, another company's logo — reads as itself, and so that the
+   * two themes are one room with the lights up or down rather than two tints.
    *
    * A ladder, darkest first, from the recessed chrome up to the surface a card
    * floats on. Each rung is one visible step off its neighbours, and the ORDER
    * is the part that carries meaning — tokens.test.ts asserts the ordering in
    * both themes rather than trusting six plausible values to stay in sequence:
    *
-   *   --bgSidebarHover #dbe2de  a pointer resting on a rail row
-   *   --bgSidebar      #e5ebe8  the application's left edge, BELOW the page
-   *   --bgCard         #e6ece9  a well inside a card: a chip, an inset row
-   *   --bgHover        #e9efec  a pointer resting on a row on the page
-   *   --bgPage         #f4f8f6  the reading ground
-   *   --bgElevated     #fafffd  a card, a panel, a menu, and the ACTIVE rail row
+   *   --bgSidebarHover #dde1de  a pointer resting on a rail row
+   *   --bgSidebar      #e6eae7  the application's left edge, BELOW the page
+   *   --bgCard         #eaedeb  a well inside a card: a chip, an inset row
+   *   --bgHover        #edf0ee  a pointer resting on a row on the page
+   *   --bgPage         #f1f5f2  the reading ground
+   *   --bgElevated     #fbfcfb  a card, a panel, a menu, and the ACTIVE rail row
    *
    * The dark theme is NOT this list mirrored. On a dark ground every surface
    * lifts toward the light, so the ladder runs the other way and only the
@@ -51,13 +38,13 @@
    * a card is therefore separated by its own lightness rather than by the
    * shadow alone. That is what lets --shadow-card be as slight as it now is.
    */
-  --bgPage: #f4f8f6;
-  --bgElevated: #fafffd;
+  --bgPage: #f1f5f2;
+  --bgElevated: #fbfcfb;
   /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
-  --bgCard: #e6ece9;
-  --bgHover: #e9efec;
+  --bgCard: #eaedeb;
+  --bgHover: #edf0ee;
   /* The sidebar's own ground, DARKER than the page rather than lighter: the
    * application's left edge is visible without a second border, and chrome that
    * recedes is chrome that stops competing with what it frames. A token rather
@@ -65,17 +52,26 @@
    * when card grounds are re-tuned. The rail's own hover is --bgSidebarHover
    * below, because --bgHover is LIGHTER than this ground and a hover that
    * brightens the row it is on collides with the active row's plate. */
-  --bgSidebar: #e5ebe8;
+  --bgSidebar: #e6eae7;
   /* A pointer resting on a rail row: one step DOWN from --bgSidebar (1.10:1),
    * the same direction --bgHover moves off --bgPage. The active row moves the
    * other way — up to --bgElevated — so the two states cannot be confused. */
-  --bgSidebarHover: #dbe2de;
+  --bgSidebarHover: #dde1de;
   /* The top strip, which the content scrolls UNDER: the page's own ground,
    * translucent, with an 8px blur behind it (app/topbar.css). Stated as an
    * alpha colour rather than a solid because the blur is only visible where the
    * ground is see-through, and the alpha is what makes the strip show the
    * content sliding past it. */
   --bgTopbar: rgba(244, 248, 246, 0.9);
+  /* One translucent pane per zone (DESIGN.md §5): white over the lit ground
+   * with a blur behind it, and a hairline for its edge. The two glows are the
+   * chrome — an emerald light at the top-left corner behind the sidebar and an
+   * indigo one at the bottom-right — faint enough that the eye does not find
+   * them; they are atmosphere, not a feature. */
+  --pane: rgba(255, 255, 255, 0.72);
+  --paneEdge: rgba(16, 26, 21, 0.08);
+  --glowA: rgba(24, 190, 120, 0.06);
+  --glowB: rgba(91, 97, 214, 0.1);
 
   --accent: #0b7a53;
   /* The accent as TEXT, split from the accent as a FILL, and now diverging from
@@ -244,15 +240,33 @@
 
   --success: #15803d;
   --successBg: rgba(34, 197, 94, 0.12);
+  /* Text and glyphs ON --successBg, split out for the reason --aiText is split
+   * out: --success over its own family's tint measures 4.48:1 at 12px, which
+   * axe reads as a serious AA failure, and the two writers of that pair
+   * (FieldDiff's new value, badge-success) each looked fine in isolation. The
+   * other two status families need no such token — --warn and --danger clear AA
+   * on their own tints — and tokens.test.ts now measures all three so a retune
+   * finds out there. */
+  --successText: #146c36;
   --warn: #92400e;
   --warnBg: rgba(251, 191, 36, 0.16);
   --warnBorder: rgba(251, 191, 36, 0.45);
   --danger: #b91c1c;
   --dangerBg: rgba(239, 68, 68, 0.1);
+  /* Text and glyphs ON --dangerBg. It coincides with --danger in this theme —
+   * the light red clears AA on its own tint over every ground — and does NOT
+   * in dark, where the lifted --danger measures 3.88:1 over --bgHover. Named in
+   * both so a call site reads the role rather than knowing which theme
+   * collapses it, exactly as --successText and --textOnAccentControl do. */
+  --dangerText: #b91c1c;
 
   --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 20px;
+  /* The one radius for a control a hand operates — button, input, select
+     trigger. Between the chip's --r-sm and the pane's --r-md, because a control
+     as round as the pane it sits in reads as part of the pane. */
+  --r-control: 10px;
+  --r-md: 14px;
+  --r-lg: 18px; /* the pane */
   --r-full: 9999px;
 
   /* The height of an interactive control, in its two sizes. A button, a text
@@ -263,10 +277,11 @@
      [Cancel][Save] pair was therefore never the same height, and a button beside
      a field never sat on the field's own line. The value is a floor rather than
      a fixed height, so a control whose label wraps grows instead of clipping —
-     nothing here assumes a one-line label. 40px also clears the 24px AA target
-     of WCAG 2.5.8 with room, and the small rung stays a deliberate step below it
-     for dense rows rather than drifting to whatever its padding produced. */
-  --control-h: 40px;
+     nothing here assumes a one-line label. 36px clears the 24px AA target of
+     WCAG 2.5.8 with room (the touch arm below raises it to 44), and the small
+     rung stays a deliberate step below it for dense rows rather than drifting
+     to whatever its padding produced. */
+  --control-h: 36px;
   --control-h-sm: 32px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
@@ -316,9 +331,13 @@
    * is, and the two went out of step by 60px of viewport width. */
   --stickyBottomInset: var(--space-2);
 
+  /* Three families (DESIGN.md §4): a display face with character for the one
+   * line a reader identifies a record by, a quiet grotesk for everything read,
+   * and a mono with tabular figures for every number, so figures align in a
+   * column and never look like words. */
   --f-display: "Outfit", system-ui, sans-serif;
-  --f-body: "DM Sans", system-ui, sans-serif;
-  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --f-body: "Geist", system-ui, sans-serif;
+  --f-mono: "Geist Mono", ui-monospace, monospace;
 
   /*
    * Type scale (design §2 three-family rule, this file's numeric half).
@@ -335,15 +354,15 @@
    * agree with — `--fs-eyebrow` says where it belongs, `--fs-10` only says how
    * big it is and invites the next 10.5px.
    */
-  --fs-eyebrow: 11px; /* uppercase kickers, section labels */
+  --fs-eyebrow: 10.5px; /* uppercase kickers, section labels */
   --fs-meta: 12px; /* counts, provenance, timestamps */
   --fs-sm: 13px; /* dense UI: chips, table cells, helper text */
-  --fs-body: 14px; /* the default reading size */
+  --fs-body: 13.5px; /* the default reading size */
   --fs-lead: 15px; /* the one paragraph under a heading; inputs */
   --fs-h3: 17px; /* card title */
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
-  --fs-display: 30px; /* the title of a full-viewport moment */
+  --fs-display: 32px; /* a record's name; the title of a full-viewport moment */
   /* Three fluid rungs, for the surfaces that own a whole viewport and therefore
      have room to answer to it: the gate, the handoff scene, and the greeting.
      The greeting's is a rung of its own rather than the hero one set larger,
@@ -367,13 +386,13 @@
      is read as a shape, relaxed for prose that is read as sentences. */
   --lh-tight: 1.15;
   --lh-snug: 1.3;
-  --lh-normal: 1.45;
+  --lh-normal: 1.55;
   --lh-relaxed: 1.6;
 
   /* Tracking. Only two directions matter: display type set large enough that
      the default spacing reads loose, and uppercase micro-type where the
      default reads cramped. Everything else is 0 and says so. */
-  --tracking-display: -0.02em;
+  --tracking-display: -0.03em;
   --tracking-normal: 0;
   --tracking-eyebrow: 0.08em;
 
@@ -398,7 +417,9 @@
    *
    * Read by every panel and card in the tree through this one token, so the
    * elevation of a card is not a decision any screen gets to make. */
-  --shadow-card: 0 2px 4px -1px #0000000f;
+  /* A pane is separated by its ground and its hairline (--paneEdge), not by a
+   * drop shadow; the card shadow is kept as a hairline so nothing floats. */
+  --shadow-card: 0 0 0 1px #0000000a;
   --shadow-pop: 0 8px 30px rgba(41, 37, 36, 0.14);
 
   /*
@@ -435,6 +456,13 @@
      still focus, and the reader should not have to notice which ring they got in
      order to know where they are. */
   --focus-glow-danger: 0 0 0 3px var(--dangerBg);
+  /* The same glow in the AI family, for a field on a surface a machine authored
+   * — the onboarding conversation, the composer. An accent ring there would be
+   * the one colour in the product that says "a person decided this" drawn on a
+   * card that says the opposite, so this is a variant for the same reason
+   * --focus-glow-danger is one, not a second spelling. Six rules hand-spelled
+   * it before it existed. */
+  --focus-glow-ai: 0 0 0 3px var(--aiMed);
 
   /*
    * Motion. Three durations and three curves, and the reason there are so few is
@@ -492,29 +520,31 @@
  * deliberately not theme tokens).
  */
 [data-theme="dark"] {
-  --bgPage: #0e1b16;
-  --bgElevated: #142420;
-  --bgCard: #1a2c26;
-  --bgHover: #1f332c;
+  --bgPage: #0c1311;
+  --bgElevated: #161d1a;
+  --bgCard: #1a211e;
+  --bgHover: #1f2623;
   /* The same RELATION the light theme states, mirrored rather than copied: the
      sidebar is one step off the page in the direction away from the elevated
      surface, so the chrome recedes in both themes. Dark is where that means
-     DARKER than the page — the light theme's #e9e9ec against #f5f5f6 measures
-     1.11:1, and this pair measures 1.09:1, which is the same step a reader
-     sees. It used to be the elevated ground, which put the frame in FRONT of
-     what it frames. */
-  --bgSidebar: #06100d;
+     DARKER than the page: near-black under a page that is itself one hair
+     above the design's #0a100e, which is what leaves room for the hover step
+     between them. */
+  --bgSidebar: #030504;
   /* Up off the sidebar, not down: on a dark ground the room only has one
-     direction to go, so hover lifts (1.06:1) and the active row lifts further,
-     all the way to --bgElevated (1.20:1 off the rail). What has to hold is the
-     GAP between hover and that plate — they are the pair a reader decodes — and
-     here it is 1.13:1. It was #0f1d18, which read 1.08:1 against the plate: an
-     ordering that was correct and a difference nobody could see. */
-  --bgSidebarHover: #0c1814;
+     direction to go, so hover lifts off the sidebar (1.06:1) and the active
+     row lifts further, all the way to --bgElevated (1.12:1 off hover). What
+     has to hold is the GAP between hover and that plate — they are the pair a
+     reader decodes — and tokens.test.ts holds both steps as floors. */
+  --bgSidebarHover: #0a100e;
   /* The page's own ground, translucent — the light theme's rule, in this
      theme's page colour. It used to be the ELEVATED ground, which made the
      strip read as a card laid over the top of the window. */
   --bgTopbar: rgba(14, 27, 22, 0.9);
+  --pane: rgba(255, 255, 255, 0.045);
+  --paneEdge: rgba(255, 255, 255, 0.09);
+  --glowA: rgba(24, 190, 120, 0.1);
+  --glowB: rgba(91, 97, 214, 0.2);
 
   --accent: #16a34a;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
@@ -576,15 +606,13 @@
      control boundary, held to the same 1.4.11 floor. */
   --borderControl: #5f7a6e;
 
-  /* Themed, because the light value is a 6% black — invisible on #0e1b16. Any
-     card whose separation depends on its shadow simply lost its edge in dark,
-     and the login surface's brand pane is exactly that case: its fill sits
-     within a couple of ΔE of the pane behind it, so with no shadow the two-pane
-     split had no visible boundary at all. The GEOMETRY is the light theme's,
-     because a card sits the same distance off the page in either theme; only the
-     alpha is a theme's decision, and on a dark ground it has to be most of the
-     way to opaque to read at all. */
-  --shadow-card: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
+  /* Themed, because the light hairline is a 4% black — invisible on the near-black page.
+     Any card whose separation depends on it simply lost its edge in dark, and
+     the login surface's brand pane is exactly that case: its fill sits within
+     a couple of ΔE of the pane behind it. The GEOMETRY is the light theme's
+     (a hairline, not a drop shadow); only the ink is a theme's decision, and
+     on a dark ground the edge is a faint white rather than a faint black. */
+  --shadow-card: 0 0 0 1px #ffffff14;
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
   /* higher alpha so the teal read-pill fill stays legible on the darker card
@@ -598,9 +626,19 @@
   --textMeta: #8fa099;
 
   --success: #4ade80;
+  /* Dark inverts the problem: the lifted --success IS the readable ink on the
+   * tint over a dark card, so the two coincide here. Named anyway, because the
+   * call sites read the role and must not have to know which theme collapses
+   * it — the same reason --textOnAccentControl exists. */
+  --successText: #4ade80;
   --warn: #fbbf24;
   --danger: #f87171;
   --dangerBg: rgba(248, 113, 113, 0.16);
+  /* Lifted further than --danger: the tint is painted on --bgCard and --bgHover
+   * as well as on the elevated ground, and --danger over the darker two is
+   * 4.22:1 and 3.88:1. --danger itself stays put — it is also a FILL, under
+   * white ink, and lightening that would cost the fill its own contrast. */
+  --dangerText: #fb9a9a;
 }
 
 /*
@@ -630,13 +668,17 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bgPage: #0e1b16;
-    --bgElevated: #142420;
-    --bgCard: #1a2c26;
-    --bgHover: #1f332c;
-    --bgSidebar: #06100d;
-    --bgSidebarHover: #0c1814;
+    --bgPage: #0c1311;
+    --bgElevated: #161d1a;
+    --bgCard: #1a211e;
+    --bgHover: #1f2623;
+    --bgSidebar: #030504;
+    --bgSidebarHover: #0a100e;
     --bgTopbar: rgba(14, 27, 22, 0.9);
+    --pane: rgba(255, 255, 255, 0.045);
+    --paneEdge: rgba(255, 255, 255, 0.09);
+    --glowA: rgba(24, 190, 120, 0.1);
+    --glowB: rgba(91, 97, 214, 0.2);
 
     --accent: #16a34a;
 
@@ -673,7 +715,7 @@
 
     --borderControl: #5f7a6e;
 
-    --shadow-card: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 0 0 1px #ffffff14;
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
     --tealLight: rgba(14, 116, 144, 0.28);
@@ -684,9 +726,11 @@
     --textMeta: #8fa099;
 
     --success: #4ade80;
+    --successText: #4ade80;
     --warn: #fbbf24;
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);
+    --dangerText: #fb9a9a;
   }
 }
 

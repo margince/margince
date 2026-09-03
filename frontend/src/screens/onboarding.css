@@ -480,7 +480,7 @@
 }
 .ob-core-url:focus-within {
   border-color: var(--aiText);
-  box-shadow: 0 0 0 3px var(--aiMed);
+  box-shadow: var(--focus-glow-ai);
 }
 .ob-core-url.invalid {
   border-color: var(--danger);
@@ -631,7 +631,7 @@
 }
 .ob-manual-input:focus {
   border-color: var(--aiText);
-  box-shadow: 0 0 0 3px var(--aiMed);
+  box-shadow: var(--focus-glow-ai);
 }
 .ob-manual-textarea {
   min-height: 82px;
@@ -918,7 +918,7 @@
 }
 .ob-conv-artifact .ob-manual-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accentMed);
+  box-shadow: var(--focus-glow);
 }
 .ob-conv-artifact .ob-core-link {
   color: var(--textSecondary);
@@ -995,7 +995,7 @@
 }
 .mw-composer textarea:focus {
   border-color: var(--ai);
-  box-shadow: 0 0 0 3px var(--aiLight);
+  box-shadow: var(--focus-glow-ai);
 }
 /* The send verb keeps the square .btn-icon draws it, pinned to the FOOT of the
    composer's row: a grid item stretches by default, and stretching an icon-only

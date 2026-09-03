@@ -226,6 +226,11 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		// no way to act on. Rows beyond the cap still exist; CountOpenForViewer
 		// is the query that answers how many.
 	}
+	// What came with each message, on the same transaction and in one
+	// statement — the batching rule attachLinks above already follows.
+	if err := WithAttachmentCounts(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if err := attachLinks(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -293,6 +298,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
+	if err := WithAttachmentCounts(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	if err := attachLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}

@@ -2,6 +2,8 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatTimeOfDay } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { readingsDay, waitingRow } from "./home.fixtures";
@@ -95,6 +97,79 @@ describe("the Brief's dials", () => {
     );
   });
 
+  // And it REPLACES the entry rather than pushing one.
+  //
+  // Back is the key a reader presses to get out of where they are. A reader
+  // turns several dials to reach one view, so pushing per turn would bury the
+  // screen they arrived from under a stack of near-identical entries and Back
+  // would walk them through it one dial at a time instead of out.
+  //
+  // app/addressstate.test.ts holds this for replaceParams itself. That proves
+  // the mechanism, not that the Brief's dials go through it — a screen writing
+  // location.hash directly would satisfy every other assertion in this file
+  // while quietly pushing an entry per press.
+  it("turns a dial without adding a history entry to press Back through", async () => {
+    stubHome(["mine", "team"]);
+    render(<HomeScreen />);
+
+    const before = globalThis.history.length;
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.view.weekly"] }),
+    );
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("view=weekly"),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: en["brief.scope.team"] }),
+    );
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("scope=team"),
+    );
+
+    expect(globalThis.history.length).toBe(before);
+  });
+
+  // The rail belongs to the view it is beside.
+  //
+  // Every panel in it answers a question about TODAY — what the day is booked
+  // with, what is owed now, what arrived overnight. Under the weekly they sit
+  // beside a week that closed, so the page shows a rep "Today's schedule" next
+  // to a retrospective and reads as two screens overlaid.
+  //
+  // The work column already switches on the view. The rail did not, because it
+  // is drawn once outside that branch and nothing asserted otherwise.
+  it("leaves the morning's rail off the weekly", async () => {
+    globalThis.location.hash = "#/home?view=weekly";
+    stubHome(["mine"]);
+    render(<HomeScreen />);
+
+    await screen.findByRole("group", { name: en["brief.view.label"] });
+    await waitFor(() =>
+      expect(document.querySelector("#home-weekly")).not.toBeNull(),
+    );
+    expect(document.querySelector("#home-schedule")).toBeNull();
+    expect(document.querySelector("#home-watch")).toBeNull();
+    // And the TRACK is gone with them. The <aside> element is gated on having
+    // content, but the grid template is on the wrapper and driven by `shape` —
+    // so dropping only the contents leaves the weekly at seventy per cent
+    // width beside a third of nothing, which reads as a rail that failed to
+    // load rather than one that was never there. `page-zones-aside` is the
+    // class that reserves the column.
+    expect(document.querySelector(".page-zones-aside")).toBeNull();
+  });
+
+  // And it is still there on the morning, or the assertion above passes over a
+  // rail that was deleted rather than placed.
+  it("keeps the rail on the morning", async () => {
+    stubHome(["mine"]);
+    render(<HomeScreen />);
+
+    await waitFor(() =>
+      expect(document.querySelector("#home-schedule")).not.toBeNull(),
+    );
+    expect(document.querySelector(".page-zones-aside")).not.toBeNull();
+  });
+
   // DECISION 5, ON THE PAGE. Every combination the dials offer must draw
   // something. An empty work column under a selectable dial is the defect the
   // rule exists to prevent, and it is invisible to a test that only checks the
@@ -128,7 +203,17 @@ describe("the Brief's dials", () => {
   it("names the view in the eyebrow, and keeps the sentence to the morning", async () => {
     stubHome(["mine"]);
     render(<HomeScreen />);
-    expect(await screen.findByText(en["brief.eyebrow"])).toBeTruthy();
+    // The expected time is DERIVED, not written down: the runner's zone is not
+    // the fixture's, so a literal "07:00" here passes in Berlin and fails in CI.
+    expect(
+      await screen.findByText(
+        `${en["brief.eyebrow"]} · as of ${formatTimeOfDay(
+          readingsDay({}).as_of,
+          "en",
+          viewerZone(),
+        )}`,
+      ),
+    ).toBeTruthy();
     // findBy: the sentence is composed from the worklist read, so it appears
     // when that lands rather than on the first paint.
     expect(await screen.findByTestId("glance-sentence")).toBeTruthy();
@@ -140,7 +225,12 @@ describe("the Brief's dials", () => {
     render(<HomeScreen />);
 
     expect(await screen.findByText(en["brief.eyebrow.weekly"])).toBeTruthy();
-    expect(screen.queryByText(en["brief.eyebrow"])).toBeNull();
+    // Exact match: the morning's eyebrow now composes the scope with an as-of,
+    // so a substring read would call the weekly clean while the morning's own
+    // words were on the page.
+    expect(
+      screen.queryByText((text) => text === en["brief.eyebrow"]),
+    ).toBeNull();
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     // And the line that stands in for it belongs to the week too. The weekly
     // NEVER composes a sentence, so the fallback is the only line under its

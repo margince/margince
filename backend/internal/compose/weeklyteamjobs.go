@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -71,7 +72,7 @@ func (w *weeklyGenerateWorkspaceWorker) liveTeams(ctx context.Context) ([]liveTe
 			  FROM team t
 			  JOIN team_membership m ON m.team_id = t.id
 			  JOIN app_user u ON u.id = m.user_id
-			    AND u.deactivated_at IS NULL AND NOT u.is_agent
+			    AND `+identity.LiveMemberSQL("u")+` AND NOT u.is_agent
 			 WHERE t.archived_at IS NULL
 			 GROUP BY t.id, t.name
 			 ORDER BY t.id`)
@@ -152,7 +153,7 @@ func (w *weeklyGenerateWorkspaceWorker) teamMembers(
 		rows, err := tx.Query(ctx, `
 			SELECT u.id, u.display_name FROM team_membership m
 			  JOIN app_user u ON u.id = m.user_id
-			    AND u.deactivated_at IS NULL AND NOT u.is_agent
+			    AND `+identity.LiveMemberSQL("u")+` AND NOT u.is_agent
 			 WHERE m.team_id = $1
 			 ORDER BY u.display_name, u.id`, teamID)
 		if err != nil {

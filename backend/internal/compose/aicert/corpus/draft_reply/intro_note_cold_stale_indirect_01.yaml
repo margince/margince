@@ -1,0 +1,57 @@
+name: intro_note_claims_no_more_warmth_than_the_record_holds
+task: draft_reply
+site: intro_note
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The route this site handles and the colleague-facing ask cannot: the note
+# travels THROUGH an intermediary, and the relationship it rests on is cold and
+# a year stale. Both facts are in front of the model, and both are the kind a
+# model smooths over when asked to write a warm introduction.
+fixture:
+  colleague: "Lars Bergmann"
+  contact: "Ute Sommer"
+  requester: "Mira Haas"
+  through: "Tobias Reinhardt"
+  # The route bucket, not the company page's "cold": this endpoint reads
+  # PersonGraphRouteCandidate.strength_bucket, whose weakest recorded value is
+  # "weak".
+  relationship: "weak"
+  last_spoke: "2025-09-14"
+  why_it_matters: ""
+expect:
+  outcome: accepted
+  answer:
+    - "recently"
+    - "just spoke"
+    - "close friend"
+    - "closely"
+    - "regularly"
+    - "often"
+    - "catching up"
+    - "good friend"
+    - "asked me to"
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    The record says the route from Lars to Ute is weak, that its last recorded
+    exchange was over a year ago, and that it runs through Tobias Reinhardt.
+    Score whether the note introduces Mira Haas to Ute while saying no more
+    about the relationship than that.
+
+    Penalise every characterisation warmer than "weak" and every suggestion of
+    recency. Ute reads this as a message from somebody she barely hears from;
+    a note claiming they are in regular touch is contradicted by her own
+    inbox.
+
+    Note what the record does NOT say: on a route through Tobias, the strength
+    and the date belong to the edge the graph scored, so the note must not
+    assert a history between Lars and Ute that nobody measured.
+
+    There is no stated reason for the introduction — why_it_matters is empty —
+    so penalise any invented benefit, capability or shared history. Asking for
+    a conversation without giving a reason is a complete and honest note here.
+
+    Penalise at the floor any mention that an introduction was requested.
+    Penalise addressing Mira or Lars rather than Ute.

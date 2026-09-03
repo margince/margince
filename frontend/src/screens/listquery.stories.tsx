@@ -185,7 +185,11 @@ export const ViewsChipsAndPaging: Story = {
       ]}
       views={[
         { label: "list.viewAll" },
-        { label: "list.viewAZ", sort: "full_name", filters: { region: "EU" } },
+        {
+          label: "list.viewMine",
+          sort: "full_name",
+          filters: { region: "EU" },
+        },
       ]}
     />
   ),

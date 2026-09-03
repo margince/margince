@@ -465,10 +465,16 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
       ? `${formatNumber(item.batch.count, locale)}+`
       : formatNumber(item.batch.count, locale);
     // An incident names WHAT is broken; a hygiene group names its kind.
+    //
+    // From `label`, never from `cause`. The cause is the identity the group was
+    // formed on and reads like one — interpolating it printed
+    // "automation_run:01a0…-… failed 12 times" at a rep, which names nothing
+    // they can act on and cannot be told from a bug. A group whose lane minted
+    // no name falls back to the generic phrase rather than to the identity.
     if (item.batch.key === "system_incident") {
       return t("worklist.batch.system_incident", {
         count,
-        cause: item.batch.cause ?? t("worklist.batch.unnamedCause"),
+        cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
       });
     }
     return t(`worklist.batch.${item.batch.key}` as const, { count });
@@ -494,6 +500,13 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
 // The source name goes through the same known-source check the titles use, so
 // a source this build has never heard of is described generically rather than
 // printed as its own identifier.
+//
+// What `sourceName` returns is a row TITLE, and most of them are whole clauses
+// — so the frame names the fact first and lets the title follow a colon. Read
+// as a subject instead, fourteen of the twenty-one ran two sentences together.
+// The alternative is a second vocabulary spelling each source as a noun, in
+// every language, kept beside the titles; the colon costs nothing and cannot
+// drift.
 export function sourceUnavailableText(
   missing: NonNullable<Worklist["sources_unavailable"]>[number],
   t: T,
@@ -516,7 +529,13 @@ export function sourceName(source: string, t: T): string {
 }
 
 // The sources this build can name without its own sentence.
-const KNOWN_SOURCES = {
+//
+// Exported so a gate over these sentences derives its corpus from here rather
+// than keeping a second copy of the list: a hand-maintained census goes short
+// of its subject the moment a source is added, and going short is the one way
+// this kind of check must not break — it reads a smaller product, reports PASS,
+// and leaves no failing assertion to notice.
+export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   task: true,

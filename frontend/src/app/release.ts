@@ -67,3 +67,24 @@ export function releaseSkew(
   }
   return mine !== theirs;
 }
+
+/**
+ * The version this build says it is, for the one line of chrome that prints it.
+ *
+ * A stamped release is the truth and is used whenever there is one. A local or
+ * unstamped build has nothing to print, and printing nothing is worse than a
+ * wrong-looking number: the marker's whole job is telling a reader, on a screen
+ * they may be seeing for the first time, that this is not finished software.
+ * So it falls back to the version the product ships under until a release
+ * stamps one.
+ *
+ * The `-alpha` suffix is on BOTH arms deliberately. It is a statement about the
+ * product's maturity rather than about the build, so a stamped release does not
+ * get to drop it — that is exactly the reader this line exists for.
+ */
+const ALPHA_FALLBACK = "0.1";
+
+export function displayVersion(): string {
+  const release = comparableRelease(SPA_RELEASE) ? SPA_RELEASE : ALPHA_FALLBACK;
+  return `v${release}-alpha`;
+}

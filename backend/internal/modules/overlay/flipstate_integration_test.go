@@ -251,7 +251,8 @@ func TestFlipChecksCountARowThatRecordsNoDeclarationAsStale(t *testing.T) {
 	ingestMirrorRow(ctx, t, ms, "person", "p-unfingerprinted", "", baseline)
 	var stored *string
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`SELECT projection_fingerprint FROM overlay_mirror WHERE external_id = 'p-unfingerprinted'`,
 		).Scan(&stored)
 	}); err != nil {
@@ -434,7 +435,8 @@ func TestCompleteFlipFlipsModeOnceAndKeepsConnection(t *testing.T) {
 		var mode string
 		var incumbent *string
 		var connStatus string
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			SELECT sor_mode, incumbent FROM overlay_mode`,
 		).Scan(&mode, &incumbent); err != nil {
 			return err
@@ -449,7 +451,8 @@ func TestCompleteFlipFlipsModeOnceAndKeepsConnection(t *testing.T) {
 			t.Errorf("connection after flip = %s, want active (still present, no longer authoritative — retirement revokes it later)", connStatus)
 		}
 		var audits int
-		if err := tx.QueryRow(ctx,
+		if err := tx.QueryRow(
+			ctx,
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'workspace' AND action = 'update'`,
 		).Scan(&audits); err != nil {
 			return err
@@ -498,7 +501,8 @@ func TestDisconnectRefusesARunningImportButNeverALatchedFreeze(t *testing.T) {
 		if err := tx.QueryRow(ctx, `SELECT status FROM incumbent_connection`).Scan(&connStatus); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			SELECT sor_mode FROM overlay_mode`,
 		).Scan(&mode); err != nil {
 			return err

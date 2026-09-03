@@ -97,8 +97,18 @@ func inviteLines(line writeLine) {
 		"Nếu bạn không mong đợi điều này, bạn có thể bỏ qua email này.")
 }
 
-// weeklyLines is the Monday retrospective.
+// weeklyLines is the Monday retrospective: what the week did, and then what a
+// reader does next with it. Split where the mail itself changes subject — the
+// counted figures above, the movement and the two links below — because the
+// list is one call per line and grows every time the mail says something new.
 func weeklyLines(line writeLine) {
+	weeklyFigureLines(line)
+	weeklyMovementLines(line)
+}
+
+// weeklyFigureLines are the counted outcomes: what was delivered, won, lost,
+// moved, decided, and how much of the morning queue was answered.
+func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklySubject },
 		"Your week: ",
 		"Deine Woche: ",
@@ -107,10 +117,10 @@ func weeklyLines(line writeLine) {
 		"Your week of ",
 		"Deine Woche ab ",
 		"Tuần của bạn từ ")
-	line(func(c *Copy) *string { return &c.WeeklyPromised },
-		"Promised, delivered",
-		"Zugesagt, erledigt",
-		"Đã hứa, đã xong")
+	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
+		"Tasks delivered",
+		"Aufgaben erledigt",
+		"Công việc đã hoàn thành")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
@@ -131,6 +141,17 @@ func weeklyLines(line writeLine) {
 		"You decided",
 		"Von dir entschieden",
 		"Bạn đã quyết")
+	weeklyDecisionLines(line)
+}
+
+// weeklyDecisionLines is the retrospective's second half: what the reader did
+// with their queue, and how each thing turned out.
+//
+// Split from weeklyLines, which had grown past the function ceiling. The seam
+// is the one the mail itself has — the top of the message reports the week's
+// numbers, and from here down it reports the reader's own decisions — so the
+// two are edited for different reasons and read as two blocks on the page.
+func weeklyDecisionLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyYes },
 		"yes",
 		"ja",
@@ -139,6 +160,13 @@ func weeklyLines(line writeLine) {
 		"no",
 		"nein",
 		"từ chối")
+	weeklyQueueLines(line)
+	weeklyClosingLines(line)
+}
+
+// weeklyQueueLines is the retrospective's middle: what the morning list did
+// with the week, and what it carried into the next one.
+func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
 		"Morning queue",
 		"Morgen-Liste",
@@ -155,6 +183,11 @@ func weeklyLines(line writeLine) {
 		"Carried over",
 		"Übernommen",
 		"Chuyển tiếp")
+}
+
+// weeklyMovementLines are what actually moved, the way on to the rest of it,
+// and the words a single row's outcome is written with.
+func weeklyMovementLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyWhatMoved },
 		"What moved:",
 		"Was sich bewegt hat:",
@@ -163,6 +196,16 @@ func weeklyLines(line writeLine) {
 		"… and %d more, on Home",
 		"… weitere auf Home: %d",
 		"… và %d mục nữa, trên Home")
+}
+
+// weeklyClosingLines is what the retrospective asks for once it has reported:
+// next week's plan, the archive behind it, and the outcome words the movement
+// list is written in.
+func weeklyClosingLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
+		"Plan next week",
+		"Nächste Woche planen",
+		"Lập kế hoạch tuần tới")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
 		"Die ganze Woche, und die davor:",

@@ -325,12 +325,7 @@ func (a *onboardingCompanyAssistant) answer(ctx context.Context, message string,
 		return companyReadModelReply{}, err
 	}
 	gate := newOnboardingCompanyGate(message, history, conversation, selection)
-	var response model.Response
-	if structured, ok := a.brain.(validatedBrain); ok {
-		response, err = structured.CompleteValidated(ctx, req, gate.validate)
-	} else {
-		response, err = a.brain.Complete(ctx, req)
-	}
+	response, err := ai.Ask(ctx, a.brain, req, gate.validate)
 	if err != nil {
 		return companyReadModelReply{}, err
 	}

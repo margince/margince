@@ -37,7 +37,7 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 	if err != nil {
 		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
 	}
-	warnings := readWarnings(legalWarning, extraction.err)
+	warnings := readWarnings(legalWarning, extraction.err, seedIsJSShell(readPages))
 	draftFields := deepReadFields(mergedFields)
 	draftPeople := siteReadPeople(extraction.merged.people)
 	draftEntities := siteReadLegalEntities(extraction.merged.entities)
@@ -127,13 +127,27 @@ func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepRead
 // not settle, so a confirmation is never made on an unstated assumption. The
 // legal caveat arrives already spelled for the cause that fired; empty means the
 // legal gate settled and there is nothing to caveat.
-func readWarnings(legalWarning string, extractErr error) []string {
-	warnings := make([]string, 0, 2)
+func readWarnings(legalWarning string, extractErr error, jsShell bool) []string {
+	warnings := make([]string, 0, 3)
 	if legalWarning != "" {
 		warnings = append(warnings, legalWarning)
 	}
 	if extractErr != nil {
 		warnings = append(warnings, "Some pages could not be extracted; the grounded findings that completed are still available.")
 	}
+	if jsShell {
+		// Said out loud, because the dossier otherwise looks like a thin
+		// company rather than a thin READ: this site assembles its words in
+		// the browser, so what was found came from what the pages declare
+		// about themselves and not from their content.
+		warnings = append(warnings, "This site builds its pages in the browser, so only what they declare about themselves could be read. A person opening it will see more.")
+	}
 	return warnings
+}
+
+// seedIsJSShell answers whether the LANDING page was a client-rendered shell.
+// The seed rather than any page: it is the one every read starts from, and a
+// site that serves a shell there serves one everywhere.
+func seedIsJSShell(pages []crawlPage) bool {
+	return len(pages) > 0 && pages[0].isJSShell()
 }

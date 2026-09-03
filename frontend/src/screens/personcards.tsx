@@ -12,7 +12,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { daysPast } from "../format/lateness";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useViewerId } from "./common";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
@@ -575,6 +575,7 @@ function loopPrefix(
 
 function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   // An unreadable due instant names no deadline, so the row reads as one with
   // no date rather than as a promise due at some NaN o'clock.
@@ -590,7 +591,9 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
       return (
         <span className="pe-loop-due pe-loop-overdue">
           {days > 0
-            ? t("person.loops.overdue", { count: formatNumber(days, locale) })
+            ? plural("person.loops.overdue", days, {
+                count: formatNumber(days, locale),
+              })
             : t("person.loops.overdueUnderDay")}
         </span>
       );

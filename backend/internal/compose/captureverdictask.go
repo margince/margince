@@ -76,13 +76,7 @@ func (e *CounterpartyVerdictEngine) ask(
 ) ([]verdictResult, string, error) {
 	req := verdictRequest(row)
 	validate := verdictShapeValid(row)
-	var resp model.Response
-	var err error
-	if structured, ok := e.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		resp, err = e.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, e.brain, req, validate)
 	if err != nil {
 		return nil, "", err
 	}

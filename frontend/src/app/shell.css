@@ -7,9 +7,9 @@
    the reading column. */
 :root {
   /* The session strip's height. The sidebar's own head measures against it, so
-     the first destination's row begins where the strip's rule ends and the two
-     halves of the chrome share one horizontal line rather than nearly sharing
-     one. */
+     the mark's axis is the strip's and the two halves of the chrome share one
+     horizontal line rather than nearly sharing one; the first destination's row
+     begins a breath under the strip's rule. */
   --topbarH: 50px;
   /* The page's own inset, spelled ONCE and used by every part of the frame that
      touches it: the strip, the heading, the screen's block, and the air under the
@@ -31,20 +31,12 @@
   initial-value: 64px;
 }
 
-/* The context column's width, registered for the same reason --railW is: the
-   two ends of a fold are 320px and 34px, and an unregistered property would
-   jump between them at the halfway mark rather than travel. */
-@property --asideTrack {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 320px;
-}
-
 /* App shell — a labeled sidebar collapsing to the canonical 64px rail, and the
- * content column beside it. The chrome is WHITE, not §2b's deep ink-green field:
- * the founder ruling of 2026-07-23 makes the product surface white, so rail icons
- * read as ordinary theme tokens rather than white-alpha on a dark ground. The
- * ink-green field keeps the marketing surfaces. */
+ * content column beside it. The chrome is GLASS over the lit ground (DESIGN.md
+ * §6), not §2b's deep ink-green field: the sidebar and the strip are the page's
+ * own pane with a blur behind it, so rail icons read as ordinary theme tokens
+ * rather than white-alpha on a dark ground. The ink-green field keeps the
+ * marketing surfaces. */
 
 /* The skip link (WCAG 2.4.1). Off-screen until it has focus, and moved with a
  * transform rather than hidden: `display: none`, `visibility: hidden` and a zero
@@ -107,20 +99,25 @@
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
   box-sizing: border-box;
-  background: var(--bgPage);
+  /* The lit ground (DESIGN.md §2): the page colour with the two corner lights
+     painted INTO it — the emerald one behind the sidebar at the top-left, the
+     indigo one at the bottom-right. A background rather than an element, so
+     nothing is stacked, scrolled or measured for it; and never animated, because
+     atmosphere that moves is a feature. Fixed radii and no repeat: each is a
+     pool of light in one corner, faint enough that the eye does not find it. */
+  background:
+    radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
+    radial-gradient(900px 620px at 100% 100%, var(--glowB), transparent 70%)
+    no-repeat,
+    var(--bgPage);
   /* `viewport-fit=cover` exposes the horizontal insets too, and this layout is
      the one that applies in landscape — where the notch sits over the sidebar's
      own edge, on top of the brand chip and the column of icons. */
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   /* Collapsing animates the grid column so the sidebar and the content edge
-     move together; labels cross-fade with it. The context column folds on the
-     same duration and the same curve, because both are the same gesture — a
-     column of the window opening or closing — and two speeds would read as two
-     unrelated mechanisms. */
-  transition:
-    --railW var(--dur-move) var(--ease-out),
-    --asideTrack var(--dur-move) var(--ease-out);
+     move together; labels cross-fade with it. */
+  transition: --railW var(--dur-move) var(--ease-out);
 }
 /* The frame every screen sits in, INCLUDING the rail-less auth surface — which
    sizes itself in dvh for a reason (screens/auth.css: on iOS, 100vh subtracts the
@@ -135,7 +132,15 @@
   }
 }
 .app.railexpanded {
-  --railW: 252px;
+  --railW: 224px;
+}
+/* A settings route's second level is a narrower column than the destinations:
+   its rows are a section's entries rather than places to go, and 210px holds
+   the longest of them (DESIGN.md §6). Read off the sidebar's own `leveled`
+   class rather than the route, so the shell keeps one opinion about what a
+   level is (app/shell.tsx). */
+.app.railexpanded:has(> .rail.leveled) {
+  --railW: 210px;
 }
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
@@ -295,22 +300,24 @@
   min-width: 0;
 }
 /* ===== sidebar =====
- * The ground is the matte near-white surface in BOTH states. The collapsed
- * state matches the canonical rail's geometry — 64px, 44px targets, the
- * logomark chip, the 44px targets — but not its ink-green field: a
- * sidebar that changed colour on collapse would read as two shells.
+ * The ground is the pane — glass over the emerald light — in BOTH states. The
+ * collapsed state matches the canonical rail's geometry — 64px, the logomark
+ * chip, the same rows — but not its ink-green field: a sidebar that changed
+ * colour on collapse would read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
  * reader walked into), More at phone width, then the installation's entitlement
  * pinned to the foot. */
 .rail {
-  /* Its own ground, a shade off the white page: the application's left edge is
-     visible as a surface rather than only as a hairline. */
-  background: var(--bgSidebar);
+  /* Glass over the glow: the pane's translucent ground with the blur that lets
+     the emerald light behind it show through as a tint rather than as a shape.
+     The two glows are the chrome (DESIGN.md §2) — there is no coloured bar. */
+  background: var(--pane);
+  backdrop-filter: blur(20px);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
-  border-right: 1px solid var(--borderSubtle);
+  border-right: 1px solid var(--paneEdge);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -338,6 +345,11 @@
    column, and lands on top of the row it names. */
 .rail.collapsed {
   overflow: visible;
+  /* Above the work column it is a sibling of: the tooltips below hang past the
+     rail's right edge, and the column, painted later with its own stacking
+     context, covered them. A tooltip behind the page is one nobody reads. */
+  position: relative;
+  z-index: 2;
 }
 /* One padding for both states. It used to drop to 0 on collapse, which shifted
    every item sideways in a single frame — the jump. */
@@ -375,7 +387,9 @@
      destination's row on the line under that rule. */
   height: var(--topbarH);
   margin-top: calc(-1 * var(--space-3));
-  margin-bottom: 0;
+  /* A breath between the mark and the first destination: with the mark at the
+     head's full height the row under it read as one more item in its stack. */
+  margin-bottom: var(--space-3);
   /* The release marker below hangs off this box. */
   position: relative;
 }
@@ -385,49 +399,6 @@
 .rail.collapsed .railhead {
   justify-content: center;
 }
-/* TEMPORARY — the release marker.
- *
- * The whole thing goes when the product leaves alpha: this rule, the span in
- * app/shell.tsx, the `shell.alpha` key and the case in rail.test.tsx that holds
- * it through the collapse, in one change.
- *
- * A corner ribbon across the head's top-left, which is the one place a marker
- * can go without competing with anything: the head holds the mark and the
- * wordmark and nothing else, and this crosses the corner both of them leave
- * empty.
- *
- * ABSOLUTE, so it takes no space: the head's height is the strip's to the pixel
- * and every row below it is aligned to that, so a marker in the flow would move
- * the whole column. And it hangs off the HEAD's own corner, which is at the same
- * place in both rail states — the head narrows around the mark rather than
- * moving it — so one placement is on screen at 252px, at 64px, and in the phone
- * sheet's head. */
-.rail .alphamark {
-  position: absolute;
-  left: 2px; /* ds:ignore the ribbon's own corner anchor */
-  top: 10px; /* ds:ignore the ribbon's own corner anchor */
-  translate: -50% 0;
-  rotate: -45deg;
-  transform-origin: 50% 0;
-  width: 75px; /* ds:ignore the ribbon's own span across the corner */
-  padding: 1px 0; /* ds:ignore a cap-height band, not spaced content */
-  border-radius: 4px; /* ds:ignore the ribbon's own corner */
-  /* The status amber, and a fixed dark ink on it. `--bgRail` is the one near
-     black this palette holds STILL across both themes (tokens.css says so where
-     it is declared) — every other dark ink here lightens with the theme, and
-     this ribbon's ground does not, so it would go unreadable in one of them. */
-  background: var(--away);
-  color: var(--bgRail);
-  font-family: var(--f-mono);
-  font-size: 8px; /* ds:ignore below the type scale on purpose — it must not compete with the mark */
-  font-weight: var(--fw-bold);
-  line-height: 1.4;
-  text-align: center;
-  text-transform: uppercase;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
 /* brand block */
 .rail .ws {
   display: flex;
@@ -436,36 +407,35 @@
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: 9px;
-  padding: 2px 7px; /* ds:ignore 7 + the rail's 8px inset centres the 32px chip on the rows' own 18px glyph axis */
+  padding: 2px 7px 2px 1px; /* ds:ignore 1 + the rail's 8px inset centres the 44px chip on the rows' own 18px glyph axis */
   flex: 1;
   min-width: 0;
   overflow: hidden;
 }
 .rail .ws-chip {
-  width: 32px;
-  height: 32px;
+  /* The workspace's mark is the one picture in the chrome, and at 32px it read
+     as one more row glyph. 44px is the head's height less a 2px inset on each
+     side: the head is the strip's height to the pixel, so this is as large as
+     the mark can be without touching the rail's edge or the rule under it. */
+  width: 44px;
+  height: 44px;
   flex: none;
-  border-radius: 9px;
-  background: linear-gradient(
-    145deg,
-    var(--wsChipTop) 0%,
-    var(--accentBrand) 52%,
-    var(--wsChipBottom) 100%
-  );
+  border-radius: 11px;
+  /* Flat brand emerald, no gradient and no lift: the mark is the one filled
+     thing in the chrome, and a lit, shadowed chip beside quiet rows was the
+     loudest object on the screen. */
+  background: var(--accentBrand);
   color: var(--textOnAccent);
   display: grid;
   place-items: center;
-  box-shadow: var(--shadow-pop);
 }
-/* The same slot holding the COMPANY's mark. The chip's own ground and lift go:
-   what stands here is a logo drawn for its own background, or the monogram
-   Avatar tints from the record's identity, and either one on the brand gradient
-   would be a second surface behind a finished mark. The avatar fills the slot
-   so the collapsed rail keeps centring the same 32px box on the rows' glyph
-   axis. */
+/* The same slot holding the COMPANY's mark. The chip's own ground goes: what
+   stands here is a logo drawn for its own background, or the monogram Avatar
+   tints from the record's identity, and either one on the brand emerald would
+   be a second surface behind a finished mark. The avatar fills the slot so the
+   collapsed rail keeps centring the same 44px box on the rows' glyph axis. */
 .rail .ws-chip-company {
   background: none;
-  box-shadow: none;
 }
 .rail .ws-chip-company .avatar {
   width: 100%;
@@ -502,18 +472,24 @@
   opacity: 0;
 }
 .rail .ws-name b {
-  font-family: var(--f-display);
-  font-size: 13.5px;
-  font-weight: 600;
+  /* A step up from the rows: the workspace's name heads the column and reads
+     first, and at the rows' own size it was one more label among them. */
+  font-size: 15px;
+  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
   line-height: 1.25;
 }
-.rail .ws-org {
-  font-family: var(--f-mono);
+/* The line under the installation's name, and the build marker at the panel's
+   foot. Both are the same voice as the rest of the panel at a smaller size —
+   the mono uppercase kicker this used to draw in was a third type family
+   standing in the corner of every screen, saying nothing the name above it does
+   not. The ellipsis stays: an installation name is user data of unbounded
+   length in a narrow column. */
+.rail .ws-org,
+.rail .railversion {
   font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--textMeta);
+}
+.rail .ws-org {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -533,23 +509,25 @@
 /* A group is a section of the column, and the heading sits IN that space: the
    air above it belongs to the break, the air under it belongs to its rows. */
 .rail .navgroup + .navgroup {
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
-/* 12px, semibold, sentence case. The uppercase mono kicker this used to be is
-   the older convention — Primer, Atlassian and shadcn all dropped it, and at
-   9.5px with 0.12em tracking it was the least legible text in the product. The
-   group is separated by space, not by a rule: a heading and a divider do the
-   same job, and stacking both says it twice. */
 /* A quiet label over a group, not a heading competing with the rows under it:
-   the rows are what the eye is looking for, so this is one step down in size and
-   weight and carries the rows' own left edge. */
+   sentence case, one step down from the rows in size and weight, in the meta
+   ink — the rows are what the eye is looking for. Not the uppercase eyebrow:
+   ten places to go under three shouted labels read as a form, and the mock
+   sets these small and plain. The group is separated by space, not by a rule:
+   a heading and a divider do the same job, and stacking both says it twice. */
 .rail .navheading {
   position: relative;
-  font-size: var(--fs-meta);
+  font-size: 11px;
   font-weight: var(--fw-medium);
   color: var(--textMeta);
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-1);
   padding: 0 14px; /* ds:ignore the nav rows' own inset, which this label stands on */
+  /* It is a label, not a place to go. Sitting in a column of links it inherited
+     the text cursor, which offers a selection nobody wants over a word that
+     answers no press. */
+  cursor: default;
 }
 /* Collapsed: the heading keeps its exact box (same font metrics, same margins)
    so the rows below never re-space; the text goes transparent and a hairline is
@@ -579,6 +557,10 @@
    here, the gap has ONE spelling and the sheet cannot fall out of step with it. */
 .rail.collapsed:not(.sheetopen) .ws {
   gap: 0;
+  /* The words have no width here, so nothing else centres the chip: `flex: 1`
+     makes this box the head's full width and the mark would sit at its left
+     edge, off the axis every glyph below it stands on. */
+  justify-content: center;
 }
 
 /* Not clipped: the collapsed tooltip sits outside
@@ -590,7 +572,12 @@
   align-items: center;
   gap: var(--space-2);
   flex: 1;
-  min-height: 36px;
+  /* 38px rows, the mock's pitch: ten places read at a glance, each with room
+     to be pressed. Past the 24x24 floor of WCAG 2.2 2.5.8 (AA) at 46x38; the
+     44px targets of 2.5.5 (AAA) are the phone bar's, where a thumb is the
+     pointer. The foot's agent card is compact enough that the column still
+     fits a laptop at this pitch. */
+  min-height: 38px;
   /* 13 and not 14, with the transparent border below making up the difference:
      the active row is a PLATE with an edge, and a border that appears only when
      the row is current would shift its glyph and its label by a pixel on every
@@ -612,37 +599,32 @@
   background: transparent;
   color: var(--textContent);
   text-decoration: none;
-  font-size: var(--fs-body);
+  /* A step above the body size: the rail's labels are the mock's 14px, read
+     from further away than a paragraph. */
+  font-size: 14px;
 }
 /* Collapsed keeps the SAME row height as expanded, and the 13px padding plus the
    1px edge centres the 18px icon either way (1 + 13 + 18 + 13 + 1 = 46), so no
    icon moves on either axis across the collapse, and none moves when a row
-   becomes the current one. Target size is therefore 46x36 at the floor — past
-   WCAG 2.2 2.5.8 (AA, 24x24), giving up the 44x44 of 2.5.5 (AAA) that
-   AC-shell-1c asks for in favour of the compact row rhythm the design direction
-   sets. */
-/* Hover moves DOWN off the sidebar's ground and the current row moves UP to the
-   elevated one, so the two states are never the same gesture read twice — which
-   is why this is --bgSidebarHover and not --bgHover: --bgHover is lighter than
-   the rail, so it would brighten toward the active plate rather than away from
-   it. */
+   becomes the current one. */
+/* A pointer resting on a row takes the page's own hover step — the glass is the
+   page's pane, so the page's ladder is the rail's ladder too. */
 .rail .navitem:hover {
-  background: var(--bgSidebarHover);
+  background: var(--bgHover);
   color: var(--textPrimary);
 }
-/* The current row is a PLATE: the elevated surface, lifted off the sidebar's own
-   recessed ground the same way a card is lifted off the page — the rail's ladder
-   and the content's are one ladder.
-   Still three signals, and for the reason it always was: the lift measures
-   1.21:1 light / 1.20:1 dark against the ground, which is a difference a reader
-   sees and not one that carries a state on its own (WCAG 1.4.1, Level A). So the
-   weight and the accent on the glyph stay, and the plate gains an EDGE —
-   --borderSubtle is what makes it a surface with a boundary rather than a pale
-   smudge, and it is the same hairline every card in the product draws.
-   The INK stays neutral: the accent as 13.5px text measures 3.9:1 on the dark
-   theme's plate, under the 4.5:1 AA needs, and weight does not rescue that below
-   18.66px. The glyph is where the accent goes, and at 3:1 non-text (1.4.11) it
-   clears. */
+/* The current row is one more pane on the glass: the pane's ground with the
+   pane's hairline as an EDGE, which is what makes it a surface with a boundary
+   rather than a smudge, and quieter than hover's tint so the two states are
+   never the same gesture read twice.
+   Four signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
+   the SOLID elevated ground — the pane's glass over the rail's glass was two
+   tints of one thing, and the current row did not stand out from its
+   neighbours — a real hairline edge, semibold weight, and the accent on the
+   glyph. The INK stays neutral: the accent as 14px text measures under the
+   4.5:1 AA needs on the dark theme, and weight does not rescue that below
+   18.66px. The glyph is where the accent goes, and at 3:1 non-text (1.4.11)
+   it clears. */
 .rail .navitem.active {
   background: var(--bgElevated);
   border-color: var(--borderSubtle);
@@ -725,7 +707,7 @@
 /* ===== a navigation level =====
  * The panel shows ONE level at a time: on a section route the ten destinations
  * step aside for that section's entries, with the way back up above them. 64px
- * cannot carry two levels, and 252px carrying both reads as a list of twenty
+ * cannot carry two levels, and 224px carrying both reads as a list of twenty
  * places to go.
  *
  * The rows are the same `.navitem`s as the destinations, deliberately: every
@@ -890,6 +872,22 @@
      the air around it read as rail nobody uses. */
   margin: var(--space-1) calc(-1 * var(--space-2)) 0;
   padding: 0 var(--space-2);
+}
+/* WHICH BUILD THIS IS, at the foot of the column.
+   Centred in both rail states, because it names the whole panel rather than
+   standing on the rows' text column — and at 64px there is no text column to
+   stand on. It reads in the brand block's own small face: the one other line in
+   this panel that is a label about the installation rather than a place to go,
+   which is why the two share a declaration rather than each spelling 9px.
+   `flex: none` for the reason the head and the agent band carry it: on a window
+   shorter than the panel this is the box a flex column would take the overflow
+   out of, and a version that shrank to nothing is a version nobody can read
+   back to us. */
+.rail .railversion {
+  flex: none;
+  margin: var(--space-3) 0 0;
+  text-align: center;
+  color: var(--textMeta);
 }
 /* The More control belongs to the phone-width bottom bar only. */
 .rail .railmore {
@@ -1238,24 +1236,19 @@
     --phoneBarLip: calc(var(--space-1) + 1px);
     overflow: visible;
     /* Here the panel IS a floating object — it hovers over the content rather
-       than bounding it — so it takes the card chrome the flush sidebar gives
-       up: all four sides, a radius, a shadow to sit on, and the ELEVATED ground
-       instead of the sidebar's recessed one. That last part is the whole reason
-       the ground is restated here: --bgSidebar is a shade DARKER than the page
-       because a left edge should recede behind what it frames, and this bar is
-       not an edge — it is a card lying on top of the content, and a card that
-       reads darker than the page it covers reads as a hole in it. */
-    background: var(--bgElevated);
-    border: 1px solid var(--borderSubtle);
-    border-radius: var(--r-md);
+       than bounding it — so it takes the chrome the flush sidebar gives up: all
+       four sides, the pane's corner, and the one shadow a layer over the page
+       may cast. The ground stays the same glass, so the bar is visibly the
+       sidebar in its other shape rather than a second surface. */
+    border: 1px solid var(--paneEdge);
+    border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
   }
-  /* And so the current cell cannot be the elevated plate it is on the desktop
-     rail: the plate and the bar would be the same colour. The accent tint is
-     what marks it here — the same signal `.railmore.active` below already uses
-     for a destination that lives in the sheet, so the bar has ONE way of saying
-     "this one", whichever cell is carrying it. The weight and the accent glyph
-     from the desktop rule still apply, so the state keeps its three signals. */
+  /* The current cell takes the accent tint rather than the desktop row's grey
+     one — the same signal `.railmore.active` below already uses for a
+     destination that lives in the sheet, so the bar has ONE way of saying "this
+     one", whichever cell is carrying it. The weight and the accent glyph from
+     the desktop rule still apply, so the state keeps its three signals. */
   .rail .navitem.active {
     background: var(--accentLight);
     border-color: transparent;
@@ -1615,120 +1608,6 @@
   margin-bottom: var(--space-4);
 }
 
-/* ── The page's context column ────────────────────────────────────────────
-   A column of the WINDOW, beside the nav rail and the work column rather than
-   inside the page — so it runs the full height past the page's own header and
-   does not move when a tab changes. The grid grows a third track only when a
-   screen actually fills it: `:has()` reads the column's own presence, so no
-   screen has to tell the shell it has one, and nothing reserves a track that
-   would otherwise sit empty. */
-.app {
-  --asideW: 320px;
-  --asideStubW: 34px;
-  --asideTrack: var(--asideW);
-}
-.app:has(> .pageaside.collapsed) {
-  --asideTrack: var(--asideStubW);
-}
-.app:has(> .pageaside:not([hidden])) {
-  grid-template-columns: var(--railW) minmax(0, 1fr) var(--asideTrack);
-}
-.pageaside {
-  min-width: 0;
-  height: 100vh;
-  overflow-y: auto;
-  /* The body keeps the open column's width while the track narrows, so the
-     fold clips it instead of re-laying it out on every frame of the tween. */
-  overflow-x: hidden;
-  border-left: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
-  padding: var(--space-3) var(--space-4) var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.pageaside-body {
-  display: flex;
-  flex-direction: column;
-  /* The page's own rhythm between stacked cards, here as everywhere: this column
-     holds the same primitive the work column does. */
-  gap: var(--space-4);
-  /* Sized to the OPEN column rather than to the track it is in, for the reason
-     above: a percentage would reflow the cards inside it sixty times a second
-     while the column closes. */
-  width: calc(var(--asideW) - 2 * var(--space-4));
-}
-/* Folded, the column is a strip rather than nothing: a reader can still see
-   that something is there and how to get it back. The strip IS the control —
-   a 34px column with a small button in it would be a target most of which
-   does nothing. */
-.pageaside.collapsed {
-  overflow: hidden;
-  padding-inline: 0;
-}
-.pageaside.collapsed .pageaside-head {
-  flex: 1;
-  padding-bottom: 0;
-}
-.pageaside.collapsed .pageaside-title,
-.pageaside.collapsed .pageaside-foldlabel,
-.pageaside.collapsed .pageaside-body {
-  display: none;
-}
-.pageaside.collapsed .pageaside-fold {
-  inline-size: 100%;
-  block-size: 100%;
-  align-items: flex-start;
-  justify-content: center;
-  padding: var(--space-4) 0 0;
-  border: 0;
-  border-radius: 0;
-}
-/* The column's own head: what this column IS, and the control that folds it.
-   Sticky to the column rather than the page, so a reader who has scrolled deep
-   into the context can still put it away without scrolling back. */
-.pageaside-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding-bottom: var(--space-1);
-  background: var(--bgElevated);
-  color: var(--textTertiary);
-}
-.pageaside-fold {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: var(--control-h-sm);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-  font-family: var(--f-body);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--textMeta);
-  cursor: pointer;
-}
-.pageaside-fold:hover {
-  background: var(--bgHover);
-}
-.pageaside-fold svg {
-  width: 13px;
-  height: 13px;
-}
-.pageaside.collapsed .pageaside-fold svg {
-  width: 15px;
-  height: 15px;
-}
-.pageaside-fold:focus-visible {
-  outline: var(--focus-ring-forced);
-  outline-offset: -2px;
-}
 /* A record reads wider than a settings page or the home screen: it carries a
    header, a tab strip and two columns under them, where the others are one
    column of prose-width cards. */
@@ -1751,78 +1630,4 @@
 .main-record {
   container-type: inline-size;
   container-name: work;
-}
-/* Under the fold the window has room for ONE region, so the record and its
-   context take turns in the same cell rather than sharing it. Two columns leave
-   neither readable; two ROWS leave neither, either — split down the middle, a
-   phone gave the record 422px and its context the other 422px, and the reader
-   had opened the record.
-
-   The switch is the one already in the record's header, and the panel's own head
-   carries the way back. */
-@media (max-width: 1100px) {
-  .app:has(> .pageaside:not([hidden])) {
-    grid-template-columns: var(--railW) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-  }
-  /* The work column's own cell, and the whole of it: what is drawn there is
-     whichever of the two the reader asked for. */
-  .pageaside {
-    grid-area: 1 / 2 / 2 / -1;
-    block-size: auto;
-    max-block-size: none;
-    overflow-y: auto;
-    border-inline-start: 0;
-    border-block-start: 0;
-  }
-  /* One at a time. `PageAsideProvider` keeps the narrow window's own open state,
-     shut on arrival, so a reader always lands on the record they opened — the
-     remembered preference is about working at a desk with both columns, and it
-     is not an instruction to open a phone on the context instead. */
-  .app:has(> .pageaside:not([hidden]):not(.collapsed)) > .main {
-    display: none;
-  }
-  /* And folded means not drawn: there is no column beside the work to leave a
-     stub at, so the record simply has the screen. */
-  .pageaside.collapsed {
-    display: none;
-  }
-  /* The panel has the work column's width now, so its cards take it. The fixed
-     width above exists to keep the fold from reflowing them sixty times a
-     second, and there is no fold to tween here — the column does not narrow, it
-     gives way to the record. Left as it was, a 288px stack of cards sat in a
-     648px region with the rest of it empty. */
-  .pageaside-body {
-    width: auto;
-  }
-  /* And it stands on the page's gutter, so its cards line up with the record's
-     own column rather than half a gutter inside it. */
-  .pageaside {
-    padding-inline: var(--pageGutter);
-  }
-}
-
-/* On a phone there is no rail TRACK to leave room for: the sidebar is a fixed
-   bottom bar, so it is out of the grid entirely and the work column is the whole
-   width.
-
-   Stated here rather than in the phone block far earlier in this file, and that
-   placement is the whole point: `.app:has(> .pageaside…)` and the phone block's
-   own `.app` carry different specificities, so the wider rule above was winning
-   at phone width too. It put a 252px rail track back into a 390px grid and
-   placed the context column in the second track BESIDE a 138px work column —
-   two unreadable columns where the page should be one. */
-@media (max-width: 700px) {
-  .app:has(> .pageaside:not([hidden])) {
-    grid-template-columns: 1fr;
-  }
-  /* The only cell there is: with one track, a column line of 2 is the grid's
-     end rather than a second column. */
-  .pageaside {
-    grid-area: 1 / 1 / 2 / -1;
-    /* Clear of the navigation bar, which is fixed over the foot of the screen:
-       the panel now reaches that far, so its last row is what the bar would
-       otherwise cover. */
-    padding-block-end: var(--phoneNavClearance);
-  }
 }

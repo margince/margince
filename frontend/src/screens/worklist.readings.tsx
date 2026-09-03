@@ -18,7 +18,7 @@ import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { formatMoneyCompact, formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import type { Worklist } from "./worklist.queries";
+import type { Worklist, WorklistFilter } from "./worklist.queries";
 import "./worklist.css";
 
 /**
@@ -26,7 +26,21 @@ import "./worklist.css";
  * four: a row that sometimes drew a fifth would fold at a different width from
  * one click away.
  */
-export function WorklistReadings({ day }: Readonly<{ day: Worklist }>) {
+export function WorklistReadings({
+  day,
+  onLane,
+}: Readonly<{
+  day: Worklist;
+  /**
+   * Open the lane a reading counted.
+   *
+   * Every figure in this strip is one of the queue's own filter pills counted,
+   * and the pills are on the same screen — so the door is the screen's own
+   * dial and needs no route. Without it the strip told a rep that eleven
+   * replies were waiting and left them to work out which pill that was.
+   */
+  onLane: (filter: WorklistFilter) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const readings = day.readings;
@@ -45,24 +59,35 @@ export function WorklistReadings({ day }: Readonly<{ day: Worklist }>) {
           readings.more_available ? t("worklist.readings.truncated") : undefined
         }
       >
-        <RevenueStat readings={readings} locale={locale} t={t} />
+        <RevenueStat
+          readings={readings}
+          locale={locale}
+          t={t}
+          onOpen={() => onLane("deals_at_risk")}
+        />
         <CountStat
           label={t("worklist.readings.replies")}
           detail={t("worklist.readings.replies.detail")}
           count={readings.buyer_replies}
           locale={locale}
+          openLabel={t("worklist.readings.openLane")}
+          onOpen={() => onLane("customer_waiting")}
         />
         <CountStat
           label={t("worklist.readings.prospecting")}
           detail={t("worklist.readings.prospecting.detail")}
           count={readings.prospecting}
           locale={locale}
+          openLabel={t("worklist.readings.openLane")}
+          onOpen={() => onLane("leads")}
         />
         <CountStat
           label={t("worklist.readings.review")}
           detail={t("worklist.readings.review.detail")}
           count={readings.review}
           locale={locale}
+          openLabel={t("worklist.readings.openLane")}
+          onOpen={() => onLane("decisions")}
         />
       </StatStrip>
     </section>
@@ -82,15 +107,19 @@ function RevenueStat({
   readings,
   locale,
   t,
+  onOpen,
 }: Readonly<{
   readings: Worklist["readings"];
   locale: Locale;
   t: Translator;
+  onOpen: () => void;
 }>) {
   const minor = readings.revenue_at_risk_minor;
   const currency = readings.revenue_currency;
   if (minor == null || !currency) {
     return (
+      // No door on this arm: nothing here could be priced, so the lane behind
+      // it is not what the reader is missing — the prices are.
       <StatCard
         label={t("worklist.readings.revenue")}
         value="—"
@@ -108,6 +137,8 @@ function RevenueStat({
       // page's ordinary tone reads it as a status rather than as work.
       tone={minor > 0 ? "warn" : undefined}
       numeric
+      openLabel={t("worklist.readings.openLane")}
+      onOpen={onOpen}
     />
   );
 }
@@ -118,11 +149,15 @@ function CountStat({
   detail,
   count,
   locale,
+  openLabel,
+  onOpen,
 }: Readonly<{
   label: string;
   detail: string;
   count: number;
   locale: Locale;
+  openLabel: string;
+  onOpen: () => void;
 }>) {
   return (
     <StatCard
@@ -130,6 +165,8 @@ function CountStat({
       value={formatNumber(count, locale)}
       detail={detail}
       numeric
+      openLabel={openLabel}
+      onOpen={onOpen}
     />
   );
 }

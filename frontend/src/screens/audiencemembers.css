@@ -1,0 +1,32 @@
+/* The member checklist inside the audience dialog.
+ *
+ * Scrolls rather than growing: a workspace with sixty seats would otherwise
+ * push the dialog's confirm button off the bottom of the screen, which is the
+ * one control the reader came for. */
+
+.compose-audience-members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.compose-audience-member {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The note is the seat's address, which is how two people with one name are
+   told apart. It truncates; the name does not. */
+.compose-audience-member > .t-caption {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

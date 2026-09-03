@@ -7990,6 +7990,14 @@ paths:
     post:
       tags: [Tags]
       operationId: restoreTag
+      # Human-only by decision, not by omission. Restoring is the one tag verb an
+      # agent cannot reach, and the reason is asymmetry rather than danger: the
+      # act itself is nearly harmless — it moves no record and a person undoes it
+      # by retiring the word again — but it is the counterpart to a RETIREMENT an
+      # agent can already perform, and the vocabulary is Admin and Ops business
+      # to keep. A model that can retire a word and cannot bring it back asks a
+      # human, which is the intended shape. create_tag's own tool copy tells a
+      # caller the same thing: a person restores in Settings, no tool does.
       x-agent-access: human-only
       summary: Bring an archived tag back into the vocabulary.
       description: |
@@ -8013,7 +8021,7 @@ paths:
     post:
       tags: [Tags]
       operationId: mergeTags
-      x-agent-access: human-only
+      x-mcp-tool: { verb: merge_tags, record_type: tag, tier: confirmation_required, scope: write }
       summary: Fold this tag into another, moving every record that carries it.
       description: |
         The fix for a vocabulary that grew two words for one idea. Every record carrying the
@@ -15952,6 +15960,69 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No run has completed yet. A fresh installation has not been checked.
+  /analytics/coverage:
+    get:
+      tags: [Reports]
+      operationId: getDataCoverage
+      summary: How current the sources behind the numbers are.
+      description: |
+        Source health: which connectors the nightly check could read, how far back each
+        reaches, and what it could not open.
+
+        Gated on `data_coverage`, which admin and ops hold and nobody else does. That is a
+        decision rather than an oversight: a rep shown their installation's connector
+        health has been handed somebody else's job, and a screen reporting a problem they
+        cannot act on teaches them to ignore the screen.
+
+        Only a `checked` source carries `checked_through`. A date on a stale or unavailable
+        one would read as "checked up to then" when nothing was read at all — which is the
+        difference between a quiet week and a broken connector.
+      x-mcp-tool: { verb: data_coverage, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The most recent run's source health.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DataCoverage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No run has completed yet. A fresh installation has not been checked.
+  /forecast/assurance/exceptions:
+    get:
+      tags: [Reports]
+      operationId: listInputChecks
+      summary: The open findings this caller can see.
+      description: |
+        What the nightly check found, ordered the way a manager with ten minutes before a
+        call needs it: high severity first, then by the money at stake.
+
+        The list is SCOPED to what the caller can open. The scan itself reads the whole
+        pipeline — a duplicate-detection rule seeing one rep's deals would report no
+        duplicates — and that decision is paid for here: a finding about a deal the caller
+        cannot see is a finding they never meet. There is deliberately no count of what was
+        withheld, because a count of what somebody may not read is itself a statement about
+        how much of it there is.
+
+        `claim` and `observed` hold structured values whose keys depend on the exception
+        type — a date, a minor-unit amount, an id. Never a snippet lifted from an activity
+        body: a frozen copy of a protected sentence outlives the protection on its source.
+      x-mcp-tool: { verb: list_input_checks, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The open findings, most material first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/InputCheck' }
+                additionalProperties: false
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /forecast/assurance/exceptions/{id}/resolve:
     post:
       tags: [Reports]
@@ -16103,6 +16174,244 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/shares:
+    post:
+      tags: [Reports]
+      operationId: createForecastShare
+      summary: Issue a link that shows a forecast reading to a colleague.
+      description: |
+        Two kinds, and they make different promises. A `live` share re-runs the reading
+        under the RECIPIENT's own grants every time it is opened, so it answers what they
+        may see today. A `snapshot` share serves a state frozen at a moment, re-summed over
+        the rows that recipient may read.
+
+        A snapshot share never serves the stored totals. The frozen headline covers every
+        deal the issuer could see, and handing that number to somebody narrower discloses a
+        total about deals they may not read. The recompute is what the kind promises.
+
+        The token comes back ONCE, in `token`, and is never returned again — the table
+        holds only its digest, so a database dump opens nothing. A caller that loses it
+        issues another share.
+
+        `expires_at` is capped server-side. An expiry beyond the ceiling is REFUSED rather
+        than quietly shortened: a link the caller believes lasts a year, silently cut to a
+        month, fails in front of whoever they sent it to.
+      # Human-only. Issuing a share is a decision to show somebody a number,
+      # and an agent that could mint one could widen who reads the forecast
+      # without a person choosing to.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewForecastShare' }
+      responses:
+        '201':
+          description: The share, with its token shown for the only time.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuedForecastShare' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/shares/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Reports]
+      operationId: revokeForecastShare
+      summary: Close a share link before it expires.
+      description: |
+        Idempotent: revoking a revoked share is the outcome the caller asked for, and
+        answers 204 either way.
+
+        Revocation and expiry are both real and neither replaces the other. An expiry alone
+        means a link sent to the wrong address stays open until it lapses; a revocation
+        alone means a link nobody remembers stays open forever.
+      x-agent-access: human-only
+      responses:
+        '204': { description: The share no longer serves. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /forecast/shared/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+        description: The token handed out when the share was issued.
+    get:
+      tags: [Reports]
+      operationId: openForecastShare
+      summary: Open a shared forecast view.
+      description: |
+        Answers the reading the share names, computed for the CALLER rather than for whoever
+        issued it. A live share re-runs the reading; a snapshot share re-sums the frozen
+        contributions the caller may read.
+
+        Every refusal is the same 404 — an unknown token, an expired one, a revoked one, and
+        a share whose issuer has left or lost `forecast:read`. Distinguishing them would tell
+        somebody working through guessed tokens which guesses were closer.
+
+        `withheld` says something was kept back and never how much. A count of what a reader
+        may not see is itself a statement about how much of it there is.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The reading, as this caller may read it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharedForecastView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /forecast/shared/{token}/export.csv:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+        description: The token handed out when the share was issued.
+    get:
+      tags: [Reports]
+      operationId: exportForecastShare
+      summary: The rows behind a shared reading, as CSV.
+      description: |
+        One row per deal the CALLER may read, which is the same set the headline above it
+        was summed from. A file whose rows and whose total disagree is worse than no file:
+        somebody reconciles it by hand and concludes the product is wrong about one of them.
+
+        A live share exports the rows as they stand; a snapshot share exports the frozen
+        contributions. Refusals are the same 404 the read is, for the same reason.
+
+        Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
+        opening the file reads them as the text the record holds rather than evaluating them.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The rows, as CSV.
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /analytics/schema:
+    get:
+      tags: [Reports]
+      operationId: getAnalyticsSchema
+      summary: What questions this caller may ask, and in what words.
+      description: |
+        The vocabulary a generic analytics question is written in: the populations, the
+        fields each can be grouped by, and the fields each can measure.
+
+        DERIVED from the report catalog and narrowed by the caller's own grants. A field
+        somebody may not read is ABSENT here rather than listed and refused later — a
+        refusal that says "you may not read that" tells them the column exists.
+
+        `version` changes when the vocabulary does, including when one seat's grants change.
+        A query planned against an older version is refused rather than run, because a plan
+        naming a field that has since moved would render SQL against a column that is gone.
+      # NOT an agent tool, and the reason is measured rather than a preference.
+      # The served catalog already renders ~87% of the certification lane's
+      # prompt window; a second analytics tool pushes it over, and what that
+      # gate protects is every corpus scenario silently reasoning over a prompt
+      # larger than this build claims to send.
+      #
+      # An agent gets this vocabulary through run_analytics_query's own
+      # refusals instead: naming a field that is absent is answered with the
+      # fields that exist, which is the same information at the moment it is
+      # needed. The route stays for the app, which pays no token budget.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsSchema' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/query:
+    post:
+      tags: [Reports]
+      operationId: runAnalyticsQuery
+      summary: Answer a question nobody wrote a report for.
+      description: |
+        A typed query over the vocabulary `/analytics/schema` returns. The caller names a
+        population, what to group by, what to measure and how to narrow — never SQL, and
+        never a field that is not in their own schema.
+
+        THE ANSWER IS COMPUTED BY THE DATABASE. Nothing here asks a model to add up a
+        column: a model's total is plausible and wrong in a way nobody can see, and the
+        value of a figure on a revenue screen is that it traces to rows.
+
+        A group covering fewer records than the installation's floor is WITHHELD, and so is
+        enough of the remainder that the withheld group cannot be recovered by subtracting
+        the rest from the total. `total_safe` says whether a total may be shown at all;
+        `withheld` says something was kept back and never how much.
+
+        Refusals are typed and each carries the smallest thing that would have worked:
+        the fields that exist, the measure that applies, the grouping that clears the floor.
+      # NOT an agent tool yet, and the reason is a measured constraint. The
+      # served catalog already renders ~87% of the certification lane's prompt
+      # window; this tool's description, trimmed to just its safety rules,
+      # still puts it over. Cutting further would drop the instructions that
+      # make an agent-reachable analytics surface safe — that the database
+      # computes the numbers, and that a withheld group is never speculated
+      # about — which is the wrong thing to spend for room.
+      #
+      # The HTTP route ships and the app uses it. Making room in the catalog is
+      # a decision about the whole tool surface rather than about this feature.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsQuery' }
+      responses:
+        '200':
+          description: The answer, as this caller may read it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/explain:
+    post:
+      tags: [Reports]
+      operationId: explainAnalyticsCell
+      summary: The records one cell of an analytics answer was computed from.
+      description: |
+        A number is worth having only if somebody can open it, and opening it means the
+        ROWS rather than a restatement of the formula.
+
+        The request carries the QUESTION unchanged plus the cell's own group keys. The
+        question rather than a handle, because an explanation of a different query than the
+        one that produced the number is not an explanation and nothing downstream could
+        tell.
+
+        The explanation reads the identical row set the answer read: same population, same
+        filters, same authority narrowings. It never out-sees the number it explains.
+
+        A cell the privacy floor withheld answers `withheld` with no rows. Handing over
+        those records one at a time is the same disclosure at a slower pace.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsExplainRequest' }
+      responses:
+        '200':
+          description: The records behind the cell, as this caller may read them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/current:
     get:
       tags: [Brief]
@@ -16196,6 +16505,41 @@ paths:
               schema: { $ref: '#/components/schemas/WeeklyPlanCommitment' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /weekly-plans/commitments/{id}:
+    patch:
+      tags: [Brief]
+      operationId: editWeeklyPlanCommitment
+      summary: Correct what a commitment says, when it is due, or what it is about.
+      description: |
+        The CALLER's own commitment, on an open week. A rep types a commitment on Monday and
+        finds the typo on Tuesday; without this the only way out is to drop the row and write
+        a new one, which discards the manager's answer and any help already asked for — the
+        two fields on the row that were never the rep's to throw away.
+
+        Every field is optional and only what is PRESENT changes. `due_on: null` clears the
+        date, which is a real state: something to do this week rather than by a day. Sending
+        `linked_record: null` unlinks the record.
+
+        State is not settable here. `PUT .../state` owns the move between open, done and
+        dropped because it ties `completed_at` to the state the schema's CHECK binds them
+        with, and two writers of that pair would drift.
+      x-agent-access: human-only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WeeklyPlanCommitmentEdit' }
+      responses:
+        '204': { description: Corrected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/commitments/{id}/state:
     put:
@@ -19477,6 +19821,13 @@ components:
             The label spells both calendar years a non-January year spans — `FY2026/27` — so
             a reader can tell which twelve months a bucket covers without knowing the
             convention. A January year is not a span and keeps the plain `2026`.
+
+            One thing it does NOT carry, and a client storing report filters should know it:
+            a SAVED report view holds the bucket's text, so a view saved under one fiscal
+            start names a different span after the start moves — or no span at all, since a
+            calendar year maps onto parts of two fiscal years. The report still runs and
+            still looks right. Whether such a view is re-pointed, invalidated or merely
+            warned about is undecided: margince/margince#2569.
         sign_in_providers:
           type: array
           description: |
@@ -19539,6 +19890,11 @@ components:
             The month the installation's business year begins, 1..12. Never frozen: it cuts
             reports on read and stores nothing, so moving it re-labels every period report at
             once and re-means no stored row.
+
+            It does not re-point a SAVED report view, which holds the bucket's TEXT and so
+            names a different span afterwards. Sending this field is enough to leave those
+            views filtering on a span nobody asked for; nothing here reports how many.
+            margince/margince#2569.
         enabled_oidc_providers:
           type: array
           maxItems: 32
@@ -20480,18 +20836,34 @@ components:
             What the classifier concluded the thread is ABOUT — legal, personnel,
             financial_corporate, personal, security_incident, explicitly_confidential. Absent while
             pending, because nothing has concluded anything yet.
+        activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: |
+            The message that opened this thread, where this caller may read it — what a
+            client opens to show the correspondence rather than only naming it.
+
+            Null when the message was erased while the hold stood (the ledger deliberately
+            outlives it) AND null when the content is not this caller's: it is read from the
+            joined activity row, which carries the content gate, rather than from the
+            ledger's own column. `has_message` says which of the two it is.
         has_message:
           type: boolean
           description: |
-            The message this thread began with is still readable by you. False where it was erased
-            while the verdict stood — which the ledger deliberately survives, because losing the
-            verdict would re-open a thread a classifier already held — and false where its content
-            is withheld from you.
+            The message this thread began with still EXISTS. False only where it was erased while
+            the verdict stood — which the ledger deliberately survives, because losing the verdict
+            would re-open a thread a classifier already held.
 
-            Separate from `subject` because absence has two causes that read differently: no
-            message to name, versus a message somebody sent with a blank subject line. It also
-            decides whether releasing is offered at all: the release works on your own messages on
-            the thread, so with none left there is nothing to share.
+            Existence, not readability: it stays true for a message whose content is withheld from
+            you, and that is the point. Read through the content gate it reported a withheld
+            message as erased, which told a holder their evidence had been destroyed while it was
+            sitting in the thread they are holding.
+
+            So `subject` absent with this true is a message you may not read, or one sent with a
+            blank subject line; this false is no message at all. It also decides whether releasing
+            is offered: the release works on your own messages on the thread, so with none left
+            there is nothing to share.
         subject:
           type: string
           description: |
@@ -28941,6 +29313,42 @@ components:
         evidence_ref:
           $ref: '#/components/schemas/OrganizationBriefEvidence'
 
+    CommunicationEvidence:
+      type: object
+      description: |
+        Records the caller can name in support of a send, each by id. Evidence is
+        CHECKED, never trusted: the engine reads the named record and asks whether it
+        actually supports the category claimed — a deal id that is closed, an invoice
+        belonging to another organization, or a record the caller cannot see supports
+        nothing. Naming a record therefore never widens what a caller may do.
+
+        Every field is optional. A caller that can name nothing says nothing, and the
+        engine resolves the send from its origin instead.
+      properties:
+        activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The inbound message this send answers.
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          description: The live opportunity this send moves along.
+        invoice_id:
+          type: [string, 'null']
+          format: uuid
+          description: The invoice or payment event this send is about.
+        contract_id:
+          type: [string, 'null']
+          format: uuid
+          description: The live contract whose notice this send carries.
+        consent_event_id:
+          type: [string, 'null']
+          format: uuid
+          description: The recorded consent this send relies on.
+        basis_id:
+          type: [string, 'null']
+          format: uuid
+          description: A recorded communication basis this send relies on.
     SendEmailRequest:
       type: object
       required: [subject, body, to, consent_purpose]
@@ -28998,6 +29406,46 @@ components:
             edited-and-sent metadata. Only a guarded, human-authored final edit may become a
             `draft_signal` corpus source. Omit for independently composed mail; no voice-learning
             outcome is inferred without a valid reference.
+        communication_context:
+          type: [string, 'null']
+          enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                 customer_service, account_notice, contract_notice, invoice_or_payment,
+                 security_notice, privacy_notice, record_confirmation, consent_confirmation,
+                 optout_confirmation, marketing, null]
+          description: |
+            What kind of communication this is. The caller CLAIMS a category; the engine
+            resolves the one the evidence actually supports and records both, so a claim
+            that the evidence does not carry is visible rather than silently honoured.
+
+            Omit it and the engine resolves the category from the send's origin — a reply
+            to an inbound message is a reply whether or not anybody said so. Omitting is
+            therefore honest and is the ordinary case for a reply; naming one matters when
+            there is no anchor to derive from.
+
+            Five categories exist to serve the recipient — `security_notice`,
+            `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+            `record_confirmation` — and are refused (422 `invalid`) from an
+            ordinary send. They are reserved for the installation's own controller mail,
+            which rides a registered template; a caller that could claim one could dress
+            marketing as a security warning and reach somebody who has objected.
+        marketing_purpose:
+          type: [string, 'null']
+          description: |
+            For a marketing send, the consent purpose key naming the topic it is for.
+            Marketing consent is purpose-specific: a grant for one topic authorizes that
+            topic and no other.
+        operator_reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: |
+            What a human typed when a first message was genuinely ambiguous. It is
+            RECORDED on the decision and grants nothing — a sentence a sender wrote about
+            their own send is not evidence about the recipient. It exists so a later
+            reader can see what the sender believed, not so the engine can be talked into
+            an allow.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
           description: |
@@ -29190,6 +29638,46 @@ components:
           description: |
             Opaque reference returned by the drafting operation, exactly as on `send_email`.
             Omit for independently composed mail.
+        communication_context:
+          type: [string, 'null']
+          enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                 customer_service, account_notice, contract_notice, invoice_or_payment,
+                 security_notice, privacy_notice, record_confirmation, consent_confirmation,
+                 optout_confirmation, marketing, null]
+          description: |
+            What kind of communication this is. The caller CLAIMS a category; the engine
+            resolves the one the evidence actually supports and records both, so a claim
+            that the evidence does not carry is visible rather than silently honoured.
+
+            Omit it and the engine resolves the category from the send's origin — a reply
+            to an inbound message is a reply whether or not anybody said so. Omitting is
+            therefore honest and is the ordinary case for a reply; naming one matters when
+            there is no anchor to derive from.
+
+            Five categories exist to serve the recipient — `security_notice`,
+            `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+            `record_confirmation` — and are refused (422 `invalid`) from an
+            ordinary send. They are reserved for the installation's own controller mail,
+            which rides a registered template; a caller that could claim one could dress
+            marketing as a security warning and reach somebody who has objected.
+        marketing_purpose:
+          type: [string, 'null']
+          description: |
+            For a marketing send, the consent purpose key naming the topic it is for.
+            Marketing consent is purpose-specific: a grant for one topic authorizes that
+            topic and no other.
+        operator_reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: |
+            What a human typed when a first message was genuinely ambiguous. It is
+            RECORDED on the decision and grants nothing — a sentence a sender wrote about
+            their own send is not evidence about the recipient. It exists so a later
+            reader can see what the sender believed, not so the engine can be talked into
+            an allow.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
           description: |
@@ -29250,6 +29738,46 @@ components:
             The (possibly edited) final message text that is sent. A messaging provider rejects a
             text-less message, so an empty or whitespace-only body is refused at request time
             (422 `empty_message_body`) rather than staged for a delivery that could only park.
+        communication_context:
+          type: [string, 'null']
+          enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                 customer_service, account_notice, contract_notice, invoice_or_payment,
+                 security_notice, privacy_notice, record_confirmation, consent_confirmation,
+                 optout_confirmation, marketing, null]
+          description: |
+            What kind of communication this is. The caller CLAIMS a category; the engine
+            resolves the one the evidence actually supports and records both, so a claim
+            that the evidence does not carry is visible rather than silently honoured.
+
+            Omit it and the engine resolves the category from the send's origin — a reply
+            to an inbound message is a reply whether or not anybody said so. Omitting is
+            therefore honest and is the ordinary case for a reply; naming one matters when
+            there is no anchor to derive from.
+
+            Five categories exist to serve the recipient — `security_notice`,
+            `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+            `record_confirmation` — and are refused (422 `invalid`) from an
+            ordinary send. They are reserved for the installation's own controller mail,
+            which rides a registered template; a caller that could claim one could dress
+            marketing as a security warning and reach somebody who has objected.
+        marketing_purpose:
+          type: [string, 'null']
+          description: |
+            For a marketing send, the consent purpose key naming the topic it is for.
+            Marketing consent is purpose-specific: a grant for one topic authorizes that
+            topic and no other.
+        operator_reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: |
+            What a human typed when a first message was genuinely ambiguous. It is
+            RECORDED on the decision and grants nothing — a sentence a sender wrote about
+            their own send is not evidence about the recipient. It exists so a later
+            reader can see what the sender believed, not so the engine can be talked into
+            an allow.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
           description: |
@@ -30867,6 +31395,45 @@ components:
             much of it there is, so the reader is told the figure is partial and not by
             how much.
       additionalProperties: false
+    InputCheck:
+      type: object
+      description: One finding from the nightly input check.
+      required: [id, type, subject_kind, subject_id, severity, status, first_seen_at, last_seen_at]
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          description: >-
+            Which question noticed it. The key set in `claim` and `observed` depends on
+            this.
+        subject_kind: { type: string, enum: [deal, signal, offer, contract] }
+        subject_id: { type: string, format: uuid }
+        severity: { type: string, enum: [low, medium, high] }
+        affected_minor:
+          type: integer
+          format: int64
+          description: >-
+            How much money the finding puts in question. Absent where that cannot be said
+            — which is different from zero, and zero would claim nothing is at stake.
+        currency: { type: string }
+        owner_id: { type: string, format: uuid }
+        status: { type: string, enum: [open, resolved, expired] }
+        claim:
+          type: object
+          additionalProperties: true
+          description: What the record says, as structured values only.
+        observed:
+          type: object
+          additionalProperties: true
+          description: What the check found, as structured values only.
+        first_seen_at: { type: string, format: date-time }
+        last_seen_at:
+          type: string
+          format: date-time
+          description: >-
+            The most recent run that still found it. A finding seen for weeks is a
+            different thing from one that appeared last night.
+      additionalProperties: false
     ResolveInputCheck:
       type: object
       required: [outcome]
@@ -30899,6 +31466,21 @@ components:
           description: >-
             When a suppressing answer stops holding. Omitted, it is the 90-day ceiling;
             beyond the ceiling it is refused rather than shortened.
+      additionalProperties: false
+    DataCoverage:
+      type: object
+      description: How current the sources behind the forecast's numbers are.
+      required: [run_id, as_of, sources]
+      properties:
+        run_id: { type: string, format: uuid }
+        as_of: { type: string, format: date-time }
+        sources:
+          type: array
+          description: >-
+            The sources the run tried, and how far it reached into each. A source absent
+            from this list is one the run did not attempt — different from one it
+            attempted and could not read, which the state field says.
+          items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
       additionalProperties: false
     ForecastAssurance:
       type: object
@@ -31054,6 +31636,267 @@ components:
             different fact from replacing nothing.
         created_at: { type: string, format: date-time }
       additionalProperties: false
+    NewForecastShare:
+      type: object
+      description: A request to issue a share link.
+      required: [kind, target]
+      properties:
+        kind:
+          type: string
+          enum: [live, snapshot]
+          x-enum-varnames: [ForecastShareLive, ForecastShareSnapshot]
+          description: >-
+            `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen
+            state, re-summed over the rows that reader may see.
+        target:
+          type: string
+          description: Which reading the link opens.
+        scope_kind: { type: string, enum: [workspace, team, owner], default: workspace }
+        scope_id:
+          type: string
+          format: uuid
+          description: >-
+            Whose forecast, for a team or owner scope. Refused with the workspace scope,
+            which names no subject.
+        snapshot_id:
+          type: string
+          format: uuid
+          description: >-
+            The frozen state a snapshot share serves. Required for `snapshot` and refused
+            for `live`, which has none — a snapshot share with no snapshot would fall back
+            to serving live data, a different promise from the one its kind makes.
+        expires_at:
+          type: string
+          format: date-time
+          description: >-
+            When it stops serving. Capped server-side; an expiry beyond the ceiling is
+            refused rather than shortened. Omitted takes the ceiling.
+      additionalProperties: false
+    IssuedForecastShare:
+      type: object
+      description: A share as issued, carrying its token for the only time.
+      required: [id, kind, target, expires_at, token, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [live, snapshot] }
+        target: { type: string }
+        scope_kind: { type: string, enum: [workspace, team, owner] }
+        scope_id: { type: string, format: uuid }
+        snapshot_id: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+        token:
+          type: string
+          description: >-
+            Shown ONCE. The table holds only its digest, so this value cannot be recovered
+            — a caller that loses it issues another share.
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
+    SharedForecastView:
+      type: object
+      description: |
+        What one caller reads through a share.
+
+        The numbers are about THEM. A snapshot share re-sums the frozen contributions this
+        caller may read rather than serving the stored totals, so two colleagues opening
+        the same link can correctly see different figures.
+      required: [kind, target, readings, withheld]
+      properties:
+        kind:
+          type: string
+          enum: [live, snapshot]
+          description: >-
+            Which promise this view makes. A reader shown a frozen number needs to know it
+            is frozen, and as of when.
+        target: { type: string }
+        as_of:
+          type: string
+          format: date-time
+          description: The instant a snapshot share's state describes. Absent on a live share.
+        readings: { $ref: '#/components/schemas/ForecastReadings' }
+        withheld:
+          type: boolean
+          description: >-
+            Whether anything was kept back from this reader. A boolean and never a count:
+            a count of what somebody may not see states how much of it there is.
+      additionalProperties: false
+    AnalyticsSchema:
+      type: object
+      description: The populations and fields one caller may ask about.
+      required: [version, entities]
+      properties:
+        version:
+          type: string
+          description: >-
+            Changes when this caller's vocabulary changes. A query planned against an
+            older version is refused rather than run.
+        entities:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsEntity' }
+      additionalProperties: false
+    AnalyticsEntity:
+      type: object
+      required: [name, group_by, measures]
+      properties:
+        name: { type: string, description: "The population, by name." }
+        group_by:
+          type: array
+          items: { type: string }
+          description: The fields this population can be grouped by.
+        measures:
+          type: array
+          items: { type: string }
+          description: The fields this population can be aggregated over.
+      additionalProperties: false
+    AnalyticsQuery:
+      type: object
+      description: One question, in the vocabulary the schema returned.
+      required: [entity, measures]
+      properties:
+        entity: { type: string, description: "The population, by name." }
+        group_by:
+          type: array
+          items: { type: string }
+          description: >-
+            The dimensions. Omitted is a single-row answer over the whole population,
+            which is a real question rather than a missing one.
+        measures:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AnalyticsMeasure' }
+          description: >-
+            What to compute. At least one — a query with none asks for group keys and
+            nothing beside them, which is a list rather than an analytic question.
+        filters:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsFilter' }
+        limit:
+          type: integer
+          description: >-
+            How many groups at most. Omitted takes the default; a grouping by a
+            high-cardinality field would otherwise return a row per record.
+      additionalProperties: false
+    AnalyticsMeasure:
+      type: object
+      required: [fn]
+      properties:
+        fn:
+          type: string
+          enum: [count, count_distinct, sum, avg, min, max]
+          x-enum-varnames:
+            - AnalyticsCount
+            - AnalyticsCountDistinct
+            - AnalyticsSum
+            - AnalyticsAvg
+            - AnalyticsMin
+            - AnalyticsMax
+          description: >-
+            The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts
+            values and skips nulls. The two differ on an unpriced deal, so naming the wrong
+            one reports a column's coverage as its population.
+        field:
+          type: string
+          description: What to aggregate. Required for every fn but `count`.
+        as:
+          type: string
+          description: >-
+            The caller's name for the result column. It never reaches the statement —
+            results map by position — so it cannot carry anything into SQL.
+      additionalProperties: false
+    AnalyticsFilter:
+      type: object
+      required: [field, op]
+      properties:
+        field: { type: string }
+        op:
+          type: string
+          enum: [eq, ne, lt, lte, gt, gte, is_null, is_not_null]
+          x-enum-varnames:
+            - AnalyticsOpEq
+            - AnalyticsOpNe
+            - AnalyticsOpLt
+            - AnalyticsOpLte
+            - AnalyticsOpGt
+            - AnalyticsOpGte
+            - AnalyticsOpIsNull
+            - AnalyticsOpIsNotNull
+        value:
+          description: >-
+            The value to compare against, bound as a parameter. Omitted exactly for
+            `is_null` and `is_not_null`; given to either, the query is refused rather
+            than having it silently dropped.
+      additionalProperties: false
+    AnalyticsAnswer:
+      type: object
+      required: [columns, rows, withheld, total_safe, schema_version]
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+          description: What each value in a row means, in order.
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            One object per group. A row the floor withheld keeps its group keys, carries
+            null for every measure, and is marked `_withheld` — dropping it entirely would
+            make the answer's row count a signal of its own.
+        withheld:
+          type: boolean
+          description: >-
+            Whether anything was kept back. A boolean and never a count: a count of what
+            somebody may not see states how much of it there is.
+        total_safe:
+          type: boolean
+          description: >-
+            Whether a total over these rows may be shown. False once anything is withheld,
+            because the total minus the shown groups is the withheld remainder.
+        schema_version:
+          type: string
+          description: The vocabulary this was asked in.
+      additionalProperties: false
+    AnalyticsExplainRequest:
+      type: object
+      description: One cell of an answer, named by the question and its group keys.
+      required: [query]
+      properties:
+        query: { $ref: '#/components/schemas/AnalyticsQuery' }
+        group:
+          type: array
+          items: {}
+          description: >-
+            The cell's group key values, one per grouping in the question and in the same
+            order. Omitted for an ungrouped answer, which has one cell. A null entry means
+            the group whose value is unset, which resolves to the records that have nothing
+            there rather than to none.
+      additionalProperties: false
+    AnalyticsExplanation:
+      type: object
+      required: [columns, rows, withheld, truncated]
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            The records, each carrying its id, the dimensions that put it in this group,
+            and the fields the measures were computed over.
+        withheld:
+          type: boolean
+          description: >-
+            The cell itself was withheld, so there is nothing to open. Different from an
+            empty list, which would mean the group had no records at all.
+        truncated:
+          type: boolean
+          description: >-
+            The cell covers more records than were returned. A reader who adds up the rows
+            and finds less than the cell needs to know why.
+      additionalProperties: false
     WeeklyPlan:
       type: object
       additionalProperties: false
@@ -31128,6 +31971,26 @@ components:
           allOf: [{ $ref: '#/components/schemas/WeeklyPlanLink' }]
         due_on: { type: [string, 'null'], format: date }
 
+    WeeklyPlanCommitmentEdit:
+      type: object
+      additionalProperties: false
+      description: |
+        What a rep may correct about their own commitment. Only the fields PRESENT change —
+        an absent field is left alone, which is what lets a client send a new label without
+        also having to restate the due date it is not touching.
+      properties:
+        label: { type: string, minLength: 1, maxLength: 500 }
+        linked_record:
+          description: |
+            Both halves or neither, as on create. Null unlinks the record, which is how a
+            commitment stops being about one without being rewritten.
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/WeeklyPlanLink' }]
+        due_on:
+          description: Null clears the date — something to do this week, rather than by a day.
+          type: [string, 'null']
+          format: date
+
     RbacObject:
       type: string
       description: >
@@ -31150,7 +32013,7 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast]
+         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage]
 
     RbacAction:
       type: string
@@ -31835,7 +32698,16 @@ components:
             type: object
             required: [fn]
             properties:
-              fn: { type: string, enum: [count, sum, avg, min, max] }
+              fn:
+                type: string
+                enum: [count, sum, avg, min, max, median, p75]
+                description: >-
+                  `median` and `p75` answer NULL below a five-value sample floor rather
+                  than a number. A median over three deals is one deal's value wearing a
+                  statistic's name, and a reader comparing groups of different sizes
+                  would take the smallest group's outlier for its norm. The row still
+                  arrives with its count, so a blank beside n=3 has told the reader
+                  something true.
               field: { type: [string, 'null'] }
               as: { type: [string, 'null'] }
 
@@ -31942,6 +32814,17 @@ components:
             filters offer, not every type `taggable` admits. It is what tells a searcher
             whether the word is worth opening before they open it. Null on every other hit
             type, and null when no count was taken.
+        email_summary:
+          allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            The canonical email row, on an `activity` hit whose activity is an email THIS
+            caller may read. Null on every other hit type, and null for a non-email activity
+            — a call, a note, a task and a meeting are activities too, and each keeps its
+            generic hit. An email whose content is not this caller's produces no hit at all,
+            because the activity branch is content-gated. A client renders the canonical row
+            when this is present and falls back to `title`/`snippet` when it is not.
         trust_tier:
           type: [string, 'null']
           enum: [authoritative, external, unverified, null]
@@ -35962,8 +36845,9 @@ components:
 
             The idle window here is DELIBERATELY shorter than the product-wide `stalled`
             threshold: a queue that only speaks once a deal meets the stalled bar is
-            reporting a two-month-old fact rather than warning. `detail` names the window
-            actually used, so the card never implies a patience the server did not apply.
+            reporting a two-month-old fact rather than warning. `quiet_days` carries the
+            window actually used, so the card never implies a patience the server did not
+            apply.
 
             Absent — not empty — on an installation whose feed does not read deals.
         relationship_decay:
@@ -35975,9 +36859,9 @@ components:
 
             A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
             a contact carrying no open deal never reaches that lane, and those are exactly
-            the relationships that lapse unnoticed. `detail` carries the silence in days,
-            from the same §4 derivation the contact's own page shows, so the two surfaces
-            cannot come to disagree about when somebody went quiet.
+            the relationships that lapse unnoticed. `quiet_days` carries the silence, from
+            the same §4 derivation the contact's own page shows, so the two surfaces cannot
+            come to disagree about when somebody went quiet.
 
             Only relationships this reader actually had: a contact nobody here ever spoke
             to has not gone quiet, and a lane that said otherwise would report every
@@ -36308,7 +37192,43 @@ components:
             ABSENT where the sentence would have to be invented: the product ships
             three languages, so a duplicate pair sends its `kind` and `confidence`
             and the client writes the line in the reader's own.
-        detail: { type: string, description: "One supporting line: what changed, or what the evidence said." }
+        detail:
+          type: string
+          description: |
+            One supporting line: what changed, or what the evidence said. PROSE, in a
+            language a reader reads — a bounce reason, a park reason, the mailbox that
+            stopped syncing, what an AI task was about.
+
+            It is not a channel for anything else. Three producers used the field as one,
+            each with its own reader parsing the value back out: two wrote a bare day count
+            and one wrote internal marker words. So the field meant "a sentence" on twelve
+            sources and something else on three, and a client drawing it faithfully printed
+            a naked "90" under one title and "machine_sender" under another.
+
+            Both now travel typed — `quiet_days` and `staged` below — and the client writes
+            the sentence in the reader's own language.
+
+            ONE source is still an exception, and a client must know it: `sync_health` fills
+            this field with its own vocabulary — the affected object classes, the failure
+            class, or the budget band — for a client to write a sentence from. Those are
+            words like `shed` and `deal, person`. A client that has not written that
+            sentence draws nothing for that source rather than the value.
+        staged:
+          $ref: '#/components/schemas/AttentionStagedFacts'
+        quiet_days:
+          type: [integer, 'null']
+          minimum: 0
+          description: |
+            How many days a deal or a relationship has been idle, where the producing lane
+            measures one. Sent by `deal_at_risk` and `relationship_decay`.
+
+            Typed rather than written into `detail` because it is a number the queue READS
+            and not only something it shows: it becomes the row's `quiet_days` reason, the
+            deal card's own figure, and the age each row carries into the ordering. A number
+            parsed back out of a sentence reads as zero the day somebody rewords the
+            sentence, and every one of those uses would go quietly wrong together.
+        relationship:
+          $ref: '#/components/schemas/AttentionRelationshipFacts'
         cause_ref:
           type: string
           description: |
@@ -36320,6 +37240,28 @@ components:
             meaning. A row that reports no shared condition omits it. Present only on the
             system-health sources, where "the same thing broke again" is a question a reader
             has.
+
+            `cause_label` is the half a reader sees. The two are separate because they must
+            be able to disagree: a rule's NAME is mutable and not unique, so an identity
+            built from it would merge two rules that happen to share a name and split one
+            that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
+        cause_label:
+          type: string
+          description: |
+            What `cause_ref` identifies, in words — the automation's name, the mailbox that
+            stopped.
+
+            Minted by the LANE that mints the cause, because only that lane knows which of
+            the records it read is the condition's name. It is deliberately not derived from
+            a sampled member's title: the members of a group are alike, not identical, and
+            one member's subject describes that member rather than the thing they share.
+
+            ABSENT is a real answer, not a gap. A lane whose only candidate is a vocabulary
+            key sends nothing rather than a plausible-looking one — the AI-work lane is that
+            case, since its task kinds are generated enum keys, and a rep reading
+            "site_triage failed 8 times" is being shown the vocabulary this field exists to
+            replace. A group with no words is named by its kind alone, and a client never
+            falls back to rendering `cause_ref`.
         rank: { type: integer, minimum: 1, description: "Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first." }
         confidence:
           type: number
@@ -36332,6 +37274,16 @@ components:
           $ref: '#/components/schemas/AttentionPair'
         deal:
           $ref: '#/components/schemas/AttentionDealFacts'
+        assignee_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Who holds this task, null when nobody has taken it. Sent by `task`.
+
+            The lane serves three scopes and only one is the reader's own queue: an
+            unassigned sweep and a named colleague's queue both put work on the page that
+            is not the reader's. Without this those rows read identically to their own,
+            and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
@@ -36373,6 +37325,27 @@ components:
             print: a reader asked to compare `full_name` is being shown the
             database rather than their own records.
           items: { $ref: '#/components/schemas/AttentionPairEvidence' }
+    AttentionStagedFacts:
+      type: object
+      description: |
+        What the verdict engine already worked out about a staged contact decision, so a
+        surface can group alike questions without reading the proposal a second time.
+
+        Read from the payload the engine staged rather than re-derived, because a second
+        opinion would put one decision in two groups across two reads.
+
+        Typed because these are FLAGS a client tests, not words a reader sees. They used to
+        ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+        a reader doing a substring match to get them back — which made the supporting line
+        undrawable on this source and would have shown a rep an internal token.
+      properties:
+        machine_sender:
+          type: boolean
+          description: 'The address is a sending system rather than a person.'
+        known_company:
+          type: boolean
+          description: "The address's domain already names a company in this workspace."
+
     AttentionDealFacts:
       type: object
       description: |
@@ -36386,6 +37359,35 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
+
+    AttentionRelationshipFacts:
+      type: object
+      description: |
+        What the lapsed relationship behind a `relationship_decay` item was WORTH before
+        it went quiet. Sent only for `source: relationship_decay`.
+
+        Without it every lapsed contact reads alike, and the rep's strongest relationship
+        going quiet is the row that most deserves to be told apart from a cc who has
+        drifted. Both facts were already in the lane's hand and discarded: the band is
+        scored from the edge the lane loads, and the deal is one batched read over the
+        candidates it already narrowed to.
+
+        The band travels rather than the raw score, because a number between 0 and 100
+        invites a client to draw a precision the §4 arithmetic does not claim.
+      properties:
+        strength:
+          type: string
+          enum: [none, weak, moderate, strong]
+          description: |
+            The relationship's band at the read instant, from the same §4 scoring the
+            contact's own page shows — computed on read rather than stored, so the two
+            surfaces cannot come to disagree about who this person is.
+        has_open_deal:
+          type: boolean
+          description: |
+            Whether money this reader can see still rests on this contact. Absent is not
+            "no": a contact with an open deal the reader may not see reads the same as one
+            with none, which is the answer every row-scoped read gives.
 
     AttentionPairEvidence:
       type: object
@@ -36678,8 +37680,11 @@ components:
     WorklistSummary:
       type: object
       description: |
-        The day in figures, for the one line above the queue. Each count is of items the
-        queue actually CARRIES, so a number here and the rows below it cannot disagree.
+        The day in figures, for the one line above the queue. Every count is over the
+        candidates this read WEIGHED — the whole assembled day, before the page cut and
+        before any category narrowing — so the sentence is one scope and does not move as
+        the reader pages. A page-scoped band beside a day-scoped `total` read as a
+        breakdown of that total and was not one.
 
         These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
         `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -36700,7 +37705,7 @@ components:
             nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
             of rows, which is the one thing this line promises cannot happen.
         lower_priority: { type: integer, minimum: 0, description: 'Routine work: decisions that block nothing, and data hygiene.' }
-        total: { type: integer, minimum: 0, description: 'How many items the queue carries.' }
+        total: { type: integer, minimum: 0, description: 'How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.' }
         material_threshold_minor:
           type: [integer, 'null']
           format: int64
@@ -36957,7 +37962,28 @@ components:
             Which underlying CONDITION this row reports, so a surface can group repeated
             failures of one thing into one row. Opaque identity, never rendered and never
             parsed. Absent on a row that reports no shared condition.
-        detail: { type: string, description: 'One supporting line.' }
+        cause_label:
+          type: string
+          description: |
+            What `cause_ref` identifies, in words — the automation's name, the mailbox that
+            stopped. This is the half a reader sees; the identity beside it is not drawable.
+
+            Present wherever the producing lane named the condition. A row whose lane named
+            none is described by its kind alone.
+        detail:
+          type: string
+          description: |
+            One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
+            stopped, what an AI task was about.
+
+            Not a channel for anything else. A value the queue itself reads travels typed
+            beside this field, never inside it: a figure parsed back out of a sentence reads
+            as zero the day somebody rewords the sentence.
+
+            ONE source is an exception a client must know: `sync_health` fills this with its
+            own vocabulary — the affected object classes, the failure class, the budget band
+            — for a client to write a sentence from. Those are words like `shed`. A client
+            that has not written that sentence draws nothing for that source.
         because:
           type: array
           items: { $ref: '#/components/schemas/WorklistReason' }
@@ -36972,6 +37998,19 @@ components:
             source, because one source has several honest answers: a deal past its close
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
+        email_summary:
+          allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            The canonical email row, on a `customer_waiting` row whose message is an EMAIL
+            this reader may read. The waiting lane spans email and channel messages, and only
+            an email has an email's shape — a chat drawn as one would carry a mail icon and an
+            email's access badge over a message that never travelled on one. Null on a channel
+            message, null on every other source, and null when the message's content is not
+            this reader's, though such a message produces no waiting row at all. A client
+            renders the canonical row when this is present and falls back to `title` when it
+            is not.
         deal: { $ref: '#/components/schemas/WorklistDealFacts' }
         batch: { $ref: '#/components/schemas/WorklistBatch' }
         pair:
@@ -37008,7 +38047,18 @@ components:
             draws a heading when the band changes and never re-sorts.
         dispositions:
           type: array
-          items: { type: string, enum: [snooze, not_mine, not_sales] }
+          items:
+            type: string
+            enum: [snooze, not_mine, not_sales]
+            # Named explicitly. These three values also appear on the activity
+            # disposition event, and which enum gets the BARE constant is
+            # decided by generator ordering — so adding an unrelated schema
+            # elsewhere in the contract can flip it and break the build in a
+            # module neither schema belongs to.
+            x-enum-varnames:
+              - WorklistDispositionSnooze
+              - WorklistDispositionNotMine
+              - WorklistDispositionNotSales
           description: |
             The ways this row can be PUT DOWN, as the server declares them. A client
             never infers this from `source`: which rows a rep may judge is a server
@@ -37197,23 +38247,41 @@ components:
         cause:
           type: string
           description: |
-            What the members have in common, for a `system_incident`: the rule's name,
-            the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
-            rather than only how often.
+            WHICH condition the members share, for a `system_incident` — the identity the
+            group was formed on, carried so a client can tell two groups apart and find
+            the same row again on a re-read.
+
+            An opaque identity, never rendered. It is a `cause_ref` and reads like one
+            (`automation_run:<uuid>`), so a client that put it on screen would show a rep
+            "automation_run:01a0… failed 12 times". `label` is the half to draw.
+        label:
+          type: string
+          description: |
+            What `cause` identifies, in words — the automation's name, the mailbox that
+            stopped. This is what a row says.
+
+            Absent where the lane that formed the group minted no name for the condition.
+            A client then names the group by its kind alone and NEVER falls back to
+            `cause`, because an identity on screen is worse than a vaguer sentence: the
+            reader cannot act on it and cannot tell it from a bug.
 
     WorklistDealFacts:
       type: object
       description: |
         The deal behind an item, with the facts its card states. `expected_minor_base` is
-        `amount_minor × win_probability`, converted to the installation's base currency —
-        the only figure by which two deals in different currencies may be compared.
+        `amount_minor` converted to the installation's base currency — the only figure by
+        which two deals in different currencies may be compared. It is not weighted by
+        `win_probability`: the pipeline this row comes from does not read a deal's stage,
+        so the two fields are independent facts rather than one computed from the other,
+        and a reader must not multiply them together expecting the product to equal a
+        risk-adjusted figure the API does not compute.
       properties:
         stage_id: { type: [string, 'null'], format: uuid }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
         win_probability: { type: [integer, 'null'], minimum: 0, maximum: 100 }
-        expected_minor_base: { type: [integer, 'null'], format: int64, description: 'Expected revenue in the base currency. Null when the amount or the rate is unknown.' }
+        expected_minor_base: { type: [integer, 'null'], format: int64, description: 'The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.' }
         expected_close_date: { type: [string, 'null'], format: date }
         quiet_days: { type: [integer, 'null'], minimum: 0 }
 

@@ -50,11 +50,14 @@ export function CompanyProjects({
   projects,
   readOnly,
   onCreate,
+  bare,
 }: Readonly<{
   organizationId: string;
   projects: readonly Organization360Project[] | undefined;
   readOnly?: boolean;
   onCreate?: () => void;
+  // As a group inside the pane the caller holds — see ProjectLinks.
+  bare?: boolean;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -133,6 +136,7 @@ export function CompanyProjects({
       adapter={adapter}
       titleKey="companyProjects.title"
       emptyBody="companyProjects.empty"
+      bare={bare}
     />
   );
 }

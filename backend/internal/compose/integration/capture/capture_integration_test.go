@@ -21,7 +21,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -352,8 +354,18 @@ func (fakeAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.Se
 	return principal.SeatFull, nil
 }
 
+// newTestCaptureRegistry builds the capture registry the way compose does.
+//
+// The seams are not decoration. A bare Sink records import rows and derives
+// nothing from them, so a test built on one asserts against a capture path
+// production never runs: both the audience a captured message is born with and
+// the name an invitation gives an attendee arrive through options. The real
+// list lives in compose/capture.go, and anything added there belongs here too.
 func newTestCaptureRegistry(e *integration.SearchEnv, vault keyvault.Vault) *capturemod.Registry {
-	return capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), fakeAuthority{}, vault)
+	sink := capturemod.NewSink(e.DB()).
+		WithAudienceRecompute(activities.RecomputeAudienceTx).
+		WithParticipantNamer(people.FillParticipantNamesTx)
+	return capturemod.NewRegistry(e.DB(), sink, fakeAuthority{}, vault)
 }
 
 // AdmittedAuthority delegates to this fixture's own two reads; see

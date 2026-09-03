@@ -89,6 +89,41 @@ func TestAnEmptyOriginIsRefused(t *testing.T) {
 	}
 }
 
+// A caller that has not wired a public origin at all is not a broken
+// configuration under development or test — those postures need no real
+// link to work. Production and every OTHER posture — an unrecognised one
+// included — still refuse below, through TestAnEmptyOriginIsRefused and
+// TestAnUnknownPostureIsTreatedAsProduction.
+func TestAnUnsetOriginInDevelopmentOrTestIsNotRefused(t *testing.T) {
+	for _, env := range []runtimeenv.Environment{runtimeenv.Development, runtimeenv.Test} {
+		if err := RequirePublicOrigin("--public-base-url", "", env); err != nil {
+			t.Errorf("posture %v refused an unset origin: %v", env, err)
+		}
+	}
+}
+
+// A malformed, non-empty origin is still refused under development or test —
+// only genuine ABSENCE is exempt, so a real but broken value is still caught
+// rather than reaching a dev stack's own link-building code unchecked.
+func TestAMalformedOriginInDevelopmentIsStillRefused(t *testing.T) {
+	if err := RequirePublicOrigin("--public-base-url", "https://user:secret@example.com", runtimeenv.Development); err == nil {
+		t.Error("posture Development admitted a malformed, non-empty origin")
+	}
+}
+
+// A whitespace-only value is not the same claim as an unset one: the sending
+// caller's own "is this configured" check (footerlanguage.go) compares
+// untrimmed, so a value of "   " reads as CONFIGURED there while meaning
+// nothing — admitting it here as if it were genuinely absent would let both
+// gates agree to send a tokenized link built from whitespace. Only the exact
+// empty string is exempt; anything else, whitespace included, goes through
+// bareOrigin's own shape check like every other non-empty value.
+func TestAWhitespaceOnlyOriginInDevelopmentIsStillRefused(t *testing.T) {
+	if err := RequirePublicOrigin("--public-base-url", "   ", runtimeenv.Development); err == nil {
+		t.Error("posture Development admitted a whitespace-only origin as if it were unset")
+	}
+}
+
 // Every one of these was admitted by a first version of this guard that
 // delegated shape validation to a caller which does not always run.
 func TestAMalformedOriginIsRefusedBySendersOwnGuard(t *testing.T) {

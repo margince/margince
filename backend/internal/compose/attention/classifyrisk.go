@@ -37,6 +37,16 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		level = levelMaterialRisk
 	}
 	row := base(item, level, "deals_at_risk", consequence)
+	// The contract's own per-row figure, sent rather than left for a client to
+	// re-derive from `because`/`above_next` — set only once conversion actually
+	// ran and priced this item (money.converted() below is the raw-amount
+	// guard). expectedRevenue already answers known=false for a deal with no
+	// amount, an unpriced converted item, or a converted figure with no base
+	// currency named, so this is the one place that answer is spent rather
+	// than a second copy of any of its three reasons.
+	if row.Deal != nil && money.converted() && known {
+		row.Deal.ExpectedMinorBase = &expected
+	}
 	// The reason carries the figure the verdict actually weighed, in the units
 	// it was weighed in — the base currency once conversion ran — so a reader
 	// comparing it against the summary's threshold compares like with like.
@@ -83,7 +93,7 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		Currency:    item.Deal.Currency,
 	}
 	// The close date rides on the lane item's own due moment, and the idle
-	// count on its detail. Both were already resolved; only this projection
+	// count on its own typed field. Both were already resolved; only this projection
 	// dropped them, so the card could state money and never say when the deal
 	// was meant to land.
 	if item.DueAt != nil {
@@ -113,6 +123,12 @@ func expectedRevenue(item crmcontracts.AttentionItem, money dayMoney) (int64, bo
 	}
 	if !money.converted() {
 		return *item.Deal.AmountMinor, true
+	}
+	// The same guard dayMoney.value already holds for the reason field: a
+	// converted figure with no base currency named is not a smaller answer,
+	// it is no answer, and must not drive a material verdict either.
+	if money.base == "" {
+		return 0, false
 	}
 	converted, priced := money.byItem[item.Id]
 	return converted, priced

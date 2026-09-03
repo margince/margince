@@ -165,43 +165,19 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 	}
 }
 
-// absentFromTheCatalog ratifies the governed verbs the page did not list when
-// this gate landed. Shrinking is the point; a NEW one fails.
+// absentFromTheCatalog is EMPTY, and that is the state to keep it in.
 //
-// A ratchet rather than a sweep, because filling a row in means writing its
-// overlay-mode behaviour — what the verb does when the records live in somebody
-// else's CRM — and that is a per-verb answer read out of the code, not
-// something a gate landing should guess at nineteen times.
+// It carried nineteen entries when this gate landed — governed verbs the
+// hand-kept page had never listed — ratcheted rather than swept because filling
+// a row in means writing the verb's overlay-mode behaviour, which is read out
+// of the code per verb rather than guessed at nineteen times. They have since
+// been read and written, and the backlog is gone.
 //
-// One reason for all of them, because it is one fact: each is declared in
-// crm.yaml with a tier, the catalog is hand-kept, and none of them was ever
-// added. That is the same drift this gate exists to stop, caught in the other
-// direction.
-var absentFromTheCatalog = gatekit.Waive(map[string]string{
-	"annotate_brief":         catalogNeverListedIt,
-	"apply_tag":              catalogNeverListedIt,
-	"commit_import":          catalogNeverListedIt,
-	"create_task":            catalogNeverListedIt,
-	"decide_approval":        catalogNeverListedIt,
-	"decide_approval_bundle": catalogNeverListedIt,
-	"list_approvals":         catalogNeverListedIt,
-	"list_channel_providers": catalogNeverListedIt,
-	"list_colleagues":        catalogNeverListedIt,
-	"list_tags":              catalogNeverListedIt,
-	"preview_import":         catalogNeverListedIt,
-	"read_approval":          catalogNeverListedIt,
-	"read_import_report":     catalogNeverListedIt,
-	"read_import_run":        catalogNeverListedIt,
-	"read_project_360":       catalogNeverListedIt,
-	"relink_activities":      catalogNeverListedIt,
-	"relink_thread":          catalogNeverListedIt,
-	"remove_tag":             catalogNeverListedIt,
-	"send_account_email":     catalogNeverListedIt,
-})
-
-const catalogNeverListedIt = "declared in crm.yaml with a tier and absent from the hand-kept catalog when " +
-	"this gate landed. Writing its row means answering what the verb does in overlay mode, which is read " +
-	"out of the code per verb — so these are counted rather than guessed at, and the count only falls"
+// So a new entry here is not a smaller version of that backlog: it is one verb
+// whose row somebody did not write, on the page a reader consults before
+// granting a passport. Write the row instead. If a verb genuinely cannot have
+// one, the reason belongs here in its own words, not a shared constant.
+var absentFromTheCatalog = gatekit.Waive(map[string]string{})
 
 // markFor is how the page must write a tool whose policies carry these tiers.
 //

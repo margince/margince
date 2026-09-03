@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -88,6 +89,22 @@ type SendEmailInput struct {
 	// message carried (ADR-0086/A131 §4).
 	AttachmentIDs  []ids.UUID
 	ConsentPurpose string
+	// Context is the communication category the CALLER claims, empty when they
+	// claim none. It is a claim and never an authorization: the engine resolves
+	// the category the evidence supports and records both, so a claim the
+	// evidence does not carry shows up as a disagreement rather than passing.
+	Context commsauthz.Category
+	// MarketingPurpose names the topic a marketing send is for. Marketing
+	// consent is purpose-specific, so a grant for one topic authorizes that
+	// topic alone.
+	MarketingPurpose string
+	// OperatorReason is what a human typed about a genuinely ambiguous first
+	// message. Recorded, never weighed: a sentence the sender wrote about their
+	// own send says nothing about the recipient.
+	OperatorReason string
+	// Evidence names records the caller offers in support. Each is read and
+	// checked against the category; naming one widens nothing.
+	Evidence commsauthz.Evidence
 	// DraftRef names the voice draft this message came from, so the send can
 	// close the learning signal that draft opened. Empty is the ordinary case:
 	// mail the human composed independently resolves no draft.
@@ -129,7 +146,13 @@ type DeliveryRequest struct {
 	// same From header the first attempt did.
 	FromName string
 	// Attachments is what this message carries, snapshotted at staging.
-	Attachments    []OutboundFile
+	Attachments []OutboundFile
+	// Authorization is the question the engine answers about this message, put
+	// once and answered in the same transaction that stages it. Carried on the
+	// request rather than rebuilt by the stager: the recipients, the anchor and
+	// the content are all known HERE, and a stager that re-derived them would
+	// be a second reading of the same message.
+	Authorization  commsauthz.Request
 	ConsentPurpose string
 	InReplyTo      string   // unbracketed; empty starts a conversation
 	References     []string // unbracketed ancestry, oldest first

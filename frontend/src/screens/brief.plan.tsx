@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -10,12 +11,14 @@ import {
   Field,
   TextInput,
 } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMe } from "./common";
 import { EntityRef } from "./entityref";
 import {
   type SettableState,
@@ -79,19 +82,56 @@ function stagedState(
   return commitment.state === "done" ? "open" : "done";
 }
 
+/**
+ * Whether the panel states its read-only posture, said once rather than as a
+ * refusal repeated on every row.
+ *
+ * The grant this reading needs is not the union of the two: a week with no plan
+ * asks for `create`, and a week with one asks for `update`. A seat holding
+ * create and not update reads an existing plan with every control gone and,
+ * under a test for both, no sentence saying why.
+ *
+ * Both answers are waited for. Neither a seat nor a week in flight is a denial,
+ * and branching before they land would flash the sentence at every reader.
+ */
+function statesReadOnly(
+  reading: Readonly<{
+    seatKnown: boolean;
+    weekKnown: boolean;
+    hasPlan: boolean;
+    mayStart: boolean;
+    mayEdit: boolean;
+  }>,
+): boolean {
+  if (!reading.seatKnown || !reading.weekKnown) {
+    return false;
+  }
+  return reading.hasPlan ? !reading.mayEdit : !reading.mayStart;
+}
+
 export function PlanSection() {
   const t = useT();
-  const { locale } = useLocale();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
-  const plural = usePlural();
+  const me = useMe();
+  // Bound to the grant each CONTROL asks for, because the two diverge: opening
+  // a week is `weekly_plan.create` and everything after it is `update`. A seat
+  // the server refuses is offered nothing — a control that exists in order to
+  // fail is worse than no control, and this panel's writes reach nothing that
+  // draws when they are refused.
+  const canStart = useCanWrite("weekly_plan", "create");
+  const canEdit = useCanWrite("weekly_plan", "update");
   // Ticking a box stages it; nothing reaches the wire until Save. The design
   // system's rule is that a control which IS the write is a Switch and one that
   // stages a choice is a Checkbox, so this set is what makes the checkbox
   // honest rather than a decoration on an immediate write.
   const [staged, setStaged] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
+  // How many rows the last Save could not write. Zero is the ordinary state and
+  // draws nothing; anything else is said out loud, because a half-written week
+  // that reports success is worse than one that fails outright.
+  const [unsaved, setUnsaved] = useState(0);
 
   const state = plan.isPending
     ? "loading"
@@ -102,7 +142,16 @@ export function PlanSection() {
   // A closed week is history. The weekly job settles it and freezes its outcome
   // into the review, so accepting an edit afterwards would make the review's
   // counts disagree with the rows they were counted from.
-  const editable = plan.data?.status === "open";
+  const editable = canEdit && plan.data?.status === "open";
+  // A closed week says nothing about posture — it is not this seat that the
+  // plan is shut to, and `editable` above is what closes it.
+  const readOnly = statesReadOnly({
+    seatKnown: me.isSuccess,
+    weekKnown: plan.isSuccess,
+    hasPlan: plan.data !== null,
+    mayStart: canStart,
+    mayEdit: canEdit,
+  });
 
   function toggle(id: string) {
     setStaged((current) => {
@@ -128,10 +177,24 @@ export function PlanSection() {
         (write): write is { id: string; state: SettableState } =>
           write.state !== null,
       );
+    // Each row is attempted even after one is refused, and only the rows that
+    // LANDED stop being staged.
+    //
+    // The loop used to throw on the first refusal, which left the writes after
+    // it unattempted and — because clearing the staged set came after the loop
+    // — left every row still ticked, including the ones already written. A rep
+    // pressing Save again then re-sent a write that had already succeeded, and
+    // nothing on the panel said any of it had gone wrong.
+    const refused: string[] = [];
     for (const write of writes) {
-      await setState.mutateAsync(write);
+      try {
+        await setState.mutateAsync(write);
+      } catch {
+        refused.push(write.id);
+      }
     }
-    setStaged(new Set());
+    setStaged(new Set(refused));
+    setUnsaved(refused.length);
   }
 
   return (
@@ -145,16 +208,13 @@ export function PlanSection() {
           ) : undefined
         }
         footer={
-          // Save appears only once a box has changed. A save bar standing in the
-          // resting layout would say there is something to save on a week nobody
-          // has touched.
-          staged.size > 0 ? (
-            <Button onClick={() => void save()} disabled={setState.isPending}>
-              {plural("plan.save", staged.size, {
-                count: formatNumber(staged.size, locale),
-              })}
-            </Button>
-          ) : undefined
+          <PlanFoot
+            editable={editable}
+            staged={staged.size}
+            unsaved={unsaved}
+            saving={setState.isPending}
+            onSave={() => void save()}
+          />
         }
       >
         <SurfaceState
@@ -163,12 +223,25 @@ export function PlanSection() {
           loadingLabel={t("plan.loading")}
           detail={{ onRetry: () => void plan.refetch() }}
         >
+          {readOnly && (
+            <PanelBody>
+              <p className="t-caption plan-readonly">{t("plan.readOnly")}</p>
+            </PanelBody>
+          )}
           {plan.isSuccess && plan.data === null && (
             <PanelBody>
               <p>{t("plan.none")}</p>
-              <Button onClick={() => start.mutate()} disabled={start.isPending}>
-                {t("plan.start")}
-              </Button>
+              {/* The sentence above is a fact about the week and stays for
+                  every reader. The button is only an act, so a seat that may
+                  not perform it is shown none. */}
+              {canStart && (
+                <Button
+                  onClick={() => start.mutate()}
+                  pending={start.isPending}
+                >
+                  {t("plan.start")}
+                </Button>
+              )}
             </PanelBody>
           )}
           {plan.data && (
@@ -187,12 +260,72 @@ export function PlanSection() {
                   onToggle={() => toggle(commitment.id)}
                 />
               ))}
-              {adding && <AddCommitment onDone={() => setAdding(false)} />}
+              {/* Gated on the same fact for the same reason: the form's own
+                  save reaches a write the closed week refuses. */}
+              {editable && adding && (
+                <AddCommitment onDone={() => setAdding(false)} />
+              )}
             </>
           )}
         </SurfaceState>
       </Panel>
     </section>
+  );
+}
+
+/**
+ * The save bar, and the refusal that can stand where it was.
+ *
+ * Save appears only once a box has changed: a save bar standing in the resting
+ * layout would say there is something to save on a week nobody has touched. The
+ * refusal sits here rather than at the top of the panel, because it is about the
+ * press the reader just made and the rows it names are the ones still ticked
+ * under it.
+ *
+ * The two halves are gated differently on purpose. A refusal is history and
+ * stays: `editable` goes false under a reader mid-stage when the weekly job
+ * closes the week, which is the very thing that refused their save — hiding the
+ * sentence with the button would leave them with neither the write nor the
+ * reason. The BUTTON goes, because the rows lose their boxes with it, and a Save
+ * left standing would send settlements the server refuses over ticks nobody can
+ * see any more.
+ */
+function PlanFoot({
+  editable,
+  staged,
+  unsaved,
+  saving,
+  onSave,
+}: Readonly<{
+  editable: boolean;
+  staged: number;
+  unsaved: number;
+  saving: boolean;
+  onSave: () => void;
+}>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (staged === 0 && unsaved === 0) {
+    return null;
+  }
+  return (
+    <>
+      {unsaved > 0 && (
+        <Callout tone="warn" live="alert">
+          {plural("plan.saveRefused", unsaved, {
+            count: formatNumber(unsaved, locale),
+          })}
+        </Callout>
+      )}
+      {/* `pending`, not `disabled`: a write in flight is not a precondition the
+          reader can meet, and `disabled` is native — it drops focus from the
+          control they just pressed. */}
+      {editable && staged > 0 && (
+        <Button onClick={onSave} pending={saving}>
+          {plural("plan.save", staged, { count: formatNumber(staged, locale) })}
+        </Button>
+      )}
+    </>
   );
 }
 
@@ -291,7 +424,7 @@ function HelpExchange({
               { onSuccess: () => setEditing(false) },
             );
           }}
-          disabled={ask.isPending}
+          pending={ask.isPending}
         >
           {t("plan.help.send")}
         </Button>
@@ -359,28 +492,39 @@ function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
           />
         )}
       </Field>
-      <Button
-        onClick={() => {
-          add.mutate(
-            // An empty date is no date, not an empty string: the contract types
-            // due_on as nullable, and "" is neither a date nor an absence.
-            { label, due_on: dueOn === "" ? null : dueOn },
-            {
-              onSuccess: () => {
-                setLabel("");
-                setDueOn("");
-                onDone();
+      {/* The submit row, not two buttons loose in the body: `.panel-body` is
+          padding and nothing else, so bare siblings sat against each other on
+          the line under the last field with no gap and no alignment of their
+          own. */}
+      <div className="form-actions">
+        <Button variant="ghost" onClick={onDone}>
+          {t("plan.new.cancel")}
+        </Button>
+        <Button
+          onClick={() => {
+            add.mutate(
+              // An empty date is no date, not an empty string: the contract
+              // types due_on as nullable, and "" is neither a date nor an
+              // absence.
+              { label, due_on: dueOn === "" ? null : dueOn },
+              {
+                onSuccess: () => {
+                  setLabel("");
+                  setDueOn("");
+                  onDone();
+                },
               },
-            },
-          );
-        }}
-        disabled={label.trim() === "" || add.isPending}
-      >
-        {t("plan.new.save")}
-      </Button>
-      <Button variant="ghost" onClick={onDone}>
-        {t("plan.new.cancel")}
-      </Button>
+            );
+          }}
+          // An empty label is a precondition the reader can meet; a write in
+          // flight is a wait of seconds. Spelling the second as `disabled`
+          // takes focus off the control they just pressed.
+          disabled={label.trim() === ""}
+          pending={add.isPending}
+        >
+          {t("plan.new.save")}
+        </Button>
+      </div>
     </PanelBody>
   );
 }

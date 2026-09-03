@@ -103,6 +103,8 @@ function Surface({
   ...rest
 }: Readonly<{
   rows: Company[];
+  /** The page's own name, for the story where the surface IS the page. */
+  title?: string;
   /** Defaults to the six this file reads as the reference set. */
   columns?: ListColumn<Company>[];
   pending?: boolean;
@@ -135,8 +137,11 @@ function Surface({
     if (!openSortMenu) {
       return;
     }
+    // Matched on the PREFIX: the dial names the order it is holding
+    // ("Sort: Company"), so an equality test against the bare word found
+    // nothing and left this story showing a closed menu.
     const trigger = [...(frame.current?.querySelectorAll("button") ?? [])].find(
-      (button) => button.textContent?.trim() === "Sort",
+      (button) => button.textContent?.trim().startsWith("Sort"),
     );
     trigger?.click();
   }, [openSortMenu]);
@@ -285,6 +290,16 @@ export const CaptionAndNote: Story = {
       note="Sorting and filters read through the source system"
     />
   ),
+};
+
+// The surface AS THE PAGE: it prints the page's own name in the header, on the
+// line that already carries the view tabs and the count. This is the arrangement
+// every record list uses — the shell prints no heading above a screen that
+// passes `title` — and what to read for is the head at a narrow width, where the
+// name takes the first line and the tabs continue under it rather than both
+// being squeezed.
+export const AsThePage: Story = {
+  render: () => <Surface rows={companies(12)} title="Companies" />,
 };
 
 // Narrow enough that six columns do not fit. The identity column stays pinned

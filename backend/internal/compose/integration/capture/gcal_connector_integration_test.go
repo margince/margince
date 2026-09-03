@@ -57,7 +57,13 @@ func gcalStub(t *testing.T, owner string) *httptest.Server {
 					"id": "evt-ext", "status": "confirmed", "summary": "Customer demo",
 					"start":     map[string]string{"dateTime": "2026-07-16T10:00:00Z"},
 					"organizer": map[string]string{"email": owner},
-					"attendees": []map[string]string{{"email": owner}, {"email": "buyer@acme.com"}},
+					// The buyer is NAMED, the way a real invitation names every
+					// attendee: it is the only place a contact minted from a
+					// bare address is ever given a full name.
+					"attendees": []map[string]string{
+						{"email": owner},
+						{"email": "buyer@acme.com", "displayName": "Robin Buyer"},
+					},
 				},
 				{
 					// All attendees share the owner's domain → internal → zero rows.

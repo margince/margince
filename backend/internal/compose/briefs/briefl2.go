@@ -76,7 +76,10 @@ func (rk briefL2Ranker) reorder(ctx context.Context, candidates []BriefQueueItem
 // certification lane runs THEM rather than a re-creation: a copy of a
 // prompt stays green through the change that breaks the original.
 func (rk briefL2Ranker) askModel(ctx context.Context, candidates []BriefQueueItem) ([]ids.UUID, error) {
-	resp, err := rk.brain.Complete(ctx, RankRequest(candidates))
+	resp, err := ai.Ask(ctx, rk.brain, RankRequest(candidates), func(text string) error {
+		_, err := ParseRankOrder(text)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

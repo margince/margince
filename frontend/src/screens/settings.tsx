@@ -2892,11 +2892,7 @@ function AuditLogEntries({
     // on a page that opens for ops would read as "nothing has happened here",
     // which is a different claim from "this is not yours to read". The same
     // choice the subject-request queue above it makes, for the same reason.
-    return (
-      <EmptyState>
-        <p className="t-small">{t("settings.auditAdminOnly")}</p>
-      </EmptyState>
-    );
+    return <EmptyState>{t("settings.auditAdminOnly")}</EmptyState>;
   }
   if (query.isPending) {
     return (

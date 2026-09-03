@@ -27,14 +27,15 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // Two placeholders and a dash. Every word in the line comes from elsewhere —
-  // the dimension's own label and the sentence the server wrote — so there is
-  // nothing here for a locale to translate.
-  "co.strip.healthSummary.because",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.
   "ob.scan.tickerFact",
+  // Two whole clauses and the space between them. The weekly's opening sentence
+  // is built from result keys and carry keys that ARE translated; this joins the
+  // two rendered clauses and contributes no word of its own, so a locale has
+  // nothing here to change.
+  "brief.week.andCarry",
   // The record's own name beside the numeral that names its reading. There is
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
@@ -87,7 +88,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // TEMPORARY, with the release marker it labels (app/shell.tsx): "Alpha" is
   // the release stage's own name and Vietnamese keeps it, the same way it keeps
   // "Email" and "pipeline". Delete this entry with the marker.
-  "shell.alpha",
   // A placeholder and a percent sign. Vietnamese writes a percentage the way
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
@@ -154,10 +154,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.brief.cite.person",
   "deals.unit",
   "history.actorAgent",
-
-  // The alphabetical sort view: the Vietnamese alphabet also runs A to Z, so
-  // the label names the same range in either catalog.
-  "list.viewAZ",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",

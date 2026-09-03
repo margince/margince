@@ -33,7 +33,11 @@ import (
 //
 // Items that already have facts are left alone: the lane that produced them
 // read the deal under this same reader, and asking again could only produce a
-// second answer to a settled question.
+// second answer to a settled question. Whether a row belongs on the day at
+// all when its deal cannot be resolved is the briefing lane's own question,
+// asked at its source (attentionBriefing.Queue, over the SAME DealFacts
+// reader) — this pass runs after that filter has already applied, so it is
+// never the one deciding whether a row survives.
 func (s *Service) nameTheMoney(ctx context.Context, day *crmcontracts.Attention) error {
 	if s.dealFacts == nil {
 		return nil
@@ -91,6 +95,12 @@ func needsDealFigures(item crmcontracts.AttentionItem) (ids.UUID, bool) {
 // The close date lands on DueAt as well as on the deal facts, because that is
 // where the projection reads a row's deadline from — a date set only on the
 // facts would print on the card and order nothing.
+//
+// The overdue verdict lands on Overdue for the same reason, and it is the
+// SAME verdict deals.CloseIsOverdue gives the at-risk lane's identical deal
+// (deals.Store.Figures computes it calendar-date, workspace-zone aware) —
+// never classifyBriefItem's own instant comparison, which is what let the two
+// lanes disagree about a deal due today.
 func applyDealFigures(item *crmcontracts.AttentionItem, figures DealFigures) {
 	facts := &crmcontracts.AttentionDealFacts{AmountMinor: figures.AmountMinor}
 	if !figures.StageID.IsZero() {
@@ -109,5 +119,9 @@ func applyDealFigures(item *crmcontracts.AttentionItem, figures DealFigures) {
 	if figures.ExpectedCloseDate != nil && item.DueAt == nil {
 		closes := *figures.ExpectedCloseDate
 		item.DueAt = &closes
+	}
+	if figures.ExpectedCloseDate != nil && item.Overdue == nil {
+		overdue := figures.CloseOverdue
+		item.Overdue = &overdue
 	}
 }

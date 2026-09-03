@@ -173,6 +173,64 @@ func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 		t.Error("a message the caller is not on handed them its subject — " +
 			"the content clause is not composed")
 	}
+	// And no id either. The id is what a client OPENS, so handing one out for
+	// a message whose subject is withheld would route the reader straight to
+	// the words the line above just refused them. It is read from the joined
+	// activity row for exactly this reason — the ledger's own
+	// first_activity_id carries no content gate.
+	if got[0].ActivityID != nil {
+		t.Errorf("a message the caller is not on handed them its id (%v) — "+
+			"the id is read from the ledger rather than the gated join",
+			*got[0].ActivityID)
+	}
+	// Refusing the content is right; reporting the message GONE is not. The
+	// screen draws a row with no activity as "no message at all", which tells a
+	// holder their evidence was destroyed while it sits in the thread. That is
+	// the confusion HasActivity exists to prevent, arriving from the other
+	// side: not evidence destroyed read as unnamed, but evidence withheld read
+	// as destroyed.
+	if !got[0].HasActivity {
+		t.Error("a message that exists and is merely withheld reports itself erased")
+	}
+}
+
+// The id a client opens is present for a message the reader may read, and the
+// admission case is asserted as hard as the refusal: a list that handed out no
+// id at all would pass every refusal above while opening nothing.
+func TestAHeldThreadCarriesTheMessageItsReaderMayOpen(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Rechnung Q3', now(), 'gmail', $2, 'workspace')`,
+			activityID, "human:"+e.Rep1.String())
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the message: %v", err)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, attempts, first_activity_id)
+			VALUES ('thread-openable', $1, 'held', 'financial_corporate', 1, $2)`,
+			e.Rep1, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+
+	got := heldThreads(t, e, e.Rep1)
+	if len(got) != 1 {
+		t.Fatalf("%d threads, want 1", len(got))
+	}
+	if got[0].ActivityID == nil {
+		t.Fatal("a held thread whose message the reader may read carried no id; " +
+			"there is nothing for the drawer to open")
+	}
+	if *got[0].ActivityID != activityID {
+		t.Errorf("the row names activity %v, want the message that opened the thread %v",
+			*got[0].ActivityID, activityID)
+	}
 }
 
 func heldThreads(t *testing.T, e *integration.Env, user ids.UUID) []capture.HeldThread {

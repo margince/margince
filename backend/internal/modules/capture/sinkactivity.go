@@ -132,6 +132,17 @@ func (s *Sink) finishNewActivity(
 		rec.Counterparty.SentByOwner(), rec.Participants); err != nil {
 		return counterpartyDecision{}, err
 	}
+	// And the names those rows just recorded, for an attendee who is ALREADY a
+	// contact. A calendar invitation names every attendee in full, and that is
+	// the only full name a contact minted from a bare address ever gets: the
+	// ladder that names people never runs for a meeting, because attendance is
+	// a list and the mapper leaves the counterparty unset. The other ordering —
+	// an attendee who becomes a contact later — belongs to the cohort repair.
+	if s.nameParticipants != nil && namesSomebody(rec.Participants) {
+		if err := s.nameParticipants(ctx, tx, id); err != nil {
+			return counterpartyDecision{}, err
+		}
+	}
 	// Capture-audit minimization (ADR-0072/A118): the after-image is
 	// metadata-only, never the subject/body (capturedActivityAuditImage).
 	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, capturedActivityAuditImage(rec, fields))

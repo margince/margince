@@ -247,17 +247,139 @@ export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
+export type WeeklyReview = components["schemas"]["WeeklyReview"];
+
+// The week just gone, in ONE payload.
+//
+// Two story files draw this review — the whole morning and the panel on its own
+// — and they had a fixture each, which is two answers to "what does an ordinary
+// week look like". A part that drifts from the page it is part of is exactly the
+// drift these frames exist to catch, so it cannot be two literals.
+//
+// EVERY INSTANT IS FIXED. A review built from `new Date()` documents whichever
+// day the catalog was opened on, and both dates the panel prints — the week it
+// names and the day each deal line closed — would then say something different
+// every time somebody looked.
+
+export const WEEK_START = "2026-06-29";
+export const PRIOR_WEEK_START = "2026-06-22";
+
+const weeklyCounts: WeeklyReview["counts"] = {
+  tasks_due: 6,
+  tasks_done: 4,
+  tasks_carried_over: 2,
+  deals_moved: 3,
+  deals_won: 3,
+  deals_lost: 1,
+  proposals_accepted: 8,
+  proposals_rejected: 2,
+  brief_items_acted: 7,
+  brief_items_dismissed: 4,
+  commitments_due: 4,
+  commitments_kept: 3,
+  leads_routed: 9,
+  leads_answered_in_target: 7,
+  leads_breached: 2,
+  meetings_held: 5,
+  meetings_with_next_step: 3,
+};
+
+/**
+ * A rep's first review: measured, and with nothing behind it to measure
+ * against.
+ *
+ * Its own fixture rather than the ordinary week minus a field, because "no
+ * prior" is what every other frame here is built on top of.
+ */
+export const firstWeek: WeeklyReview = {
+  id: "01a04000-0000-7000-8000-00000000000a",
+  local_week_start: WEEK_START,
+  generated_at: "2026-07-06T06:00:00Z",
+  as_of: "2026-07-06T06:00:00Z",
+  counts: weeklyCounts,
+  deals: [],
+};
+
+/**
+ * What the week did to the pipeline, converted and frozen.
+ *
+ * Its own value rather than folded into the week below, because ABSENT is a
+ * real state with its own frame: an open deal freezes no rate, so one
+ * unconvertible deal makes the whole figure unanswerable and the panel prints
+ * the count instead of a sum. A week that always carries money cannot show
+ * that the two are different sentences.
+ */
+export const weeklyPipeline: NonNullable<WeeklyReview["pipeline"]> = {
+  created_minor: 214_000_00,
+  won_minor: 96_500_00,
+  lost_minor: 31_000_00,
+  currency: "EUR",
+};
+
+/** The ordinary Monday: a sentence, a week before it, and three closed lines. */
+export const narratedWeek: WeeklyReview = {
+  ...firstWeek,
+  pipeline: weeklyPipeline,
+  narrative: "Weber signed on Thursday; two promises slipped into this week.",
+  narrated_at: "2026-07-06T06:01:00Z",
+  prior: {
+    local_week_start: PRIOR_WEEK_START,
+    // Deliberately uneven against the week above: one figure up, one down and
+    // one exactly level, so the delta line is readable as arithmetic a reader
+    // can check rather than as five copies of the same string. The level one is
+    // the case worth the frame — it prints "±0", never "+0".
+    counts: { ...weeklyCounts, deals_won: 1, meetings_held: 7 },
+  },
+  // All three outcome words, because each is a separate lookup and a stage
+  // label rides along with only one of them. The labels are what the deals were
+  // CALLED that week: frozen, so they render even though nothing here serves
+  // the deals they name.
+  deals: [
+    {
+      deal_id: "01a04000-0000-7000-8000-00000000000b",
+      label: "Weber Rahmenvertrag",
+      outcome: "won",
+      occurred_at: "2026-07-02T14:00:00Z",
+    },
+    {
+      deal_id: "01a04000-0000-7000-8000-00000000000c",
+      label: "Aster Handel — Kassensystem",
+      outcome: "lost",
+      occurred_at: "2026-07-03T09:30:00Z",
+    },
+    {
+      deal_id: "01a04000-0000-7000-8000-00000000000d",
+      label: "Nordwind Logistik — Depot rollout",
+      outcome: "moved",
+      to_stage_label: "Proposal sent",
+      occurred_at: "2026-07-01T16:15:00Z",
+    },
+  ],
+};
+
 export type Worklist = components["schemas"]["Worklist"];
 type Readings = components["schemas"]["WorklistReadings"];
 
-/** One meeting row, prepared or not, as the queue would carry it. */
-export function meetingRow(id: string, prepared: boolean): WorklistItem {
+/**
+ * One meeting row, prepared or not, as the queue would carry it.
+ *
+ * `due_at` is the start, and it is not optional in the fixture because it is
+ * not optional on the wire: the meeting lane sets it on every row it produces.
+ * A fixture that left it off was the reason a panel which could never draw a
+ * time had a green test suite.
+ */
+export function meetingRow(
+  id: string,
+  prepared: boolean,
+  startsAt = "2026-09-03T09:30:00Z",
+): WorklistItem {
   return {
     id,
     source: "meeting",
     level: 3,
     category: "meetings",
     title: "Weber GmbH · quarterly review",
+    due_at: startsAt,
     because: prepared ? [] : [{ kind: "meeting_unprepared" }],
     consequence: prepared ? "none" : "meeting_unprepared",
     actions: ["open"],

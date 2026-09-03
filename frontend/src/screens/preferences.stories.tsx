@@ -15,6 +15,12 @@ import {
 // workspace header — the token in the URL is the whole capability.
 // PreferenceCenter is {purposes: [{key, label, state, locked}]} — no
 // events — matching preferences.test.tsx's CENTER fixture exactly.
+//
+// A purpose's `label` here is the CATALOG's word and is only what the screen
+// draws for a key `PURPOSE_LABEL_KEYS` does not name (preferences.logic.ts).
+// `marketing_email` IS named there, so the row reads "Product news" and not the
+// fixture's "Product updates" — which is what these stories used to query for,
+// having been written before the copy moved.
 
 const CENTER = {
   purposes: [
@@ -67,7 +73,7 @@ export const Dirty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("checkbox", { name: /product updates/i }),
+      await canvas.findByRole("checkbox", { name: /product news/i }),
     );
   },
 };
@@ -83,7 +89,9 @@ export const OneClickLanding: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /unsubscribe from all/i }),
+      await canvas.findByRole("button", {
+        name: /stop everything I can switch off/i,
+      }),
     );
   },
 };
@@ -108,7 +116,7 @@ export const PartialSave: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("checkbox", { name: /product updates/i }),
+      await canvas.findByRole("checkbox", { name: /product news/i }),
     );
     await userEvent.click(
       canvas.getByRole("button", { name: /save preferences/i }),

@@ -120,9 +120,7 @@ export function AiProviderKeysCard() {
     return (
       <Panel title={t("aiProviderKeys.title")} sub={t("aiProviderKeys.sub")}>
         <PanelBody>
-          <EmptyState>
-            <p className="t-small">{t("aiProviderKeys.withheld")}</p>
-          </EmptyState>
+          <EmptyState>{t("aiProviderKeys.withheld")}</EmptyState>
         </PanelBody>
       </Panel>
     );

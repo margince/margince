@@ -65,7 +65,7 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		  WHERE p.person_id = $1`, nil},
 		{&pkg.ChannelIdentities, `SELECT provider, channel_user_id, username, blocked_at, source, created_at, archived_at
 		   FROM person_channel_identity WHERE person_id = $1`, nil},
-		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.created_at,
+		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.display_name, ap.created_at,
 		       a.kind, a.occurred_at, a.direction
 		   FROM activity_participant ap
 		   JOIN activity a ON a.id = ap.activity_id
@@ -211,7 +211,14 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// this date was the basis", which is what Art. 15 asks. Export the note
 		// only alongside telling reps, at the surface where they type it, that
 		// the subject can read it.
-		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, captured_at
+		// created_at AS captured_at: the table records when the row was written
+		// as created_at and carries no captured_at, so the unaliased name was a
+		// 42703 that took the WHOLE export down — every section assembles in one
+		// pass, so one bad column means the subject gets nothing rather than a
+		// short answer. Aliased rather than renamed in the output because every
+		// other section here reports "when we wrote it down" as captured_at, and
+		// the export is read by the subject, not by us.
+		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
 		   FROM consent_qualifying_event
 		   WHERE person_id = $1`, nil},
 		// The token row itself is deliberately NOT read: it is a live
@@ -264,6 +271,18 @@ func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []id
 // captured what from where.
 func sarProvenanceSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
+		// Why the installation holds this person at all: what they did, or
+		// what was done to obtain them. Art. 15(1)(g) asks for the source of
+		// the data, and this is the record that answers it in the subject's
+		// own terms rather than as an internal surface name.
+		//
+		// source_entity_id is withheld for the reason the qualifying events
+		// withhold theirs: it points at rows whose own audience gating lives
+		// in the record sections, and a bare id would route around it.
+		{&pkg.AcquisitionEvidence, `SELECT kind, source_entity_type, purpose_claimed,
+		          occurred_at, captured_at
+		   FROM person_acquisition_evidence
+		   WHERE person_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's
 		// purgeDerivedTraces): by email, ILIKE against the stored address, and
 		// by channel identity, a typed JSONB path equality rather than a

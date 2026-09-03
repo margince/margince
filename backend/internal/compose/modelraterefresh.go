@@ -263,7 +263,10 @@ func (m modelCostRefresh) extract(ctx context.Context, src pricingSource) ([]ext
 		}
 		pageText = reduced
 	}
-	resp, err := m.brain.Complete(ctx, rateExtractRequest(pageText))
+	resp, err := ai.Ask(ctx, m.brain, rateExtractRequest(pageText), func(text string) error {
+		_, err := parseRateExtraction(text)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
 	}

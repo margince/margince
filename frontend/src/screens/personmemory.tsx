@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, SegmentedControl } from "../design-system/atoms";
+import { EmailEntry } from "../design-system/emailentry";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -28,11 +29,23 @@ import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 
 type Person360 = components["schemas"]["Person360"];
 type Activity = components["schemas"]["Activity"];
+type EmailSummary = components["schemas"]["EmailSummary"];
 
 const FILTERS = ["all", "email", "meetings", "calls", "notes"] as const;
 type Filter = (typeof FILTERS)[number];
 
-export function PersonMemory({ view }: Readonly<{ view: Person360 }>) {
+export function PersonMemory({
+  view,
+  onOpenEmail,
+}: Readonly<{
+  view: Person360;
+  /**
+   * Opens the page's email drawer. Optional because the page owns the drawer,
+   * not this card: a host that mounts none passes none, and the rows stay
+   * readable rather than offering a control that answers nothing.
+   */
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -86,10 +99,22 @@ export function PersonMemory({ view }: Readonly<{ view: Person360 }>) {
             {interactionIcon(row.kind)}
             {row.channelLabel}
           </span>
-          <span>
-            <span className="pe-memory-title">{row.title}</span>
-            <span className="pe-memory-summary">{row.summary}</span>
-          </span>
+          {/* A retained email is the canonical row, whatever surface it is on.
+              The card keeps its own date, channel, badge and time columns —
+              those place the message in this card's reading — and hands the
+              message itself to the one component that draws one. */}
+          {row.emailSummary ? (
+            <EmailEntry
+              summary={row.emailSummary}
+              timestamp={row.time}
+              onOpen={openerFor(row, onOpenEmail)}
+            />
+          ) : (
+            <span>
+              <span className="pe-memory-title">{row.title}</span>
+              <span className="pe-memory-summary">{row.summary}</span>
+            </span>
+          )}
           {row.status ? (
             <Badge tone={row.tone}>{row.statusLabel}</Badge>
           ) : (
@@ -135,6 +160,14 @@ type Row = {
   channelLabel: string;
   title: string;
   summary: string;
+  // The server's own row model for a retained email, when this row is one.
+  // Present it and the card draws EmailEntry instead of its own two lines, so
+  // a message reads here exactly as it does on the timeline beside it.
+  //
+  // Null on every other kind, and null for a thread-projection entry too: a
+  // conversation summary is a fold of several messages and has no single
+  // message's access state to show.
+  emailSummary: EmailSummary | null;
   // `status` stays the STORED key and `statusLabel` is what the reader sees.
   // Folding them into one field would make the badge's tone depend on the
   // active locale, since tone is chosen by the same word.
@@ -142,6 +175,24 @@ type Row = {
   statusLabel: string;
   tone: "success" | "warn" | "accent" | undefined;
 };
+
+// The row's opener, or nothing.
+//
+// Both halves are required and neither is assumed: a page that mounts no
+// drawer passes no opener, and a row the projection gave no activity id has
+// nothing to open. EmailEntry draws an un-openable row as plain text, which is
+// the honest reading — a row that looks openable and is not teaches a reader
+// the product does not work.
+function openerFor(
+  row: Row,
+  onOpenEmail: ((activityId: string) => void) | undefined,
+): (() => void) | undefined {
+  const { activityId } = row;
+  if (!onOpenEmail || !activityId) {
+    return undefined;
+  }
+  return () => onOpenEmail(activityId);
+}
 
 // The filter key for the channel column. Since ADR-0107/A158 a message names
 // its transport separately, so the kind alone renders every channel row as the
@@ -192,6 +243,9 @@ function fromEntry(
     channelLabel: interactionLabel(entry.channel, entry.channel_provider),
     title: entry.title,
     summary: entry.summary,
+    // A conversation entry folds a whole thread, so no single message's access
+    // state describes it. It keeps the card's own two lines.
+    emailSummary: null,
     status,
     statusLabel: statusLabel(status, t),
     tone: toneFor(status),
@@ -242,6 +296,10 @@ function foldActivities(
           : row.email_summary
             ? (row.email_summary.preview ?? "")
             : (row.body ?? ""),
+        // A retained email draws the canonical row. The title and summary
+        // above stay filled for it: they are what the segmented filter reads,
+        // and what the row falls back to if a server has not caught up.
+        emailSummary: row.email_summary ?? null,
         status,
         statusLabel: statusLabel(status, t),
         tone: toneFor(status),

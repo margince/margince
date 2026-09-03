@@ -32,8 +32,13 @@ import (
 // names no person at all.
 func personCreateFrom(fields map[string]string, source string) people.CreatePersonInput {
 	in := people.CreatePersonInput{
-		FullName: personFullName(fields),
-		Source:   source,
+		// Recorded as the import it is. unknown_legacy is the honest answer
+		// where a door cannot say why a contact exists; here the door knows,
+		// and letting it default would make a CSV lane
+		// indistinguishable from a rep typing a name in.
+		Acquisition: people.Acquisition{Kind: people.AcquiredPurchasedOrImported},
+		FullName:    personFullName(fields),
+		Source:      source,
 	}
 	in.FirstName = importString(fields, "first_name")
 	in.LastName = importString(fields, "last_name")

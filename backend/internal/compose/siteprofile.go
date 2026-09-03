@@ -166,11 +166,21 @@ func profileExcerptPages(pages []crawlPage) excerptPages {
 				}
 			}
 		}
-		pageRunes := []rune(page.Text)
+		// prose, not Text: on a client-rendered site the server sends a loader
+		// and a <head> description, so reading Text alone handed the model
+		// eight words of <title> — and it answered with the only two fields a
+		// title can ground. The declaration is charged against the same
+		// per-page cap and the same total budget as any other passage, and
+		// gateProfile stores the corpus passage itself as evidence, so a
+		// meta-grounded field quotes text the page really carries.
+		//
+		// `page` is this loop's own copy, so the narrowed Text travels into
+		// the excerpt and never back into the crawl's record of the page.
+		pageRunes := []rune(page.prose())
 		if len(pageRunes) > capRunes {
 			pageRunes = pageRunes[:capRunes]
-			page.Text = string(pageRunes)
 		}
+		page.Text = string(pageRunes)
 		if used+len(pageRunes) > profileExcerptBudgetRunes {
 			return false
 		}
@@ -220,13 +230,7 @@ func (x evidenceExtractor) extractProfile(ctx context.Context, pages []crawlPage
 		return nil, nil
 	}
 	req := profileRequest(idx)
-	var resp model.Response
-	var err error
-	if structured, ok := x.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, profileShapeValid)
-	} else {
-		resp, err = x.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, x.brain, req, profileShapeValid)
 	if err != nil {
 		return nil, err
 	}

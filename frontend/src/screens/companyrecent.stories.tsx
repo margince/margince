@@ -24,6 +24,21 @@ const base: Activity = {
   captured_by: "human:u1",
   created_at: "2026-08-20T09:00:00Z",
   updated_at: "2026-08-20T09:00:00Z",
+  // A retained email carries the server's own row model, and drawing it is
+  // what makes these stories show the canonical row rather than the fallback
+  // every other kind takes.
+  email_summary: {
+    activity_id: "a-1",
+    occurred_at: "2026-08-20T09:00:00Z",
+    version: 1,
+    subject: "Renewal terms",
+    preview: "Sending the revised terms across for Thursday.",
+    counterparty: "Dana Buyer",
+    direction: "inbound",
+    display_status: "team",
+    move: "needs_reply",
+    attachment_count: 1,
+  },
 };
 
 function List({ activities }: Readonly<{ activities: Activity[] }>) {
@@ -37,6 +52,7 @@ function List({ activities }: Readonly<{ activities: Activity[] }>) {
               ? "Acme Expansion"
               : undefined
           }
+          onOpenRecord={() => {}}
         />
       </div>
     </StoryProviders>
@@ -96,7 +112,20 @@ export const MixedKinds: Story = {
           subject: "Re: Renewal terms",
           direction: "inbound",
           occurred_at: "2026-08-20T09:00:00Z",
+          email_summary: {
+            ...base.email_summary,
+            activity_id: "a-3",
+            occurred_at: "2026-08-20T09:00:00Z",
+            version: 1,
+            subject: "Re: Renewal terms",
+            display_status: "team",
+            move: "needs_reply",
+            attachment_count: 1,
+          },
         },
+        // Every kind below drops the summary `base` carries. Only an email has
+        // one, so a call spreading it would draw as a message and this story
+        // would be describing a record the server never sends.
         {
           ...base,
           id: "a-4",
@@ -105,6 +134,7 @@ export const MixedKinds: Story = {
           direction: "outbound",
           duration_seconds: 900,
           occurred_at: "2026-08-19T14:00:00Z",
+          email_summary: undefined,
         },
         {
           ...base,
@@ -113,6 +143,7 @@ export const MixedKinds: Story = {
           subject: "Send updated MSA",
           direction: undefined,
           occurred_at: "2026-08-18T11:00:00Z",
+          email_summary: undefined,
         },
         {
           ...base,
@@ -121,6 +152,7 @@ export const MixedKinds: Story = {
           subject: "Prefers async updates",
           direction: undefined,
           occurred_at: "2026-08-17T16:00:00Z",
+          email_summary: undefined,
         },
       ]}
     />
@@ -133,4 +165,35 @@ export const MixedKinds: Story = {
 export const MixedKindsDark: Story = {
   ...MixedKinds,
   globals: { theme: "dark" },
+};
+
+// A message this reader may not open, beside one they may.
+//
+// The withheld row keeps its shape and loses its words — no subject, no
+// counterparty, no preview. Drawing it as absent would report a quieter
+// account than the one on file; drawing it as empty would say there was
+// nothing to read, which is a claim about the message rather than about them.
+export const WithheldBesideReadable: Story = {
+  render: () => (
+    <List
+      activities={[
+        base,
+        {
+          ...base,
+          id: "a-7",
+          subject: undefined,
+          occurred_at: "2026-08-19T08:30:00Z",
+          content_state: "withheld",
+          email_summary: {
+            activity_id: "a-7",
+            occurred_at: "2026-08-19T08:30:00Z",
+            version: 1,
+            display_status: "withheld",
+            move: "none",
+            attachment_count: 0,
+          },
+        },
+      ]}
+    />
+  ),
 };

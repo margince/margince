@@ -6,8 +6,6 @@ package attention
 import (
 	"context"
 	"errors"
-	"strconv"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -181,29 +179,37 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 	if approval.TargetEntityType != nil && approval.TargetEntityId != nil {
 		item.Subject = subjectOf(*approval.TargetEntityType, ids.UUID(*approval.TargetEntityId))
 	}
-	if markers := stagedMarkers(approval, machine); markers != "" {
-		item.Detail = &markers
+	if staged, ok := stagedFacts(approval, machine); ok {
+		item.Staged = &staged
 	}
 	return item
 }
 
-// stagedMarkers says what a routine contact decision is ABOUT, for the group it
+// stagedFacts says what a routine contact decision is ABOUT, for the group it
 // will join.
 //
 // Read from the payload the verdict engine staged — the address it is asking
 // about, and whether that address's domain already names a company here. Both
 // are facts the engine had; re-deriving them in the queue would be a second
 // opinion, and one decision would land in two groups across two reads.
-func stagedMarkers(approval crmcontracts.Approval, machine MachineSender) string {
+//
+// TYPED on the item rather than written into `detail` as marker words. They were
+// words because `detail` was the only line on the wire and this was all they
+// needed to carry — but that made a supporting line undrawable on this source,
+// and any client rendering it faithfully showed a rep "machine_sender".
+func stagedFacts(
+	approval crmcontracts.Approval, machine MachineSender,
+) (crmcontracts.AttentionStagedFacts, bool) {
 	if approval.Kind != "capture_counterparty" || approval.ProposedChange == nil {
-		return ""
+		return crmcontracts.AttentionStagedFacts{}, false
 	}
 	change := *approval.ProposedChange
-	markers := make([]string, 0, 2)
+	facts := crmcontracts.AttentionStagedFacts{}
 	if address, ok := change["email"].(string); ok && machine != nil && machine(address) {
-		markers = append(markers, stagedMachineSender)
+		sender := true
+		facts.MachineSender = &sender
 	}
-	// There is no company marker here, and the reason is worth stating: the
+	// KnownCompany is left UNSET here, and the reason is worth stating: the
 	// only company-ish field the staged payload carries is `display_name`,
 	// which capture labels "untrusted header text — for display, never
 	// matching" (modules/capture/pending.go). A sender types it, so
@@ -212,7 +218,7 @@ func stagedMarkers(approval crmcontracts.Approval, machine MachineSender) string
 	// A real match needs a lookup against the organizations this workspace has,
 	// which is a read this assembler does not make. Until it does, a contact
 	// question is either from a machine or is the honest remainder.
-	return strings.Join(markers, " ")
+	return facts, true
 }
 
 // taskItem renders one open task.
@@ -235,6 +241,12 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		item.DueAt = &due
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
+	}
+	// Who holds it. Absent means nobody has taken it, which the unassigned
+	// scope exists to surface and which the row could not say before.
+	if task.AssigneeID != nil {
+		assignee := openapi_types.UUID(*task.AssigneeID)
+		item.AssigneeId = &assignee
 	}
 	return item
 }
@@ -299,82 +311,6 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 	return item
 }
 
-// riskItem renders one deal the pipeline should worry about.
-//
-// The title is the deal's own name, which the reader recognises. The card's
-// SENTENCE is the client's to write, because the two grounds read differently
-// in every language and the server has none — so what travels is the deal, the
-// idle days, and whether the close date has passed, and the client says it.
-//
-// `kind` carries the ground rather than a label: `quiet` when only the idle
-// clock admitted it, `close_overdue` when the date has passed. A deal that is
-// both is reported as overdue, because a date the customer agreed to outranks
-// a silence nobody agreed to.
-//
-// It offers no verb that DECIDES. What to do about a quiet deal is a judgement,
-// and a queue that answered it here would be deciding rather than warning. It
-// does offer `open`, which decides nothing: naming a deal as drifting and then
-// leaving the reader to go and find it by hand is a warning they cannot act on.
-// The `deal` facts ride along so the card states value, stage and ownership
-// without a second read per row.
-func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
-	name := deal.Name
-	ground := "quiet"
-	if deal.CloseOverdue {
-		ground = "close_overdue"
-	}
-	item := crmcontracts.AttentionItem{
-		Id:      deal.DealID.String(),
-		Source:  crmcontracts.AttentionItemSource("deal_at_risk"),
-		Kind:    &ground,
-		Title:   &name,
-		Subject: subjectOf("deal", deal.DealID),
-		Overdue: &deal.CloseOverdue,
-		Deal:    dealFacts(deal),
-		Actions: []crmcontracts.AttentionItemActions{actionOpen},
-	}
-	// The idle count rides as the detail's own number, so the card can say the
-	// window the server actually applied instead of implying one.
-	if deal.QuietDays > 0 {
-		days := strconv.Itoa(deal.QuietDays)
-		item.Detail = &days
-	}
-	if deal.ExpectedCloseDate != nil {
-		due := *deal.ExpectedCloseDate
-		item.DueAt = &due
-	}
-	return item
-}
-
-// lapsedItem renders one relationship this reader has stopped talking to.
-//
-// The contact's NAME travels as the title because a person's name is a
-// sentence in every language, and the silence rides as the detail's own
-// number, the way the risk card carries its idle count — so the client writes
-// "quiet 63 days" and the server implies no window it did not apply.
-//
-// `occurred_at` is the last time they spoke. It is the fact the card dates
-// itself from, and it lets the lane be read as a chronology rather than only
-// as a list of numbers.
-//
-// It offers NO verb, exactly as the risk card does not. What to do about a
-// lapsed relationship is a judgement about that person, and a queue that
-// answered it here would be deciding rather than warning.
-func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
-	name := quiet.Name
-	days := strconv.Itoa(quiet.QuietDays)
-	lastAt := quiet.LastAt
-	return crmcontracts.AttentionItem{
-		Id:         quiet.PersonID.String(),
-		Source:     crmcontracts.AttentionItemSource("relationship_decay"),
-		Title:      &name,
-		Detail:     &days,
-		Subject:    subjectOf("person", quiet.PersonID),
-		OccurredAt: &lastAt,
-		Actions:    []crmcontracts.AttentionItemActions{},
-	}
-}
-
 // receiptItem renders one thing the system did on its own.
 //
 // It offers no decision: a receipt reports a finished act, and asking the reader
@@ -401,27 +337,6 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 		OccurredAt: &occurred,
 		Actions:    actions,
 	}
-}
-
-// dealFacts carries the at-risk deal's card facts onto the wire, or nothing:
-// a facts object with every field empty says less than its absence.
-func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
-	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil && deal.Currency == nil {
-		return nil
-	}
-	facts := &crmcontracts.AttentionDealFacts{
-		AmountMinor: deal.AmountMinor,
-		Currency:    deal.Currency,
-	}
-	if deal.StageID != nil {
-		stage := openapi_types.UUID(*deal.StageID)
-		facts.StageId = &stage
-	}
-	if deal.OwnerID != nil {
-		owner := openapi_types.UUID(*deal.OwnerID)
-		facts.OwnerId = &owner
-	}
-	return facts
 }
 
 // subjectOf names the record an item concerns, when the producer named one.

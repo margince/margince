@@ -1,20 +1,34 @@
 /* Callout — what the surface says about itself.
  *
- * Every tone is a tinted ground plus a border in the tone's own colour. The
- * ground is what makes it read as a notice rather than as prose; the border is
- * what keeps it legible for a reader who cannot tell the tints apart, and it
- * is why tone is never the only signal — the words carry the meaning and the
- * icon slot is there to double it. */
+ * A ROW on the recessed ground with a dot in the tone's colour before its
+ * first words, never a filled coloured box: colour on this page means one
+ * thing at a time, and a tinted plate shouts over the record it sits in. The
+ * words carry the meaning; the dot and the icon slot double it for a reader
+ * who reads colour, and the title in the tone's ink for one who does not. */
 
 .callout {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgCard);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-md);
+  background: var(--pane);
   color: var(--textContent);
+}
+
+/* The tone's dot, before the first words. Neutral for a plain notice, so the
+ * shape is the same whatever the tone and only the colour changes. */
+.callout::before {
+  content: "";
+  position: absolute;
+  inset-block-start: calc(var(--space-3) + 5px);
+  inset-inline-start: var(--space-3);
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-full);
+  background: var(--textTertiary);
 }
 
 .callout-icon {
@@ -63,32 +77,29 @@
   align-items: center;
 }
 
-.callout-warn {
-  background: var(--warnBg);
-  border-color: var(--warnBorder);
-}
-
+.callout-warn::before,
 .callout-warn .callout-icon,
 .callout-warn .callout-title {
   color: var(--warn);
 }
-
-.callout-danger {
-  background: var(--dangerBg);
-  border-color: var(--danger);
+.callout-warn::before {
+  background: var(--warn);
 }
 
+.callout-danger::before,
 .callout-danger .callout-icon,
 .callout-danger .callout-title {
-  color: var(--danger);
+  color: var(--dangerText);
+}
+.callout-danger::before {
+  background: var(--danger);
 }
 
-.callout-success {
-  background: var(--successBg);
-  border-color: var(--success);
-}
-
+.callout-success::before,
 .callout-success .callout-icon,
 .callout-success .callout-title {
   color: var(--success);
+}
+.callout-success::before {
+  background: var(--success);
 }

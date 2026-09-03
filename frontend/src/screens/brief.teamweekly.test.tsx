@@ -117,6 +117,52 @@ describe("the headline states the bar it measured against", () => {
   });
 });
 
+describe("the scorecard says what the wins were worth", () => {
+  // The count alone says a week of five small renewals and a week of one
+  // company-making deal are the same week. The money was computed, converted
+  // and stored when the snapshot was written — and read by nothing until now.
+  it("prices the wins beside the losses when the snapshot recorded the money", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(
+          review({}, {
+            pipeline: {
+              created_minor: 9000000,
+              won_minor: 2500000,
+              lost_minor: 0,
+              currency: "EUR",
+            },
+          } as Partial<TeamWeeklyReview>),
+        ),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+
+    // The review's OWN currency, not the installation's current setting: base
+    // currency is operator-mutable, and re-reading it would re-label a closed
+    // week with a currency its numbers were never in.
+    expect(await screen.findByText(/25.000,00\s*€|€25,000\.00/)).toBeTruthy();
+    // The lost count survives the money arriving: it is a different fact, not a
+    // delta the value replaces.
+    expect(screen.getByText(/1 lost|1 verloren/)).toBeTruthy();
+  });
+
+  // The block is ABSENT whenever any member's week could not be converted, and
+  // summing only the reps who did convert would be a confident number quietly
+  // missing one. A zero here would claim a team that won three deals won
+  // nothing.
+  it("draws no money at all over a week that could not be converted", async () => {
+    stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
+    render(<TeamWeeklySection teamId="t1" />);
+
+    expect(
+      await screen.findByText(
+        en["teamweekly.card.wonBasis"].replace("{lost}", "1"),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/€|EUR/)).toBeNull();
+  });
+});
+
 describe("the team's frozen week", () => {
   // A snapshot covering four of six reps reads exactly like a team of four, and
   // every figure on the page is short by the same two people.

@@ -729,7 +729,7 @@ describe("view tabs — two views can ask for the same thing", () => {
         fetchPage={fetchPage}
         views={[
           { label: "list.viewAll" },
-          { label: "list.viewAZ", sort: "full_name" },
+          { label: "list.viewMine", sort: "full_name" },
         ]}
         dataViews={[
           savedTab({ id: "v-1", label: "My A-Z", sort: "full_name" }),
@@ -750,7 +750,7 @@ describe("view tabs — two views can ask for the same thing", () => {
       ).toBe("true"),
     );
     expect(
-      screen.getByRole("button", { name: "A–Z" }).getAttribute("aria-pressed"),
+      screen.getByRole("button", { name: "Mine" }).getAttribute("aria-pressed"),
     ).toBe("false");
   });
 });

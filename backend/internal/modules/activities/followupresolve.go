@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -76,11 +77,22 @@ const systemCapturedByPattern = systemCapturedBy + ":%"
 // recompute.
 func FollowUpWorkflows(store *Store) []workflow.Handler {
 	return []workflow.Handler{
-		followUpAutoResolve{store: store, name: "follow_up_auto_resolve", trigger: "activity.captured", leadsFromLinks: true},
-		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_promoted", trigger: "lead.promoted"},
-		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_disqualified", trigger: "lead.disqualified"},
+		followUpAutoResolve{store: store, name: "follow_up_auto_resolve", trigger: activityCapturedTrigger, leadsFromLinks: true},
+		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_promoted", trigger: leadPromotedTrigger},
+		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_disqualified", trigger: leadDisqualifiedTrigger},
 	}
 }
+
+// The three triggers this file's Apply arms watch. Named together because
+// they are read together (FollowUpWorkflows, Apply's leadPromotedTrigger
+// check), and a third literal beside two names is the spelling that drifts.
+const (
+	activityCapturedTrigger = "activity.captured"
+	// leadPromotedTrigger is the one trigger whose Apply also has to resolve
+	// by PERSON rather than by lead — see the comment on Apply for why.
+	leadPromotedTrigger     = "lead.promoted"
+	leadDisqualifiedTrigger = "lead.disqualified"
+)
 
 // followUpAutoResolve is one trigger's arm of the auto-resolve invariant.
 // leadsFromLinks says the fired entity is an ACTIVITY whose linked leads
@@ -151,10 +163,65 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		}
 		completed += done
 	}
+	// A PROMOTED lead is a different shape from a disqualified one.
+	// carryLeadActivities (people/promote.go) moves the follow-up task's
+	// link from the lead onto the person it became, inside the SAME
+	// transaction that emits this event — so the lead-keyed completion above
+	// never finds it once a lead has genuinely promoted; only the payload
+	// still names where the task went.
+	//
+	// Only for a FRESH person (dedupe_outcome "created"). A promotion that
+	// MERGES into an existing survivor carries the same task, but the
+	// survivor can already carry its own open system-minted reminders —
+	// no_activity_reminder and check_in_cadence anchor on a person the same
+	// way a lead's follow-up does — and completing every open system task on
+	// the person would tick off work this promotion has nothing to do with.
+	// A newly minted person cannot yet carry anything else, so completing by
+	// person id is exact there and only there. A MERGED promotion's carried
+	// follow-up is left open by this arm; nothing else resolves it either.
+	if w.trigger == leadPromotedTrigger {
+		promoted, err := decodeLeadPromoted(ev.Payload)
+		if err != nil {
+			return workflow.RunResult{}, fmt.Errorf("decoding the promoted person: %w", err)
+		}
+		if promoted.DedupeOutcome == dedupeOutcomeCreated {
+			done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, promoted.PersonID, ev.OccurredAt)
+			if err != nil {
+				return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on person %s: %w", promoted.PersonID, err)
+			}
+			completed += done
+		}
+	}
 	if completed == 0 {
 		return workflow.RunResult{}, nil
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
+}
+
+// dedupeOutcomeCreated is people.QualifyLead's own spelling
+// (promote.go) for "a fresh person, not a merge into a survivor" — the one
+// outcome where completing every open system task on the person cannot reach
+// anything this promotion did not itself just carry there.
+const dedupeOutcomeCreated = "created"
+
+// promotedLead is what a lead.promoted payload says about where a lead's
+// tasks went, and whether that person existed before this promotion.
+type promotedLead struct {
+	PersonID      ids.PersonID
+	DedupeOutcome string
+}
+
+// decodeLeadPromoted reads a lead.promoted payload — the only place, once
+// carryLeadActivities has run, that still says where its tasks went.
+func decodeLeadPromoted(payload json.RawMessage) (promotedLead, error) {
+	var body crmcontracts.PublicEventLeadPromoted
+	if err := json.Unmarshal(payload, &body); err != nil {
+		return promotedLead{}, fmt.Errorf("activities: decoding lead.promoted's payload: %w", err)
+	}
+	return promotedLead{
+		PersonID:      ids.From[ids.PersonKind](ids.UUID(body.PromotedPersonId)),
+		DedupeOutcome: body.DedupeOutcome,
+	}, nil
 }
 
 func (w followUpAutoResolve) IdempotencyKey(ev workflow.Event) string {
@@ -188,19 +255,45 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 }
 
 // CompleteOpenSystemTasksForLead completes every open system-minted task
-// linked to the lead, each through UpdateActivity — the module's own
-// write path — so every completion carries the write shape (audit row,
-// activity.updated event) exactly like a human ticking the box. A bulk
-// UPDATE would be invisible history. Replays are harmless: a completed
-// task no longer matches the open filter.
+// linked to the lead — see completeOpenSystemTasksLinkedBy for the write
+// shape, the version-skew handling and what "system-minted" means.
+func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
+	return s.completeOpenSystemTasksLinkedBy(ctx, "lead_id", leadID.UUID, nil)
+}
+
+// CompleteOpenSystemTasksForPerson is CompleteOpenSystemTasksForLead's
+// sibling for a lead that PROMOTED: carryLeadActivities (people/promote.go)
+// re-points a follow-up task's link from the lead onto the person it became,
+// in the same transaction that emits lead.promoted, so a lead id can no
+// longer find it — only the person id it was carried to can.
+//
+// before bounds completion to tasks that existed by that instant. This
+// arm's caller runs asynchronously off the outbox, so "the person is fresh
+// and cannot yet carry anything else" is only true up to the moment the
+// promotion committed — a sibling automation (no_activity_reminder,
+// check_in_cadence) can anchor its own system task on the same person before
+// this handler runs, and completing every open system task on the person
+// would claim that task too. The caller passes the triggering event's own
+// OccurredAt.
+func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID ids.PersonID, before time.Time) (int, error) {
+	return s.completeOpenSystemTasksLinkedBy(ctx, "person_id", personID.UUID, &before)
+}
+
+// completeOpenSystemTasksLinkedBy completes every open system-minted task the
+// given column and value select, each through UpdateActivity — the module's
+// own write path — so every completion carries the write shape (audit row,
+// activity.updated event) exactly like a human ticking the box. A bulk UPDATE
+// would be invisible history. Replays are harmless: a completed task no
+// longer matches the open filter.
 //
 // The selection and the completions are separate transactions, so two
-// firings for one lead — an activity.captured racing a lead.promoted — can
-// both select the same open task. Each completion therefore carries the
-// version the selection read, and a task somebody else finished first
-// answers version skew and is SKIPPED. Without it the loser writes
-// is_done = true over a row that already says so, and the task's history
-// shows two identical completions of the same thing.
+// firings — an activity.captured racing a lead.promoted, or two firings that
+// both resolve through this same helper — can both select the same open
+// task. Each completion therefore carries the version the selection read,
+// and a task somebody else finished first answers version skew and is
+// SKIPPED. Without it the loser writes is_done = true over a row that
+// already says so, and the task's history shows two identical completions of
+// the same thing.
 //
 // The count is what THIS call completed, which is also why skew is not an
 // error: another firing completing the task is the outcome this one wanted.
@@ -212,21 +305,40 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // answers a COUNT rather than rows, so nothing about which records exist
 // leaves a call that takes no read gate of its own; each completion's
 // write is gated inside UpdateActivity.
-func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
+//
+// `column` is unexported and passed only by the two callers above, each a
+// compile-time literal ("lead_id" / "person_id") — never a value off a
+// request body. Its placeholder is spelled right here, beside the argument
+// that fills it, rather than split across a call boundary.
+//
+// `before`, when non-nil, adds the created_at bound
+// CompleteOpenSystemTasksForPerson needs; nil (CompleteOpenSystemTasksForLead's
+// own call) asks the original, unbounded question — a lead's own follow-up
+// cannot be confused with a sibling automation's task the way a shared
+// person id can.
+func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column string, linkValue ids.UUID, before *time.Time) (int, error) {
 	type openTask struct {
 		id      ids.ActivityID
 		version int64
 	}
 	var open []openTask
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
+		args := []any{
+			linkValue, string(crmcontracts.ActivityKindTask), systemSource,
+			systemCapturedBy, systemCapturedByPattern,
+		}
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		query := storekit.SQLf(`
 			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
-			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
+			WHERE l.%s = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
-			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), systemSource,
-			systemCapturedBy, systemCapturedByPattern)
+			  AND a.is_done = false AND a.archived_at IS NULL`, column)
+		if before != nil {
+			query += storekit.SQLf(" AND a.created_at <= $%d", arg(*before))
+		}
+		query += " ORDER BY a.id"
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

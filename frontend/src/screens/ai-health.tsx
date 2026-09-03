@@ -48,11 +48,9 @@ export function AiHealthCard() {
               // so it says which it is rather than drawing an empty table a
               // reader would read as failure.
               <EmptyState>
-                <p className="t-small">
-                  {t("aiHealth.noCalls", {
-                    hours: formatNumber(health.window_hours, locale),
-                  })}
-                </p>
+                {t("aiHealth.noCalls", {
+                  hours: formatNumber(health.window_hours, locale),
+                })}
               </EmptyState>
             ) : (
               <RungTable rungs={health.rungs} hours={health.window_hours} />
@@ -137,10 +135,10 @@ function LastCell({ row, zone }: Readonly<{ row: RungHealth; zone: string }>) {
       {row.last_call_at ? (
         <span>{formatDateTime(row.last_call_at, locale, zone)}</span>
       ) : (
-        <span className="t-meta">—</span>
+        <span className="t-caption">—</span>
       )}
       {row.last_sentinel ? (
-        <span className="t-meta t-mono">{row.last_sentinel}</span>
+        <span className="t-caption t-mono">{row.last_sentinel}</span>
       ) : null}
     </span>
   );

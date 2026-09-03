@@ -25,9 +25,8 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Badge } from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Badge, EmptyState } from "../design-system/atoms";
+import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import {
   omitted,
   SurfaceState,
@@ -98,7 +97,7 @@ export function CompanyWorkCard({
     <>
       <WorkGroup
         label={t("co.work.deals")}
-        level={bare ? "h4" : "h3"}
+        level="h3"
         state={dealState}
         emptyLabel={t("co.work.noDeals")}
         emptyDetail={t("co.work.noDealsDetail")}
@@ -121,19 +120,11 @@ export function CompanyWorkCard({
       )}
     </>
   );
+  // Bare, the groups stand under the pane's own head: a second head naming
+  // the work in flight, over a group already named Deals, was a pane that
+  // introduced itself twice.
   if (bare) {
-    // The count rides with the subhead rather than in a header band this
-    // card no longer owns, and the visit line moves to the whole card's
-    // footer — it is about the account, not about the work on it.
-    return (
-      <>
-        <PanelBody className="co-360-head">
-          <Eyebrow as="h3">{t("co.work.title")}</Eyebrow>
-          <WorkCount view={view} />
-        </PanelBody>
-        {body}
-      </>
-    );
+    return body;
   }
   return (
     <Panel
@@ -282,10 +273,10 @@ function WorkGroup({
   children,
 }: Readonly<{
   label: string;
-  // Deals and Projects sit one level under whatever names this card. Standing
-  // alone that is the card title, an h2, so they are h3; as a section of the
-  // Company 360 card they are h4 — the outline nests rather than flattening
-  // into a row of equal siblings a screen reader cannot walk.
+  // One level under whatever names the pane: this card's own title standing
+  // alone, or the money pane's when the group is bare — an h2 either way, so
+  // the group is an h3 and the outline nests rather than flattening into a
+  // row of equal siblings a screen reader cannot walk.
   level: "h3" | "h4";
   state: ReturnType<typeof sectionState>;
   emptyLabel: string;
@@ -300,16 +291,7 @@ function WorkGroup({
   action?: ReactNode;
   children: ReactNode;
 }>) {
-  // The head is drawn in EVERY state, so the group's own verb keeps one place
-  // on the card. Moved into the empty plate it changed position with the
-  // content — a reader who has just read one group looks for the next verb
-  // where the last one was.
-  const head = (
-    <PanelBody className="co-work-head">
-      <Eyebrow as={level}>{label}</Eyebrow>
-      {action}
-    </PanelBody>
-  );
+  const head = <PanelGroupHead title={label} level={level} action={action} />;
   if (state === "ready") {
     return (
       <>
@@ -326,20 +308,16 @@ function WorkGroup({
     <>
       {head}
       <PanelBody>
-        {/* An empty group gets a PLATE rather than a line of grey text. There
+        {/* An empty group gets a PLATE rather than a line of grey text: there
             being no deal on an account is a state a reader has to decide
             about, and drawn as one quiet sentence it reads as a section that
-            failed to load. The dashes say the space is waiting to be filled;
-            the verb that fills it is in the head above, where every other
-            group keeps its own.
-
-            No label on the state itself either way: the head carries it, and
-            a section that names itself twice reads as two sections. */}
+            failed to load. No label on the state itself either way: the head
+            carries it, and a section that names itself twice reads as two
+            sections. */}
         {state === "empty" ? (
-          <div className="co-work-empty">
-            <p className="co-work-empty-title">{emptyLabel}</p>
-            <p className="co-work-empty-note">{emptyDetail}</p>
-          </div>
+          <EmptyState plate title={emptyLabel}>
+            {emptyDetail}
+          </EmptyState>
         ) : (
           <SurfaceState state={state} emptyLabel={emptyLabel}>
             {null}

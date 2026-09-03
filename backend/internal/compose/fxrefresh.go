@@ -155,7 +155,10 @@ func (f fxRefresh) extract(ctx context.Context) ([]extractedFxPair, error) {
 	if doc.IsMarkdown() {
 		f.log.Debug("fx source served markdown", "url", f.url)
 	}
-	resp, err := f.brain.Complete(ctx, fxExtractRequest(doc.Text))
+	resp, err := ai.Ask(ctx, f.brain, fxExtractRequest(doc.Text), func(text string) error {
+		_, err := parseFxExtraction(text)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
 	}

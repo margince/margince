@@ -39,7 +39,7 @@ import {
   useNavLevel,
   useNavWalk,
 } from "./navlevel";
-import { PageAsideProvider, PageAsideRegion } from "./pageaside";
+import { PageAsideProvider } from "./pageaside";
 import {
   PAGE_SUB_KEYS,
   resolveTitle,
@@ -47,6 +47,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
+import { displayVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -251,7 +252,7 @@ export function WorkspaceRail({
   // Which of the route's levels the panel is showing, and the two ways the
   // reader moves between them (app/navlevel.tsx). A section's entries take the
   // panel OVER rather than hanging off the destinations: 64px cannot carry two
-  // levels, and 252px carrying both reads as a list of twenty places to go.
+  // levels, and 224px carrying both reads as a list of twenty places to go.
   //
   // At phone width the panel is a bottom bar of four destinations, and it KEEPS
   // them on a section route — a bar that hands its four tabs over to a section
@@ -355,14 +356,6 @@ export function WorkspaceRail({
       >
         <div className="railhead">
           <BrandBlock />
-          {/* TEMPORARY, and the whole element goes when the product leaves
-              alpha: this span, its rule in shell.css, the `shell.alpha` key and
-              the case in rail.test.tsx, together. A ribbon across the head's
-              top-left corner, absolutely positioned so it takes no space and
-              moves nothing — the head is the same box with it and without it —
-              and anchored to the corner rather than to the wordmark, which is
-              what keeps it on screen at 64px where every label is gone. */}
-          <span className="alphamark">{t("shell.alpha")}</span>
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the SAME depth are the same level with
@@ -425,6 +418,17 @@ export function WorkspaceRail({
             <AgentRail route={route} />
           </div>
         )}
+        {/* WHAT BUILD THIS IS, under everything else. It is the alpha marker
+            now: a corner ribbon across the brand said the product is
+            unfinished and nothing else, where a version says that AND which
+            build a reader is looking at — which is the thing worth having in
+            front of somebody the first time they see the product.
+            It stays at 64px, where every label in the panel is gone: the
+            sentence is four characters wide and it is the one line here that a
+            reader may need to read back to us. It goes on a drilled-in level
+            too, because it is a fact about the BUILD rather than about the
+            level, and at phone width there is no column to have a foot. */}
+        {!phone && <p className="railversion">{displayVersion()}</p>}
       </nav>
     </>
   );
@@ -839,9 +843,9 @@ export function Shell({
   };
 
   return (
-    // The provider spans the whole chrome, because the column and the screen
-    // that fills it are on opposite sides of the tree: the region is a sibling
-    // of <main>, the content comes from a screen inside it.
+    // The provider spans the whole chrome, because the details pane's memory
+    // — open or folded — outlives the screen that draws it: the switch and
+    // the pane are the record's, the preference is the reader's.
     <PageAsideProvider>
       <div className={collapsed ? "app" : "app railexpanded"}>
         <SkipToContent target={scroller} />
@@ -889,11 +893,6 @@ export function Shell({
             {children}
           </div>
         </main>
-        {/* The page's context column — a column of the WINDOW, beside the work
-          rather than inside it, so it runs the full height past the page's own
-          header and does not move when a tab changes. A screen that fills none
-          leaves nothing here. */}
-        <PageAsideRegion />
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
           person is working in, and a contour that stopped at the sidebar would

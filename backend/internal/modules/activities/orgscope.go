@@ -349,7 +349,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		return "", nil, "", nil, err
 	}
 	if !in.IncludeArchived {
-		where = append(where, "a.archived_at IS NULL")
+		where = append(where, activityLive)
 	}
 	if in.Kind != nil {
 		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))

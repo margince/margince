@@ -20,11 +20,11 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // systemDomainTriageActor is the requested-by sentinel a triage read carries.
@@ -290,7 +290,7 @@ const (
 
 // classifySeed runs the one classification call over the landing page.
 func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (siteTriageVerdict, error) {
-	if strings.TrimSpace(seed.Text) == "" {
+	if strings.TrimSpace(seed.Text) == "" && len(seed.HeadText) == 0 {
 		if seed.UnresolvedForward {
 			// This page named the site's real address and the crawl could not
 			// reach it. The emptiness is a gap in the read, not the site
@@ -302,6 +302,18 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 				Reason: "the landing page forwards to an address that could not be read",
 			}, nil
 		}
+		if seed.isJSShell() {
+			// A client-rendered shell that declared nothing about itself. The
+			// words exist — a browser would assemble them — so this reader
+			// having none is a gap in the read, exactly as an unfollowable
+			// forward is. Settling `parked` with confidence 1 would put a real
+			// company on file as an empty address, with no model call made and
+			// nothing later to reopen it.
+			return siteTriageVerdict{
+				Kind:   siteKindUnclear,
+				Reason: "the landing page is a JavaScript application shell this reader cannot render",
+			}, nil
+		}
 		// A page with no readable text identifies nobody. That IS the parked
 		// answer, and it costs no model call to say so.
 		return siteTriageVerdict{
@@ -310,13 +322,7 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 		}, nil
 	}
 	req := triageRequest(seed, identity.BaseLanguageForPrompt(ctx, w.pool))
-	var resp model.Response
-	var err error
-	if structured, ok := w.triageBrain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, triageShapeValid)
-	} else {
-		resp, err = w.triageBrain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, w.triageBrain, req, triageShapeValid)
 	if err != nil {
 		return siteTriageVerdict{}, err
 	}

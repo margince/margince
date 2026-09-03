@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -31,6 +31,11 @@ const PENDING: HeldThread = {
   occurred_at: "2026-08-30T09:12:00Z",
 };
 
+// A message this reader may read. The subject and the id come through the SAME
+// content clause on the server, so a row carrying one carries the other — a
+// fixture with a subject and no id would describe a record the server cannot
+// send, and every component judged against it would be judged against a shape
+// that does not exist.
 const JUDGED: HeldThread = {
   thread_key: "t-legal",
   status: "held",
@@ -39,7 +44,18 @@ const JUDGED: HeldThread = {
   has_message: true,
   kind: "legal",
   subject: "Entwurf Aufhebungsvertrag",
+  activity_id: "01a05500-0000-7000-8000-0000000000b1",
   occurred_at: "2026-08-29T15:40:00Z",
+};
+
+// And the refusal, as the server actually answers it: the message EXISTS —
+// `has_message` is read without the content gate — and neither its subject nor
+// its id crossed the clause.
+const WITHHELD: HeldThread = {
+  ...JUDGED,
+  thread_key: "t-withheld",
+  subject: undefined,
+  activity_id: undefined,
 };
 
 function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
@@ -64,6 +80,49 @@ function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
+      }
+      // The drawer's own read. Served here so opening a thread does not throw
+      // on a body with no access block; what the drawer draws from it is
+      // emaildetail's contract, tested there.
+      if (key.endsWith("/email-presentation")) {
+        return new Response(
+          JSON.stringify({
+            id: "01a05500-0000-7000-8000-0000000000b1",
+            lifecycle: "delivered",
+            occurred_at: "2026-08-29T15:40:00Z",
+            summary: {
+              activity_id: "01a05500-0000-7000-8000-0000000000b1",
+              occurred_at: "2026-08-29T15:40:00Z",
+              version: 1,
+              subject: "Entwurf Aufhebungsvertrag",
+              display_status: "participants",
+              move: "none",
+              attachment_count: 0,
+            },
+            body: "…",
+            from: [],
+            to: [],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            thread: { members: [], next_cursor: null },
+            access: {
+              content_state: "available",
+              audience: "participants",
+              selected_members: [],
+              display_status: "participants",
+              can_change: false,
+              change_mode: "message",
+              held_by_others: false,
+            },
+            can_reply: false,
+            can_relink: false,
+            version: 1,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
       if (key.startsWith("POST /activities/threads/")) {
         return new Response(JSON.stringify(share ?? { shared: true }), {
@@ -132,9 +191,26 @@ describe("held threads", () => {
 
   it("tells a message with no subject from no message at all", async () => {
     // Both draw an unnamed row, and collapsing them would tell a reader their
-    // evidence was destroyed when it is sitting there unnamed.
+    // evidence was destroyed when it is sitting there unnamed. This one keeps
+    // its id: the content clause admitted the message, and the sender simply
+    // left the subject line empty.
     renderCard([{ ...JUDGED, subject: undefined }]);
     expect(await screen.findByText(/^no subject$/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/the message this began with is gone/i),
+    ).not.toBeInTheDocument();
+    // And not the withheld reading either: a blank subject is a fact about the
+    // sender, "not shared with you" a fact about the reader.
+    expect(screen.queryByText(/not shared with you/i)).not.toBeInTheDocument();
+  });
+
+  it("does not report a withheld message as one that was erased", async () => {
+    // The three states are separate all the way down. A message this reader
+    // may not open still EXISTS, so telling them the evidence they are holding
+    // is gone would be false — and it is the release they would stop asking
+    // for.
+    renderCard([WITHHELD]);
+    expect(await screen.findByText(/not shared with you/i)).toBeInTheDocument();
     expect(
       screen.queryByText(/the message this began with is gone/i),
     ).not.toBeInTheDocument();
@@ -170,4 +246,52 @@ describe("held threads", () => {
       await screen.findByText(/withholding nothing right now/i),
     ).toBeInTheDocument();
   });
+});
+
+// A held thread whose message this reader may read opens it. The server sends
+// `activity_id` only for those — it reads the id off the gated join — so the
+// presence of the field IS the permission.
+it("opens the message a held thread is about", async () => {
+  const openable: HeldThread = {
+    ...JUDGED,
+    thread_key: "t-openable",
+    activity_id: "01a05500-0000-7000-8000-0000000000b1",
+  };
+  renderCard([openable]);
+
+  const button = await screen.findByRole("button", {
+    name: "Entwurf Aufhebungsvertrag",
+  });
+  expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+  // Pressing it asks for THIS message's presentation — the screen's half of
+  // the job. What the drawer then draws is emaildetail's own contract.
+  await userEvent.click(button);
+  await waitFor(() => {
+    const asked = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.some((call) => {
+      const [input] = call;
+      const url = input instanceof Request ? input.url : String(input);
+      return url.includes(
+        "/activities/01a05500-0000-7000-8000-0000000000b1/email-presentation",
+      );
+    });
+    expect(asked).toBe(true);
+  });
+});
+
+// And a thread whose message it may NOT read says so and offers nothing.
+//
+// The server withholds the subject and the id together for a message outside
+// the caller's audience, so the row names itself as withheld rather than
+// printing words it was refused, and does not become a control — a button that
+// opened nothing would be worse than the plain text it replaced.
+it("says a thread is not the reader's without offering to open it", async () => {
+  renderCard([WITHHELD]);
+
+  expect(await screen.findByText(/not shared with you/i)).toBeTruthy();
+  // The row is still LISTED: they are holding it and must be able to release
+  // it. Only the message's words are refused.
+  expect(screen.getByText("Legal")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /not shared/i })).toBeNull();
 });

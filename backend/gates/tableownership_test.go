@@ -230,6 +230,7 @@ var tableOwners = map[string]string{
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
+	"person_acquisition_evidence":    "internal/modules/people",
 	"communication_decision":         "internal/modules/consent",
 	"communication_basis":            "internal/modules/consent",
 	"communication_suppression":      "internal/modules/consent",
@@ -403,6 +404,7 @@ var tableOwners = map[string]string{
 	// way it owns idempotency_key and agent_task.
 	"activity_kind":    "internal/compose",
 	"channel_provider": "internal/compose",
+	"analytics_share":  "internal/compose",
 	"brief_run":        "internal/compose/briefs",
 	"brief_item":       "internal/compose/briefs",
 	// The weekly retrospective, in its own aggregate rather than the brief's:

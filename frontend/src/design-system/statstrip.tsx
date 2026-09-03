@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Children, type CSSProperties, type ReactNode } from "react";
+import { ReadingsFloor } from "./readingsfloor";
 import "./statstrip.css";
 
 // The strip's style carries the slot-count custom properties alongside the
@@ -9,13 +10,14 @@ import "./statstrip.css";
 // than cast away.
 type StripVars = CSSProperties & Record<`--${string}`, string | number>;
 
-// StatStrip is the record page's readings row: ONE plate of equal slots
-// divided by rules, not N free-standing cards. The difference is what the row
-// claims — cards sit beside each other and are read one at a time, a strip is
-// read across as a single comparison.
+// StatStrip is the record page's readings row: ONE comparison of equal slots,
+// each a reading pane, with air between them and no plate around them. The
+// row is read across as a single comparison, which is what the equal slots
+// and the one type scale hold; the panes are what keeps every reading on the
+// same translucent ground as every other zone of the page.
 //
-// It takes StatCards as children and owns only the plate: the slot count, the
-// rules between slots, the fold when the row stops being legible, and the one
+// It takes StatCards as children and owns only the row: the slot count, the
+// gaps between slots, the fold when the row stops being legible, and the one
 // type scale every slot in the row shares. A slot that sized itself to its own
 // content would stop the row reading as one comparison — some slots carry a
 // figure and some carry a sentence.
@@ -23,11 +25,16 @@ export function StatStrip({
   children,
   className,
   testId,
+  label,
   floor,
 }: Readonly<{
   children: ReactNode;
   className?: string;
   testId?: string;
+  // The row's name as a landmark, for a screen that wants the readings
+  // reachable as one region. Absent, the section is unnamed and not a
+  // landmark of its own.
+  label?: string;
   // What qualifies the WHOLE row — a source read to its limit, making every
   // figure above a floor. It belongs to the plate rather than to a slot: the
   // row is read across as one statement, and a caveat attached to one figure
@@ -52,22 +59,23 @@ export function StatStrip({
     "--stat-strip-tail-3": tailSpan(slots, 3),
     "--stat-strip-tail-2": tailSpan(slots, 2),
   };
-  const plate = (
+  const row = (
     <section
       className={["stat-strip", className ?? ""].filter(Boolean).join(" ")}
       style={vars}
+      aria-label={label}
       data-testid={testId}
     >
       {children}
     </section>
   );
   if (!floor) {
-    return plate;
+    return row;
   }
   return (
     <div className="stat-strip-wrap">
-      {plate}
-      <p className="t-meta stat-strip-floor">{floor}</p>
+      {row}
+      <ReadingsFloor>{floor}</ReadingsFloor>
     </div>
   );
 }

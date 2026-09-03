@@ -95,6 +95,11 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 		trace.Provider, trace.ModelID = m.provider, m.model
 	}
 	trace.ServedModel, trace.ServedIdentitySource = servedIdentity(trace.Provider, trace.ModelID, resp.ServedModel)
+	// Taken straight from the response with no servedIdentity-style fallback:
+	// both are reports or they are nothing. An absent ServedProvider
+	// means no broker named an upstream, and substituting the configured
+	// provider would turn "nobody told us" into a claim about who served.
+	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, resp.FinishReason
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()
