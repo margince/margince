@@ -1985,6 +1985,8 @@ export const vi = {
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
+  "lead.callNotInOverlay":
+    "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
   "lead.boardTerminalOnly":
     "Bảng chỉ hiện khách hàng tiềm năng đang mở. Những mục này đã chuyển hoặc bị loại.",
   "person.fromLead": "Từ khách hàng tiềm năng",
@@ -2483,6 +2485,8 @@ export const vi = {
   "plan.empty": "Chưa có gì trong kế hoạch.",
   "plan.none": "Bạn chưa lập kế hoạch cho tuần này.",
   "plan.start": "Lập kế hoạch tuần của tôi",
+  "plan.readOnly":
+    "Chế độ chỉ đọc \u2014 bạn không có quyền lập kế hoạch tuần hay chốt một cam kết ở đây.",
   "plan.add": "Thêm cam kết",
   "plan.saveRefused_one":
     "Không lưu được một cam kết. Mục này vẫn được tick — hãy thử lại.",
@@ -2991,6 +2995,7 @@ export const vi = {
   "log.kindNote": "Ghi chú",
   "log.kindTask": "Công việc",
   "log.kindMeeting": "Cuộc họp",
+  "log.kindCall": "Cuộc gọi",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán từ công cụ họp của bạn (Teams, Zoom, Meet…) — nhãn người nói, nếu có, sẽ được giữ nguyên.",
@@ -3666,7 +3671,8 @@ export const vi = {
   "restricted.until": "Giữ đến",
   "restricted.redacted": "Đã che",
   "restricted.nothingRedacted": "Không xóa gì",
-  "restricted.redactedCount": "Đã xóa {count} trường",
+  "restricted.redactedCount_one": "Đã xóa {count} trường",
+  "restricted.redactedCount_other": "Đã xóa {count} trường",
   "restricted.class.commercialCorrespondence": "Thư từ thương mại",
   "restricted.kind.email": "Email",
   "restricted.kind.call": "Cuộc gọi",
@@ -4765,7 +4771,8 @@ export const vi = {
   "ob.conv.guide.attentionStatus.empty": "vẫn trống",
   "ob.conv.guide.attentionStatus.decision": "cần một quyết định",
   "ob.conv.guide.attentionStatus.check": "nên xem lại",
-  "ob.conv.activity.steps": "{count} bước",
+  "ob.conv.activity.steps_one": "{count} bước",
+  "ob.conv.activity.steps_other": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
   "ob.conv.review.backToDossier": "Quay lại tập hồ sơ",
@@ -6885,6 +6892,7 @@ export const vi = {
   "person.intro.stepPending": "Sau",
   "person.intro.laneOurs": "Đội của ta",
   "person.intro.laneTheirs": "Công ty của họ",
+  "person.intro.lanePeers": "Những người họ trao đổi",
   "person.intro.laneTarget": "Người cần gặp",
   "person.intro.useThisRoute": "Dùng hướng này",
   "person.intro.mapRegion": "Ai tiếp cận được người này, và qua ai",
@@ -7121,7 +7129,8 @@ export const vi = {
     "Trong các cuộc trò chuyện đã ghi nhận, không có cam kết hay câu hỏi nào.",
   "person.loops.ours": "Bạn",
   "person.loops.question": "Câu hỏi mở",
-  "person.loops.overdue": "quá hạn {count} ngày",
+  "person.loops.overdue_one": "quá hạn {count} ngày",
+  "person.loops.overdue_other": "quá hạn {count} ngày",
   "person.loops.overdueUnderDay": "quá hạn chưa đến một ngày",
   "person.loops.due": "đến hạn {when}",
   "person.loops.dueToday": "hôm nay",
@@ -7173,7 +7182,8 @@ export const vi = {
   "person.rail.signals": "Tín hiệu & rủi ro",
   "person.rail.noSignals": "Không có gì nổi bật ở mối quan hệ này.",
   "person.rail.noReplyDays": "Không hồi đáp suốt {count} ngày",
-  "person.rail.repliedDaysAgo": "Đã hồi đáp {count} ngày trước",
+  "person.rail.repliedDaysAgo_one": "Đã hồi đáp {count} ngày trước",
+  "person.rail.repliedDaysAgo_other": "Đã hồi đáp {count} ngày trước",
   "person.rail.singleThreaded": "Chỉ một đầu mối trong deal này",
   "person.rail.noMeetingBooked": "Chưa đặt cuộc họp kế tiếp",
   "person.rail.consentTitle": "Đồng ý & kênh liên lạc",

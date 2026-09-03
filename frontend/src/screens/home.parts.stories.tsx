@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { PlanSection } from "./brief.plan";
 import { deckItems } from "./home";
 import { DecisionsSection } from "./home.decisions";
 import {
   bundle,
   deals,
   digest,
+  meetingRow,
   NOT_FOUND,
   pipelineRows,
   quietRun,
@@ -19,6 +21,7 @@ import {
 import { HomeGlance } from "./home.glance";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
+import { PromisesPanel, SchedulePanel } from "./home.schedule";
 import { FocusSection } from "./home.today";
 import {
   installFetchStub,
@@ -402,4 +405,107 @@ export const WatchClear: Story = {
 // that never answered.
 export const WatchRefused: Story = {
   render: part(<WatchPanel deals={[]} more={false} state="failed" />),
+};
+
+// ── The day's schedule and what it owes ─────────────────────────────────────
+
+// A meeting the queue carries, at the hour it starts. The time is `due_at`:
+// `occurred_at` is when something HAPPENED, which a meeting still ahead of the
+// reader has no answer for, and a schedule with no times in it is a duplicate
+// of the meetings count in the strip above.
+export const Schedule: Story = {
+  render: part(
+    <SchedulePanel
+      day={readingsDay({}, [meetingRow("m1", false), meetingRow("m2", true)])}
+      state="ready"
+    />,
+  ),
+};
+
+// The server sent a meeting with no start. It is drawn without a time rather
+// than with an invented one — a wrong hour would send a rep somewhere nobody
+// booked them for.
+export const ScheduleUndated: Story = {
+  render: part(
+    <SchedulePanel
+      day={readingsDay({}, [{ ...meetingRow("m1", true), due_at: undefined }])}
+      state="ready"
+    />,
+  ),
+};
+
+// A day with nothing booked, which is a fact worth saying rather than an empty
+// panel that reads as a read that never landed.
+export const ScheduleClear: Story = {
+  render: part(<SchedulePanel day={readingsDay({}, [])} state="ready" />),
+};
+
+// The tasks this rep owes, under a heading that names two things. The line
+// beneath it stands on every reading, including the empty one: promises made in
+// conversation reach nothing, and an empty panel would otherwise claim none are
+// outstanding.
+export const Promises: Story = {
+  render: part(
+    <PromisesPanel
+      day={readingsDay({}, [meetingRow("m1", true)])}
+      state="ready"
+    />,
+  ),
+};
+
+// ── The week ahead ──────────────────────────────────────────────────────────
+
+/** The plan reads, for a seat holding the grants each control asks for. */
+const PLAN_ROUTES: RouteMap = {
+  ...RAIL_ROUTES,
+  "GET /me": meRoute(
+    { weekly_plan: ["read", "create", "update"] },
+    { roles: ["rep"] },
+  ),
+  "GET /weekly-plans/current": () =>
+    jsonResponse({
+      id: "p1",
+      local_week_start: "2026-06-08",
+      status: "open",
+      commitments: [
+        {
+          id: "c1",
+          label: "Call the Aster buyer back",
+          state: "open",
+          position: 1,
+          due_on: "2026-06-11",
+          help_requested: null,
+          manager_response: null,
+          manager_user_id: null,
+          responded_at: null,
+          completed_at: null,
+        },
+      ],
+    }),
+};
+
+// The week a rep is keeping. Ticking a box stages it and reveals Save; nothing
+// reaches the wire until then, which is why these are checkboxes and not
+// switches.
+export const Plan: Story = {
+  render: part(<PlanSection />, PLAN_ROUTES),
+};
+
+// No plan yet, and this seat may open one. The sentence is a fact about the
+// week; the button is the act.
+export const PlanNone: Story = {
+  render: part(<PlanSection />, {
+    ...PLAN_ROUTES,
+    "GET /weekly-plans/current": () => jsonResponse(NOT_FOUND, 404),
+  }),
+};
+
+// A seat the server refuses. The week is still reported — withholding it would
+// say the reader had planned nothing — and every write verb is absent, with the
+// posture said once rather than a refusal repeated on each row.
+export const PlanReadOnly: Story = {
+  render: part(<PlanSection />, {
+    ...PLAN_ROUTES,
+    "GET /me": meRoute({ weekly_plan: ["read"] }, { roles: ["read_only"] }),
+  }),
 };

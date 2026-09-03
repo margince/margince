@@ -182,7 +182,9 @@ describe("open tasks are commitments too", () => {
       </StoryProviders>,
     );
 
-    expect(screen.getByText("overdue 1 days")).toBeDefined();
+    // One whole day, in the singular: the wording comes from the reader's own
+    // plural rule rather than from one string with a count poured into it.
+    expect(screen.getByText("overdue 1 day")).toBeDefined();
   });
 
   it('keeps "You" on a task the reader holds themselves', async () => {

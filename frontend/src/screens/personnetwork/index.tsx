@@ -63,6 +63,7 @@ export function PersonNetworkTab({
     () => ({
       ourTeam: t("person.intro.laneOurs"),
       theirCompany: t("person.intro.laneTheirs"),
+      peers: t("person.intro.lanePeers"),
       target: t("person.intro.laneTarget"),
       useThisRoute: t("person.intro.useThisRoute"),
       withheldDirect: t("person.graph.withheldDirect"),

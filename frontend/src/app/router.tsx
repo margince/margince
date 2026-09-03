@@ -47,16 +47,27 @@ export const SCREENS = [
   // type. Every tag pill in the product links here.
   "tags",
   "onboarding",
+  // reach:external the extension's own chrome, opened by the client rather than
+  // from anywhere in this app.
   "client",
   "book",
   "preferences",
+  // reach:external the address the visible unsubscribe footer of an outbound
+  // message carries; this app never links to it.
   "unsubscribe",
+  // reach:external a double opt-in link, followed out of the reader's mailbox.
   "confirm",
   "room",
+  // reach:external where a provider returns a human who has just lent an agent
+  // their authority; it is a redirect target, never a destination.
   "oauth-consent",
+  // reach:external the address a password-reset mail carries. A signed-out
+  // reader has no nav to reach it from.
   "reset-password",
   "ext",
   "x",
+  // reach:external what `parseRoute` answers for an address this app does not
+  // have; a link to it would be a link to the fact that a link was wrong.
   "not-found",
 ] as const;
 

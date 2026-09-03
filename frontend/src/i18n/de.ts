@@ -1998,6 +1998,8 @@ export const de = {
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
+  "lead.callNotInOverlay":
+    "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardTerminalOnly":
     "Das Board zeigt nur offene Leads. Diese Leads sind übernommen oder disqualifiziert.",
   "person.fromLead": "Aus Lead übernommen",
@@ -2507,6 +2509,8 @@ export const de = {
   "plan.empty": "Noch nichts auf dem Plan.",
   "plan.none": "Du hast diese Woche noch nicht geplant.",
   "plan.start": "Meine Woche planen",
+  "plan.readOnly":
+    "Nur-Lese-Ansicht \u2014 eine Woche zu planen und eine Zusage abzuschlie\u00dfen ist hier nicht deine Aufgabe.",
   "plan.add": "Vorhaben hinzufügen",
   "plan.saveRefused_one":
     "Eine Zusage konnte nicht gespeichert werden. Sie ist weiterhin angehakt — bitte erneut versuchen.",
@@ -3022,6 +3026,7 @@ export const de = {
   "log.kindNote": "Notiz",
   "log.kindTask": "Aufgabe",
   "log.kindMeeting": "Meeting",
+  "log.kindCall": "Anruf",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Aus Ihrem Meeting-Tool einfügen (Teams, Zoom, Meet …) — Sprecherkennzeichnungen bleiben, sofern vorhanden, erhalten.",
@@ -3708,7 +3713,8 @@ export const de = {
   "restricted.until": "Zurückgehalten bis",
   "restricted.redacted": "Geschwärzt",
   "restricted.nothingRedacted": "Nichts entfernt",
-  "restricted.redactedCount": "{count} Felder entfernt",
+  "restricted.redactedCount_one": "{count} Feld entfernt",
+  "restricted.redactedCount_other": "{count} Felder entfernt",
   "restricted.class.commercialCorrespondence": "Handelsbrief",
   "restricted.kind.email": "E-Mail",
   "restricted.kind.call": "Anruf",
@@ -4815,7 +4821,8 @@ export const de = {
   "ob.conv.guide.attentionStatus.empty": "noch leer",
   "ob.conv.guide.attentionStatus.decision": "braucht eine Entscheidung",
   "ob.conv.guide.attentionStatus.check": "einen Blick wert",
-  "ob.conv.activity.steps": "{count} Schritte",
+  "ob.conv.activity.steps_one": "{count} Schritt",
+  "ob.conv.activity.steps_other": "{count} Schritte",
   "ob.conv.showField": "Zeig mir",
   "ob.conv.review.editDirectly": "Felder direkt bearbeiten",
   "ob.conv.review.backToDossier": "Zurück zum Dossier",
@@ -6961,6 +6968,7 @@ export const de = {
   "person.intro.stepPending": "Später",
   "person.intro.laneOurs": "Unser Team",
   "person.intro.laneTheirs": "Ihr Unternehmen",
+  "person.intro.lanePeers": "Mit wem sie sprechen",
   "person.intro.laneTarget": "Zielperson",
   "person.intro.useThisRoute": "Diesen Weg nutzen",
   "person.intro.mapRegion": "Wer diesen Kontakt erreicht, und über wen",
@@ -7208,7 +7216,8 @@ export const de = {
     "In den erfassten Gesprächen wurde nichts zugesagt und nichts gefragt.",
   "person.loops.ours": "Sie",
   "person.loops.question": "Offene Frage",
-  "person.loops.overdue": "{count} Tage überfällig",
+  "person.loops.overdue_one": "{count} Tag überfällig",
+  "person.loops.overdue_other": "{count} Tage überfällig",
   "person.loops.overdueUnderDay": "seit weniger als einem Tag überfällig",
   "person.loops.due": "fällig {when}",
   "person.loops.dueToday": "heute",
@@ -7260,7 +7269,8 @@ export const de = {
   "person.rail.signals": "Signale & Risiken",
   "person.rail.noSignals": "An dieser Beziehung fällt nichts auf.",
   "person.rail.noReplyDays": "Seit {count} Tagen keine Antwort",
-  "person.rail.repliedDaysAgo": "Antwort vor {count} Tagen",
+  "person.rail.repliedDaysAgo_one": "Antwort vor {count} Tag",
+  "person.rail.repliedDaysAgo_other": "Antwort vor {count} Tagen",
   "person.rail.singleThreaded": "Nur ein Kontakt in diesem Deal",
   "person.rail.noMeetingBooked": "Kein nächster Termin vereinbart",
   "person.rail.consentTitle": "Einwilligung & Kanäle",

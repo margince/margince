@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { navigate, useRoute } from "../app/router";
+import { useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
@@ -30,6 +31,7 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
+import { SurfaceState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import {
@@ -71,6 +73,7 @@ import {
   scoreTone,
 } from "./leadpresentation";
 import { LeadReadings } from "./leadreadings";
+import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
 import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
@@ -1413,6 +1416,24 @@ function LeadOverviewPane({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  // The verb the reader arrived to perform, named by the address rather than
+  // guessed: a caller that sends somebody here to log a call says so, and the
+  // composer opens on that kind instead of on a note the reader has to change.
+  //
+  // Left in the address rather than consumed, like every other dial this
+  // product carries: the link is one somebody can paste, and Back returns to
+  // the same screen it described.
+  const [params] = useUrlParams();
+  const askedToLogCall = params.get(ACTION_PARAM) === CALL_ACTION;
+  const composer = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!askedToLogCall) {
+      return;
+    }
+    // The composer follows the facts, so a reader who arrived FOR it lands
+    // above it. jsdom has no scrollIntoView; the browser always does.
+    composer.current?.scrollIntoView?.({ block: "start" });
+  }, [askedToLogCall]);
   return (
     <div className="record-stack">
       {/* The readings open the overview, as they do on every record page. */}
@@ -1463,7 +1484,30 @@ function LeadOverviewPane({
       {/* The composer follows the facts so opening a lead answers "what
           should I do" before asking the rep to type. */}
       {!lead.archived_at && !overlay && (
-        <LogActivity entityType="lead" entityId={id} onLogged={onTouchLogged} />
+        <div ref={composer}>
+          <LogActivity
+            entityType="lead"
+            entityId={id}
+            askedKind={askedToLogCall ? "call" : undefined}
+            onLogged={onTouchLogged}
+          />
+        </div>
+      )}
+      {/* An address that named a verb this posture cannot perform is answered,
+          not ignored. The composer is absent in overlay for every reader, and
+          for a reader who followed a link TO it that absence would read as a
+          broken page rather than as a mirrored record the product may not
+          write. */}
+      {!lead.archived_at && overlay && askedToLogCall && (
+        <SurfaceState
+          state="unsupported"
+          // Never drawn — the state above is fixed — but the primitive asks
+          // every caller for the sentence it would say if it were empty.
+          emptyLabel={t("lead.callNotInOverlay")}
+          detail={{ unsupportedReason: t("lead.callNotInOverlay") }}
+        >
+          {null}
+        </SurfaceState>
       )}
       {!lead.archived_at && !overlay && (
         <RecordEmailAside entityType="lead" entityId={id} detectWaitingReply />
