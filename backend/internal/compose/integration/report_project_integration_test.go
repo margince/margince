@@ -55,7 +55,14 @@ func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID
 	actor := principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{object: {Read: true}},
+			// installation_settings.read too: every RunReport plan resolves the
+			// installation's timezone and base currency as its framing (0191
+			// grants this to all five seeded roles), whatever the entity —
+			// a project-only report still pays that basis read.
+			Objects: map[string]principal.ObjectGrant{
+				object:             {Read: true},
+				objInstallSettings: {Read: true},
+			},
 			RowScope: scope,
 		},
 	}

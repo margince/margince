@@ -77,6 +77,7 @@ func SetupSearch(t *testing.T) *SearchEnv {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
 		t.Fatal(err)
 	}
+	seedInstallationIdentity(ctx, t, owner)
 	for i, u := range []ids.UUID{e.Rep1, e.Rep3} {
 		if _, err := owner.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, u, fmt.Sprintf("rep%d@search.test", i)); err != nil {
 			t.Fatal(err)
@@ -141,8 +142,14 @@ var searchObjects = []string{objPerson, objOrg, objDeal, "lead", objActivity, ob
 // reach. Read-only on purpose: the suites riding it assert what a caller may SEE,
 // so a grant that could write would let a fixture change the rows under its own
 // assertion.
+//
+// installation_settings is added outside the searchObjects loop: it is not a
+// record type, it is the basis (timezone, base currency) every report resolves
+// regardless of entity — 0191 grants it to all five seeded roles, so a fixture
+// standing in for a seeded human should too, or a caller this suite treats as
+// unbounded gets refused a read production always admits.
 func searchReadGrants() map[string]principal.ObjectGrant {
-	grants := map[string]principal.ObjectGrant{}
+	grants := map[string]principal.ObjectGrant{objInstallSettings: {Read: true}}
 	for _, object := range searchObjects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
