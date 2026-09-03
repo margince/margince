@@ -20,7 +20,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "../screens/common";
 import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
-import { Panel, PanelBody, PanelRow } from "./panel";
+import { Panel, PanelBody, PanelGroupHead, PanelRow } from "./panel";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 import { Select } from "./select";
 import "./projectlinks.css";
@@ -102,6 +102,7 @@ export function ProjectLinks({
   titleKey,
   emptyBody,
   words,
+  bare = false,
 }: Readonly<{
   adapter: ProjectLinksAdapter;
   // The section's own heading, because a project page saying "Companies" and a
@@ -116,6 +117,12 @@ export function ProjectLinks({
   // saying "Attach project" about a company is wrong on screen and wrong in the
   // dialog's accessible name.
   words?: LinkWords;
+  // Render the section as a GROUP inside a pane the caller holds — a group
+  // head with the verbs, then the rows — rather than as a pane of its own. The
+  // company glance does: the projects stand under the deals in the one pane
+  // that holds the money, and a pane inside a pane is two borders around one
+  // list.
+  bare?: boolean;
 }>) {
   const t = useT();
   const [picking, setPicking] = useState(false);
@@ -169,98 +176,115 @@ export function ProjectLinks({
     }
   }
 
-  return (
-    <div ref={section}>
-      <Panel
-        title={t(titleKey)}
-        titleAction={
-          !adapter.readOnly && (
-            <div className="pl-verbs">
-              {adapter.onCreate && (
-                <Button variant="ghost" onClick={adapter.onCreate}>
-                  {t("projectLinks.new")}
-                </Button>
-              )}
-              {canAdd || moving ? (
-                <Button variant="ghost" onClick={() => setPicking(true)}>
-                  {moving ? said.move : said.attach}
-                </Button>
-              ) : null}
-            </div>
+  const verbs = !adapter.readOnly && (
+    <div className="pl-verbs">
+      {adapter.onCreate && (
+        <Button variant="ghost" onClick={adapter.onCreate}>
+          {t("projectLinks.new")}
+        </Button>
+      )}
+      {canAdd || moving ? (
+        <Button variant="ghost" onClick={() => setPicking(true)}>
+          {moving ? said.move : said.attach}
+        </Button>
+      ) : null}
+    </div>
+  );
+  const rows =
+    adapter.linked.length === 0 ? (
+      <PanelBody>
+        {bare ? (
+          <EmptyState plate title={t("projectLinks.emptyTitle")}>
+            {t(emptyBody)}
+          </EmptyState>
+        ) : (
+          <EmptyState title={t("projectLinks.emptyTitle")}>
+            <p>{t(emptyBody)}</p>
+          </EmptyState>
+        )}
+      </PanelBody>
+    ) : (
+      adapter.linked.map((project) => (
+        <PanelRow key={project.project_id}>
+          <div className="pl-row">
+            <a
+              className="pl-name"
+              href={project.href ?? `#/projects/${project.project_id}`}
+            >
+              {project.name}
+            </a>
+            {project.key && (
+              <span className="t-mono pl-key">{project.key}</span>
+            )}
+            {project.phase}
+            {adapter.detach && !adapter.readOnly && (
+              <Button
+                variant="ghost"
+                onClick={() => setDetaching(project)}
+                // Every row's verb reads the same to the eye and must not to
+                // a screen reader: a button list of five "Detach" entries
+                // cannot say which record each one takes off.
+                aria-label={t("projectLinks.detachNamed", {
+                  name: project.name,
+                })}
+              >
+                {t("projectLinks.detach")}
+              </Button>
+            )}
+          </div>
+        </PanelRow>
+      ))
+    );
+  const dialogs = (
+    <>
+      <AttachDialog
+        open={picking}
+        adapter={adapter}
+        role={role}
+        onRole={setRole}
+        moving={moving}
+        busy={busy}
+        refusal={refusal}
+        words={said}
+        onClose={closeWhenIdle(() => setPicking(false))}
+        onPick={(id) =>
+          run(
+            () => adapter.attach(id, role),
+            () => setPicking(false),
           )
         }
-      >
-        {adapter.linked.length === 0 ? (
-          <PanelBody>
-            <EmptyState title={t("projectLinks.emptyTitle")}>
-              <p>{t(emptyBody)}</p>
-            </EmptyState>
-          </PanelBody>
-        ) : (
-          adapter.linked.map((project) => (
-            <PanelRow key={project.project_id}>
-              <div className="pl-row">
-                <a
-                  className="pl-name"
-                  href={project.href ?? `#/projects/${project.project_id}`}
-                >
-                  {project.name}
-                </a>
-                {project.key && (
-                  <span className="t-mono pl-key">{project.key}</span>
-                )}
-                {project.phase}
-                {adapter.detach && !adapter.readOnly && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setDetaching(project)}
-                    // Every row's verb reads the same to the eye and must not to
-                    // a screen reader: a button list of five "Detach" entries
-                    // cannot say which record each one takes off.
-                    aria-label={t("projectLinks.detachNamed", {
-                      name: project.name,
-                    })}
-                  >
-                    {t("projectLinks.detach")}
-                  </Button>
-                )}
-              </div>
-            </PanelRow>
-          ))
-        )}
-
-        <AttachDialog
-          open={picking}
-          adapter={adapter}
-          role={role}
-          onRole={setRole}
-          moving={moving}
-          busy={busy}
-          refusal={refusal}
-          words={said}
-          onClose={closeWhenIdle(() => setPicking(false))}
-          onPick={(id) =>
-            run(
-              () => adapter.attach(id, role),
-              () => setPicking(false),
-            )
-          }
-        />
-        <DetachDialog
-          project={detaching}
-          detach={adapter.detach}
-          busy={busy}
-          refusal={refusal}
-          returnFocusTo={() => section.current}
-          words={said}
-          onClose={closeWhenIdle(() => setDetaching(null))}
-          onConfirm={(id) =>
-            run(
-              () => adapter.detach?.(id) ?? Promise.resolve(),
-              () => setDetaching(null),
-            )
-          }
-        />
+      />
+      <DetachDialog
+        project={detaching}
+        detach={adapter.detach}
+        busy={busy}
+        refusal={refusal}
+        returnFocusTo={() => section.current}
+        words={said}
+        onClose={closeWhenIdle(() => setDetaching(null))}
+        onConfirm={(id) =>
+          run(
+            () => adapter.detach?.(id) ?? Promise.resolve(),
+            () => setDetaching(null),
+          )
+        }
+      />
+    </>
+  );
+  if (bare) {
+    return (
+      <div ref={section}>
+        <PanelGroupHead title={t(titleKey)} level="h4" action={verbs} />
+        {rows}
+        {dialogs}
+      </div>
+    );
+  }
+  return (
+    <div ref={section}>
+      <Panel title={t(titleKey)} titleAction={verbs}>
+        {rows}
+        {dialogs}
       </Panel>
     </div>
   );

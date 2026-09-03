@@ -242,17 +242,18 @@ test.describe("company record — the glance's page shape", () => {
     await expect(needs).toHaveCount(0);
   });
 
-  // The details column is the shell's, on the RIGHT of the work, and it starts
-  // closed: the Details control at the end of the tab row opens it (DESIGN.md
-  // §6). Inside it, ONE pane of named sections — the account's fields, its
-  // deals, its people, the hold where the account has a domain, its tags —
-  // each a disclosure with a non-empty summary, never a stack of cards.
+  // The details pane is the record's, on the RIGHT of the work under the tab
+  // row, and it starts closed: the Details control at the end of the tab row
+  // opens it (DESIGN.md §6). Inside it, ONE pane of named sections — the
+  // account's fields, its deals, its people, the hold where the account has a
+  // domain, its tags — each a disclosure with a non-empty summary, never a
+  // stack of cards.
   //
   // What is asserted is structural, not textual: the pane's presence, that it
   // carries its named slices, and that it stands to the right of the overview
-  // (the x comparison holds above the 1100px restack, which this suite's
+  // (the x comparison holds above the 1200px restack, which this suite's
   // viewport pins). The German copy inside is not pinned.
-  test("the details column opens from the tab row as one pane of named sections, on the right", async ({
+  test("the details pane opens from the tab row as one pane of named sections, on the right", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);

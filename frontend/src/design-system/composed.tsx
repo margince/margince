@@ -782,12 +782,13 @@ export function RecordView({
   // note, since the mirror cannot serve entity-scoped activity reads. Keeps the
   // section honest instead of rendering an empty list that reads as "no activity".
   timelineNotice?: ReactNode;
-  // The bar that chooses which part of the record is below it. It leads the
-  // WORK COLUMN rather than the band, because what it chooses is what appears
-  // beneath it: in the band it would sit over the rail as well and claim to
-  // govern a column it does not. The slot exists so the interval under it and
-  // the one-row-that-scrolls behaviour are the record page's, spelled once —
-  // two pages had already written the same wrapper under two names.
+  // The bar that chooses which part of the record is below it. It runs the
+  // full width over the columns, because the details pane opens under it
+  // (DESIGN.md §6): the switch at the row's end governs the column beside the
+  // work, and a strip confined to the work column would end where the pane it
+  // opens begins. The slot exists so the interval under it and the
+  // one-row-that-scrolls behaviour are the record page's, spelled once — two
+  // pages had already written the same wrapper under two names.
   tabs?: ReactNode;
   zone: string;
   children?: ReactNode;
@@ -830,6 +831,7 @@ export function RecordView({
           the work column, where it would sit beside the rail as though it were
           one more thing to read rather than the frame around all of them. */}
       {band && <div className="record-band">{band}</div>}
+      {tabs && <div className="record-tabs">{tabs}</div>}
       <PageZones
         shape={shape}
         className={zonesClassName(shape)}
@@ -844,7 +846,6 @@ export function RecordView({
         mainClassName="arrive-stack"
         main={
           <>
-            {tabs && <div className="record-tabs">{tabs}</div>}
             {children}
             {timeline && (
               <section aria-label={t("record.timeline")}>

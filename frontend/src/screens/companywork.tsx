@@ -25,9 +25,8 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Badge } from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Badge, EmptyState } from "../design-system/atoms";
+import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import {
   omitted,
   SurfaceState,
@@ -292,16 +291,7 @@ function WorkGroup({
   action?: ReactNode;
   children: ReactNode;
 }>) {
-  // The head is drawn in EVERY state, so the group's own verb keeps one place
-  // on the card. Moved into the empty plate it changed position with the
-  // content — a reader who has just read one group looks for the next verb
-  // where the last one was.
-  const head = (
-    <PanelBody className="co-work-head">
-      <Eyebrow as={level}>{label}</Eyebrow>
-      {action}
-    </PanelBody>
-  );
+  const head = <PanelGroupHead title={label} level={level} action={action} />;
   if (state === "ready") {
     return (
       <>
@@ -318,20 +308,16 @@ function WorkGroup({
     <>
       {head}
       <PanelBody>
-        {/* An empty group gets a PLATE rather than a line of grey text. There
+        {/* An empty group gets a PLATE rather than a line of grey text: there
             being no deal on an account is a state a reader has to decide
             about, and drawn as one quiet sentence it reads as a section that
-            failed to load. The dashes say the space is waiting to be filled;
-            the verb that fills it is in the head above, where every other
-            group keeps its own.
-
-            No label on the state itself either way: the head carries it, and
-            a section that names itself twice reads as two sections. */}
+            failed to load. No label on the state itself either way: the head
+            carries it, and a section that names itself twice reads as two
+            sections. */}
         {state === "empty" ? (
-          <div className="co-work-empty">
-            <p className="co-work-empty-title">{emptyLabel}</p>
-            <p className="co-work-empty-note">{emptyDetail}</p>
-          </div>
+          <EmptyState plate title={emptyLabel}>
+            {emptyDetail}
+          </EmptyState>
         ) : (
           <SurfaceState state={state} emptyLabel={emptyLabel}>
             {null}

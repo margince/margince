@@ -1174,6 +1174,7 @@ export function PendingBody({
 export function EmptyState({
   title,
   action,
+  plate,
   children,
 }: Readonly<{
   // The instructional variant's heading. Present, the children render as the
@@ -1183,8 +1184,24 @@ export function EmptyState({
   // with `title`: a bare one-liner that offered a verb would be a filtered
   // list inviting the reader to create what the filter hid.
   action?: ReactNode;
+  // An empty GROUP inside a pane, as a dashed plate rather than a sentence:
+  // the title says there is none of this kind of thing, the children say what
+  // the kind is for. The dashed edge is what says the space is WAITING rather
+  // than broken — a solid card holding one grey line reads as a section whose
+  // content failed to arrive. No verb in here: the group's own head carries
+  // it, so a reader who has just pressed one finds the next where the last
+  // one was. Needs `title`.
+  plate?: boolean;
   children: ReactNode;
 }>) {
+  if (plate && title !== undefined) {
+    return (
+      <div className="empty empty-plate">
+        <p className="empty-plate-title">{title}</p>
+        <p className="empty-plate-note">{children}</p>
+      </div>
+    );
+  }
   if (title === undefined) {
     return (
       <Card as="div" inset className="empty">

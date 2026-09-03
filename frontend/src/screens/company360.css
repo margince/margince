@@ -70,6 +70,16 @@
 .co-reading-call {
   background-image: linear-gradient(180deg, var(--aiLight), transparent);
 }
+/* The 360's head is a LINE inside the pane, not a band across it (DESIGN.md
+   §7): the mark, the name, the claim — and the verdict under them on the same
+   ground. The tint is the pane's own gradient, so the head keeps no fill and
+   no rule of its own. */
+.co-reading-call > .panel-head {
+  background: none;
+  border-bottom: 0;
+  padding-top: var(--space-5);
+  padding-bottom: 0;
+}
 
 /* The reference sections, side by side. Half the measure each, because a
    reader consults them rather than reads them through; one column as soon as
@@ -204,12 +214,6 @@
   gap: 8px;
   flex-wrap: wrap;
   margin: 8px 0;
-}
-
-/* The bar leads the column it governs, so it owns the interval between
-   itself and the first panel beneath it. */
-.co-tabs {
-  margin-bottom: var(--space-5);
 }
 
 /* A card holding two independently-governed sections labels each one, so a
@@ -1642,11 +1646,10 @@
    statement rather than as a caption: the mark on its own indigo tile, the
    claim above the subject, and the record's name at reading size. */
 .co-360-title {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--space-3);
-  row-gap: 0;
+  gap: var(--space-2) var(--space-3);
   min-inline-size: 0;
 }
 .co-360-subject {
@@ -1656,8 +1659,7 @@
   min-inline-size: 0;
 }
 
-/* The eyebrow is a ROW: the mark and the words it marks are one line, and left
-   to the default the icon took a line of its own above them. Indigo, because
+/* The claim of authorship, after the name it is about. Indigo, because
    `.t-eyebrow` sets the neutral meta tone for every other eyebrow in the
    product and this one names the machine that wrote the card under it. */
 .co-360-title .t-eyebrow {
@@ -1665,14 +1667,10 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--aiText);
-  grid-column: 2;
 }
 
-/* The mark, on a tile of its own. It spans both lines of the claim, so the
-   eyebrow and the name read as one block that the mark introduces rather than
-   as two rows with an icon stuck to the first. */
+/* The mark, on a tile of its own, leading the line. */
 .co-360-title .co-360-mark {
-  grid-row: span 2;
   display: grid;
   place-items: center;
   inline-size: 2rem;

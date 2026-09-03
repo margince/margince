@@ -175,8 +175,6 @@ export const de = {
   "nav.tags": "Tag",
 
   "shell.railAria": "Hauptnavigation",
-  "shell.aside.hide": "Ausblenden",
-  "shell.aside.show": "Kontextspalte einblenden",
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",

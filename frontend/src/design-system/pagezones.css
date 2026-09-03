@@ -71,6 +71,12 @@
   .page-zones > .page-zones-main {
     grid-column: 1 / -1;
   }
+  /* One rail under the story takes the whole width: half a column for the
+     details pane and the other half empty is a 300px stack at the edge of a
+     region several times wider. */
+  .page-zones-aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @media (max-width: 720px) {
   .page-zones {

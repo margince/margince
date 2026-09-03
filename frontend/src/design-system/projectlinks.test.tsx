@@ -9,7 +9,7 @@ import { ProjectLinks, type ProjectLinksAdapter } from "./projectlinks";
 
 afterEach(cleanup);
 
-function draw(adapter: Partial<ProjectLinksAdapter> = {}) {
+function draw(adapter: Partial<ProjectLinksAdapter> = {}, bare = false) {
   const full: ProjectLinksAdapter = {
     linked: [],
     allowsMany: true,
@@ -18,16 +18,17 @@ function draw(adapter: Partial<ProjectLinksAdapter> = {}) {
     attach: async () => undefined,
     ...adapter,
   };
-  render(
+  const view = render(
     <LocaleProvider initial="en">
       <ProjectLinks
         adapter={full}
         titleKey="companyProjects.title"
         emptyBody="companyProjects.empty"
+        bare={bare}
       />
     </LocaleProvider>,
   );
-  return full;
+  return { ...full, container: view.container };
 }
 
 describe("ProjectLinks", () => {
@@ -37,6 +38,21 @@ describe("ProjectLinks", () => {
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
     expect(screen.getByText(/body of work a deal is about/)).toBeTruthy();
+  });
+
+  // Bare, the section is a GROUP inside a pane the caller holds: no pane of
+  // its own, the title as a group head one level down with the verb beside
+  // it, and the empty state as the plate an empty group draws.
+  it("stands as a group inside a pane when the caller holds the pane", () => {
+    const { container } = draw({}, true);
+    expect(container.querySelector(".panel")).toBeNull();
+    expect(container.querySelector(".panel-grouphead h4")?.textContent).toBe(
+      "Projects",
+    );
+    expect(
+      container.querySelector(".panel-grouphead button")?.textContent,
+    ).toBe("Attach project");
+    expect(container.querySelector(".empty-plate")).toBeTruthy();
   });
 
   it("offers to MOVE rather than attach when the record carries at most one", () => {

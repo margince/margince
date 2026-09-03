@@ -172,6 +172,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
   {
+    file: "app/pageaside.stories.tsx",
+    why: "The story hand-renders a RecordView around the details pane and passes the view's required zone; nothing in it renders a date, so the zone is the shape being satisfied, not a rendering under review.",
+  },
+  {
     file: "screens/recordconversations.stories.tsx",
     why: "The story passes the component's required zone prop directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },

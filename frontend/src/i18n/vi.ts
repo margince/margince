@@ -181,8 +181,6 @@ export const vi = {
   "nav.tags": "Thẻ",
 
   "shell.railAria": "Điều hướng chính",
-  "shell.aside.hide": "Ẩn",
-  "shell.aside.show": "Hiện cột ngữ cảnh",
   "shell.skipToContent": "Bỏ qua tới nội dung",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",

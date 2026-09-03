@@ -11,6 +11,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { CommercialPanel, recordNamesIn } from "../company360";
 import { CompanyContractState } from "../companycommercial";
+import { CompanyProjects } from "../companyprojects";
 import { peopleSlice } from "../companyrailshared";
 import { CompanyRecentList } from "../companyrecent";
 import type { CompanyTab } from "../companytab";
@@ -102,14 +103,20 @@ export function ThreadFold({
  * cannot say two things about one renewal.
  */
 export function MoneyPane({
+  organizationId,
   view,
   loading,
+  readOnly,
   onAllDeals,
   onOpenRecord,
   verbs,
 }: Readonly<{
+  organizationId: string;
   view?: Organization360;
   loading: boolean;
+  // An archived company joins no new project, so the group offers no verb
+  // that would only be refused.
+  readOnly: boolean;
   onAllDeals: () => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   verbs?: { deal?: ReactNode };
@@ -140,6 +147,17 @@ export function MoneyPane({
         onOpenRecord={onOpenRecord}
         bare
         verbs={verbs}
+      />
+      {/* The deliveries this company is part of — as the client, a partner or
+          a subcontractor — as the group under the deals they came from. In
+          this pane rather than one of its own: the money and the work it
+          bought are one reading, and a third pane on the column read as a
+          second page starting. */}
+      <CompanyProjects
+        organizationId={organizationId}
+        projects={view?.projects}
+        readOnly={readOnly}
+        bare
       />
     </Panel>
   );

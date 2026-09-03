@@ -39,7 +39,7 @@ import {
   useNavLevel,
   useNavWalk,
 } from "./navlevel";
-import { PageAsideProvider, PageAsideRegion } from "./pageaside";
+import { PageAsideProvider } from "./pageaside";
 import {
   PAGE_SUB_KEYS,
   resolveTitle,
@@ -839,9 +839,9 @@ export function Shell({
   };
 
   return (
-    // The provider spans the whole chrome, because the column and the screen
-    // that fills it are on opposite sides of the tree: the region is a sibling
-    // of <main>, the content comes from a screen inside it.
+    // The provider spans the whole chrome, because the details pane's memory
+    // — open or folded — outlives the screen that draws it: the switch and
+    // the pane are the record's, the preference is the reader's.
     <PageAsideProvider>
       <div className={collapsed ? "app" : "app railexpanded"}>
         <SkipToContent target={scroller} />
@@ -889,11 +889,6 @@ export function Shell({
             {children}
           </div>
         </main>
-        {/* The page's context column — a column of the WINDOW, beside the work
-          rather than inside it, so it runs the full height past the page's own
-          header and does not move when a tab changes. A screen that fills none
-          leaves nothing here. */}
-        <PageAsideRegion />
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
           person is working in, and a contour that stopped at the sidebar would

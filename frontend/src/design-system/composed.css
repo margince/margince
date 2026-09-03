@@ -406,19 +406,15 @@
   margin-bottom: var(--space-5);
 }
 
-/* The bar that chooses which part of the record is drawn under it. It scrolls
-   sideways on a narrow screen rather than wrapping: wrapped tabs read as two
-   rows of navigation, which is a different thing from one row that continues.
-   The scrollbar is hidden because the row is short, its overflow is obvious
-   from the clipped tab, and a scrollbar under it would read as a divider. */
+/* The bar that chooses which part of the record is drawn under it. The strip
+   inside scrolls sideways on a narrow screen rather than wrapping
+   (design-system/recordtabs.css); this wrapper owns only the interval under
+   it. It must NOT scroll itself: the strip breaks out past the reading column
+   by half the work column's slack, and a scroller around it turned that
+   overhang into scroll room — the Details control at the row's end taking
+   focus dragged the whole row sideways by it. */
 .record-tabs {
   margin-bottom: var(--space-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.record-tabs::-webkit-scrollbar {
-  display: none;
 }
 
 /* One vertical stack of full-width panels, which is what a record's work

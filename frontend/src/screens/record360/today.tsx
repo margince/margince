@@ -24,7 +24,6 @@ import {
   EmptyState,
   Skeleton,
 } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { useT } from "../../i18n";
@@ -68,7 +67,7 @@ export function TodayPanel({
           fact about the list's head, and as a footer band under the rows it
           floated alone at the bottom of the pane. */}
       <div className="co-360-headtext">
-        <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+        <h3 className="co-360-title-text">{t("today.title")}</h3>
         {footer}
       </div>
       {onOpenTasks && (

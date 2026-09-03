@@ -2088,10 +2088,10 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // writes nothing.
       "How it stands",
     ]);
-    // The column's OWN fold is skipped structurally rather than by its label:
-    // it belongs to the shell's chrome, not to this record, and "Hide" is too
+    // The pane's own controls are skipped structurally rather than by label:
+    // what folds a disclosure in it is a view control, and "Hide" is too
     // ordinary a word to exempt everywhere it might appear.
-    const contextColumn = document.querySelector(".pageaside");
+    const contextColumn = document.querySelector(".page-zones-aside-column");
     for (const button of screen.getAllByRole("button")) {
       // The ACCESSIBLE name, not the text: the panel switch is icon-only, so
       // its text is empty and a set keyed on text would have exempted every
