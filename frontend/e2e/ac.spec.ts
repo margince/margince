@@ -1211,11 +1211,23 @@ test.describe("§3.8: 390px mobile", () => {
     });
     expect(narrow).toEqual([]);
 
-    // Every verb a rep can press is a real target. Named offenders rather than
-    // a count, so whoever breaks it learns which control shrank.
+    // Every verb in the QUEUE is a real target — the rows and the focus card
+    // above them, which is the work this screen exists for. The focus CTA is a
+    // full-size `.btn` and already clears the floor through `--control-h`; it
+    // is measured anyway, because a rule that holds only where somebody
+    // remembered to look is not a floor.
+    //
+    // The readings strip above is deliberately NOT measured. Its "open this
+    // lane" link is a 24px target on a phone and genuinely too small, but it
+    // belongs to the design system's StatCard rather than to this screen —
+    // fixing it here would size every reading card in the product from the
+    // worklist's stylesheet. Filed as #3961.
+    //
+    // Visible controls only: the page carries collapsed panels whose buttons
+    // lay out at zero height, and those are not targets a thumb can miss.
     const small = await page.evaluate(() => {
       const controls = document.querySelectorAll(
-        ".worklist-row-verbs .btn, .worklist-row-dispositions .btn, .worklist-row .link-button",
+        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button, .worklist-focus button, .worklist-focus a.btn",
       );
       return Array.from(controls)
         .filter((element) => element.getBoundingClientRect().height > 0)
