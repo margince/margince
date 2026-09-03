@@ -33,7 +33,26 @@ func pageFrom(url string, kind crmcontracts.SiteReadPageKind, page webread.Page)
 		Fingerprint:     page.Fingerprint,
 		HeadText:        page.HeadText,
 		ExternalScripts: page.ExternalScripts,
+		ModuleScripts:   page.ModuleScripts,
 	}
+}
+
+// bodyIdentity is what makes two fetched pages the SAME document for the
+// crawl's dedupe: their stripped text and what their heads declared.
+//
+// The head half is not decoration. Once a page's meta description became
+// evidence the profile lane reads, two routes sharing a body but declaring
+// different descriptions stopped being the same document — and keying on text
+// alone would have dropped the second silently, taking a description no other
+// page carries with it. That is the one failure a dedupe must not have.
+//
+// The separator cannot occur in either part: StripTags collapses whitespace
+// runs, and a harvested declaration is joined from strings.Fields.
+func bodyIdentity(text string, headText []string) string {
+	if len(headText) == 0 {
+		return text
+	}
+	return text + "\n\x00\n" + strings.Join(headText, "\n")
 }
 
 // prose is everything this page SAYS, for a reader that wants to understand it:
@@ -60,14 +79,21 @@ func (p crawlPage) prose() string {
 }
 
 // isJSShell reports whether this page is a client-rendered application shell:
-// too little prose to read, and the scripts that would have rendered it.
+// too little prose to read, and a MODULE bundle that would have rendered it.
 //
-// Both halves are needed. Short AND scriptless is a genuinely empty document —
-// a parked domain, a placeholder — and must keep reading as one. Short and
-// SCRIPTED is a site whose words exist and are assembled by a browser this
-// reader does not run; judging that one "no readable text" says something
+// Both halves are needed. Short and scriptless is a genuinely empty document —
+// a parked domain, a placeholder — and must keep reading as one. Short with an
+// application bundle is a site whose words exist and are assembled by a browser
+// this reader does not run; judging that one "no readable text" says something
 // false about the company behind it.
+//
+// A parked domain is the case that decides the second half's shape. Those pages
+// routinely carry an analytics tag or a registrar's own script, so counting ANY
+// external script would let a squatter's placeholder escape the parked verdict
+// and stay a pending, retried, never-evidenced read forever. `type="module"` is
+// what separates them: it is how every current bundler emits an application
+// entry point, and no analytics snippet is served that way.
 func (p crawlPage) isJSShell() bool {
-	return p.ExternalScripts > 0 &&
+	return p.ModuleScripts > 0 &&
 		utf8.RuneCountInString(strings.TrimSpace(p.Text)) < crawlMinRunes
 }

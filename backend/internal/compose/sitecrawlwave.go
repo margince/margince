@@ -152,7 +152,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonOffDomain)
 		return
 	}
-	if r.seenText[page.Text] {
+	if r.seenText[bodyIdentity(page.Text, page.HeadText)] {
 		// An SPA catch-all serves the same document on every path; the
 		// duplicate carries zero new evidence and reporting it as a skip
 		// would flood the report with noise, so it vanishes silently.
@@ -173,7 +173,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		// finds a body no commit ever recorded, so one document was reported
 		// as thirty-one separate unreadable pages. The FIRST one is the honest
 		// report; the repeats are the same fact again.
-		r.seenText[page.Text] = true
+		r.seenText[bodyIdentity(page.Text, page.HeadText)] = true
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
 		return
 	}
@@ -199,7 +199,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		r.markVisited(servedURL)
 		kind = classifyKind(servedURL)
 	}
-	r.seenText[page.Text] = true
+	r.seenText[bodyIdentity(page.Text, page.HeadText)] = true
 	r.canonicalDone[localeCanonical(adm.url)] = true
 	if kind == crmcontracts.SiteReadPageKindImpressum {
 		r.impressumRead++

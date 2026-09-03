@@ -125,3 +125,38 @@ func TestOnlyLoadedScriptsAreCounted(t *testing.T) {
 		t.Fatalf("Page.ExternalScripts = %d, want 0 — an inline snippet loads nothing", page.ExternalScripts)
 	}
 }
+
+// A parked domain routinely carries a registrar's script or an analytics tag,
+// so "has a script" cannot separate one from a real site whose words a browser
+// assembles. The module count is what does, because that is how every current
+// bundler emits an application entry point.
+func TestOnlyAModuleBundleCountsAsAnApplication(t *testing.T) {
+	doc := `<html><head>
+<script src="https://plausible.io/js/script.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js"></script>
+</head><body><p>For sale.</p></body></html>`
+	page, err := testFetcher().FetchPage(context.Background(), serveHTML(t, doc).URL+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.ExternalScripts != 2 {
+		t.Fatalf("Page.ExternalScripts = %d, want 2 — both are loaded", page.ExternalScripts)
+	}
+	if page.ModuleScripts != 0 {
+		t.Fatalf("Page.ModuleScripts = %d, want 0 — analytics is not an application", page.ModuleScripts)
+	}
+}
+
+func TestAModuleBundleIsCountedAsOne(t *testing.T) {
+	doc := `<html><head>
+<script src="https://plausible.io/js/script.js"></script>
+<script type="module" crossorigin src="/assets/index-DyqdXLtN.js"></script>
+</head><body><div id="root"></div></body></html>`
+	page, err := testFetcher().FetchPage(context.Background(), serveHTML(t, doc).URL+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.ModuleScripts != 1 {
+		t.Fatalf("Page.ModuleScripts = %d, want 1 — the bundle is the application", page.ModuleScripts)
+	}
+}

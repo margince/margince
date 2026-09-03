@@ -61,9 +61,12 @@ type crawlPage struct {
 	// only prose the server sends. Kept out of Text because stored evidence
 	// snippets are matched against Text.
 	HeadText []string
-	// ExternalScripts counts the page's <script src=…> tags, which together
-	// with the text floor tells an application shell from an empty document.
+	// ExternalScripts counts the page's <script src=…> tags and ModuleScripts
+	// how many of those are ES modules. The MODULE count is what tells an
+	// application shell from an empty document — a parked domain carries
+	// analytics and registrar scripts just as readily as a real site does.
 	ExternalScripts int
+	ModuleScripts   int
 }
 
 type crawlSkip struct {
@@ -388,7 +391,7 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 			SeedURL:    seedURL,
 		},
 		visited:       visited,
-		seenText:      map[string]bool{seedPage.Text: true},
+		seenText:      map[string]bool{bodyIdentity(seedPage.Text, seedPage.HeadText): true},
 		canonicalDone: map[string]bool{localeCanonical(seedURL): true},
 		probeKindDone: map[crmcontracts.SiteReadPageKind]bool{},
 		totalBytes:    seedPage.Bytes,

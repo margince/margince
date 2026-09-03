@@ -5,10 +5,7 @@ package webread
 
 import (
 	"context"
-	"encoding/xml"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -60,10 +57,15 @@ type Page struct {
 	// wants it — which for a client-rendered site is the only prose the server
 	// ever sends.
 	HeadText []string
-	// ExternalScripts counts the <script src=…> tags the page loads. It says
-	// nothing on its own; a caller pairs it with a text floor to tell a
-	// client-rendered application shell from an empty document.
+	// ExternalScripts counts the <script src=…> tags the page loads, and
+	// ModuleScripts how many of those are ES modules.
+	//
+	// The module count is the one that answers "is this an application shell":
+	// a parked domain carries analytics and registrar scripts too, so the plain
+	// count cannot separate a squatter's placeholder from a real site whose
+	// words a browser assembles. A caller pairs ModuleScripts with a text floor.
 	ExternalScripts int
+	ModuleScripts   int
 }
 
 // MetaRefreshOnly reports whether this page is a redirect trampoline: it
@@ -141,6 +143,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	}
 	body := string(got.body)
 	head := extractHeadAssets(body, base)
+	external, modules := countScripts(body)
 	return Page{
 		URL:             rawURL,
 		FinalURL:        base.String(),
@@ -151,7 +154,8 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		Icons:           head.icons,
 		Refresh:         head.refresh,
 		HeadText:        head.text,
-		ExternalScripts: countExternalScripts(body),
+		ExternalScripts: external,
+		ModuleScripts:   modules,
 		Fingerprint:     fingerprintOf(got.header, body, base),
 	}, nil
 }
@@ -406,72 +410,6 @@ func resolveLink(base *url.URL, href string) (string, bool) {
 	}
 	abs.Fragment = ""
 	return abs.String(), true
-}
-
-// FetchSitemap retrieves <origin>/sitemap.xml (robots-checked like any path)
-// and returns its <loc> entries. Both shapes parse: a urlset yields page URLs;
-// a sitemapindex yields the CHILD SITEMAP URLs as-is — deliberately not
-// recursed, the crawl's discovery budget does not chase nested indexes, and
-// the caller is expected to ignore entries that are sitemaps rather than
-// pages. A missing sitemap (4xx) is an empty list with no error: most sites
-// have none, absence is normal.
-func (f *Fetcher) FetchSitemap(ctx context.Context, origin string) ([]string, error) {
-	sitemapURL := strings.TrimSuffix(origin, "/") + "/sitemap.xml"
-	parsed, err := url.Parse(sitemapURL)
-	if err != nil || parsed.Host == "" {
-		return nil, fmt.Errorf("webread: %q is not a fetchable origin", origin)
-	}
-	allowed, err := f.pathAllowed(ctx, parsed)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, fmt.Errorf("%w: %s", ErrRobotsDisallowed, parsed.Path)
-	}
-
-	body, status, _, err := f.getRaw(ctx, sitemapURL, "")
-	if err != nil {
-		return nil, err
-	}
-	switch {
-	case status == http.StatusOK:
-		return parseSitemapLocs(body)
-	case status >= 400 && status < 500:
-		return nil, nil // no sitemap declared — absence is normal
-	default:
-		return nil, fmt.Errorf("webread: sitemap.xml answered %d", status)
-	}
-}
-
-// parseSitemapLocs collects every <loc>'s text. Walking the token stream
-// instead of unmarshalling a struct lets one pass read both the urlset and
-// sitemapindex shapes — the element carrying a <loc> differs, the <loc> does
-// not.
-func parseSitemapLocs(body string) ([]string, error) {
-	decoder := xml.NewDecoder(strings.NewReader(body))
-	var locs []string
-	inLoc := false
-	for {
-		token, err := decoder.Token()
-		if errors.Is(err, io.EOF) {
-			return locs, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("webread: sitemap.xml is not XML: %w", err)
-		}
-		switch element := token.(type) {
-		case xml.StartElement:
-			inLoc = element.Name.Local == "loc"
-		case xml.EndElement:
-			inLoc = false
-		case xml.CharData:
-			if inLoc {
-				if loc := strings.TrimSpace(string(element)); loc != "" {
-					locs = append(locs, loc)
-				}
-			}
-		}
-	}
 }
 
 // SameRegistrableDomain reports whether two URLs' hostnames share an eTLD+1

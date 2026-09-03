@@ -73,20 +73,25 @@ func truncateRunes(s string, n int) string {
 	return string([]rune(s)[:n])
 }
 
-// countExternalScripts counts the <script src=…> tags a page loads.
+// countScripts counts the <script src=…> tags a page loads, and how many of
+// those are ES MODULES.
 //
 // It reads the whole document, not just the head: a client-rendered site puts
 // its bundle wherever the build tool chose, and the question here is what the
 // page needs a BROWSER for, not what it declares about itself. Inline scripts
-// are not counted — an analytics snippet is on every page, including the ones
-// that also carry prose.
-func countExternalScripts(rawHTML string) int {
+// are not counted — they carry no application.
+//
+// The module count is kept apart because the plain one cannot answer the
+// question a caller actually asks. A parked domain carries analytics and a
+// registrar's script just as readily as a real site does, so "has a script"
+// says nothing; `type="module"` is how every current bundler emits an
+// application entry point, and no analytics snippet is served that way.
+func countScripts(rawHTML string) (external, modules int) {
 	tokenizer := html.NewTokenizer(strings.NewReader(rawHTML))
-	count := 0
 	for {
 		tokenType := tokenizer.Next()
 		if tokenType == html.ErrorToken {
-			return count
+			return external, modules
 		}
 		if tokenType != html.StartTagToken && tokenType != html.SelfClosingTagToken {
 			continue
@@ -95,8 +100,13 @@ func countExternalScripts(rawHTML string) int {
 		if string(name) != "script" || !hasAttr {
 			continue
 		}
-		if tagAttrs(tokenizer)["src"] != "" {
-			count++
+		attrs := tagAttrs(tokenizer)
+		if attrs["src"] == "" {
+			continue
+		}
+		external++
+		if strings.EqualFold(strings.TrimSpace(attrs["type"]), "module") {
+			modules++
 		}
 	}
 }
