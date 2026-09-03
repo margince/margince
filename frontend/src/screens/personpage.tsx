@@ -14,7 +14,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
@@ -267,6 +267,7 @@ export function PersonPageV2({
   const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
   const recordZone = useRecordZone();
+  const details = usePageAside();
   const view = useQuery({
     queryKey: ["person360", id],
     queryFn: async () => {
@@ -373,6 +374,28 @@ export function PersonPageV2({
   return (
     <div className="wrap">
       <RecordView
+        // The contact's context, in the details pane beside the work: what is
+        // true of the PERSON does not belong to whichever part of them is open,
+        // so it does not move when a tab changes. The same pane, fold and
+        // memory of it as every other record page.
+        aside={
+          details.open ? (
+            <>
+              <PersonRail
+                view={view.data}
+                guard={guard.data}
+                firstName={firstName}
+                onExplain={() => navigate({ screen: "contacts", id })}
+                onOpenEmail={setOpenEmail}
+              />
+              <PersonEmailPanel
+                personId={id}
+                overlay={overlay}
+                archived={Boolean(person.archived_at)}
+              />
+            </>
+          ) : undefined
+        }
         name={person.full_name}
         avatarSrc={null}
         subtitle={<PersonSubtitle view={view.data} />}
@@ -391,7 +414,6 @@ export function PersonPageV2({
               onLogActivity={() => setDrawer("activity_log")}
               onAddTask={() => setDrawer("activity_task")}
             />
-            <PageAsideToggle />
           </>
         }
         actionsInline
@@ -401,6 +423,10 @@ export function PersonPageV2({
             options={PERSON_TABS}
             value={tab}
             onChange={(next) => navigate(personTabRoute(id, next))}
+            // The switch for the details pane, at the end of the tab row: it
+            // chooses what the page shows beside the work, so it stands with
+            // the controls that choose what the work column shows.
+            trailing={<PageAsideToggle />}
             labels={{
               overview: t(TAB_LABEL_KEYS.overview),
               timeline: t(TAB_LABEL_KEYS.timeline),
@@ -423,26 +449,6 @@ export function PersonPageV2({
           />
         }
       >
-        {/* The contact's context goes to the PAGE's own column, beside the
-            work rather than inside the record's grid — so it runs the full
-            height past the header and the tab strip, and does not move when a
-            tab changes. What is true of the PERSON does not belong to
-            whichever part of them is open. Same column, same fold and same
-            memory of it as every other record page. */}
-        <PageAside>
-          <PersonRail
-            view={view.data}
-            guard={guard.data}
-            firstName={firstName}
-            onExplain={() => navigate({ screen: "contacts", id })}
-            onOpenEmail={setOpenEmail}
-          />
-          <PersonEmailPanel
-            personId={id}
-            overlay={overlay}
-            archived={Boolean(person.archived_at)}
-          />
-        </PageAside>
         {tab === "overview" && (
           <div className="record-stack">
             {/* The readings lead the overview, under the strip that chose it —

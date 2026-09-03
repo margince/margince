@@ -1916,15 +1916,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await waitFor(() =>
       expect(container.querySelector(".co-overview-stack")).toBeTruthy(),
     );
-    // The context is the PAGE's column, not one of the record's own: it sits
-    // beside the work rather than inside it, which is what lets it run past
-    // the header and stay put when a tab changes. The record itself keeps no
-    // rail of its own — a second column inside one would be a third place to
-    // look.
-    expect(document.querySelector(".pageaside")).toBeTruthy();
-    expect(document.querySelector(".co-rail")).toBeTruthy();
+    // The context is the record's details pane, beside the work under the tab
+    // row, and nothing else: the record keeps no left rail — a second column
+    // would be a third place to look.
+    const pane = container.querySelector(".record-aside");
+    expect(pane).toBeTruthy();
+    expect(pane?.querySelector(".co-rail")).toBeTruthy();
     expect(container.querySelector(".record-rail")).toBeNull();
-    expect(container.querySelector(".record-aside")).toBeNull();
   });
 
   // Every card is still ON the page, wherever it sits. Named individually

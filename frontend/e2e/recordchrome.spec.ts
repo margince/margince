@@ -13,11 +13,12 @@ import { mockApi } from "./seed";
  *    ellipsis on every record header was 32×40. The unit gate asserted the class
  *    was present, which jsdom can see, and a rectangle is exactly what it
  *    cannot.
- * 2. The context column stands BESIDE the work column or UNDER it, never
- *    both-and-neither. Below the fold it is a panel at the foot of the page; on
- *    a phone the sidebar leaves the grid entirely, and a rule written for the
- *    tablet was still claiming a 252px rail track at 390px — which put the
- *    context in a second column beside a 138px record.
+ * 2. The details pane stands BESIDE the work column under the tab row, or
+ *    UNDER the work column, never both-and-neither. Below the fold it is a
+ *    pane at the foot of the record; on a phone the sidebar leaves the grid
+ *    entirely, and a rule written for the tablet was still claiming a 252px
+ *    rail track at 390px — which put the context in a second column beside a
+ *    138px record.
  *
  * Geometry, therefore, and in a browser: both defects were invisible to every
  * unit test in the tree and obvious in a screenshot.
@@ -77,89 +78,90 @@ test.describe("a record's icon-only buttons", () => {
   }
 });
 
-test.describe("the record's context column", () => {
-  // Beside the record above the fold, and one-at-a-time below it. 900px and
-  // 390px are both here because the rule that broke the phone was written for
-  // the tablet: a fix swept at only the failing width is a fix nobody can trust
+test.describe("the record's details pane", () => {
+  // Beside the record above the fold, and under it below. 900px and 390px are
+  // both here because the rule that broke the phone was written for the
+  // tablet: a fix swept at only the failing width is a fix nobody can trust
   // at the other one.
   const BESIDE = 1440;
-  const SWAPPED = [900, 390];
+  const STACKED = [900, 390];
 
-  test(`stands beside the work column at ${BESIDE}px`, async ({ page }) => {
+  // The switch at the end of the tab row: the one pressed control with a glyph
+  // and no word.
+  function detailsSwitch(page: Page) {
+    return page
+      .locator(".recordtabs-trailing")
+      .locator("button[aria-label]")
+      .filter({ has: page.locator("svg") })
+      .and(page.locator("[aria-pressed]"));
+  }
+
+  test(`opens beside the work column, under the tab row, at ${BESIDE}px`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: BESIDE, height: 900 });
     await openRecord(page, "/#/companies/o-brandt");
 
-    const aside = await page.locator(".pageaside").boundingBox();
-    const main = await page.locator("main.main").boundingBox();
-    if (!aside || !main) {
+    const pane = page.locator(".record-aside");
+    // Closed on arrival: the pane is where a reader goes for the attributes,
+    // not what they open a record to see.
+    await expect(pane, "the pane is open on arrival").toBeHidden();
+    await detailsSwitch(page).click();
+    await expect(pane, "the switch did not open the pane").toBeVisible();
+
+    const paneBox = await pane.boundingBox();
+    const work = await page.locator(".page-zones-main").boundingBox();
+    const tabs = await page.locator(".record-tabs").boundingBox();
+    if (!paneBox || !work || !tabs) {
       throw new Error(
-        "the column and the work column are visible but one has no box",
+        "the pane, the work column and the tab row are visible but one has no box",
       );
     }
     expect(
-      aside.x,
-      "the context column is not beside the work column",
-    ).toBeGreaterThanOrEqual(main.x + main.width - 1);
+      paneBox.x,
+      "the pane is not beside the work column",
+    ).toBeGreaterThanOrEqual(work.x + work.width - 1);
+    expect(
+      paneBox.y,
+      "the pane does not open under the tab row",
+    ).toBeGreaterThanOrEqual(tabs.y + tabs.height - 1);
   });
 
-  for (const width of SWAPPED) {
-    test(`shows the record OR its context at ${width}px, never both`, async ({
+  for (const width of STACKED) {
+    test(`stacks the pane under the work column at ${width}px`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 844 });
       await openRecord(page, "/#/companies/o-brandt");
 
-      const main = page.locator("main.main");
-      const aside = page.locator(".pageaside");
-      // Arriving shows the record. The remembered preference belongs to a desk
-      // with room for both columns; below the fold, opening on the context would
-      // hide the very thing the reader asked for.
-      await expect(
-        main,
-        "the record is not on screen on arrival",
-      ).toBeVisible();
-      await expect(
-        aside,
-        "the context is on screen on arrival, in place of the record that was opened",
-      ).toBeHidden();
+      const pane = page.locator(".record-aside");
+      await expect(pane, "the pane is open on arrival").toBeHidden();
+      await detailsSwitch(page).click();
+      await expect(pane, "the switch did not open the pane").toBeVisible();
 
-      // The switch stands with the record's verbs on the pages that keep it
-      // there, and at the end of the tab row on the pages that have taken the
-      // design's glance; either way it is the one pressed control with a
-      // glyph and no word.
-      const switchToContext = page
-        .locator(".record-actions, .recordtabs-trailing")
-        .locator("button[aria-label]")
-        .filter({ has: page.locator("svg") })
-        .and(page.locator("[aria-pressed]"));
-      await switchToContext.click();
-
-      await expect(
-        aside,
-        "the switch did not bring the context on screen",
-      ).toBeVisible();
-      await expect(
-        main,
-        "the record is still drawn behind the context, so both share a screen that fits one",
-      ).toBeHidden();
-
-      // And it takes the whole column rather than a 288px stack in the middle of
-      // it: the fixed width the open column's fold needs is not a width this
-      // state has any use for.
-      const box = await aside.boundingBox();
-      const body = await page.locator(".pageaside-body").boundingBox();
-      if (!box || !body) {
-        throw new Error("the context column is visible but has no box");
+      const paneBox = await pane.boundingBox();
+      const work = await page.locator(".page-zones-main").boundingBox();
+      if (!paneBox || !work) {
+        throw new Error(
+          "the pane and the work column are visible but one has no box",
+        );
       }
+      // Under the work rather than squeezed beside it: two columns leave
+      // neither readable at this width.
       expect(
-        body.width,
-        "the context's cards keep the narrow column's width in a region several times wider",
-      ).toBeGreaterThan(box.width * 0.8);
+        paneBox.y,
+        "the pane stands beside the work column on a screen that fits one",
+      ).toBeGreaterThanOrEqual(work.y + work.height - 1);
+      // And it takes the record's whole width rather than a 300px stack at
+      // the edge of it.
+      expect(
+        paneBox.width,
+        "the pane keeps the narrow column's width in a region several times wider",
+      ).toBeGreaterThan(work.width * 0.8);
 
-      // Back to the record, from the panel's own head.
-      await page.locator(".pageaside-fold").click();
-      await expect(main, "the record did not come back").toBeVisible();
-      await expect(aside, "the context is still on screen").toBeHidden();
+      // And away again, from the same switch.
+      await detailsSwitch(page).click();
+      await expect(pane, "the pane is still on screen").toBeHidden();
     });
   }
 });

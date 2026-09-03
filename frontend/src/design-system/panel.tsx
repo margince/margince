@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { Eyebrow } from "./eyebrow";
 import "./panel.css";
 
 // Panel is the titled-card shape Card does not offer: a fixed-height header
@@ -131,6 +132,32 @@ export function PanelPlate({
     <div className={["panel-plate", className ?? ""].filter(Boolean).join(" ")}>
       {children}
     </div>
+  );
+}
+
+// PanelGroupHead names one GROUP inside a pane — the deals, then the projects,
+// under the one head that names the pane. One level in from the pane's own
+// title, as an eyebrow, so the groups read as parts of one reading rather than
+// as two more panes; and its verb rides the same line, so a group keeps one
+// place for it whatever state its rows are in — moved into an empty plate it
+// changed position with the content, and a reader who has just read one group
+// looks for the next verb where the last one was.
+export function PanelGroupHead({
+  title,
+  level,
+  action,
+}: Readonly<{
+  title: string;
+  // Where the group sits in the outline: one under whatever heads the pane.
+  level: "h3" | "h4";
+  // The verb that opens one of these. Absent on a record nobody may write to.
+  action?: ReactNode;
+}>) {
+  return (
+    <PanelBody className="panel-grouphead">
+      <Eyebrow as={level}>{title}</Eyebrow>
+      {action}
+    </PanelBody>
   );
 }
 

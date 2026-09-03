@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
@@ -85,7 +85,6 @@ import {
 import { CompanyPeopleList } from "./companypeople/contacts";
 import { CoverageBand } from "./companypeople/summary";
 import { CompanyProfileForm } from "./companyprofiletab";
-import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
 import {
@@ -1859,6 +1858,11 @@ function CompanyPage({
   // the one decision, rather than the page rendering a rail element that
   // itself returns null while `RecordView` still reserves the column for it.
   const composerOpen = Boolean(composing) || writingEmail;
+  // The details pane yields to the composer, which opens as its own drawer
+  // (ComposeModal's `placement="right"` is a portalled overlay): no pane at
+  // all while one is open, so the column is absent for exactly as long as the
+  // drawer holds that space, rather than standing open around nothing.
+  const details = usePageAside(!composerOpen);
   // The rail, or nothing while a composer holds its column. Both drawers open
   // into this space, so a rail beside them would be two things in one place —
   // and absent rather than narrowed, because a rail squeezed to a third of its
@@ -1955,6 +1959,14 @@ function CompanyPage({
         </>
       }
       actionsInline
+      // The account's context, beside the work under the tab row: what is
+      // true of the ACCOUNT does not belong to whichever part of it is open,
+      // so the pane stays put when a tab changes.
+      aside={details.open ? rail : undefined}
+      // The bar that chooses which part of the account to read, across the
+      // page above the columns: the details pane opens under it, from the
+      // control at its end.
+      tabs={tabs}
       // A company's mark is its logo, so it is drawn on a square the way a
       // logo is rather than round the way a face is.
       markShape="organization"
@@ -1962,25 +1974,12 @@ function CompanyPage({
       // The Partner tab is a form, so it does not repeat it under itself.
       {...slots}
     >
-      {/* The account's context goes to the PAGE's own column, beside the work
-          rather than inside the record's grid — so it runs the full height
-          past the header and the tab strip, and does not move when a tab
-          changes. What is true of the ACCOUNT does not belong to whichever
-          part of it is open.
-
-          It yields to the composer, which opens as its own drawer rather than
-          into a column (ComposeModal's `placement="right"` is a portalled
-          overlay): no `PageAside` at all while one is open, so the column is
-          absent for exactly as long as the drawer holds that space, rather
-          than standing open around nothing. */}
-      {!composerOpen && <PageAside>{rail}</PageAside>}
       <CompanyRecordBody
         org={org}
         view={view}
         overlay={overlay}
         loading={loading}
         failed={failed}
-        tabs={tabs}
         tab={tab}
         onTab={onTab}
         t={t}
@@ -2061,7 +2060,6 @@ function CompanyRecordBody({
   overlay,
   loading,
   failed,
-  tabs,
   tab,
   onTab,
   t,
@@ -2085,7 +2083,6 @@ function CompanyRecordBody({
   // sectionState's own doc for why "undefined view" is not one fact.
   loading: boolean;
   failed: boolean;
-  tabs: ReactNode;
   tab: CompanyTab;
   onTab: (next: CompanyTab) => void;
   t: ReturnType<typeof useT>;
@@ -2112,11 +2109,6 @@ function CompanyRecordBody({
   const [preparing, setPreparing] = useState<string | null>(null);
   return (
     <>
-      {/* The bar that chooses which part of the account to read sits at the
-          top of the column it governs, not across the page: the readings and
-          the brief above it describe the ACCOUNT, and a bar spanning them
-          reads as though they belonged to whichever tab is selected. */}
-      {tabs}
       {/* Overlay refuses the whole company page, not one tab of it: the
           partner extension and the field history are native records the
           mirror does not hold, so switching tabs must not walk around the
@@ -2446,8 +2438,10 @@ function CompanyOverviewStack({
           <div className="co-glance-col">
             <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
             <MoneyPane
+              organizationId={org.id}
               view={view}
               loading={loading}
+              readOnly={readOnly}
               onAllDeals={onAllDeals}
               onOpenRecord={onOpenRecord}
               // The verbs ride with the WORK rather than with the figures:
@@ -2458,16 +2452,6 @@ function CompanyOverviewStack({
               // the moment it mounts, which is itself a disclosure to a reader
               // who may not see deals.
               verbs={workVerbs({ view, org, readOnly })}
-            />
-            {/* The deliveries this company is part of — as the client, a
-      partner or a subcontractor — under the money they came from.
-      In the column rather than across the page: a pane spanning
-      both columns under a two-column glance read as a second page
-      starting. */}
-            <CompanyProjects
-              organizationId={org.id}
-              projects={view?.projects}
-              readOnly={readOnly}
             />
           </div>
           <div className="co-glance-col">

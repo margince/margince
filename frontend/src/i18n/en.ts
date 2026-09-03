@@ -182,8 +182,6 @@ export const en = {
   "nav.tags": "Tag",
 
   "shell.railAria": "Primary navigation",
-  "shell.aside.hide": "Hide",
-  "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",

@@ -353,6 +353,37 @@
   color: var(--textPrimary);
   margin: 0;
 }
+/* An empty group as a plate: the dashed edge says the space is waiting, the
+   recessed ground keeps it under the pane's own rows. */
+.empty-plate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgHover);
+}
+.empty-plate-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--textContent);
+}
+/* What this kind of thing is FOR, under the line saying there is none of it.
+   Held to a measure: a definition set across the full pane width reads as body
+   copy the reader has to work through, and this one is meant to be taken in a
+   glance. */
+.empty-plate-note {
+  margin: 0;
+  max-inline-size: 46ch;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--textMeta);
+  text-wrap: pretty;
+}
 .empty-body {
   max-width: 52ch;
   font-size: var(--fs-body);

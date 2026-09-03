@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { navigate, useRoute } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -1724,6 +1724,7 @@ function LeadRecord({
   const t = useT();
   const queryClient = useQueryClient();
   const refreshAfterTouch = useLadderRefresh(id);
+  const details = usePageAside();
   // ONE sentence about this lead being closed, minted here and pointed at by
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
@@ -1771,6 +1772,21 @@ function LeadRecord({
 
   return (
     <RecordView
+      // What a rep CONSULTS — who owns this and why it scores what it scores
+      // — in the details pane beside the work, so the work column stays the
+      // work and the context does not move when the tab does. The same pane,
+      // fold and memory of it as every other record page.
+      aside={
+        details.open ? (
+          <>
+            <LeadRail
+              lead={lead}
+              writer={writer}
+              terminalReasonId={terminalReasonId}
+            />
+          </>
+        ) : undefined
+      }
       name={leadIdentityName(lead) || t("lead.unnamed")}
       avatarSrc={null}
       // The "Lead" marker rides the identity, not a badge among badges: a
@@ -1801,7 +1817,6 @@ function LeadRecord({
             onQualify={() => setDialog("qualify")}
             onDisqualify={() => setDialog("disqualify")}
           />
-          <PageAsideToggle />
         </>
       }
       actionsInline
@@ -1877,20 +1892,13 @@ function LeadRecord({
             overview: t("tab.overview"),
             history: t("tab.history"),
           }}
+          // The switch for the details pane, at the end of the tab row: it
+          // chooses what the page shows beside the work, so it stands with
+          // the controls that choose what the work column shows.
+          trailing={<PageAsideToggle />}
         />
       }
     >
-      {/* What a rep CONSULTS — who owns this and why it scores what it scores
-          — in the PAGE's own column, so the column beside it can stay the work
-          and the context does not move when the tab does. Same column, same
-          fold and same memory of it as every other record page. */}
-      <PageAside>
-        <LeadRail
-          lead={lead}
-          writer={writer}
-          terminalReasonId={terminalReasonId}
-        />
-      </PageAside>
       {tab === "overview" && (
         <LeadOverviewPane
           lead={lead}

@@ -22,7 +22,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useCanWriteRecord } from "../app/capability";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
@@ -3863,6 +3863,7 @@ function dealBand({
 
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const details = usePageAside();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const queryClient = useQueryClient();
@@ -3922,6 +3923,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // requests for facts the page already holds.
   const statusQuery = useDealStatusCard(id);
   const coverageRead = useDealCoverage(id, !overlay);
+  // The pane's content, or nothing while it is folded: an aside handed to the
+  // view reserves its column, so a closed pane hands it none.
+  const dealContext = (deal: Deal) =>
+    details.open ? (
+      <DealContext deal={deal} coverage={coverageRead} overlay={overlay} />
+    ) : undefined;
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
   const timelineQuery = useRecordTimeline("deal", id, {
     filters: timelineFilters,
@@ -4003,6 +4010,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           );
           return (
             <RecordView
+              // Context first: who these people are, before the verbs that act
+              // on them. The seats moved out of the main column when the
+              // readings band started counting them — the same two facts were
+              // reaching a reader three times on one screen. The pane is the
+              // one every record page draws, with the same fold and the same
+              // memory of it.
+              aside={dealContext(deal)}
               name={deal.name}
               subtitle={<DealSubtitle deal={deal} />}
               zone={recordZone}
@@ -4061,41 +4075,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 t,
               )}
             >
-              {/* Context first: who these people are, before the verbs that act
-                  on them. The seats moved out of the main column when the
-                  readings band started counting them — the same two facts were
-                  reaching a reader three times on one screen.
-
-                  DealSeats is present in overlay mode too, stating the refusal.
-                  Dropping the whole column there took the seats away silently,
-                  which reads as "nobody is on this deal" — the deal rooms and
-                  the mail aside stay out because they are actions rather than a
-                  withheld fact.
-
-                  It is the PAGE's own column, beside the work rather than
-                  inside the record's grid: same column, same fold and same
-                  memory of it as every other record page. */}
-              <PageAside>
-                <DealSeats
-                  coverage={coverageRead.coverage}
-                  withheld={coverageRead.withheld}
-                  pending={coverageRead.pending}
-                  overlay={overlay}
-                />
-                {/* How this deal is filed, in the rail with the rest of its
-                    context — the same card a person and a company draw, in the
-                    same column of their pages. It sat full-width in the
-                    overview before, between the readings and the stage
-                    stepper, where a reader looking for the record's context
-                    was not looking. */}
-                <DealTagsSection deal={deal} />
-                {!overlay && (
-                  <>
-                    <DealRoomAside dealId={id} dealName={deal.name} />
-                    <DealEmailAside dealId={id} />
-                  </>
-                )}
-              </PageAside>
               {/* The same strip every record carries: a place a reader
                   navigates, drawn as a rule with the open body underlined. */}
               <RecordTabs
@@ -4210,5 +4189,38 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         }}
       </QueryGate>
     </div>
+  );
+}
+
+// The deal's context, for the details pane: the seats first, then how the deal
+// is filed, then the deal rooms and the mail card. DealSeats is present in
+// overlay mode too, stating the refusal — dropping it there took the seats
+// away silently, which reads as "nobody is on this deal"; the rooms and the
+// mail aside stay out because they are actions rather than a withheld fact.
+function DealContext({
+  deal,
+  coverage,
+  overlay,
+}: Readonly<{
+  deal: Deal;
+  coverage: ReturnType<typeof useDealCoverage>;
+  overlay: boolean;
+}>) {
+  return (
+    <>
+      <DealSeats
+        coverage={coverage.coverage}
+        withheld={coverage.withheld}
+        pending={coverage.pending}
+        overlay={overlay}
+      />
+      <DealTagsSection deal={deal} />
+      {!overlay && (
+        <>
+          <DealRoomAside dealId={deal.id} dealName={deal.name} />
+          <DealEmailAside dealId={deal.id} />
+        </>
+      )}
+    </>
   );
 }

@@ -1,18 +1,6 @@
 /* The work card's own two shapes: a group's subhead, and a row's status
    clause on its own line under the row's facts. */
 
-/* A GROUP's label inside the work section — deals, then projects. One level in
-   from a section's own label, so the two groups read as parts of one reading
-   rather than as two more sections of the card. */
-.co-work-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-  padding-bottom: var(--space-2);
-}
-
 /* Its own line, full row width, so a sentence wraps as a sentence rather than
    flowing into the chip rhythm the meta line above it keeps. */
 .co-work-status {
@@ -108,42 +96,4 @@
   margin-top: var(--space-2);
   padding-top: var(--space-2);
   border-top: 1px solid var(--borderSubtle);
-}
-
-/* AN EMPTY GROUP, as a plate rather than a sentence.
-   The dashed edge is what says the space is WAITING rather than broken: a
-   solid card holding one grey line reads as a section whose content failed to
-   arrive, and this group's emptiness is a fact about the account. Its verb is
-   not in here — it stays in the group's own head, so a reader who has just
-   pressed one finds the next where the last one was. */
-.co-work-empty {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  align-items: center;
-  text-align: center;
-  padding: var(--space-5) var(--space-4);
-  border: 1px dashed var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgHover);
-}
-
-.co-work-empty-title {
-  margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  color: var(--textContent);
-}
-
-/* What this kind of work is FOR, under the line saying there is none of it.
-   Held to a measure: a definition set across the full card width reads as body
-   copy the reader has to work through, and this one is meant to be taken in a
-   glance. */
-.co-work-empty-note {
-  margin: 0;
-  max-inline-size: 46ch;
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-  color: var(--textMeta);
-  text-wrap: pretty;
 }
