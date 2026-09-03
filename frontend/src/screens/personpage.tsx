@@ -414,7 +414,6 @@ export function PersonPageV2({
               onLogActivity={() => setDrawer("activity_log")}
               onAddTask={() => setDrawer("activity_task")}
             />
-            <PageAsideToggle />
           </>
         }
         actionsInline
@@ -424,6 +423,10 @@ export function PersonPageV2({
             options={PERSON_TABS}
             value={tab}
             onChange={(next) => navigate(personTabRoute(id, next))}
+            // The switch for the details pane, at the end of the tab row: it
+            // chooses what the page shows beside the work, so it stands with
+            // the controls that choose what the work column shows.
+            trailing={<PageAsideToggle />}
             labels={{
               overview: t(TAB_LABEL_KEYS.overview),
               timeline: t(TAB_LABEL_KEYS.timeline),

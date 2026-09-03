@@ -1817,7 +1817,6 @@ function LeadRecord({
             onQualify={() => setDialog("qualify")}
             onDisqualify={() => setDialog("disqualify")}
           />
-          <PageAsideToggle />
         </>
       }
       actionsInline
@@ -1893,6 +1892,10 @@ function LeadRecord({
             overview: t("tab.overview"),
             history: t("tab.history"),
           }}
+          // The switch for the details pane, at the end of the tab row: it
+          // chooses what the page shows beside the work, so it stands with
+          // the controls that choose what the work column shows.
+          trailing={<PageAsideToggle />}
         />
       }
     >
