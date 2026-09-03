@@ -19,12 +19,24 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-func address(email string, primary bool, archived bool) crmcontracts.PersonEmail {
+// The four shapes an address on a record can have. Named rather than passed as
+// two booleans: `address("x", false, true)` at a call site says nothing about
+// which flag is which, and the whole table turns on telling them apart.
+type addressShape int
+
+const (
+	plain addressShape = iota
+	marked
+	retired
+	markedAndRetired
+)
+
+func address(email string, shape addressShape) crmcontracts.PersonEmail {
 	out := crmcontracts.PersonEmail{
 		Email:     openapi_types.Email(email),
-		IsPrimary: primary,
+		IsPrimary: shape == marked || shape == markedAndRetired,
 	}
-	if archived {
+	if shape == retired || shape == markedAndRetired {
 		when := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 		out.ArchivedAt = &when
 	}
@@ -48,8 +60,8 @@ func TestTheAddressAContactIsWrittenTo(t *testing.T) {
 		{
 			name: "takes the one marked primary",
 			person: personWith(
-				address("old@buyer.test", false, false),
-				address("anna@buyer.test", true, false),
+				address("old@buyer.test", plain),
+				address("anna@buyer.test", marked),
 			),
 			want: "anna@buyer.test",
 		},
@@ -59,8 +71,8 @@ func TestTheAddressAContactIsWrittenTo(t *testing.T) {
 			// to them would read the flag as permission when it only ranks.
 			name: "takes the first live one when nothing is marked",
 			person: personWith(
-				address("anna@buyer.test", false, false),
-				address("anna.weber@buyer.test", false, false),
+				address("anna@buyer.test", plain),
+				address("anna.weber@buyer.test", plain),
 			),
 			want: "anna@buyer.test",
 		},
@@ -69,8 +81,8 @@ func TestTheAddressAContactIsWrittenTo(t *testing.T) {
 			// it either bounces or reaches a person who asked us to stop.
 			name: "skips an archived address even when it is first",
 			person: personWith(
-				address("left@buyer.test", false, true),
-				address("anna@buyer.test", false, false),
+				address("left@buyer.test", retired),
+				address("anna@buyer.test", plain),
 			),
 			want: "anna@buyer.test",
 		},
@@ -79,14 +91,14 @@ func TestTheAddressAContactIsWrittenTo(t *testing.T) {
 			// address itself, and the flag only ranks among live ones.
 			name: "skips an archived address even when it is marked primary",
 			person: personWith(
-				address("left@buyer.test", true, true),
-				address("anna@buyer.test", false, false),
+				address("left@buyer.test", markedAndRetired),
+				address("anna@buyer.test", plain),
 			),
 			want: "anna@buyer.test",
 		},
 		{
 			name:   "answers nothing when every address is archived",
-			person: personWith(address("left@buyer.test", false, true)),
+			person: personWith(address("left@buyer.test", retired)),
 			want:   "",
 		},
 		{
