@@ -205,7 +205,7 @@ test.describe("company record — the glance's page shape", () => {
     await openCompany(page, POPULATED_ORG as string);
     const call = page.getByText(/· 360$/);
     await expect(call).toHaveCount(1);
-    const needs = page.getByRole("heading", { name: "Was Sie jetzt braucht" });
+    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toHaveCount(1);
     const money = page.getByRole("heading", { name: "Kommerziell" });
     const ask = page.getByRole("heading", { name: "Diesen Account befragen" });
@@ -235,7 +235,7 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
-    const needs = page.getByRole("heading", { name: "Was Sie jetzt braucht" });
+    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toBeVisible();
 
     await page.getByRole("button", { name: "Personen" }).click();

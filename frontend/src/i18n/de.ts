@@ -841,7 +841,7 @@ export const de = {
   "co.strip.lastTouch.today": "Heute",
   "co.strip.lastTouch.ago": "vor {count} T",
   "co.strip.lastTouch.theirs": "Die Gegenseite hat zuletzt geschrieben",
-  "co.strip.lastTouch.ours": "Sie haben zuletzt geschrieben",
+  "co.strip.lastTouch.ours": "Du hast zuletzt geschrieben",
   "co.strip.lastTouch.never": "Noch kein Austausch",
   "co.strip.next": "Als Nächstes",
   "co.strip.next.none": "Nichts geplant",
@@ -2842,7 +2842,7 @@ export const de = {
   "co.360.title": "Margince hat diesen Datensatz gelesen",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "Dieser Account · 360",
-  "today.title": "Was Sie jetzt braucht",
+  "today.title": "Was dich jetzt braucht",
   "co.spine.earlier_other": "{count} frühere Gespräche",
   "co.spine.earlier_one": "{count} früheres Gespräch",
   "today.failed":
