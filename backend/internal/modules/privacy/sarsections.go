@@ -174,9 +174,46 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
 		   FROM person_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
 		   WHERE pc.person_id = $1`, nil},
-		{&pkg.ConsentEvents, `SELECT cp.key AS purpose, ce.new_state, ce.source, ce.captured_at
+		// The proof row in full, not a summary of it.
+		//
+		// Four of these columns ARE the Art. 7(1) demonstrability: the exact
+		// wording the subject was shown and its version, when the double
+		// opt-in round trip completed, and what made the grant confirmable
+		// without one. Exporting the state and the date while withholding them
+		// answers "what did you decide" and not "what did I agree to", which is
+		// the question a subject access request is actually asking.
+		//
+		// captured_by names who recorded it — a person, an agent, or the
+		// system. confirm_ip and confirm_user_agent are deliberately absent:
+		// they are the subject's own network fingerprint, held to defend the
+		// grant, and handing them back in an export widens where they exist
+		// without telling the subject anything they do not know.
+		{&pkg.ConsentEvents, `SELECT cp.key AS purpose, ce.new_state, ce.source, ce.captured_at,
+		          ce.lawful_basis, ce.policy_text, ce.policy_version,
+		          ce.double_opt_in_confirmed_at, ce.issuance_trigger, ce.captured_by
 		   FROM consent_event ce JOIN consent_purpose cp ON cp.id = ce.purpose_id
 		   WHERE ce.person_id = $1`, nil},
+		// What made business correspondence lawful: the inbound message, the
+		// inquiry, the open deal or the exchange somebody recorded by hand.
+		// Absent from the export until now, which meant a subject could be told
+		// their consent state and not the basis a message to them actually
+		// stood on.
+		// source_entity_id is withheld deliberately: those ids point at activity
+		// and deal rows whose own audience gating lives in the record sections
+		// above, and handing over a bare id would route around it. The TYPE
+		// still answers what kind of thing the basis was.
+		//
+		// `note` is withheld for a different reason, and it is a judgement
+		// rather than a rule. It is free text a rep types to describe an
+		// in-person exchange, and nothing tells them it will be shown to the
+		// person it is about — so it can name a third party or repeat what
+		// somebody said. The kind and the date answer "an in-person exchange on
+		// this date was the basis", which is what Art. 15 asks. Export the note
+		// only alongside telling reps, at the surface where they type it, that
+		// the subject can read it.
+		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, captured_at
+		   FROM consent_qualifying_event
+		   WHERE person_id = $1`, nil},
 		// The token row itself is deliberately NOT read: it is a live
 		// credential, and the subject already holds their own copy in the mail
 		// that delivered it. Registered sarForbidden so a future section over
@@ -227,6 +264,18 @@ func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []id
 // captured what from where.
 func sarProvenanceSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
+		// Why the installation holds this person at all: what they did, or
+		// what was done to obtain them. Art. 15(1)(g) asks for the source of
+		// the data, and this is the record that answers it in the subject's
+		// own terms rather than as an internal surface name.
+		//
+		// source_entity_id is withheld for the reason the qualifying events
+		// withhold theirs: it points at rows whose own audience gating lives
+		// in the record sections, and a bare id would route around it.
+		{&pkg.AcquisitionEvidence, `SELECT kind, source_entity_type, purpose_claimed,
+		          occurred_at, captured_at
+		   FROM person_acquisition_evidence
+		   WHERE person_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's
 		// purgeDerivedTraces): by email, ILIKE against the stored address, and
 		// by channel identity, a typed JSONB path equality rather than a

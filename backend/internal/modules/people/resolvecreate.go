@@ -90,6 +90,10 @@ type PersonSpec struct {
 	// Visibility is "" for the column default; capture mints 'owner' rows
 	// until a human promotes them, the channel bot mints 'workspace' ones.
 	Visibility string
+	// Acquisition says why this contact exists — what the person did, or what
+	// was done to obtain them. Distinct from Source, which says which surface
+	// typed it in. The zero value records unknown_legacy rather than nothing.
+	Acquisition Acquisition
 	// Quarantined flags the impersonation tells capture screens for; the row
 	// is still created, because hiding suspicious mail is worse than labeling
 	// it.
@@ -141,6 +145,16 @@ func createPerson(ctx context.Context, tx pgx.Tx, match PersonResolution, spec P
 		return ids.PersonID{}, err
 	}
 	if err := insertPersonPhones(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
+		return ids.PersonID{}, err
+	}
+	// Why this contact exists, written beside the contact itself.
+	//
+	// Here rather than at each door, because every production creation path
+	// comes through this function: a new door gets the record without knowing
+	// it exists, and a door that says nothing still leaves a row saying nobody
+	// knows. Leaving it to callers is how three of four doors would record it
+	// and the fourth would be discovered by an auditor.
+	if err := recordAcquisition(ctx, tx, id, spec.Acquisition, spec.CapturedBy); err != nil {
 		return ids.PersonID{}, err
 	}
 	return id, nil

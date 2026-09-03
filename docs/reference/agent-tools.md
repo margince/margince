@@ -130,6 +130,7 @@ Columns:
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
 | `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |
 | `forecast_movement` | 🟢 | `read` | — | Diffs two stored snapshots, so it answers only where snapshots exist |
+| `forecast_input_checks` | 🟢 | `read` | — | Reads the nightly run's own record, so it answers only where a run has completed |
 | `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `search_records` | 🟢 | `read` | — | Mirror-backed; results carry `trust_tier: external` |
 | `send_email` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |

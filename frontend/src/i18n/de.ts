@@ -2399,6 +2399,7 @@ export const de = {
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.eyebrow": "Dein Morgen",
   "brief.eyebrow.weekly": "Deine Woche",
+  "brief.eyebrow.asOf": "{scope} · Stand {at}",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Welches Briefing",
   "brief.view.morning": "Morgen",
@@ -6806,9 +6807,9 @@ export const de = {
   "person.graph.withContact": "mit diesem Kontakt",
   "person.graph.counts":
     "{total} Interaktionen in 90 Tagen \u00b7 {inbound} eingehend, {outbound} ausgehend",
+  "person.graph.untitledMessage": "Ohne Titel",
   "person.graph.countsOnly":
     "Nur Z\u00e4hlwerte \u2014 die Nachrichten selbst bleiben in der Chronik.",
-  "person.graph.untitledMessage": "Nachricht ohne Betreff",
   "person.intro.routesTitle": "Wege hinein",
   "person.graph.droppedNote": "{count} weitere werden nicht angezeigt.",
   "person.graph.withheldDirect":

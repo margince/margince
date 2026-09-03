@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import type { components } from "../api/schema";
+import { viewerZone } from "../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,6 +14,7 @@ import { Card } from "./atoms";
 import { EmailDetail } from "./emaildetail";
 import { EmailEntry } from "./emailentry";
 import { EmailReference } from "./emailreference";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { Panel, PanelBody } from "./panel";
 
 // The one email row, and the citation that opens the same drawer.
@@ -202,6 +204,56 @@ export const Detail: StoryObj = {
           activityId={BASE.activity_id}
           onClose={() => {}}
           formatWhen={() => "1 Sep 09:12"}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The record page's drawer, which draws nothing when no message is open. The
+ * story shows the open state; the closed one is an empty canvas by design.
+ */
+export const RecordDrawer: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
+        () =>
+          jsonResponse({
+            id: BASE.activity_id,
+            lifecycle: "delivered",
+            occurred_at: BASE.occurred_at,
+            summary: BASE,
+            body: "Können wir Dienstag kurz sprechen?\n\nViele Grüße\nAna",
+            from: [
+              { address: "ana@brandt.example", display_name: "Ana Sommer" },
+            ],
+            to: [],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            access: {
+              content_state: "available",
+              display_status: "team",
+              can_change: false,
+              change_mode: "none",
+            },
+            can_reply: true,
+            can_relink: false,
+            version: 3,
+          }),
+    });
+    return (
+      <StoryProviders>
+        {/* The reader's own zone, as every record page passes its own: a
+            story that pinned one would be the only place in the tree naming a
+            timezone, which is what format/zone-by-purpose holds. */}
+        <OpenEmailDrawer
+          activityId={BASE.activity_id}
+          zone={viewerZone()}
+          onClose={() => {}}
         />
       </StoryProviders>
     );

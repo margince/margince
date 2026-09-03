@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 65,
-    "tokens": 20514,
-    "median_tool_tokens": 274,
-    "mean_tool_tokens": 315
+    "tools": 66,
+    "tokens": 20773,
+    "median_tool_tokens": 273,
+    "mean_tool_tokens": 314
   },
   "agents": [
     {
@@ -220,6 +220,10 @@
     {
       "name": "create_task",
       "tokens": 260
+    },
+    {
+      "name": "forecast_input_checks",
+      "tokens": 259
     },
     {
       "name": "apply_tag",

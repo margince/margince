@@ -287,7 +287,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, personID ids.UUID) ([]
 	limitPos := arg(receiptsPerEdge)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, a.subject, a.occurred_at
+		SELECT a.id, a.subject, a.occurred_at, a.kind
 		  FROM activity a
 		 WHERE a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM activity_participant up
@@ -306,10 +306,12 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, personID ids.UUID) ([]
 	for rows.Next() {
 		var r crmcontracts.PersonGraphReceipt
 		var activityID ids.UUID
-		if err := rows.Scan(&activityID, &r.Subject, &r.OccurredAt); err != nil {
+		var kind string
+		if err := rows.Scan(&activityID, &r.Subject, &r.OccurredAt, &kind); err != nil {
 			return nil, fmt.Errorf("network: reading a message behind a relationship: %w", err)
 		}
 		r.ActivityId = openapi_types.UUID(activityID)
+		r.Kind = crmcontracts.PersonGraphReceiptKind(kind)
 		out = append(out, r)
 	}
 	if err := rows.Err(); err != nil {

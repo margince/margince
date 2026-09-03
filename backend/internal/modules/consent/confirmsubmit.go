@@ -41,6 +41,11 @@ const correctionsField = "corrections"
 // storage, and both are refused rather than stored.
 const maxProposedValueRunes = 500
 
+// maxWordingRunes bounds the consent sentence stored as proof. Longer than a
+// corrected field because a lawful consent wording is a sentence or two with
+// its disclosures, and shorter than anything that could be used as storage.
+const maxWordingRunes = 2000
+
 // ConfirmSubmission is what the subject sent: their corrections, whether they
 // asked to be removed, and their answer to the marketing question.
 type ConfirmSubmission struct {
@@ -83,8 +88,13 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// Naming the subject costs one extra read and buys the ordering: it
 		// takes no row lock, so it can say who this link belongs to without
 		// ordering anything.
-		personID, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
+		personID, kind, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
 		if err != nil {
+			return err
+		}
+		// Before the spend, so a submission the store will not stand behind
+		// leaves the link usable rather than burning the subject's one answer.
+		if err := refuseWiderThanTheMail(kind, in); err != nil {
 			return err
 		}
 		if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
@@ -96,6 +106,17 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		ref, err := s.spendConfirmTokenTx(ctx, tx, token)
 		if err != nil {
 			return err
+		}
+		// A consent link asked one question and may answer only that one. It
+		// was mailed saying "confirm this subscription"; letting it also edit
+		// the record or file an erasure request would make it a wider
+		// capability than the mail it arrived in described, which is exactly
+		// the property that makes a mailed link trustworthy evidence.
+		if ref.Kind == LinkConsentConfirmation {
+			if in.MarketingChoice == "" {
+				return nil
+			}
+			return s.recordLinkedPurposeTx(ctx, tx, ref, in)
 		}
 		for field, value := range in.Corrections {
 			if err := stageSubmission(ctx, tx, ref, submissionCorrection, &field, &value); err != nil {
@@ -184,6 +205,18 @@ func validateConfirmSubmission(in ConfirmSubmission) error {
 			Reason: "a marketing answer is granted, withdrawn, or absent",
 		}
 	}
+	// Bounded, and this became load-bearing the moment the wording started
+	// coming back out. It arrives from the anonymous public body and lands
+	// verbatim on the proof row, which the subject access export now reads —
+	// so an unbounded column is an unbounded export, growable by anyone
+	// holding one link. The corrections beside it have carried this bound all
+	// along; the wording never did because nothing read it back.
+	if len([]rune(in.MarketingWording)) > maxWordingRunes {
+		return &ValidationError{
+			Field:  "marketing_wording",
+			Reason: "the recorded wording is at most 2000 characters",
+		}
+	}
 	if in.MarketingChoice == string(StateGranted) && strings.TrimSpace(in.MarketingWording) == "" {
 		return &ValidationError{
 			// Art. 7(1) asks the controller to demonstrate what the subject
@@ -208,6 +241,52 @@ func validateConfirmSubmission(in ConfirmSubmission) error {
 				Field:  correctionsField,
 				Reason: "a corrected value is at most 500 characters",
 			}
+		}
+	}
+	return nil
+}
+
+// recordLinkedPurposeTx records the answer a consent link came back with,
+// against the purpose that link was minted for.
+//
+// The purpose comes off the TOKEN, never off the submission. A page that could
+// name its own purpose would let whoever holds one link grant any purpose,
+// which is the operator-completable round trip this whole change removed.
+func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef, in ConfirmSubmission) error {
+	source := "consent_link"
+	input := RecordInput{
+		PersonID:   ref.PersonID,
+		PurposeID:  ref.PurposeID,
+		NewState:   in.MarketingChoice,
+		Source:     &source,
+		PolicyText: &in.MarketingWording,
+		// Earned, not asserted: set only after spendConfirmTokenTx consumed the
+		// link that proves the mailbox. This is what satisfies a double-opt-in
+		// purpose, and the only thing that does.
+		MailboxProof: MailboxProvenByConfirmLink,
+	}
+	sub, state, err := admitRecord(ctx, input)
+	if err != nil {
+		return err
+	}
+	_, err = s.recordAdmittedTx(ctx, tx, input, sub, state)
+	return err
+}
+
+// refuseWiderThanTheMail holds a spent link to the question it was sent asking.
+//
+// A consent link's mail said "confirm this subscription". Letting the page it
+// opens also edit the record or file an erasure would hand whoever holds that
+// link a capability the mail never described — and a mailed link is only
+// evidence because what it can do is what the subject was told it would do.
+func refuseWiderThanTheMail(kind string, in ConfirmSubmission) error {
+	if kind != LinkConsentConfirmation {
+		return nil
+	}
+	if len(in.Corrections) > 0 || in.RequestErasure {
+		return &ValidationError{
+			Field:  correctionsField,
+			Reason: "this link confirms a subscription and cannot change the record",
 		}
 	}
 	return nil

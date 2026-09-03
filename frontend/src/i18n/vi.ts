@@ -2375,6 +2375,7 @@ export const vi = {
   // không do mô hình viết.
   "brief.eyebrow": "Buổi sáng của bạn",
   "brief.eyebrow.weekly": "Tuần của bạn",
+  "brief.eyebrow.asOf": "{scope} · tính đến {at}",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
   "brief.view.label": "Bản tóm tắt nào",
   "brief.view.morning": "Buổi sáng",
@@ -6732,9 +6733,9 @@ export const vi = {
   "person.graph.withContact": "với contact này",
   "person.graph.counts":
     "{total} lượt tương tác trong 90 ngày · {inbound} đến, {outbound} đi",
+  "person.graph.untitledMessage": "Không có tiêu đề",
   "person.graph.countsOnly":
     "Chỉ là số đếm — nội dung tin nhắn vẫn nằm trên timeline.",
-  "person.graph.untitledMessage": "Tin nhắn không có tiêu đề",
   "person.intro.routesTitle": "Các lối vào",
   "person.graph.droppedNote": "Còn {count} mục không hiển thị.",
   "person.graph.withheldDirect": "Một số đồng nghiệp không được hiển thị.",

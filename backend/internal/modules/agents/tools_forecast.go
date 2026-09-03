@@ -214,3 +214,73 @@ type ForecastMovementDealResult struct {
 	AuditID     *string `json:"audit_id,omitempty"`
 	ApprovalID  *string `json:"approval_id,omitempty"`
 }
+
+// AssuranceReader answers what last night's input check found.
+type AssuranceReader func(ctx context.Context) (json.RawMessage, error)
+
+// RegisterAssuranceTool joins forecast_input_checks to the surface.
+func RegisterAssuranceTool(r *Registry, read AssuranceReader) {
+	r.Register(forecastInputChecks{read: read})
+}
+
+type forecastInputChecks struct {
+	read AssuranceReader
+}
+
+func (t forecastInputChecks) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "forecast_input_checks", Title: "What the forecast's inputs were checked against",
+		Version: toolVersionV1,
+		Description: "What last night's input check found, and how much of the pipeline it " +
+			"reached. A forecast is only as good as its inputs, and the failures are " +
+			"mundane: a close date that went by, an amount that disagrees with the offer " +
+			"that was sent, a deal nobody has heard from in ninety days. " +
+			"Read `readiness` before quoting any forecast figure. `checks_incomplete` is " +
+			"NOT a worse `needs_review` — one says the pipeline has problems, the other " +
+			"says we could not look, and reporting the first when the second is true tells " +
+			"somebody their pipeline is sound when nobody read the mailbox. " +
+			"`sources` says why: each carries the state the run reached, and only a " +
+			"`checked` source has a date. An absent or unread source means the run could " +
+			"not confirm anything from it, which is different from finding nothing there. " +
+			"`eligible_deals` is how much there was to check — compared against an earlier " +
+			"run it shows a pass that covered less of the pipeline.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "getForecastAssurance",
+		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OutputSchema: schemaFor[ForecastAssuranceResult](),
+	}
+}
+
+func (t forecastInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+	noteDerivedContent(ctx)
+	return t.read(ctx)
+}
+
+// ForecastAssuranceResult is what forecast_input_checks answers with.
+type ForecastAssuranceResult struct {
+	RunID string `json:"run_id"`
+	AsOf  string `json:"as_of"`
+	// Status is complete or incomplete. An incomplete run still happened and
+	// still recorded what it reached.
+	Status string `json:"status"`
+	// Readiness is the verdict. checks_incomplete means nobody could look,
+	// which is a different answer from the pipeline having problems.
+	Readiness string `json:"readiness,omitempty"`
+	// EligibleDeals is how much there was to check, counted per deal.
+	EligibleDeals   int `json:"eligible_deals"`
+	EligibleSignals int `json:"eligible_signals,omitempty"`
+	// Sources are the sources the run tried, and how far it reached into each.
+	// A source absent from this list is one the run did not attempt — which is
+	// different from one it attempted and could not read, and the state field
+	// is where that distinction lives.
+	Sources []ForecastAssuranceSourceResult `json:"sources"`
+}
+
+// ForecastAssuranceSourceResult is one source and the state the run reached.
+type ForecastAssuranceSourceResult struct {
+	Source string `json:"source"`
+	State  string `json:"state"`
+	// CheckedThrough is present only for a `checked` source: a date on an
+	// unread one would claim coverage that did not happen.
+	CheckedThrough string `json:"checked_through,omitempty"`
+}

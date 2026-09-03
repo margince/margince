@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
@@ -174,6 +175,12 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The forecast owns its arithmetic and nothing about deals, so the deal
 		// rows and the fiscal window arrive as seams. Row scope is applied in
 		// ForecastDeals, where the caller's authority already sits.
+		// The assurance surface reads what last night's pass found. Its scan
+		// is a job rather than a request, so the handler set is a read.
+		assuranceHandlers: assurance.NewHandlers(
+			assurance.NewStore(InstallationDB(pool)),
+			func() time.Time { return time.Now().UTC() },
+		),
 		forecastHandlers: forecasting.NewHandlers(
 			forecasting.NewStore(InstallationDB(pool)),
 			ForecastDeals, ForecastPeriodAt,

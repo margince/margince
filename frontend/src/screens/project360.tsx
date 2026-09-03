@@ -10,6 +10,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -24,6 +25,7 @@ import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
 import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
+import { useOpenEmail } from "./openemail";
 import { ProjectCompanies } from "./projectcompanies";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
@@ -418,7 +420,9 @@ function useProjectChronology(
     filters,
     firstPage: activities,
   });
+  const [openEmail, setOpenEmail] = useOpenEmail();
   const history = useRecordChronology({
+    onOpenEmail: setOpenEmail,
     kind: "project",
     recordId: view.project.id,
     filter,
@@ -468,7 +472,17 @@ function useProjectChronology(
         )}
       </>
     ),
-    timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
+    timelineFooter: (
+      <>
+        <ChronologyFooter filter={filter} chronology={history} />
+        {/* One drawer over the project, beside the chronology it opens from. */}
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={recordZone}
+          onClose={() => setOpenEmail(null)}
+        />
+      </>
+    ),
     timelineNotice: chronologyNotice(
       "project.timeline.empty",
       {

@@ -2448,6 +2448,7 @@ export const en = {
   // never model-written, so it cannot say what the rows contradict.
   "brief.eyebrow": "Your morning",
   "brief.eyebrow.weekly": "Your week",
+  "brief.eyebrow.asOf": "{scope} · as of {at}",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Which brief",
   "brief.view.morning": "Morning",
@@ -6856,9 +6857,9 @@ export const en = {
   "person.graph.withContact": "with this contact",
   "person.graph.counts":
     "{total} interactions in 90 days · {inbound} in, {outbound} out",
+  "person.graph.untitledMessage": "Untitled",
   "person.graph.countsOnly":
     "Counts only — the messages themselves stay on the timeline.",
-  "person.graph.untitledMessage": "Message with no subject",
   "person.intro.routesTitle": "Ways in",
   "person.graph.droppedNote": "{count} more not shown.",
   "person.graph.withheldDirect": "Some colleagues are not shown.",
