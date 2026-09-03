@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
@@ -20,7 +20,6 @@ import {
   type TimelineEntry,
   type TimelineGroup,
 } from "../design-system/composed";
-import { EmailDetail } from "../design-system/emaildetail";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -123,6 +122,8 @@ import {
   useTagChips,
 } from "./listquery";
 import { PersonMeetingBrief } from "./meetingbrief";
+import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { PartnerTab } from "./partners";
 import {
   OverlayFallback,
@@ -1565,18 +1566,7 @@ function useChronologySlots({
     firstPage: view?.activities,
   });
 
-  // Which message the drawer is showing. Held beside the chronology it opens
-  // from, and reset when the account changes: this hook outlives a move from
-  // one organization to the next, and a drawer left open would reopen the
-  // previous account's mail over the new one.
-  const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const shownFor = useRef(org.id);
-  if (shownFor.current !== org.id) {
-    shownFor.current = org.id;
-    if (openEmail) {
-      setOpenEmail(null);
-    }
-  }
+  const [openEmail, setOpenEmail] = useOpenEmail(org.id);
   const history = useRecordChronology({
     onOpenEmail: setOpenEmail,
     kind: "organization",
@@ -1652,13 +1642,11 @@ function useChronologySlots({
           <ChronologyFooter filter={filter} chronology={history} />
           {/* One drawer over the account, mounted beside the chronology it
               opens from. */}
-          {openEmail && (
-            <EmailDetail
-              activityId={openEmail}
-              onClose={() => setOpenEmail(null)}
-              formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
-            />
-          )}
+          <OpenEmailDrawer
+            activityId={openEmail}
+            zone={recordZone}
+            onClose={() => setOpenEmail(null)}
+          />
         </>
       ),
       // Every cut renders through the ONE chronicle: Changes draws the same
