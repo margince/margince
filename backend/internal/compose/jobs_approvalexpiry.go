@@ -100,6 +100,27 @@ func (w *approvalExpiryWorker) Work(ctx context.Context, _ *river.Job[ApprovalEx
 		// the shape of work going unanswered rather than a healthy sweep.
 		w.logger().InfoContext(ctx, "approval expiry: stagings closed unactioned", "count", len(expired))
 	}
+	// The other end of the same window. Above closes stagings nobody DECIDED;
+	// this marks the ones a human decided YES on and the agent never came back
+	// to spend. Both are a clock closing on an approval, which is why they share
+	// a tick rather than taking a second periodic job — and neither can starve
+	// the other, because each is its own bounded pass.
+	//
+	// Ordered second, and its failure does not hide the expiry's: the expiry
+	// writes decisions and this writes bookkeeping, so a tick that expired what
+	// was due and failed to annotate what lapsed did the more important half,
+	// and the next tick re-runs this one either way.
+	marked, err := expiringApprovalsService(w.pool).MarkLapsedRedemptions(passCtx)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if marked > 0 {
+		// Louder than the expiry line above deserves to be read as. A human
+		// said yes to each of these and the work did not happen, so a run of
+		// them is an agent path failing to complete rather than people not
+		// getting round to their inbox.
+		w.logger().InfoContext(ctx, "approval expiry: approvals the assistant never redeemed", "count", marked)
+	}
 	return nil
 }
 
