@@ -189,12 +189,12 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Zugesagt, erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
+			labels:   []string{"Aufgaben erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
 		},
 		{
 			language: "vi",
 			subject:  "Tuần của bạn",
-			labels:   []string{"Đã hứa, đã xong", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
+			labels:   []string{"Công việc đã hoàn thành", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
 		},
 		{
 			// A language this build has no copy for is written in the fallback
@@ -202,7 +202,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 			// more to its reader than no summary.
 			language: "fr",
 			subject:  "Your week",
-			labels:   []string{"Promised, delivered", "You decided", "Morning queue", "Carried over", "won"},
+			labels:   []string{"Tasks delivered", "You decided", "Morning queue", "Carried over", "won"},
 		},
 	} {
 		t.Run(c.language, func(t *testing.T) {

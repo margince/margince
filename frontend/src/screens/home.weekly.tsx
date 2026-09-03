@@ -105,7 +105,7 @@ function WeeklyWorkings({
   return (
     <dl className="home-weekly-workings">
       <Working
-        label={t("home.weekly.promised")}
+        label={t("home.weekly.tasksDelivered")}
         value={t("home.weekly.ofDue", {
           done: n(counts.tasks_done),
           due: n(counts.tasks_due),
@@ -258,15 +258,15 @@ function WeeklyBody({
       {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
           is a table wearing a strip's clothes — at 1280 the row folded to two
           ranks of five and stopped being one reading at all (#3709).
-          These five are the week's outcomes: what was promised and kept, what
-          closed, how fast new business was answered, whether meetings led
+          These five are the week's outcomes: what the rep planned and kept,
+          what closed, how fast new business was answered, whether meetings led
           anywhere, and what did not get finished. The other five are workings
           — how the queue was worked, how proposals were decided — and they
           read as a list under the strip, where they are still available to
           anyone who wants them and no longer compete with the outcomes. */}
       <StatStrip testId="weekly-strip">
         <StatCard
-          label={t("home.weekly.promisesKept")}
+          label={t("home.weekly.planCommitmentsKept")}
           value={t("home.weekly.ofDue", {
             done: formatNumber(c.commitments_kept, locale),
             due: formatNumber(c.commitments_due, locale),

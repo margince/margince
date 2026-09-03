@@ -78,7 +78,7 @@ describe("HomeScreen — the weekly retrospective", () => {
     // row rather than looked up — which is why it renders although the review's
     // own deal is absent from the deals payload, where only Fleet retrofit is.
     await screen.findByText("Weber Rahmenvertrag");
-    expect(screen.getByText(en["home.weekly.promised"])).toBeTruthy();
+    expect(screen.getByText(en["home.weekly.tasksDelivered"])).toBeTruthy();
   });
 
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
@@ -196,7 +196,7 @@ describe("HomeScreen — the week's sentence", () => {
     });
     render(<HomeScreen />);
 
-    await screen.findByText(en["home.weekly.promised"]);
+    await screen.findByText(en["home.weekly.tasksDelivered"]);
     // A pass that honestly found nothing is not a pass that never ran, and
     // claiming otherwise would tell the rep their week was never looked at.
     expect(screen.queryByText(en["home.weekly.noNarrative"])).toBeNull();
@@ -294,20 +294,53 @@ describe("HomeScreen — the week against the one before", () => {
     expect(strip.querySelectorAll(".stat-card")).toHaveLength(5);
   });
 
-  // The five are the week's OUTCOMES: what was promised and kept, what closed,
-  // how fast new business was answered, whether meetings led anywhere, and what
-  // did not get finished.
+  // The five are the week's OUTCOMES: what the rep planned and kept, what
+  // closed, how fast new business was answered, whether meetings led anywhere,
+  // and what did not get finished.
   it("gives the strip the week's outcomes", async () => {
     const strip = await mount(withPrior);
 
     for (const key of [
-      "home.weekly.promisesKept",
+      "home.weekly.planCommitmentsKept",
       "home.weekly.dealsWon",
       "home.weekly.leadsAnswered",
       "home.weekly.meetingsHeld",
       "home.weekly.carriedOver",
     ] as const) {
       expect(within(strip).getByText(en[key])).toBeTruthy();
+    }
+  });
+
+  // Two readings, two names — and neither of them a promise.
+  //
+  // commitments_* counts what a rep wrote into their weekly PLAN and settled;
+  // tasks_* counts tasks that fell due in the week. Both render through
+  // home.weekly.ofDue, so they arrive on one screen in the same "{n} of {m}"
+  // shape six lines apart, and they used to arrive under names one word apart
+  // too: "Promises kept" heading the strip, "Promised, delivered" in the list
+  // below. On a seat that keeps no weekly plan the first reads 0 of 0 for ever
+  // while the figure that reflects the week's delivered work sits under the
+  // near-synonym, and the likely reading of a leading 0 of 0 is "I kept
+  // nothing" rather than "I never wrote a plan".
+  //
+  // "Promise" is the wrong word for either. The Morning rail reserves it for
+  // something the product does not track yet and says so on screen, so a
+  // headline figure wearing it names a third thing again.
+  it("names the plan and the task figures apart, and neither as a promise", async () => {
+    await mount(withPrior);
+
+    const planned = en["home.weekly.planCommitmentsKept"];
+    const delivered = en["home.weekly.tasksDelivered"];
+    expect(planned).not.toBe(delivered);
+    expect(screen.getByText(planned)).toBeTruthy();
+    expect(screen.getByText(delivered)).toBeTruthy();
+
+    // Asserted rather than assumed: the reservation is what makes "promise"
+    // wrong here, so if the rail ever starts tracking them this rule wants
+    // rereading instead of quietly continuing to hold.
+    expect(en["home.promises.untracked"]).toContain("not tracked yet");
+    for (const label of [planned, delivered]) {
+      expect(label.toLowerCase()).not.toContain("promise");
     }
   });
 
@@ -319,7 +352,7 @@ describe("HomeScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     for (const key of [
-      "home.weekly.promised",
+      "home.weekly.tasksDelivered",
       "home.weekly.dealsMoved",
       "home.weekly.dealsLost",
       "home.weekly.decided",
