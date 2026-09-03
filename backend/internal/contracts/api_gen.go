@@ -5470,6 +5470,102 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
+// Defines values for ForecastAssuranceReadiness.
+const (
+	ForecastAssuranceChecksIncomplete    ForecastAssuranceReadiness = "checks_incomplete"
+	ForecastAssuranceNeedsReview         ForecastAssuranceReadiness = "needs_review"
+	ForecastAssuranceReady               ForecastAssuranceReadiness = "ready"
+	ForecastAssuranceReadyWithExceptions ForecastAssuranceReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceReadiness enum.
+func (e ForecastAssuranceReadiness) Valid() bool {
+	switch e {
+	case ForecastAssuranceChecksIncomplete:
+		return true
+	case ForecastAssuranceNeedsReview:
+		return true
+	case ForecastAssuranceReady:
+		return true
+	case ForecastAssuranceReadyWithExceptions:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceStatus.
+const (
+	ForecastAssuranceStatusComplete   ForecastAssuranceStatus = "complete"
+	ForecastAssuranceStatusIncomplete ForecastAssuranceStatus = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceStatus enum.
+func (e ForecastAssuranceStatus) Valid() bool {
+	switch e {
+	case ForecastAssuranceStatusComplete:
+		return true
+	case ForecastAssuranceStatusIncomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceSourceSource.
+const (
+	ForecastAssuranceSourceSourceCalendar  ForecastAssuranceSourceSource = "calendar"
+	ForecastAssuranceSourceSourceContracts ForecastAssuranceSourceSource = "contracts"
+	ForecastAssuranceSourceSourceDocuments ForecastAssuranceSourceSource = "documents"
+	ForecastAssuranceSourceSourceIncumbent ForecastAssuranceSourceSource = "incumbent"
+	ForecastAssuranceSourceSourceMail      ForecastAssuranceSourceSource = "mail"
+	ForecastAssuranceSourceSourceOffers    ForecastAssuranceSourceSource = "offers"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceSourceSource enum.
+func (e ForecastAssuranceSourceSource) Valid() bool {
+	switch e {
+	case ForecastAssuranceSourceSourceCalendar:
+		return true
+	case ForecastAssuranceSourceSourceContracts:
+		return true
+	case ForecastAssuranceSourceSourceDocuments:
+		return true
+	case ForecastAssuranceSourceSourceIncumbent:
+		return true
+	case ForecastAssuranceSourceSourceMail:
+		return true
+	case ForecastAssuranceSourceSourceOffers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceSourceState.
+const (
+	ForecastAssuranceSourceStateChecked           ForecastAssuranceSourceState = "checked"
+	ForecastAssuranceSourceStatePermissionLimited ForecastAssuranceSourceState = "permission_limited"
+	ForecastAssuranceSourceStateStale             ForecastAssuranceSourceState = "stale"
+	ForecastAssuranceSourceStateUnavailable       ForecastAssuranceSourceState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceSourceState enum.
+func (e ForecastAssuranceSourceState) Valid() bool {
+	switch e {
+	case ForecastAssuranceSourceStateChecked:
+		return true
+	case ForecastAssuranceSourceStatePermissionLimited:
+		return true
+	case ForecastAssuranceSourceStateStale:
+		return true
+	case ForecastAssuranceSourceStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastCallScopeKind.
 const (
 	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
@@ -7662,22 +7758,22 @@ func (e OrganizationFactSuspectReason) Valid() bool {
 
 // Defines values for OrganizationGraphGroupsOmitted.
 const (
-	OrganizationGraphGroupsOmittedContacts  OrganizationGraphGroupsOmitted = "contacts"
-	OrganizationGraphGroupsOmittedDeals     OrganizationGraphGroupsOmitted = "deals"
-	OrganizationGraphGroupsOmittedIntroPath OrganizationGraphGroupsOmitted = "intro_path"
-	OrganizationGraphGroupsOmittedOurSide   OrganizationGraphGroupsOmitted = "our_side"
+	Contacts  OrganizationGraphGroupsOmitted = "contacts"
+	Deals     OrganizationGraphGroupsOmitted = "deals"
+	IntroPath OrganizationGraphGroupsOmitted = "intro_path"
+	OurSide   OrganizationGraphGroupsOmitted = "our_side"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationGraphGroupsOmitted enum.
 func (e OrganizationGraphGroupsOmitted) Valid() bool {
 	switch e {
-	case OrganizationGraphGroupsOmittedContacts:
+	case Contacts:
 		return true
-	case OrganizationGraphGroupsOmittedDeals:
+	case Deals:
 		return true
-	case OrganizationGraphGroupsOmittedIntroPath:
+	case IntroPath:
 		return true
-	case OrganizationGraphGroupsOmittedOurSide:
+	case OurSide:
 		return true
 	default:
 		return false
@@ -14172,22 +14268,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -20943,6 +21039,45 @@ type FinanceInvoiceStatus string
 // `error` — the last attempt failed. What is shown is the last good answer,
 // and the reader is told it is not current.
 type FinanceSummaryState string
+
+// ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
+type ForecastAssurance struct {
+	AsOf time.Time `json:"as_of"`
+
+	// EligibleDeals How many deals the run evaluated, counted one per deal.
+	EligibleDeals   int  `json:"eligible_deals"`
+	EligibleSignals *int `json:"eligible_signals,omitempty"`
+
+	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
+	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// Sources Every source the run tried, and how far it reached into each.
+	Sources []ForecastAssuranceSource `json:"sources"`
+
+	// Status `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+	Status ForecastAssuranceStatus `json:"status"`
+}
+
+// ForecastAssuranceReadiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+type ForecastAssuranceReadiness string
+
+// ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+type ForecastAssuranceStatus string
+
+// ForecastAssuranceSource defines model for ForecastAssuranceSource.
+type ForecastAssuranceSource struct {
+	// CheckedThrough How current the source was. Present only for a `checked` source: a date on an unread one would read as "checked up to then" when nothing was read at all.
+	CheckedThrough *time.Time                    `json:"checked_through,omitempty"`
+	Source         ForecastAssuranceSourceSource `json:"source"`
+	State          ForecastAssuranceSourceState  `json:"state"`
+}
+
+// ForecastAssuranceSourceSource defines model for ForecastAssuranceSource.Source.
+type ForecastAssuranceSourceSource string
+
+// ForecastAssuranceSourceState defines model for ForecastAssuranceSource.State.
+type ForecastAssuranceSourceState string
 
 // ForecastCall defines model for ForecastCall.
 type ForecastCall struct {
@@ -45190,6 +45325,9 @@ type ServerInterface interface {
 	// What a period is expected to close, and what the figure does not cover.
 	// (GET /forecast)
 	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
+	// What last night's input check found, and how much of the pipeline it reached.
+	// (GET /forecast/assurance)
+	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
@@ -47518,6 +47656,12 @@ func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Reques
 // What a period is expected to close, and what the figure does not cover.
 // (GET /forecast)
 func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What last night's input check found, and how much of the pipeline it reached.
+// (GET /forecast/assurance)
+func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58557,6 +58701,28 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecast(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastAssurance operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastAssurance(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74662,6 +74828,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast", wrapper.GetForecast)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)

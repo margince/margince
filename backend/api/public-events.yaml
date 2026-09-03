@@ -93,6 +93,7 @@ components:
         - notice.created
         - user_delivery.changed
         - forecast.created
+        - forecast.assurance_created
         - forecast.snapshot_created
         - weekly_plan.updated
         - weekly_plan.help_requested
@@ -1845,6 +1846,57 @@ components:
             The call this one replaces. Absent on the first call of a period —
             which is a different fact from replacing nothing, and a consumer
             tracking revisions needs to tell them apart.
+      additionalProperties: false
+    PublicEventForecastAssuranceCreated:
+      type: object
+      x-event-type: forecast.assurance_created
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for forecast.assurance_created — a nightly input check finished, and
+        the forecast's inputs have been examined. The Morning Brief waits on this: a
+        brief assembled before the night's check has nothing to say about whether the
+        numbers in it were verified.
+
+        `readiness` is the verdict, and `checks_incomplete` is NOT a worse
+        `needs_review`. One says the pipeline has problems; the other says we could not
+        look, and a consumer that treats them alike will tell somebody their pipeline is
+        sound when nobody read the mailbox.
+
+        The counts ride along because they say how much of the pipeline the run covered.
+        The findings do not: they are a read away, and a subscriber acting on a list
+        that arrived on a bus is acting on a list somebody may already have resolved.
+      required:
+        - run_id
+        - status
+        - eligible_deals
+      properties:
+        run_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [complete, incomplete]
+          description: >-
+            `incomplete` means an upstream was unavailable. The run still happened and
+            still recorded what it could reach — refusing to run would produce no record
+            in exactly the case worth reporting.
+        readiness:
+          type: string
+          enum: [ready, ready_with_exceptions, needs_review, checks_incomplete]
+          # Named explicitly: `ready` generates a constant `Ready`, which
+          # already exists for another schema's state — and a collision there
+          # silently renames THAT enum's constants and breaks modules with no
+          # connection to this one.
+          x-enum-varnames:
+            - AssuranceReady
+            - AssuranceReadyWithExceptions
+            - AssuranceNeedsReview
+            - AssuranceChecksIncomplete
+        eligible_deals:
+          type: integer
+          description: >-
+            How many deals the run considered. A consumer comparing this against the
+            previous run's count sees a pass that covered less of the pipeline.
+        eligible_signals: { type: integer }
       additionalProperties: false
     PublicEventForecastSnapshotCreated:
       type: object

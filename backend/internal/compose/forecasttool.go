@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -228,4 +229,44 @@ func movementToolResult(reading forecasting.Reading, in forecasting.Movement) ag
 		out.Deals = append(out.Deals, deal)
 	}
 	return out
+}
+
+// assuranceToolReader answers forecast_input_checks, through the same store the
+// endpoint reads.
+func assuranceToolReader(pool *pgxpool.Pool) agents.AssuranceReader {
+	store := assurance.NewStore(InstallationDB(pool))
+	return func(ctx context.Context) (json.RawMessage, error) {
+		run, err := store.LatestRun(ctx)
+		if err != nil {
+			return nil, err
+		}
+		coverage, err := store.CoverageFor(ctx, run.ID)
+		if err != nil {
+			return nil, err
+		}
+		out := agents.ForecastAssuranceResult{
+			RunID:         run.ID.String(),
+			AsOf:          run.AsOf.UTC().Format(time.RFC3339),
+			Status:        run.Status,
+			EligibleDeals: run.EligibleDeals,
+			// Empty, never nil: a run that recorded no coverage is a real
+			// answer, and null reads as "unknown" to a model.
+			Sources: []agents.ForecastAssuranceSourceResult{},
+		}
+		if run.Readiness != nil {
+			out.Readiness = *run.Readiness
+		}
+		if run.EligibleSignals > 0 {
+			out.EligibleSignals = run.EligibleSignals
+		}
+		for _, c := range coverage {
+			source := agents.ForecastAssuranceSourceResult{Source: c.Source, State: c.State}
+			// Only a source actually read carries a date.
+			if c.State == assurance.CoverageChecked && c.CheckedThrough != nil {
+				source.CheckedThrough = c.CheckedThrough.UTC().Format(time.RFC3339)
+			}
+			out.Sources = append(out.Sources, source)
+		}
+		return json.Marshal(out)
+	}
 }

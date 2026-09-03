@@ -174,6 +174,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// the two transports cannot disagree about what a quarter contains.
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
+	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
 	// The governed workspace query. It takes the provider as well as the runner
 	// because the two halves of an answer come from different places: the plan
 	// selects records through the search module, and each selected record is
