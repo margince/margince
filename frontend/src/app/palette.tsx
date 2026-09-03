@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDialogFocus } from "../design-system/dialogfocus";
 import { api } from "../api/client";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -311,13 +312,22 @@ export function CommandPalette({
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
 
-  // AC-shell-3: opening focuses AND clears the input.
+  // What every dialog in this product owes the keyboard, from the one place it
+  // is spelled: Escape from anywhere inside, Tab kept in, and focus returned to
+  // whatever opened this when it closes. The palette had none of the three —
+  // Escape belonged to the search input, so it did nothing from a result row,
+  // and Shift+Tab left for the page behind on the first press.
+  useDialogFocus({ open, onClose, container: panel });
+
+  // AC-shell-3: opening CLEARS the input. Focus is the hook's — the input is
+  // this dialog's first tab stop, so it lands there either way, and two owners
+  // of one focus move is how they come to disagree.
   useEffect(() => {
     if (open) {
       setQuery("");
       setSelected(0);
-      inputRef.current?.focus();
     }
   }, [open]);
 
@@ -397,6 +407,11 @@ export function CommandPalette({
         role="dialog"
         aria-modal="true"
         aria-label={t("palette.aria")}
+        ref={panel}
+        // Focusable so the trap has somewhere to put focus on a query that
+        // matched nothing — the list is then empty and the input is the only
+        // other stop.
+        tabIndex={-1}
       >
         <div className="palette-input">
           <Search aria-hidden />
@@ -410,9 +425,11 @@ export function CommandPalette({
               setSelected(0);
             }}
             onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                onClose();
-              } else if (event.key === "ArrowDown") {
+              // No Escape arm here: `useDialogFocus` answers it for the whole
+              // dialog. It was wired to this input alone, so Escape pressed
+              // while focus sat on a result row — which is where the arrow keys
+              // put a reader — did nothing at all.
+              if (event.key === "ArrowDown") {
                 event.preventDefault();
                 setSelected((index) => clamp(index + 1));
               } else if (event.key === "ArrowUp") {
