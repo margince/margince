@@ -219,7 +219,7 @@ function WorklistHeader({
       {/* What the page is NOT showing. Drawn only when there is a difference to
           report: on a day the queue carries whole, "12 of 12" is noise. */}
       {completeness !== null && (
-        <p className="t-meta worklist-completeness">{completeness}</p>
+        <p className="t-caption worklist-completeness">{completeness}</p>
       )}
     </div>
   );

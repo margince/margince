@@ -7995,10 +7995,6 @@ export const en = {
   "worklist.readings.prospecting.detail": "New business owed a first reply",
   "worklist.readings.review": "Review",
   "worklist.readings.review.detail": "Routine work queued behind a decision",
-  "worklist.readings.revenue.open": "Show the deals at risk",
-  "worklist.readings.replies.open": "Show who is waiting",
-  "worklist.readings.prospecting.open": "Show the leads",
-  "worklist.readings.review.open": "Show what is queued",
   "worklist.readings.truncated":
     "There is more work than this could count. These are floors, not totals.",
   "worklist.hidden.title": "What the queue is not showing",
