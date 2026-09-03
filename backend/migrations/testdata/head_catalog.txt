@@ -2131,6 +2131,7 @@ public.forecast_contribution.forecast_contribution_probability_is_a_percent CHEC
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
+public.forecast_contribution.forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
 public.forecast_contribution.fx_date date gen=- def=-
 public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
 public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
@@ -2144,6 +2145,7 @@ public.forecast_contribution.stage_probability integer gen=- def=-
 public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
 public.forecast_contribution.version bigint NOT NULL gen=- def=1
+public.forecast_contribution.weighted_minor bigint gen=- def=-
 public.forecast_contribution_pkey CREATE UNIQUE INDEX forecast_contribution_pkey ON public.forecast_contribution USING btree (id)
 public.forecast_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_snapshot.base_currency text NOT NULL gen=- def=-

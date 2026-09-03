@@ -186,9 +186,15 @@ CREATE TABLE forecast_contribution (
     close_provisional boolean DEFAULT false NOT NULL,
     category text,
     -- Integer percent, the same type and scale as stage.win_probability, so
-    -- the three spellings of the weighted value in this tree cannot diverge on
-    -- type.
+    -- the spellings of the weighted value in this tree cannot diverge on type.
     stage_probability int,
+    -- The deal's own weighted amount, ALREADY ROUNDED, in the base currency.
+    -- Stored beside base_minor because the snapshot's weighted headline is the
+    -- SUM of these: a headline whose parts are not persisted cannot be
+    -- reconciled against anything, which is the one promise a frozen snapshot
+    -- exists to keep. NULL exactly when base_minor is — an unpriced or
+    -- unconvertible deal has no weighted amount either.
+    weighted_minor bigint,
 
     -- Which readings this deal is in. Stored rather than recomputed, because a
     -- snapshot that re-decided membership on read would not be frozen.
@@ -217,6 +223,9 @@ CREATE TABLE forecast_contribution (
     -- records what the number was computed with.
     CONSTRAINT forecast_contribution_rate_dated CHECK (
         (fx_rate IS NULL) = (fx_date IS NULL)),
+    -- A weighted amount exists exactly when there is a base amount to weight.
+    CONSTRAINT forecast_contribution_weighted_needs_a_base CHECK (
+        (weighted_minor IS NULL) = (base_minor IS NULL)),
     CONSTRAINT forecast_contribution_rate_positive CHECK (
         fx_rate IS NULL OR fx_rate > 0),
     CONSTRAINT forecast_contribution_probability_is_a_percent CHECK (

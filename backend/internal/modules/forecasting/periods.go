@@ -89,6 +89,19 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 	}, nil
 }
 
+// consistent answers whether a Period's two spellings describe one window.
+//
+// ResolvePeriod always builds them together, so this only ever fails for a
+// Period a caller assembled by hand — which is exactly the case worth refusing,
+// because the two halves are read by different code paths and a disagreement
+// puts a deal in one reading and not the other.
+func (p Period) consistent() bool {
+	if p.Zone == nil {
+		return false
+	}
+	return p.StartDate.Equal(p.Start) && p.EndDate.Equal(p.End.AddDate(0, 0, -1))
+}
+
 // LocalDay reduces an instant to the calendar day it fell on IN THIS PERIOD'S
 // ZONE — the conversion every close-instant comparison goes through.
 //

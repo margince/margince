@@ -27,6 +27,10 @@ import (
 // why the number is what it is; past this it is a document.
 const noteBound = 2000
 
+// codeInvalid is the ParseError code for a value that is the wrong shape, as
+// distinct from one that is missing or out of range.
+const codeInvalid = "invalid"
+
 // The scopes a call or a snapshot can be about.
 const (
 	ScopeWorkspace = "workspace"
@@ -166,6 +170,16 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 // a caller gets an answer they can act on rather than a constraint violation.
 // It returns the trimmed note, which is the one input it normalizes.
 func checkCall(in NewCall) (string, error) {
+	// A Period carries the same window twice, and only the date half is
+	// written. A caller assembling one by hand can make the two halves name
+	// different quarters, and the call would then be recorded under a period
+	// nobody asked for — with the instant half, which the reading used, gone.
+	if !in.Period.consistent() {
+		return "", &values.ParseError{
+			Field: "period", Code: codeInvalid,
+			Message: "the period's day bounds and instant bounds name different windows",
+		}
+	}
 	if in.AmountMinor < 0 {
 		return "", &values.ParseError{
 			Field: "amount_minor", Code: "out_of_range",
@@ -174,7 +188,7 @@ func checkCall(in NewCall) (string, error) {
 	}
 	if !values.ValidCurrency(in.Currency) {
 		return "", &values.ParseError{
-			Field: "currency", Code: "invalid",
+			Field: "currency", Code: codeInvalid,
 			Message: "a called amount names the currency it is in",
 		}
 	}
@@ -233,12 +247,18 @@ func (s *Store) CurrentCall(ctx context.Context, period Period, scope Scope) (Ca
 // discarding the chain for the one scope every installation has.
 func (s *Store) currentCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (ids.UUID, error) {
 	var id ids.UUID
+	// FOR UPDATE, and it is what makes the chain linear. Read without it, two
+	// managers calling at the same moment both find the same predecessor, both
+	// insert a call superseding it, and both commit — leaving two heads for one
+	// period with nothing to say which is current. The lock serializes them, so
+	// the second reads the first's call and supersedes THAT.
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM forecast_call
 		WHERE period_start = $1 AND period_end = $2
 		  AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
 		ORDER BY created_at DESC, id DESC
-		LIMIT 1`,
+		LIMIT 1
+		FOR UPDATE`,
 		period.StartDate, period.EndDate, scope.Kind, scope.ID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, errNoStandingCall
@@ -276,7 +296,7 @@ func checkScope(scope Scope) error {
 		}
 	default:
 		return &values.ParseError{
-			Field: "scope_kind", Code: "invalid",
+			Field: "scope_kind", Code: codeInvalid,
 			Message: "a forecast is about the workspace, a team, or one owner",
 		}
 	}

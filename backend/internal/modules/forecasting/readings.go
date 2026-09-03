@@ -4,6 +4,7 @@
 package forecasting
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -79,7 +80,10 @@ type Contribution struct {
 	CloseProvisional bool
 	Category         string
 	StageProbability int
-	WeightedMinor    int64
+	// The deal's own weighted amount, ALREADY ROUNDED. Stored beside the base
+	// amount because the weighted headline is the sum of these, and a headline
+	// whose parts are not persisted cannot be reconciled against anything.
+	WeightedMinor int64
 
 	InWon      bool
 	InEvidence bool
@@ -136,22 +140,51 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 		if contribution.BaseMinor != nil {
 			base = *contribution.BaseMinor
 		}
-		if contribution.InWon {
-			out.WonMinor += base
-		}
-		if contribution.InEvidence {
-			out.EvidenceMinor += base
-		}
-		if contribution.InBestCase {
-			out.BestCaseMinor += base
-		}
-		if contribution.InOpen {
-			out.OpenMinor += base
-			out.WeightedMinor += contribution.WeightedMinor
+		// Every accumulation is checked. amount_minor is contract-unbounded, so
+		// a large enough population wraps a native sum — and a wrapped headline
+		// is the worst possible failure here, because it still LOOKS like a
+		// number and disagrees silently with the contributions it claims to be
+		// the sum of.
+		for _, add := range []struct {
+			into *int64
+			by   int64
+			when bool
+		}{
+			{&out.WonMinor, base, contribution.InWon},
+			{&out.EvidenceMinor, base, contribution.InEvidence},
+			{&out.BestCaseMinor, base, contribution.InBestCase},
+			{&out.OpenMinor, base, contribution.InOpen},
+			{&out.WeightedMinor, contribution.WeightedMinor, contribution.InOpen},
+		} {
+			if !add.when {
+				continue
+			}
+			sum, err := addMinor(*add.into, add.by)
+			if err != nil {
+				return Readings{}, fmt.Errorf("forecasting: totalling deal %s: %w", deal.ID, err)
+			}
+			*add.into = sum
 		}
 		out.Contributions = append(out.Contributions, contribution)
 	}
 	return out, nil
+}
+
+// ErrReadingOutOfRange marks a total that cannot be represented. A refusal
+// rather than a wrapped number: a headline that wrapped still looks like money
+// and disagrees silently with the rows it claims to be the sum of.
+var ErrReadingOutOfRange = errors.New("forecasting: a reading exceeds the representable money range")
+
+// addMinor sums two minor-unit amounts, refusing an overflow.
+func addMinor(running, add int64) (int64, error) {
+	sum := running + add
+	// Both operands are non-negative here (a money reading is never negative
+	// pipeline, held by the table's own CHECK), so a sum smaller than either
+	// operand is a wrap.
+	if (add > 0 && sum < running) || (add < 0 && sum > running) {
+		return 0, ErrReadingOutOfRange
+	}
+	return sum, nil
 }
 
 // contribute decides one deal's membership and its rounded weighted value.
@@ -203,6 +236,12 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 	return out, nil
 }
 
+// calendarDay drops the clock, keeping the zone the value already carries. A
+// date and an instant compare as the same day or they do not compare at all.
+func calendarDay(at time.Time) time.Time {
+	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
+}
+
 // EffectiveCategory answers what a deal's forecast category READS as, which is
 // not always what is stored on it.
 //
@@ -224,8 +263,13 @@ func EffectiveCategory(asOfDay time.Time, deal Deal) string {
 	// next week has not slipped merely because the quarter started last month,
 	// and comparing to the period start would report most of a quarter's
 	// healthy pipeline as slipped for the whole quarter.
+	// Both sides reduced to a calendar day before comparing. asOfDay arrives
+	// as an instant and a deal expected TODAY must not read as slipped from
+	// noon onward — the SQL compares dates in the installation zone, and a Go
+	// side comparing instants disagrees with it for exactly one day per deal,
+	// on the day the deal is due.
 	slipped := deal.ExpectedCloseDate == nil ||
-		deal.ExpectedCloseDate.Before(asOfDay) ||
+		calendarDay(*deal.ExpectedCloseDate).Before(calendarDay(asOfDay)) ||
 		deal.CloseProvisional
 	if slipped {
 		return CategorySlipped

@@ -4,6 +4,8 @@
 package forecasting
 
 import (
+	"errors"
+	"math"
 	"math/rand"
 	"testing"
 	"time"
@@ -289,5 +291,90 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 					run, check.name, check.headline, check.summed)
 			}
 		}
+	}
+}
+
+// A deal due TODAY has not slipped, and the Go side must agree with the SQL
+// about that. The SQL compares calendar dates in the installation zone; a Go
+// side comparing instants calls the same deal slipped from noon onward, so the
+// forecast screen and the report engine disagree for one day per deal — on the
+// day the deal is actually due, which is the day anyone is looking at it.
+func TestADealDueTodayHasNotSlippedAtAnyHour(t *testing.T) {
+	t.Parallel()
+	zone := berlin(t)
+	due := healthyDeal(t)
+	due.ExpectedCloseDate = day(t, time.May, 14)
+
+	for _, hour := range []int{0, 12, 23} {
+		asOf := time.Date(testYear, time.May, 14, hour, 30, 0, 0, zone)
+		if got := EffectiveCategory(asOf, due); got != CategoryCommit {
+			t.Errorf("read at %02d:30 on the day it is due, the deal reads as %q — "+
+				"the report engine says %q at every hour of that day",
+				hour, got, CategoryCommit)
+		}
+	}
+	// The admitting case: the day after, it really has slipped.
+	if got := EffectiveCategory(time.Date(testYear, time.May, 15, 0, 30, 0, 0, zone), due); got != CategorySlipped {
+		t.Errorf("the day after it was due, the deal reads as %q, want %q", got, CategorySlipped)
+	}
+}
+
+// A headline that wrapped still looks like money. It would disagree silently
+// with the contributions it claims to be the sum of, which is the one property
+// this whole module promises.
+func TestAHeadlineRefusesToWrapRatherThanReportANumber(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+	asOf := *day(t, time.May, 14)
+
+	huge := int64(math.MaxInt64)
+	population := make([]Deal, 3)
+	for i := range population {
+		deal := healthyDeal(t)
+		deal.ID = string(rune('a' + i))
+		deal.AmountMinor = &huge
+		deal.BaseMinor = &huge
+		deal.Won = true
+		deal.ClosedAt = day(t, time.May, 30)
+		population[i] = deal
+	}
+
+	if _, err := Compute(period, asOf, population); !errors.Is(err, ErrReadingOutOfRange) {
+		t.Errorf("three maximal won deals totalled to err=%v — a sum that cannot be "+
+			"represented must refuse, never wrap into a plausible-looking figure", err)
+	}
+
+	// The admitting case. Without it, an accumulator that refused EVERY total
+	// would pass the assertion above.
+	if _, err := Compute(period, asOf, []Deal{healthyDeal(t)}); err != nil {
+		t.Errorf("an ordinary population was refused: %v", err)
+	}
+}
+
+// A Period's two spellings are read by different code paths — the date half by
+// the expected-close comparison, the instant half by the close-instant one. A
+// hand-assembled Period whose halves disagree puts a deal in one reading and
+// not the other.
+func TestAPeriodWhoseHalvesDisagreeIsNotConsistent(t *testing.T) {
+	t.Parallel()
+	zone := berlin(t)
+	good, err := ResolvePeriod(PeriodQuarter, time.Date(testYear, time.May, 14, 12, 0, 0, 0, zone), 1, zone)
+	if err != nil {
+		t.Fatalf("resolving: %v", err)
+	}
+	if !good.consistent() {
+		t.Error("a period built by ResolvePeriod reads as inconsistent — the builder and the check disagree")
+	}
+
+	forked := good
+	forked.EndDate = forked.EndDate.AddDate(0, 1, 0)
+	if forked.consistent() {
+		t.Error("a period whose day bounds name a different window than its instant bounds passed the check")
+	}
+
+	zoneless := good
+	zoneless.Zone = nil
+	if zoneless.consistent() {
+		t.Error("a period with no zone passed the check — which day an instant falls on has no answer without one")
 	}
 }
