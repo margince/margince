@@ -219,9 +219,9 @@ const ConfirmDetailsScreen = lazy(
     })),
   ),
 );
-const ReportsScreen = lazy(
+const AnalyticsScreen = lazy(
   routed(() =>
-    import("./screens/reports").then((m) => ({ default: m.ReportsScreen })),
+    import("./screens/analytics").then((m) => ({ default: m.AnalyticsScreen })),
   ),
 );
 const ScheduledSendsScreen = lazy(
@@ -461,7 +461,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // other three dials stay state: putting one of four in the address would
     // make it describe a fraction of what the reader is looking at.
     worklist: ({ id }) => <WorklistScreen opensOn={id} />,
-    reports: () => <ReportsScreen />,
+    analytics: () => <AnalyticsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
     // is the settings IA's question: the admin half lives a segment deeper, and

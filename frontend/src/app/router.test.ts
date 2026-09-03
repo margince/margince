@@ -179,3 +179,22 @@ describe("routeIdentity", () => {
 it("answers the old day address with the page that replaced it", () => {
   expect(parseHash("#/today")).toEqual({ screen: "worklist" });
 });
+
+// Reports became Analytics. Same argument as the day address above, with one
+// more thing to get right: the segment has to ride along. A bookmark of
+// #/reports/forecast that lands on the default section has kept the reader on
+// the product and still lost their page.
+it("answers the old reports address, carrying the segment across", () => {
+  expect(parseHash("#/reports")).toEqual({
+    screen: "analytics",
+    id: undefined,
+    id2: undefined,
+    id3: undefined,
+  });
+  expect(parseHash("#/reports/forecast")).toEqual({
+    screen: "analytics",
+    id: "forecast",
+    id2: undefined,
+    id3: undefined,
+  });
+});

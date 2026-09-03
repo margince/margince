@@ -168,7 +168,7 @@ export const vi = {
   "nav.leads": "Lead",
   "nav.deals": "Pipeline",
   "nav.today": "Danh sách việc",
-  "nav.reports": "Báo cáo",
+  "nav.analytics": "Analytics",
   "nav.ai": "Hỏi Margince",
   "nav.settings": "Cài đặt",
   "nav.automations": "Tự động hoá",
@@ -3090,20 +3090,20 @@ export const vi = {
   "tasks.isDone": "Đã hoàn thành",
   "tasks.logged": "Đã ghi nhận",
 
-  "reports.sub": "deal theo giai đoạn — chưa trọng số cạnh có trọng số",
-  "reports.currency": "Tiền tệ",
-  "reports.count": "Deal",
-  "reports.unweighted": "Chưa trọng số",
-  "reports.weighted": "Có trọng số",
-  "reports.planNote":
+  "analytics.sub": "deal theo giai đoạn — chưa trọng số cạnh có trọng số",
+  "analytics.currency": "Tiền tệ",
+  "analytics.count": "Deal",
+  "analytics.unweighted": "Chưa trọng số",
+  "analytics.weighted": "Có trọng số",
+  "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
-  "reports.reportDeals": "Deal theo giai đoạn",
-  "reports.reportForecast": "Dự báo",
-  "reports.reportOpenByCompany": "Deal đang mở theo công ty",
-  "reports.forecastBanner":
+  "analytics.reportDeals": "Deal theo giai đoạn",
+  "analytics.reportForecast": "Nhóm dự báo",
+  "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
+  "analytics.forecastBanner":
     'Mỗi ô hiển thị tổng chưa trọng số, và bên dưới là tổng có trọng số — được làm tròn theo từng deal, nên luôn khớp với "Giải thích con số này".',
-  "reports.company": "Công ty",
-  "reports.openDeals": "Deal đang mở",
+  "analytics.company": "Công ty",
+  "analytics.openDeals": "Deal đang mở",
   "explain.sources": "Các dòng nguồn",
 
   "ai.sub": "mang Agent của riêng bạn — được quản trị bằng hợp đồng hai bậc",
@@ -7739,6 +7739,7 @@ export const vi = {
   "worklist.above.waiting_days": "Trên mục kế nhờ thời gian chờ.",
   "worklist.above.waiting_days.pair": "Trên mục kế: {mine} so với {theirs}.",
   "worklist.above.relationship": "Trên mục kế nhờ quan hệ gần hơn.",
+  "worklist.above.crowded": "Trên mục kế vì loại việc đó đang có rất nhiều.",
   "worklist.consequence.buyer_waits": "Nếu bạn không làm gì, họ vẫn chờ.",
   "worklist.consequence.promise_breaks":
     "Nếu bạn không làm gì, một lời hứa bị phá vỡ.",

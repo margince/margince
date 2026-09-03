@@ -35,7 +35,7 @@ const SCREENS = [
   "deals",
   "projects",
   "worklist",
-  "reports",
+  "analytics",
   "ai",
   "settings",
   "filters",
@@ -102,6 +102,12 @@ export function parseHash(hash: string): Route {
   // lost their page.
   if (screen === "today") {
     return { screen: "worklist" };
+  }
+  // Reports became Analytics, and the same argument applies: a bookmark and
+  // every link already sent outlive the rename. The segment rides along, so
+  // #/reports/forecast lands on the forecast section rather than the default.
+  if (screen === "reports") {
+    return { screen: "analytics", id, id2, id3 };
   }
   if (!isScreen(screen)) {
     // A hash comes out of the URL bar, so its first segment is text a human
@@ -170,9 +176,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // state and never touches the address, which is what makes lowering this look
   // free — the pane is not what the depth is protecting.
   worklist: WHOLE_ADDRESS,
-  // #/reports/<report> — the picker chooses a view of one screen, so switching
-  // reports re-renders the panel instead of throwing the screen away.
-  reports: 1,
+  // #/analytics/<section> — the picker chooses a view of one screen, so
+  // switching sections re-renders the panel instead of throwing the screen away.
+  analytics: 1,
   ai: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.

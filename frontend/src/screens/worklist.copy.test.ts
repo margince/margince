@@ -60,6 +60,20 @@ describe("comparisonText", () => {
   it("draws nothing for order (every comparator tied, ids broke it)", () => {
     expect(comparisonText({ comparator: "order" }, t, "en", zone)).toBeNull();
   });
+
+  // The comparator this build emits and could not name.
+  //
+  // `crowded` is the anti-monopoly rule: the row BELOW was held back so one
+  // lane could not own the page. It carries no values on purpose — "8th
+  // against 9th" describes the lane, not either row — and the client's
+  // known-comparator guard, written to drop values from NEWER servers, was
+  // dropping one this same build sends. The row whose position is hardest to
+  // explain was the one row with no explanation.
+  it("names crowded, which this build's own server emits", () => {
+    expect(comparisonText({ comparator: "crowded" }, t, "en", zone)).toBe(
+      "Above the next because that one is one of many of its kind.",
+    );
+  });
 });
 
 // The move that became performable.
