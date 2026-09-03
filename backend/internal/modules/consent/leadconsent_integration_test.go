@@ -24,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type leadConsentEnv struct {
@@ -213,5 +215,108 @@ func TestOutboundGateAcceptsTheLeadArm(t *testing.T) {
 	}
 	if err := gate.RequireGrantedForEmails(e.ctx, []string{e.leadEmail}, "doi_newsletter"); !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Fatalf("a grant for one purpose authorized another: %v", err)
+	}
+}
+
+// The ENGINE's own answer about a lead, which is a different question from the
+// legacy gate's and had no answer at all until now.
+//
+// Without a lead arm the engine returned `review`/no-subject for every
+// lead-only recipient. That was harmless while the engine only observed and
+// would have become an inversion the day a category moved to enforce: the
+// conjunction would refuse exactly the sends the legacy gate allows, so a
+// rollout step meant to tighten marketing would have silently stopped ordinary
+// correspondence with every unpromoted lead.
+func TestTheEngineAnswersAboutALeadRatherThanShrugging(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	recipient := connector.Recipient{Email: e.leadEmail}
+
+	tx, err := e.store.db.Pool().Begin(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	// Before the grant the engine denies, and names WHY: no consent, not "we
+	// could not find anybody". The distinction is the whole point — a
+	// no-subject verdict is absolute and would deny in every mode.
+	before, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+	if err != nil {
+		t.Fatalf("deciding about an ungranted lead: %v", err)
+	}
+	if before.SubjectKind != entityLead {
+		t.Errorf("subject kind = %q, want lead — the engine did not recognise the subject", before.SubjectKind)
+	}
+	if before.Verdict != commsauthz.VerdictDeny {
+		t.Errorf("verdict = %q, want deny for a lead with no grant", before.Verdict)
+	}
+	if before.ReasonCode == commsauthz.ReasonNoSubject {
+		t.Error("an identified lead was recorded as nobody, which denies in every mode")
+	}
+
+	if _, err := e.store.Record(e.ctx, RecordInput{
+		LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	after, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+	if err != nil {
+		t.Fatalf("deciding about a granted lead: %v", err)
+	}
+	if after.Verdict != commsauthz.VerdictAllow {
+		t.Errorf("verdict = %q (%s), want allow — the engine refused what the legacy gate allows",
+			after.Verdict, after.ReasonCode)
+	}
+	if after.SubjectID != e.lead.UUID {
+		t.Errorf("subject id = %v, want the lead's own id %v", after.SubjectID, e.lead.UUID)
+	}
+}
+
+// The engine and the legacy gate agree about a lead, which is what makes it
+// safe to enforce. Two implementations of "may we write to this lead" would be
+// two answers, and the one that stopped matching would look exactly like the
+// one that still did.
+func TestTheEngineAndTheLegacyGateAgreeAboutALead(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	recipient := connector.Recipient{Email: e.leadEmail}
+
+	for _, step := range []struct {
+		name  string
+		grant bool
+	}{{"before the grant", false}, {"after the grant", true}} {
+		if step.grant {
+			if _, err := e.store.Record(e.ctx, RecordInput{
+				LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		legacyErr := gate.RequireGrantedForEmails(e.ctx, []string{e.leadEmail}, "newsletter")
+		legacyAllows := legacyErr == nil
+
+		tx, err := e.store.db.Pool().Begin(e.ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		d, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+		if err != nil {
+			t.Fatalf("%s: deciding: %v", step.name, err)
+		}
+		if err := tx.Rollback(e.ctx); err != nil {
+			t.Fatalf("%s: rolling back: %v", step.name, err)
+		}
+		engineAllows := d.Verdict == commsauthz.VerdictAllow
+
+		if legacyAllows != engineAllows {
+			t.Errorf("%s: legacy allows=%v, engine allows=%v (%s) — enforcing this category would change who can be written to",
+				step.name, legacyAllows, engineAllows, d.ReasonCode)
+		}
 	}
 }
