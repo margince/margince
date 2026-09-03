@@ -125,6 +125,20 @@ func (s ToolSpec) ReadOnly() bool {
 	return s.RequiredScope == principal.ScopeRead
 }
 
+// The argument names the SURFACE owns rather than any one tool.
+//
+// Here in the port because two packages need them and neither owns the other:
+// the tool surface splices and pops them, and the runner's listing renderer
+// omits what the surface states once instead of printing it per tool. They were
+// spelled in the surface alone, which left the renderer either importing the
+// surface for a string or keeping a second copy of it — and a second copy of an
+// argument NAME is the one that goes wrong silently, because a listing that
+// omits `idempotency_ke` still renders and still looks right.
+const (
+	ReservedApprovalIDArg     = "approval_id"
+	ReservedIdempotencyKeyArg = "idempotency_key"
+)
+
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the
 // effective tier depends on the call's arguments and MUST carry a

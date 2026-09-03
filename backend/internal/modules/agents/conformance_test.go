@@ -210,6 +210,11 @@ func fullRegistry(t *testing.T) *Registry {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
 	}, nil)
 	RegisterVocabularyTool(r, inertVocabulary{})
+	// The REAL resource, over the probe catalog. Nothing about the report
+	// vocabulary needs a pool or a seam, so a stub here would put a test double
+	// where the production renderer belongs and the encoding walk would be
+	// checking the double's schema.
+	RegisterReportVocabularyTool(r, NewReportVocabularyResource(probeReportCatalog))
 	RegisterContextSearchTool(r, nil, inertRetriever{})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, nil

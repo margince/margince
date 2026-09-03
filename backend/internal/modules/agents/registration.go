@@ -205,10 +205,15 @@ func assertObjectSchemas(spec mcp.ToolSpec) error {
 	return nil
 }
 
-// retryKeyProperty is the advertised member. The prose is short on purpose: it
-// is served in the tools/list catalog AND printed into every Surface-B run's
-// system prompt, once per mutating tool, so a sentence here is twenty-eight
-// sentences of every run's context.
+// retryKeyProperty is the advertised member, served in the tools/list catalog.
+//
+// The prose used to be short because a Surface-B run re-sent it once per
+// mutating tool on every step. It no longer does: the runner's listing omits
+// this description and its frame states the rule once
+// (runner.surfaceSchemaRules), so the sentence here is paid for by a client
+// catalogue a client caches, and not by every turn of every run. Keep it short
+// anyway — a client holds it for a whole session — but the reason is now the
+// catalogue and not the window.
 const retryKeyProperty = `{"type":"string","maxLength":255,` +
 	`"description":"Optional. Same key, same result; a key reused with other arguments is refused."}`
 

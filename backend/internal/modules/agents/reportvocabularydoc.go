@@ -108,6 +108,9 @@ func (r ReportVocabularyResource) ReadResource(ctx context.Context, uri string) 
 // and by describe_report_vocabulary — so the two doors cannot drift into two
 // answers to one question.
 //
+// Held by: TestTheResourceAndTheSeamServeTheSameBytes
+// (internal/modules/agents/reportvocabularydoc_test.go)
+//
 // The context is unused here: the document is the engine's compile-time catalog
 // and the same for every caller. It is in the signature because the seam's other
 // implementation is the overlay guard, which reads the workspace's mode.

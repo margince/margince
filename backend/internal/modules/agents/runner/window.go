@@ -279,7 +279,7 @@ Rules:
 - The trigger is ` + triggerProvenance + `: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
-- `)
+- ` + surfaceSchemaRules + `- `)
 	b.WriteString(fence.Rule("captured external"))
 	// The rule governs the run's final summary, which is filed on a record the
 	// whole team reads. Empty when the caller passed none — the certification
@@ -294,6 +294,45 @@ Available tools:
 `)
 	b.WriteString(ToolListing(specs))
 	return b.String()
+}
+
+// surfaceSchemaRules states, ONCE, what CompactSchema stops printing per tool.
+//
+// Every sentence here is true of the whole surface, which is the test for
+// belonging in this block: the retry key has one definition spliced into every
+// mutating core tool, and the unknown-key refusal is enforced by the runtime
+// independently of any schema. A rule true of one tool belongs in that tool's
+// own description, where it is paid for once by the tool that needs it.
+//
+// It costs the frame ~40 tokens on every run and the compaction saves ~1,165 on
+// every listing. The frame's own tokens are published in
+// docs/reference/agent-tool-budget.md, because a saving that quietly re-spends
+// part of itself somewhere unmeasured is the shape this whole change is against.
+//
+// One line per omission, and no more: the schema-equivalence gate asserts the
+// other direction too — the frame states nothing about a member the compaction
+// leaves in place.
+const surfaceSchemaRules = `An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.
+- Any mutating tool accepts an optional ` + "`" + mcp.ReservedIdempotencyKeyArg + "`" + ` string. Same key, same result; a key reused with other arguments is refused.
+`
+
+// SystemFrameTokens is what the system prompt costs BEFORE any tool is listed:
+// the output contract, the rules — surfaceSchemaRules included — and the prompt
+// fence, measured with the same ~4-bytes-per-token heuristic the window bounds
+// itself with.
+//
+// Exported for the same reason ToolListing and PromptTokenCeiling are, and for a
+// reason this change created: moving a per-tool sentence into the frame trades
+// (tools × sentence) for (1 × sentence), and only the first half was ever
+// measured. The catalog floor holds ToolListing alone, so a frame that grew a
+// paragraph would spend it on every run of every agent with no assertion and no
+// published number anywhere. Now it is published beside the listing it bought.
+//
+// The language rule is excluded because it is the CALLER's, not the frame's:
+// the certification lane passes none, and an installation's own base language
+// sentence is not a cost this build can state once.
+func SystemFrameTokens() int {
+	return len(systemPrompt(nil, promptfence.New(), "")) / 4
 }
 
 // ToolListing renders the tool surface exactly as the system prompt carries it.
@@ -314,7 +353,7 @@ func ToolListing(specs []mcp.ToolSpec) string {
 		// alike, and the description is the half that choice is made on — so it
 		// goes first, rather than after the several hundred characters of JSON
 		// the model needs only once it has chosen.
-		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, string(spec.InputSchema))
+		fmt.Fprintf(&b, "- %s — %s\n  input schema: %s\n", spec.Name, spec.Description, CompactSchema(spec.InputSchema))
 	}
 	return b.String()
 }
