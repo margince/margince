@@ -896,6 +896,9 @@ describe("the address opens a queue", () => {
     // silence from a component that has not run yet, and this case passed with
     // the guard removed before the anchor was added.
     await screen.findByRole("button", { name: "Leave a note" });
+    // And a line drawn after the panel, so the wait covers the panel's own
+    // position rather than only its neighbour's.
+    await screen.findByText("Nothing is waiting on you.");
 
     // The panel is absent, and — the half that actually holds — it never ASKS.
     // The endpoint answers about the authenticated principal, so a request made
@@ -921,10 +924,18 @@ describe("the address opens a queue", () => {
     );
     renderWorklist("en", "unassigned");
 
-    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
-    await waitFor(() =>
-      expect(screen.queryByText("What the queue is not showing")).toBeNull(),
-    );
+    // Anchored on a line drawn AFTER the panel in the same tree, so seeing it
+    // proves React reached and passed the point where the panel would have
+    // rendered and asked.
+    //
+    // `waitFor` on the absence itself would prove nothing: "this text is not
+    // here" is already true before the day has landed, so the wait returns on
+    // its first tick and the case passes against a page that has not rendered.
+    // That is the defect this anchor replaces, and it is the same one the
+    // sibling case above hit.
+    await screen.findByText("Nothing is waiting on you.");
+
+    expect(screen.queryByText("What the queue is not showing")).toBeNull();
     expect(hiddenRequests()).toEqual([]);
   });
 
