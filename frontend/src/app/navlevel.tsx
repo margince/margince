@@ -279,9 +279,7 @@ function NavLevelGroupView({
           and draws a hairline inside the same space. Swapping it for a shorter
           <hr> re-spaced every group and drifted the icons. */}
       {group.headingKey && (
-        <Heading className="navheading t-eyebrow">
-          {t(group.headingKey)}
-        </Heading>
+        <Heading className="navheading">{t(group.headingKey)}</Heading>
       )}
       {group.items.map((entry) => (
         <Fragment key={entry.id}>

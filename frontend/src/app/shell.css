@@ -467,26 +467,21 @@
   height: 32px;
   flex: none;
   border-radius: 9px;
-  background: linear-gradient(
-    145deg,
-    var(--wsChipTop) 0%,
-    var(--accentBrand) 52%,
-    var(--wsChipBottom) 100%
-  );
+  /* Flat brand emerald, no gradient and no lift: the mark is the one filled
+     thing in the chrome, and a lit, shadowed chip beside quiet rows was the
+     loudest object on the screen. */
+  background: var(--accentBrand);
   color: var(--textOnAccent);
   display: grid;
   place-items: center;
-  box-shadow: var(--shadow-pop);
 }
-/* The same slot holding the COMPANY's mark. The chip's own ground and lift go:
-   what stands here is a logo drawn for its own background, or the monogram
-   Avatar tints from the record's identity, and either one on the brand gradient
-   would be a second surface behind a finished mark. The avatar fills the slot
-   so the collapsed rail keeps centring the same 32px box on the rows' glyph
-   axis. */
+/* The same slot holding the COMPANY's mark. The chip's own ground goes: what
+   stands here is a logo drawn for its own background, or the monogram Avatar
+   tints from the record's identity, and either one on the brand emerald would
+   be a second surface behind a finished mark. The avatar fills the slot so the
+   collapsed rail keeps centring the same 32px box on the rows' glyph axis. */
 .rail .ws-chip-company {
   background: none;
-  box-shadow: none;
 }
 .rail .ws-chip-company .avatar {
   width: 100%;
@@ -523,9 +518,8 @@
   opacity: 0;
 }
 .rail .ws-name b {
-  font-family: var(--f-display);
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
   line-height: 1.25;
 }
@@ -556,14 +550,18 @@
 .rail .navgroup + .navgroup {
   margin-top: var(--space-6);
 }
-/* The eyebrow, which is the one uppercase thing in the product (DESIGN.md §2):
-   the heading carries `t-eyebrow` (app/navlevel.tsx) for its size, weight,
-   tracking and case, and this rule only places it. The group is separated by
-   space, not by a rule: a heading and a divider do the same job, and stacking
-   both says it twice. */
+/* A quiet label over a group, not a heading competing with the rows under it:
+   sentence case, one step down from the rows in size and weight, in the meta
+   ink — the rows are what the eye is looking for. Not the uppercase eyebrow:
+   ten places to go under three shouted labels read as a form, and the mock
+   sets these small and plain. The group is separated by space, not by a rule:
+   a heading and a divider do the same job, and stacking both says it twice. */
 .rail .navheading {
   position: relative;
-  margin: 0 0 var(--space-2);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--textMeta);
+  margin: 0 0 var(--space-1);
   padding: 0 14px; /* ds:ignore the nav rows' own inset, which this label stands on */
 }
 /* Collapsed: the heading keeps its exact box (same font metrics, same margins)
@@ -643,21 +641,21 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-/* The current row is a TINT on the glass (DESIGN.md §2: "a pill, a keycap, the
-   active sidebar row"), one step past hover so the two states are never the
-   same gesture read twice. A white plate — what this was on the recessed
-   sidebar — is invisible on a ground that is already white.
-   Still three signals, because a tint alone is colour-only (WCAG 1.4.1, Level
-   A): the weight, the accent on the glyph, and the pane's own hairline as an
-   EDGE, which is what makes it a surface with a boundary rather than a smudge.
-   The INK stays neutral: the accent as 13.5px text measures under the 4.5:1 AA
-   needs on the dark theme, and weight does not rescue that below 18.66px. The
-   glyph is where the accent goes, and at 3:1 non-text (1.4.11) it clears. */
+/* The current row is one more pane on the glass: the pane's ground with the
+   pane's hairline as an EDGE, which is what makes it a surface with a boundary
+   rather than a smudge, and quieter than hover's tint so the two states are
+   never the same gesture read twice.
+   Still three signals, because a ground alone is colour-only (WCAG 1.4.1,
+   Level A): the edge, medium weight — not semibold, which shouted the row on
+   a column this quiet — and the accent on the glyph. The INK stays neutral:
+   the accent as 13.5px text measures under the 4.5:1 AA needs on the dark
+   theme, and weight does not rescue that below 18.66px. The glyph is where the
+   accent goes, and at 3:1 non-text (1.4.11) it clears. */
 .rail .navitem.active {
-  background: var(--bgCard);
+  background: var(--pane);
   border-color: var(--paneEdge);
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-medium);
 }
 .rail .navitem.active svg {
   color: var(--accentText);

@@ -95,10 +95,11 @@
   width: 100%;
   min-height: var(--control-h-sm);
   padding: 0 var(--space-2) 0 var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  /* A field's corner: this control is drawn as the field it opens. */
-  border-radius: var(--r-control);
-  background: var(--bgPage);
+  /* One more pane on the glass, with the pane's own edge: a field drawn in the
+     page's ground sat in the strip as a hole. */
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-sm);
+  background: var(--pane);
   color: var(--textMeta);
   font-size: var(--fs-sm);
   text-align: left;
