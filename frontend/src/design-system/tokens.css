@@ -594,15 +594,13 @@
      control boundary, held to the same 1.4.11 floor. */
   --borderControl: #5f7a6e;
 
-  /* Themed, because the light value is a 6% black — invisible on #0e1b16. Any
-     card whose separation depends on its shadow simply lost its edge in dark,
-     and the login surface's brand pane is exactly that case: its fill sits
-     within a couple of ΔE of the pane behind it, so with no shadow the two-pane
-     split had no visible boundary at all. The GEOMETRY is the light theme's,
-     because a card sits the same distance off the page in either theme; only the
-     alpha is a theme's decision, and on a dark ground it has to be most of the
-     way to opaque to read at all. */
-  --shadow-card: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
+  /* Themed, because the light hairline is a 4% black — invisible on #0e1b16.
+     Any card whose separation depends on it simply lost its edge in dark, and
+     the login surface's brand pane is exactly that case: its fill sits within
+     a couple of ΔE of the pane behind it. The GEOMETRY is the light theme's
+     (a hairline, not a drop shadow); only the ink is a theme's decision, and
+     on a dark ground the edge is a faint white rather than a faint black. */
+  --shadow-card: 0 0 0 1px #ffffff14;
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
   /* higher alpha so the teal read-pill fill stays legible on the darker card
@@ -695,7 +693,7 @@
 
     --borderControl: #5f7a6e;
 
-    --shadow-card: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 0 0 1px #ffffff14;
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
     --tealLight: rgba(14, 116, 144, 0.28);

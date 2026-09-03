@@ -564,7 +564,7 @@ a:not([class]):focus-visible {
 }
 .t-label {
   font-size: var(--fs-meta);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--textMeta);
 }
 .t-caption {
