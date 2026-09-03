@@ -1277,6 +1277,7 @@ export const vi = {
   "approval.kind.promote_lead": "Chuyển đổi một lead",
   "approval.kind.archive_record": "Lưu trữ một bản ghi",
   "approval.kind.merge_records": "Gộp hai bản ghi",
+  "approval.kind.merge_tags": "Gộp một thẻ vào thẻ khác",
   "approval.kind.update_record": "Cập nhật một bản ghi",
   "approval.kind.create_record": "Tạo một bản ghi",
   "approval.kind.send_email": "Gửi một email",

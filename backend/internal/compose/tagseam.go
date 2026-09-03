@@ -183,6 +183,18 @@ func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (
 	return tagOf(row.ID, row.Name, row.Color, row.ArchivedAt != nil), nil
 }
 
+// MergeTags hands the store the two ids and nothing else: which tag survives is
+// the caller's decision, already made and already approved by a human, and the
+// store owns every refusal that remains (a self-merge, an archived target, a
+// word the caller may not read).
+func (a tagAdapter) MergeTags(ctx context.Context, source, target ids.UUID) (agents.TagMergeResult, error) {
+	out, err := a.store.MergeTags(ctx, ids.From[ids.TagKind](source), ids.From[ids.TagKind](target))
+	if err != nil {
+		return agents.TagMergeResult{}, err
+	}
+	return agents.TagMergeResult{Moved: out.Moved, Collapsed: out.Collapsed}, nil
+}
+
 func (a tagAdapter) UpdateTag(ctx context.Context, tagID ids.UUID, in agents.TagEdit) (agents.Tag, error) {
 	// expectedVersion 0: the tool takes no If-Match, and zero is the store's
 	// own spelling for "the caller sent none and accepts last-write-wins" —
