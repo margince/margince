@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -89,6 +90,7 @@ type (
 	aiActivityHandlers     = aiactivity.Handlers
 	noticesHandlers        = notices.Handlers
 	weeklyPlanHandlers     = weeklyplan.Handlers
+	forecastHandlers       = forecasting.Handlers
 	introductionHandlers   = introductions.Handlers
 )
 

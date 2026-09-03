@@ -5470,6 +5470,48 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
+// Defines values for ForecastCallScopeKind.
+const (
+	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
+	ForecastCallScopeKindTeam      ForecastCallScopeKind = "team"
+	ForecastCallScopeKindWorkspace ForecastCallScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastCallScopeKind enum.
+func (e ForecastCallScopeKind) Valid() bool {
+	switch e {
+	case ForecastCallScopeKindOwner:
+		return true
+	case ForecastCallScopeKindTeam:
+		return true
+	case ForecastCallScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastReadingsScopeKind.
+const (
+	ForecastReadingsScopeKindOwner     ForecastReadingsScopeKind = "owner"
+	ForecastReadingsScopeKindTeam      ForecastReadingsScopeKind = "team"
+	ForecastReadingsScopeKindWorkspace ForecastReadingsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastReadingsScopeKind enum.
+func (e ForecastReadingsScopeKind) Valid() bool {
+	switch e {
+	case ForecastReadingsScopeKindOwner:
+		return true
+	case ForecastReadingsScopeKindTeam:
+		return true
+	case ForecastReadingsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -6490,6 +6532,45 @@ func (e MyAgentGrantState) Valid() bool {
 	case MyAgentGrantStateGranted:
 		return true
 	case MyAgentGrantStateNeverAsked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastCallPeriod.
+const (
+	NewForecastCallPeriodMonth   NewForecastCallPeriod = "month"
+	NewForecastCallPeriodQuarter NewForecastCallPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastCallPeriod enum.
+func (e NewForecastCallPeriod) Valid() bool {
+	switch e {
+	case NewForecastCallPeriodMonth:
+		return true
+	case NewForecastCallPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastCallScopeKind.
+const (
+	NewForecastCallScopeKindOwner     NewForecastCallScopeKind = "owner"
+	NewForecastCallScopeKindTeam      NewForecastCallScopeKind = "team"
+	NewForecastCallScopeKindWorkspace NewForecastCallScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastCallScopeKind enum.
+func (e NewForecastCallScopeKind) Valid() bool {
+	switch e {
+	case NewForecastCallScopeKindOwner:
+		return true
+	case NewForecastCallScopeKindTeam:
+		return true
+	case NewForecastCallScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -13612,6 +13693,45 @@ func (e GetFilterVocabularyParamsResource) Valid() bool {
 	}
 }
 
+// Defines values for GetForecastParamsPeriod.
+const (
+	GetForecastParamsPeriodMonth   GetForecastParamsPeriod = "month"
+	GetForecastParamsPeriodQuarter GetForecastParamsPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the GetForecastParamsPeriod enum.
+func (e GetForecastParamsPeriod) Valid() bool {
+	switch e {
+	case GetForecastParamsPeriodMonth:
+		return true
+	case GetForecastParamsPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetForecastParamsScopeKind.
+const (
+	GetForecastParamsScopeKindOwner     GetForecastParamsScopeKind = "owner"
+	GetForecastParamsScopeKindTeam      GetForecastParamsScopeKind = "team"
+	GetForecastParamsScopeKindWorkspace GetForecastParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetForecastParamsScopeKind enum.
+func (e GetForecastParamsScopeKind) Valid() bool {
+	switch e {
+	case GetForecastParamsScopeKindOwner:
+		return true
+	case GetForecastParamsScopeKindTeam:
+		return true
+	case GetForecastParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListLeadsParamsCapturedByKind.
 const (
 	ListLeadsParamsCapturedByKindAgent     ListLeadsParamsCapturedByKind = "agent"
@@ -14049,19 +14169,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
-	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
-	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
+	All  ListPeopleParamsTagMode = "all"
+	Any  ListPeopleParamsTagMode = "any"
+	None ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case ListPeopleParamsTagModeAll:
+	case All:
 		return true
-	case ListPeopleParamsTagModeAny:
+	case Any:
 		return true
-	case ListPeopleParamsTagModeNone:
+	case None:
 		return true
 	default:
 		return false
@@ -20715,6 +20835,69 @@ type FinanceInvoiceStatus string
 // and the reader is told it is not current.
 type FinanceSummaryState string
 
+// ForecastCall defines model for ForecastCall.
+type ForecastCall struct {
+	AmountMinor int64                 `json:"amount_minor"`
+	AuthorId    openapi_types.UUID    `json:"author_id"`
+	CreatedAt   time.Time             `json:"created_at"`
+	Currency    string                `json:"currency"`
+	Id          openapi_types.UUID    `json:"id"`
+	Note        *string               `json:"note,omitempty"`
+	PeriodEnd   openapi_types.Date    `json:"period_end"`
+	PeriodStart openapi_types.Date    `json:"period_start"`
+	ScopeId     *openapi_types.UUID   `json:"scope_id,omitempty"`
+	ScopeKind   ForecastCallScopeKind `json:"scope_kind"`
+
+	// SupersedesId The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
+	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
+}
+
+// ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
+type ForecastCallScopeKind string
+
+// ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
+type ForecastReadings struct {
+	AsOf               time.Time     `json:"as_of"`
+	BaseCurrency       string        `json:"base_currency"`
+	BestCaseMinor      int64         `json:"best_case_minor"`
+	ConfirmedDateCount int           `json:"confirmed_date_count"`
+	CurrentCall        *ForecastCall `json:"current_call,omitempty"`
+
+	// EligibleCount Deals considered, priced or not.
+	EligibleCount int `json:"eligible_count"`
+
+	// EvidenceMinor Committed pipeline whose close date somebody confirmed. A provisional date is a guess, so it is excluded here and included in open_minor.
+	EvidenceMinor int64 `json:"evidence_minor"`
+
+	// FxMissingCount Priced deals no rate could convert. Counted rather than silently totalled as zero, which would read as a smaller pipeline instead of an unconverted one.
+	FxMissingCount int   `json:"fx_missing_count"`
+	OpenMinor      int64 `json:"open_minor"`
+
+	// PeriodEnd The last day INSIDE the period, not an exclusive bound.
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
+	PricedCount int                       `json:"priced_count"`
+	ScopeId     *openapi_types.UUID       `json:"scope_id,omitempty"`
+	ScopeKind   ForecastReadingsScopeKind `json:"scope_kind"`
+
+	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
+	ScopeLimited *bool `json:"scope_limited,omitempty"`
+
+	// Timezone The zone the period's days were cut in, as an IANA name.
+	Timezone string `json:"timezone"`
+
+	// WeightedMinor Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
+	WeightedMinor int64 `json:"weighted_minor"`
+
+	// WonMinor Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// ForecastReadingsScopeKind defines model for ForecastReadings.ScopeKind.
+type ForecastReadingsScopeKind string
+
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
 	EffectiveDate openapi_types.Date `json:"effective_date"`
@@ -22997,6 +23180,27 @@ type MyAgentGrants struct {
 	// Data One entry per scheduled agent, including the ones never answered.
 	Data []MyAgentGrant `json:"data"`
 }
+
+// NewForecastCall defines model for NewForecastCall.
+type NewForecastCall struct {
+	AmountMinor int64 `json:"amount_minor"`
+
+	// AsOf A day inside the period being called. Omitted means today's period.
+	AsOf     *openapi_types.Date `json:"as_of,omitempty"`
+	Currency string              `json:"currency"`
+
+	// Note Why the number is what it is. Not carried on the event — a subscriber acting on prose is acting on something the author may edit for a human reader.
+	Note      *string                   `json:"note,omitempty"`
+	Period    *NewForecastCallPeriod    `json:"period,omitempty"`
+	ScopeId   *openapi_types.UUID       `json:"scope_id,omitempty"`
+	ScopeKind *NewForecastCallScopeKind `json:"scope_kind,omitempty"`
+}
+
+// NewForecastCallPeriod defines model for NewForecastCall.Period.
+type NewForecastCallPeriod string
+
+// NewForecastCallScopeKind defines model for NewForecastCall.ScopeKind.
+type NewForecastCallScopeKind string
 
 // NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
 type NewWeeklyPlanCommitment struct {
@@ -32662,6 +32866,25 @@ type GetFilterVocabularyParams struct {
 // GetFilterVocabularyParamsResource defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParamsResource string
 
+// GetForecastParams defines parameters for GetForecast.
+type GetForecastParams struct {
+	// Period The window length. Quarters follow the installation's financial year.
+	Period *GetForecastParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// AsOf Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock.
+	AsOf      *openapi_types.Date         `form:"as_of,omitempty" json:"as_of,omitempty"`
+	ScopeKind *GetForecastParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// GetForecastParamsPeriod defines parameters for GetForecast.
+type GetForecastParamsPeriod string
+
+// GetForecastParamsScopeKind defines parameters for GetForecast.
+type GetForecastParamsScopeKind string
+
 // ListFxRatesParams defines parameters for ListFxRates.
 type ListFxRatesParams struct {
 	// From 3-letter ISO currency; when set, returns that pair's history.
@@ -35985,6 +36208,9 @@ type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
+
+// RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
+type RecordForecastCallJSONRequestBody = NewForecastCall
 
 // SetFxRateJSONRequestBody defines body for SetFxRate for application/json ContentType.
 type SetFxRateJSONRequestBody = SetFxRateRequest
@@ -44745,6 +44971,12 @@ type ServerInterface interface {
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
+	// What a period is expected to close, and what the figure does not cover.
+	// (GET /forecast)
+	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
+	// Record what somebody believes will close.
+	// (POST /forecast/calls)
+	RecordForecastCall(w http.ResponseWriter, r *http.Request)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -47061,6 +47293,18 @@ func (_ Unimplemented) PreviewFilter(w http.ResponseWriter, r *http.Request) {
 // Read what a new filter clause may name on one record type (LVS-EXT-8).
 // (GET /filters/vocabulary)
 func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a period is expected to close, and what the figure does not cover.
+// (GET /forecast)
+func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record what somebody believes will close.
+// (POST /forecast/calls)
+func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58008,6 +58252,108 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetFilterVocabulary(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecast operation middleware
+func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastParams
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecast(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordForecastCall operation middleware
+func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordForecastCall(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74021,6 +74367,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast", wrapper.GetForecast)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)

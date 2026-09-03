@@ -10678,6 +10678,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a period is expected to close, and what the figure does not cover.
+         * @description Four readings over one period, plus the counts that say what they leave out.
+         *
+         *     `won` counts deals by the day they ACTUALLY closed, never by the day they were
+         *     expected to: a deal expected in March and won in April belongs to April, and
+         *     counting it in March reports money the quarter did not bring in. `evidence` is the
+         *     committed pipeline whose close dates somebody confirmed — a provisional date is a
+         *     guess, which is what that reading exists to exclude, though the deal stays in
+         *     `open`. `best_case` adds the best-case category. `weighted` applies each deal's
+         *     stage probability, rounded per deal.
+         *
+         *     `eligible_count` minus `priced_count` is the gap a reader is owed. An unpriced deal
+         *     is real pipeline contributing zero money, and a total presented without that gap
+         *     invites the reading where every eligible deal was counted.
+         *
+         *     The frame is part of the answer: `as_of`, the zone the days were cut in, and the
+         *     base currency. A total with none of those beside it is a number the reader places
+         *     by assumption, and the assumption is usually their own zone.
+         */
+        get: operations["getForecast"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what somebody believes will close.
+         * @description A call is an assertion by a person, not a derivation — a manager saying what they
+         *     believe the period will bring in, which may differ from every reading above.
+         *
+         *     It writes NO deal row. Calling a number is a statement about the pipeline, not an
+         *     edit of it: a manager who disagrees with the derived figure records what they
+         *     believe instead of reaching into deals until the derivation says it.
+         *
+         *     A call SUPERSEDES rather than overwrites. The previous call for the same period and
+         *     scope is named in `supersedes_id`, so what was believed on the day it was believed
+         *     survives — which is the whole value of a call to anyone reviewing how forecasting
+         *     went.
+         */
+        post: operations["recordForecastCall"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/current": {
         parameters: {
             query?: never;
@@ -22173,6 +22239,103 @@ export interface components {
              *     gets today.
              */
             delivery_hour_local?: number;
+        };
+        /** @description Four money readings over one period, the counts that say what they leave out, and the frame they were computed in. */
+        ForecastReadings: {
+            /** Format: date */
+            period_start: string;
+            /**
+             * Format: date
+             * @description The last day INSIDE the period, not an exclusive bound.
+             */
+            period_end: string;
+            /** @enum {string} */
+            scope_kind: "workspace" | "team" | "owner";
+            /** Format: uuid */
+            scope_id?: string;
+            /**
+             * Format: int64
+             * @description Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
+             */
+            won_minor: number;
+            /**
+             * Format: int64
+             * @description Committed pipeline whose close date somebody confirmed. A provisional date is a guess, so it is excluded here and included in open_minor.
+             */
+            evidence_minor: number;
+            /** Format: int64 */
+            best_case_minor: number;
+            /** Format: int64 */
+            open_minor: number;
+            /**
+             * Format: int64
+             * @description Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
+             */
+            weighted_minor: number;
+            /** @description Deals considered, priced or not. */
+            eligible_count: number;
+            /** @description How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero. */
+            priced_count: number;
+            confirmed_date_count: number;
+            /** @description Priced deals no rate could convert. Counted rather than silently totalled as zero, which would read as a smaller pipeline instead of an unconverted one. */
+            fx_missing_count: number;
+            /** Format: date-time */
+            as_of: string;
+            /** @description The zone the period's days were cut in, as an IANA name. */
+            timezone: string;
+            base_currency: string;
+            current_call?: components["schemas"]["ForecastCall"];
+            /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
+            scope_limited?: boolean;
+        };
+        NewForecastCall: {
+            /**
+             * @default quarter
+             * @enum {string}
+             */
+            period: "quarter" | "month";
+            /**
+             * Format: date
+             * @description A day inside the period being called. Omitted means today's period.
+             */
+            as_of?: string;
+            /**
+             * @default workspace
+             * @enum {string}
+             */
+            scope_kind: "workspace" | "team" | "owner";
+            /** Format: uuid */
+            scope_id?: string;
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+            /** @description Why the number is what it is. Not carried on the event — a subscriber acting on prose is acting on something the author may edit for a human reader. */
+            note?: string;
+        };
+        ForecastCall: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            /** @enum {string} */
+            scope_kind: "workspace" | "team" | "owner";
+            /** Format: uuid */
+            scope_id?: string;
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+            note?: string;
+            /** Format: uuid */
+            author_id: string;
+            /**
+             * Format: uuid
+             * @description The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
+             */
+            supersedes_id?: string;
+            /** Format: date-time */
+            created_at: string;
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -45339,6 +45502,64 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getForecast: {
+        parameters: {
+            query?: {
+                /** @description The window length. Quarters follow the installation's financial year. */
+                period?: "quarter" | "month";
+                /** @description Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock. */
+                as_of?: string;
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject. */
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The readings for that period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastReadings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordForecastCall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewForecastCall"];
+            };
+        };
+        responses: {
+            /** @description The call as recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastCall"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCurrentWeeklyPlan: {

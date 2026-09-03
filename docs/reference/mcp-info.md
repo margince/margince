@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 61 |
+| Tools | 62 |
 | Resources | 9 |
-| Tool catalog | 173.7 KB |
+| Tool catalog | 177.2 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 45334 |
+| Approx. wire tokens | 46238 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 83.5 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 40.2 KB | 23% | Yes, every step |
-| Input schemas | 37.0 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.9 KB | 7% | Partly |
-| **Description + input schema** | **77.2 KB** | **44%** | **the recurring cost** |
+| Output schemas | 85.1 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 41.3 KB | 23% | Yes, every step |
+| Input schemas | 37.6 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 13.1 KB | 7% | Partly |
+| **Description + input schema** | **79.0 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (61)
+### Tools (62)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -82,6 +82,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.5 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
@@ -3906,6 +3907,215 @@ Learn about an organization by reading its public website, and propose what was 
 {
   "properties": {
     "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### forecast_readings
+
+**Read the forecast**
+
+What a period is expected to close, in four readings, plus what the figures do not cover. `won` counts deals by the day they ACTUALLY closed, never the day they were expected to — a deal expected in March and won in April is April's. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date is a guess, so it is excluded there and still counted in `open`. `weighted` applies each deal's stage probability, rounded per deal. Read `eligible_count` against `priced_count` before quoting a total: an unpriced deal is real pipeline contributing zero money, and the gap is what the money readings leave out. `fx_missing_count` is priced deals no rate could convert — also absent from the totals rather than counted as zero. `scope_limited` true means deals the caller cannot read were left out; there is deliberately no count of them. Every figure carries the frame it was cut in: `as_of`, the installation's timezone, and the base currency. Quote them with the number — a total placed in the reader's own zone is a different total. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "as_of": {
+      "description": "Which period to read, by naming a day inside it. Omit for the current one.",
+      "format": "date",
+      "type": "string"
+    },
+    "period": {
+      "description": "The window length. Quarters follow the installation's own financial year, which may not start in January.",
+      "enum": [
+        "quarter",
+        "month"
+      ],
+      "type": "string"
+    },
+    "scope_id": {
+      "description": "The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "scope_kind": {
+      "description": "Whose forecast. Defaults to the whole workspace.",
+      "enum": [
+        "workspace",
+        "team",
+        "owner"
+      ],
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "base_currency": {
+          "type": "string"
+        },
+        "best_case_minor": {
+          "type": "integer"
+        },
+        "confirmed_date_count": {
+          "type": "integer"
+        },
+        "current_call": {
+          "type": "object"
+        },
+        "eligible_count": {
+          "type": "integer"
+        },
+        "evidence_minor": {
+          "type": "integer"
+        },
+        "fx_missing_count": {
+          "type": "integer"
+        },
+        "open_minor": {
+          "type": "integer"
+        },
+        "period_end": {
+          "type": "string"
+        },
+        "period_start": {
+          "type": "string"
+        },
+        "priced_count": {
+          "type": "integer"
+        },
+        "scope_id": {
+          "type": "string"
+        },
+        "scope_kind": {
+          "type": "string"
+        },
+        "scope_limited": {
+          "type": "boolean"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "weighted_minor": {
+          "type": "integer"
+        },
+        "won_minor": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "as_of",
+        "base_currency",
+        "best_case_minor",
+        "confirmed_date_count",
+        "eligible_count",
+        "evidence_minor",
+        "fx_missing_count",
+        "open_minor",
+        "period_end",
+        "period_start",
+        "priced_count",
+        "scope_kind",
+        "timezone",
+        "weighted_minor",
+        "won_minor"
+      ],
       "type": "object"
     },
     "evidence": {

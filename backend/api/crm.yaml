@@ -15820,6 +15820,101 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /forecast:
+    get:
+      tags: [Reports]
+      operationId: getForecast
+      summary: What a period is expected to close, and what the figure does not cover.
+      description: |
+        Four readings over one period, plus the counts that say what they leave out.
+
+        `won` counts deals by the day they ACTUALLY closed, never by the day they were
+        expected to: a deal expected in March and won in April belongs to April, and
+        counting it in March reports money the quarter did not bring in. `evidence` is the
+        committed pipeline whose close dates somebody confirmed — a provisional date is a
+        guess, which is what that reading exists to exclude, though the deal stays in
+        `open`. `best_case` adds the best-case category. `weighted` applies each deal's
+        stage probability, rounded per deal.
+
+        `eligible_count` minus `priced_count` is the gap a reader is owed. An unpriced deal
+        is real pipeline contributing zero money, and a total presented without that gap
+        invites the reading where every eligible deal was counted.
+
+        The frame is part of the answer: `as_of`, the zone the days were cut in, and the
+        base currency. A total with none of those beside it is a number the reader places
+        by assumption, and the assumption is usually their own zone.
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [quarter, month], default: quarter }
+          description: The window length. Quarters follow the installation's financial year.
+        - name: as_of
+          in: query
+          schema: { type: string, format: date }
+          description: >-
+            Which period to read, by naming a day inside it. Omitted means today's.
+            A DAY rather than an instant: which period a moment falls in is a question
+            about the installation's calendar, not about the caller's clock.
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [workspace, team, owner], default: workspace }
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            Whose forecast, for a team or owner scope. Refused with the workspace scope,
+            which names no subject.
+      x-mcp-tool: { verb: forecast_readings, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The readings for that period.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastReadings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/calls:
+    post:
+      tags: [Reports]
+      operationId: recordForecastCall
+      summary: Record what somebody believes will close.
+      description: |
+        A call is an assertion by a person, not a derivation — a manager saying what they
+        believe the period will bring in, which may differ from every reading above.
+
+        It writes NO deal row. Calling a number is a statement about the pipeline, not an
+        edit of it: a manager who disagrees with the derived figure records what they
+        believe instead of reaching into deals until the derivation says it.
+
+        A call SUPERSEDES rather than overwrites. The previous call for the same period and
+        scope is named in `supersedes_id`, so what was believed on the day it was believed
+        survives — which is the whole value of a call to anyone reviewing how forecasting
+        went.
+      # Human-only, for now and on purpose. A call is a person's judgement about
+      # a number they are accountable for, so an agent could at most stage one
+      # for approval — and a staged approval has to name what it binds to. The
+      # governed-call machinery is record-typed and a forecast call writes no
+      # record, so the command that would describe it does not exist yet.
+      #
+      # Opening this to agents before that command exists would stage approvals
+      # a human is asked to release against a target nothing resolved. The tool
+      # lands with its command, not ahead of it.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewForecastCall' }
+      responses:
+        '201':
+          description: The call as recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastCall' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/current:
     get:
       tags: [Brief]
@@ -30431,6 +30526,124 @@ components:
             reporting timezone. Absent means the job's own hour, which is what every seat
             gets today.
 
+    ForecastReadings:
+      type: object
+      description: >-
+        Four money readings over one period, the counts that say what they leave out, and
+        the frame they were computed in.
+      required:
+        - period_start
+        - period_end
+        - scope_kind
+        - won_minor
+        - evidence_minor
+        - best_case_minor
+        - open_minor
+        - weighted_minor
+        - eligible_count
+        - priced_count
+        - confirmed_date_count
+        - fx_missing_count
+        - as_of
+        - timezone
+        - base_currency
+      properties:
+        period_start: { type: string, format: date }
+        period_end:
+          type: string
+          format: date
+          description: The last day INSIDE the period, not an exclusive bound.
+        scope_kind: { type: string, enum: [workspace, team, owner] }
+        scope_id: { type: string, format: uuid }
+        won_minor:
+          type: integer
+          format: int64
+          description: >-
+            Deals whose ACTUAL close instant fell in this period, by its local days. Not
+            the expected date: a deal expected in March and won in April is April's.
+        evidence_minor:
+          type: integer
+          format: int64
+          description: >-
+            Committed pipeline whose close date somebody confirmed. A provisional date is
+            a guess, so it is excluded here and included in open_minor.
+        best_case_minor: { type: integer, format: int64 }
+        open_minor: { type: integer, format: int64 }
+        weighted_minor:
+          type: integer
+          format: int64
+          description: >-
+            Each open deal at its stage probability, rounded PER DEAL and then summed. Not
+            the sum rounded once — the two differ by up to one minor unit per deal.
+        eligible_count:
+          type: integer
+          description: Deals considered, priced or not.
+        priced_count:
+          type: integer
+          description: >-
+            How many carried an amount. The gap to eligible_count is what the money
+            readings do not cover: an unpriced deal is real pipeline contributing zero.
+        confirmed_date_count: { type: integer }
+        fx_missing_count:
+          type: integer
+          description: >-
+            Priced deals no rate could convert. Counted rather than silently totalled as
+            zero, which would read as a smaller pipeline instead of an unconverted one.
+        as_of: { type: string, format: date-time }
+        timezone:
+          type: string
+          description: The zone the period's days were cut in, as an IANA name.
+        base_currency: { type: string }
+        current_call: { $ref: '#/components/schemas/ForecastCall' }
+        scope_limited:
+          type: boolean
+          description: >-
+            True when deals the caller cannot read were left out. A BOOLEAN and never a
+            count: a count of what somebody may not read is itself a statement about how
+            much of it there is, so the reader is told the figure is partial and not by
+            how much.
+      additionalProperties: false
+    NewForecastCall:
+      type: object
+      required: [amount_minor, currency]
+      properties:
+        period: { type: string, enum: [quarter, month], default: quarter }
+        as_of:
+          type: string
+          format: date
+          description: A day inside the period being called. Omitted means today's period.
+        scope_kind: { type: string, enum: [workspace, team, owner], default: workspace }
+        scope_id: { type: string, format: uuid }
+        amount_minor: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string }
+        note:
+          type: string
+          maxLength: 2000
+          description: >-
+            Why the number is what it is. Not carried on the event — a subscriber acting
+            on prose is acting on something the author may edit for a human reader.
+      additionalProperties: false
+    ForecastCall:
+      type: object
+      required: [id, period_start, period_end, scope_kind, amount_minor, currency, author_id, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        scope_kind: { type: string, enum: [workspace, team, owner] }
+        scope_id: { type: string, format: uuid }
+        amount_minor: { type: integer, format: int64 }
+        currency: { type: string }
+        note: { type: string }
+        author_id: { type: string, format: uuid }
+        supersedes_id:
+          type: string
+          format: uuid
+          description: >-
+            The call this one replaces. Absent on the first call of a period, which is a
+            different fact from replacing nothing.
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
     WeeklyPlan:
       type: object
       additionalProperties: false

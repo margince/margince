@@ -879,6 +879,14 @@ func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
 }
 
+func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastParams) {
+	httperr.NotImplemented(w, r, "GetForecast")
+}
+
+func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RecordForecastCall")
+}
+
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
 	httperr.NotImplemented(w, r, "ListFxRates")
 }

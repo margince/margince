@@ -102,7 +102,64 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 
 	var out Call
 	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		previous, err := s.currentCallTx(ctx, tx, in.Period, in.Scope)
+		out, err = s.writeCallTx(ctx, tx, in, note, author)
+		return err
+	})
+	if err != nil {
+		return Call{}, err
+	}
+	return out, nil
+}
+
+// RecordCallTx is RecordCall for a caller already holding a transaction — the
+// handler, which resolved the period in that same transaction so a settings
+// change mid-request cannot put the read and the write in different periods.
+//
+// The gate and the validation run here too rather than being assumed done by
+// the caller: an entry point that trusts its caller to have checked is one
+// deletion away from being an ungated write.
+func (s *Store) RecordCallTx(ctx context.Context, tx pgx.Tx, in NewCall) (Call, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
+		return Call{}, err
+	}
+	note, err := checkCall(in)
+	if err != nil {
+		return Call{}, err
+	}
+	author, err := callAuthor(ctx)
+	if err != nil {
+		return Call{}, err
+	}
+	return s.writeCallTx(ctx, tx, in, note, author)
+}
+
+// InTx runs fn inside one workspace transaction.
+//
+// Gated on read even though it reads nothing itself: everything a caller can do
+// through it begins with reading the forecast, and an ungated transaction
+// opener on a store is a door whose lock is somebody else's responsibility to
+// remember.
+func (s *Store) InTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
+	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
+		return err
+	}
+	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		return fn(ctx, tx)
+	})
+}
+
+// IsNoStandingCall answers whether a lookup found no call, as distinct from
+// having failed. "Nobody has called this period" is a real answer a reader
+// renders, not an error.
+func IsNoStandingCall(err error) bool { return errors.Is(err, errNoStandingCall) }
+
+// writeCallTx is the write itself, with every input already checked.
+func (s *Store) writeCallTx(
+	ctx context.Context, tx pgx.Tx, in NewCall, note string, author ids.UUID,
+) (Call, error) {
+	var out Call
+	err := func() error {
+		previous, err := s.standingCallTx(ctx, tx, in.Period, in.Scope)
 		switch {
 		case errors.Is(err, errNoStandingCall):
 			// The first call of a period supersedes nothing, which is a
@@ -110,7 +167,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 		case err != nil:
 			return err
 		default:
-			out.SupersedesID = &previous
+			out.SupersedesID = &previous.ID
 		}
 		out.PeriodStart = in.Period.StartDate
 		out.PeriodEnd = in.Period.EndDate
@@ -159,7 +216,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 			event.SupersedesId = &superseded
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, author, event)
-	})
+	}()
 	if err != nil {
 		return Call{}, err
 	}
@@ -245,28 +302,49 @@ func (s *Store) CurrentCall(ctx context.Context, period Period, scope Scope) (Ca
 // and `scope_id = NULL` is never true: written with =, a workspace call would
 // find no predecessor and every call would look like the first one, silently
 // discarding the chain for the one scope every installation has.
-func (s *Store) currentCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (ids.UUID, error) {
-	var id ids.UUID
+func (s *Store) CurrentCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (Call, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
+		return Call{}, err
+	}
+	return s.standingCallTx(ctx, tx, period, scope)
+}
+
+// standingCallTx is the lookup itself. Ungated on purpose and unexported for
+// exactly that reason: its two callers are CurrentCallTx, which gates read, and
+// the write path, which has already required create on the same object. A
+// second Require there would refuse a manager who may call but not read, which
+// is not a seat this product has.
+func (s *Store) standingCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (Call, error) {
+	var out Call
+	var note *string
 	// FOR UPDATE, and it is what makes the chain linear. Read without it, two
 	// managers calling at the same moment both find the same predecessor, both
 	// insert a call superseding it, and both commit — leaving two heads for one
 	// period with nothing to say which is current. The lock serializes them, so
 	// the second reads the first's call and supersedes THAT.
 	err := tx.QueryRow(ctx, `
-		SELECT id FROM forecast_call
+		SELECT id, period_start, period_end, scope_kind, scope_id, amount_minor,
+		       currency, note, author_id, supersedes_id, created_at
+		FROM forecast_call
 		WHERE period_start = $1 AND period_end = $2
 		  AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
 		ORDER BY created_at DESC, id DESC
 		LIMIT 1
 		FOR UPDATE`,
-		period.StartDate, period.EndDate, scope.Kind, scope.ID).Scan(&id)
+		period.StartDate, period.EndDate, scope.Kind, scope.ID).
+		Scan(&out.ID, &out.PeriodStart, &out.PeriodEnd, &out.Scope.Kind, &out.Scope.ID,
+			&out.AmountMinor, &out.Currency, &note, &out.AuthorID, &out.SupersedesID,
+			&out.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.Nil, errNoStandingCall
+		return Call{}, errNoStandingCall
 	}
 	if err != nil {
-		return ids.Nil, fmt.Errorf("forecasting: reading the standing call: %w", err)
+		return Call{}, fmt.Errorf("forecasting: reading the standing call: %w", err)
 	}
-	return id, nil
+	if note != nil {
+		out.Note = *note
+	}
+	return out, nil
 }
 
 // errNoStandingCall says this period and scope have never been called.
