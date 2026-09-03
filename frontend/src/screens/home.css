@@ -33,11 +33,6 @@
   line-height: var(--lh-tight);
 }
 
-.glance-intro {
-  margin: 0;
-  color: var(--textSecondary);
-}
-
 /* ── The readings plate ────────────────────────────────────────────────────
  * `StatStrip` owns the plate; this only places it. It sits between the
  * briefing and the work, which is the reading order the sentences promise.
@@ -241,16 +236,21 @@
   color: var(--textMeta);
 }
 
-/* The Brief's opening block: a scope label, the greeting, then the day in one
-   sentence. The sentence is body-weight rather than caption — it is the thing
-   the page is FOR, and every figure it used to be followed by is now drawn by
-   the section that owns it. */
+/* Scope and, for the morning, the moment the queue below was read — the label
+   over the greeting rather than a heading of its own. */
 .glance-eyebrow {
   color: var(--textMeta);
   display: block;
   margin-bottom: var(--space-1);
 }
 
+/* The Brief's opening block: the greeting, then the day in one sentence. The
+   sentence is body-weight rather than caption — it is the thing the page is
+   FOR, and every figure it used to be followed by is now drawn by the section
+   that owns it. It is ONE face whether the morning composed the sentence from
+   the ranked queue or the view fell back to its own standing line: the weekly's
+   fallback drew as a caption, which read as a footnote under a heading where
+   the morning read as the page's opening. */
 .glance-sentence {
   color: var(--textContent);
   margin: 0 0 var(--space-3);

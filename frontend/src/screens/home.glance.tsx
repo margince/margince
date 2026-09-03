@@ -146,7 +146,11 @@ export function HomeGlance({ firstName, now, day, week, view }: GlanceProps) {
         // describing it, because there is nothing yet to describe — and the
         // morning's "this is your day" read as the wrong week entirely beneath
         // "YOUR WEEK". Each view says its own.
-        <p className="glance-intro t-caption">
+        //
+        // ONE FACE either way. It is the same slot the morning's composed
+        // sentence fills, and drawn as a caption it read as a footnote where
+        // the composed one read as the page's opening.
+        <p className="glance-sentence">
           {t(
             view === "weekly" ? "home.glance.introWeekly" : "home.glance.intro",
           )}
