@@ -1,8 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 /**
- * The company record page against the mockups in
- * docs/explanation/assets/company-record-page-v2/.
+ * The company record page against the design's glance (DESIGN.md §7).
  *
  * This suite exists because "it looks like the mockup" kept being reported from
  * reading the code rather than the page. TWO describes, and the split matters:
@@ -110,46 +109,45 @@ async function topOf(locator: Locator): Promise<number> {
   return box.y;
 }
 
-test.describe("company record — the mockup's page shape", () => {
+test.describe("company record — the glance's page shape", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
   });
 
-  // State D and State A both put the money strip directly under the header and
-  // the tab strip below it. Today the page renders the tabs first, so this is
-  // the assertion that fails until the topology is fixed.
-  test("the KPI strip sits above the tab strip", async ({ page }) => {
+  // The readings are the overview's, under the bar that chose it (DESIGN.md
+  // §7): a tab without them moves nothing above itself, and a row of account
+  // readings over the People roster would be a header for a page it is not
+  // describing.
+  test("the readings row sits under the tab strip, on the overview alone", async ({
+    page,
+  }) => {
     await openCompany(page, POPULATED_ORG as string);
-    expect(await topOf(page.locator(STRIP))).toBeLessThan(
-      await topOf(page.locator(".co-tabs")),
+    expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
+      await topOf(page.locator(STRIP)),
     );
+    await page.getByRole("button", { name: "Personen" }).click();
+    await expect(page.locator(STRIP)).toHaveCount(0);
   });
 
-  // The strip carries the account's STANDING state — what is true until
-  // something changes it. What is true TODAY is the daily brief's, so the
-  // whose-move and worth-knowing readings are not here to be counted.
-  //
-  // FIVE slots on every account, whatever the fixture holds: the lifecycle
-  // decides which fifth reading it is (a close date or the money) and never how
-  // many there are, and a slot with no reading says so rather than vanishing.
-  // The count is asserted because StatStrip derives the row's fold from it — a
-  // row that sometimes carried six would fold at a different width on two
-  // accounts of the same product.
+  // FIVE doors on every account, whatever the fixture holds: open pipeline,
+  // invoiced, the conversation, the last touch, what is next. A slot with no
+  // reading says so rather than vanishing. The count is asserted because the
+  // strip derives the row's fold from it — a row that sometimes carried six
+  // would fold at a different width on two accounts of the same product.
   //
   // Then the row must READ as one row — the regression this strip actually had
   // was two slots drawn at a different font size than the rest — so every slot
   // is checked for a label AND a value, and every value against the SAME
   // computed size. A row of readings is a scale the eye sweeps; a slot that
   // sizes itself to its own content breaks the sweep.
-  test("every KPI slot carries a label and a value, all at one size", async ({
+  test("every reading carries a label and a value, all at one size", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
     const slots = page.locator(`${STRIP} > *`);
     // Waited for, not counted straight away: a bare count() resolves against
     // whatever is mounted at that instant, which on a composite read is an
-    // empty strip. The floor is the stage and relationship readings, which no
-    // account lacks.
+    // empty strip.
     await expect(slots.nth(1)).toBeVisible();
     await expect(slots).toHaveCount(5);
     const count = await slots.count();
@@ -167,12 +165,13 @@ test.describe("company record — the mockup's page shape", () => {
     expect(sizes.size).toBe(1);
   });
 
-  // Overview · People · Deals · Tasks · History · Documents · Profile, plus
-  // Partner for an account that has a partner programme (companyTabsFor in
-  // organizations.tsx gates it on relationship_types, not on a fixed count) —
-  // so the expectation follows the fixture's own data rather than assuming
-  // either shape.
-  test("the tab strip offers every tab, plus partner only where the account has one", async ({
+  // Overview · History · People · Deals · Tasks · Finance · Documents · Profile,
+  // plus Partner for an account that has a partner programme (companyTabsFor
+  // in organizations.tsx gates it on relationship_types, not on a fixed
+  // count) — so the expectation follows the fixture's own data rather than
+  // assuming either shape. The details control stands at the END of the row
+  // and is not a tab: it is the one pressed button among them.
+  test("the tab strip offers every tab, plus partner only where the account has one, and ends in the details control", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
@@ -184,90 +183,92 @@ test.describe("company record — the mockup's page shape", () => {
       const org = await response.json();
       return Boolean(org?.relationship_types?.includes("partner"));
     });
-    await expect(page.locator(".co-tabs button")).toHaveCount(
+    await expect(page.locator(".co-tabs .recordtabs-tab")).toHaveCount(
       isPartnerAccount ? 8 : 7,
     );
-  });
-
-  // ONE card holds every reading of the account: the day's brief, what is in
-  // flight, the commercial standing and what happened lately, each under its
-  // own subhead. What this pins is that they are SECTIONS of Company 360 and
-  // not cards of their own — the shape the overview was restructured into.
-  //
-  // Anchored on the rendered HEADING rather than a class: NextSteps draws a
-  // bare `.card.co-card` with nothing to name it by, so a class assertion here
-  // would pass against any page — including one that still renders it.
-  // The strings are the German chrome the suite pins via `locale: de-DE`.
-  test("the overview reads as one Company 360 card, not a column of them", async ({
-    page,
-  }) => {
-    await openCompany(page, POPULATED_ORG as string);
-    const card = page.getByRole("heading", { name: /Company 360/ });
-    await expect(card).toHaveCount(1);
-    // Its sections are h3 subheads under that one h2, so the card's title is
-    // the only card-level heading among them.
-    for (const section of ["Was gerade läuft", "Heute bei diesem Account"]) {
-      await expect(
-        page.getByRole("heading", { name: section, level: 3 }),
-      ).toHaveCount(1);
-    }
-    // Next steps is gone from this page — its open tasks are the day's brief
-    // and the Tasks tab now. Ask is NOT: it sits beside the 360 as its own
-    // card, because a question about the account is a different act from
-    // reading it, and this suite asserted its absence long after it moved
-    // here.
     await expect(
-      page.getByRole("heading", { name: "Nächste Schritte" }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "Diesen Account befragen" }),
+      page.locator(".co-tabs .recordtabs-trailing button[aria-pressed]"),
     ).toHaveCount(1);
   });
 
-  // The brief asks for a move on the account, so it belongs to the tab a
-  // reader opens to be told what to do — not to every tab. Someone who has
-  // gone to People or Documents has already chosen what to read, and the
-  // readings above the tab bar are what stays with them there.
-  test("the daily brief leads the overview, and is not drawn on the other tabs", async ({
+  // The 360 is the first pane and the only one that may look like a feature
+  // (DESIGN.md §7): one pane naming the record and "· 360", the needs list
+  // and the money under it on the left, Ask on the right. What this pins is
+  // that they are PANES of the glance in that order, not a column of cards
+  // that each reads the account.
+  //
+  // Anchored on rendered TEXT rather than classes: the strings are the German
+  // chrome the suite pins via `locale: de-DE`.
+  test("the overview leads with the 360, then the needs list and the money on the left, Ask on the right", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
-    const brief = page.getByRole("heading", {
-      name: "Heute bei diesem Account",
-      level: 3,
-    });
-    await expect(brief).toBeVisible();
+    const call = page.getByText(/· 360$/);
+    await expect(call).toHaveCount(1);
+    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
+    await expect(needs).toHaveCount(1);
+    const money = page.getByRole("heading", { name: "Kommerziell" });
+    const ask = page.getByRole("heading", { name: "Diesen Account befragen" });
+    await expect(ask).toHaveCount(1);
+    // Next steps is gone from this page — its open tasks are the needs list
+    // and the Tasks tab now.
+    await expect(
+      page.getByRole("heading", { name: "Nächste Schritte" }),
+    ).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Personen" }).click();
-    await expect(brief).toHaveCount(0);
+    // Order: the 360 above the needs list, the needs list above the money, and
+    // Ask beside the needs list rather than under it.
+    expect(await topOf(call)).toBeLessThan(await topOf(needs));
+    expect(await topOf(needs)).toBeLessThan(await topOf(money));
+    const needsBox = await needs.boundingBox();
+    const askBox = await ask.boundingBox();
+    if (!needsBox || !askBox) {
+      throw new Error("the needs list and Ask are visible but one has no box");
+    }
+    expect(askBox.x).toBeGreaterThan(needsBox.x);
   });
 
-  // State A's left column (RecordView's `rail` slot, aria-label "Profile"):
-  // the account's own fields, then health, people, signals and how it is
-  // filed, drawn as ONE panel rather than a stack of separate cards.
+  // The needs list asks for a move on the account, so it belongs to the tab a
+  // reader opens to be told what to do — not to every tab. Someone who has
+  // gone to People or Documents has already chosen what to read.
+  test("the needs list leads the overview, and is not drawn on the other tabs", async ({
+    page,
+  }) => {
+    await openCompany(page, POPULATED_ORG as string);
+    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
+    await expect(needs).toBeVisible();
+
+    await page.getByRole("button", { name: "Personen" }).click();
+    await expect(needs).toHaveCount(0);
+  });
+
+  // The details column is the shell's, on the RIGHT of the work, and it starts
+  // closed: the Details control at the end of the tab row opens it (DESIGN.md
+  // §6). Inside it, ONE pane of named sections — the account's fields, its
+  // deals, its people, the hold where the account has a domain, its tags —
+  // each a disclosure with a non-empty summary, never a stack of cards.
   //
-  // What is asserted is structural, not textual: the panel's own presence,
-  // and that it carries a fixed number of named sections (a non-empty
-  // <summary> on each collapsible slice), never the copy inside them. The
-  // app renders German chrome, and a copy change must not fail a layout
-  // suite. The rail sitting to the LEFT of the overview stack is the other
-  // half of the claim, the account's context beside the work rather than
-  // under it (the x comparison holds above the 1200px restack, which this
-  // suite's viewport pins).
-  //
-  // Four, always: Health, People, Signals and Lists & tags each name their
-  // own slice whether or not they have a row to draw today, unlike the
-  // stacked cards this replaced, which could disappear along with their data.
-  test("the left rail carries the account's context as one panel of named sections", async ({
+  // What is asserted is structural, not textual: the pane's presence, that it
+  // carries its named slices, and that it stands to the right of the overview
+  // (the x comparison holds above the 1100px restack, which this suite's
+  // viewport pins). The German copy inside is not pinned.
+  test("the details column opens from the tab row as one pane of named sections, on the right", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
     const rail = page.locator(".co-rail");
+    await expect(rail).toBeHidden();
+
+    await page
+      .locator(".co-tabs .recordtabs-trailing button[aria-pressed]")
+      .click();
     await expect(rail).toBeVisible();
 
     expect(await rail.locator("> .panel").count()).toBe(1);
     const sections = rail.locator("> .panel > details");
-    expect(await sections.count()).toBe(4);
+    // Four on every account, five where the account has a domain to hold.
+    expect(await sections.count()).toBeGreaterThanOrEqual(4);
+    expect(await sections.count()).toBeLessThanOrEqual(5);
     for (const summary of await sections.locator("> summary").all()) {
       expect((await summary.textContent())?.trim()).not.toBe("");
     }
@@ -277,34 +278,30 @@ test.describe("company record — the mockup's page shape", () => {
     if (!railBox || !bodyBox) {
       throw new Error("rail and stack are visible but one has no box");
     }
-    expect(railBox.x).toBeLessThan(bodyBox.x);
+    expect(railBox.x).toBeGreaterThan(bodyBox.x);
   });
 
   // A freshly imported company is lifecycle `unknown` and has nothing on it.
   // It must still render the page's skeleton — the regions carry their own
   // empty states, and a sparse account that drops whole regions is the
-  // second way this page stops looking like the mockup.
+  // second way this page stops looking like the design.
   test("an imported company keeps the page's shape", async ({ page }) => {
     await openCompany(page, SPARSE_ORG as string);
-    await expect(page.locator(STRIP)).toBeVisible();
     await expect(page.locator(".co-tabs")).toBeVisible();
-    expect(await topOf(page.locator(STRIP))).toBeLessThan(
-      await topOf(page.locator(".co-tabs")),
+    await expect(page.locator(STRIP)).toBeVisible();
+    expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
+      await topOf(page.locator(STRIP)),
     );
     // Five readings here too, on an account that can answer almost none of
     // them: each slot says which reading it has none of. A shorter row would be
     // the sparse account quietly dropping part of the page again.
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
+    await expect(page.getByText(/· 360$/)).toHaveCount(1);
   });
 
-  // Not an assertion — the artifact a human compares against the PNGs. It is
+  // Not an assertion — the artifact a human compares against the design. It is
   // written outside the repo (E2E_SHOT_DIR) because a screenshot is session
   // debris, not product.
-  //
-  // The assertions above this point are all STRUCTURE: which regions exist and
-  // in what order. A page can satisfy every one of them and still look nothing
-  // like the mockup, because none of them reads a colour, a size or a weight —
-  // which is exactly what happened. The block below closes that hole.
   test("capture both states for eyeball comparison", async ({ page }) => {
     for (const [name, org] of [
       ["populated", POPULATED_ORG],
@@ -312,12 +309,8 @@ test.describe("company record — the mockup's page shape", () => {
     ] as const) {
       await openCompany(page, org as string);
       // openCompany waits for the h1, which the router paints before the
-      // composite read returns. Shooting there photographs skeletons and —
-      // because a section reading the shared view cannot tell "still loading"
-      // from "failed" — two rail sections mid-flash of the same wording a real
-      // outage shows. A capture whose whole purpose is eyeball comparison must
-      // wait for the page it is comparing. The strip's second slot comes from
-      // that same composite read, so its arrival is the proxy for it.
+      // composite read returns. The strip's second slot comes from that read,
+      // so its arrival is the proxy for a settled page.
       await expect(page.locator(`${STRIP} > *`).nth(1)).toBeVisible();
       await page.screenshot({
         path: `${SHOTS}/company-${name}.png`,
@@ -444,7 +437,7 @@ test.describe("company record — the mockup's visual weight", () => {
     // The mockups set white cards on a light grey page. The border is what
     // makes a card an object; against a near-white background at 1px of very
     // low contrast it stops being visible at all.
-    const card = page.locator(".co-overview-stack > .panel").first();
+    const card = page.locator(".co-overview-stack .panel").first();
     const pageBg = await page.evaluate(
       () => getComputedStyle(document.body).backgroundColor,
     );

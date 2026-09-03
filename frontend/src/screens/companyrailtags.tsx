@@ -18,17 +18,19 @@ type Organization = components["schemas"]["Organization"];
 export function CompanyTagsSection({
   organization,
   orgId,
-}: Readonly<{ organization?: Organization; orgId: string }>) {
+  bare = false,
+}: Readonly<{ organization?: Organization; orgId: string; bare?: boolean }>) {
   if (!organization) {
     return null;
   }
-  return <CompanyTags organization={organization} orgId={orgId} />;
+  return <CompanyTags organization={organization} orgId={orgId} bare={bare} />;
 }
 
 function CompanyTags({
   organization,
   orgId,
-}: Readonly<{ organization: Organization; orgId: string }>) {
+  bare,
+}: Readonly<{ organization: Organization; orgId: string; bare: boolean }>) {
   // useCanWriteRecord, not useCan: applying a tag is a WRITE to the record, so
   // it owes the same three axes every other company control derives — the
   // object grant, the licensing seat, and the server's own `writable` for this
@@ -40,6 +42,11 @@ function CompanyTags({
   const canEdit = canUpdate && !readOnlyReason;
 
   return (
-    <TagsPanel entityType="organization" entityID={orgId} canEdit={canEdit} />
+    <TagsPanel
+      entityType="organization"
+      entityID={orgId}
+      canEdit={canEdit}
+      bare={bare}
+    />
   );
 }

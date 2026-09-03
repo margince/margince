@@ -434,14 +434,15 @@ describe("company view — withheld sections", () => {
     );
     renderCompany();
 
-    const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
-    });
-    const health = within(strip).getByText("Health").closest(".stat-card");
-    if (!(health instanceof HTMLElement)) {
-      throw new Error("the health verdict card has no wrapper");
+    // The standing is the 360's word now, under the readings row: withheld
+    // reads as withheld there, on the word and on each dimension.
+    const call = await screen.findByText("Margince read this record");
+    const pane = call.closest(".co-reading-call");
+    if (!(pane instanceof HTMLElement)) {
+      throw new Error("the 360 has no pane");
     }
-    expect(within(health).getByText("Not shown")).toBeTruthy();
+    expect(within(pane).getAllByText("Not shown").length).toBeGreaterThan(0);
+    expect(within(pane).queryByText("Not assessed")).toBeNull();
   });
 
   it("says there is no health reading yet, distinct from hidden", async () => {
@@ -458,16 +459,13 @@ describe("company view — withheld sections", () => {
     );
     renderCompany();
 
-    const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
-    });
-    const health = within(strip).getByText("Health").closest(".stat-card");
-    if (!(health instanceof HTMLElement)) {
-      throw new Error("the health verdict card has no wrapper");
+    const call = await screen.findByText("Margince read this record");
+    const pane = call.closest(".co-reading-call");
+    if (!(pane instanceof HTMLElement)) {
+      throw new Error("the 360 has no pane");
     }
-    expect(within(health).getByText("Not assessed")).toBeTruthy();
-    expect(within(health).getByText("0 of 3 rated")).toBeTruthy();
-    expect(within(health).queryByText("Not shown")).toBeNull();
+    expect(within(pane).getAllByText("Not assessed").length).toBeGreaterThan(0);
+    expect(within(pane).queryByText("Not shown")).toBeNull();
   });
 
   it("rates the relationship reading once there is a signal to read", async () => {
@@ -630,7 +628,9 @@ describe("company view — overlay mode", () => {
     // No half-page: the overview's own panels (the account, its worth, the
     // pipeline, the money) are absent entirely rather than showing cards
     // that would each read as an empty account.
-    expect(document.querySelector(".co-panel-stack")?.textContent).toBeFalsy();
+    expect(
+      document.querySelector(".co-overview-stack")?.textContent,
+    ).toBeFalsy();
   });
 });
 
@@ -753,7 +753,7 @@ describe("company view — a section still loading is not one that failed", () =
     // arrives.
     const brief = () => {
       const panel = screen
-        .getByRole("heading", { name: "What needs a person today" })
+        .getByRole("heading", { name: "What needs you" })
         .closest("section");
       if (!panel) {
         throw new Error("the day's brief has no section wrapper");
@@ -2254,7 +2254,10 @@ describe("the money slot says its reason once and borrows no figure", () => {
         selector: ".stat-card-label",
       }),
     ).toBeTruthy();
-    expect(within(region).getByText("Health")).toBeTruthy();
+    // The other two doors: the last touch and the calendar, whatever the
+    // money slot could or could not read.
+    expect(within(region).getByText("Last touch")).toBeTruthy();
+    expect(within(region).getByText("Next")).toBeTruthy();
     expect(within(region).getByText("Finance")).toBeTruthy();
   });
 
@@ -2280,7 +2283,8 @@ describe("the money slot says its reason once and borrows no figure", () => {
         selector: ".stat-card-label",
       }),
     ).toBeTruthy();
-    expect(within(region).getByText("Health")).toBeTruthy();
+    expect(within(region).getByText("Last touch")).toBeTruthy();
+    expect(within(region).getByText("Next")).toBeTruthy();
     expect(within(region).getByText("Net invoiced · 12 mo")).toBeTruthy();
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
     // "Finance" is the label of a slot that has nothing to report, so it must
