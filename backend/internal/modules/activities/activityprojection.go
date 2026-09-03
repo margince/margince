@@ -166,5 +166,53 @@ func (s *activityScan) record() crmcontracts.Activity {
 	a.BulkMailAttested = &bulk
 	version := s.version
 	a.Version = &version
+	// What a canonical email row draws, composed here so every reader of an
+	// activity carries it: a list that had to fetch a message per visible line
+	// to draw one would be the N+1 this field exists to avoid. Attached from
+	// the row's own columns only — the counterparty and the attachment count
+	// need joins this scan does not have, and the detail read fills them in.
+	a.EmailSummary = rowEmailSummary(a)
 	return a
+}
+
+// rowEmailSummary is the email row's fields, for the kind that has them.
+//
+// Present exactly when kind=email, so a reader branches on the field rather
+// than on the kind word: a call and a note are activities too, and neither has
+// an email's shape. A withheld row still gets a summary — the status says the
+// content is not this caller's, which is what keeps a withheld row visibly
+// withheld rather than absent.
+func rowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
+	if a.Kind != crmcontracts.ActivityKindEmail {
+		return nil
+	}
+	withheld := a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
+	summary := crmcontracts.EmailSummary{
+		ActivityId:    a.Id,
+		OccurredAt:    a.OccurredAt,
+		DisplayStatus: crmcontracts.EmailAccessStatusWithheld,
+		Move:          crmcontracts.EmailSummaryMoveNone,
+	}
+	if a.Version != nil {
+		summary.Version = *a.Version
+	}
+	if a.Direction != nil {
+		d := crmcontracts.EmailSummaryDirection(*a.Direction)
+		summary.Direction = &d
+	}
+	if withheld {
+		return &summary
+	}
+	summary.DisplayStatus = crmcontracts.EmailAccessStatusTeam
+	if a.Audience != nil {
+		summary.DisplayStatus = statusForAudience(*a.Audience)
+	}
+	summary.Subject = a.Subject
+	if a.Body != nil {
+		if preview := EmailSummaryText(*a.Body); preview != "" {
+			summary.Preview = &preview
+		}
+	}
+	summary.Move = moveOf(a)
+	return &summary
 }

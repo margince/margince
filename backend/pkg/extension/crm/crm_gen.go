@@ -30,16 +30,16 @@ func (e ActivityCaptureLabel) Valid() bool {
 
 // Defines values for ActivityContentState.
 const (
-	Available ActivityContentState = "available"
-	Withheld  ActivityContentState = "withheld"
+	ActivityContentStateAvailable ActivityContentState = "available"
+	ActivityContentStateWithheld  ActivityContentState = "withheld"
 )
 
 // Valid indicates whether the value is a known member of the ActivityContentState enum.
 func (e ActivityContentState) Valid() bool {
 	switch e {
-	case Available:
+	case ActivityContentStateAvailable:
 		return true
-	case Withheld:
+	case ActivityContentStateWithheld:
 		return true
 	default:
 		return false
@@ -265,6 +265,78 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailAccessStatus.
+const (
+	EmailAccessStatusParticipants   EmailAccessStatus = "participants"
+	EmailAccessStatusPrivateByYou   EmailAccessStatus = "private_by_you"
+	EmailAccessStatusPrivatePending EmailAccessStatus = "private_pending"
+	EmailAccessStatusSelected       EmailAccessStatus = "selected"
+	EmailAccessStatusStillHeld      EmailAccessStatus = "still_held"
+	EmailAccessStatusTeam           EmailAccessStatus = "team"
+	EmailAccessStatusWithheld       EmailAccessStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the EmailAccessStatus enum.
+func (e EmailAccessStatus) Valid() bool {
+	switch e {
+	case EmailAccessStatusParticipants:
+		return true
+	case EmailAccessStatusPrivateByYou:
+		return true
+	case EmailAccessStatusPrivatePending:
+		return true
+	case EmailAccessStatusSelected:
+		return true
+	case EmailAccessStatusStillHeld:
+		return true
+	case EmailAccessStatusTeam:
+		return true
+	case EmailAccessStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSummaryDirection.
+const (
+	Inbound  EmailSummaryDirection = "inbound"
+	Outbound EmailSummaryDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the EmailSummaryDirection enum.
+func (e EmailSummaryDirection) Valid() bool {
+	switch e {
+	case Inbound:
+		return true
+	case Outbound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSummaryMove.
+const (
+	NeedsReply     EmailSummaryMove = "needs_reply"
+	None           EmailSummaryMove = "none"
+	WaitingForThem EmailSummaryMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the EmailSummaryMove enum.
+func (e EmailSummaryMove) Valid() bool {
+	switch e {
+	case NeedsReply:
+		return true
+	case None:
+		return true
+	case WaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
 // **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
 // CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
@@ -314,6 +386,9 @@ type Activity struct {
 
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
+
+	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
 	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
@@ -424,6 +499,68 @@ type CreateActivityRequestLinksEntityType string
 
 // CreateActivityRequestMeetingStatus defines model for CreateActivityRequest.MeetingStatus.
 type CreateActivityRequestMeetingStatus string
+
+// EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
+// badge can print. `team` never means the whole workspace: the linked record's own scope
+// still decides who may discover the row at all.
+//
+// `still_held` is the honest half of a share — you released your hold and somebody else
+// has not. `withheld` is the only value that says the content is not this caller's, and
+// it never travels with a reason: why a message is private describes what it is about.
+type EmailAccessStatus string
+
+// EmailSummary One retained email, reduced to what a row shows without opening it. Present on an
+// activity only when `kind=email`; every other kind carries none, and a reader that
+// branches on this field is asking the one question that decides the canonical row.
+//
+// The preview is normalised by the server with the same splitter the detail uses, so a
+// row and the message it opens never disagree about where the sender's own words end.
+// A withheld email carries a summary whose `subject` and `preview` are null and whose
+// `display_status` says so — the row stays, the words do not.
+type EmailSummary struct {
+	ActivityId string `json:"activity_id"`
+
+	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
+	AttachmentCount int `json:"attachment_count"`
+
+	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
+	// the exchange had more. Null when no participant resolves to a name this caller may
+	// see — the row then says the direction alone rather than inventing a stranger.
+	Counterparty *string                `json:"counterparty,omitempty"`
+	Direction    *EmailSummaryDirection `json:"direction,omitempty"`
+
+	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
+	// badge can print. `team` never means the whole workspace: the linked record's own scope
+	// still decides who may discover the row at all.
+	//
+	// `still_held` is the honest half of a share — you released your hold and somebody else
+	// has not. `withheld` is the only value that says the content is not this caller's, and
+	// it never travels with a reason: why a message is private describes what it is about.
+	DisplayStatus EmailAccessStatus `json:"display_status"`
+
+	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// the question cannot be answered honestly — an unanswerable move is not a claim.
+	Move       EmailSummaryMove `json:"move"`
+	OccurredAt time.Time        `json:"occurred_at"`
+
+	// Preview One line of the sender's own text, signature and quoted history already removed.
+	// Null when withheld, and when the message has no text of its own.
+	Preview *string `json:"preview,omitempty"`
+
+	// Subject Null when the message has none, and when the content is withheld.
+	Subject *string `json:"subject,omitempty"`
+
+	// Version The activity's version, carried so a row can open an editor that writes with
+	// If-Match. A row without it can only read.
+	Version RowVersion `json:"version"`
+}
+
+// EmailSummaryDirection defines model for EmailSummary.Direction.
+type EmailSummaryDirection string
+
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// the question cannot be answered honestly — an unanswerable move is not a claim.
+type EmailSummaryMove string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation
 // (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:

@@ -3176,6 +3176,35 @@ export interface paths {
         patch: operations["updateActivity"];
         trace?: never;
     };
+    "/activities/{id}/email-presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Everything one email needs to be read and acted on, in one read.
+         * @description The composed read behind the canonical email viewer: the message, who it went to,
+         *     what came with it, and what this caller may do about who else reads it.
+         *
+         *     It answers 404 for an activity that is not `kind=email`, and for one held under a
+         *     statutory retention obligation — a held row is outside every ordinary read, so there
+         *     is no presentation of it to refuse. A caller who may discover the row but stands
+         *     outside its audience gets `content_state: withheld`: the markers, and nothing said.
+         */
+        get: operations["getEmailPresentation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/audience": {
         parameters: {
             query?: never;
@@ -13552,6 +13581,186 @@ export interface components {
              */
             deletes_at?: string;
         };
+        /**
+         * @description One retained email, reduced to what a row shows without opening it. Present on an
+         *     activity only when `kind=email`; every other kind carries none, and a reader that
+         *     branches on this field is asking the one question that decides the canonical row.
+         *
+         *     The preview is normalised by the server with the same splitter the detail uses, so a
+         *     row and the message it opens never disagree about where the sender's own words end.
+         *     A withheld email carries a summary whose `subject` and `preview` are null and whose
+         *     `display_status` says so — the row stays, the words do not.
+         */
+        EmailSummary: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @description Null when the message has none, and when the content is withheld. */
+            subject?: string | null;
+            /**
+             * @description One line of the sender's own text, signature and quoted history already removed.
+             *     Null when withheld, and when the message has no text of its own.
+             */
+            preview?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
+            /** @enum {string|null} */
+            direction?: null | "inbound" | "outbound";
+            /**
+             * @description Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
+             *     the exchange had more. Null when no participant resolves to a name this caller may
+             *     see — the row then says the direction alone rather than inventing a stranger.
+             */
+            counterparty?: string | null;
+            /** @description How many files came with it. Zero when withheld, like every other count. */
+            attachment_count: number;
+            /**
+             * @description Whose move it is, derived from what this reader can see of the thread. `none` when
+             *     the question cannot be answered honestly — an unanswerable move is not a claim.
+             * @enum {string}
+             */
+            move: "needs_reply" | "waiting_for_them" | "none";
+            display_status: components["schemas"]["EmailAccessStatus"];
+            /**
+             * @description The activity's version, carried so a row can open an editor that writes with
+             *     If-Match. A row without it can only read.
+             */
+            version: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description What a reader is allowed to know about who else reads this message, in one word the
+         *     badge can print. `team` never means the whole workspace: the linked record's own scope
+         *     still decides who may discover the row at all.
+         *
+         *     `still_held` is the honest half of a share — you released your hold and somebody else
+         *     has not. `withheld` is the only value that says the content is not this caller's, and
+         *     it never travels with a reason: why a message is private describes what it is about.
+         * @enum {string}
+         */
+        EmailAccessStatus: "team" | "participants" | "selected" | "private_pending" | "private_by_you" | "still_held" | "withheld";
+        /** @description One address on a message, resolved to a person or a seat when it is one. */
+        EmailParty: {
+            address: string;
+            display_name?: string | null;
+            /**
+             * Format: uuid
+             * @description Set when the address belongs to a contact this caller may see.
+             */
+            person_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Set when the address belongs to a seat in this workspace.
+             */
+            user_id?: string | null;
+        };
+        /** @description One file that came with the message. Metadata only; bytes are fetched separately. */
+        EmailAttachmentSummary: {
+            /** Format: uuid */
+            id: string;
+            filename: string;
+            byte_size?: number | null;
+            content_type?: string | null;
+        };
+        /**
+         * @description Who reads this message, and what this caller may do about that. `can_change` and
+         *     `change_mode` are decided by the same authority that would execute the write, so a
+         *     control this block offers is a control the write will accept.
+         */
+        EmailAccess: {
+            /** @enum {string} */
+            content_state: "available" | "withheld";
+            display_status: components["schemas"]["EmailAccessStatus"];
+            audience?: components["schemas"]["ActivityAudience"] | null;
+            /**
+             * @description Who is named on a `selected` audience. Returned only to a caller who may both read
+             *     the content and change it — a reader with no standing to edit the set has no
+             *     standing to enumerate it either.
+             */
+            selected_members?: components["schemas"]["AudienceMember"][];
+            can_change: boolean;
+            /**
+             * @description Which write this caller's Access control performs. `thread_contribution` changes
+             *     only this owner's contribution to a captured thread; `message_audience` sets a
+             *     hand-logged message's own audience. The browser never decides this by reading
+             *     `captured_by` — the server knows which write it would accept.
+             * @enum {string}
+             */
+            change_mode: "thread_contribution" | "message_audience" | "none";
+            /**
+             * @description What the editor must say it is about to change, in the words the user reads.
+             * @enum {string}
+             */
+            change_scope?: "thread" | "message" | "none";
+            /**
+             * @description After a share, how many other seats still hold this thread. A count and never a
+             *     name. Null when the question does not apply.
+             */
+            held_by_others?: number | null;
+            /**
+             * @description Why the message is limited, when the caller may know. Always null while the content
+             *     is withheld: the reason describes the message.
+             */
+            explanation?: string | null;
+        };
+        /**
+         * @description The rest of the conversation, newest first, as summaries. Bounded and paged rather
+         *     than whole: a thread has no ceiling, and a drawer that fetched every message would
+         *     make opening the newest one cost the whole history.
+         */
+        EmailThreadPage: {
+            members: components["schemas"]["EmailSummary"][];
+            /** @description Pass back as `thread_cursor` for the next page. Null when this is the last. */
+            next_cursor?: string | null;
+        };
+        /**
+         * @description One email, composed for reading. The message and its parties come from the activity's
+         *     own store; the access block is assembled from the same authority that performs the
+         *     write, so what this says a caller may do is what the caller may do.
+         *
+         *     A withheld presentation carries the markers and refuses the rest: no subject, no body,
+         *     no parties, no attachments, no thread, no reason, no member names.
+         */
+        EmailPresentation: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Whether this is correspondence or something not yet sent. A scheduled send and a
+             *     draft awaiting approval borrow the frame; their operational verbs stay with the
+             *     workflow that owns them.
+             * @enum {string}
+             */
+            lifecycle: "delivered" | "scheduled" | "approval_draft";
+            /** Format: date-time */
+            occurred_at: string;
+            summary: components["schemas"]["EmailSummary"];
+            /**
+             * @description The message as plain text, normalised. Null when withheld. Provider payloads are
+             *     never handed to a browser to parse.
+             */
+            body?: string | null;
+            thread_key?: string | null;
+            from: components["schemas"]["EmailParty"][];
+            to: components["schemas"]["EmailParty"][];
+            cc: components["schemas"]["EmailParty"][];
+            /**
+             * @description Empty for every caller but the seat that sent or imported the message. Being
+             *     allowed to read what was written does not disclose who was copied blind.
+             */
+            bcc: components["schemas"]["EmailParty"][];
+            /**
+             * @description True when the message has blind recipients this caller may not see. The viewer says
+             *     that they exist rather than showing an empty list that reads as none.
+             */
+            bcc_withheld: boolean;
+            attachments: components["schemas"]["EmailAttachmentSummary"][];
+            /** @description What the message is filed against, named for a reader. */
+            links: components["schemas"]["ActivityLink"][];
+            thread?: components["schemas"]["EmailThreadPage"];
+            access: components["schemas"]["EmailAccess"];
+            can_reply: boolean;
+            can_relink: boolean;
+            /** @description The activity's version, for the If-Match its own actions send. */
+            version: components["schemas"]["RowVersion"];
+        };
         /** @description What an owner's decision about a thread reached. */
         ThreadAudienceOutcome: {
             /** @description How many of the thread's messages you imported, and the decision reached. */
@@ -19703,6 +19912,8 @@ export interface components {
              * @enum {string|null}
              */
             direction?: null | "inbound" | "outbound";
+            /** @description Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word. */
+            readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
@@ -19938,15 +20149,21 @@ export interface components {
              */
             snoozed_until?: string;
         };
+        /**
+         * @description One user or team admitted to a message besides its participants. The same shape the
+         *     audience write takes and the presentation reads back, so an editor that renders the
+         *     current set submits it in the vocabulary it received.
+         */
+        AudienceMember: {
+            /** @enum {string} */
+            subject_type: "user" | "team";
+            /** Format: uuid */
+            subject_id: string;
+        };
         SetActivityAudienceRequest: {
             audience: components["schemas"]["ActivityAudience"];
             /** @description The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set. */
-            members?: {
-                /** @enum {string} */
-                subject_type: "user" | "team";
-                /** Format: uuid */
-                subject_id: string;
-            }[];
+            members?: components["schemas"]["AudienceMember"][];
         };
         UpdateActivityRequest: {
             subject?: string | null;
@@ -32996,6 +33213,33 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getEmailPresentation: {
+        parameters: {
+            query?: {
+                /** @description Continue the thread's member page from a previous response's `thread.next_cursor`. */
+                thread_cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The email. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailPresentation"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     setActivityAudience: {
