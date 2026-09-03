@@ -123,6 +123,11 @@ type Copy struct {
 	WeeklyWhatMoved string
 	WeeklyAndMore   string
 	WeeklyFullWeek  string
+	// The question the message closes on, in the panel's own words. The weekly
+	// mail reported the week and asked nothing, so it read as a receipt for
+	// work already done — while the screen it links to opens with a panel
+	// inviting the reader to plan the next one.
+	WeeklyPlanAhead string
 	// The three outcomes a deal line reports, lower-case because they are read
 	// inside a sentence rather than as a label.
 	WeeklyOutcomeWon   string
