@@ -32,6 +32,7 @@ import (
 // statement about how much of it there is.
 func ForecastDeals(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
+	asOf time.Time, baseCurrency string,
 ) ([]forecasting.Deal, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -45,6 +46,12 @@ func ForecastDeals(
 		scopeClause = sqlUnnarrowed
 	}
 
+	// The deal's money in the installation's base currency, converted HERE
+	// rather than in the module: the rate sheet is a table, and forecasting
+	// owns no tables. Without it every priced deal reaches the arithmetic with
+	// no base amount, counts as fx_missing, and every money headline is zero.
+	baseValue := BaseValueSQL(arg(asOf), arg(baseCurrency))
+
 	// A deal belongs to this read if it is EXPECTED in the period or CLOSED in
 	// it. Both, because the readings need both: open pipeline comes from the
 	// expected date and the won total from the close instant, and a deal that
@@ -56,7 +63,7 @@ func ForecastDeals(
 	// installation's, and a deal closing just after local midnight would fall
 	// out of both readings with no bucket to explain where it went.
 	sql := fmt.Sprintf(`
-		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
+		SELECT d.id, d.owner_id, d.amount_minor, d.currency, %s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
 		       d.status = 'won', d.forecast_category,
 		       COALESCE(s.win_probability, 0)
@@ -70,6 +77,7 @@ func ForecastDeals(
 		      )
 		  AND %s
 		  %s`,
+		baseValue,
 		arg(period.StartDate), arg(period.EndDate),
 		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate),
 		scopeClause, forecastScopeClause(scope, arg))
@@ -84,7 +92,7 @@ func ForecastDeals(
 		var d forecasting.Deal
 		var owner *ids.UUID
 		var currency, category *string
-		err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency,
+		err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
 			&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
 			&d.Won, &category, &d.StageProbability)
 		if owner != nil {

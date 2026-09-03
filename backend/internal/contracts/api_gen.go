@@ -6220,6 +6220,45 @@ func (e IssuePassportRequestScopes) Valid() bool {
 	}
 }
 
+// Defines values for IssuedForecastShareKind.
+const (
+	IssuedForecastShareKindLive     IssuedForecastShareKind = "live"
+	IssuedForecastShareKindSnapshot IssuedForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the IssuedForecastShareKind enum.
+func (e IssuedForecastShareKind) Valid() bool {
+	switch e {
+	case IssuedForecastShareKindLive:
+		return true
+	case IssuedForecastShareKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssuedForecastShareScopeKind.
+const (
+	IssuedForecastShareScopeKindOwner     IssuedForecastShareScopeKind = "owner"
+	IssuedForecastShareScopeKindTeam      IssuedForecastShareScopeKind = "team"
+	IssuedForecastShareScopeKindWorkspace IssuedForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the IssuedForecastShareScopeKind enum.
+func (e IssuedForecastShareScopeKind) Valid() bool {
+	switch e {
+	case IssuedForecastShareScopeKindOwner:
+		return true
+	case IssuedForecastShareScopeKindTeam:
+		return true
+	case IssuedForecastShareScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for JobFailureState.
 const (
 	JobFailureStateCancelled JobFailureState = "cancelled"
@@ -6805,6 +6844,45 @@ func (e NewForecastCallScopeKind) Valid() bool {
 	case NewForecastCallScopeKindTeam:
 		return true
 	case NewForecastCallScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastShareKind.
+const (
+	ForecastShareLive     NewForecastShareKind = "live"
+	ForecastShareSnapshot NewForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastShareKind enum.
+func (e NewForecastShareKind) Valid() bool {
+	switch e {
+	case ForecastShareLive:
+		return true
+	case ForecastShareSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastShareScopeKind.
+const (
+	NewForecastShareScopeKindOwner     NewForecastShareScopeKind = "owner"
+	NewForecastShareScopeKindTeam      NewForecastShareScopeKind = "team"
+	NewForecastShareScopeKindWorkspace NewForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastShareScopeKind enum.
+func (e NewForecastShareScopeKind) Valid() bool {
+	switch e {
+	case NewForecastShareScopeKindOwner:
+		return true
+	case NewForecastShareScopeKindTeam:
+		return true
+	case NewForecastShareScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -7824,22 +7902,22 @@ func (e OrganizationFactSuspectReason) Valid() bool {
 
 // Defines values for OrganizationGraphGroupsOmitted.
 const (
-	Contacts  OrganizationGraphGroupsOmitted = "contacts"
-	Deals     OrganizationGraphGroupsOmitted = "deals"
-	IntroPath OrganizationGraphGroupsOmitted = "intro_path"
-	OurSide   OrganizationGraphGroupsOmitted = "our_side"
+	OrganizationGraphGroupsOmittedContacts  OrganizationGraphGroupsOmitted = "contacts"
+	OrganizationGraphGroupsOmittedDeals     OrganizationGraphGroupsOmitted = "deals"
+	OrganizationGraphGroupsOmittedIntroPath OrganizationGraphGroupsOmitted = "intro_path"
+	OrganizationGraphGroupsOmittedOurSide   OrganizationGraphGroupsOmitted = "our_side"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationGraphGroupsOmitted enum.
 func (e OrganizationGraphGroupsOmitted) Valid() bool {
 	switch e {
-	case Contacts:
+	case OrganizationGraphGroupsOmittedContacts:
 		return true
-	case Deals:
+	case OrganizationGraphGroupsOmittedDeals:
 		return true
-	case IntroPath:
+	case OrganizationGraphGroupsOmittedIntroPath:
 		return true
-	case OurSide:
+	case OrganizationGraphGroupsOmittedOurSide:
 		return true
 	default:
 		return false
@@ -10486,6 +10564,24 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for SharedForecastViewKind.
+const (
+	SharedForecastViewKindLive     SharedForecastViewKind = "live"
+	SharedForecastViewKindSnapshot SharedForecastViewKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the SharedForecastViewKind enum.
+func (e SharedForecastViewKind) Valid() bool {
+	switch e {
+	case SharedForecastViewKindLive:
+		return true
+	case SharedForecastViewKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SignalEntityType.
 const (
 	SignalEntityTypeDeal         SignalEntityType = "deal"
@@ -11892,22 +11988,22 @@ func (e VoiceBuildReason) Valid() bool {
 
 // Defines values for VoiceBuildStage.
 const (
-	Activate VoiceBuildStage = "activate"
-	Evaluate VoiceBuildStage = "evaluate"
-	Extract  VoiceBuildStage = "extract"
-	Snapshot VoiceBuildStage = "snapshot"
+	VoiceBuildStageActivate VoiceBuildStage = "activate"
+	VoiceBuildStageEvaluate VoiceBuildStage = "evaluate"
+	VoiceBuildStageExtract  VoiceBuildStage = "extract"
+	VoiceBuildStageSnapshot VoiceBuildStage = "snapshot"
 )
 
 // Valid indicates whether the value is a known member of the VoiceBuildStage enum.
 func (e VoiceBuildStage) Valid() bool {
 	switch e {
-	case Activate:
+	case VoiceBuildStageActivate:
 		return true
-	case Evaluate:
+	case VoiceBuildStageEvaluate:
 		return true
-	case Extract:
+	case VoiceBuildStageExtract:
 		return true
-	case Snapshot:
+	case VoiceBuildStageSnapshot:
 		return true
 	default:
 		return false
@@ -22407,6 +22503,27 @@ type IssuePasswordLinkResponse struct {
 	SetPasswordUrl string `json:"set_password_url"`
 }
 
+// IssuedForecastShare A share as issued, carrying its token for the only time.
+type IssuedForecastShare struct {
+	CreatedAt  time.Time                     `json:"created_at"`
+	ExpiresAt  time.Time                     `json:"expires_at"`
+	Id         openapi_types.UUID            `json:"id"`
+	Kind       IssuedForecastShareKind       `json:"kind"`
+	ScopeId    *openapi_types.UUID           `json:"scope_id,omitempty"`
+	ScopeKind  *IssuedForecastShareScopeKind `json:"scope_kind,omitempty"`
+	SnapshotId *openapi_types.UUID           `json:"snapshot_id,omitempty"`
+	Target     string                        `json:"target"`
+
+	// Token Shown ONCE. The table holds only its digest, so this value cannot be recovered — a caller that loses it issues another share.
+	Token string `json:"token"`
+}
+
+// IssuedForecastShareKind defines model for IssuedForecastShare.Kind.
+type IssuedForecastShareKind string
+
+// IssuedForecastShareScopeKind defines model for IssuedForecastShare.ScopeKind.
+type IssuedForecastShareScopeKind string
+
 // JobFailure defines model for JobFailure.
 type JobFailure struct {
 	Attempt  int       `json:"attempt"`
@@ -23749,6 +23866,31 @@ type NewForecastCallPeriod string
 
 // NewForecastCallScopeKind defines model for NewForecastCall.ScopeKind.
 type NewForecastCallScopeKind string
+
+// NewForecastShare A request to issue a share link.
+type NewForecastShare struct {
+	// ExpiresAt When it stops serving. Capped server-side; an expiry beyond the ceiling is refused rather than shortened. Omitted takes the ceiling.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// Kind `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
+	Kind NewForecastShareKind `json:"kind"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	ScopeId   *openapi_types.UUID        `json:"scope_id,omitempty"`
+	ScopeKind *NewForecastShareScopeKind `json:"scope_kind,omitempty"`
+
+	// SnapshotId The frozen state a snapshot share serves. Required for `snapshot` and refused for `live`, which has none — a snapshot share with no snapshot would fall back to serving live data, a different promise from the one its kind makes.
+	SnapshotId *openapi_types.UUID `json:"snapshot_id,omitempty"`
+
+	// Target Which reading the link opens.
+	Target string `json:"target"`
+}
+
+// NewForecastShareKind `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
+type NewForecastShareKind string
+
+// NewForecastShareScopeKind defines model for NewForecastShare.ScopeKind.
+type NewForecastShareScopeKind string
 
 // NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
 type NewWeeklyPlanCommitment struct {
@@ -29334,6 +29476,29 @@ type ShareCaptureHoldHistoryResponse struct {
 	// other reason too, or was captured before the product recorded more than one reason.
 	Released int `json:"released"`
 }
+
+// SharedForecastView What one caller reads through a share.
+//
+// The numbers are about THEM. A snapshot share re-sums the frozen contributions this
+// caller may read rather than serving the stored totals, so two colleagues opening
+// the same link can correctly see different figures.
+type SharedForecastView struct {
+	// AsOf The instant a snapshot share's state describes. Absent on a live share.
+	AsOf *time.Time `json:"as_of,omitempty"`
+
+	// Kind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+	Kind SharedForecastViewKind `json:"kind"`
+
+	// Readings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
+	Readings ForecastReadings `json:"readings"`
+	Target   string           `json:"target"`
+
+	// Withheld Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is.
+	Withheld bool `json:"withheld"`
+}
+
+// SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+type SharedForecastViewKind string
 
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
@@ -36921,6 +37086,9 @@ type ResolveInputCheckJSONRequestBody = ResolveInputCheck
 
 // RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
 type RecordForecastCallJSONRequestBody = NewForecastCall
+
+// CreateForecastShareJSONRequestBody defines body for CreateForecastShare for application/json ContentType.
+type CreateForecastShareJSONRequestBody = NewForecastShare
 
 // SetFxRateJSONRequestBody defines body for SetFxRate for application/json ContentType.
 type SetFxRateJSONRequestBody = SetFxRateRequest
@@ -45705,6 +45873,18 @@ type ServerInterface interface {
 	// What moved the forecast between two snapshots, and which deals moved it.
 	// (GET /forecast/movement)
 	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
+	// Open a shared forecast view.
+	// (GET /forecast/shared/{token})
+	OpenForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// The rows behind a shared reading, as CSV.
+	// (GET /forecast/shared/{token}/export.csv)
+	ExportForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// Issue a link that shows a forecast reading to a colleague.
+	// (POST /forecast/shares)
+	CreateForecastShare(w http.ResponseWriter, r *http.Request)
+	// Close a share link before it expires.
+	// (DELETE /forecast/shares/{id})
+	RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -48066,6 +48246,30 @@ func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request
 // What moved the forecast between two snapshots, and which deals moved it.
 // (GET /forecast/movement)
 func (_ Unimplemented) GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a shared forecast view.
+// (GET /forecast/shared/{token})
+func (_ Unimplemented) OpenForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The rows behind a shared reading, as CSV.
+// (GET /forecast/shared/{token}/export.csv)
+func (_ Unimplemented) ExportForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Issue a link that shows a forecast reading to a colleague.
+// (POST /forecast/shares)
+func (_ Unimplemented) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Close a share link before it expires.
+// (DELETE /forecast/shares/{id})
+func (_ Unimplemented) RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59288,6 +59492,130 @@ func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecastMovement(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OpenForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OpenForecastShare(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportForecastShare(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateForecastShare(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeForecastShare(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75356,6 +75684,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shared/{token}", wrapper.OpenForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shared/{token}/export.csv", wrapper.ExportForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/shares", wrapper.CreateForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/forecast/shares/{id}", wrapper.RevokeForecastShare)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)

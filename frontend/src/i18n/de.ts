@@ -3149,6 +3149,30 @@ export const de = {
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.share.open": "Ansicht teilen",
+  "analytics.share.title": "Diese Ansicht teilen",
+  "analytics.share.kindLegend": "Was der Link zeigt",
+  "analytics.share.liveLabel": "Live-Ansicht",
+  "analytics.share.liveHelp":
+    "Wird bei jedem Öffnen neu berechnet, begrenzt auf das, was die lesende Person sehen darf. Die Zahlen bewegen sich mit der Pipeline.",
+  "analytics.share.snapshotLabel": "Eingefrorener Stand",
+  "analytics.share.snapshotHelp":
+    "Die Zahlen, wie sie beim Einfrieren standen. Sie ändern sich nicht, deshalb nennt der Link den Zeitpunkt.",
+  "analytics.share.snapshotUnavailable":
+    "Für diesen Zeitraum wurde noch kein Stand eingefroren.",
+  "analytics.share.expiryNote":
+    "Der Link läuft nach 30 Tagen ab. Sie können ihn früher schließen.",
+  "analytics.share.create": "Link erstellen",
+  "analytics.share.linkTitle": "Ihr Link",
+  "analytics.share.linkWarning":
+    "Der Link wird nur dieses eine Mal angezeigt. Kopieren Sie ihn jetzt — er lässt sich nicht erneut auslesen.",
+  "analytics.share.leaveWarning":
+    "Wenn Sie ohne Kopieren schließen, ist der Link verloren. Sie müssten einen neuen erstellen.",
+  "analytics.share.copy": "Link kopieren",
+  "analytics.share.copied": "Kopiert",
+  "analytics.share.copyFailed":
+    "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
+  "analytics.share.done": "Fertig",
   "analytics.frame": "Stand {asOf} · {zone} · {currency}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
   "review.ready": "Bereit",
