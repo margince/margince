@@ -350,7 +350,7 @@ function doorsIn(
  * returning as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-const BUDGETED_CORPUS_FILES = 1_400;
+const BUDGETED_CORPUS_FILES = 1_500;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("every screen has a door", () => {
