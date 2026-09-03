@@ -422,10 +422,6 @@
    read as two panels rather than two answers. */
 .ob-scene.ob-invite-scene {
   max-width: 44rem;
-  /* On the board's own left edge, under the question, not centred as a
-     column of its own: a narrower block that floats to the middle stops
-     lining up with the title it answers. */
-  margin-inline-start: 0;
 }
 
 /* The team act: the settings invite form on a plate of its own, held to a
@@ -517,11 +513,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* The scene owns the pane's full width, centred as a reading column: the
-     prototype's move — generous gutters, no dead half-pane. */
+  /* The scene starts where the board's headline starts and stops at a
+     reading measure. Centred, a scene narrower than the board floated to the
+     middle and its content sat a step to the right of the question it
+     answers, which read as pushed aside rather than as a column. */
   width: 100%;
   max-width: 74rem;
-  margin-inline: auto;
+  margin-inline: 0;
   padding-block-start: var(--space-4);
 }
 
