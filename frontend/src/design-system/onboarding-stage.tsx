@@ -389,7 +389,7 @@ const StageActionsSlot = createContext<HTMLElement | null>(null);
 export function StageActions({ children }: Readonly<{ children: ReactNode }>) {
   const slot = useContext(StageActionsSlot);
   if (slot === null) {
-    return children;
+    return <div className="ob-stage-acts">{children}</div>;
   }
   return createPortal(children, slot);
 }
