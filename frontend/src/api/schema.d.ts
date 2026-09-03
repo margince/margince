@@ -26914,12 +26914,26 @@ export interface components {
         /**
          * @description The day in figures, for the one line above the queue. Each count is of items the
          *     queue actually CARRIES, so a number here and the rows below it cannot disagree.
+         *
+         *     These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
+         *     `due` is asked of every item whatever its level, so an overdue promise counts in
+         *     both `urgent` and `due` — deliberately, because a reader wants both answers about
+         *     it. Read them as four questions about one day rather than four slices of it.
          */
         WorklistSummary: {
             /** @description Items at the top two levels: somebody is waiting, or a promise is breaking. */
             urgent: number;
             /** @description Items carrying a date that has arrived or passed. */
             due: number;
+            /**
+             * @description The middle of the day: revenue at risk, work already agreed, and decisions that
+             *     block somebody. Neither an interruption nor hygiene.
+             *
+             *     Sent because without it those items reached no figure at all — a queue holding
+             *     nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
+             *     of rows, which is the one thing this line promises cannot happen.
+             */
+            in_play?: number;
             /** @description Routine work: decisions that block nothing, and data hygiene. */
             lower_priority: number;
             /** @description How many items the queue carries. */

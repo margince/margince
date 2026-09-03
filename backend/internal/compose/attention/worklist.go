@@ -423,15 +423,29 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 // Held by: TestTheSummaryCountsTheSameItemsTheQueueCarries
 // (backend/internal/compose/attention/worklist_test.go).
 func summarize(items []crmcontracts.WorklistItem, bar materialBar) crmcontracts.WorklistSummary {
-	summary := crmcontracts.WorklistSummary{Total: len(items)}
+	// Always sent, never omitted: the field is optional in the contract so an
+	// older client keeps working, but this server always counts it, and a
+	// missing figure would read as "no work in the middle" rather than as "this
+	// server does not answer that".
+	inPlay := 0
+	summary := crmcontracts.WorklistSummary{Total: len(items), InPlay: &inPlay}
 	bar.stateOn(&summary)
 	for _, item := range items {
+		// Every level reaches one of the three arms, so no row is missing from
+		// the line. Without the default, levels 3 to 5 — material risk, agreed
+		// work, blocking decisions — fell between the two and a queue holding
+		// only at-risk deals reported three zeros over a page full of rows.
 		switch {
 		case item.Level <= levelPromise:
 			summary.Urgent++
 		case item.Level >= levelRoutine:
 			summary.LowerPriority++
+		default:
+			inPlay++
 		}
+		// Asked of every item whatever its level, so an overdue promise counts
+		// here AND above. These are four questions about the day rather than
+		// four slices of it, which is what the contract says.
 		if item.Overdue != nil && *item.Overdue {
 			summary.Due++
 		}

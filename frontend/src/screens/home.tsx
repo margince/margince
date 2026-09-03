@@ -348,7 +348,15 @@ export function HomeScreen() {
   // answer lives on the worklist read rather than on any of the five deal
   // reads beside it. Same query key as the Worklist screen, so the two cannot
   // disagree about what was read.
-  const worklistQuery = useWorklist("mine", "all");
+  const worklistPages = useWorklist("mine", "all");
+  // Home reads the day's FIGURES — coverage, readings, scope options — and
+  // never its rows, so the first page is the whole of what it needs. Those
+  // figures describe the assembled day rather than the page, so paging would
+  // not change one of them.
+  const worklistQuery = {
+    ...worklistPages,
+    data: worklistPages.data?.pages[0],
+  };
   // Whether this reader's scope reaches a team, off the read the page already
   // makes. It decides BOTH which dials are drawn and which the address may
   // resolve to, so a control and a surface cannot disagree about it.

@@ -7576,8 +7576,12 @@ export const vi = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Việc cần làm tiếp theo",
+  "worklist.more": "Xem thêm",
+  "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
-    "{urgent} khẩn cấp · {due} đến hạn · {lower} ưu tiên thấp",
+    "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ — tổng {total}",
+  "worklist.summary.noMiddle":
+    "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
