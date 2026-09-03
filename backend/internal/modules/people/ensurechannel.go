@@ -275,6 +275,9 @@ func (s *Store) offerChannelPerson(ctx context.Context, tx pgx.Tx, in EnsureChan
 	// are statements about a mail domain this record does not have.
 	id, err := createPerson(ctx, tx, match, PersonSpec{
 		FullName: name,
+		// A channel message arrived from them: the same act as an inbound
+		// mail, over a different transport.
+		Acquisition: Acquisition{Kind: AcquiredSubjectInitiated},
 		// The address the provider vouched for, written with the person rather
 		// than after it, so the person-create audit and event cover it — the
 		// mail path's own shape. An addressless record is one the next mail from

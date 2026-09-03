@@ -72,6 +72,7 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
 		SuppressOrg: in.SuppressOrg,
+		Replied:     in.Replied,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.
