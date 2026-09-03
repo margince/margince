@@ -2399,6 +2399,7 @@ export const de = {
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.eyebrow": "Dein Morgen",
   "brief.eyebrow.weekly": "Deine Woche",
+  "brief.eyebrow.asOf": "{scope} · Stand {at}",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Welches Briefing",
   "brief.view.morning": "Morgen",
