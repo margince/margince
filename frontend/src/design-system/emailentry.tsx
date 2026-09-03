@@ -76,20 +76,33 @@ export function EmailEntry({
   const subject = withheld
     ? t("email.withheldSubject")
     : summary.subject?.trim() || t("email.noSubject");
+  // Direction is nullable, and an unknown one is not an outbound one. Saying
+  // "Sent to" about a message nobody recorded a direction for is a claim the
+  // row does not have.
   const direction =
     summary.direction === "inbound"
       ? t("email.receivedFrom")
-      : t("email.sentTo");
-  const move = summary.move === "none" ? null : MOVE_LABEL[summary.move];
+      : summary.direction === "outbound"
+        ? t("email.sentTo")
+        : null;
+  // Everything below is withheld TOGETHER, from the row's own reading of the
+  // status rather than from trusting the payload to have been stripped. The
+  // server does strip it; this is the second lock, and it exists because a
+  // response assembled by a path that forgot would otherwise print a
+  // counterparty's name beside a message the reader may not open.
+  const counterparty = withheld ? null : summary.counterparty;
+  const move =
+    withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move];
+  const attachments = withheld ? 0 : summary.attachment_count;
 
   const content = (
     <>
       <span className="emailentry__lead">
         <Mail aria-hidden="true" />
         <span className="emailentry__who">
-          {summary.counterparty
-            ? `${direction} ${summary.counterparty}`
-            : direction}
+          {counterparty && direction
+            ? `${direction} ${counterparty}`
+            : (direction ?? t("email.aMessage"))}
         </span>
         <span className="emailentry__when">{timestamp}</span>
       </span>
@@ -105,10 +118,10 @@ export function EmailEntry({
           {t(STATUS_LABEL[summary.display_status])}
         </Badge>
         {move && <span className="emailentry__move">{t(move)}</span>}
-        {summary.attachment_count > 0 && (
+        {attachments > 0 && (
           <span className="emailentry__files">
             <Paperclip aria-hidden="true" />
-            {formatNumber(summary.attachment_count, locale)}
+            {formatNumber(attachments, locale)}
           </span>
         )}
       </span>

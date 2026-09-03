@@ -28,12 +28,21 @@ import "./emailreference.css";
 export function EmailReference({
   subject,
   occurredAt,
+  withheld = false,
   onOpen,
 }: Readonly<{
   /** Null when the message has none, or when its content is not the reader's. */
   subject: string | null | undefined;
   /** Already formatted by the caller, which owns the reader's timezone. */
   occurredAt?: string;
+  /**
+   * Whether this reader is outside the message's audience. The citation takes
+   * the state rather than trusting its caller to have blanked the subject: a
+   * privacy rule that lives only in a prop contract is a rule the next caller
+   * has to remember, and the surfaces that cite mail are exactly the ones that
+   * assemble their own summaries.
+   */
+  withheld?: boolean;
   /**
    * Opens the canonical detail. Omitted when this reader may not read the
    * message: a control that opens nothing teaches a reader that citations do
@@ -42,7 +51,12 @@ export function EmailReference({
   onOpen?: () => void;
 }>) {
   const t = useT();
-  const label = subject?.trim() || t("email.noSubject");
+  const label = withheld
+    ? t("email.withheldSubject")
+    : subject?.trim() || t("email.noSubject");
+  // A message this reader may not read has nothing to open, whatever the
+  // caller passed.
+  const open = withheld ? undefined : onOpen;
   const body = (
     <>
       <Mail aria-hidden="true" />
@@ -50,14 +64,14 @@ export function EmailReference({
       {occurredAt && <span className="emailref__when">{occurredAt}</span>}
     </>
   );
-  if (!onOpen) {
+  if (!open) {
     return <span className="emailref">{body}</span>;
   }
   return (
     <button
       type="button"
       className="emailref emailref--open"
-      onClick={onOpen}
+      onClick={open}
       aria-haspopup="dialog"
     >
       {body}

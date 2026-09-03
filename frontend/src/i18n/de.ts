@@ -1495,6 +1495,7 @@ export const de = {
   "compose.audience": "Sichtbarkeit",
   "compose.audienceTitle": "Wer darf diese Nachricht lesen?",
   "compose.audienceLegend": "Sichtbarkeit dieser einen Nachricht",
+  "email.aMessage": "Eine Nachricht",
   "email.noSubject": "Kein Betreff",
   "email.withheldSubject": "Nicht für Sie freigegeben",
   "email.receivedFrom": "Erhalten von",
@@ -1508,6 +1509,9 @@ export const de = {
   "email.detail.loading": "Nachricht wird geöffnet",
   "email.detail.none": "Diese Nachricht",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
+  "email.detail.close": "Schließen",
+  "email.detail.withheldReason":
+    "Diese Nachricht ist nicht für Sie freigegeben",
   "email.detail.from": "Von",
   "email.detail.to": "An",
   "email.detail.cc": "Cc",

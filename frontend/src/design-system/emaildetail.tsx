@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
+import { useId } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { splitEmailBody } from "../format/emailtext";
 import { useT } from "../i18n";
-import { Modal } from "./atoms";
+import { Button, Modal } from "./atoms";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
 
@@ -45,8 +47,26 @@ export function EmailDetail({
   formatWhen: (iso: string) => string;
 }>) {
   const t = useT();
+  // Generated rather than fixed: two drawers mounted at once would otherwise
+  // share an id, and a dialog labelled by a duplicate is labelled by whichever
+  // one the browser found first.
+  const titleId = useId();
   const read = useQuery({
     queryKey: emailDetailKey(activityId),
+    // A message's content is an AUTHORIZATION result, not a value that ages.
+    // The global 30-second staleTime would let a reopen skip the request
+    // entirely, and the default gcTime would let it paint the last open's
+    // subject and body while a refetch ran — both of which show a reader what
+    // they WERE allowed to see rather than what they are, and an audience
+    // narrowed by somebody else cannot invalidate this browser's cache at all.
+    //
+    // So: ask every time, and keep nothing to repaint. leadkeys.ts documents
+    // the same hazard for the promote preview and says plainly that
+    // invalidation does not purge an inactive query's data; the answer there
+    // was to state it, and the answer here has to be stronger, because what
+    // this one would repaint is somebody's mail.
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data, error } = await api.GET(
         "/activities/{id}/email-presentation",
@@ -59,24 +79,40 @@ export function EmailDetail({
     },
   });
 
-  const title = read.data
-    ? read.data.summary.subject?.trim() ||
-      (read.data.access.content_state === "withheld"
-        ? t("email.withheldSubject")
-        : t("email.noSubject"))
-    : t("email.detail.none");
+  // The status decides FIRST. Reaching for the subject and falling back to the
+  // withheld wording only when it is empty would print a subject that a
+  // response assembled by a path which forgot to strip it still carried.
+  const title = !read.data
+    ? t("email.detail.none")
+    : read.data.access.content_state === "withheld"
+      ? t("email.withheldSubject")
+      : read.data.summary.subject?.trim() || t("email.noSubject");
 
   return (
     <Modal
       open
       onClose={onClose}
-      labelledBy="emaildetail-title"
+      labelledBy={titleId}
       placement="right"
       size="wide"
     >
-      <h2 id="emaildetail-title" className="emaildetail__title">
-        {title}
-      </h2>
+      {/* A visible way out. On a phone the drawer is the whole viewport, so
+          there is no backdrop to tap and usually no Escape key — the trap the
+          Modal builds for keyboard users becomes a trap in the ordinary sense
+          without this. */}
+      <div className="emaildetail__head">
+        <h2 id={titleId} className="emaildetail__title">
+          {title}
+        </h2>
+        <Button
+          small
+          iconOnly
+          onClick={onClose}
+          aria-label={t("email.detail.close")}
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </div>
       {read.isPending ? (
         <SurfaceState
           state="loading"
@@ -115,7 +151,15 @@ function EmailBody({
     // The row stays, its words do not, and the reason does not either: why a
     // message is limited describes what it is about.
     return (
-      <SurfaceState state="withheld" emptyLabel={t("email.detail.none")}>
+      <SurfaceState
+        state="withheld"
+        emptyLabel={t("email.detail.none")}
+        // The generic sentence says "your role cannot read this", and an
+        // audience is not a role: the author of one message limited it, which
+        // says nothing about the seat this reader holds. Naming the real
+        // reason would describe the message, so this names neither.
+        detail={{ withheldReason: t("email.detail.withheldReason") }}
+      >
         {null}
       </SurfaceState>
     );

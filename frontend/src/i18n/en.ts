@@ -1549,6 +1549,7 @@ export const en = {
   // The canonical email row and its detail. "Team" never means the whole
   // workspace: who may discover the linked record still decides who sees the
   // row at all, so the word is about the audience and not the population.
+  "email.aMessage": "A message",
   "email.noSubject": "No subject",
   "email.withheldSubject": "Not shared with you",
   "email.receivedFrom": "Received from",
@@ -1562,6 +1563,8 @@ export const en = {
   "email.detail.loading": "Opening the message",
   "email.detail.none": "This message",
   "email.detail.showQuoted": "Show quoted history",
+  "email.detail.close": "Close",
+  "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
   "email.detail.to": "To",
   "email.detail.cc": "Cc",

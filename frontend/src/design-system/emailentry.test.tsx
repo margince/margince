@@ -43,8 +43,6 @@ const WITHHELD: EmailSummary = {
   ...READABLE,
   activity_id: "22222222-2222-4222-8222-222222222222",
   display_status: "withheld",
-  attachment_count: 0,
-  move: "none",
 };
 
 const PRESENTATION = {
@@ -117,11 +115,18 @@ describe("EmailEntry", () => {
     // happened.
     expect(screen.getByText("1 Sep 09:12")).toBeInTheDocument();
     expect(screen.getByText("Withheld")).toBeInTheDocument();
-    // And nothing of what was said, though the fixture carries both.
+    // And nothing of what was said or who said it, though the fixture carries
+    // all of it. The counterparty matters as much as the subject: a name
+    // beside a message the reader may not open still says who this person is
+    // talking to.
     expect(screen.queryByText("Angebot Q4")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Können wir Dienstag sprechen?"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ana Sommer/)).not.toBeInTheDocument();
+    // No move claim and no file count either: both describe the message.
+    expect(screen.queryByText("Needs reply")).not.toBeInTheDocument();
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
   });
 
   it("opens on Enter and on Space, and says it opens a dialog", async () => {
@@ -154,6 +159,23 @@ describe("EmailReference", () => {
     expect(screen.queryByText("Team")).not.toBeInTheDocument();
   });
 
+  it("prints nothing of a withheld message, and does not open it", () => {
+    const onOpen = vi.fn();
+    wrap(
+      <EmailReference
+        subject="Angebot Q4"
+        occurredAt="1 Sep"
+        withheld
+        onOpen={onOpen}
+      />,
+    );
+    // The subject the caller passed is not this reader's to see, and an opener
+    // the caller passed leads to a message they may not read.
+    expect(screen.queryByText("Angebot Q4")).not.toBeInTheDocument();
+    expect(screen.getByText("Not shared with you")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
   it("says No subject rather than drawing an empty line", () => {
     wrap(<EmailReference subject={null} />);
     expect(screen.getByText("No subject")).toBeInTheDocument();
@@ -182,6 +204,37 @@ describe("EmailDetail", () => {
     await screen.findByText("Können wir Dienstag sprechen?");
     expect(screen.getByText("Show quoted history")).toBeInTheDocument();
     expect(screen.getByText(/Ana Sommer/)).toBeInTheDocument();
+  });
+
+  it("asks again on every open, and keeps nothing to repaint", async () => {
+    const fetchSpy = jsonOnce(PRESENTATION);
+    vi.stubGlobal("fetch", fetchSpy);
+    // One client across both opens, as a real session has.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+    });
+    const draw = () =>
+      render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider>
+            <EmailDetail
+              activityId={READABLE.activity_id}
+              onClose={() => {}}
+              formatWhen={() => "1 Sep 09:12"}
+            />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+
+    draw();
+    await screen.findByText("Können wir Dienstag sprechen?");
+    cleanup();
+
+    // The global staleTime would let this second open skip the request and
+    // paint the first one's answer. A message's content is an authorization
+    // result, so the reopen has to ask again.
+    draw();
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
   });
 
   it("says blind recipients exist without naming them", async () => {
