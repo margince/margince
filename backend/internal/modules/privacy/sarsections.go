@@ -211,7 +211,13 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// this date was the basis", which is what Art. 15 asks. Export the note
 		// only alongside telling reps, at the surface where they type it, that
 		// the subject can read it.
-		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, captured_at
+		// `created_at`, not captured_at: this table records WHEN THE EXCHANGE
+		// HAPPENED in occurred_at and when the row was written in created_at,
+		// and it has never had a captured_at. Naming one made every access
+		// package fail to assemble at all — the section is not optional, so a
+		// column that does not exist takes the whole export down rather than
+		// one part of it.
+		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at
 		   FROM consent_qualifying_event
 		   WHERE person_id = $1`, nil},
 		// The token row itself is deliberately NOT read: it is a live
