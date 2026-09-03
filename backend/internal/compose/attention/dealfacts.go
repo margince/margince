@@ -29,7 +29,8 @@ import (
 )
 
 // nameTheMoney puts a deal's figures on every lane item that names one and
-// carries none.
+// carries none — and drops the item where Figures cannot answer for it at
+// all, since a row that can name nothing is not a suggestion.
 //
 // Items that already have facts are left alone: the lane that produced them
 // read the deal under this same reader, and asking again could only produce a
@@ -59,20 +60,28 @@ func (s *Service) nameTheMoney(ctx context.Context, day *crmcontracts.Attention)
 		return err
 	}
 	for _, lane := range lanes {
+		kept := make([]crmcontracts.AttentionItem, 0, len(*lane))
 		for i := range *lane {
-			id, ok := needsDealFigures((*lane)[i])
-			if !ok {
+			item := (*lane)[i]
+			id, needsFigures := needsDealFigures(item)
+			if !needsFigures {
+				kept = append(kept, item)
 				continue
 			}
 			found, ok := figures[id]
 			if !ok {
-				// The reader may not see this deal, or it is gone. The row
-				// keeps its name and says no more, which is the shape an
-				// unnamed subject already has.
+				// The deal is gone (archived, deleted) or the reader can no
+				// longer see it — Figures answers the same absence either
+				// way, and a row that can name nothing is not a suggestion:
+				// dropped here rather than left on the page with no amount,
+				// no close date and no reason, still offering act/set_aside/
+				// dismiss over a deal that no longer resolves.
 				continue
 			}
-			applyDealFigures(&(*lane)[i], found)
+			applyDealFigures(&item, found)
+			kept = append(kept, item)
 		}
+		*lane = kept
 	}
 	return nil
 }
@@ -91,6 +100,12 @@ func needsDealFigures(item crmcontracts.AttentionItem) (ids.UUID, bool) {
 // The close date lands on DueAt as well as on the deal facts, because that is
 // where the projection reads a row's deadline from — a date set only on the
 // facts would print on the card and order nothing.
+//
+// The overdue verdict lands on Overdue for the same reason, and it is the
+// SAME verdict deals.CloseIsOverdue gives the at-risk lane's identical deal
+// (deals.Store.Figures computes it calendar-date, workspace-zone aware) —
+// never classifyBriefItem's own instant comparison, which is what let the two
+// lanes disagree about a deal due today.
 func applyDealFigures(item *crmcontracts.AttentionItem, figures DealFigures) {
 	facts := &crmcontracts.AttentionDealFacts{AmountMinor: figures.AmountMinor}
 	if !figures.StageID.IsZero() {
@@ -109,5 +124,9 @@ func applyDealFigures(item *crmcontracts.AttentionItem, figures DealFigures) {
 	if figures.ExpectedCloseDate != nil && item.DueAt == nil {
 		closes := *figures.ExpectedCloseDate
 		item.DueAt = &closes
+	}
+	if figures.ExpectedCloseDate != nil && item.Overdue == nil {
+		overdue := figures.CloseOverdue
+		item.Overdue = &overdue
 	}
 }

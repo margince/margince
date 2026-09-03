@@ -257,6 +257,7 @@ func (f attentionDealFacts) Figures(
 			AmountMinor:       figures.AmountMinor,
 			Currency:          figures.Currency,
 			ExpectedCloseDate: figures.ExpectedCloseDate,
+			CloseOverdue:      figures.CloseOverdue,
 		}
 	}
 	return out, nil

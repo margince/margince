@@ -10,6 +10,7 @@ import {
   Field,
   TextInput,
 } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -92,6 +93,10 @@ export function PlanSection() {
   // honest rather than a decoration on an immediate write.
   const [staged, setStaged] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
+  // How many rows the last Save could not write. Zero is the ordinary state and
+  // draws nothing; anything else is said out loud, because a half-written week
+  // that reports success is worse than one that fails outright.
+  const [unsaved, setUnsaved] = useState(0);
 
   const state = plan.isPending
     ? "loading"
@@ -128,10 +133,24 @@ export function PlanSection() {
         (write): write is { id: string; state: SettableState } =>
           write.state !== null,
       );
+    // Each row is attempted even after one is refused, and only the rows that
+    // LANDED stop being staged.
+    //
+    // The loop used to throw on the first refusal, which left the writes after
+    // it unattempted and — because clearing the staged set came after the loop
+    // — left every row still ticked, including the ones already written. A rep
+    // pressing Save again then re-sent a write that had already succeeded, and
+    // nothing on the panel said any of it had gone wrong.
+    const refused: string[] = [];
     for (const write of writes) {
-      await setState.mutateAsync(write);
+      try {
+        await setState.mutateAsync(write);
+      } catch {
+        refused.push(write.id);
+      }
     }
-    setStaged(new Set());
+    setStaged(new Set(refused));
+    setUnsaved(refused.length);
   }
 
   return (
@@ -148,12 +167,30 @@ export function PlanSection() {
           // Save appears only once a box has changed. A save bar standing in the
           // resting layout would say there is something to save on a week nobody
           // has touched.
-          staged.size > 0 ? (
-            <Button onClick={() => void save()} disabled={setState.isPending}>
-              {plural("plan.save", staged.size, {
-                count: formatNumber(staged.size, locale),
-              })}
-            </Button>
+          //
+          // The refusal sits beside it rather than at the top of the panel: it
+          // is about the press the reader just made, and the rows it names are
+          // the ones still ticked under it.
+          staged.size > 0 || unsaved > 0 ? (
+            <>
+              {unsaved > 0 && (
+                <Callout tone="warn" live="alert">
+                  {plural("plan.saveRefused", unsaved, {
+                    count: formatNumber(unsaved, locale),
+                  })}
+                </Callout>
+              )}
+              {staged.size > 0 && (
+                <Button
+                  onClick={() => void save()}
+                  disabled={setState.isPending}
+                >
+                  {plural("plan.save", staged.size, {
+                    count: formatNumber(staged.size, locale),
+                  })}
+                </Button>
+              )}
+            </>
           ) : undefined
         }
       >
