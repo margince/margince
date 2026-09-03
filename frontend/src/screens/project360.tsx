@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useState, useRef} from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import { EmailDetail } from "../design-system/emaildetail";
 import { OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import {
@@ -17,7 +18,7 @@ import {
 } from "../design-system/recordtimeline";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDate } from "../format/format";
+import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
@@ -418,7 +419,19 @@ function useProjectChronology(
     filters,
     firstPage: activities,
   });
+  // Which message the drawer is showing, reset when the project changes: this
+  // component outlives a move from one project to the next, and a drawer left
+  // open would reopen the previous project's mail over the new one.
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const shownFor = useRef(view.project.id);
+  if (shownFor.current !== view.project.id) {
+    shownFor.current = view.project.id;
+    if (openEmail) {
+      setOpenEmail(null);
+    }
+  }
   const history = useRecordChronology({
+    onOpenEmail: setOpenEmail,
     kind: "project",
     recordId: view.project.id,
     filter,
@@ -468,7 +481,19 @@ function useProjectChronology(
         )}
       </>
     ),
-    timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
+    timelineFooter: (
+      <>
+        <ChronologyFooter filter={filter} chronology={history} />
+        {/* One drawer over the project, beside the chronology it opens from. */}
+        {openEmail && (
+          <EmailDetail
+            activityId={openEmail}
+            onClose={() => setOpenEmail(null)}
+            formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
+          />
+        )}
+      </>
+    ),
     timelineNotice: chronologyNotice(
       "project.timeline.empty",
       {
