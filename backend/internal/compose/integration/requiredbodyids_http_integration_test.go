@@ -119,6 +119,16 @@ type requiredIDCase struct {
 	method, path      string
 	omitted, supplied AnyMap
 	field             string
+	// suppliedStatus overrides the 404 the invisible-id arm expects, for an
+	// endpoint that refuses BEFORE it looks anything up. Zero means 404.
+	//
+	// The property this suite defends is that a caller cannot tell an id that
+	// names nothing from one they may not see. A uniform refusal satisfies that
+	// more completely than a 404 does — every id gets the same answer, so there
+	// is nothing to compare — but it cannot answer 404 without inventing a
+	// lookup it does not perform. Naming the status keeps the arm honest
+	// instead of exempting the endpoint from the sweep.
+	suppliedStatus int
 }
 
 // requiredIDCases is every body this suite drives, keyed by the field under
@@ -163,6 +173,11 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
+			// Operator-held issuance is retired: it refuses every purpose,
+			// visible or not, because a token handed to the caller lets the
+			// round trip close without the subject's mailbox. So there is no
+			// lookup to 404 on, and one uniform answer enumerates nothing.
+			suppliedStatus: http.StatusConflict,
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
@@ -221,10 +236,14 @@ func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
 		})
 		t.Run(name+"/supplied but invisible stays a 404", func(t *testing.T) {
 			var problem problemBody
+			want := tc.suppliedStatus
+			if want == 0 {
+				want = http.StatusNotFound
+			}
 			status := e.Call(t, tc.method, tc.path, tc.supplied, nil, &problem)
-			if status != http.StatusNotFound {
-				t.Fatalf("→ %d, want 404: a well-formed id that names nothing must not be distinguishable "+
-					"from one the caller may not see, or the status code enumerates rows: %+v", status, problem)
+			if status != want {
+				t.Fatalf("→ %d, want %d: a well-formed id that names nothing must not be distinguishable "+
+					"from one the caller may not see, or the status code enumerates rows: %+v", status, want, problem)
 			}
 			// And it must not name the field either: a 404 that said "purpose_id"
 			// would confirm the caller's id was structurally accepted and only

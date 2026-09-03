@@ -341,10 +341,17 @@ func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 	}
 }
 
-// grantMarketingConsent takes the recipient through the double-opt-in round
-// trip marketing_email requires — the server mints the token, the confirming
-// grant presents it — so the send under that purpose is lawful at both the
-// request-time gate and the dispatcher's.
+// grantMarketingConsent takes the recipient through the round trip
+// marketing_email requires, so the send under that purpose is lawful at both
+// the request-time gate and the dispatcher's.
+//
+// Through the CONFIRM LINK, which is how a double-opt-in purpose is confirmed
+// now: a single-use token minted for the subject's own live address, answered
+// on the anonymous page it opens. The token comes from the store rather than
+// the contract because the contract hands it to nobody — an operator holding
+// the plaintext could close the round trip with the subject's mailbox never
+// taking part, which is why the issuance endpoint that once returned it
+// refuses.
 func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	t.Helper()
 	var purposes struct {
@@ -365,20 +372,37 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	if marketing == "" {
 		t.Fatalf("bootstrap seeded no marketing purpose: %+v", purposes.Data)
 	}
-	var issued struct {
-		Token string `json:"token"`
+	person, err := ids.ParseAs[ids.PersonKind](p.personID)
+	if err != nil {
+		t.Fatalf("parsing the person id: %v", err)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/double-opt-in", AnyMap{
-		"purpose_id": marketing, "deliver": false,
-	}, nil, &issued); status != http.StatusCreated {
-		t.Fatalf("issue the double-opt-in token → %d", status)
+	issued, err := consent.NewStore(p.DB()).IssueConfirmToken(p.confirmMinterContext(t), person)
+	if err != nil {
+		t.Fatalf("mint the confirm link: %v", err)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
-		"purpose_id": marketing, "new_state": "granted",
-		"lawful_basis": "consent", "double_opt_in_token": issued.Token,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("confirm the marketing grant → %d", status)
+	if status := p.Call(t, "POST", "/v1/public/confirm/"+issued.Token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "Yes, send me product news.",
+	}, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("answer the confirm page → %d, want 204", status)
 	}
+}
+
+// confirmMinterContext is the seat the mail path would mint under: a human who
+// may update the person the link is for, which is what IssueConfirmToken asks.
+func (p *preflightEnv) confirmMinterContext(t *testing.T) context.Context {
+	t.Helper()
+	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, p.Pool)
+	ctx := principal.WithWorkspaceID(context.Background(), wsID)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	user := ids.NewV7()
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }
 
 // Revocation binds mid-flight on the one lane that reaches a real external

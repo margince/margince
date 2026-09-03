@@ -269,6 +269,17 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"granting it here would widen the authority every other tool in the sweep runs under, " +
 		"and the answer shape it would prove is the one remove_tag already shares",
 	"remove_tag": "same missing tag.read as apply_tag above",
+	"create_tag": "naming the vocabulary is admin/ops work, and this lane's seat holds no tag " +
+		"write — granting it would widen the authority every other tool in the sweep runs under",
+	"update_tag": "same missing tag write as create_tag above; it renames or recolours a row " +
+		"that tool would have had to make",
+	"forecast_readings": "needs a seat holding forecast.read, which this lane's seat does not " +
+		"carry — the forecast is an installation-wide figure and granting it here would widen " +
+		"the authority every other tool in the sweep runs under",
+	"forecast_movement": "the same missing forecast.read as forecast_readings above, and it " +
+		"additionally needs two SNAPSHOTS to sit between — a snapshot is minted by the period's " +
+		"own producer rather than by a caller, so standing one up would make this sweep a " +
+		"forecast test",
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
