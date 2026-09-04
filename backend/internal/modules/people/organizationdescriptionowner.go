@@ -110,25 +110,9 @@ func carryDescriptionAuthor(ctx context.Context, tx pgx.Tx, from, to ids.Organiz
 }
 
 // descriptionHeldByHuman reports whether a person authored this organization's
-// description.
-//
-// No provenance row means nobody has claimed the column, and an automated
-// writer may replace what another automated writer put there: every human
-// writer of the description stamps, so the absence is informative rather than
-// merely unknown.
+// description. The column and its provenance move together — a human clearing
+// the description stamps it too — so the field's own answer is the whole test,
+// which is where it differs from the logo one screen over.
 func descriptionHeldByHuman(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (bool, error) {
-	var human bool
-	err := tx.QueryRow(ctx, `
-		SELECT captured_by LIKE 'human:%'
-		FROM field_provenance
-		WHERE object_type = 'organization' AND object_id = $1 AND field_name = $2
-		ORDER BY captured_at DESC, id DESC
-		LIMIT 1`, orgID, descriptionField).Scan(&human)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("read organization description provenance: %w", err)
-	}
-	return human, nil
+	return orgFieldHeldByHuman(ctx, tx, orgID, descriptionField)
 }

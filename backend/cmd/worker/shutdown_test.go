@@ -98,17 +98,17 @@ func TestJobsThatSurviveBothStopsAreReportedAsAnError(t *testing.T) {
 func TestJoinReportsALaneThatDoesNotStop(t *testing.T) {
 	logger, written := recordingLogger()
 	_, stop := context.WithCancel(context.Background())
-	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stop, logger: logger}
+	var background sync.WaitGroup
 
 	// A lane that ignores cancellation. It is released at the end of the test
 	// rather than left running, so the suite does not leak it.
 	stuck := make(chan struct{})
 	t.Cleanup(func() { close(stuck) })
-	lanes.background.Go(func() { <-stuck })
+	background.Go(func() { <-stuck })
 
 	returned := make(chan struct{})
 	go func() {
-		lanes.joinWithin(time.Millisecond)
+		joinLanesWithin(stop, &background, logger, time.Millisecond)
 		close(returned)
 	}()
 

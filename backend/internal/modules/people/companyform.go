@@ -37,7 +37,7 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 			continue
 		}
 		trimmed := strings.TrimSpace(*value)
-		if spec.update != "" {
+		if spec.column != "" {
 			moved, err := setCompanyColumn(ctx, tx, orgID, spec, trimmed)
 			if err != nil {
 				return nil, err
@@ -65,16 +65,12 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 			continue
 		}
 		// A human-typed value has no snippet to quote — the human IS the
-		// evidence, which is what source=human + captured_by=human:<id>
-		// record. Confidence is 1: they are not guessing about themselves.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization_profile_field (organization_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-			VALUES ($1, $2, $3, '', '', 1, 'human', $4)
-			ON CONFLICT (organization_id, field)
-			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = '', source_url = '',
-			              confidence = 1, source = 'human',
-			              captured_by = EXCLUDED.captured_by, captured_at = now()`,
-			orgID, field, trimmed, by); err != nil {
+		// evidence, which is what source=human + captured_by=human:<id> record.
+		// The last argument is the precedence flag upsertOrgProfileField gates
+		// on: a person's answer always lands, including over their own earlier
+		// one, which is the half a read-back never gets.
+		if _, err := tx.Exec(ctx, upsertOrgProfileField,
+			orgID, field, trimmed, "", "", humanAuthoredConfidence, companySourceHuman, by, true); err != nil {
 			return nil, fmt.Errorf("save company field %s: %w", field, err)
 		}
 		applied[field] = trimmed
@@ -116,12 +112,27 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 //
 // A value clears to NULL rather than to the empty string — an unfilled field
 // reads as absent, never as the empty answer.
+//
+// The concurrency guard is the ANCHOR'S ROW LOCK, two frames up, not the
+// RowsAffected report below. Both callers reach here through
+// resolveOrCreateAnchor, whose anchorOrganization holds
+// `WHERE is_anchor AND archived_at IS NULL FOR UPDATE` for the rest of the
+// transaction, so two company saves serialize on the row instead of racing on
+// it. Said here because the form carries no version to pin, so nothing else in
+// this file records what stops the second save silently losing the first.
 func setCompanyColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, spec companyField, value string) (bool, error) {
 	var stored *string
 	if value != "" {
 		stored = &value
 	}
-	tag, err := tx.Exec(ctx, spec.update, orgID, stored)
+	write, ok := orgColumnWrites[spec.column]
+	if !ok {
+		// A field the form declares a column for that the shared table does not
+		// write. Reported rather than sent: the lookup would otherwise hand
+		// tx.Exec an empty statement and the failure would name syntax.
+		return false, fmt.Errorf("people: the company form names column %q, which nothing writes", spec.column)
+	}
+	tag, err := tx.Exec(ctx, write.statementFor(spec.authority), orgID, stored)
 	if err != nil {
 		return false, fmt.Errorf("set %s: %w", spec.name, err)
 	}
