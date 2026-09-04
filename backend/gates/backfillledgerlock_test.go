@@ -44,6 +44,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -53,6 +54,18 @@ const (
 	runTable    = "capture_backfill"
 	rowLock     = "FOR UPDATE"
 )
+
+// runRowLock is the lock this gate is about: one taken ON THE RUN. Matching
+// bare `FOR UPDATE` would accept a writer that locks some other table and
+// still report the run protected — capture takes `FOR UPDATE` on
+// `capture_import`, `capture_connection` and the pending queue, so that is a
+// reachable pass, not a hypothetical one.
+//
+// `\b` after the table name excludes the ledger's own `capture_backfill_creation`,
+// since `_` is a word character. The gap admits no backtick or semicolon, which
+// keeps the match inside ONE SQL literal: a run named in one statement cannot
+// borrow a `FOR UPDATE` belonging to the next.
+var runRowLock = regexp.MustCompile("(?is)\\b" + runTable + "\\b[^;`]*" + rowLock)
 
 func TestEveryWriterOfTheBackfillLedgerLocksTheRunFirst(t *testing.T) {
 	t.Parallel()
@@ -64,7 +77,10 @@ func TestEveryWriterOfTheBackfillLedgerLocksTheRunFirst(t *testing.T) {
 			"wrong tree. A census that finds no subject cannot report a pass.")
 	}
 	for name, body := range writers {
-		lock := strings.Index(body, rowLock)
+		lock := -1
+		if at := runRowLock.FindStringIndex(body); at != nil {
+			lock = at[0]
+		}
 		insert := strings.Index(body, "INSERT INTO "+ledgerTable)
 		switch {
 		case lock < 0:
