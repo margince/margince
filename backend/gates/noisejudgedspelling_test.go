@@ -65,6 +65,18 @@ func TestTheNoiseJudgedPredicateHasOneSpelling(t *testing.T) {
 	}
 	needle := noiseStandsClause(t, string(owner))
 
+	// The owner is COUNTED, not skipped. Skipping it kept the needle from
+	// finding its own declaration and exempted the rest of the file with it —
+	// a second spelling in another function there would have passed, which is
+	// the hole this gate exists to close, one scope in. Exactly one occurrence
+	// is the declaration; a second anywhere in that file is a failure.
+	if n := strings.Count(string(owner), needle); n != 1 {
+		t.Errorf("%s spells the noise-judged predicate %d times, want the one "+
+			"declaration. A second spelling in the file that owns it drifts from the "+
+			"first exactly as one anywhere else would.",
+			filepath.Base(noiseStandsOwner), n)
+	}
+
 	var elsewhere []string
 	root := filepath.Join(repoRoot, "backend")
 	err = filepath.Walk(root, func(path string, _ os.FileInfo, err error) error {
