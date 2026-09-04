@@ -79,9 +79,12 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedOrg(t *testing.T) {
 
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	// The WORKSPACE job, not the dispatcher: a dispatcher completes as soon as
-	// its fan-out is enqueued, so waiting on it would race the work.
-	integration.AwaitKindCompleted(waitCtx, t, sub, compose.CaptureAutoEnrichWorkspaceArgs{}.Kind())
+	// THE PASS ITSELF, which is now the only kind there is (ADR-0103). This
+	// used to wait on the workspace child, because a dispatcher completed as
+	// soon as its fan-out was enqueued and waiting on it raced the work. A
+	// collapsed pass completes when the work is done, so the thing to wait for
+	// and the thing that does the work are the same row.
+	integration.AwaitKindCompleted(waitCtx, t, sub, compose.CaptureAutoEnrichSweepArgs{}.Kind())
 
 	// The sweep created a system-requested dossier for the org...
 	var readCount int

@@ -33,16 +33,24 @@ package gates
 //
 // # Which arm carries the weight
 //
-// The FAN-OUT requirement is the load-bearing one. The regression this phase
-// exists to prevent is a worker that loops the fleet and calls a store method
-// per tenant — the pre-conversion shape — and that worker calls none of the
-// spellings above, so it fails here and nowhere else. jobbinding_test.go does
-// not look at writes at all (it catches a Work body binding its own workspace),
-// and the RLS lane catches only UNBOUND writes, while a fleet loop that binds
-// the GUC per workspace and then writes satisfies RLS completely. Nothing
-// downstream covers that shape.
+// The FLEET-WALK requirement is the load-bearing one, and what it prohibits has
+// narrowed once. It used to read "a FleetWide job must fan out", and the
+// regression it prevented was a worker that looped the fleet and called a store
+// method per tenant. ADR-0103 makes that loop the intended shape for a
+// scheduled pass — one job declaration, not a dispatcher and a child — so the
+// loop itself is no longer the finding.
 //
-// # The one kind that owns no tenant and still does the work
+// What is still a finding is reaching the fleet by HAND. runPerWorkspace is now
+// a sanctioned spelling beside the three dispatch helpers: it enumerates the
+// live workspaces, attempts every one, and joins the failures, so a pass that
+// walks the fleet through it cannot silently skip a tenant or swallow a
+// tenant's error. A `for` loop written at the call site gets none of that, and
+// nothing downstream catches it — jobbinding_test.go does not look at writes at
+// all (it catches a Work body binding its own workspace), and the RLS lane
+// catches only UNBOUND writes, while a fleet loop that binds the GUC per
+// workspace and then writes satisfies RLS completely.
+//
+// # Kinds that own no tenant and still do the work
 //
 // A FleetWide declaration says the job owns no tenant. Until ADR-0091 §8 that
 // implied a fan-out, because the work itself always belonged to some workspace.
@@ -86,7 +94,15 @@ const fleetWideDispatcherFloor = 20
 
 // fanOutHelpers are the compose helpers that ARE a fan-out. See the allowlist
 // above for why the set is closed and why a direct River insert is not in it.
-var fanOutHelpers = []string{"dispatchPerWorkspace", "dispatchWith", "dispatchOne"}
+// fanOutHelpers are the sanctioned ways a FleetWide job reaches the fleet.
+//
+// The first three ENQUEUE one child per unit; runPerWorkspace RUNS the pass for
+// each workspace in this process, which is what ADR-0103 collapsed the
+// workspace dispatchers into. All four are listed together because the arm
+// below is about the same thing for all of them: a FleetWide job must reach the
+// fleet through a helper that knows what a unit is, and not through a loop it
+// wrote itself.
+var fanOutHelpers = []string{"dispatchPerWorkspace", "dispatchWith", "dispatchOne", "runPerWorkspace"}
 
 // fleetWideDispatcher is one resolved args→worker→Work association and what
 // the gate found in it.
@@ -367,7 +383,7 @@ func checkFleetWideDispatchers(t *testing.T, dir string) {
 			continue
 		}
 		if !d.fansOut {
-			t.Errorf("%s:%d: %s works FleetWide args %s but never fans out. A dispatcher enqueues one job per unit of its fan-out, through dispatchPerWorkspace, dispatchWith or dispatchOne — those three build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap. If it does tenant work instead, it is WorkspaceScoped and its args must carry the workspace.",
+			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchPerWorkspace, dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace, which walks the live workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
 				d.pos.Filename, d.pos.Line, d.worker, d.args)
 		}
 		for _, verb := range d.writes {

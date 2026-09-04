@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "7debad373823f8c1db17b96b79ae3d8afc9a146bcd86628dc63ff99a4274a080"
+const jobContractHash = "5f5c8efdb21834e2f48eb64b52d037dd8bad08e94f6733999b2669d44a0e9c84"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -37,7 +37,6 @@ type declaredJobArgs interface {
 		BriefGenerateArgs |
 		BriefGenerateWorkspaceArgs |
 		CaptureAutoEnrichSweepArgs |
-		CaptureAutoEnrichWorkspaceArgs |
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
 		CaptureClassifyWorkspaceArgs |
@@ -153,7 +152,6 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 var (
 	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
-	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
 	_ jobs.FleetWide = CaptureClassifyArgs{}
 	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
@@ -191,7 +189,6 @@ var (
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = BriefGenerateWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = CaptureAutoEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureClassifyWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ConfidentialityVerdictWorkspaceArgs{}

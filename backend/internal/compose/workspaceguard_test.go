@@ -162,9 +162,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		IdempotencyRetentionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&idempotencyRetentionWorkspaceWorker{}).Work(ctx, &river.Job[IdempotencyRetentionWorkspaceArgs]{})
 		},
-		CaptureAutoEnrichWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&captureAutoEnrichWorkspaceWorker{}).Work(ctx, &river.Job[CaptureAutoEnrichWorkspaceArgs]{})
-		},
 		EmbedDriftWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&embedDriftWorkspaceWorker{}).Work(ctx, &river.Job[EmbedDriftWorkspaceArgs]{})
 		},

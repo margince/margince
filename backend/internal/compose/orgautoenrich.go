@@ -87,11 +87,6 @@ func (g *OrgAutoEnrichTrigger) HandleEvent(ctx context.Context, env events.Envel
 	if time.Since(env.OccurredAt) > orgAutoEnrichFreshWindow {
 		return nil
 	}
-	// The envelope carries no tenant (ADR-0091 §6); the store's handle names it.
-	ws, err := InstallationDB(g.pool).Workspace(ctx)
-	if err != nil {
-		return err
-	}
 	// The uniqueness is the flood bound: any authenticated writer can emit
 	// organization.updated in a loop (the store's emit has no value-changed
 	// guard), and without it every event would land its own row on the
@@ -109,8 +104,15 @@ func (g *OrgAutoEnrichTrigger) HandleEvent(ctx context.Context, env events.Envel
 	// doors dedupe against each other instead of stacking; the sweep-tag
 	// gauges may therefore occasionally count a day's coverage against a
 	// trigger-queued pass that did the identical work untagged.
-	child := CaptureAutoEnrichWorkspaceArgs{Workspace: ws.UUID}
-	opts := oneOffChildOpts(child.Kind())
+	// The PASS, not a per-workspace child: the child kind is gone with the
+	// fan-out (ADR-0103). Its args carried the workspace, so ByArgs deduped one
+	// trigger against another for the SAME workspace; the pass carries none, so
+	// the same dedupe now means one pending sweep at a time — which is what
+	// this trigger wanted in the first place. The pass walks the workspaces
+	// itself, so `ws` is no longer named: a pass over the installation cannot
+	// be aimed at one tenant.
+	child := CaptureAutoEnrichSweepArgs{}
+	opts := oneOffPassOpts(child.Kind())
 	opts.UniqueOpts = river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}
 	return g.enqueue.Enqueue(ctx, child, opts)
 }
