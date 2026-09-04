@@ -127,9 +127,10 @@ func (s *Service) Draft(
 	in := FromLead(lead, activities, req.Intent, envelope)
 	// Loaded after the lead read, so a caller who may not see this lead is
 	// refused before their voice profile is touched at all.
-	draft, by, err := persondraft.Write(ctx, s.lane, in, draftvoice.Load(ctx, s.voice, s.log))
+	voice := draftvoice.Load(ctx, s.voice, s.log)
+	draft, by, err := persondraft.Write(ctx, s.lane, in, voice)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
-	return persondraft.Wire(draft, by), nil
+	return persondraft.Wire(draft, by, voice.Degraded), nil
 }

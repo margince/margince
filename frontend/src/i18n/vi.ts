@@ -3037,6 +3037,8 @@ export const vi = {
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI tạo. Hãy đọc và sửa trước khi gửi.",
   "compose.voiceVersion": "Dựng từ kho văn bản của bạn · v{n}",
+  "compose.voiceDegraded":
+    "Không tải được hồ sơ giọng văn của bạn, nên bản nháp này không viết theo giọng của bạn. Hãy soạn lại bản nháp hoặc chỉnh sửa trước khi gửi.",
   "compose.provisional": "Giọng tạm thời",
   "compose.provisionalHint":
     "Voice DNA của bạn vẫn đang được dựng. Giọng đó đã định hình bản nháp này y như một bản đã hoàn thiện — không giữ lại gì cả.",

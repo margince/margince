@@ -15564,6 +15564,9 @@ type AccountEmailDraft struct {
 	Subject string                 `json:"subject"`
 	To      *[]openapi_types.Email `json:"to,omitempty"`
 
+	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
+
 	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
 }
@@ -21377,6 +21380,9 @@ type EmailDraft struct {
 	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
 	Subject             string                 `json:"subject"`
 	To                  *[]openapi_types.Email `json:"to,omitempty"`
+
+	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
 
 	// VoiceProfileVersion The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
