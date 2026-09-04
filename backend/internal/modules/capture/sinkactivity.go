@@ -224,8 +224,8 @@ func (s *Sink) upsertActivity(
 	audience, audienceReason := birth.bornAudience()
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''))
+		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17)
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
@@ -249,7 +249,12 @@ func (s *Sink) upsertActivity(
 		// message, so a newsletter blast is destroyable while a personal mail
 		// from the same address is only ever hidden.
 		rec.Counterparty.ListUnsubscribe,
-		audience, audienceReason).Scan(&id)
+		audience, audienceReason,
+		// What the parser read, stored as read. A record that carried no
+		// calendar part stores false rather than NULL: NULL is reserved for the
+		// rows captured before this column existed, so the two stay tellable
+		// apart.
+		fields.HasCalendarPart).Scan(&id)
 	if err == nil {
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.
