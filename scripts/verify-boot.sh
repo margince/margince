@@ -76,9 +76,9 @@ echo "== verify-boot 2/6: the installation describes itself =="
 # describe_company's own body: `display_name` is a field the seeder sends for
 # organizations too, and the first one in the file is only the right one until
 # somebody adds a record above it.
-seeded_company="$(awk '/^describe_company\(\) \{/,/^\}/' scripts/seed-dev.sh \
+seeded_company="$(awk '/^describe_company\(\) \{/,/^\}/' "$REPO_DIR/scripts/seed-dev.sh" \
   | sed -n 's/.*"display_name":"\([^"]*\)".*/\1/p' | head -1)"
-[ -n "$seeded_company" ] || fail "found no {\"display_name\":\"…\"} in scripts/seed-dev.sh — this step would pass by reading nothing"
+[ -n "$seeded_company" ] || fail "found no {\"display_name\":\"…\"} in $REPO_DIR/scripts/seed-dev.sh — this step would pass by reading nothing"
 company_status="$(curl -sS --max-time 15 -o "$workdir/company.json" -w '%{http_code}' \
   "$API_BASE/v1/company" --cookie "crm_session=$session" || true)"
 if [ "$company_status" = "404" ]; then
