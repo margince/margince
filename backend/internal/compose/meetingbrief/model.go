@@ -86,7 +86,7 @@ var natureAllowed = map[crmcontracts.MeetingBriefSectionKind]map[string]bool{
 
 // natureFact is the contract's default: an unlabelled claim is read as a fact,
 // which is the strictest reading — it must be grounded and it may not judge.
-const natureFact = string(crmcontracts.Fact)
+const natureFact = string(crmcontracts.OrganizationBriefSentenceNatureFact)
 
 // Write produces the brief's sections. lane may be nil, which is not an error:
 // it is the deployment saying this role runs no model, and the deterministic

@@ -5,7 +5,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */
   font-weight: var(--fw-medium);
@@ -67,7 +67,7 @@
   background: none;
   padding: 0;
   font-weight: 400;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .badge-quiet::before {
   content: "";
@@ -94,17 +94,17 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 .table th {
   text-align: left;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--textMeta);
   padding: 8px 12px;
   border-bottom: 1px solid var(--borderStrong);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--tracking-eyebrow);
 }
 .table td {
   padding: 10px 12px;
@@ -161,20 +161,20 @@
 .avatar-xs {
   width: 20px;
   height: 20px;
-  font-size: 9px;
+  font-size: var(--fs-eyebrow);
 }
 /* The default: every list row, every name a chip sits beside, the account
    block in the rail. */
 .avatar-sm {
   width: 28px;
   height: 28px;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
 }
 /* A record header. */
 .avatar-md {
   width: 44px;
   height: 44px;
-  font-size: 16px;
+  font-size: var(--fs-h3);
 }
 /* A WIDE record header, where the chip is the page's own mark rather than a
    marker beside a name. Sized to sit beside the name rather than to tower over
@@ -646,7 +646,7 @@
 }
 .segmented button {
   font-family: var(--f-body);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   border: 0;
   background: transparent;
@@ -696,7 +696,7 @@
  * compete with the primary Accept / Reject buttons. */
 .link-button {
   font-family: var(--f-body);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--accentText);
   background: transparent;
@@ -741,7 +741,7 @@
 
 .kbd {
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
   background: var(--bgCard);
   border: 1px solid var(--borderStrong);
@@ -829,7 +829,7 @@
 .section-header h1 {
   margin: 0;
   font-family: var(--f-display);
-  font-size: 22px;
+  font-size: var(--fs-h1);
   font-weight: 600;
   color: var(--textPrimary);
 }
@@ -888,7 +888,7 @@
   background: var(--accentLight);
   color: var(--textPrimary);
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 .recordpicker-selected-check {
   color: var(--accentText);
@@ -1008,7 +1008,7 @@
    existed they computed 40.25px and 38.25px independently. */
 .input {
   font-family: var(--f-body);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   line-height: 1.25;
   color: var(--textPrimary);
   background: var(--bgElevated);
@@ -1075,7 +1075,7 @@
    of the type scale is set against. */
 @media (max-width: 35rem) {
   .input {
-    font-size: 16px;
+    font-size: 16px; /* ds:ignore iOS zooms any field under 16px — a platform floor, not a rung */
   }
 }
 
@@ -1166,7 +1166,7 @@
 /* A refusal is not a caption. It reads in the danger tone at the caption's
    size, under the control it belongs to and above the rule that still applies. */
 .field-error {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--danger);
   font-weight: var(--fw-medium);
 }
@@ -1233,6 +1233,19 @@
   outline-offset: 2px;
 }
 
+/* The clear affordance a `type="search"` field gets from the engine, which is
+   the same platform blue the checkbox ring above refuses — and unlike that ring
+   it cannot be recoloured, only replaced or removed. It is drawn by the browser
+   inside a field built entirely from these tokens, so it reads as the hole in
+   the surface that `<select>` reads as, and it appears the moment the field has
+   focus and content: in the ⌘K palette, that is always.
+   Nothing is lost by removing it. The palette clears its box on Escape and on
+   every reopen, and the results field is a form a reader retypes into. */
+.input[type="search"]::-webkit-search-cancel-button,
+.input[type="search"]::-webkit-search-decoration {
+  appearance: none;
+}
+
 .input-icon {
   position: relative;
   display: inline-flex;
@@ -1249,6 +1262,32 @@
 .input-icon .input {
   padding-left: 30px;
 }
+/* The field whose container draws the chrome (SearchField `flush`): the ⌘K
+   palette's bar has its own ground, inset and bottom rule, so a bordered field
+   nested inside it reads as a box in a box. The magnifier stays — it is the
+   affordance, not the chrome — and moves to the bar's own left inset. */
+.input-icon-flush {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.input-icon-flush svg {
+  left: 0;
+}
+.input-icon-flush .input {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  height: auto;
+  padding: 0 0 0 24px;
+  font-size: 14px;
+}
+.input-icon-flush .input:focus,
+.input-icon-flush .input:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border: 0;
+}
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
    other in the same form, so type size, padding and focus transition are the
@@ -1262,7 +1301,7 @@
    logger) rendered a short box in a wide field. */
 .textarea {
   font-family: var(--f-body);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -1500,7 +1539,7 @@
   border-radius: var(--r-sm);
   background: none;
   box-shadow: none;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--textPrimary);
   /* A verb long enough to need the ceiling above wraps onto a second line
@@ -1638,9 +1677,9 @@
 }
 
 /* The label is the reading's eyebrow (`.t-eyebrow` sets its type) and owns
- * the row; the source badge sits at its far end — beside the name of the
- * reading rather than under the figure, so it qualifies the label without
- * competing with the number. */
+ * the row; what QUALIFIES the reading — where it came from, what it rests on —
+ * sits at its far end, beside the name of the reading rather than under the
+ * figure, so neither competes with the number. */
 .stat-card-label {
   display: flex;
   align-items: baseline;
@@ -1662,7 +1701,7 @@
   /* 26px on a wide page, down to 20px where five readings share a narrow row:
      a money figure with its cents is the widest reading, and a figure that
      wraps mid-number is worse than one set a little smaller. */
-  font-size: clamp(20px, 1.8vw, 26px);
+  font-size: clamp(var(--fs-h2), 1.8vw, var(--fs-h1));
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-display);
   line-height: 1.15;
@@ -1670,7 +1709,7 @@
 }
 .stat-card-value.t-mono {
   font-family: var(--f-mono);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-display);
 }
 
 /* The receipt under a reading. Not a fourth line of it — it is what the
@@ -1711,42 +1750,43 @@
   border-radius: var(--r-sm);
 }
 
-/* The card's foot: the receipt at one end, the way out at the other. Pushed to
-   the BOTTOM of the card (margin-top: auto) so a row of readings of different
-   heights lines its feet up — the alternative was each card's last line
-   floating wherever its own content ended. */
+/* The card's foot: the way out. Pushed to the BOTTOM of the card
+   (margin-top: auto) so a row of readings of different heights lines its feet
+   up — the alternative was each card's last line floating wherever its own
+   content ended. */
 .stat-card-foot {
   display: flex;
-  /* Two whole items that may go onto two lines, never two items broken
-     mid-phrase: in a four-across row the receipt and the door do not always
-     share a line, and a receipt shrunk to one word per line reads as damage. */
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  justify-content: flex-end;
   margin-top: auto;
   padding-top: var(--space-2);
-}
-
-.stat-card-foot > * {
   white-space: nowrap;
 }
-/* Only the door: with no receipt beside it, it still sits at the card's end
-   rather than under the figure. */
-.stat-card-foot:has(> .stat-card-open:only-child) {
-  justify-content: flex-end;
-}
 
-/* The receipt reads as the quiet line it is: meta-sized, in the meta colour,
-   and marked pressable only by its caret and its hover — the card's figure is
-   what a reader compares across the row, and a receipt set to compete with it
-   is the wrong thing catching the eye. */
+/* The receipt is a CHIP on the reading's name line, not a line of text: what
+   it offers is a door to the working rather than a fact to read, and the one
+   thing on this card meant to be read across a row is the figure. Outlined
+   rather than filled, and at the meta size the eyebrow beside it already uses,
+   so it is legible as pressable without becoming the first thing seen.
+
+   `align-self: center` because the row is baseline-aligned for the label's
+   own sake, and a bordered box hung from a text baseline sits low against the
+   word beside it. */
 .popover-trigger.stat-card-basis {
+  align-self: center;
+  flex-shrink: 0;
   font-size: var(--fs-meta);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
   color: var(--textMeta);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  padding: 1px var(--space-1);
+  background: var(--bgCard);
 }
 .popover-trigger.stat-card-basis:hover {
   color: var(--textPrimary);
+  border-color: var(--borderStrong);
 }
 
 /* Inside the panel: the reading's own name over the working, then the door

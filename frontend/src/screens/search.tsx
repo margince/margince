@@ -5,15 +5,21 @@ import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ENTITY, ENTITY_KINDS, type EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import {
+  SEARCH_HIT_GROUP_KEY,
+  SEARCH_HIT_ORDER,
+  type SearchHitType,
+  searchHitRoute,
+} from "../app/searchkinds";
+import { useUrlParams } from "../app/urlstate";
 import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
+import { FilterPills } from "../design-system/filterpills";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
 import { useOpenEmail } from "./openemail";
 import "./search.css";
@@ -21,44 +27,51 @@ import "./search.css";
 type SearchResult = components["schemas"]["SearchResult"];
 
 // RS-1/RS-2: the cross-object search results screen. Hits are grouped by
-// record type (fixed display order below) so a caller scanning "acme" sees
-// people, companies, deals, activities, and leads as separate sections
-// rather than one undifferentiated ranked list.
-const GROUP_ORDER = [
-  "person",
-  "organization",
-  "deal",
-  "activity",
-  "lead",
-  // Last: a tag is a WORD, and somebody searching a name is usually after the
-  // records rather than the label. It sits below them and is how they get to
-  // the rest of the slice.
-  "tag",
-] as const;
-const GROUP_KEY: Record<string, MessageKey> = {
-  person: "search.group.person",
-  organization: "search.group.organization",
-  deal: "search.group.deal",
-  activity: "search.group.activity",
-  lead: "search.group.lead",
-  tag: "search.group.tag",
-};
-// Only these hit types have a 360 to route to (the app-wide ENTITY registry).
-// `activity` is a valid SearchResult type but has no record route, so it
-// renders as plain text instead of an EntityRef link.
-const LINKABLE_KINDS = new Set<EntityKind>(ENTITY_KINDS);
+// record type so a caller scanning "acme" sees people, companies, deals and the
+// rest as separate sections rather than one undifferentiated ranked list.
+//
+// The order and the headings come from app/searchkinds.ts, which the ⌘K palette
+// reads too. They were a pair of literals here until a type the server returned
+// went missing from both — project hits came back ranked and were dropped on the
+// floor, because a list that has to be edited by hand once per new type is a
+// list somebody eventually does not edit.
+
+// Which type the reader has narrowed to. `all` is the absence of a narrowing
+// and is spelled by an ABSENT parameter, so one view has exactly one address.
+export const SEARCH_TYPE_PARAM = "type";
+const ALL_TYPES = "all";
+type TypeFilter = SearchHitType | typeof ALL_TYPES;
+
+function typeFilterFrom(value: string | undefined): TypeFilter {
+  return SEARCH_HIT_ORDER.find((kind) => kind === value) ?? ALL_TYPES;
+}
 
 export function SearchScreen({ q }: Readonly<{ q: string }>) {
   const t = useT();
   const [draft, setDraft] = useState(q);
   const [openEmail, setOpenEmail] = useOpenEmail();
   const zone = useRecordZone();
+  const [params, setParams] = useUrlParams();
+  const filter = typeFilterFrom(params.get(SEARCH_TYPE_PARAM));
   const query = useQuery({
-    queryKey: ["search", q],
+    // The narrowing is part of the key because it is part of the REQUEST: the
+    // pills send `types` to the server rather than hiding rows already drawn,
+    // so a narrowed search is a different answer and not a smaller view of the
+    // same one. That is also why no pill carries a count — the endpoint returns
+    // one page of ranked hits and knows no per-type total, and a figure derived
+    // from what happens to be on screen would be a number the reader could act
+    // on and could not trust.
+    queryKey: ["search", q, filter],
     enabled: q.trim().length > 0,
     queryFn: async () => {
       const { data, error } = await api.GET("/search", {
-        params: { query: { q, limit: 50 } },
+        params: {
+          query: {
+            q,
+            limit: 50,
+            ...(filter === ALL_TYPES ? {} : { types: [filter] }),
+          },
+        },
       });
       if (error) {
         throwProblem(error);
@@ -66,6 +79,16 @@ export function SearchScreen({ q }: Readonly<{ q: string }>) {
       return data;
     },
   });
+
+  const narrowTo = (next: TypeFilter) => {
+    const dials = new Map(params);
+    if (next === ALL_TYPES) {
+      dials.delete(SEARCH_TYPE_PARAM);
+    } else {
+      dials.set(SEARCH_TYPE_PARAM, next);
+    }
+    setParams(dials);
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -94,15 +117,32 @@ export function SearchScreen({ q }: Readonly<{ q: string }>) {
       {q.trim() === "" ? (
         <EmptyState>{t("search.prompt")}</EmptyState>
       ) : (
-        <QueryGate query={query}>
-          {(data) =>
-            data.data.length === 0 ? (
-              <EmptyState>{t("search.empty", { q })}</EmptyState>
-            ) : (
-              <SearchGroups results={data.data} onOpenEmail={setOpenEmail} />
-            )
-          }
-        </QueryGate>
+        <>
+          {/* Drawn above the results and not inside them, because it survives
+              an empty answer: a reader who narrowed to Deals and found none
+              needs the control that got them there in order to get back. */}
+          <FilterPills
+            label={t("search.filter.label")}
+            value={filter}
+            onChange={narrowTo}
+            pills={[
+              { value: ALL_TYPES as TypeFilter, label: t("search.filter.all") },
+              ...SEARCH_HIT_ORDER.map((kind) => ({
+                value: kind as TypeFilter,
+                label: t(SEARCH_HIT_GROUP_KEY[kind]),
+              })),
+            ]}
+          />
+          <QueryGate query={query} pendingLabel={t("search.pending")}>
+            {(data) =>
+              data.data.length === 0 ? (
+                <EmptyState>{t("search.empty", { q })}</EmptyState>
+              ) : (
+                <SearchGroups results={data.data} onOpenEmail={setOpenEmail} />
+              )
+            }
+          </QueryGate>
+        </>
       )}
       {/* One drawer over the whole results page, at page level rather than
           inside a group: two mounted dialogs would be two `aria-modal`
@@ -126,24 +166,24 @@ function SearchGroups({
   const t = useT();
   return (
     <div className="search-groups arrive-stack">
-      {GROUP_ORDER.filter((type) => results.some((r) => r.type === type)).map(
-        (type) => (
-          <Card key={type} className="search-group">
-            <h2 className="t-label">{t(GROUP_KEY[type])}</h2>
-            <ul className="search-hits">
-              {results
-                .filter((r) => r.type === type)
-                .map((hit) => (
-                  <SearchHit
-                    key={`${hit.type}:${hit.id}`}
-                    hit={hit}
-                    onOpenEmail={onOpenEmail}
-                  />
-                ))}
-            </ul>
-          </Card>
-        ),
-      )}
+      {SEARCH_HIT_ORDER.filter((type) =>
+        results.some((r) => r.type === type),
+      ).map((type) => (
+        <Card key={type} className="search-group">
+          <h2 className="t-label">{t(SEARCH_HIT_GROUP_KEY[type])}</h2>
+          <ul className="search-hits">
+            {results
+              .filter((r) => r.type === type)
+              .map((hit) => (
+                <SearchHit
+                  key={`${hit.type}:${hit.id}`}
+                  hit={hit}
+                  onOpenEmail={onOpenEmail}
+                />
+              ))}
+          </ul>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -175,24 +215,17 @@ function SearchHit({
       </li>
     );
   }
-  // A tag is not an ENTITY kind — it has no 360 — but it does have a page, and
-  // it is the whole point of finding one: the word is the way to the records
-  // carrying it. Routed on its own rather than by widening ENTITY_KINDS, which
-  // drives record routing everywhere else and would claim a tag is a record.
+  // Where this kind goes, asked of the one place that knows. A tag is not a
+  // record and a catalog row has no page of its own, and each used to be a
+  // branch spelled here as well as in the palette; an activity answers null
+  // because it is a link rather than a thing links hang off, and it renders as
+  // plain text.
   const isTag = hit.type === "tag";
-  const isLinkable = LINKABLE_KINDS.has(hit.type as EntityKind);
+  const route = searchHitRoute(hit.type as SearchHitType, hit.id);
   return (
     <li className="search-hit">
       <div className="search-hit-title">
-        {isTag ? (
-          <button
-            type="button"
-            className="entity-link"
-            onClick={() => navigate({ screen: "tags", id: hit.id })}
-          >
-            {hit.title ?? hit.id}
-          </button>
-        ) : isLinkable ? (
+        {route ? (
           // The search API already returns the hit's display name as
           // `title` — routing through EntityRef here would re-fetch the
           // same record per hit (an N+1 GET per result) just to re-derive
@@ -200,9 +233,7 @@ function SearchHit({
           <button
             type="button"
             className="entity-link"
-            onClick={() =>
-              navigate(ENTITY[hit.type as EntityKind].route(hit.id))
-            }
+            onClick={() => navigate(route)}
           >
             {hit.title ?? hit.id}
           </button>
@@ -244,7 +275,18 @@ function SearchHit({
           })}
         </p>
       )}
-      {hit.snippet && <p className="search-hit-snippet">“{hit.snippet}”</p>}
+      {/* Quoted only when the excerpt is PROSE the record actually contains —
+          an activity's body slice, which is a passage lifted out of a message
+          and reads as one. Every other branch's excerpt is a structured
+          identifier the record carries in a field: a project's key and company,
+          a product's sku. Quoting “KAR-9910” claims somebody wrote that
+          sentence, and the marks are what a reader would have to type to search
+          for it. */}
+      {hit.snippet && (
+        <p className="search-hit-snippet">
+          {hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}
+        </p>
+      )}
     </li>
   );
 }

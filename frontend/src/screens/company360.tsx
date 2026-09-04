@@ -1341,7 +1341,6 @@ function MoneyStat({
             state: data?.state,
           }),
         )}
-        basisLabel={basis ? t("co.strip.basis.reading") : undefined}
         basis={basis}
       />
     );
@@ -1390,7 +1389,6 @@ function MoneyStat({
             data?.provider ||
             undefined
       }
-      basisLabel={basis ? t("co.strip.basis.reading") : undefined}
       basis={basis}
     />
   );
@@ -1463,7 +1461,6 @@ function PipelineCard({
     />
   ) : undefined;
   const basisProps = {
-    basisLabel: basis ? t("co.strip.basis.reading") : undefined,
     basis,
   };
   if (!commercial) {
@@ -1591,7 +1588,6 @@ function HealthStat({
   const door = { openLabel: t("co.strip.open.history"), onOpen };
   const dimension = health?.relationship;
   const basisProps = {
-    basisLabel: dimension ? t("co.strip.basis.reading") : undefined,
     basis: dimension ? (
       <FactList
         facts={[

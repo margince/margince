@@ -131,7 +131,6 @@ function ScoreCard({
             : t("lead.scoreNoSignals")
       }
       meter={{ filled: lead.score, total: 100 }}
-      basisLabel={t("co.strip.basis.reading")}
       basis={basis}
     />
   );

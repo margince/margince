@@ -8,7 +8,7 @@ and the two permission gates every firing passes through — see
 [explanation/automation.md](../explanation/automation.md).
 
 This recipe covers the common case: **adding a new starter workflow handler** over the existing
-seven-trigger × seven-action vocabulary. Adding an eighth *trigger kind* or *action type* to the
+closed trigger/action vocabulary. Adding a new *trigger kind* or *action type* to the
 vocabulary itself is a larger, spec-level change — extend
 `catalog_triggers.go`/`catalog_actions.go` and `catalog_closure_test.go`'s pinned lists together, and
 expect to touch the match-time gate's permission table (`catalog_actions.go`'s `actionDefs`) too

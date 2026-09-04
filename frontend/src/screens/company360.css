@@ -125,40 +125,9 @@
    still need a name of their own take `.co-worth-split` or `.co-worth-row`
    below, for their LAYOUT rather than for their seam. */
 
-/* The dot between two readings on one line. Owned by the reading that FOLLOWS
-   it, so a line that wraps never leaves a separator stranded at its end. */
-.co-sep {
-  color: var(--textMeta);
-}
-
-/* CompanyIdentityLine's two meta lines: what the account is and who owns it,
-   then when it was created and last exchanged with — stacked, not run into
-   one row, so the two questions read as two answers rather than one long
-   sentence a reader has to re-parse. A single flex item inside record-pulse
-   (composed.css), so it stacks on its own without fighting that row's own
-   layout. */
-.co-identity-meta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.co-meta-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-}
-/* The second line: when, not who — quieter than the first so the eye lands
-   on identity before date. The SIZE carries that, not the colour: this is
-   meta text, and every 11-13px line reads --textMeta to clear AA.
-   --textTertiary is a 3:1 token for marks and rules, and small text set in
-   it fails the contrast law the axe gate holds this page to. */
-.co-meta-quiet {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
+/* The account's own web address, in the identity line: a link, and it reads as
+   one. The line around it is the design system's `IdentityLine`; only the link
+   ink is the company's. */
 .co-meta-link {
   color: var(--accentText);
   text-decoration: none;
@@ -1405,7 +1374,7 @@
   font-weight: var(--fw-regular);
   font-size: var(--fs-sm);
   line-height: 1.45;
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
   color: var(--textMeta);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
@@ -1502,7 +1471,7 @@
 /* The account's identity and its readings are two different statements — who
    this is, then how it stands — so the row needs room to start rather than
    sitting directly under the name it describes. */
-.record-head:has(.co-identity-meta) {
+.record-head:has(.identity-meta) {
   margin-bottom: var(--space-5);
 }
 
@@ -1658,7 +1627,7 @@
   font-family: var(--f-display);
   font-size: var(--fs-h3);
   font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 /* The three rated dimensions under the verdict: a dot in the dimension's
@@ -1822,7 +1791,7 @@
   font-family: var(--f-display);
   font-size: var(--fs-lead);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 

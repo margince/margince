@@ -8378,7 +8378,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -24572,7 +24572,7 @@ export interface components {
         };
         SearchResult: {
             /** @enum {string} */
-            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag";
+            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag";
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -24605,7 +24605,7 @@ export interface components {
              *     response echoes the anchor back as one of these refs.
              * @enum {string}
              */
-            type: "person" | "organization" | "deal" | "lead" | "project" | "activity" | "user";
+            type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity" | "user";
             /** Format: uuid */
             id: string;
         };
@@ -39475,7 +39475,7 @@ export interface operations {
                 /** @description The search query. */
                 q: string;
                 /** @description Restrict to these object types (default all). */
-                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag")[];
+                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -42920,7 +42920,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };

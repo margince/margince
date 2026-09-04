@@ -77,11 +77,17 @@ func pipelineCurrentSpec() reportSpec {
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountBaseMinor, As: "amount_base_minor_sum"},
 			{Fn: aggFnSum, Field: fieldWeightedBaseMinor, As: "weighted_base_minor_sum"},
+			// How many of those deals the money actually covers. Without it a
+			// stage holding a deal in an unpriced currency shows a complete
+			// count beside a short total and reads as whole.
+			{Fn: aggFnCount, Field: fieldAmountBaseMinor, As: aliasPricedDeals},
 		},
 	}
 }
 
-// The base-currency measures, and the two counts that say what they leave out.
+// The base-currency measures. What they LEAVE OUT is said by counting them:
+// count(amount_base_minor) is how many deals the money covers, against the bare
+// row count beside it.
 const (
 	fieldAmountBaseMinor   = "amount_base_minor"
 	fieldWeightedBaseMinor = "weighted_base_minor"

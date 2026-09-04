@@ -98,18 +98,33 @@ type DraftProvenance = Pick<
 // The link targets a relink can point at (relinkActivity's entity_type enum,
 // minus `activity` — a relink never points at another activity). Reused by
 // ComposeModal and TimelineActions so the whole surface speaks one vocabulary.
-export type RelinkKind =
-  | "person"
-  | "organization"
-  | "deal"
-  | "lead"
-  | "project";
+//
+// An ARRAY with the type derived from it, rather than a bare union, because the
+// picker below has to decide at RUNTIME whether a search hit is one of these.
+export const RELINK_KINDS = [
+  "person",
+  "organization",
+  "deal",
+  "lead",
+  "project",
+] as const;
+export type RelinkKind = (typeof RELINK_KINDS)[number];
+
+// Whether a cross-object search hit is something a message can be filed
+// against. Asked as an ADMISSION rather than as a list of exclusions: the
+// skip-list form named `activity` and `tag`, and silently admitted every type
+// /search learned to return afterwards — which is how a product and an offer
+// template became relink targets the moment the search enum widened. What this
+// endpoint accepts is bounded and known; what search returns is not.
+function isRelinkKind(type: string): type is RelinkKind {
+  return (RELINK_KINDS as readonly string[]).includes(type);
+}
 
 // The relink target is chosen via cross-object search (/search covers every
 // kind; the per-entity list endpoints don't all expose `q`). Each candidate's
 // entity_type comes from its SearchResult.type, remembered here so the confirm
 // can recover it — RecordPickerCandidate itself only carries {id,name}.
-// Activity results are dropped: relink's target enum has no `activity`.
+// Anything the relink enum does not name is dropped.
 function useSearchTargets() {
   const kindById = useRef(new Map<string, RelinkKind>());
   const search = useCallback(
@@ -120,10 +135,11 @@ function useSearchTargets() {
       if (error) throwProblem(error);
       const out: RecordPickerCandidate[] = [];
       for (const result of data.data) {
-        // Neither is a record this can be filed against: an activity is the
-        // message itself, and a tag is a word rather than something a message
-        // can be about.
-        if (result.type === "activity" || result.type === "tag") continue;
+        // Only what a relink may point at. An activity is the message itself, a
+        // tag is a word rather than something a message can be about, and a
+        // catalog row is neither — none of them is a record this can be filed
+        // against, and the endpoint's own enum is what says so.
+        if (!result.type || !isRelinkKind(result.type)) continue;
         kindById.current.set(result.id, result.type);
         out.push({ id: result.id, name: result.title ?? result.id });
       }

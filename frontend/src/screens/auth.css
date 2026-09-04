@@ -225,8 +225,8 @@
 .auth-card h1 {
   font-family: var(--f-display);
   font-weight: 600;
-  font-size: clamp(27px, 2.2vw, 33px);
-  letter-spacing: -0.02em;
+  font-size: clamp(var(--fs-h1), 2.2vw, var(--fs-display));
+  letter-spacing: var(--tracking-display);
   line-height: 1.15;
   color: var(--textPrimary);
 }
@@ -235,7 +235,7 @@
    quietest thing on a screen with only three sentences on it. */
 .auth-card .card-sub {
   margin-top: var(--space-2);
-  font-size: 14.5px;
+  font-size: var(--fs-lead);
   color: var(--textSecondary);
   line-height: 1.55;
   /* Balanced, not merely orphan-free: two lines of roughly equal length under a
@@ -295,9 +295,9 @@
   gap: var(--space-3);
   margin: var(--space-6) 0 var(--space-1);
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }
@@ -356,12 +356,12 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--accentText);
   padding: 0;
   text-transform: none;
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
 }
 .auth-link:hover,
 .auth-link:focus-visible {
@@ -382,12 +382,12 @@
   padding: var(--space-3);
 }
 .auth-error .ae-t {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--danger);
 }
 .auth-error .ae-m {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   margin-top: var(--space-1);
   line-height: 1.45;
@@ -400,7 +400,7 @@
    dressed as one — the user has nothing to correct. */
 .auth-notice {
   text-align: left;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   background: var(--bgCard);
   border: 1px solid var(--borderSubtle);
@@ -447,7 +447,7 @@
   width: 100%;
   max-width: 400px;
   padding-top: calc(var(--space-6) * 1.5);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   line-height: 1.5;
   color: var(--textMeta);
 }
@@ -585,7 +585,7 @@
   font-size: var(--fs-greeting-fluid);
   font-weight: 500;
   line-height: 1.04;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 /* ZERO layout shift while typing. The ghost is the full sentence rendered

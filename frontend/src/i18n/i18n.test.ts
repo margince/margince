@@ -230,6 +230,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.
   "lead.marker",
+  // The SINGULAR kind name on a search hit's second line. vi carries "Deal",
+  // "Lead" and "Tag" as loanwords — the same words the plural group headings
+  // above them already use — and those headings only escape this check because
+  // en pluralises and vi does not. A singular pair is therefore identical for
+  // the same reason the plural pair is not: the word is borrowed, not missed.
+  "search.kind.deal",
+  "search.kind.lead",
+  "search.kind.tag",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client

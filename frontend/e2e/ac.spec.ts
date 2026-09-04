@@ -336,7 +336,7 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await page.goto("/#/home");
   await page.locator("body").click();
   await page.keyboard.press("ControlOrMeta+k");
-  const input = page.getByRole("textbox", { name: "Befehlspalette" });
+  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
   // "Deals" is the route id, not the label the rail shows (Pipeline) — typing the
   // domain word still has to land on the screen, or a relabeled destination
@@ -355,7 +355,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   await expect(topbar.locator("input")).toHaveCount(0);
   await topbar.locator(".topbar-search").click();
   await expect(
-    page.getByRole("textbox", { name: "Befehlspalette" }),
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
@@ -1176,6 +1176,36 @@ test.describe("§3.8: 390px mobile", () => {
     });
   }
 
+  test("nothing scrolls sideways at 390px on the search results", async ({
+    page,
+  }) => {
+    await page.goto("/#/search/brandt");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
+    expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  // The palette is a full-height SHEET at this width — a 560px box floated at
+  // 12vh with a 320px list had about two rows left under a software keyboard.
+  // Its rows are thumb targets, which is the half a screenshot cannot assert.
+  test("the palette is a workable sheet at 390px", async ({ page }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(
+      page.getByRole("dialog", { name: "Befehlspalette" }),
+    ).toBeVisible();
+    expect(await pageOverflow(page)).toEqual([]);
+    const rows = page.locator(".palette-row");
+    await expect(rows.first()).toBeVisible();
+    const heights = await rows.evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().height),
+    );
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
+  });
+
   // The queue is WORKABLE with a thumb, not merely present.
   //
   // What stood here asserted that one text node was visible at 390px, and it
@@ -1485,6 +1515,11 @@ const ADDRESSED_VIEWS = [
   // the readers who cannot see the glyph.
   "contacts/p-anna",
   "deals/d-fleet",
+  // The results screen with hits on it. It was in NEITHER sweep while it grew
+  // groups, a type filter and links per row — and it is the surface a reader
+  // arrives at by searching, so it is one of the few nobody navigates TO on
+  // purpose and everybody lands on.
+  "search/brandt",
   "projects/pr-fleet",
 ];
 
@@ -1559,6 +1594,56 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await expectNoAaViolations(page, screen);
     });
   }
+
+  // The results screen with hits on it, in the light palette. ADDRESSED_VIEWS
+  // above reaches it in dark alone, and the two sweeps disagree by design —
+  // this is the half where an accent-coloured link on a light card is judged.
+  test("no AA violations on the search results screen", async ({ page }) => {
+    await page.goto("/#/search/brandt");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "search/brandt");
+  });
+
+  // The narrowed screen is a DIFFERENT arrangement, not the same one shorter:
+  // one group, a pressed pill, and — when the narrowing finds nothing — an
+  // empty state under a filter row that has to stay operable.
+  test("no AA violations on a narrowed search", async ({ page }) => {
+    await page.goto("/#/search/brandt");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page.getByRole("button", { name: "Produkte", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Produkte", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "search/brandt (narrowed to products)");
+  });
+
+  // The ⌘K palette is a modal, and no sweep in this file had ever opened one:
+  // every axe pass above measures a page with the dialog closed, so the
+  // surface a reader reaches from any screen in the product was unmeasured.
+  test("no AA violations with the command palette open", async ({ page }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(
+      page.getByRole("dialog", { name: "Befehlspalette" }),
+    ).toBeVisible();
+    await page
+      .getByRole("searchbox", { name: "Befehlspalette" })
+      .fill("brandt");
+    // Wait on the hits, not on a duration: the live arm is what adds the rows
+    // this sweep exists to judge.
+    await expect(
+      page.getByRole("button", { name: /Brandt Automotive/ }),
+    ).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "home — the command palette open");
+  });
 
   // A list header FOLDS its verbs into one overflow menu below 1100px
   // (design-system/listsurface.tsx), which is a different arrangement rather

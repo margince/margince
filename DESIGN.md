@@ -148,10 +148,17 @@ Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
 ## 3. Colour
 
-The semantic split is unchanged and remains pinned by `tokens.test.ts`:
-`--accent` (emerald) is brand and primary action, `--ai*` (indigo) is agent
-provenance, `--success` / `--warn` / `--danger` are status. What changes is the
-ground, which is lit, and the surface, which is one translucent pane per zone.
+The semantic split is unchanged: `--accent` (emerald) is brand and primary
+action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
+`--danger` are status. Those names are the ones `tokens.test.ts` pins, together
+with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
+which is lit, and the surface, which is one translucent pane per zone.
+
+The tables below are the design TARGET, and they name some rungs the tree does
+not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
+does not appear in `frontend/src` as a value still to be introduced, not as one
+to reach for today: the shipped spelling of the agent tint is `--aiLight`, its
+edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 
 ### Light (the default)
 
@@ -219,6 +226,23 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
+- **Sizes by role, and there are nine.** `--fs-eyebrow` 10.5 (uppercase
+  kickers, monograms), `--fs-meta` 12 (counts, timestamps, provenance),
+  `--fs-sm` 13 (chips, table cells, helper text), `--fs-body` 13.5 (the
+  default), `--fs-lead` 15 (the paragraph under a heading, and inputs),
+  `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title), `--fs-h1` 24 (a
+  step title, a record's head), `--fs-display` 32 (a full-viewport moment),
+  plus the two fluid rungs `--fs-display-fluid` and `--fs-hero-fluid` for the
+  first-run surfaces. Nothing in the tree names a length instead — a size half
+  a pixel off a rung is a decision nobody made, and the tree carried 25 of
+  them. `design-system/type.test.ts` fails a tenth value, and a genuine
+  platform floor (iOS zooms a field under 16px) is waived in line with its
+  reason.
+- **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
+  uppercase label, `--tracking-display` -0.03em on the display face,
+  `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
+  eighteen sheets while the token said 0.08em, which is a label that looks
+  different depending on which screen drew it.
 - **Radii by role**: 20px for a pane, the details panel and a reading card;
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.
@@ -892,10 +916,10 @@ rest one screen at a time.
 - [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
       a shadow at rest.
 - [ ] One emerald-filled control in view.
-- [ ] Anything an agent wrote is a row on `--aiBg` carrying the indigo mark,
+- [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark,
       and a row that ASKS for something says "Margince suggests" — never over
       the answer that nothing needs doing, which is nobody's suggestion; a
-      staged change has a dashed edge until accepted.
+      staged change carries a `--aiMed` dashed edge until accepted.
 - [ ] A withheld section says "Hidden from you"; an empty one says what to do.
 - [ ] Checked in both themes and with the sidebar and the details panel folded.
 - [ ] The page carries every section the current screen renders (§7), or says
