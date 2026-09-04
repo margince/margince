@@ -272,7 +272,7 @@ func ensurePersonEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids.
 	return nil
 }
 
-const personColumns = `id, full_name, first_name, last_name, title, owner_id,
+const personColumns = `id, full_name, first_name, last_name, title, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
 	merged_into_id, converted_from_lead_id, source, captured_by,
 	version, created_at, updated_at, archived_at, last_activity_at`
@@ -310,9 +310,10 @@ func scanPerson(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcon
 	var ownerID, mergedInto, fromLead *ids.UUID
 	var addr crmcontracts.Address
 	var version int64
+	var visibility string
 
 	dests := []any{
-		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID,
+		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt,
@@ -327,6 +328,9 @@ func scanPerson(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcon
 
 	p.Id = openapi_types.UUID(id)
 	p.OwnerId = uuidPtr(ownerID)
+	if v := crmcontracts.PersonVisibility(visibility); v != "" {
+		p.Visibility = &v
+	}
 	p.MergedIntoId = uuidPtr(mergedInto)
 	p.ConvertedFromLeadId = uuidPtr(fromLead)
 	if a := addressOrNil(addr); a != nil {

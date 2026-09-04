@@ -23349,6 +23349,20 @@ components:
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
         owner_id: { type: [string, 'null'], format: uuid }
+        visibility:
+          type: string
+          enum: [workspace, owner]
+          readOnly: true
+          description: >-
+            Who this record is for. `workspace` is every seat that holds the read grant.
+            `owner` is capture privacy: a connector made this record from a message nothing
+            had judged yet, and it belongs to the mailbox owner alone until something does —
+            not to their team, their manager, or an admin.
+            You are only ever sent a row you may already read, so this discloses nothing new;
+            it says WHY you can see it, which is what lets a page tell "private to you" from
+            "shared with everybody" instead of leaving the owner to guess. An `owner` row
+            reaches the workspace through a verdict or through the owner's own
+            `POST /people/{id}/publish`, and never travels back.
         writable:
           type: boolean
           readOnly: true
@@ -23660,6 +23674,20 @@ components:
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
+        visibility:
+          type: string
+          enum: [workspace, owner]
+          readOnly: true
+          description: >-
+            Who this record is for. `workspace` is every seat that holds the read grant.
+            `owner` is capture privacy: a connector made this record from a message nothing
+            had judged yet, and it belongs to the mailbox owner alone until something does —
+            not to their team, their manager, or an admin.
+            You are only ever sent a row you may already read, so this discloses nothing new;
+            it says WHY you can see it, which is what lets a page tell "private to you" from
+            "shared with everybody" instead of leaving the owner to guess. An `owner` row
+            reaches the workspace through a verdict or through the owner's own
+            `POST /people/{id}/publish`, and never travels back.
         writable:
           type: boolean
           readOnly: true
