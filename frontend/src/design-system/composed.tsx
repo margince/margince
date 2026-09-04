@@ -1162,6 +1162,14 @@ function conversationDirection(
 
 function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
+  // A withheld row claims no move, in either direction. "Your move" over
+  // content the reader may not read tells them they owe a reply to words they
+  // are not allowed to see, and the row's own per-message move label is
+  // already suppressed for exactly that reason — leaving this one unsuppressed
+  // made the two disagree about one row, and this is the one on screen.
+  if (entry.withheld) {
+    return null;
+  }
   const direction = conversationDirection(entry);
   if (direction === "inbound") {
     return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
