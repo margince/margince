@@ -15,12 +15,34 @@ package activities
 // and simply report a different number.
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// asOther is the SECOND seat, for a judgement this file's own reader must not
+// see. Same grants and the same row scope — what differs is only who it is,
+// which is what the audience arm answers on.
+func asOther(e *loadEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"manager"},
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Read: true, Update: true}, "person": {Read: true},
+				"deal": {Read: true}, "organization": {Read: true},
+				"lead": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
 
 func metricsStore(e *loadEnv) *Store {
 	return NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -330,5 +352,214 @@ func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
 		t.Fatalf("the answered count moved %d → %d over a mail nobody replied to — "+
 			"a channel reply on a forged thread key was counted as its answer",
 			before.Answered, after.Answered)
+	}
+}
+
+// Putting a row down and picking it back up counts as NOTHING.
+//
+// Four verbs write this column and two of them are UNDO. Counting every
+// non-null value scored the rep who set a message aside and then thought better
+// of it at TWO dispositions rather than none — so the figure ran backwards for
+// exactly the behaviour it should reward, and the careful self-correcting rep
+// scored worst on a number a manager reads.
+//
+// Written through the STORE's own verbs rather than by inserting audit rows.
+// The defect is in which states the reader counts, so a test that hand-writes
+// the audit row is a test agreeing with itself about what the writer produces.
+func TestSettingARowAsideAndTakingItBackCountsAsNoDisposition(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "Second thoughts", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := metricsStore(e)
+	id := ids.From[ids.ActivityKind](activity)
+	if err := store.SetMessageNotMine(e.as(), id); err != nil {
+		t.Fatalf("setting the message aside: %v", err)
+	}
+	// The undo, through the verb a rep actually presses.
+	if err := store.ClearMessageDisposition(e.as(), id); err != nil {
+		t.Fatalf("taking it back: %v", err)
+	}
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ONE, not two and not zero: the not_mine really happened and is counted,
+	// and the picked_up that undid it is not a second act of judgement.
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("a set-aside and its undo counted %d dispositions, want the one "+
+			"judgement — the undo is not a second one",
+			after.Disposed-before.Disposed)
+	}
+}
+
+// The same for the workspace-wide judgement, which has its own undo verb.
+func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "Not sales after all", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := metricsStore(e)
+	id := ids.From[ids.ActivityKind](activity)
+	if err := store.SetThreadNotSales(e.as(), id); err != nil {
+		t.Fatalf("judging the thread: %v", err)
+	}
+	if err := store.ClearThreadNotSales(e.as(), id); err != nil {
+		t.Fatalf("taking the judgement back: %v", err)
+	}
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("a not_sales and its undo counted %d dispositions, want the one",
+			after.Disposed-before.Disposed)
+	}
+	// And the sales_again does not inflate the figure that costs everybody.
+	if after.DisposedNotSales != before.DisposedNotSales+1 {
+		t.Fatalf("the workspace-wide figure counted %d, want the one judgement",
+			after.DisposedNotSales-before.DisposedNotSales)
+	}
+}
+
+// A judgement on a conversation this reader cannot open counts for nobody.
+//
+// The whole point of reading audit_log here is that it records judgements the
+// state table has already forgotten — but audit_log holds every workspace's
+// bookkeeping without regard to who may read the record judged, so the count
+// had no visibility clause at all. The median beside it did, which made one
+// response body answer two different questions: "how fast do the conversations
+// I can see get answered" and "how much did EVERYBODY put down".
+//
+// A limited activity captured by nobody this reader is, with no participant row
+// and no audience membership for them, is the case that tells the two apart. It
+// is invisible to `e.rep` and its judgement must be too.
+func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Someone Else''s Buyer', $2, 'seed', 'system')`, person, e.other)
+	activity := e.seedWait(t, "A held conversation", "person_id", person)
+	// Held to a named audience that does not include this reader, and captured
+	// by the other seat — so no arm of the audience test admits `e.rep`.
+	e.exec(t, `UPDATE activity SET audience = 'selected', captured_by = $2 WHERE id = $1`,
+		activity, "human:"+e.other.String())
+	e.exec(t, `INSERT INTO activity_audience_member (activity_id, subject_type, subject_id, created_by)
+		VALUES ($1, 'user', $2, 'seed')`, activity, e.other)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The OTHER seat judges it, through the real writer — which is the only way
+	// to produce this fixture honestly: `e.rep` cannot judge a conversation they
+	// cannot open, so a hand-written audit row would be modelling a write that
+	// could not have happened.
+	if err := metricsStore(e).SetThreadNotSales(
+		asOther(e), ids.From[ids.ActivityKind](activity)); err != nil {
+		t.Fatalf("the other seat could not judge its own conversation: %v", err)
+	}
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed {
+		t.Fatalf("the disposal figure moved %d → %d over a judgement on a conversation "+
+			"this reader cannot open — the count is answering for the whole workspace "+
+			"while the median beside it answers for the caller",
+			before.Disposed, after.Disposed)
+	}
+	if after.DisposedNotSales != before.DisposedNotSales {
+		t.Fatalf("the workspace-wide figure moved %d → %d over an unreadable conversation",
+			before.DisposedNotSales, after.DisposedNotSales)
+	}
+}
+
+// And the admit case, without which the test above passes against a count that
+// refuses EVERYTHING. The same fixture, readable: the judgement lands.
+func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "An open conversation", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Through the real writer, so the audit shape this reader matches on is the
+	// one production writes rather than one the test invented.
+	if err := metricsStore(e).SetThreadNotSales(
+		e.as(), ids.From[ids.ActivityKind](activity)); err != nil {
+		t.Fatalf("judging the thread: %v", err)
+	}
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("a judgement on a workspace-audience conversation counted %d, want the one — "+
+			"a clause that refuses every row passes the refusal test above and reports a "+
+			"quiet fortnight for a workspace full of judgement",
+			after.Disposed-before.Disposed)
+	}
+}
+
+// Archiving a thread does not unmake the judgement somebody recorded on it.
+//
+// The median beside these counts excludes archived activities, because an
+// archived thread is not a wait anybody is still serving. A disposal figure is
+// a different kind of fact — the reader made the call, inside the window — so
+// counting only unarchived ones would make it fall as a workspace tidied up.
+// That is the same defect reading from activity_reader_state had, reached by a
+// different route, and it is the direction this figure must not fail in.
+func TestArchivingAThreadDoesNotUnmakeTheJudgementOnIt(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "Judged then archived", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := metricsStore(e).SetThreadNotSales(
+		e.as(), ids.From[ids.ActivityKind](activity)); err != nil {
+		t.Fatalf("judging the thread: %v", err)
+	}
+	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, activity)
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("the disposal figure moved %d over a judgement whose thread was "+
+			"archived afterwards, want 1 — a figure that falls as a workspace "+
+			"tidies up reports less judgement the more of it happened",
+			after.Disposed-before.Disposed)
 	}
 }

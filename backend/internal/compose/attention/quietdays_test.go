@@ -120,11 +120,12 @@ func TestTheDealCardsFigureIsTheSameCountTheRowStates(t *testing.T) {
 // reason the count is typed: `ranked.waitingDays` is not drawn anywhere, so a
 // wrong value here is invisible on screen.
 //
-// It is what the waiting-days step REPORTS — the "12 against 30" a reader
-// checks the order against. That step decides on `waitingRank`, which these two
-// sources do not yet set, so today a wrong value here misexplains the order
-// rather than changing it. Both are the row lying about itself, and both are
-// fixed by the count being right.
+// The count feeds BOTH halves of that step: waitingDays is what it reports —
+// the "12 against 30" a reader checks the order against — and waitingRank is
+// what it decides on. Asserting only the reported half was how both these
+// sources shipped with waitingRank left at its zero value: every drifting deal
+// tied on age, the step fell through to the next tie-break, and each row went
+// on printing the true count it had not been ordered by.
 func TestTheIdleCountBecomesTheAgeTheOrderingCarries(t *testing.T) {
 	for _, c := range []struct {
 		name string
@@ -139,8 +140,52 @@ func TestTheIdleCountBecomesTheAgeTheOrderingCarries(t *testing.T) {
 					"this value is never drawn, so a wrong one silently reorders the queue",
 					c.row.waitingDays)
 			}
+			if c.row.waitingRank != waitingDaysCeiling {
+				t.Fatalf("the ordering DECIDES on %d, want the ceiling %d — a row that "+
+					"leaves this at zero ties with every other and its age decides nothing",
+					c.row.waitingRank, waitingDaysCeiling)
+			}
 		})
 	}
+}
+
+// And the same age under the ceiling travels whole, so the ordering can tell
+// two drifting deals apart rather than only distinguishing "old" from "new".
+func TestAnIdleCountUnderTheCeilingDecidesAtItsTrueSize(t *testing.T) {
+	row := classifyRisk(quietDealItem(9), rankInstant, materialBar{}, dayMoney{})
+
+	if row.waitingRank != 9 {
+		t.Fatalf("a deal quiet 9 days orders at %d, want 9", row.waitingRank)
+	}
+}
+
+// And the order a rep actually sees, which is the only place any of this shows.
+//
+// Two drifting deals alike in every other respect: same level, no amount, no
+// close date, and — the reason this case is the sharp one — no occurrence
+// either, because the risk lane sets none and `occurredOf` falls back to the
+// shared read instant for both. So every step above and below waiting-days ties,
+// and the age is the whole of what decides. With waitingRank unset they tied
+// there too and the input order stood, which meant a deal quiet ninety days sat
+// below one quiet three while printing "quiet 90 days" on its own row.
+//
+// The ids are chosen so the LAST tie-break — `a.item.Id < b.item.Id`, which
+// exists to keep a complete tie stable — would put the fresh deal first. A
+// fixture whose older row also sorted first by id passed with waitingRank
+// unset, proving only that "aged" precedes "fresh" in the alphabet.
+func TestTheDealQuietLongestLeadsTheOnesQuietLess(t *testing.T) {
+	fresh := quietDealItem(3)
+	fresh.Id = "a-quiet-three-days"
+	aged := quietDealItem(90)
+	aged.Id = "b-quiet-ninety-days"
+	// Fresh FIRST too, so a stable sort that decides nothing leaves it there.
+	rows := []ranked{
+		classifyRisk(fresh, rankInstant, materialBar{}, dayMoney{}),
+		classifyRisk(aged, rankInstant, materialBar{}, dayMoney{}),
+	}
+
+	assertOrder(t, rankAll(stampAsOf(rows, rankInstant)),
+		"b-quiet-ninety-days", "a-quiet-three-days")
 }
 
 // A lane that measured no idle time says nothing about it. Zero is a real

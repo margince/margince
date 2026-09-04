@@ -6804,6 +6804,14 @@ export interface paths {
          *     access to. So this answers "how much is hidden from YOU", which is the only
          *     honest reading available without giving one person a licence to read another's
          *     records.
+         *
+         *     Read by a LEAD, and refused below a row scope of `team` — the same tier
+         *     `/worklist/team` and `/worklist/response` take. Not a confinement: the figures are
+         *     already the caller's own and an ungated read would disclose no row they cannot
+         *     open. It is that two of the five rules are a horizon somebody configured and a
+         *     reader who works the queue cannot change either, so the surface belongs to whoever
+         *     can. A rep asking whether their own day is honest is a real question and a
+         *     different endpoint from this one.
          */
         get: operations["getHiddenBacklog"];
         put?: never;
@@ -6832,18 +6840,26 @@ export interface paths {
          *     number taken from today would swing on one slow afternoon. The window defaults to
          *     the last 14 days.
          *
-         *     Counted under the CALLER's own visibility — but only on the INBOUND side, and the
-         *     difference is worth stating rather than glossing. A message the caller may not read
-         *     contributes to no figure here. The REPLY that answered it is not gated: the waiting
-         *     lane deliberately ignores the audience arm on its own reply anti-join, because a
-         *     reply somebody else may see still answered the customer, and skipping it would
-         *     report an answered message as waiting.
+         *     Counted under the CALLER's own visibility, all four figures. A conversation this
+         *     caller may not open contributes to no median, and a judgement recorded against one
+         *     counts in neither disposal figure.
+         *
+         *     With ONE exception, on the reply side of the median, worth stating rather than
+         *     glossing. The REPLY that answered an inbound is not gated: the waiting lane
+         *     deliberately ignores the audience arm on its own reply anti-join, because a reply
+         *     somebody else may see still answered the customer, and skipping it would report an
+         *     answered message as waiting.
          *
          *     So a caller who can read an inbound but not the audience-limited reply to it learns
          *     WHEN a colleague answered, to the minute, folded into the median. That is a
          *     timestamp rather than content, and it is the price of the two readers agreeing
          *     about which threads were answered — but it is a real disclosure and this is where
          *     it is written down.
+         *
+         *     Read by a LEAD, and refused below a row scope of `team`, the same tier
+         *     `/worklist/team` and `/worklist/hidden` take. "How fast does the workspace answer"
+         *     is a question about how the work is going rather than about what to do next, and
+         *     the rep answering the queue is not the person who changes the answer.
          */
         get: operations["getResponseMetrics"];
         put?: never;
@@ -28724,9 +28740,26 @@ export interface components {
              */
             as_of: string;
             /**
-             * @description What the queue itself would carry. Here so the others read as a proportion
-             *     rather than as bare volumes — three hidden against four shown is a broken
-             *     queue, and three against three hundred is a rep tidying up.
+             * @description What the eligibility query FOUND under the rules as they stand. Here so the
+             *     others read as a proportion rather than as bare volumes — three hidden against
+             *     four found is a broken queue, and three against three hundred is a rep tidying
+             *     up.
+             *
+             *     Not quite what the queue draws, and the difference is stated rather than
+             *     glossed. Machine senders are filtered TWICE, deliberately: the query removes
+             *     the obvious ones before its scan cap, because two hundred notification threads
+             *     would otherwise fill the scan and push a real customer past it, and the queue
+             *     then applies a fuller address rule over the survivors — a baseline of
+             *     transactional relay domains no pattern list could stand in for. A repeat thread
+             *     from one sender is folded there too, statefully across rows.
+             *
+             *     So a mail relayed by one of those domains is counted here and absent from the
+             *     page. Measuring it here would mean a second copy of that baseline inside the
+             *     database, drifting from the first.
+             *
+             *     The four hidden figures are differences between runs of THIS query, so they
+             *     are counted the same way and the proportions hold. It is the absolute figure
+             *     that is a near neighbour of the page's own count rather than equal to it.
              */
             shown: number;
             /**
@@ -28824,6 +28857,10 @@ export interface components {
              *     that lifted and a not_mine somebody withdrew leave no trace in the current
              *     state, so a figure read from there would FALL as readers tidied up — reporting
              *     less judgement the more of it happened.
+             *
+             *     Over the conversations THIS caller may open, like every figure beside it. Two
+             *     readers of the same workspace can therefore see different totals here, and each
+             *     is answering "how much of the work I can see is being put down".
              */
             disposed: number;
             /**

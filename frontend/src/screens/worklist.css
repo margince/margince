@@ -115,19 +115,25 @@
   padding: 0;
 }
 
-/* The band heading, above the first row of its run.
-   Inside the list item rather than between them, because an <ol> may hold only
-   <li> children — a heading placed as a sibling would be invalid structure that
-   the browser silently reparents. The margin collapses to nothing on the first
-   heading, which needs no gap above it. */
+/* The band heading, above its own <ol>. The page draws one list per band, so
+   the heading is a sibling of the list rather than a child of its first item —
+   which is what lets a band with no rows draw a heading and a line saying so.
+   The first heading needs no gap above it. */
 .worklist-band {
   color: var(--textSecondary);
   display: block;
   margin: var(--space-5) 0 var(--space-2);
 }
 
-.worklist-list > li:first-child .worklist-band {
+.worklist-queue-band:first-child .worklist-band {
   margin-top: 0;
+}
+
+/* What an empty band says. Set in the secondary colour so a clear band reads as
+   a quiet answer rather than as the same weight as work. */
+.worklist-band-clear {
+  color: var(--textSecondary);
+  margin: 0;
 }
 
 .worklist-row {

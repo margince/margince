@@ -22135,9 +22135,26 @@ type HiddenBacklog struct {
 	// lift at all.
 	SetAside int `json:"set_aside"`
 
-	// Shown What the queue itself would carry. Here so the others read as a proportion
-	// rather than as bare volumes — three hidden against four shown is a broken
-	// queue, and three against three hundred is a rep tidying up.
+	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
+	// others read as a proportion rather than as bare volumes — three hidden against
+	// four found is a broken queue, and three against three hundred is a rep tidying
+	// up.
+	//
+	// Not quite what the queue draws, and the difference is stated rather than
+	// glossed. Machine senders are filtered TWICE, deliberately: the query removes
+	// the obvious ones before its scan cap, because two hundred notification threads
+	// would otherwise fill the scan and push a real customer past it, and the queue
+	// then applies a fuller address rule over the survivors — a baseline of
+	// transactional relay domains no pattern list could stand in for. A repeat thread
+	// from one sender is folded there too, statefully across rows.
+	//
+	// So a mail relayed by one of those domains is counted here and absent from the
+	// page. Measuring it here would mean a second copy of that baseline inside the
+	// database, drifting from the first.
+	//
+	// The four hidden figures are differences between runs of THIS query, so they
+	// are counted the same way and the proportions hold. It is the absolute figure
+	// that is a near neighbour of the page's own count rather than equal to it.
 	Shown int `json:"shown"`
 
 	// Truncated True when a read stopped at its own scan bound, which makes every figure above
@@ -29264,6 +29281,10 @@ type ResponseMetrics struct {
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
 	// state, so a figure read from there would FALL as readers tidied up — reporting
 	// less judgement the more of it happened.
+	//
+	// Over the conversations THIS caller may open, like every figure beside it. Two
+	// readers of the same workspace can therefore see different totals here, and each
+	// is answering "how much of the work I can see is being put down".
 	Disposed int `json:"disposed"`
 
 	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it

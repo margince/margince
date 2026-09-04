@@ -103,9 +103,19 @@ export const AFullDay: Story = {
           more_available: false,
         },
       ],
+      // Every band in draw order, including the one no row reaches — which is
+      // what the page needs to say "no new pipeline work waiting" rather than
+      // silently starting at the next heading.
+      bands: [
+        { band: "now", shown: 2 },
+        { band: "build_pipeline", shown: 0 },
+        { band: "keep_momentum", shown: 1 },
+        { band: "review", shown: 1 },
+      ],
       queue: [
         {
           id: "waiting-1",
+          band: "now",
           source: "customer_waiting",
           category: "customer_waiting",
           level: 1,
@@ -124,6 +134,7 @@ export const AFullDay: Story = {
         },
         {
           id: "deal-1",
+          band: "now",
           source: "deal_at_risk",
           category: "deals_at_risk",
           level: 3,
@@ -146,6 +157,7 @@ export const AFullDay: Story = {
         },
         {
           id: "task-1",
+          band: "keep_momentum",
           source: "task",
           category: "tasks",
           level: 4,
@@ -156,6 +168,7 @@ export const AFullDay: Story = {
         },
         {
           id: "approval-1",
+          band: "review",
           source: "approval",
           category: "decisions",
           level: 6,
