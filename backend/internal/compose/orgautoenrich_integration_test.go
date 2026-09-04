@@ -30,25 +30,27 @@ func TestAnOrganizationEventQueuesTheEnrichPassNow(t *testing.T) {
 	}
 	trigger := NewOrgAutoEnrichTrigger(e.Pool, inserter, slog.Default())
 	ctx := context.Background()
-	kind := CaptureAutoEnrichWorkspaceArgs{}.Kind()
+	kind := CaptureAutoEnrichSweepArgs{}.Kind()
 
-	// A create queues exactly one pass, addressed to the installation's own
-	// workspace — the envelope carries no tenant, so naming the wrong one
-	// here would run the pass against nobody's data and read as a no-op.
+	// A create queues exactly one pass.
 	if err := trigger.HandleEvent(ctx, envelopeFor(e.WS, "organization.created", "organization", ids.NewV7())); err != nil {
 		t.Fatalf("organization.created: %v", err)
 	}
 	if n := countJobsOfKind(ctx, t, e.Pool, kind); n != 1 {
 		t.Fatalf("organization.created queued %d enrich pass(es), want exactly 1", n)
 	}
+	// It names NO workspace, and that is the collapse (ADR-0103) rather than a
+	// missing field. The trigger used to queue one child per tenant and had to
+	// address it; the pass walks the live workspaces itself, so a tenant in
+	// these args would be a claim this row is about one of them.
 	var workspace string
 	if err := e.Pool.QueryRow(ctx,
 		`SELECT coalesce(args->>'workspace_id', '') FROM river_job WHERE kind = $1`, kind,
 	).Scan(&workspace); err != nil {
 		t.Fatalf("reading the queued pass: %v", err)
 	}
-	if workspace != e.WS.String() {
-		t.Errorf("the queued pass names workspace %q, want the installation's %q", workspace, e.WS)
+	if workspace != "" {
+		t.Errorf("the queued pass names workspace %q; a pass over the installation addresses no tenant", workspace)
 	}
 
 	// A burst dedupes onto the pass already queued: the uniqueness is the

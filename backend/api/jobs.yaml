@@ -223,29 +223,23 @@ kinds:
       provider set rather than a single page.
 
   capture_auto_enrich_sweep:
-    role: dispatcher
+    role: worker
     go_type: CaptureAutoEnrichSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: capture_auto_enrich_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, and run at boot like every pass here, so the captured backlog an
       installation already carries is enriched on the first start rather than a
       day into it.
 
-  capture_auto_enrich_workspace:
-    role: worker
-    go_type: CaptureAutoEnrichWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
+      ONE declaration (ADR-0103). This used to be a dispatcher that enqueued
+      capture_auto_enrich_workspace per workspace; the pass now walks them
+      itself. The five minutes is the CHILD's old deadline, not the
+      dispatcher's two: the deadline has to bound the work, and the two minutes
+      only ever bounded an enumeration and an insert.
+
       Database-only: the pass reserves a budget slot and queues a deep read per
       due org, and never crawls anything itself. autoEnrichDailyCap bounds it at
       500 trigger transactions, and a pass that stops early simply leaves the

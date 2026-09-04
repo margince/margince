@@ -96,37 +96,16 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 	}
 }
 
-// Work is the DISPATCHER: it enumerates the fleet and enqueues one sweep per
-// workspace, and touches no tenant data itself.
+// Work is the PASS: it walks the live workspaces and enriches each one.
+//
+// It used to be a dispatcher that enqueued one capture_auto_enrich_workspace
+// per workspace (ADR-0103). The child kind is gone; the enumeration is not,
+// because the collapse is about how many job kinds describe one pass and not
+// about assuming a single tenant.
 func (w *captureAutoEnrichSweepWorker) Work(ctx context.Context, _ *river.Job[CaptureAutoEnrichSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(CaptureAutoEnrichWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CaptureAutoEnrichWorkspaceArgs{Workspace: ws} }))
-}
-
-// CaptureAutoEnrichWorkspaceArgs is one workspace's auto-enrich pass.
-type CaptureAutoEnrichWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureAutoEnrichWorkspaceArgs) Kind() string { return "capture_auto_enrich_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a CaptureAutoEnrichWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// captureAutoEnrichWorkspaceWorker runs one workspace's pass. It reuses the
-// dispatcher's wiring rather than a second copy: the stores, the daily cap and
-// the actor are the pass's, not the fan-out's.
-type captureAutoEnrichWorkspaceWorker struct {
-	sweeper *captureAutoEnrichSweepWorker
-}
-
-func (w *captureAutoEnrichWorkspaceWorker) Work(ctx context.Context, job *river.Job[CaptureAutoEnrichWorkspaceArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.sweeper.sweepWorkspace(ctx, ids.From[ids.WorkspaceKind](job.Args.Workspace)))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, ws ids.UUID) error {
+		return w.sweepWorkspace(ctx, ids.From[ids.WorkspaceKind](ws))
+	}))
 }
 
 // sweepWorkspace enriches the due orgs of one workspace, respecting the flag

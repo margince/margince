@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -132,6 +133,35 @@ func oneOffChildOpts(childKind string) *river.InsertOpts {
 	return &river.InsertOpts{Queue: spec.Queue, MaxAttempts: spec.MaxAttempts}
 }
 
+// oneOffPassOpts is oneOffChildOpts for a COLLAPSED pass: a scheduled kind that
+// does the work in its own row rather than fanning out (ADR-0103).
+//
+// Its sibling insists the kind is somebody's fan-out child, which this one
+// cannot be — that is the whole of the collapse. What it keeps is the reason
+// that helper exists: the queue comes from the DECLARATION, so an on-demand
+// enqueue lands on the same pool the scheduled tick uses instead of a queue the
+// caller happened to name.
+//
+// No attempt cap, because a caller-owned kind declares none: max_attempts is
+// contract-declared only for a fan-out child, whose cap the fan-out is
+// responsible for setting. Passing one here would publish a number the
+// declaration does not carry.
+//
+// No sweep tag, for the reason oneOffChildOpts gives: the tag marks a row as
+// one workspace's share of a fleet pass, and the gauges count tagged rows. A
+// one-off wearing it would inflate the coverage reading of a pass that never
+// ran.
+func oneOffPassOpts(kind string) *river.InsertOpts {
+	spec, ok := jobs.SpecFor(kind)
+	if !ok {
+		panic("compose: enqueuing " + kind + ", which api/jobs.yaml does not declare")
+	}
+	if spec.OptsOwner != jobs.OptsCaller {
+		panic("compose: " + kind + " declares an opts_owner other than caller, so its queue is not this helper's to set")
+	}
+	return &river.InsertOpts{Queue: spec.Queue}
+}
+
 // fanOutChildren is every kind some dispatcher DECLARES it fans out to —
 // fans_out_to, read as the registry it is, over BOTH halves of the declaration
 // table (jobs.Declared covers the compiled core kinds and this installation's
@@ -185,6 +215,40 @@ func dispatchPerWorkspace(ctx context.Context, pool *pgxpool.Pool, opts *river.I
 		return err
 	}
 	return dispatchWith(ctx, workspaces, clientInsertMany(ctx), opts, argsFor)
+}
+
+// runPerWorkspace runs a scheduled pass for every live workspace, IN THIS
+// PROCESS, and is what a collapsed pass uses where it used to fan out.
+//
+// ADR-0103: a scheduled pass over the installation is one job declaration, not
+// two. The dispatchers this replaces existed only to enumerate workspaces and
+// enqueue one child each — a second kind, a second row and a second retry
+// ladder for work the pass could simply do.
+//
+// It still ENUMERATES. The collapse is about how many job kinds describe one
+// pass, not about assuming a single tenant: an installation holds one active
+// workspace today (identity.InstallationWorkspace refuses more), and a pass
+// written against that assumption would silently skip the second one the day
+// it stops being true. So the loop stays and only the fan-out goes.
+//
+// EVERY WORKSPACE IS ATTEMPTED. One workspace's failure does not stop the
+// others — the fan-out it replaces gave each child its own row, so a failure in
+// one never touched the rest, and collapsing must not quietly introduce that
+// coupling. The errors are joined, so the pass still FAILS: a tick that
+// swallowed them would be the swallowed-error shape the fan-out's own
+// atomicity argument exists to prevent.
+func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.Context, ids.UUID) error) error {
+	workspaces, err := enumerateWorkspaces(ctx, pool)
+	if err != nil {
+		return err
+	}
+	var failures []error
+	for _, ws := range workspaces {
+		if err := run(ctx, ws); err != nil {
+			failures = append(failures, fmt.Errorf("workspace %s: %w", ws, err))
+		}
+	}
+	return errors.Join(failures...)
 }
 
 // clientInsertMany binds the fan-out to the River client already in context —

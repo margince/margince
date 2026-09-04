@@ -1,0 +1,12 @@
+-- Nothing to restore, and that is not a gap.
+--
+-- The up migration deleted queue rows for work that had not run: a pending
+-- child of a pass that no longer exists. A rollback re-registers the child's
+-- worker, and the pass it belongs to re-enqueues on its next tick — so the work
+-- returns on its own schedule rather than from a row this file could recreate.
+--
+-- Recreating them would be worse than doing nothing. A row forged here would
+-- carry a new id, a fresh attempt count and this migration's timestamp, so it
+-- would not be the row that was deleted; it would be a new claim that work is
+-- pending, made by a migration rather than by the pass that decides.
+SELECT 1;
