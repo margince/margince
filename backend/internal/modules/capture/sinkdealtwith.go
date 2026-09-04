@@ -52,11 +52,17 @@ func (s *Sink) dealtWithEnoughToRecord(
 	if out.exchanged, out.replied, err = s.exchangedHow(ctx, tx, cp.Email); err != nil {
 		return dealtWith{}, err
 	}
-	met, err := metInPersonTx(ctx, tx, cp.Email)
-	if err != nil {
-		return dealtWith{}, err
+	// The meeting read is LAST and conditional, because it is the only one of
+	// the three that runs per captured message without an index it can fully
+	// use. Mail that already satisfies both clauses cannot be changed by it —
+	// the answer is already yes — so the ordinary case pays nothing, and the
+	// query runs only for the addresses the mail evidence left short.
+	if !out.corresponded || !out.exchanged {
+		if out.met, err = metInPersonTx(ctx, tx, cp.Email); err != nil {
+			return dealtWith{}, err
+		}
 	}
-	out.create = (out.corresponded || met) && (out.exchanged || met) && s.recordWorthy(cp)
+	out.create = (out.corresponded || out.met) && (out.exchanged || out.met) && s.recordWorthy(cp)
 	return out, nil
 }
 
@@ -66,6 +72,8 @@ func (s *Sink) dealtWithEnoughToRecord(
 type dealtWith struct {
 	// create: the tier's answer — a record here is honest.
 	create bool
+	// met: a captured meeting connects the workspace to this address.
+	met bool
 
 	// corresponded: the workspace has provably written to this address.
 	corresponded bool
@@ -76,3 +84,14 @@ type dealtWith struct {
 	// worth a record and is not somebody writing to us first.
 	replied bool
 }
+
+// positive reports T1 in the sense the tiers BELOW it read: this workspace has
+// dealt with the address, so a stale judgement about it no longer governs.
+//
+// The distinction matters and cost a bug. `corresponded` alone is what T2 and
+// the settled-disposition arm used to consult, and it reads attested outbound
+// MAIL — so a partner known only from a meeting was still suppressed by the ESP
+// registry, and a prior `noise` verdict still stopped them, while the comments
+// beside both said T1 outranks them. Meeting somebody is the same claim those
+// arms defer to, so it belongs in the same answer.
+func (d dealtWith) positive() bool { return d.corresponded || d.met }

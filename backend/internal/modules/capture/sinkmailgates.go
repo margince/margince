@@ -438,6 +438,11 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 //   - it was not declined or abandoned (no_show, canceled);
 //   - it is not dated past the horizon, so a far-future date cannot stand in for
 //     a relationship.
+//
+// An ARCHIVED meeting is excluded too, which is not one of the three: a meeting
+// somebody removed is not evidence of anything, and the activity kind index is
+// partial on archived_at IS NULL, so naming it here is also what lets this
+// query use one — it runs per captured address.
 func metInPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
@@ -450,6 +455,7 @@ func metInPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 		    FROM activity a
 		    JOIN activity_participant p ON p.activity_id = a.id
 		   WHERE a.kind = 'meeting'
+		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'
 		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
 		     AND a.occurred_at <= now() + $2::interval

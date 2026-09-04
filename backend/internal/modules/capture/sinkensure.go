@@ -231,7 +231,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	corresponded := dealt.corresponded
+	corresponded := dealt.positive()
 	decision.create, decision.replied = dealt.create, dealt.replied
 	roleMailbox := refusesToNameAPerson(cp.Email, dealt.exchanged)
 	if roleMailbox {
