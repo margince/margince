@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // stubUnsubscribeLinker stands in for the consent module's preference-token
@@ -265,7 +266,7 @@ func TestASendGoesOutThroughTheMailboxItResolved(t *testing.T) {
 			// transmits, and the activity's source_system is the natural key the
 			// provider's own echo carries. Two answers here would file a
 			// duplicate timeline row for every message anybody sends.
-			if got := m.delivery(ids.NewV7(), threading{}, SendOrigin{}).Provider; got != provider {
+			if got := m.delivery(ids.NewV7(), threading{}, commsauthz.Request{}).Provider; got != provider {
 				t.Errorf("delivery provider = %q, want %q — handed to a connector this sender has no grant on", got, provider)
 			}
 			act := m.activity(threading{})

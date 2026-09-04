@@ -39,6 +39,58 @@ import (
 // describes. That also means it must not acquire a connection of its own, which
 // is why every read below runs on the passed tx.
 func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	set, err := g.stagingDecisions(ctx, tx, req)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	if err := g.recordStagingDecisions(ctx, tx, deliveryID, ids.NewV7(), req, set); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	return set, nil
+}
+
+// PreviewStagingTx answers the staging question WITHOUT writing the record.
+//
+// It exists for the callers that must know whether a message could be staged
+// before they commit something else that depends on the answer — the held-draft
+// release is the one that needs it: its approval decision commits first, and a
+// refusal discovered after that leaves an approved row nothing can decide again
+// and a message a human said yes to that will never exist.
+//
+// It shares stagingDecisions with AuthorizeStagingTx rather than asking the
+// same question a second way. A preview that answered on its own code would be
+// a second authority, and the one that stopped matching would look exactly like
+// the one that still did — the failure this module is built to prevent.
+//
+// It records NOTHING on purpose. An Art. 5(2) record describes a message that
+// was staged; writing one for a message nobody sent would put a decision in the
+// register for a send that never happened.
+func (g *Gate) PreviewStagingTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	return g.stagingDecisions(ctx, tx, req)
+}
+
+// PreviewStaging is the pool-side spelling for a caller holding no transaction.
+//
+// It opens a read transaction of its own because the callers that need a
+// preview are outside one by construction: they are deciding whether to START
+// the work that would open it.
+func (g *Gate) PreviewStaging(ctx context.Context, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	var set commsauthz.DecisionSet
+	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		set, err = g.stagingDecisions(ctx, tx, req)
+		return err
+	})
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	return set, nil
+}
+
+// stagingDecisions is the decision itself: validation, the live posture, and one
+// decision per recipient. The single body both the recorded and the previewed
+// answer come from.
+func (g *Gate) stagingDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error) {
 	for _, r := range req.Recipients {
 		if err := r.Validate(); err != nil {
 			return commsauthz.DecisionSet{}, fmt.Errorf(
@@ -58,7 +110,6 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 		return commsauthz.DecisionSet{}, err
 	}
 
-	setID := ids.NewV7()
 	set := commsauthz.DecisionSet{}
 	for _, r := range req.Recipients {
 		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
@@ -71,9 +122,6 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 		d.Mode = ModeFor(modes, d.Resolved)
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
-	}
-	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set); err != nil {
-		return commsauthz.DecisionSet{}, err
 	}
 	return set, nil
 }

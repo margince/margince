@@ -178,7 +178,7 @@ func releaseHeldDraft(
 // snapshots, and writes nothing.
 func heldDraftPrecheck(
 	store *activities.Store,
-	gate activities.ConsentGate,
+	gate releaseAuthority,
 	stager activities.DeliveryStager,
 ) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
@@ -197,8 +197,28 @@ func heldDraftPrecheck(
 			proposal = corrected
 		}
 		origin, in := sendFromHeldDraft(proposal)
-		_, err = store.PrepareSend(ctx, origin, in, gate, stager)
-		return err
+		prepared, err := store.PrepareSend(ctx, origin, in, gate, stager)
+		if err != nil {
+			return err
+		}
+		// And then the ENGINE, which is the authority that actually decides a
+		// send. Preparation stopped answering that question when the request-time
+		// purpose gate was removed from it: the decision moved to staging, and
+		// staging happens inside the transaction that has already decided the
+		// approval. A precheck that stopped at PrepareSend would report "this
+		// draft can be sent" about every message the engine refuses.
+		//
+		// The SAME request staging will decide on, carried from preparation
+		// rather than rebuilt, so this cannot answer about a different message
+		// than the one that would go out.
+		set, err := gate.PreviewStaging(ctx, prepared.Authorization())
+		if err != nil {
+			return err
+		}
+		// The same reading of the same decision set the stager applies. A
+		// second spelling of "which refusals stop a send" would be the half
+		// that falls behind.
+		return refuseAtStaging(set)
 	}
 }
 

@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -193,9 +194,23 @@ func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
 // They travel together because they are two readings of ONE question — can this
 // be released — and a kind that registered the executor without the preflight
 // would answer it only where the answer is too late to act on.
+// releaseAuthority is everything a late-registered release has to ask about a
+// message before it decides the approval that releases it.
+//
+// TWO questions, because there are two authorities and only one of them the
+// store takes: activities.ConsentGate is the old purpose gate the send path
+// still carries, and PreviewStaging is the engine, which is what actually
+// decides a send now. A precheck holding only the first would pass a message
+// the engine then refuses — and it would refuse it after the approval had
+// already committed.
+type releaseAuthority interface {
+	activities.ConsentGate
+	PreviewStaging(ctx context.Context, req commsauthz.Request) (commsauthz.DecisionSet, error)
+}
+
 type lateApprovalEffect struct {
 	effect   func(*approvals.Service, *activities.Store, activities.ConsentGate, activities.DeliveryStager) approvals.ApprovedEffect
-	precheck func(*activities.Store, activities.ConsentGate, activities.DeliveryStager) approvals.ReleasePrecheck
+	precheck func(*activities.Store, releaseAuthority, activities.DeliveryStager) approvals.ReleasePrecheck
 }
 
 // lateApprovalEffects are the approve-side pairs that cannot be registered with

@@ -99,7 +99,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 }
 
 // delivery is the same message as the delivery machinery receives it.
-func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin SendOrigin) DeliveryRequest {
+func (m outboundMessage) delivery(activityID ids.UUID, chain threading, authorization commsauthz.Request) DeliveryRequest {
 	return DeliveryRequest{
 		ActivityID:      ids.From[ids.ActivityKind](activityID),
 		Provider:        m.provider,
@@ -113,7 +113,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		FromName:        m.fromName,
 		Attachments:     m.files,
 		ConsentPurpose:  m.in.ConsentPurpose,
-		Authorization:   m.authorization(origin),
+		Authorization:   authorization,
 		InReplyTo:       chain.inReplyTo,
 		References:      chain.references,
 		ThreadKey:       chain.threadKey,

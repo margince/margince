@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -73,13 +74,41 @@ func assertStaged(t *testing.T, stager *recordingStager, want int, when string) 
 	}
 }
 
+// governedDelivery is the REAL delivery machinery, for the suites whose claim is
+// that a send is refused.
+//
+// A double cannot stand in for it in those suites any more, and that is not a
+// preference. The consent decision moved INTO this seam: the stager is what asks
+// the engine and what refuses. A recordingStager put in its place removes the
+// authority and then reports that nothing was refused — a suite named for the
+// governed path, passing because it no longer contains one.
+func governedDelivery(t *testing.T, e *integration.Env) DeliveryMachinery {
+	t.Helper()
+	integration.ApplyRiverSchema(t)
+	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	return NewDeliveryStager(e.Pool, inserter)
+}
+
+// assertDelivered counts the delivery rows the real machinery wrote, which is
+// what assertStaged counts for a double: what actually reached transmission.
+func assertDelivered(t *testing.T, e *integration.Env, want int, when string) {
+	t.Helper()
+	if n := e.WsCount(t, `SELECT count(*) FROM comms_outbound`); n != want {
+		t.Fatalf("%s staged %d deliveries, want %d", when, n, want)
+	}
+}
+
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	e := integration.Setup(t)
-	stager := &recordingStager{}
+	// The real machinery: this suite's claim is that an unconsented send is
+	// REFUSED, and the refusal now lives in the stager.
 	adapter := commsAdapter{
 		store:  activities.NewStore(e.DB()),
 		gate:   consent.NewGate(consent.NewStore(InstallationDB(e.Pool))),
-		stager: stager,
+		stager: governedDelivery(t, e),
 	}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
@@ -118,7 +147,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Fatalf("unconsented MCP send → %v, want ErrConsentNotGranted", err)
 	}
-	assertStaged(t, stager, 0, "the suppressed MCP send")
+	assertDelivered(t, e, 0, "the suppressed MCP send")
 
 	from := time.Date(2026, 7, 7, 8, 0, 0, 0, time.UTC)
 	avail, err := adapter.Availability(ctx, nil, from, from.Add(10*time.Hour), 60)

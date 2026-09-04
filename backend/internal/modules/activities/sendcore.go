@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // SendEmail runs the governed send: origin resolution → the guard sequence
@@ -69,7 +70,24 @@ type PreparedSend struct {
 	in        SendEmailInput
 	message   outboundMessage
 	messageID string
+	// authorization is the question the engine will be asked about this
+	// message, built HERE and carried rather than rebuilt at staging. One
+	// construction is the point: a caller that must know the answer before it
+	// commits something else (the held-draft release) previews it, and staging
+	// then decides on the identical request. Two constructions would be two
+	// readings of one message, and the preview that stopped matching would
+	// promise a send the engine refuses.
+	authorization commsauthz.Request
 }
+
+// Authorization is the question the engine will be asked about this message.
+//
+// Exported for callers that have to know the answer before they commit
+// something the answer would invalidate: releasing a held draft decides an
+// approval first, and a refusal discovered after that leaves an approved row
+// nothing can decide again. It is a getter and not a field so a caller outside
+// this package can read the request and cannot forge one.
+func (p PreparedSend) Authorization() commsauthz.Request { return p.authorization }
 
 // PrepareSend runs everything an outbound send needs BEFORE it writes: origin
 // resolution, the guard sequence, the sign-off, deliverability, attachment
@@ -150,22 +168,24 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 		return PreparedSend{}, err
 	}
 
+	message := outboundMessage{
+		in:              in,
+		messageID:       messageID,
+		fromName:        fromName,
+		body:            derived.transmitted,
+		recordedBody:    derived.recorded,
+		htmlBody:        htmlBody,
+		files:           files,
+		listUnsubscribe: derived.listUnsubscribe,
+		to:              toRecipients(in.Recipients, in.Cc, in.Bcc),
+		links:           links,
+		provider:        provider,
+	}
 	return PreparedSend{
-		in:        in,
-		messageID: messageID,
-		message: outboundMessage{
-			in:              in,
-			messageID:       messageID,
-			fromName:        fromName,
-			body:            derived.transmitted,
-			recordedBody:    derived.recorded,
-			htmlBody:        htmlBody,
-			files:           files,
-			listUnsubscribe: derived.listUnsubscribe,
-			to:              toRecipients(in.Recipients, in.Cc, in.Bcc),
-			links:           links,
-			provider:        provider,
-		},
+		in:            in,
+		messageID:     messageID,
+		message:       message,
+		authorization: message.authorization(origin),
 	}, nil
 }
 
@@ -204,7 +224,7 @@ func (s *Store) SendPreparedTx(ctx context.Context, tx pgx.Tx, origin SendOrigin
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := stager.StageTx(ctx, tx, p.message.delivery(ids.UUID(sent.Id), chain, origin)); err != nil {
+	if err := stager.StageTx(ctx, tx, p.message.delivery(ids.UUID(sent.Id), chain, p.authorization)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// in.Body, not message.body: the judgment is about the text the HUMAN
