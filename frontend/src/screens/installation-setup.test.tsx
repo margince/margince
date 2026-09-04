@@ -11,13 +11,14 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
 import { InstallationSetup, outstandingStep } from "./installation-setup";
 
 afterEach(() => {
-  // Every case starts with the platform question unanswered in this browser.
+  // Every case starts with the platform question unanswered by this account.
   window.localStorage.clear();
   cleanup();
   vi.unstubAllGlobals();
@@ -118,6 +119,11 @@ function mount(
     }
     if (url.endsWith("/ai-model-rates")) {
       return jsonResponse({ data: SEEDED_SHEET });
+    }
+    // The platform question's "Not now" is remembered against the account that
+    // gave it, so the gate reads the session before it can hide the step.
+    if (url.endsWith("/me")) {
+      return jsonResponse(meFixture({ allow: {} }));
     }
     if (url.includes("/installation/oauth-apps/")) {
       return jsonResponse({
@@ -274,6 +280,30 @@ describe("the first-run setup gate", () => {
     await waitFor(() => expect(container.innerHTML).toBe(""));
     expect(writes.length).toBe(0);
     expect(outstandingStep(setupReport(true, false), true)).toBeUndefined();
+  });
+
+  // The decline is the ACCOUNT's answer, not the browser's. Keyed on the
+  // browser alone it outlived the installation it was about: a machine that
+  // had run one cold start carried the answer into the next, and the second
+  // installation's setup skipped the platform step entirely.
+  it("keeps asking when the remembered decline belongs to another account", async () => {
+    window.localStorage.setItem(
+      "margince.first-run.platform-declined:00000000-0000-4000-8000-000000000009",
+      "1",
+    );
+    mount(setupReport(true, false));
+    expect(
+      await screen.findByRole("radio", { name: /Google Workspace/ }),
+    ).toBeTruthy();
+  });
+
+  it("stays answered for the account that gave it", async () => {
+    window.localStorage.setItem(
+      "margince.first-run.platform-declined:00000000-0000-4000-8000-000000000001",
+      "1",
+    );
+    const { container } = mount(setupReport(true, false));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
   });
 
   // IMAP has no installation-wide app, so the one thing the answer can do is

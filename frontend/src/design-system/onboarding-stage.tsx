@@ -159,6 +159,7 @@ export function OnboardingStage({
   coreProgress,
   coreFeed,
   coreStateLabel,
+  coreHidden = false,
   aside,
   coreFlash,
   coreScale = "hero",
@@ -225,6 +226,17 @@ export function OnboardingStage({
    * whose Core is not carrying a state anybody needs to act on.
    */
   coreStateLabel?: string;
+  /**
+   * Stands the room's own Core down, for the one case where the BOARD draws a
+   * Core of its own: the voice build, whose orb carries the progress ring the
+   * stage's cannot. Two of the same object on one screen is the product
+   * disagreeing with itself about which one is the agent.
+   *
+   * Hidden, not unmounted. The Core owns a WebGL context, and taking it away
+   * and giving it back restarts every loop from phase 0 — the orb would blink
+   * on the way out of the build rather than simply being there again.
+   */
+  coreHidden?: boolean;
   /**
    * The band's right slot: what the installation is running on, and what this
    * setup has spent.
@@ -324,7 +336,12 @@ export function OnboardingStage({
               light: anchored to the orb itself rather than to a remembered
               offset into the window, which is nowhere near the ball at most
               widths and nowhere near it at all once the scene stacks. */}
-          <div className="ob-stage-core" id={STAGE_CORE_ID} data-unlit={!lit}>
+          <div
+            className="ob-stage-core"
+            id={STAGE_CORE_ID}
+            data-unlit={!lit}
+            data-hidden={coreHidden}
+          >
             {coreFlash ? (
               <span className="ob-stage-flash" aria-hidden="true" />
             ) : null}

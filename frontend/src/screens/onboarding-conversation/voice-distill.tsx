@@ -22,6 +22,12 @@ import { emphasisIndices } from "./voice-excerpts";
 // Decorative on purpose (`aria-hidden`): the same numbers stand in the meter
 // and the sources list as real text, and a ticker read aloud every few
 // seconds would talk over the reader adding their next file.
+//
+// EVERY PART OF A STEP MOVES. A line arrives by opening its own row and
+// fading up into it; the one that leaves closes its row rather than being
+// taken away, which is what carries the stack up instead of dropping it a
+// line. The stylesheet owns all of that (conversation.css) — this only says
+// which line is which.
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 
@@ -32,7 +38,12 @@ type DistillItem =
 // How long each line stays before the next arrives, and how many stay on
 // screen. Slow enough to be read as prose, few enough that the panel stays a
 // glance rather than a transcript.
-const STEP_MS = 2600;
+//
+// Exported for the one thing that has to agree with it: the stylesheet's
+// `--distill-glide`, which must finish inside a step or a line would still be
+// arriving when the next is due. `voice-distill.test.ts` holds the two
+// together in both directions.
+export const STEP_MS = 2600;
 const VISIBLE = 5;
 
 // The registers a corpus can carry, in the summary's own keys. A register the
@@ -152,9 +163,16 @@ export function VoiceDistillPanel({
   // The window ending at `head`, oldest first, wrapping around the sequence
   // so the panel never goes blank between the last item and the first.
   const count = Math.min(VISIBLE, items.length);
-  const shown = Array.from({ length: count }, (_, i) => {
-    const index = (head - (count - 1) + i + items.length) % items.length;
-    return { item: items[index], index };
+  // One more than the window whenever the ticker actually advances: the line
+  // that has just left stays mounted a step longer so its row can close under
+  // it. Unmounting it outright is what made the whole stack jump a line every
+  // few seconds. A sequence too short to advance has nothing leaving, and
+  // asking for one more than it holds would repeat a line.
+  const closing = items.length > VISIBLE ? 1 : 0;
+  const span = count + closing;
+  const shown = Array.from({ length: span }, (_, i) => {
+    const index = (head - (span - 1) + i + items.length) % items.length;
+    return { item: items[index], index, age: span - 1 - i };
   });
   return (
     <aside className="ob-distill" aria-hidden="true">
@@ -162,22 +180,28 @@ export function VoiceDistillPanel({
         <i className="ob-distill-pulse" /> {t("ob.conv.voice.distilling")}
       </Eyebrow>
       <div className="ob-distill-feed">
-        {shown.map(({ item, index }, position) => (
+        {shown.map(({ item, index, age }) => (
           <div
             key={index}
             className="ob-distill-item"
             data-kind={item.kind}
             // How many lines have arrived since this one: the stylesheet
             // fades the older ones, newest fully lit at the bottom.
-            data-age={shown.length - 1 - position}
+            data-age={age}
+            // The line on its way out, still mounted so its row can close.
+            data-leaving={
+              closing === 1 && age === span - 1 ? "true" : undefined
+            }
           >
-            {item.kind === "evidence" ? (
-              <EvidenceLine text={item.text} />
-            ) : (
-              <p className="ob-distill-hears">
-                <b>{t("ob.conv.voice.hears")}</b> {item.text}
-              </p>
-            )}
+            <div className="ob-distill-line">
+              {item.kind === "evidence" ? (
+                <EvidenceLine text={item.text} />
+              ) : (
+                <p className="ob-distill-hears">
+                  <b>{t("ob.conv.voice.hears")}</b> {item.text}
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>

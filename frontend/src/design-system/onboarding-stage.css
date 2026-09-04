@@ -299,7 +299,23 @@
   top: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%) scale(var(--ob-core-scale, 1));
-  transition: transform var(--dur-enter) var(--ease-out);
+  transition:
+    transform var(--dur-enter) var(--ease-out),
+    opacity var(--dur-enter) var(--ease-out);
+}
+
+/*
+ * Stood down while the BOARD draws a Core of its own — the voice build, whose
+ * orb carries the progress ring this one cannot. Two of the same object on one
+ * screen is the product disagreeing with itself about which is the agent.
+ *
+ * Faded, never removed. The canvas owns a WebGL context, and taking it away and
+ * giving it back restarts every loop from phase 0: the orb would blink back
+ * into the room on the way out of the build rather than simply being there
+ * again. The reduced-motion rule below drops the fade with the rest.
+ */
+.ob-stage-core[data-hidden="true"] {
+  opacity: 0;
 }
 /*
  * The Core gives ground as the work arrives.

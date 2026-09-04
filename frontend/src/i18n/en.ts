@@ -4879,7 +4879,7 @@ export const en = {
   "ob.conv.voice.resultSub":
     "Read the sample first. If it lands, confirm. If it is off, add more sources and I rebuild.",
   "ob.conv.voice.resultSubNoSample":
-    "Your corpus is too small for a sample draft. Here is what the build learned. Add more sources.",
+    "No sample draft came back for this build. Here is what it learned \u2014 add more of your writing and I will try again.",
   "ob.conv.voice.resultContinue": "That is me",
   "ob.conv.voice.revise": "Not quite me — add more writing",
   "ob.conv.voice.distilling": "Distilling",

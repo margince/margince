@@ -109,6 +109,9 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
     <ConversationWorkbench
       core={presence.core}
       progress={presence.progress}
+      // The build scene draws the Core itself, with the progress ring inside
+      // it; the room's own would be a second orb saying the same thing.
+      coreHidden={state.phase === "vo.building"}
       railState={state}
       status={t(
         state.phase === "vo.building"

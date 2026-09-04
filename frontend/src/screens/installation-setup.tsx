@@ -26,7 +26,7 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, useMe } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
 import {
   RedirectUris,
@@ -105,14 +105,31 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
  * The app step is asked of the person running the cold start, once. The server
  * has no word for "asked and declined" — the step is simply unconfigured until
  * an app is stored, from here or from Settings — so the decline lives in this
- * browser. That is the honest scope of it: a different browser, or a cleared
- * one, asks once more, and the answer is still one press away.
+ * browser.
+ *
+ * KEYED BY THE ACCOUNT THAT GAVE IT. A mark keyed on the browser alone outlives
+ * the installation it was about: a machine that had run one cold start carried
+ * that answer into the next, and the second installation's setup skipped the
+ * platform question with nothing on screen to say why — the one step that asks
+ * for the organization's OAuth app, silently gone, on the run that most needed
+ * it. A re-claimed installation mints its own administrator, so its cold start
+ * asks again; the same person on the same installation is still asked once.
  */
 const PLATFORM_DECLINED_KEY = "margince.first-run.platform-declined";
 
-function platformDeclined(): boolean {
+function declinedKey(account: string): string {
+  return `${PLATFORM_DECLINED_KEY}:${account}`;
+}
+
+/** Whether `account` declined the question. An unknown account — the session
+ *  probe has not answered yet — has declined nothing, which is the reading
+ *  that asks rather than the one that hides. */
+function platformDeclined(account: string | null): boolean {
+  if (account === null) {
+    return false;
+  }
   try {
-    return window.localStorage.getItem(PLATFORM_DECLINED_KEY) === "1";
+    return window.localStorage.getItem(declinedKey(account)) === "1";
   } catch {
     // Storage blocked (a private window, a policy): the question is asked
     // again, which is the safe reading of not knowing.
@@ -130,9 +147,11 @@ function subscribeDeclined(listener: () => void): () => void {
   return () => declinedListeners.delete(listener);
 }
 
-function rememberPlatformDeclined(): void {
+function rememberPlatformDeclined(account: string | null): void {
   try {
-    window.localStorage.setItem(PLATFORM_DECLINED_KEY, "1");
+    if (account !== null) {
+      window.localStorage.setItem(declinedKey(account), "1");
+    }
   } catch {
     // Nothing to remember it in; the reader is let through regardless, and
     // asked again next time.
@@ -142,13 +161,32 @@ function rememberPlatformDeclined(): void {
   }
 }
 
+/** The signed-in account the decline belongs to, or null while the session
+ *  probe is still answering. */
+function useAccount(): string | null {
+  const me = useMe();
+  return me.data?.user.id ?? null;
+}
+
 /**
- * Whether the platform question was declined in this browser, live: the
- * answer every caller of `outstandingStep` passes it, so the gate and the act
- * in front of it re-read the same fact the moment it changes.
+ * Whether this account declined the platform question in this browser, live:
+ * the answer every caller of `outstandingStep` passes it, so the gate and the
+ * act in front of it re-read the same fact the moment it changes.
  */
 export function usePlatformDeclined(): boolean {
-  return useSyncExternalStore(subscribeDeclined, platformDeclined, () => false);
+  const account = useAccount();
+  return useSyncExternalStore(
+    subscribeDeclined,
+    () => platformDeclined(account),
+    () => false,
+  );
+}
+
+/** Records the decline against the account that gave it. Its own hook so the
+ *  gate does not have to hold the account itself to hand it back. */
+function useRememberPlatformDeclined(): () => void {
+  const account = useAccount();
+  return () => rememberPlatformDeclined(account);
 }
 
 /**
@@ -884,6 +922,7 @@ export function InstallationSetup() {
   const queryClient = useQueryClient();
   const setup = useInstallationSetup();
   const declined = usePlatformDeclined();
+  const decline = useRememberPlatformDeclined();
   const step = outstandingStep(setup.data, declined);
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
@@ -952,7 +991,7 @@ export function InstallationSetup() {
       sub={t(head(step.step, ignited !== null).sub)}
     >
       {step.step === "oauth_app" ? (
-        <PlatformStep onBusy={setBusy} onDecline={rememberPlatformDeclined} />
+        <PlatformStep onBusy={setBusy} onDecline={decline} />
       ) : ignited === null ? (
         <AiStep
           onBusy={setBusy}

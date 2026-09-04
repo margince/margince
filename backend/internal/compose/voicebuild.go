@@ -267,6 +267,20 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 	if err != nil {
 		return err
 	}
+	// A corpus too small to hold anything out still owes the reader a line to
+	// read. The draft is unscored and the version stays unevaluated; only the
+	// screen gains something. Its failure is NOT the build's — the profile is
+	// complete without it — so it is said out loud and the run carries on
+	// rather than losing a built artifact to a missing illustration.
+	if len(evaluated.SampleDrafts) == 0 {
+		drafts, draftErr := demonstrationDraft(ctx, w.brain, artifact, input.Personality)
+		if draftErr != nil {
+			w.log.WarnContext(ctx, "voice demonstration draft failed",
+				"build", buildID.String(), "err", draftErr)
+		} else {
+			evaluated.SampleDrafts = drafts
+		}
+	}
 	corpusStats := ai.AnalyzeVoice(input.Samples)
 	if err := w.store.SetBuildStage(ctx, buildID, "activate"); err != nil {
 		w.log.WarnContext(ctx, "voice build stage update failed", "build", buildID.String(), "err", err)

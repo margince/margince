@@ -4766,7 +4766,7 @@ export const vi = {
   "ob.conv.voice.resultSub":
     "Hãy đọc mẫu trước. Thấy đúng thì xác nhận. Thấy lệch thì thêm nguồn và tôi dựng lại.",
   "ob.conv.voice.resultSubNoSample":
-    "Kho văn bản còn nhỏ nên chưa có bản nháp mẫu. Đây là điều lần dựng học được. Hãy thêm nguồn.",
+    "L\u1ea7n d\u1ef1ng n\u00e0y kh\u00f4ng tr\u1ea3 v\u1ec1 b\u1ea3n nh\u00e1p m\u1eabu n\u00e0o. \u0110\u00e2y l\u00e0 nh\u1eefng g\u00ec n\u00f3 h\u1ecdc \u0111\u01b0\u1ee3c \u2014 h\u00e3y th\u00eam b\u00e0i vi\u1ebft c\u1ee7a b\u1ea1n r\u1ed3i t\u00f4i s\u1ebd th\u1eed l\u1ea1i.",
   "ob.conv.voice.resultContinue": "Đúng là tôi",
   "ob.conv.voice.revise": "Chưa đúng tôi — thêm bài viết",
   "ob.conv.voice.distilling": "Đang chắt lọc",

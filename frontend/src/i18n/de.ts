@@ -4819,7 +4819,7 @@ export const de = {
   "ob.conv.voice.resultSub":
     "Lies zuerst das Beispiel. Passt es, bestätige. Passt es nicht, gib mir mehr Quellen und ich baue neu.",
   "ob.conv.voice.resultSubNoSample":
-    "Dein Korpus reicht noch nicht für ein Beispiel. Das hat der Aufbau gelernt. Füg Quellen hinzu.",
+    "F\u00fcr diesen Build kam kein Beispielentwurf zur\u00fcck. Hier ist, was er gelernt hat \u2014 f\u00fcge mehr von deinen Texten hinzu, dann versuche ich es erneut.",
   "ob.conv.voice.resultContinue": "Das bin ich",
   "ob.conv.voice.revise": "Nicht ganz ich — mehr Text hinzufügen",
   "ob.conv.voice.distilling": "Destilliert",

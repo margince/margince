@@ -829,6 +829,12 @@
 /* ---- the distilling panel ---- */
 
 .ob-distill {
+  /* The stream's pacing, in one place. The glide has to finish well inside
+     the ticker's own step (STEP_MS in voice-distill.tsx) so a line has
+     settled before the next is due; voice-distill.test.ts holds the two
+     together. */
+  --distill-glide: 720ms;
+  --distill-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   position: sticky;
   top: var(--space-4);
   display: flex;
@@ -875,13 +881,54 @@
 .ob-distill-feed {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
-/* Newest fully lit at the bottom, each older line a step fainter: the eye
-   reads the panel as a stream without any of it moving. */
+/* Every line is its own collapsible row (1fr → 0fr), which is what lets one
+   arrive and one leave without the rest of the stack jumping: the row opens
+   under the new line and closes under the old, and the lines between simply
+   ride that. Height is not knowable here — a sentence wraps to one line or
+   three — so the row, not a pixel height, is the thing that animates. */
 .ob-distill-item {
-  transition: opacity 0.6s ease;
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--distill-glide) var(--distill-ease),
+    opacity var(--distill-glide) var(--distill-ease);
+}
+
+/* The gap lives INSIDE the collapsing row rather than on the container: a
+   flex gap belongs to the feed and would hold a line's worth of space open
+   under a line that has already gone. */
+.ob-distill-line {
+  min-height: 0;
+  overflow: hidden;
+  padding-block-end: var(--space-3);
+}
+
+/* Arriving. A keyframe rather than a transition because the element is new
+   and a transition has no earlier state to run from. */
+@keyframes ob-distill-arrive {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ob-distill-item[data-age="0"] {
+  animation: ob-distill-arrive var(--distill-glide) var(--distill-ease) both;
+}
+
+/* Leaving: the row closes under it as it fades, so the stack rises into the
+   space rather than snapping up once the line is gone. */
+.ob-distill-item[data-leaving] {
+  grid-template-rows: 0fr;
+  opacity: 0;
 }
 
 .ob-distill-item[data-age="1"] {
@@ -938,6 +985,7 @@
 
   .ob-distill-item {
     transition: none;
+    animation: none;
   }
 }
 

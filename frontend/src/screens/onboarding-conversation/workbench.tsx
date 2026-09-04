@@ -133,6 +133,7 @@ function useFirstWorkbench(): boolean {
 
 export function ConversationWorkbench({
   core,
+  coreHidden = false,
   progress,
   status,
   runtime,
@@ -146,6 +147,9 @@ export function ConversationWorkbench({
   children,
 }: Readonly<{
   core: MarginceCoreState;
+  /** The board draws its own Core on this screen, so the room stands its own
+   * down rather than showing the reader two of the same object. */
+  coreHidden?: boolean;
   progress?: number;
   status: string;
   runtime?: AiRunSummary;
@@ -208,6 +212,7 @@ export function ConversationWorkbench({
         lit
         coreState={core}
         coreProgress={progress}
+        coreHidden={coreHidden}
         coreScale="work"
         anchor="start"
         coreStateLabel={status}
