@@ -80,6 +80,21 @@ describe("the day is one panel", () => {
     const lists = document.querySelectorAll("ol.worklist-list");
     expect(lists.length).toBe(1);
   });
+  // A clear day has no first row to put in hand, and asking for one must not
+  // draw an aside describing nothing.
+  it("draws no context pane on a day with no rows", async () => {
+    stub(
+      day({
+        queue: [],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+      }),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("complementary")).toBeNull();
+    });
+  });
 });
 
 describe("a task is finished where the reader is standing", () => {
