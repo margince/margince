@@ -43,11 +43,23 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	// rather than only the entry.
 	read := map[string]string{}
 
+	// The call sites whose entry expression this walk could not name at all.
+	// Kept rather than skipped: an entry the walk drops is one it agrees with,
+	// while ApplyTx refuses it at runtime — which is the defect this gate is
+	// for, one level up.
+	var unreadable []string
+
 	for _, file := range files {
 		pkg := ""
 		if file.Name != nil {
 			pkg = file.Name.Name
 		}
+		// The file's own import aliases, so a qualified entry resolves to the
+		// package that DECLARED it rather than to whatever this file happens to
+		// call that package. An alias is not exotic — the tree carries several —
+		// and an unresolved qualifier would land in the "declaration not found"
+		// arm below, which is precisely where a false negative could hide.
+		aliases := importAliases(file)
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch node := n.(type) {
 			case *ast.ValueSpec:
@@ -60,9 +72,12 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
 					return true
 				}
-				if entry := entryName(node.Args[2], pkg); entry != "" {
-					read[entry] = fset.Position(node.Pos()).String()
+				entry := entryName(node.Args[2], pkg, aliases)
+				if entry == "" {
+					unreadable = append(unreadable, fset.Position(node.Pos()).String())
+					return true
 				}
+				read[entry] = fset.Position(node.Pos()).String()
 			}
 			return true
 		})
@@ -81,14 +96,27 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 		t.Fatal("found no settings.Define declarations at all, so nothing below could have been judged")
 	}
 
+	for _, where := range unreadable {
+		t.Errorf("%s: this gate cannot name the entry passed to settings.ApplyTx here, so it cannot "+
+			"check that entry's declaration — and an entry it cannot check is one it agrees with, "+
+			"while ApplyTx refuses an undeclared one at runtime. Pass the entry as a plain "+
+			"identifier or a qualified one.", where)
+	}
+
 	for entry, where := range read {
 		isDeclared, found := declared[entry]
 		switch {
 		case !found:
-			// Not a failure: the call names an entry this walk did not resolve
-			// — a different package's, most often. Reported so the gate's reach
-			// is visible rather than silently narrower than it looks.
-			t.Logf("%s: %s is read through ApplyTx and its declaration was not found in this walk", where, entry)
+			// A FAILURE, not a note. This walk covers all of internal/, which is
+			// where every settings.Define lives, so an entry whose declaration
+			// it cannot find is one it did not resolve rather than one declared
+			// out of reach — and an unresolved entry is exactly the shape a
+			// false negative takes here: reported as "not found" while its
+			// machineryApplied is false and the send lane dies.
+			t.Errorf("%s reads %s through settings.ApplyTx and this walk found no settings.Define "+
+				"for it. Either the entry is declared outside internal/ — in which case this gate's "+
+				"reach is wrong and should say so — or the name was not resolved, and an entry this "+
+				"gate cannot resolve is one it silently passes.", where, entry)
 		case !isDeclared:
 			t.Errorf("%s reads %s through settings.ApplyTx, which refuses an entry not declared "+
 				"MachineryApplied — at runtime, inside the machinery. Declare it where it is defined, "+
@@ -143,14 +171,41 @@ func hasMachineryApplied(expr ast.Expr) bool {
 
 // entryName renders the entry argument as package.Name, resolving a bare
 // identifier against the file's own package.
-func entryName(expr ast.Expr, pkg string) string {
+func entryName(expr ast.Expr, pkg string, aliases map[string]string) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		return pkg + "." + e.Name
 	case *ast.SelectorExpr:
 		if qualifier, ok := e.X.(*ast.Ident); ok {
+			// Through the file's aliases, so `idp "…/identity"` names identity
+			// and not idp. An unaliased import maps to itself, so the ordinary
+			// case is unchanged.
+			if declaring, aliased := aliases[qualifier.Name]; aliased {
+				return declaring + "." + e.Sel.Name
+			}
 			return qualifier.Name + "." + e.Sel.Name
 		}
 	}
 	return ""
+}
+
+// importAliases maps the names a file refers to its imports BY onto the package
+// names those imports actually declare.
+//
+// The last path segment is the package name in this tree — the module layout
+// keeps the two the same, and a package whose name differed from its directory
+// would be caught by the "declaration not found" arm rather than passed.
+func importAliases(file *ast.File) map[string]string {
+	out := map[string]string{}
+	for _, spec := range file.Imports {
+		if spec.Name == nil || spec.Name.Name == "_" || spec.Name.Name == "." {
+			continue
+		}
+		path := strings.Trim(spec.Path.Value, `"`)
+		if at := strings.LastIndex(path, "/"); at >= 0 {
+			path = path[at+1:]
+		}
+		out[spec.Name.Name] = path
+	}
+	return out
 }
