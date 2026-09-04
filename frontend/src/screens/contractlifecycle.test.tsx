@@ -46,7 +46,7 @@ function show(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  return render(
     <QueryClientProvider client={client}>
       <LocaleProvider>{ui}</LocaleProvider>
     </QueryClientProvider>,
@@ -308,5 +308,44 @@ describe("ContractCancelModal", () => {
     );
 
     expect(posted).toBe(false);
+  });
+
+  // CodeRabbit (PR #4002): the reseed effect keyed on [open, contract] — the
+  // OBJECT reference. react-query hands back a new object on every refetch of
+  // the same row even when nothing the reader can see changed, so a
+  // background orgContracts refetch while this modal is open (another tab
+  // editing the same contract, a window-focus refetch) replaced `contract`
+  // and re-ran the effect, discarding whatever the reader had already typed.
+  // Keying on contract.id instead means a REFETCH of the same row leaves the
+  // draft alone; only a genuinely different row (or a fresh open) reseeds it.
+  it("keeps what the reader typed across a background refetch of the same row", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider>
+          <ContractCancelModal contract={PREDECESSOR} open onClose={() => {}} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByLabelText(/^Notice given/),
+      "2026-06-01",
+    );
+
+    // The SAME row, refetched: a new object, same id, a version bump — the
+    // exact shape a background orgContracts refetch hands back.
+    const refetched: Contract = { ...PREDECESSOR, version: 4 };
+    rerender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider>
+          <ContractCancelModal contract={refetched} open onClose={() => {}} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByLabelText(/^Notice given/)).toHaveValue("2026-06-01");
   });
 });

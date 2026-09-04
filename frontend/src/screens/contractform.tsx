@@ -101,12 +101,19 @@ export function ContractForm({
   // Re-seed when the modal opens on a DIFFERENT agreement. Without this the
   // form keeps the previous row's values, and a reader correcting the second
   // contract they clicked would be editing the first one's numbers.
+  //
+  // Keyed on the ID, never the CONTRACT OBJECT: react-query hands back a new
+  // object on every refetch of the same row even when nothing changed, and a
+  // background refetch while this form is open — another tab editing the same
+  // agreement, a window-focus refetch — would otherwise re-seed mid-edit and
+  // discard whatever the reader had already typed.
   useEffect(() => {
     if (open) {
       setDraft(draftOf(contract));
       setFile(undefined);
     }
-  }, [open, contract]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
+  }, [open, contract?.id]);
 
   // The draft is a VARIABLE, never a closure over render state: a click that
   // lands before React re-arms the mutation's options would otherwise submit

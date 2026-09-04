@@ -138,11 +138,17 @@ export function ContractRenewModal({
 
   // Re-seed on open, and when a different row's renewal is what just opened:
   // otherwise the form keeps the previous agreement's title and basis.
+  //
+  // Keyed on the ID, never the CONTRACT OBJECT: react-query hands back a new
+  // object on every refetch of the same row even when nothing changed, and a
+  // background refetch while this modal is open would otherwise re-seed
+  // mid-edit and discard whatever the reader had already typed.
   useEffect(() => {
     if (open) {
       setDraft(renewDraftOf(contract));
     }
-  }, [open, contract]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
+  }, [open, contract.id]);
 
   const renew = useMutation({
     mutationFn: async (submitted: {
@@ -235,11 +241,15 @@ export function ContractStatusModal({
     contract.status ?? "draft",
   );
 
+  // Keyed on the ID, never the CONTRACT OBJECT — see ContractRenewModal's
+  // identical comment: a background refetch of the SAME row must not discard
+  // a status the reader already picked.
   useEffect(() => {
     if (open) {
       setStatus(contract.status ?? "draft");
     }
-  }, [open, contract]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
+  }, [open, contract.id]);
 
   const assert = useMutation({
     mutationFn: async (submitted: {
@@ -343,12 +353,16 @@ export function ContractCancelModal({
   const [noticeOn, setNoticeOn] = useState("");
   const [effectiveOn, setEffectiveOn] = useState("");
 
+  // Keyed on the ID, never the CONTRACT OBJECT — see ContractRenewModal's
+  // identical comment: a background refetch of the SAME row must not discard
+  // dates the reader already typed.
   useEffect(() => {
     if (open) {
       setNoticeOn(contract.cancellation_notice_on ?? "");
       setEffectiveOn(contract.cancellation_effective_on ?? "");
     }
-  }, [open, contract]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
+  }, [open, contract.id]);
 
   const cancel = useMutation({
     mutationFn: async (submitted: {
