@@ -2116,31 +2116,35 @@ function CompanyRecordBody({
           refusal into reads that can only fail. */}
       {overlay && <OverlayFallback />}
       {!overlay && tab === "partner" && <PartnerTab organizationId={org.id} />}
-      {tab === "overview" && failed && (
-        <EmptyState>{t("co.partial")}</EmptyState>
-      )}
-      {/* What needs a person, before anything that merely reports state. It is
-          assembled from sections the page already read — open tasks, the
-          calendar, what changed since the last visit, the suggestions — put in
-          the order a rep works them, with facts, assessments and
-          recommendations labelled apart. */}
+      {/* The partial-read notice stands IN the overview's stack rather than
+          above it: the sentence and the column it qualifies are one body, and
+          on the record's own ground the notice's card met the first pane of
+          the stack at the border. */}
       {tab === "overview" && (
-        <CompanyOverviewStack
-          org={org}
-          view={view}
-          overlay={overlay}
-          loading={loading}
-          failed={failed}
-          readOnly={readOnly}
-          onAllDeals={() => onTab("deals")}
-          onOpenHistory={onOpenHistory}
-          onOpenTab={onTab}
-          onOpenRecord={receipt.open}
-          onOpenTasks={() => onTab("tasks")}
-          onPrepareMeeting={setPreparing}
-          onDraftTo={(id) => onCompose({ kind: "account", id })}
-          onPerform={onPerform}
-        />
+        <div className="record-stack">
+          {failed && <EmptyState>{t("co.partial")}</EmptyState>}
+          {/* What needs a person, before anything that merely reports state. It
+              is assembled from sections the page already read — open tasks, the
+              calendar, what changed since the last visit, the suggestions — put
+              in the order a rep works them, with facts, assessments and
+              recommendations labelled apart. */}
+          <CompanyOverviewStack
+            org={org}
+            view={view}
+            overlay={overlay}
+            loading={loading}
+            failed={failed}
+            readOnly={readOnly}
+            onAllDeals={() => onTab("deals")}
+            onOpenHistory={onOpenHistory}
+            onOpenTab={onTab}
+            onOpenRecord={receipt.open}
+            onOpenTasks={() => onTab("tasks")}
+            onPrepareMeeting={setPreparing}
+            onDraftTo={(id) => onCompose({ kind: "account", id })}
+            onPerform={onPerform}
+          />
+        </div>
       )}
       <PersonMeetingBrief
         activityId={preparing}
