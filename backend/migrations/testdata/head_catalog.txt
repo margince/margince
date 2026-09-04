@@ -43,6 +43,7 @@ public.activity.direction text gen=- def=-
 public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
+public.activity.has_calendar_part boolean gen=- def=-
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
 public.activity.is_done boolean NOT NULL gen=- def=false

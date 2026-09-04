@@ -71,8 +71,9 @@ func bodyText(plain, html string) string {
 
 // A calendar payload arrives by three routes: an unnamed inline part (the shape
 // Google sends), a named inline part, and a declared attachment. All three are
-// the same evidence — an invitation — so all three are read, and the two named
-// routes are read before the collector consumes the part.
+// the same evidence — an invitation — so all three set the flag AND hand their
+// bytes to the collector. The unnamed route did neither for the file until the
+// order in readInlinePart put the collector ahead of the body read.
 func isCalendarType(contentType string) bool {
 	return strings.HasPrefix(strings.ToLower(contentType), "text/calendar")
 }
@@ -111,7 +112,20 @@ func readInlinePart(
 		files.takeInline(inline, name, body)
 		return true
 	}
-	content, err := io.ReadAll(body)
+	// An UNNAMED calendar part is the invitation itself, and it goes to the
+	// collector before anything reads it. Handing it over after a read would
+	// hand over a spent reader, and the collector's bounds are the only ones
+	// that apply to a file — so the order here is what makes the part both kept
+	// and bounded.
+	//
+	// The name is ours because the sender supplied none. It is presentational
+	// only: the object key is generated, as Part.Filename says.
+	if isCalendarType(contentType) {
+		*calendar = true
+		files.takeInline(inline, unnamedCalendarFilename, body)
+		return true
+	}
+	content, err := readBounded(body)
 	if err != nil {
 		return false
 	}
@@ -120,8 +134,21 @@ func readInlinePart(
 		*plain = string(content)
 	case strings.HasPrefix(contentType, "text/html") && *html == "":
 		*html = string(content)
-	case isCalendarType(contentType):
-		*calendar = true
 	}
 	return true
+}
+
+// unnamedCalendarFilename names the invitation a sender rendered inline without
+// naming. Every client that sends this shape calls it the same thing.
+const unnamedCalendarFilename = "invite.ics"
+
+// readBounded reads one body part under the same per-part ceiling a file gets.
+//
+// An unnamed inline part is body text and never reaches the collector, so
+// nothing else bounds it: an unbounded read here lets one sender choose how
+// much memory a capture costs. Truncating rather than refusing keeps the body
+// a message actually carried — a 25 MiB text part is a hostile message, and the
+// first 25 MiB of it is more than enough to read.
+func readBounded(body io.Reader) ([]byte, error) {
+	return io.ReadAll(io.LimitReader(body, maxPartBytes))
 }
