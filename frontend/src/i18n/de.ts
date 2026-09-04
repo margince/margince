@@ -1518,6 +1518,14 @@ export const de = {
   "email.access.participants": "Beteiligte",
   "email.access.selected": "Ausgewählte",
   "email.access.withheld": "Zurückgehalten",
+  "email.access.sentence.team": "Alle im Unternehmen können das lesen.",
+  "email.access.sentence.participants":
+    "Nur die Beteiligten dieser Nachricht können sie lesen.",
+  "email.access.sentence.selected":
+    "Nur die unten genannten Personen können das lesen.",
+  "email.access.sentence.withheld":
+    "Diese Nachricht ist nicht für Sie freigegeben.",
+  "email.access.unnamedMember": "Jemand, der nicht mehr hier ist",
   "email.move.needsReply": "Antwort offen",
   "email.move.waitingForThem": "Warten auf Antwort",
   "email.detail.loading": "Nachricht wird geöffnet",
