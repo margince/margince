@@ -55,14 +55,14 @@ const CHECKED: VatCheck = {
 
 // The row as the rail draws it: the label, the value, the mark. The mark has to
 // sit on the value's own line without out-measuring it.
-function inRow(stated: string) {
+function inRow(stated: string, canAsk = true) {
   return (
     <StoryProviders locale="de">
       <div style={{ maxWidth: 340 }}>
         <span className="t-label">Register / USt-IdNr.</span>
         <div>
           {stated}
-          <VatMark orgId={ORG_ID} stated={stated} />
+          <VatMark orgId={ORG_ID} stated={stated} canAsk={canAsk} />
         </div>
       </div>
     </StoryProviders>
