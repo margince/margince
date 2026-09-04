@@ -276,7 +276,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// a reader accepts from a meeting. A promise a rep made is then real
 		// data the queue was still refusing to show.
 		attentionCommitments{store: people.NewStore(db)},
-		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays)},
+		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays), pool: pool},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},

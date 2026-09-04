@@ -151,12 +151,18 @@ func relationshipBand(bucket string) *crmcontracts.AttentionRelationshipFactsStr
 // dealFacts carries the at-risk deal's card facts onto the wire, or nothing:
 // a facts object with every field empty says less than its absence.
 func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
-	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil && deal.Currency == nil {
+	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil &&
+		deal.Currency == nil && deal.NoChampion == nil {
 		return nil
 	}
 	facts := &crmcontracts.AttentionDealFacts{
 		AmountMinor: deal.AmountMinor,
 		Currency:    deal.Currency,
+		// Carried through, not re-decided. The seam that read the committee
+		// already resolved the tri-state — a withheld or seatless read arrives
+		// absent — and a renderer that reapplied the rule would be a second
+		// judgement over a fact it cannot see the evidence for.
+		NoChampion: deal.NoChampion,
 	}
 	if deal.StageID != nil {
 		stage := openapi_types.UUID(*deal.StageID)
