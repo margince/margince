@@ -316,3 +316,53 @@ func (w *walkStore) Resume(
 	}
 	return walk, nil
 }
+
+// TestAWalkDoesNotSkipRowsWhenEarlierOnesAreDealtWith is the case the offset
+// resume gets wrong if it counts positions in a SHRINKING list.
+//
+// Page one covers the first three survivors and stops at offset three. Two of
+// those three are then answered. If offset three is read against the shortened
+// list it lands two rows further on than the reader ever got, and the rows in
+// between are skipped — silently, on a queue whose whole purpose is that work is
+// not forgotten.
+func TestAWalkDoesNotSkipRowsWhenEarlierOnesAreDealtWith(t *testing.T) {
+	t.Parallel()
+	walks := &walkStore{}
+	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
+
+	first := svc.worklistFrom(context.Background(), aDayOfTasks(8), scopeAll, "", 3,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	if len(first.Queue) != 3 || first.NextCursor == nil {
+		t.Fatalf("the first page drew %d rows, want three and a cursor", len(first.Queue))
+	}
+	served := map[string]bool{}
+	for _, row := range first.Queue {
+		served[row.Id] = true
+	}
+
+	// Two rows the reader has ALREADY seen are answered between pages.
+	thinner := aDayOfTasks(8)
+	kept := make([]crmcontracts.AttentionItem, 0, 6)
+	for _, task := range thinner.Planned {
+		if task.Id == "task-0" || task.Id == "task-1" {
+			continue
+		}
+		kept = append(kept, task)
+	}
+	thinner.Planned = kept
+
+	next := svc.worklistFrom(context.Background(), thinner, scopeAll, "", 10,
+		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor), nil)
+	for _, row := range next.Queue {
+		served[row.Id] = true
+	}
+
+	// Every row of the walk that still exists must have been served on one of
+	// the two pages. task-0 and task-1 are gone and are not owed.
+	for _, want := range []string{"task-2", "task-3", "task-4", "task-5", "task-6", "task-7"} {
+		if !served[want] {
+			t.Errorf("row %q was never served: the walk skipped it when earlier rows "+
+				"were dealt with between pages", want)
+		}
+	}
+}

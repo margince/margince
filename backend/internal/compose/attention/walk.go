@@ -67,29 +67,66 @@ func pageFrozenWalk(rows []ranked, limit int, cursor worklistCursor, walk workli
 	// frozen order rather than sorted again: re-ranking is exactly what this
 	// exists to avoid, and a comparator run over the survivors would reorder
 	// them the moment any input to it moved.
-	surviving := make([]ranked, 0, len(walk.Rows))
 	carried := make(map[worklistsnap.Row]bool, len(walk.Rows))
 	for _, at := range walk.Rows {
 		carried[at] = true
-		if row, here := live[at]; here {
-			surviving = append(surviving, row)
+	}
+	gone := 0
+	for _, at := range walk.Rows {
+		if _, here := live[at]; !here {
+			gone++
 		}
 	}
 	page := walkPage{
-		gone: len(walk.Rows) - len(surviving),
+		gone: gone,
 		// Everything this read holds that the walk does not. Counted over the
 		// whole live set rather than the page, because the question is how much
 		// a refresh would add to their day and not to their screen.
 		arrived: countArrived(rows, carried),
 	}
-	from := min(cursor.At, len(surviving))
-	surviving = surviving[from:]
-	if len(surviving) > limit {
-		page.shown, page.more, page.reached = surviving[:limit], true, from+limit
-		return page
+	// THE OFFSET COUNTS THE FROZEN LIST, never the surviving one, and this is
+	// the whole correctness of the resume.
+	//
+	// The frozen list does not change; the surviving one shrinks as work is
+	// dealt with. An offset read against the shorter list lands further into
+	// the walk than the reader ever got: page one covers the first three, two of
+	// those three are answered, and offset three now points two rows past where
+	// they stopped — skipping the rows in between, silently, on a queue whose
+	// whole purpose is that work is not forgotten. That was a real defect here
+	// and TestAWalkDoesNotSkipRowsWhenEarlierOnesAreDealtWith is what caught it.
+	//
+	// So the cursor is a position among the walk's OWN rows, and the rows that
+	// have gone are simply skipped as it walks past them.
+	from := min(cursor.At, len(walk.Rows))
+	shown := make([]ranked, 0, limit)
+	at := from
+	for ; at < len(walk.Rows) && len(shown) < limit; at++ {
+		if row, here := live[walk.Rows[at]]; here {
+			shown = append(shown, row)
+		}
 	}
-	page.shown, page.more, page.reached = surviving, false, from+len(surviving)
+	// Anything left in the frozen list past this page — rows still to serve, or
+	// only departed ones. Asked rather than inferred from the count: a tail made
+	// entirely of gone rows must not mint a cursor that answers empty.
+	page.shown, page.reached = shown, at
+	page.more = anyLive(walk.Rows[at:], live)
 	return page
+}
+
+// anyLive reports whether this tail of a walk still holds a servable row.
+//
+// The cut cannot be inferred from a count. A walk whose remaining rows have all
+// been dealt with has a non-empty tail and nothing to serve from it, and a
+// cursor minted there would invite one more request that can only answer
+// empty — the exact failure `next_cursor` documents as the one it must never
+// make wrongly.
+func anyLive(tail []worklistsnap.Row, live map[worklistsnap.Row]ranked) bool {
+	for _, at := range tail {
+		if _, here := live[at]; here {
+			return true
+		}
+	}
+	return false
 }
 
 // countArrived is how much of this read the walk never carried.
