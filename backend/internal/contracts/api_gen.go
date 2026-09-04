@@ -14239,6 +14239,30 @@ func (e ListDealsParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListDealsParamsForecastCategory.
+const (
+	ListDealsParamsForecastCategoryBestCase ListDealsParamsForecastCategory = "best_case"
+	ListDealsParamsForecastCategoryCommit   ListDealsParamsForecastCategory = "commit"
+	ListDealsParamsForecastCategoryOmitted  ListDealsParamsForecastCategory = "omitted"
+	ListDealsParamsForecastCategoryPipeline ListDealsParamsForecastCategory = "pipeline"
+)
+
+// Valid indicates whether the value is a known member of the ListDealsParamsForecastCategory enum.
+func (e ListDealsParamsForecastCategory) Valid() bool {
+	switch e {
+	case ListDealsParamsForecastCategoryBestCase:
+		return true
+	case ListDealsParamsForecastCategoryCommit:
+		return true
+	case ListDealsParamsForecastCategoryOmitted:
+		return true
+	case ListDealsParamsForecastCategoryPipeline:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListDealsParamsPartnerAttribution.
 const (
 	Influenced ListDealsParamsPartnerAttribution = "influenced"
@@ -15333,19 +15357,19 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
-	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
-	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
-	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	Dropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	Open    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
 )
 
 // Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
 func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
 	switch e {
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+	case Done:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+	case Dropped:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
+	case Open:
 		return true
 	default:
 		return false
@@ -34399,6 +34423,14 @@ type ListDealsParams struct {
 	OrganizationId *openapi_types.UUID    `form:"organization_id,omitempty" json:"organization_id,omitempty"`
 	Status         *ListDealsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// ForecastCategory One of the forecast's named buckets. The same `deal.forecast_category` the forecast
+	// reads, so a tile's figure and the list behind it are one answer rather than two
+	// derivations that can disagree.
+	//
+	// A deal carrying no category is in no bucket and is returned by none of the four —
+	// the buckets partition the CATEGORISED pipeline, not the pipeline.
+	ForecastCategory *ListDealsParamsForecastCategory `form:"forecast_category,omitempty" json:"forecast_category,omitempty"`
+
 	// Stalled Deterministic stalled flag (no activity past the threshold).
 	Stalled *bool `form:"stalled,omitempty" json:"stalled,omitempty"`
 
@@ -34430,6 +34462,9 @@ type ListDealsParams struct {
 
 // ListDealsParamsStatus defines parameters for ListDeals.
 type ListDealsParamsStatus string
+
+// ListDealsParamsForecastCategory defines parameters for ListDeals.
+type ListDealsParamsForecastCategory string
 
 // ListDealsParamsPartnerAttribution defines parameters for ListDeals.
 type ListDealsParamsPartnerAttribution string
@@ -59088,6 +59123,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "forecast_category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "forecast_category", r.URL.Query(), &params.ForecastCategory, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "forecast_category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "forecast_category", Err: err})
 		}
 		return
 	}

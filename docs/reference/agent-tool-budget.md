@@ -30,15 +30,15 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1621 | 6% | 15787 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2453 | 9% | 14955 | 15 | 8 |
-| _whole served catalog, for scale_ | 72 | 20865 | 84% | — | — | — |
+| `morning_brief` | 5 | 1634 | 6% | 15774 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2467 | 10% | 14941 | 15 | 8 |
+| _whole served catalog, for scale_ | 72 | 20878 | 84% | — | — | — |
 
 ### `morning_brief`
 
 > Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
 
-Attaches 5 tools for 1621 tokens, leaving 15787 of its budget and 22955 tokens of the
+Attaches 5 tools for 1634 tokens, leaving 15774 of its budget and 22942 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2453 tokens, leaving 14955 of its budget and 22123 tokens of the
+Attaches 7 tools for 2467 tokens, leaving 14941 of its budget and 22109 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -144,8 +144,8 @@ a term in an addition.
 | `log_activity` | 635 | 1 scenario |
 | `send_email` | 588 | 1 scenario |
 | `update_record` | 572 | 4 scenarios |
+| `list_records` | 508 | — |
 | `resolve_entities` | 498 | — |
-| `list_records` | 494 | — |
 | `query_workspace` | 484 | 3 scenarios |
 | `advance_deal` | 443 | 1 scenario |
 | `send_message` | 431 | — |

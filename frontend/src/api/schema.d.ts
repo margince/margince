@@ -33378,6 +33378,15 @@ export interface operations {
                 owner_id?: string;
                 organization_id?: string;
                 status?: "open" | "won" | "lost";
+                /**
+                 * @description One of the forecast's named buckets. The same `deal.forecast_category` the forecast
+                 *     reads, so a tile's figure and the list behind it are one answer rather than two
+                 *     derivations that can disagree.
+                 *
+                 *     A deal carrying no category is in no bucket and is returned by none of the four —
+                 *     the buckets partition the CATEGORISED pipeline, not the pipeline.
+                 */
+                forecast_category?: "commit" | "best_case" | "pipeline" | "omitted";
                 /** @description Deterministic stalled flag (no activity past the threshold). */
                 stalled?: boolean;
                 /** @description Filter to the deals belonging to one body of work. */
