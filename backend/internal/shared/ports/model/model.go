@@ -350,12 +350,20 @@ type Capabilities struct {
 // and treats a client that does not implement it as "this vendor does not
 // publish a list" rather than as a failure.
 //
-// It answers AVAILABILITY, never price. Only a broker (OpenRouter) publishes
-// per-model prices on the same endpoint; the native vendors put theirs on an
-// HTML page, which is why the price sheet is its own effective-dated record and
-// stays the authority on cost. A model listed here that the sheet cannot price
-// is bindable and reports UNPRICED — that is honest, and it is the reason the
-// two must not be folded into one read.
+// It answers AVAILABILITY, never price. A broker (OpenRouter) publishes
+// per-model prices on the same wire endpoint this reads; the native vendors
+// put theirs on an HTML page. Either way this interface drops it: the price
+// sheet is its own effective-dated record and stays the authority on cost for
+// anything reached through a stored binding, so a second price arriving by
+// this route would be two answers that drift the first time either moves. A
+// model listed here that the sheet cannot price is bindable and reports
+// UNPRICED — that is honest.
+//
+// `ai`'s unauthenticated, unbound OpenRouter read (asked by provider name,
+// never through a Lister) folds a vendor's own price in anyway: it has no
+// stored binding to protect and no sheet row to contradict yet, so its price
+// rides beside the sheet's, always labelled PROPOSED and never confused with
+// a recorded rate.
 type Lister interface {
 	// ListModels reports what the vendor serves, newest first where the vendor
 	// dates its models and in the vendor's own order where it does not.
@@ -369,6 +377,15 @@ type Lister interface {
 // field only some of them fill is one the caller cannot rely on. What every
 // list endpoint agrees on is an id, and what a picker needs is that id plus
 // enough to sort and label it.
+//
+// A caller that needs more than this asks a wider question than Lister
+// answers: `ai.AvailableModel` embeds Info and adds the price and rank-score
+// fields the one unauthenticated broker read (OpenRouter, by provider name)
+// can honestly state. That type lives beside its own caller rather than
+// widening this one, because every OTHER vendor's Lister still cannot fill
+// those fields — and a Lister that returned them anyway would have nothing
+// but a zero value to put there, which reads as an answer rather than as
+// silence.
 type Info struct {
 	// ID is the string a binding names, exactly as the vendor spells it.
 	ID string

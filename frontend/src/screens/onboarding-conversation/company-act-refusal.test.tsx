@@ -137,53 +137,47 @@ function renderReview(routes: RouteMap): void {
   );
 }
 
-// The two panes by name, so every assertion below is about WHICH of them a
-// sentence landed on. Throwing rather than asserting: a missing pane means the
-// shell never rendered, and every case after it would report the wrong failure.
-function pane(selector: string): HTMLElement {
-  const found = document.querySelector<HTMLElement>(selector);
+// The one work surface, by name, so every assertion below is about the
+// notice actually landing on it. Throwing rather than asserting: a missing
+// pane means the stage never rendered, and every case after it would report
+// the wrong failure.
+//
+// There is no second pane to compare against any more — the conversation
+// rail this file used to check a refusal was ABSENT from does not render in
+// onboarding at all (OnboardingStage is one room, not two), so the surface
+// is the only place a refusal could ever appear.
+function surface(): HTMLElement {
+  const found = document.querySelector<HTMLElement>(".ob-conv-artifact");
   if (found === null) {
-    throw new Error(`the conversation shell rendered no ${selector}`);
+    throw new Error("the conversation stage rendered no .ob-conv-artifact");
   }
   return found;
 }
 
-/** The work surface: the review board and the Continue it carries. */
-function surface(): HTMLElement {
-  return pane(".mw-artifact");
-}
-
-/** The conversation rail: narration and history, and a scroller. */
-function rail(): HTMLElement {
-  return pane(".mw-thread");
-}
-
-async function pressContinue(): Promise<HTMLElement> {
-  const button = await screen.findByRole("button", { name: /Continue/ });
+async function pressConfirm(): Promise<HTMLElement> {
+  const button = await screen.findByRole("button", {
+    name: "Confirm the profile",
+  });
   expect(button).toBeEnabled();
   fireEvent.click(button);
   return button;
 }
 
-it("says on the work surface, not in the rail, that the server refused the press", async () => {
+it("says on the work surface that the server refused the press", async () => {
   renderReview({
     [CONFIRM_PATH]: () =>
       jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
   });
 
-  await pressContinue();
+  await pressConfirm();
 
   const notice = await within(surface()).findByText(
     en["ob.conv.review.confirmNotReady"],
   );
-  // Once, and on the pane that carries the button. A second copy in the rail
-  // would leave the reader deciding which of the two is about their press.
+  // Once, on the one surface there is.
   expect(
     screen.getAllByText(en["ob.conv.review.confirmNotReady"]),
   ).toHaveLength(1);
-  expect(
-    within(rail()).queryByText(en["ob.conv.review.confirmNotReady"]),
-  ).toBeNull();
   // A DIRECT child of the pane's own surface, because that is what pins it:
   // conversation.css sticks `.ob-conv-artifact > .ob-conv-refusal` to the pane's
   // head, and a selector that quietly stops matching would leave the notice
@@ -203,20 +197,19 @@ it("puts the one look that could end the refusal on the same surface as the refu
       jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
   });
 
-  await pressContinue();
+  await pressConfirm();
 
   await within(surface()).findByText(en["ob.conv.review.confirmNotReady"]);
-  // Continue is blocked here, so the re-check IS the route forward — it may
-  // not sit one pane away from the sentence that tells the reader to take it.
+  // Confirm is blocked here, so the re-check IS the route forward — it has
+  // to sit right beside the sentence that tells the reader to take it.
   expect(
     await within(surface()).findByRole("button", { name: "Retry" }),
   ).toBeInTheDocument();
-  expect(within(rail()).queryByRole("button", { name: "Retry" })).toBeNull();
 });
 
-it("keeps the skew sentence on the surface after the refetch re-arms Continue", async () => {
+it("keeps the skew sentence on the surface after the refetch re-arms Confirm", async () => {
   // The whole race in the field report: the refetch lands a genuinely newer
-  // draft, Continue becomes safe to press again, and the reader still has to
+  // draft, Confirm becomes safe to press again, and the reader still has to
   // be able to see why their first press did nothing.
   let proposalCalls = 0;
   renderReview({
@@ -230,7 +223,7 @@ it("keeps the skew sentence on the surface after the refetch re-arms Continue", 
       jsonResponse({ title: "conflict", code: "version_skew" }, 409),
   });
 
-  const button = await pressContinue();
+  const button = await pressConfirm();
 
   await within(surface()).findByText(en["ob.conv.review.confirmVersionSkew"]);
   await waitFor(() => expect(button).toBeEnabled());

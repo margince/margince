@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { mockApi } from "./seed";
+import { textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -726,9 +727,11 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   await expect(slot).toBeDisabled();
   await page.getByRole("checkbox").check();
   await expect(slot).toBeEnabled();
-  const shownWording = await page
-    .locator("[data-consent-wording]")
-    .textContent();
+  const wording = page.locator("[data-consent-wording]");
+  // The assert above waited on the SLOT; this is a different element, and a
+  // bare textContent would answer null on the tick before it paints.
+  await expect(wording).toBeVisible();
+  const shownWording = await wording.textContent();
   const requestPromise = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -742,7 +745,7 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   expect(body.consent.purpose_id).toBeTruthy();
   expect(body.consent.policy_version).toBeTruthy();
   await expect(
-    page.getByText("Gebucht. Die Einladung ist unterwegs."),
+    page.getByText("Gebucht."),
   ).toBeVisible();
 });
 
@@ -763,7 +766,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
   ).toBeVisible();
   await expect(page.getByText("slot no longer available")).toBeVisible();
   await expect(
-    page.getByText("Gebucht. Die Einladung ist unterwegs."),
+    page.getByText("Gebucht."),
   ).toHaveCount(0);
 });
 
@@ -818,10 +821,9 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   // The choices exist only while the popup is open, and the popup is portalled
   // to the body — so it is located from the page, not from inside the dialog.
   await stageSelect.click();
-  const stageNames = await page
-    .locator('[role="listbox"]')
-    .getByRole("option")
-    .allTextContents();
+  const stageNames = await textsOf(
+    page.locator('[role="listbox"]').getByRole("option"),
+  );
   expect(stageNames.filter(Boolean)).toEqual([
     "Qualify",
     "Proposal",
@@ -1948,20 +1950,16 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
   // viewport it actually produces — a 1280x800 window at 200% presents 640x400 —
   // because that is what the layout sees; deviceScaleFactor would change the
   // pixel ratio and nothing about the breakpoints.
-  // `identity` is whether the identity REGION is part of the surface at that
-  // width. Below 561px it is not: the phone layout is the task alone — the
-  // region goes, and the Core goes with it (see the ≤560 block in auth.css),
-  // because on a phone the form is the only thing the screen is for. That is a
-  // deliberate reversal of Decision 1 for phones only, and this suite is the
-  // record of it: pinned here rather than left to drift, because the alternative
-  // is a suite that still forbids the shipped design.
+  // The identity region is part of the surface at EVERY width: the sign-in is
+  // one centred column, and the Core and its sentences are what the surface is
+  // for, so no phone layout drops them.
   const NARROW = [
-    { label: "390px mobile", width: 390, height: 844, identity: false },
-    { label: "320px narrow", width: 320, height: 568, identity: false },
-    { label: "200% zoom", width: 640, height: 400, identity: true },
+    { label: "390px mobile", width: 390, height: 844 },
+    { label: "320px narrow", width: 320, height: 568 },
+    { label: "200% zoom", width: 640, height: 400 },
   ] as const;
 
-  for (const { label, width, height, identity } of NARROW) {
+  for (const { label, width, height } of NARROW) {
     test.describe(label, () => {
       test.use({ viewport: { width, height } });
 
@@ -2009,87 +2007,75 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
         expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
       });
 
-      // Where the region IS part of the surface, it shows all of itself: not one
-      // of its rows may be dropped or clipped to fit (ADR-0076 Decision 6, and
-      // two earlier implementations dropped rows with `display: none`). Presence
-      // AND rendered height, because a node that is CSS-visible inside a
-      // container hiding its overflow still passes `toBeVisible` while measuring
-      // nothing — which is exactly how the copy came to be cut off at this width
-      // once already.
-      //
-      // Where it is NOT — the phone layout — the region is absent by design and
-      // what remains is the task alone: no aside, no sphere, and no second copy
-      // of the region's copy either. The phone surface is the form (founder
-      // ruling, 2026-08-07): the disclosure the aside makes is a property of the
-      // region, and at this width the region is not on the screen for it to be a
-      // property of.
+      // The region shows all of itself: not one of its rows may be dropped or
+      // clipped to fit (ADR-0076 Decision 6, and two earlier implementations
+      // dropped rows with `display: none`). Presence AND rendered height,
+      // because a node that is CSS-visible inside a container hiding its
+      // overflow still passes `toBeVisible` while measuring nothing — which is
+      // exactly how the copy came to be cut off at a narrow width once already.
       //
       // Named ROW BY ROW rather than counted: the copy is one paragraph in one
       // voice, so a row missing from the middle of it is a sentence the system
-      // stopped saying, and a count would pass on any six elements.
-      const identityRows = [
-        ".auth-kicker",
-        ".auth-statement",
-        ".auth-purpose",
-        ".auth-scope",
-        ".auth-promise",
-        ".auth-handover",
-      ];
+      // stopped saying, and a count would pass on any two elements.
+      //
+      // Two rows, since the surface stopped making claims about itself: the
+      // greeting and the one line about what the product is for. The kicker,
+      // the send promise and the handover line were removed with the AI
+      // posture readout they belonged to.
+      const identityRows = [".auth-statement", ".auth-purpose"];
 
-      test("shows the identity region whole, or not at all", async ({
-        page,
-      }) => {
+      test("shows the identity region whole", async ({ page }) => {
         await page.goto("/");
-        const region = page.locator("aside.auth-identity");
-        if (identity) {
-          await expect(region).toBeVisible();
-          for (const row of identityRows) {
-            const line = page.locator(row);
-            await expect(line).toHaveCount(1);
-            await expect(line).toBeVisible();
-            const box = await line.boundingBox();
-            expect(box?.height ?? 0).toBeGreaterThan(0);
-          }
-        } else {
-          await expect(region).toBeHidden();
-          // Hidden, not merely present: the sphere is drawn by the same markup at
-          // every width, so a count would pass on a Core the phone layout still
-          // shows — which is the thing this width is supposed to be free of.
-          await expect(page.locator("[data-core-state]")).toBeHidden();
-          // NONE of the region's copy survives either, named part by part: the
-          // region hides as one box, so a future rule that lifted a line of it
-          // back into the task column would leave this width claiming to be the
-          // form alone while a sentence about the AI sat above the fields.
-          for (const row of identityRows) {
-            await expect(page.locator(row)).toBeHidden();
-          }
-          // The class, not the tag: `RaillessFrame` already wraps every
-          // rail-less screen in a `<main>`, so the task region is a `<div>` —
-          // a second `<main>` here would be an invalid, duplicate landmark.
-          await expect(page.locator(".auth-task")).toBeVisible();
+        await expect(page.locator(".auth-identity")).toBeVisible();
+        for (const row of identityRows) {
+          const line = page.locator(row);
+          await expect(line).toHaveCount(1);
+          await expect(line).toBeVisible();
+          const box = await line.boundingBox();
+          expect(box?.height ?? 0).toBeGreaterThan(0);
         }
+        // The class, not the tag: `RaillessFrame` already wraps every
+        // rail-less screen in a `<main>`, so the task region is a `<div>` —
+        // a second `<main>` here would be an invalid, duplicate landmark.
+        await expect(page.locator(".auth-task")).toBeVisible();
       });
     });
   }
 
-  // Stacked below 960px, and the task comes FIRST — visually as well as in the
-  // DOM, because at this width there is no second column for `order` to move.
-  test("stacks the task region above the identity region below 960px", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 720, height: 900 });
-    await page.goto("/");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
-    ).toBeVisible();
-    // The class, not the tag: see the note beside the other `.auth-task`
-    // locator above — one `<main>` per screen, and it belongs to the frame.
-    const task = await page.locator(".auth-task").boundingBox();
-    const identity = await page.locator("aside.auth-identity").boundingBox();
-    expect(task).not.toBeNull();
-    expect(identity).not.toBeNull();
-    expect(task?.y ?? 0).toBeLessThan(identity?.y ?? 0);
-  });
+  // One column at every width, the identity region ABOVE the task on screen
+  // while the task stays FIRST in the DOM (Decision 1): `order` is what puts
+  // the Core over the form, so a reading order that starts at the form and a
+  // picture that starts at the Core are the same markup.
+  for (const width of [390, 720, 1280]) {
+    test(`puts the identity region above the task at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
+      ).toBeAttached();
+      // The class, not the tag: see the note beside the other `.auth-task`
+      // locator above — one `<main>` per screen, and it belongs to the frame.
+      const task = page.locator(".auth-task");
+      const identity = page.locator(".auth-identity");
+      await expect(task).toBeVisible();
+      await expect(identity).toBeVisible();
+      const taskBox = await task.boundingBox();
+      const identityBox = await identity.boundingBox();
+      expect(identityBox?.y ?? 0).toBeLessThan(taskBox?.y ?? 0);
+      const order = await page.evaluate(() => {
+        const first = document.querySelector(".auth-task");
+        const second = document.querySelector(".auth-identity");
+        return first && second
+          ? (first.compareDocumentPosition(second) &
+              Node.DOCUMENT_POSITION_FOLLOWING) !==
+              0
+          : false;
+      });
+      expect(order).toBe(true);
+    });
+  }
 
   // §6.4 / §12: one h1, and it is the TASK. A surface whose h1 is the system
   // talking and whose h2 is "sign in" has inverted its own hierarchy — and the
@@ -2297,7 +2283,7 @@ test.describe("filters and views", () => {
     // is an EXISTS over a join rather than a column, and none of them is
     // spelled anywhere in the frontend.
     await page.getByRole("combobox", { name: "Feld" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "owner id",
       "industry",
       "lifecycle",
@@ -2311,7 +2297,7 @@ test.describe("filters and views", () => {
     // And the operator set is the FIELD's. `industry` is text, so `enthält` is
     // offered; the tag clause in AC-4 proves the narrowing by its absence.
     await page.getByRole("combobox", { name: "Operator" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist eines von",
@@ -2350,7 +2336,7 @@ test.describe("filters and views", () => {
     // `enthält` does not. A picker that offered a fixed set here would produce
     // a 422 the reader could not interpret.
     await page.getByRole("combobox", { name: "Operator" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist größer als",
@@ -2392,7 +2378,7 @@ test.describe("filters and views", () => {
     await page.getByRole("combobox", { name: "Feld" }).first().click();
     await page.getByRole("option", { name: "tag" }).click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist eines von",
@@ -2453,17 +2439,18 @@ test.describe("filters and views", () => {
       objects.getByRole("button", { name: "Geschäfte", pressed: true }),
     ).toBeVisible();
 
-    // "Kontakte", not "Personen": these tabs read `filters.tab.contacts`,
-    // which is a different key from the nav's and is not one the People ruling
-    // moved. Noted on the ticket as a surface its inventory did not reach.
-    await objects.getByRole("button", { name: "Kontakte" }).click();
+    // "Personen": `filters.tab.contacts` is a different KEY from the nav's,
+    // which is why it was read as out of the People ruling's reach — but the
+    // key is not the word, and the catalog moved this one too. The tab says
+    // what every other surface says.
+    await objects.getByRole("button", { name: "Personen" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
     await expect(
-      objects.getByRole("button", { name: "Kontakte", pressed: true }),
+      objects.getByRole("button", { name: "Personen", pressed: true }),
     ).toBeVisible();
   });
 });

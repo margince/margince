@@ -108,6 +108,18 @@ var workspaceLevelEntities = map[string]struct{}{
 	// list is for. A run keyed to an owner would also be a lie about what was
 	// checked.
 	"assurance_run": {},
+	// The two lead vocabularies, for the reason pipeline and stage are here:
+	// they are workspace configuration an admin edits, not a record anybody
+	// owns a slice of. There is no per-owner scope to probe — every seat that
+	// can see a lead sees the same source list and the same disqualification
+	// reasons, because those are the values the leads themselves carry.
+	//
+	// The payload names the entry (key, label) rather than staying a bare ref,
+	// which pipeline.created already does with its name and stage set: a
+	// catalog entry's own name is not somebody's record, and after `deleted`
+	// it is the only thing that identifies what went away.
+	"lead_source":            {},
+	"lead_disqualify_reason": {},
 }
 
 // deferredDeliveryEvents are subscribable events whose subject cannot be

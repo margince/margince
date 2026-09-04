@@ -27,7 +27,15 @@ func buildReportWhere(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, req reportRequest,
 	requested RequestedScope, arg func(any) int,
 ) ([]string, error) {
-	where := []string{spec.baseWhere}
+	// A spec may restrict nothing: leads-by-status counts every lead whatever
+	// its status, because the archived ones ARE its subject. An empty base
+	// joined in with the rest would render `WHERE  AND …`, so the absence is
+	// dropped here rather than paid for with a `TRUE` in every such spec — a
+	// spec should not have to spell a no-op to say it has no restriction.
+	var where []string
+	if spec.baseWhere != "" {
+		where = append(where, spec.baseWhere)
+	}
 	// Deterministic filter order — the plan echo and the SQL must not
 	// depend on map iteration.
 	filterKeys := make([]string, 0, len(req.Filters))

@@ -1,0 +1,58 @@
+/* The read's own picture. It takes a band of the board rather than a box: a
+   bordered panel would make the graph a widget, and this is the screen's
+   subject while a read runs. */
+.crawl-canvas {
+  /* The picture's three colours, named here so the canvas can read them off
+     its own element. A 2D context cannot resolve `var()`, so the alternative
+     is literals in the TypeScript, which is the one thing ADR-0040 forbids and
+     also the thing that would stop the graph following the theme. */
+  --crawl-ink: var(--ai);
+  /* The STRONG border. A link between two pages is the picture's only structure
+     and at `--borderSubtle` on this ground it was not visible at all, leaving a
+     scatter of dots with nothing joining them. */
+  --crawl-edge: var(--borderStrong);
+  --crawl-rest: var(--textTertiary);
+  display: block;
+  width: 100%;
+  /* A picture, not a panorama: past this the two rings sit so far apart that
+     the tree reads as unrelated dots at opposite ends of the room. The cap was
+     44rem against a stage inset from the viewport on both sides; the stage now
+     reaches the edge, and the same cap left a third of the tile empty to the
+     right of the drawing. Raised with the height, so the picture keeps roughly
+     the proportion it was tuned at rather than stretching. */
+  max-width: 60rem;
+  height: 210px;
+  /* Any slack left over on a very wide window falls on both sides rather than
+     all of it on the right. */
+  margin-inline: auto;
+}
+
+/*
+ * The evidence crossing the room, on its own layer over everything.
+ *
+ * FIXED TO THE VIEWPORT, which is the only frame both ends of the journey can
+ * be measured in: the graph is a box on the board and the Core is placed
+ * against the stage, and a canvas clips at its own edges, so motes drawn in the
+ * graph's own layer stopped dead at its border instead of arriving anywhere.
+ * Being fixed also means a scroll needs no correction: both rects it reads are
+ * viewport-relative too.
+ *
+ * It never takes a click and never takes a colour of its own. `z-index` sits
+ * under the app's own layered surfaces so this can never cover a dialog.
+ */
+.crawl-motes {
+  position: fixed;
+  inset: 0;
+  /* BOTH dimensions, stated. A canvas is a replaced element, and for one that
+     is positioned, `inset: 0` does not stretch it: its intrinsic size wins and
+     the far edges are simply dropped. Its intrinsic size is its pixel buffer,
+     and the frame loop sets that buffer FROM the box it measures, times the
+     device pixel ratio — so without these two lines a retina screen doubled the
+     layer every frame until the page was one white canvas. At a ratio of one
+     the same loop is a fixed point, which is why it never showed on a headless
+     run. */
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}

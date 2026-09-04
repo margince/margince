@@ -18,6 +18,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
+import { excerptLines } from "./voice-excerpts";
 
 // The voice corpus of the conversational shell as one hook: intake (files
 // and pasted text), the preview probe that decides what a source honestly
@@ -40,6 +41,10 @@ export type CorpusManifestEntry = Readonly<{
   inputWords: number;
   /** Kept-of-total is shown only where filtering actually discarded turns. */
   transcript: boolean;
+  /** Sentences of the reader's own prose, for the distilling panel to read
+   * back. Empty for a transcript: its text carries other speakers' turns, and
+   * which words are the reader's is decided on the server, not here. */
+  lines: readonly string[];
 }>;
 
 type SpeakerAsk = Readonly<{
@@ -47,6 +52,16 @@ type SpeakerAsk = Readonly<{
   label: string;
   content: string;
   preview: CorpusPreview;
+}>;
+
+/** What the board shows beside itself when a source could not be added: a
+ * server refusal, a safe ingest-failed detail, or the unexpected-client-bug
+ * fallback. The thread these used to narrate into is gone with the chat
+ * rail, so this is now the only surface a reader sees the refusal on. */
+export type VoiceIngestFailure = Readonly<{
+  id: string;
+  i18nKey: MessageKey;
+  params?: Record<string, string>;
 }>;
 
 type UseVoiceCorpusArgs = Readonly<{
@@ -95,6 +110,7 @@ export function useVoiceCorpus({
   const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>([]);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
+  const [failure, setFailure] = useState<VoiceIngestFailure | null>(null);
   const summaryRef = useRef<CorpusSummary | null>(initialSummary);
   const mounted = useRef(true);
   useEffect(() => {
@@ -134,6 +150,7 @@ export function useVoiceCorpus({
     (id: string, err: unknown) => {
       console.error("voice corpus ingest failed unexpectedly", err);
       say(id, "ob.conv.voice.ingestUnexpected");
+      setFailure({ id, i18nKey: "ob.conv.voice.ingestUnexpected" });
     },
     [say],
   );
@@ -191,9 +208,16 @@ export function useVoiceCorpus({
         return;
       }
       if (outcome.kind === "refused") {
-        dispatch({
-          type: "NARRATION",
-          entry: refusalEntry(outcome.ref, outcome.reason, outcome.problem),
+        const entry = refusalEntry(
+          outcome.ref,
+          outcome.reason,
+          outcome.problem,
+        );
+        dispatch({ type: "NARRATION", entry });
+        setFailure({
+          id: entry.id,
+          i18nKey: entry.i18nKey,
+          params: entry.params,
         });
         return;
       }
@@ -219,6 +243,7 @@ export function useVoiceCorpus({
           keptWords: outcome.stats.kept_words,
           inputWords: outcome.stats.input_words,
           transcript: outcome.transcript,
+          lines: outcome.transcript ? [] : excerptLines(outcome.content),
         },
         outcome.stats,
         outcome.summary,
@@ -243,6 +268,7 @@ export function useVoiceCorpus({
       failureId: string,
     ): void => {
       setProbesInFlight((count) => count + 1);
+      setFailure(null);
       let seq = 0;
       start(() => {
         ingestSeq.current += 1;
@@ -381,5 +407,8 @@ export function useVoiceCorpus({
     /** True while any probe, ingest, or speaker question is still open —
      * a build starting now would misrepresent what the voice is made of. */
     busy: probesInFlight > 0 || asks.length > 0,
+    /** The most recent source the corpus could not add; cleared the moment
+     * a new attempt starts. */
+    failure,
   };
 }

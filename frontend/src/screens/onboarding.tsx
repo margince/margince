@@ -19,7 +19,6 @@ import type { MessageKey } from "../i18n/en";
 
 // The wizard-state step names the server contract pins; an index past the
 // last one means the journey is complete.
-const STEP_KEYS = ["read", "voice", "results", "connect"] as const;
 
 // The facts endpoint accepts at most this many selected keys; preselecting
 // more than the API takes would make the default state unsubmittable.
@@ -375,7 +374,7 @@ export async function writeWizardState(body: PutOnboardingState) {
 
 export function wizardStateBody(input: {
   expectedVersion: number;
-  nextStep: number;
+  step: PutOnboardingState["step"];
   mode: SourceMode | null;
   readID: string | null;
   norm: { ok: boolean; full: string };
@@ -387,7 +386,7 @@ export function wizardStateBody(input: {
   const websiteMode = input.mode === "website";
   return {
     expected_version: input.expectedVersion,
-    step: STEP_KEYS[input.nextStep] ?? "complete",
+    step: input.step,
     source_mode: input.mode,
     website_url: websiteMode && input.norm.ok ? input.norm.full : null,
     site_read_id: websiteMode ? input.readID : null,

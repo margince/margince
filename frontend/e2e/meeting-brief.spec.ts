@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { type MockApiOptions, mockApi } from "./seed";
+import { itemsOf, textsOf } from "./waits";
 
 // The meeting brief a rep opens two minutes before a room.
 //
@@ -228,9 +229,13 @@ test.describe("with a preparation plan", () => {
     page,
   }) => {
     await openBrief(page, { meetingBrief: "plan" });
-    const legs = await page.locator(".mb-advance > *").all();
-    expect(legs).toHaveLength(3);
-    const boxes = await Promise.all(legs.map((leg) => leg.boundingBox()));
+    const legs = page.locator(".mb-advance > *");
+    // toHaveCount waits; a bare all() answers [] on a drawer whose frame has
+    // painted and whose body has not, and reports three missing legs.
+    await expect(legs).toHaveCount(3);
+    const boxes = await Promise.all(
+      (await itemsOf(legs)).map((leg) => leg.boundingBox()),
+    );
     const [first, second, third] = boxes.map(
       (box) => box as NonNullable<typeof box>,
     );
@@ -274,9 +279,7 @@ test.describe("for a lead reading a teammate's meeting", () => {
         .getByRole("button", { name: copy("person.meeting.brief") })
         .click();
       await expect(own.locator(DRAWER)).toBeVisible();
-      const headings = await own
-        .locator(".modal-drawer-wide h3")
-        .allTextContents();
+      const headings = await textsOf(own.locator(".modal-drawer-wide h3"));
       await own.close();
       return headings;
     };
@@ -330,8 +333,11 @@ test.describe("on a phone", () => {
     page,
   }) => {
     await openBrief(page, { meetingBrief: "plan" });
-    const legs = await page.locator(".mb-advance > *").all();
-    const boxes = await Promise.all(legs.map((leg) => leg.boundingBox()));
+    const legs = page.locator(".mb-advance > *");
+    await expect(legs).toHaveCount(3);
+    const boxes = await Promise.all(
+      (await itemsOf(legs)).map((leg) => leg.boundingBox()),
+    );
     const ys = boxes.map((box) => (box as NonNullable<typeof box>).y);
     // Strictly increasing: three columns in 390px would be 110px each, which is
     // a column of broken words rather than a plan.

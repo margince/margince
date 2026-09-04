@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -139,7 +140,14 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// without a restart. Always wired, including on an installation that has
 	// bound nothing — an operator binding models for the first time reaches it
 	// through the same surface as one re-pointing a lane.
-	s.aiRoutingHandlers = aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS)}
+	//
+	// WithCatalogue wires the public OpenRouter model read unconditionally: it
+	// needs no tenant credential, so there is no "no provider connected"
+	// configuration to honor here.
+	s.aiRoutingHandlers = aiRoutingHandlers{
+		store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).
+			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
+	}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a
@@ -283,4 +291,25 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// other write on this server does.
 	s.wireReversal(pool)
 	s.wireProject360(pool)
+}
+
+// newConsentHandlers binds the consent surface to the four edges it cannot
+// reach for itself.
+//
+// DSR fulfillment executes privacy's erase path, and the subject-access export
+// assembles rows from every module that holds them — injected here so consent
+// never imports a sibling.
+//
+// The guard endpoint previews the same verdict the send path takes, so it
+// resolves the same jurisdiction windows. Without the country seam it would
+// answer on the core defaults while a pack shortened the real ones, and tell a
+// rep a send is allowed that the engine then refuses.
+func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
+	return consent.NewHandlers(InstallationDB(pool)).
+		WithEraser(privacy.NewEraser(InstallationDB(pool))).
+		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
+		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
+			return identity.InstallationNameForPublicPage(ctx, pool)
+		})).
+		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))
 }

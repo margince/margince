@@ -20,9 +20,12 @@ import (
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
 	// configuredProviders carries the external sign-in providers this DEPLOYMENT
-	// holds credentials for, injected by the option that wires them. Empty is
-	// the honest answer for a deployment that composed none, and the screen then
-	// offers nothing to toggle rather than a list nobody can use.
+	// mounted, injected by the option that wires them. Empty is the honest
+	// answer for a deployment that composed none, and the screen then offers
+	// nothing to toggle rather than a list nobody can use. A mounted provider
+	// whose client is not there yet — no app stored and none in the
+	// environment — is still listed: the app card on the same screen is where
+	// it is made to work, and the login screen withholds it until then.
 	configuredProviders []identity.OIDCProviderConfig
 	// maxUploadBytes is the deployment's attachment ceiling (OPS-CFG-12),
 	// published so an upload surface enforces the number THIS installation

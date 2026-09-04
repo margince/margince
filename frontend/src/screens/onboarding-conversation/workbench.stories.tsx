@@ -12,14 +12,13 @@ import {
   StoryProviders,
 } from "../story-utils";
 import { initialConversationState } from "./conversation-machine";
-import type { ConversationState, ThreadEntry } from "./conversation-types";
-import { ConversationThread } from "./thread";
+import type { ConversationState } from "./conversation-types";
 import { ConversationWorkbench, WorkbenchEntranceScope } from "./workbench";
 
 // The shell all four conversation acts render inside: brand line, orb, rail of
-// steps, the runtime footer, and the split thread/artifact body. Everything on
-// it comes from two requests — the configured model (GET /ai/profile) and who
-// is signed in (GET /me) — so the stories are the states of those two answers.
+// steps, the runtime footer, and the board. Everything on it comes from two
+// requests — the configured model (GET /ai/profile) and who is signed in
+// (GET /me) — so the stories are the states of those two answers.
 //
 // The signed-in chip at the rail's foot is the one that has bitten before: an
 // unrouted session probe reads as a MALFORMED session, not as an absent one,
@@ -31,29 +30,6 @@ const state: ConversationState = {
   act: "company",
   phase: "co.review",
 };
-
-const thread: readonly ThreadEntry[] = [
-  {
-    kind: "narration",
-    id: "1:pages:5",
-    i18nKey: "ob.conv.read.pages",
-    params: { pages: "5" },
-  },
-  {
-    kind: "narration",
-    id: "2:field:industry",
-    i18nKey: "ob.conv.read.learnedField",
-    params: { value: "Industrial robotics" },
-    paramKeys: { field: "ob.field.industry" },
-    findingIds: ["industry"],
-  },
-  {
-    kind: "outcome",
-    id: "3:company:confirmed",
-    i18nKey: "ob.conv.company.confirmed",
-    tone: "success",
-  },
-];
 
 function Shell({ session }: Readonly<{ session: RouteMap[string] }>) {
   installFetchStub({
@@ -70,25 +46,10 @@ function Shell({ session }: Readonly<{ session: RouteMap[string] }>) {
           core="idle"
           railState={state}
           status="Ready"
-          artifact={
-            <div className="mw-review ob-conv-artifact">
-              <div className="mw-review-heading">
-                <span>Live artifact</span>
-                <h2>Company profile</h2>
-                <p>
-                  The work surface each act fills; here it stands in for one.
-                </p>
-              </div>
-            </div>
-          }
+          title="Company profile"
+          sub="The work surface each act fills; here it stands in for one."
         >
-          <div className="mw-thread">
-            <ConversationThread
-              entries={thread}
-              pendingQuestionId={null}
-              onAnswer={() => {}}
-            />
-          </div>
+          <div className="mw-review ob-conv-artifact" />
         </ConversationWorkbench>
       </WorkbenchEntranceScope>
     </StoryProviders>

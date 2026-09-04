@@ -132,7 +132,7 @@ func TestWinLossGroupsClosedDealsByYearAndExcludesOpenOnes(t *testing.T) {
 	e.seedOpenDeal(t, "Still open", 60, nil, int64p(500000), stringp("commit"))
 
 	result := e.runReport(e.Admin(), t, "win-loss",
-		`{"group_by":["period_year","status"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
+		`{"group_by":["period_year","status","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
 
 	won2025 := bucketRow(t, result, map[string]string{"period_year": "2025", "status": "won"})
 	if got := wireInt(t, won2025, "deals"); got != 2 {
@@ -160,7 +160,7 @@ func TestWinLossPeriodDerivationReconcilesExactly(t *testing.T) {
 	e.seedClosedDeal(t, "Other year", "won", "2026-02-01T10:00:00Z", 7000)
 
 	result := e.runReport(e.Admin(), t, "win-loss",
-		`{"group_by":["period_year"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
+		`{"group_by":["period_year","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
 	row := bucketRow(t, result, map[string]string{"period_year": "2025"})
 	handle, ok := row["derivation_url"].(string)
 	if !ok || handle == "" {

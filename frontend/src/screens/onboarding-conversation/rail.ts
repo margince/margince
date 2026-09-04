@@ -8,13 +8,13 @@ import type { ConversationState } from "./conversation-types";
 // than tracked beside it, so the rail cannot disagree with the conversation.
 //
 // The stops are NOT the phases: READ is already finished by the time the
-// two-column view first renders, and CONFIRM covers the whole clarify/review/
-// manual cluster. A member never reaches voice or ready, so their rail has
-// three stops — a greyed step that will never happen is a promise the flow
-// does not keep.
+// two-column view first renders, CONFIRM covers the whole clarify/review/
+// manual cluster, and the invite is the doorway to VOICE rather than a stop
+// of its own. A member never reaches voice, so their rail has four stops —
+// a greyed step that will never happen is a promise the flow does not keep.
 
 export type RailStop = Readonly<{
-  key: "read" | "confirm" | "voice" | "ready" | "connect";
+  key: "read" | "confirm" | "voice" | "connect" | "prefs";
   labelKey: MessageKey;
 }>;
 
@@ -24,13 +24,13 @@ const CREATOR_STOPS: readonly RailStop[] = [
   { key: "read", labelKey: "ob.rail.read" },
   { key: "confirm", labelKey: "ob.rail.confirm" },
   { key: "voice", labelKey: "ob.rail.voice" },
-  { key: "ready", labelKey: "ob.rail.ready" },
   { key: "connect", labelKey: "ob.rail.connect" },
+  { key: "prefs", labelKey: "ob.rail.prefs" },
 ];
 
-// The creator's rail minus the two stops the member path never visits.
+// The creator's rail minus the stop the member path never visits.
 const MEMBER_STOPS: readonly RailStop[] = CREATOR_STOPS.filter(
-  (stop) => stop.key !== "voice" && stop.key !== "ready",
+  (stop) => stop.key !== "voice",
 );
 
 export function railStops(memberPath: boolean): readonly RailStop[] {
@@ -48,17 +48,54 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
       return state.phase === "co.intro" || state.phase === "co.reading"
         ? null
         : "confirm";
+    // The invite asks whether the voice stop happens at all, so it stands on
+    // that stop: a rail pointing at the stop the question is about.
+    case "invite":
     case "voice":
       return "voice";
-    case "results":
-      return "ready";
+    // The team act is a creator's way OUT of the personal stops, not one of
+    // them: no stop is current, and none is promised.
+    case "team":
+      return null;
     // Every account the setup asks for — mailbox and LinkedIn alike — belongs to
     // this one stop. A stop per integration would grow the rail once per provider
     // for something the reader already reads as "connecting".
     case "connect":
-    case "done":
       return "connect";
+    case "prefs":
+    case "done":
+      return "prefs";
   }
+}
+
+// The read is its own stop and its own truth: it is done the moment the server
+// says so, whether or not the conversation has moved on.
+function readStopState(
+  state: ConversationState,
+  pastTheRead: boolean,
+): RailStopState {
+  if (state.readCompleted || pastTheRead) {
+    return "done";
+  }
+  return state.phase === "co.reading" ? "now" : "todo";
+}
+
+// Where a stop sits relative to the one the conversation is standing on.
+function stopStateByPosition(
+  stop: RailStop["key"],
+  state: ConversationState,
+  index: number,
+  currentIndex: number,
+): RailStopState {
+  if (currentIndex < 0 || index < 0 || index > currentIndex) {
+    return "todo";
+  }
+  if (index < currentIndex) {
+    return "done";
+  }
+  // The last stop only reads `done` once the flow actually finished, so
+  // it does not claim completion while the user is still choosing.
+  return stop === "prefs" && state.act === "done" ? "done" : "now";
 }
 
 export function stopState(
@@ -66,31 +103,20 @@ export function stopState(
   state: ConversationState,
 ): RailStopState {
   const stops = railStops(state.memberPath).map((entry) => entry.key);
-  const current = currentStop(state);
-  const index = stops.indexOf(stop);
+  const currentIndex = currentIndexOf(currentStop(state), stops);
 
-  // The read is its own stop and its own truth: it is done the moment the
-  // server says so, whether or not the conversation has moved on.
+  // The team act stands on no stop, so `currentIndex` is -1 and the position
+  // arithmetic would read every stop as `todo` — including the two the creator
+  // finished to get here, and including `read` on a restored flow where
+  // `readCompleted` has not come back yet. It is a way OUT of the personal
+  // stops: those stay `todo` because this creator will not be walking them.
+  if (state.act === "team") {
+    return stop === "read" || stop === "confirm" ? "done" : "todo";
+  }
   if (stop === "read") {
-    if (state.readCompleted || currentIndexOf(current, stops) > 0) {
-      return "done";
-    }
-    return state.phase === "co.reading" ? "now" : "todo";
+    return readStopState(state, currentIndex > 0);
   }
-
-  const currentIndex = currentIndexOf(current, stops);
-  if (currentIndex < 0 || index < 0) {
-    return "todo";
-  }
-  if (index < currentIndex) {
-    return "done";
-  }
-  if (index > currentIndex) {
-    return "todo";
-  }
-  // The last stop only reads `done` once the flow actually finished, so
-  // "Connect" does not claim completion while the user is still choosing.
-  return stop === "connect" && state.act === "done" ? "done" : "now";
+  return stopStateByPosition(stop, state, stops.indexOf(stop), currentIndex);
 }
 
 function currentIndexOf(

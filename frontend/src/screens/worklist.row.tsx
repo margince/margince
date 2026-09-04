@@ -35,6 +35,7 @@ import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
 import {
   useApproval,
+  usePinRow,
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
@@ -195,6 +196,10 @@ export function WorklistRow({
           rep may judge is a server rule, and a client keeping its own copy
           draws a verb that 404s or hides one the rep is entitled to. */}
       <DispositionVerbs item={item} />
+      {/* The reader's own override, on every row that can carry one. It is not
+          a disposition — those put a row DOWN, and this lifts one up — so it is
+          drawn beside them rather than among them. */}
+      <PinVerb item={item} />
       {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move. */}
       {owner !== "" && item.source === "task" && !item.batch && (
@@ -628,3 +633,59 @@ const VERB_LABEL: Record<
 };
 
 // The day's figures, and the dials that narrow them.
+
+// The reader's own override: this row leads their day, whatever the ranking
+// chose.
+//
+// The ranking has carried a pin level since it was written and, until the store
+// shipped, nothing could set it. Every other control on this page changes what
+// the SERVER thinks — a disposition, a filter, a scope. This is the only one
+// that says "I know, and I want this first anyway", which is the difference
+// between a queue a rep works and a queue a rep argues with.
+//
+// WHAT IT READS to know which way to toggle: the row's own `pinned` reason. The
+// server states it on a pinned row, so the client asks the response rather than
+// keeping a second record of what it pressed — a local flag would disagree with
+// the page the moment the reader pinned from another tab, and the button would
+// offer to pin a row that already leads their day.
+//
+// A BATCH row is skipped. Its id is synthetic and minted by the fold, so a pin
+// on one names a group that will not exist under that key on the next read.
+function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const toast = useToast();
+  const pin = usePinRow();
+  if (item.batch) {
+    return null;
+  }
+  const pinned = (item.because ?? []).some((why) => why.kind === "pinned");
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        pending={pin.isPending}
+        onClick={() =>
+          pin.mutate(
+            { source: item.source, rowId: item.id, pinned },
+            {
+              // A refused write otherwise leaves the button exactly as an
+              // unpressed one looks, and the row keeps the place it had — so
+              // the reader is told nothing and sees nothing change.
+              onError: () =>
+                toast.show(
+                  t(
+                    pinned
+                      ? "worklist.verb.unpinFailed"
+                      : "worklist.verb.pinFailed",
+                  ),
+                  { mark: false },
+                ),
+            },
+          )
+        }
+      >
+        {t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
+      </Button>
+    </div>
+  );
+}

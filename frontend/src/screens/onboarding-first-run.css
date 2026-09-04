@@ -1,0 +1,77 @@
+/*
+ * First run, on the shared onboarding stage.
+ *
+ * The room, the Core's column and the type scale belong to
+ * `design-system/onboarding-stage.css`, which every screen before the workbench
+ * now stands in. What is left here is what is true of THIS surface only: a card
+ * holding a stack of questions, and the price plate attached to the two fields
+ * that decide it.
+ *
+ * The sheet carries the `onboarding-` prefix so both onboarding CSS censuses
+ * (typography, dead rules) derive it from the tree the day it lands.
+ */
+
+/* The panel is the form, not a second frame around the stage: the stage is
+   already the surface, so the card's own ground and shadow would draw a box
+   inside a room. */
+/* The board gives every child its full width now, so the form no longer asks
+   for it here. See `.ob-stage-board`. */
+
+/* No box at all. The stage card IS the container, so the panel's own edge was a
+   second frame inside the first, and at `--borderSubtle` on this ground it did
+   not read as a container either: it read as a stray line, with the tinted
+   strip under the button looking like a band attached to nothing. */
+.ob-fr-form .panel {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* `.panel-body` owns no gap on purpose: the house card puts a hairline seam
+   between two bodies rather than air between two children, because most cards
+   hold one thing. First run holds a stack of questions in one body, so the air
+   between them is this surface's to declare — without it a field's hint runs
+   straight into the next field's label. */
+.ob-fr-form .panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  /* And no inset either, now that there is no edge to sit inside: the board's
+     own padding already holds this form off the card. */
+  padding: 0;
+}
+
+/* What the binding costs, directly under the two fields that decide it. The
+   plate is `StatStrip`, which is built for a record's readings row; here it
+   holds the two lanes, and the small offset is what attaches it to the fields
+   above rather than letting it float as a third thing. */
+.ai-rate-plate {
+  margin-top: var(--space-2);
+}
+
+/* Where a price came from, when it did not come from the sheet. Indigo carries
+   its one meaning here as everywhere: a machine proposed this and nobody has
+   confirmed it. The recorded price beside it stays unmarked, because a number
+   this installation has agreed to is the ordinary case. */
+.ai-rate-proposed {
+  color: var(--aiText);
+}
+
+/* The platform step's fold: the console steps as a numbered list at the
+   sheet's own body size, and the notes under it as captions. */
+.ob-fr-help {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+.ob-fr-help-note {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}

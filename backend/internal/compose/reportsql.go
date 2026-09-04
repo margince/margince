@@ -141,8 +141,14 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 // spec's FROM and WHERE, grouped and ordered by the dimension positions,
 // bounded by the report row limit.
 func reportSQL(spec reportSpec, selects, where, groupBy []string) string {
-	sql := fmt.Sprintf("SELECT %s FROM %s WHERE %s",
-		strings.Join(selects, ", "), spec.fromClause(), strings.Join(where, " AND "))
+	sql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selects, ", "), spec.fromClause())
+	// A report can legitimately restrict NOTHING: leads-by-status counts every
+	// lead whatever its status, and an admin's row scope adds no clause of its
+	// own. A bare WHERE would then be a syntax error, so the keyword is written
+	// only when there is something to write after it.
+	if len(where) > 0 {
+		sql += " WHERE " + strings.Join(where, " AND ")
+	}
 	if len(groupBy) > 0 {
 		positions := make([]string, len(groupBy))
 		for i := range groupBy {

@@ -204,43 +204,6 @@
   color: var(--textSecondary);
 }
 
-/* step 4 results */
-.rcards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-}
-.rcard .rh {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-weight: var(--fw-semibold);
-  font-size: var(--fs-sm);
-  color: var(--textPrimary);
-}
-.rcard .rh .ck {
-  width: 20px;
-  height: 20px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--online);
-  color: var(--textOnAccent);
-  display: grid;
-  place-items: center;
-  flex: none;
-}
-.rcard .rh .ck svg {
-  width: 12px;
-  height: 12px;
-}
-.rcard p {
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
-  margin-top: var(--space-2);
-  line-height: var(--lh-normal);
-}
-
 /* step 5 connect */
 
 .imap-form {
@@ -329,7 +292,6 @@
 }
 
 @media (max-width: 640px) {
-  .rcards,
   .imap-form {
     grid-template-columns: 1fr;
   }
@@ -1313,84 +1275,10 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
-.understanding-reveal {
-  margin: var(--space-6) 0;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--online) 35%, var(--borderSubtle));
-  border-radius: var(--r-lg);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--online) 7%, var(--bgElevated)),
-    var(--bgElevated)
-  );
-  box-shadow: 0 20px 48px color-mix(in srgb, var(--online) 9%, transparent);
-}
-.understanding-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-.understanding-brand > span {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  color: var(--textOnAccent);
-  border-radius: var(--r-control);
-  background: var(--online);
-}
-.understanding-brand svg {
-  width: 17px;
-}
-.understanding-brand small,
-.understanding-grid small {
-  color: var(--textTertiary);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-bold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-}
-.understanding-brand h2 {
-  margin: var(--space-1) 0 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h2);
-}
-.understanding-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--borderSubtle);
-}
-.understanding-grid > div {
-  padding: var(--space-4) var(--space-5);
-  background: color-mix(in srgb, var(--bgElevated) 96%, transparent);
-}
-.understanding-grid p {
-  margin: var(--space-1) 0 0;
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
-}
-.understanding-note {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  padding: var(--space-4) var(--space-5);
-  color: var(--online);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-}
-.understanding-note svg {
-  width: 14px;
-}
-
 @media (max-width: 720px) {
   .finding-grid,
   .fact-grid,
-  .legal-preview-grid,
-  .understanding-grid {
+  .legal-preview-grid {
     grid-template-columns: 1fr;
   }
 

@@ -364,8 +364,13 @@ func (s *Store) CreateLeadSource(ctx context.Context, in CreateLeadSourceInput) 
 		if err != nil {
 			return fmt.Errorf("insert lead source: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", "lead_source", id, nil,
-			map[string]any{"key": key, "label": label, "intent": string(intent)}); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "create", "lead_source", id, nil,
+			map[string]any{"key": key, "label": label, "intent": string(intent)})
+		if err != nil {
+			return err
+		}
+		if err := emitLeadSourceChanged(ctx, tx, auditID, id, key,
+			crmcontracts.PublicEventLeadSourceChangedChangeCreated); err != nil {
 			return err
 		}
 		out, err = readLeadSource(ctx, tx, id, false)
@@ -420,7 +425,14 @@ func (s *Store) UpdateLeadSource(ctx context.Context, id ids.UUID, in UpdateLead
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "lead_source", id, p.Before(), p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "update", "lead_source", id, p.Before(), p.After())
+		if err != nil {
+			return err
+		}
+		// before.Key, not a re-read: the key never changes, and it is what a
+		// subscriber has cached this entry under.
+		if err := emitLeadSourceChanged(ctx, tx, auditID, id, before.Key,
+			crmcontracts.PublicEventLeadSourceChangedChangeUpdated); err != nil {
 			return err
 		}
 		out, err = readLeadSource(ctx, tx, id, false)
@@ -446,7 +458,35 @@ func (s *Store) DeleteLeadSource(ctx context.Context, id ids.UUID) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM lead_source WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("delete lead source: %w", err)
 		}
-		_, err = storekit.Audit(ctx, tx, "erase", "lead_source", id, map[string]any{"key": current.Key, "label": current.Label}, nil)
-		return err
+		auditID, err := storekit.Audit(ctx, tx, "erase", "lead_source", id,
+			map[string]any{"key": current.Key, "label": current.Label}, nil)
+		if err != nil {
+			return err
+		}
+		return emitLeadSourceChanged(ctx, tx, auditID, id, current.Key,
+			crmcontracts.PublicEventLeadSourceChangedChangeDeleted)
 	})
+}
+
+// emitLeadSourceChanged publishes one source-catalog change.
+//
+// The three mutations map their locals onto the published payload through
+// here, so a contract rename lands in one place rather than at three literals
+// that would drift apart — the same reason pipelineCreatedPayload exists next
+// door.
+func emitLeadSourceChanged(
+	ctx context.Context,
+	tx pgx.Tx,
+	auditID, id ids.UUID,
+	key string,
+	change crmcontracts.PublicEventLeadSourceChangedChange,
+) error {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLeadSourceChanged{
+		SourceId: openapi_types.UUID(id),
+		Change:   change,
+		Key:      key,
+	}); err != nil {
+		return fmt.Errorf("emit lead_source.changed: %w", err)
+	}
+	return nil
 }

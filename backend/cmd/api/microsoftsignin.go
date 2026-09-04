@@ -53,12 +53,22 @@ func microsoftSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, 
 		}
 	}
 	switch {
-	case ssoCfg.Enabled():
+	case ssoCfg.Enabled() && ssoCfg.HasEnvClient():
 		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in enabled (/auth/oidc/microsoft/*, directories %s)\n", ssoCfg.Tenant)
-		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in redirect URI to register on the Entra app: %s\n",
-			compose.MicrosoftSignInRedirectURI(redirectBase))
+	case ssoCfg.Enabled() && cfg.graphClientID != "":
+		// The pair is there and cannot sign anyone in: nothing names a directory
+		// its tokens may come from. Said out loud, because the operator who set
+		// the pair expects the button, and a stored app pinned to a directory
+		// would put it there without them knowing why.
+		_, _ = fmt.Fprintln(stdout, "api microsoft sign-in mounted (/auth/oidc/microsoft/*); the environment's client is offered once --microsoft-signin-tenant names a directory, and a Microsoft app stored under Settings is offered on the directory it is pinned to")
+	case ssoCfg.Enabled():
+		_, _ = fmt.Fprintln(stdout, "api microsoft sign-in mounted (/auth/oidc/microsoft/*); offered once a Microsoft app pinned to a directory is stored under Settings, or MARGINCE_GRAPH_CLIENT_ID/SECRET and --microsoft-signin-tenant are set")
 	case cfg.graphClientID != "":
 		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in configured but INCOMPLETE — missing %v; the provider stays off\n", ssoCfg.MissingFields())
+	}
+	if ssoCfg.Enabled() {
+		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in redirect URI to register on the Entra app: %s\n",
+			compose.MicrosoftSignInRedirectURI(redirectBase))
 	}
 	return []compose.Option{compose.WithMicrosoftSignIn(ssoCfg)}, nil
 }

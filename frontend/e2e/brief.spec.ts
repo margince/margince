@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
+import { signIn } from "./waits";
 
 /**
  * The Brief — the page a rep and a lead open first.
@@ -54,30 +55,6 @@ function copy(key: MessageKey): string {
 
 const STRIP = '[data-testid="home-readings"]';
 const GLANCE = '[data-testid="home-glance"]';
-
-/**
- * Sign in as the dev bootstrap admin, unless the session is already up.
- *
- * A dev stack already logged into redirects /#/login straight to the app, so
- * the form is ABSENT on the happy path — waiting for a navigation that never
- * happens is a 30s timeout rather than a login failure.
- */
-async function signIn(page: Page) {
-  await page.goto("/#/login", { waitUntil: "networkidle" });
-  const email = page
-    .locator('input[type="email"], input[name="email"]')
-    .first();
-  if ((await email.count()) === 0) {
-    return;
-  }
-  await email.fill(process.env.E2E_EMAIL ?? "admin@demo.test");
-  await page
-    .locator('input[type="password"], input[name="password"]')
-    .first()
-    .fill(process.env.E2E_PASSWORD ?? "demo-password-123");
-  await page.locator('button[type="submit"]').first().click();
-  await expect(page.locator("nav.rail").first()).toBeVisible();
-}
 
 /**
  * Open the Brief and wait for the page to have actually settled.

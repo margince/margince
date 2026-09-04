@@ -2117,8 +2117,12 @@ export const en = {
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.callNotInOverlay":
     "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
+  "lead.boardCountsUnavailable":
+    "The Qualified and Disqualified counts could not be read.",
+  "lead.boardTerminalRowsUnavailable":
+    "These leads could not be read. The count above still stands.",
   "lead.boardTerminalOnly":
-    "The board shows open leads only. These leads are promoted or disqualified.",
+    "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
   "person.fromLead": "From lead",
   "lead.promotedTitle": "Promoted to a contact",
   "lead.promotedMerged":
@@ -4090,9 +4094,6 @@ export const en = {
   "ob.factsSelected": "{selected} of {total} selected",
   "ob.factsSub":
     "Untick anything that should not become company context — up to 100 facts can be selected.",
-  "ob.nowUnderstands": "I now understand",
-  "ob.contextReady":
-    "I can use this context for drafts, search, agents and Voice DNA, with sources attached.",
 
   // No step number: the rail decides how many stops a reader gets, so the
   // count belongs to ob.conv.scene.step, which reads it off the rail. A total
@@ -4204,40 +4205,80 @@ export const en = {
   "ob.field.industry": "Industry",
   "ob.field.history": "Company history",
 
-  "ob.s3.title": "Look what you've built —",
-  "ob.s3.titleEm": "with nothing connected.",
-  "ob.s3.sub":
-    "Your organization knows your business and your voice. Connect your inbox and it fills itself.",
-  "ob.s3.subNoVoice":
-    "Your organization knows your business. Connect your inbox and it fills itself.",
-  "ob.s3.cardProfile": "Business profile",
-  "ob.s3.cardProfileBody":
-    "Confirmed and saved to your company page. Fields read from your site keep their source.",
-  "ob.s3.cardProfileSkippedBody":
-    "Read from your site but not saved — you skipped the confirm step. Go back to confirm it.",
-  "ob.s3.cardVoice": "Your writing voice",
-  "ob.s3.cardVoiceBody":
-    "Built from the corpus you just gave us. Drafts will sound like you from day one.",
-  "ob.s3.cardVoiceSkippedBody":
-    "You skipped this step, so drafts use a neutral starter voice. Build yours anytime in Settings.",
-  "ob.s3.cardPipeline": "Sales pipeline",
-  "ob.s3.cardPipelineBody":
-    "The standard 7-stage B2B template, tuned to your industry. Empty until you connect your inbox.",
-  "ob.s3.cardDraft": "A sample draft, in your voice",
-  "ob.s3.cardDraftExample": "A sample draft",
-  "ob.s3.cardDraftBody": "See it below.",
-  "ob.s3.originLabel": "Where this pipeline comes from",
-  "ob.s3.originBody":
-    "The standard B2B stage template, tuned to your industry from the read. Empty until you connect. You approve what becomes a deal.",
-  "ob.s3.stillNothing":
-    "Still nothing connected. You're in control of when that changes.",
+  // What the answer should contain and why the CRM wants it. Shown on an
+  // empty deck card so the card is answerable without guessing; still shown
+  // once evidence exists, because the evidence states a claim and this states
+  // a purpose, and the two are not the same sentence.
+  "ob.fieldHint.display_name":
+    "The name customers actually call you by, not the legal one. It is what shows across Margince.",
+  "ob.fieldHint.offer_summary":
+    "One or two plain sentences on what you sell, so Margince can explain the business without asking again.",
+  "ob.fieldHint.icp":
+    "Who benefits most, by size, industry or situation, so outreach can be aimed rather than generic.",
+  "ob.fieldHint.buying_center":
+    "The roles who evaluate or sign off, so a rep knows who else belongs in the conversation.",
+  "ob.fieldHint.value_proposition":
+    "The outcome a customer gets, not the product feature, stated plainly enough to stand alone in a pitch.",
+  "ob.fieldHint.usp":
+    "The one difference that actually moves a decision, not a strength every competitor also claims.",
+  "ob.fieldHint.customer_pains":
+    "The problem in the customer's own words, the way they would say it before they found you.",
+  "ob.fieldHint.desired_outcomes":
+    "What the customer is trying to achieve, in business terms rather than product terms.",
+  "ob.fieldHint.buying_intents":
+    "The signal that usually means a prospect is close to buying, such as a hire or a deadline.",
+  "ob.fieldHint.common_objections":
+    "The concern that most often slows or stops a deal, so a rep can prepare for it early.",
+  "ob.fieldHint.sales_motion":
+    "The path from first conversation to signed deal, including any trial or procurement step.",
+  "ob.fieldHint.legal_name":
+    "The name as it appears on the register, legal form included, since this is what belongs on an invoice.",
+  "ob.fieldHint.registered_address":
+    "The address printed in the legal notice, not a mailing or showroom address.",
+  "ob.fieldHint.register_vat":
+    "Both identifiers exactly as issued, since they appear together on invoices and contracts.",
+  "ob.fieldHint.legal_form":
+    "The form as the register states it, which decides how the company is named on a contract.",
+  "ob.fieldHint.register_court":
+    "The court named in the legal notice that holds the company's register entry.",
+  "ob.fieldHint.register_number":
+    "The register entry alone, without the VAT ID, which has its own field above.",
+  "ob.fieldHint.industry":
+    "The description your own customers would recognize, not an internal classification code.",
+  "ob.fieldHint.history":
+    "Add it only if it changes how the company should be read, such as a founding year or a major pivot.",
+
+  // A worked example, not an instruction: what a filled-in answer looks like,
+  // never the label restated. The legal fields print a real German imprint's
+  // shape because that is the notice the read parses.
+  "ob.fieldEg.display_name": "Northwind Robotics",
+  "ob.fieldEg.offer_summary":
+    "Cloud inventory software for mid-size retailers.",
+  "ob.fieldEg.icp": "Retail chains with 20 to 200 stores.",
+  "ob.fieldEg.buying_center": "Head of Operations, with Finance approving.",
+  "ob.fieldEg.value_proposition":
+    "Cuts stock-out incidents by half within a quarter.",
+  "ob.fieldEg.usp": "Only vendor offering same-day, on-site support.",
+  "ob.fieldEg.customer_pains": "We keep running out of stock without noticing.",
+  "ob.fieldEg.desired_outcomes": "Never miss a reorder deadline again.",
+  "ob.fieldEg.buying_intents": "A new warehouse opening within 90 days.",
+  "ob.fieldEg.common_objections": "Worried about migrating off the old system.",
+  "ob.fieldEg.sales_motion": "Demo, a two-week pilot, then a yearly contract.",
+  "ob.fieldEg.legal_name": "Northwind Robotics GmbH",
+  "ob.fieldEg.registered_address": "Musterstraße 12, 10115 Berlin",
+  "ob.fieldEg.register_vat": "DE123456789",
+  "ob.fieldEg.legal_form": "GmbH",
+  "ob.fieldEg.register_court": "Amtsgericht Charlottenburg",
+  "ob.fieldEg.register_number": "HRB 12345 B",
+  "ob.fieldEg.industry": "E-commerce logistics",
+  "ob.fieldEg.history": "Founded 2015, spun off from a logistics startup.",
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Any inbox (IMAP)",
+  "ob.s4.provImap": "Any other mailbox (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Allow access to my Microsoft",
   "ob.s4.microsoftHint":
-    "Read-only mail access. You can disconnect any time from Settings.",
+    "Reads your mail, and can send from it. You grant both on Microsoft's own screen, and can disconnect any time.",
   "ob.s4.microsoftUnverified":
     'You may see an "unverified app" notice — that\'s this self-hosted install, not a third party.',
   "ob.s4.microsoftFailed": "The Microsoft connection didn't complete.",
@@ -4569,6 +4610,8 @@ export const en = {
   "connectors.imapSecretHint":
     "Use an app-specific password. We seal it in the credential vault and read your mail on a schedule until you disconnect — disconnecting deletes it.",
   "connectors.imapSubmitCta": "Connect",
+  "connectors.imapNeeded": "Needed to connect",
+  "connectors.imapStillNeeded": "Still needed: {fields}",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable": "The mail server could not be reached.",
@@ -4692,15 +4735,11 @@ export const en = {
   "ob.s4.capturedTitle": "Mailbox connected",
   "ob.s4.capturedBody":
     "Your CRM is building itself. New mail lands here as the first sweep runs, usually in minutes.",
-  "ob.s4.enterCrm": "Enter your CRM",
+  "ob.s4.enterCrm": "Continue",
   "ob.s4.connectFailed": "Couldn't connect that mailbox",
   "ob.s4.notNow": "Not now",
 
   "ob.conv.threadLabel": "Onboarding conversation",
-  "ob.conv.welcome":
-    "Hi, I am Margince. I set up your CRM from what already exists, and I show a source for everything.",
-  "ob.conv.welcomeMember":
-    "Hi, I am Margince. Your team is already set up. Two short steps and you are in.",
   "ob.conv.read.started": "Reading {host} now. I will tell you what I find.",
   "ob.conv.read.pages": "Pages read so far: {pages}.",
   "ob.conv.read.learnedField": "Learned {field}: {value}",
@@ -4723,8 +4762,6 @@ export const en = {
   "ob.conv.voice.speakerQuestion":
     "This transcript has several speakers. Which one is you? Only your own words count.",
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
-  "ob.conv.voice.guideSpeaker":
-    "A speaker choice is waiting on the right — pick which one is you.",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",
   "ob.conv.voice.continueSkippedStatus":
@@ -4733,8 +4770,6 @@ export const en = {
     "Your material is safe — retry now, or continue and pick this up later.",
   "ob.conv.voice.continueDeferredStatus":
     "No action needed here — continue, and it finishes on its own.",
-  "ob.conv.voice.collectAsk":
-    "Send me things you wrote. Call transcripts work best; plain documents work too.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
     "You can also drop files anywhere in this conversation.",
@@ -4758,10 +4793,6 @@ export const en = {
   "ob.conv.voice.pasteAdd": "Yes, add it to my corpus.",
   "ob.conv.voice.pasteDiscard": "No, discard it.",
   "ob.conv.voice.pasteSource": "Pasted text",
-  "ob.conv.voice.buildFloor":
-    "Own words so far: {words}. I need at least {min} before I can build.",
-  "ob.conv.voice.buildNudge":
-    "I have enough to build. More helps: 4,000 words or more sharpen your voice noticeably.",
   "ob.conv.voice.buildChip": "Build my voice profile",
   "ob.conv.voice.retryBuild": "Try the build again",
   "ob.conv.voice.buildPollFailed":
@@ -4795,10 +4826,6 @@ export const en = {
     "The build is queued behind budget. It will run automatically.",
   "ob.conv.build.failed":
     "The build did not finish. Your texts are kept and you can retry anytime.",
-  "ob.conv.recap":
-    "Here is what your CRM knows now, with a source for every item.",
-  "ob.conv.consent":
-    "Last step: what may I capture, and for which purpose? Nothing is on by default.",
   "ob.conv.done": "Setup complete. Your CRM is ready.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4869,14 +4896,12 @@ export const en = {
   "ob.conv.triage.peopleEmpty": "No people found on your site.",
   "ob.conv.triage.factsLabel": "Facts",
   "ob.conv.triage.factsCount": "{count} found",
-  "ob.rail.spend": "Tokens this setup",
   "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Step {n} of {m} · {label}",
   "ob.conv.scene.detour": "A quick detour",
   "ob.conv.scene.decisionSub":
     "Your site names several legal entities. The one you pick goes on every quote and invoice.",
   "ob.conv.scene.continue": "Continue",
-  "ob.conv.scene.candidates": "{count} candidates",
   "ob.conv.connect.sceneTitle": "Connect your accounts.",
   "ob.conv.connect.sceneSub":
     "I build your contacts, companies and history from what is already in your inbox.",
@@ -4888,23 +4913,32 @@ export const en = {
     "Optional but worth it. Turns who you know into accounts and watches them for triggers.",
   "ob.conv.connect.required": "required",
   "ob.conv.connect.recommended": "recommended",
-  "ob.conv.connect.gmailBrings": "Mail, contacts and calendar from Google",
-  "ob.conv.connect.microsoftBrings":
-    "Mail, contacts and calendar over the Graph API",
-  "ob.conv.connect.imapBrings": "Any other mail host, with an app password",
+  // Neither grant carries calendar or contacts — those are their own,
+  // separate consent (Settings → Calendar) — and neither carries sign-in:
+  // both connect the SAME two things here, mail read and send, so the two
+  // lines say the same thing rather than inventing a difference that is not
+  // in the grant.
+  "ob.conv.connect.gmailBrings": "Mail read and sent via Google",
+  "ob.conv.connect.microsoftBrings": "Mail read and sent via Microsoft",
+  "ob.conv.connect.imapBrings":
+    "Mail from any host, with your email address and an app password",
   "ob.conv.connect.linkedinAuth": "Profile link, read only",
   "ob.conv.connect.scopeGoogle": "OAuth, read and send scopes",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Any other provider, app password",
+  "ob.conv.connect.scopeImap": "Mail address and password",
   "ob.conv.connect.connectCta": "connect →",
   "ob.conv.connect.connectedCta": "connected",
   "ob.conv.connect.blockedCard":
     "You already picked a mailbox. Disconnect it in Settings to switch.",
   "ob.conv.connect.guaranteesToggle": "What connecting actually does",
-  "ob.conv.connect.railPromise":
-    "We read your mail, and we can send from it once you allow that.",
   "ob.conv.connect.dialogHeadlineAccess": "{name} access needed",
   "ob.conv.connect.dialogHeadlineImap": "Connect your mail host",
+  "ob.conv.connect.appMissingCard":
+    "Your organization has not registered its {name} app yet.",
+  "ob.conv.connect.appUnusableCard":
+    "Your organization's {name} app cannot be opened right now. It needs an admin, not a new app.",
+  "ob.conv.connect.unsupportedCard": "This installation does not serve {name}.",
+  "ob.conv.connect.appSetupLink": "Set it up in Settings",
   "ob.conv.connect.dialogIntro":
     "{brings}. I read it once to build your contacts and history, then keep it in sync.",
   "ob.conv.connect.dialogClose": "Close",
@@ -4939,8 +4973,15 @@ export const en = {
   "ob.conv.voice.resultSub":
     "Read the sample first. If it lands, confirm. If it is off, add more sources and I rebuild.",
   "ob.conv.voice.resultSubNoSample":
-    "Your corpus is too small for a sample draft. Here is what the build learned. Add more sources.",
-  "ob.conv.voice.resultContinue": "That is my voice",
+    "No sample draft came back for this build. Here is what it learned \u2014 add more of your writing and I will try again.",
+  "ob.conv.voice.resultContinue": "That is me",
+  "ob.conv.voice.revise": "Not quite me — add more writing",
+  "ob.conv.voice.distilling": "Distilling",
+  "ob.conv.voice.hears": "hears",
+  "ob.conv.voice.hearsWords":
+    "{words} of your own words across {sources} sources",
+  "ob.conv.voice.hearsBand": "a {band} corpus so far",
+  "ob.conv.voice.hearsRegister": "{words} words of {register} writing",
   "ob.conv.voice.sampleEyebrow": "Sample, not sent",
   "ob.conv.voice.sampleAnother": "Another scenario",
   "ob.conv.voice.sampleSubjectLabel": "Subject",
@@ -4956,26 +4997,6 @@ export const en = {
   "ob.conv.scene.hideEvidence": "hide evidence",
   "ob.conv.scene.whyThis": "What I read",
   "ob.conv.scene.foundOn": "Found on",
-  "ob.conv.guide.decision":
-    "I need one decision from you: {question} It is on the right, with the evidence for each option.",
-  "ob.conv.guide.reviewBlocked_one":
-    "Your review is ready on the right. {count} field blocks confirm.",
-  "ob.conv.guide.reviewBlocked_other":
-    "Your review is ready on the right. {count} fields block confirm.",
-  "ob.conv.guide.reviewAdvisory_one":
-    "Your review is ready on the right. Nothing blocks you; {count} thing is worth a look.",
-  "ob.conv.guide.reviewAdvisory_other":
-    "Your review is ready on the right. Nothing blocks you; {count} things are worth a look.",
-  "ob.conv.guide.reviewClean":
-    "Your review is ready on the right. It looks clean, check what you want and confirm when ready.",
-  "ob.conv.guide.attentionHeading": "These need your input",
-  "ob.conv.guide.attentionGroup.blocking": "Needed before you can continue",
-  "ob.conv.guide.attentionGroup.decisions": "Needs a decision",
-  "ob.conv.guide.attentionGroup.advisory": "Worth a look",
-  "ob.conv.guide.attentionStatus.blocks": "needed to continue",
-  "ob.conv.guide.attentionStatus.empty": "still empty",
-  "ob.conv.guide.attentionStatus.decision": "needs a decision",
-  "ob.conv.guide.attentionStatus.check": "worth a check",
   "ob.conv.activity.steps_one": "{count} step",
   "ob.conv.activity.steps_other": "{count} steps",
   "ob.conv.showField": "Show me",
@@ -4996,17 +5017,6 @@ export const en = {
   "ob.conv.artifact.empty":
     "Nothing read yet. Give me a website and this panel fills with sourced findings.",
   "ob.conv.results.continue": "Continue",
-  "ob.conv.results.artifactTitle": "Setup recap",
-  "ob.conv.results.artifactBody":
-    "What your CRM starts with. Nothing here claims more than what actually happened.",
-  "ob.conv.results.company":
-    "Company profile confirmed for {name}. Everything stored carries its source.",
-  "ob.conv.results.companyUnsaved":
-    "Your company details are not saved yet. You can complete them later in Settings.",
-  "ob.conv.results.voiceBuilt":
-    "Your voice profile is built. Drafts will sound like you.",
-  "ob.conv.results.voiceSkipped":
-    "No voice profile yet. Drafts use a neutral starter voice, and you can build yours later in Settings.",
   "ob.conv.recap.back": "Welcome back. Here is where we stand.",
   "ob.conv.recap.company": "Your company profile for {name} is confirmed.",
   "ob.conv.recap.companyUnsaved":
@@ -5025,9 +5035,10 @@ export const en = {
     "Welcome back. My earlier read of {host} did not finish. Give me a website again, or tell me directly.",
   "ob.conv.recap.readDeferred":
     "Welcome back. My read of {host} is paused for now. Give me a website again, or tell me directly.",
-  "ob.conv.connect.pick":
-    "Pick a provider to see exactly what connecting does, or skip and connect later in Settings.",
-  "ob.conv.connect.skip": "Skip connecting for now",
+  "ob.conv.connect.skip": "Continue without a mailbox",
+  "ob.conv.connect.continue": "Continue",
+  "ob.conv.connect.mailboxNeeded":
+    "A mailbox is still needed: mail is what gets read and drafted. Connect one above, or continue without one for now.",
   "ob.conv.linkedin.cardBody":
     "Turns your network into accounts and contacts, and flags it when a connection changes jobs.",
   "ob.conv.linkedin.limitsToggle": "What Margince can and cannot see",
@@ -5063,8 +5074,49 @@ export const en = {
   "ob.rail.read": "Read",
   "ob.rail.confirm": "Confirm",
   "ob.rail.voice": "Voice",
-  "ob.rail.ready": "Ready",
   "ob.rail.connect": "Connect",
+  "ob.rail.prefs": "Preferences",
+
+  // The invite: asked once the company is confirmed, before the two steps
+  // that are only about the person answering. An administrator who sets the
+  // installation up for a team and never works in it finishes here.
+  "ob.conv.invite.title": "Will you be working in Margince yourself?",
+  "ob.conv.invite.body":
+    "The company is set up. Two more steps are about you, and they only make sense if you will be using Margince too.",
+  "ob.conv.invite.yes": "Yes, I'll work in Margince",
+  "ob.conv.invite.yesBody":
+    "Train your voice and connect your inbox and calendar: two short steps, both about you.",
+  "ob.conv.invite.no": "No, I'm only setting it up",
+  "ob.conv.invite.noBody":
+    "Invite the first person who will work here instead, and you're done.",
+  "ob.conv.invite.foot":
+    "Either way, a voice and accounts can be set up later from Settings.",
+  "ob.conv.invite.continue": "Continue",
+  "ob.conv.invite.accepted": "Yes, I'll be working in it.",
+  "ob.conv.invite.declined": "No, I'm only setting it up.",
+
+  // The team act: the first person who will work here, invited with the
+  // same form Settings → People uses.
+  "ob.conv.team.title": "Invite the first user.",
+  "ob.conv.team.body":
+    "Somebody has to be the first person working in Margince. Add them now, or later from Settings → People.",
+  "ob.conv.team.invitedLabel": "Invited so far",
+  "ob.conv.team.invitedLine": "{name} is invited.",
+  "ob.conv.team.skip": "Skip for now",
+  "ob.conv.team.finish": "Finish setup",
+  "ob.conv.team.done":
+    "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
+  "ob.conv.prefs.title": "Last, a few preferences.",
+  "ob.conv.prefs.body":
+    "Everything here is prefilled from what is already recorded, and can be changed later in Settings. Press Done if it all reads right.",
+  "ob.conv.prefs.reportingTitle": "How the numbers are reported",
+  "ob.conv.prefs.timezoneNeeded": "A reporting timezone is needed.",
+  "ob.conv.prefs.autonomyTitle": "What it may change on its own",
+  "ob.conv.prefs.autonomyBody":
+    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
+  "ob.conv.prefs.done": "Done",
+  "ob.conv.prefs.persistFailed":
+    "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
@@ -5112,13 +5164,12 @@ export const en = {
   "ob.scan.phaseDeferred": "Paused for now",
   "ob.scan.pagesRead": "{pages} pages read",
   "ob.scan.pagesSkipped": "{count} skipped",
-  "ob.scan.factsSoFar": "{count} facts so far",
   "ob.scan.stillReading": "still reading",
   "ob.scan.pageStripLabel": "Pages read so far",
   "ob.scan.logLabel": "The pages I am walking, newest first",
-  "ob.scan.pageFetched": "{url} — read",
-  "ob.scan.pageSkipped": "{url} — skipped: {reason}",
-  "ob.scan.pageFailed": "{url} — could not be read: {reason}",
+  "ob.scan.pageFetched": "{url}: read",
+  "ob.scan.pageSkipped": "{url}: skipped, {reason}",
+  "ob.scan.pageFailed": "{url}: could not be read, {reason}",
   "ob.scan.pageNoReason": "no reason recorded",
   "ob.scan.pageStatusFetched": "read",
   "ob.scan.pageStatusSkipped": "skipped: {reason}",
@@ -5165,34 +5216,7 @@ export const en = {
   "ob.facts.capReached":
     "You can save up to {max} facts. Clear one to make room for another.",
 
-  // --- the payoff: what two minutes actually bought ----------------------
-  // Counts, not congratulation. Every cell is a real number off the wire, and
-  // a cell with no number says so rather than showing a zero that looks earned.
-  // Two leads for one moment. The first is only true when the install really was
-  // empty minutes ago; a setup picked up across days is the supported path, and
-  // the payoff above all else may not overstate.
-  "ob.payoff.lead": "Minutes ago this was an empty install.",
-  "ob.payoff.leadResumed": "This started as an empty install.",
-  "ob.payoff.factsRead": "facts read",
-  "ob.payoff.factsConfirmed": "facts you confirmed",
-  "ob.payoff.peopleFound": "people found",
-  "ob.payoff.profileFields": "profile fields",
-  "ob.payoff.voiceWords": "words in your voice",
-  "ob.payoff.pagesRead": "pages read",
-  "ob.payoff.voiceNotTrained": "voice not trained yet",
-  "ob.payoff.body":
-    "Everything in there is yours to correct, and every value still points at the page it came from.",
-  "ob.payoff.defaults":
-    "I wait for your yes, and never overwrite what you typed. Both change in Settings → Autonomy.",
-  "ob.payoff.seats":
-    "The one thing left is your colleagues. Seats are billed, so you create them in Settings → People.",
-  "ob.payoff.understood": "Understood",
-  "ob.payoff.projects":
-    "When a deal turns into work, open a project for it: a project starts during the deal and outlives close-won, so delivery keeps its own timeline.",
-  "ob.payoff.projectsLink": "See projects",
-
   // --- the handoff into the app -----------------------------------------
-  "ob.enter.cta": "Enter Margince",
   "ob.enter.assembling": "Assembling your organization",
 
   // --- the mailbox backread ---------------------------------------------
@@ -5239,7 +5263,7 @@ export const en = {
     "I could not stop the read: {detail} Try again — it keeps running meanwhile.",
   "ob.backread.detailUnavailable": "Something unexpected went wrong.",
   "ob.backread.cancel": "Stop reading",
-  "ob.backread.explore": "Explore Margince meanwhile",
+  "ob.backread.explore": "Continue while it reads",
   "ob.backread.skip": "Do not read history now",
 
   "auth.title": "Margince",
@@ -5255,7 +5279,6 @@ export const en = {
   // link.
   "auth.loginSub":
     "Accounts come from your administrator. There is no self-signup.",
-  "auth.coreDisclosure": "Margince · AI system",
   // Five lines, one voice, and the ORDER is load-bearing: greeting, what the
   // system is for, what it does, the one promise, then the handover to the form.
   // They read as a paragraph somebody is saying, so reordering them breaks a
@@ -5268,33 +5291,8 @@ export const en = {
   // the other half of the screen.
   "auth.coreGreeting": "Hi, I’m Margince.",
   "auth.corePurpose": "I’m here to take care of the work around your work.",
-  "auth.coreWork":
-    "I’ll keep your CRM up to date, spot what needs attention, and prepare the next step—so you can focus on customers.",
-  // The one limit left, and the only sentence here a reader has to be able to
-  // rely on. It keeps the icon badge the four older limits carried, because it
-  // is the same register — an absolute the system enforces, not a feature. So it
-  // states the limit that IS absolute: an agent inherits one person's authority
-  // and cannot exceed it. The older promise here said nothing is sent without
-  // asking first, which the send verbs stopped doing when a person's grant of
-  // the `send` scope became the approval.
-  "auth.corePromise":
-    "And I only ever act with the permission you gave me — never more than you can do yourself.",
-  "auth.coreHandover": "First, let me make sure it’s really you…",
-  "auth.coreConfigured": "Configured",
-  "auth.coreUnconfigured": "AI not configured",
-  "auth.coreStillWorks": "The CRM still works.",
   "auth.coreDevelopment": "Development AI",
-  "auth.coreModeCloud": "cloud routing",
-  "auth.coreModeLocal": "local routing",
-  "auth.coreModeHybrid": "hybrid routing",
-  "auth.coreModeNone": "no model routing",
   "auth.coreModeDevelopment": "offline development path",
-  "auth.coreProviderAnthropic": "Anthropic",
-  "auth.coreProviderGemini": "Gemini",
-  "auth.coreProviderOllama": "Ollama",
-  "auth.coreProviderOpenAI": "OpenAI",
-  "auth.coreProviderCompatible": "compatible provider",
-  "auth.coreProviderVllm": "vLLM",
   // The shortest label that still names the field (VOICE-RULE-1), pinned by the
   // login spec §7.1/§7.2 (Amendment 4) and reconciling
   // single-organization-auth-concept.md §12, which already drew "Email".
@@ -6695,19 +6693,18 @@ export const en = {
   "oauthApp.clientSecret": "Client secret",
   "oauthApp.tenant": "Directory (tenant) ID",
   "oauthApp.tenantHint":
-    "Optional. Pins the app to one Entra directory, so only its members may authorize. Leave it empty to allow any organization.",
+    "Optional. Pins the app to one Entra directory: only its members may connect a mailbox, and Microsoft sign-in runs on it. Leave it empty to let any organization connect; sign-in then waits for the server to name your directories.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
-    "Margince provides no inference of its own, so it works through your vendor account. You can change any of this later under Settings → AI.",
+    "Margince has no AI of its own. It thinks through your vendor account, and you can change any of this later under Settings → AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
-  "firstRun.ai.keyHint":
-    "Sent once and sealed in the key vault. The server reads it as {envVar} when one is set in the environment instead.",
+  "firstRun.ai.keyHint": "Sealed in the key vault, never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. The listed prices are per million tokens, in → out; any model id your provider serves will do.",
+    "A starting point. Any model your provider serves will do.",
   "firstRun.ai.embedModel": "Embedding model",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
@@ -8002,6 +7999,8 @@ export const en = {
   "worklist.summary.noMiddle":
     "{urgent} urgent · {due} due · {lower} routine — {total} in all",
   "worklist.completeness": "{shown} of {considered} shown",
+  "worklist.review.partial":
+    "{loaded} of {total} shown — page the day to reach the rest",
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
@@ -8264,6 +8263,10 @@ export const en = {
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
+  "worklist.verb.pin": "Pin",
+  "worklist.verb.unpin": "Unpin",
+  "worklist.verb.pinFailed": "That row could not be pinned.",
+  "worklist.verb.unpinFailed": "That row could not be unpinned.",
   "worklist.verb.completed": "Task done.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "That task could not be reopened.",
@@ -8298,6 +8301,156 @@ export const en = {
   "worklist.when.due": "due {when}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",
+
+  "ob.conv.scene.settleEyebrow": "It stopped on something only you can settle",
+  "ob.conv.review.boardSub":
+    "Every line says where it came from. Nothing is written until you confirm.",
+  "ob.conv.manual.boardTitle": "Fill it in yourself.",
+  "ob.conv.scene.writes": "Writes",
+  "ob.core.idle": "core · at rest",
+  "ob.core.ingest": "core · taking it in",
+  "ob.core.working": "core · working it out",
+  "ob.core.warning": "core · something needs a look",
+  "ob.core.error": "core · stopped",
+  "ob.scan.tallyPages": "pages read",
+  "ob.scan.tallyFacts": "facts found",
+  "ob.scan.tallyUncertain": "it will not guess at",
+  // The ticker's page-level finding: a fact field's own name (already the
+  // reader's language via factFieldLabelKey) and the value the page gave up.
+  // Punctuation only, nothing here for a locale to translate.
+  "ob.scan.tickerFact": "{field}: {value}",
+  "ob.digest.where": "What Margince knows about you",
+  "ob.digest.written": "{n} of {m} lines written",
+  "ob.digest.companyLine": "Company profile, written from {n} pages of {host}",
+  "ob.digest.citedCaption": "lines, each citing its page",
+  "ob.digest.openCaption": "still open",
+  "ob.digest.section.identity": "Identity",
+  "ob.digest.section.offer": "What they sell",
+  "ob.digest.section.customer": "Who they sell to",
+  "ob.digest.section.sales": "How they write",
+  "ob.digest.facts": "Proof",
+  "ob.digest.people": "People",
+  "ob.digest.sources": "References",
+  "ob.digest.blank": "not written yet",
+  "ob.digest.notWritten": "not written down",
+  "ob.digest.settle": "Settle it",
+  "ob.digest.deciding": "you are deciding this now",
+  "ob.digest.yours": "yours",
+  "ob.digest.editLine": "Edit {label}",
+  "ob.digest.saveChanges": "Save changes",
+  "ob.digest.changed": "{count} lines changed, not saved yet",
+  "ob.digest.pickFacts": "Choose the facts to keep",
+  "ob.digest.referenceNote":
+    "A later re-read may propose changes to this record. It will never overwrite a line a person has already touched.",
+  "ob.digest.sidebarLabel": "Facts about the company",
+  "ob.digest.sidebar.legalName": "Legal name",
+  "ob.digest.sidebar.founded": "Founded",
+  "ob.digest.sidebar.headquarters": "Headquarters",
+  "ob.digest.sidebar.offices": "Offices",
+  "ob.digest.sidebar.employees": "Employees",
+  "ob.digest.sidebar.certifications": "Certifications",
+  "ob.digest.pageKind.home": "Home page",
+  "ob.digest.pageKind.impressum": "Legal notice",
+  "ob.digest.pageKind.about": "About page",
+  "ob.digest.pageKind.team": "Team page",
+  "ob.digest.pageKind.services": "Services page",
+  "ob.digest.pageKind.products": "Products page",
+  "ob.digest.pageKind.contact": "Contact page",
+  "ob.digest.pageKind.other": "Page",
+  "ob.deck.counter": "{n} of {m}",
+  "ob.deck.left": "{n} of {m} left",
+  "ob.deck.settled": "{count} facts went in on evidence, without you",
+  "ob.deck.needed": "Needed to continue",
+  "ob.deck.optional": "Worth a look",
+  "ob.deck.next": "Next",
+  "ob.deck.leaveOut": "Leave it out",
+  "ob.deck.readWhole": "Read the whole profile",
+  "ob.deck.backToOpen": "Back to the open ones",
+  "ob.deck.backToRecord": "Back to the record",
+  "ob.deck.confirm": "Confirm the profile",
+  "ob.deck.stillNeeded": "Still needed: {fields}",
+  "ob.deck.openLeft":
+    "Questions left unanswered: {count}. The record is saved without them.",
+  "ob.conv.invite.pickOne": "Pick one of the two to continue.",
+  "ob.conv.voice.speakerPick": "Pick a speaker to continue.",
+  "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",
+  "ob.deck.eyebrow": "Everything else went in on evidence",
+  "ob.deck.title": "It will not guess at these.",
+  "ob.stage.flow": "Setup",
+  "ob.stop.read": "Read the site",
+  "firstRun.ai.eyebrow": "Nothing here can think yet",
+  "firstRun.step.model": "The model",
+  "firstRun.step.platform": "Your platform",
+  "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
+  "firstRun.platform.title": "What does your organization run on?",
+  "firstRun.platform.sub":
+    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
+  "firstRun.platform.legend": "The platform this organization runs on",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, calendar and sign-in through one Google app you own.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail, calendar and sign-in through one Entra app you own.",
+  "firstRun.platform.imap": "IMAP",
+  "firstRun.platform.imapWhat":
+    "Each mailbox connects with its own IMAP app-password. Sign-in is email and password.",
+  "firstRun.platform.redirectTitle": "Register these redirect URIs on the app",
+  "firstRun.platform.redirectHint":
+    "Copy each one into the app before you save it here. Sign-in is what puts the sign-in button on the login page for everyone you invite; Mailbox and Calendar are what let people connect theirs. A missing one fails at the vendor's consent screen, not here.",
+  "firstRun.google.helpToggle": "Where do I get these?",
+  "firstRun.google.helpStep1":
+    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
+  "firstRun.google.helpStep2":
+    "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
+  "firstRun.google.helpStep3":
+    "Under Authorized redirect URIs, add the ones listed above. Mailbox is the one you need for mail; Calendar and Sign-in are what the other two do.",
+  "firstRun.google.helpStep4":
+    "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpDocs":
+    "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
+  "firstRun.platform.imapNote":
+    "Nothing is set up for the whole installation. Connect your own mailbox now, or later; every other mailbox is connected under Settings → Integrations, with its own app-password.",
+  "firstRun.platform.skip": "Not now",
+  "firstRun.needed": "Needed to continue",
+  "firstRun.stillNeeded": "Still needed: {fields}",
+  "firstRun.platform.foot":
+    "Whatever you answer here can be changed later under Settings → Admin.",
+  "firstRun.microsoft.note":
+    "Register an app in Microsoft Entra with the redirect URIs above, then paste its client id and secret here. Pin it to your directory: that is whose mailboxes connect through it, and whose people sign in with it.",
+  "firstRun.microsoft.helpSignIn":
+    "The directory is what puts Microsoft on the login page, so it is asked for here rather than left to chance. To register an app without one — any organization may connect a mailbox, and nobody signs in with Microsoft — use Settings instead.",
+  "firstRun.microsoft.tenantHint":
+    "The Entra directory your people are in. Mailboxes connect through it, and it is the directory Microsoft sign-in runs on.",
+  "firstRun.ai.rankedHint":
+    "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
+  "firstRun.ai.rankedUnavailable":
+    "OpenRouter's live model list could not be read just now, so this offers what your price sheet holds.",
+  "aiRates.chatLane": "What it thinks with",
+  "aiRates.embedLane": "What it remembers with",
+  "aiRates.perMTokInOut": "per million tokens, in → out",
+  "aiRates.perMTok": "per million tokens",
+  "aiRates.unpriced": "No price on file",
+  "aiRates.unpricedDetail":
+    "It will still serve calls. They report as unpriced, so they are missing from usage and spend until someone adds a rate under Settings → AI.",
+  "aiRates.priced": "Priced from {date}",
+  "aiRates.proposed": "OpenRouter's price",
+  "aiRates.proposedDetail":
+    "Read from the vendor just now, not from your price sheet. Bind it and it goes to your approvals inbox, so usage and spend can price it once you confirm.",
+  "firstRun.ignite.title": "It has a pulse.",
+  "firstRun.ignite.sub":
+    "The key is sealed and the model answered. Here is what that changes.",
+  "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
+  "firstRun.ignite.reaching": "reaching the model for the first time…",
+  "firstRun.ignite.canNow": "can now",
+  "firstRun.ignite.cannot": "cannot",
+  "firstRun.ignite.read": "read your website and tell you what it found",
+  "firstRun.ignite.draft": "draft in a voice you taught it",
+  "firstRun.ignite.act": "send anything, or change a record, unless you say so",
+  "firstRun.ignite.carryOn": "Carry on",
+  "firstRun.ai.foot":
+    "Nothing is sent to your vendor until you press Continue.",
   "person.readings.title": "Where this contact stands",
   "person.readings.move": "Whose move",
   "person.readings.yourMove": "Yours",

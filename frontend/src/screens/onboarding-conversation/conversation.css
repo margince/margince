@@ -257,110 +257,6 @@
   color: var(--danger);
 }
 
-/* The review's outstanding points, grouped by tier rather than one flat
- * list: a heading announces the panel as a to-do (not an error report),
- * then one labelled group per tier that actually differs — what stops
- * confirm, what stops it because a decision is pending, and what merely
- * wants a look. Each group is its own stacked list; unlike a chip set
- * answering the machine, this is navigation into rows that already exist
- * on the surface. */
-.ob-conv-attention {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.ob-conv-attention-heading {
-  margin: 0;
-  color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-sm) / var(--lh-normal) var(--f-display);
-}
-
-.ob-conv-attention-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* The short line naming a tier — "needed before you can continue" versus
- * "worth a look" — so the shape of the work is legible before any single
- * row is read, and a row's own text can stay just the field name. */
-.ob-conv-attention-group-label {
-  margin: 0;
-  color: var(--textSecondary);
-  font: var(--fw-semibold) var(--fs-eyebrow) / var(--lh-normal) var(--f-body);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-}
-
-.ob-conv-attention-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ob-conv-attention-list button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  color: var(--textPrimary);
-  cursor: pointer;
-  font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
-  text-align: start;
-}
-
-.ob-conv-attention-list button:hover {
-  border-color: var(--accent);
-}
-
-/* Colour is a hint, not the only carrier — a screen reader gets the same
- * distinction through each button's own (visually hidden) status word and
- * the group label it sits under, never through the dot alone. Danger red is
- * reserved for the ONE tier that actually stops confirm; that group simply
- * does not render when nothing blocks, so nothing in the list reads as red
- * unless something genuinely is. */
-.ob-conv-attention-list button::before {
-  content: "";
-  inline-size: 6px;
-  block-size: 6px;
-  flex: none;
-  border-radius: 50%;
-  corner-shape: round;
-}
-
-.ob-conv-attention-list button[data-kind="blocks"]::before {
-  background: var(--danger);
-}
-
-.ob-conv-attention-list button[data-kind="decision"]::before {
-  background: var(--accent);
-}
-
-/* The advisory pair: an optional field with no value yet, or one with a
- * weak-confidence value worth a second look — neither stops the human, and
- * both recede next to the blocking tier's red. */
-.ob-conv-attention-list button[data-kind="empty"]::before {
-  background: var(--textMuted);
-}
-
-.ob-conv-attention-list button[data-kind="check"]::before {
-  background: var(--warn);
-}
-
-.ob-conv-attention-field {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ob-conv-confirm {
   display: flex;
   flex-direction: column;
@@ -521,6 +417,36 @@
   margin-block-start: auto;
 }
 
+/* The invite: the question is the scene's own heading, and the two answers
+   are the choice list's cards under it. A narrower measure than the working
+   scenes: two plates of one sentence each, stretched across the whole board,
+   read as two panels rather than two answers. */
+.ob-scene.ob-invite-scene {
+  max-width: 44rem;
+}
+
+/* The team act: the settings invite form on a plate of its own, held to a
+   form's measure rather than the scene's, and the people it has invited so
+   far listed under it. */
+.ob-scene.ob-team-scene {
+  max-width: 58rem;
+}
+.ob-team-form {
+  max-width: 34rem;
+  padding: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.ob-team-invited {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+}
+
 /*
  * The refusal a confirm earned, at the head of the pane whose own Continue
  * earned it.
@@ -582,40 +508,20 @@
    reads 1280 and leaves the widest layout in place. Naming the container
    (`ob-scene`) rather than relying on "nearest" keeps a scene-level query
    scene-level even where a tighter container sits between — the board's own
-   column is its own container, `ob-board`. Same reasoning, and the same fix,
-   as onboarding-payoff.css. */
+   column is its own container, `ob-board`. */
 .ob-scene {
   container: ob-scene / inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* The scene owns the pane's full width, centred as a reading column: the
-     prototype's move — generous gutters, no dead half-pane. */
+  /* The scene starts where the board's headline starts and stops at a
+     reading measure. Centred, a scene narrower than the board floated to the
+     middle and its content sat a step to the right of the question it
+     answers, which read as pushed aside rather than as a column. */
   width: 100%;
   max-width: 74rem;
-  margin-inline: auto;
+  margin-inline: 0;
   padding-block-start: var(--space-4);
-}
-
-.ob-scene-eyebrow {
-  margin: 0;
-  color: var(--accentText);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-}
-
-/* The header block below owns the distance to the headline above; a margin
-   here would fight it, and the pair used to sit almost on one baseline
-   because this one pulled the sub back up into the headline. */
-.ob-scene-sub {
-  margin: 0;
-  max-width: 38rem;
-  color: var(--textSecondary);
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
 }
 
 /* A decision as the scene: headline, candidate cards, one confirm. A
@@ -677,6 +583,26 @@
   cursor: pointer;
 }
 
+/* What this answer puts on the record, next to the answer itself.
+   Mono and verbatim, because it is a STRING that will be stored and quoted
+   rather than a description of one: paraphrasing it here would defeat the
+   whole point of showing it before the choice is made. */
+.ob-decision-writes {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--fs-meta);
+}
+.ob-decision-writes-lead {
+  color: var(--textMeta);
+}
+.ob-decision-writes code {
+  font-family: var(--f-mono);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+
 .ob-decision-toggle {
   flex: none;
   padding: 0;
@@ -695,6 +621,19 @@
   color: var(--textPrimary);
 }
 
+/*
+ * Something that went wrong, on the board under the surface that produced it.
+ *
+ * The transcript used to carry these as narration in the chat rail. The rail is
+ * gone with the workbench and the narration went with it, but a failure the
+ * reader has to act on is not narration: it stays, beside the thing it is about.
+ */
+.ob-conv-notice {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-meta);
+}
+
 .ob-decision-head {
   display: flex;
   align-items: flex-start;
@@ -702,12 +641,9 @@
   gap: var(--space-4);
 }
 
-/* Eyebrow, headline and sub are one block, and the scenes assemble it
-   differently — the decision and voice scenes hang a count beside it, the
-   connect scene does not — so its internal rhythm is set once here rather
-   than three times over. */
-.ob-decision-head > div,
-.ob-scene > div:has(> .ob-scene-eyebrow) {
+/* Eyebrow, headline and sub are one block, so its internal rhythm is set
+   once here rather than every scene declaring it again. */
+.ob-decision-head > div {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -716,21 +652,8 @@
 /* A headline is not a peer of the rows beneath it: the block claims more than
    the scene's own child gap, so the eye reads a title and then content rather
    than a list of equal parts. */
-.ob-decision-head,
-.ob-scene > div:has(> .ob-scene-eyebrow) {
+.ob-decision-head {
   margin-block-end: var(--space-4);
-}
-
-.ob-decision-count {
-  flex: none;
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--warnBorder);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--warnBg);
-  color: var(--warn);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 /* The native radio stays for keyboard and AT; the disc is what shows. */
@@ -875,6 +798,198 @@
 
 .ob-voice-scene {
   max-width: 58rem;
+}
+
+/* The collect scene keeps a second column, so it takes the board's measure. */
+.ob-voice-scene-wide {
+  max-width: 74rem;
+}
+
+/* The intake on the left, the distilling panel beside it: the reader adds
+   writing and watches it taken in, in the same glance. One column once the
+   pane cannot hold two without breaking the panel's lines mid-phrase. */
+.ob-voice-collect {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.ob-voice-collect-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@container ob-scene (max-width: 44rem) {
+  .ob-voice-collect {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- the distilling panel ---- */
+
+.ob-distill {
+  /* The stream's pacing, in one place. The glide has to finish well inside
+     the ticker's own step (STEP_MS in voice-distill.tsx) so a line has
+     settled before the next is due; voice-distill.test.ts holds the two
+     together. */
+  --distill-glide: 720ms;
+  --distill-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 16rem;
+  padding: var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background: var(--bgElevated);
+  overflow: hidden;
+}
+
+/* The eyebrow's own type comes from `Eyebrow`; this only seats the pulse
+   beside it and lends it the agent's colour, because what the panel reads out
+   is the agent taking material in. */
+.ob-distill-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--aiText);
+}
+
+.ob-distill-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ai);
+  animation: ob-distill-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ob-distill-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ob-distill-feed {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Every line is its own collapsible row (1fr → 0fr), which is what lets one
+   arrive and one leave without the rest of the stack jumping: the row opens
+   under the new line and closes under the old, and the lines between simply
+   ride that. Height is not knowable here — a sentence wraps to one line or
+   three — so the row, not a pixel height, is the thing that animates. */
+.ob-distill-item {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--distill-glide) var(--distill-ease),
+    opacity var(--distill-glide) var(--distill-ease);
+}
+
+/* The gap lives INSIDE the collapsing row rather than on the container: a
+   flex gap belongs to the feed and would hold a line's worth of space open
+   under a line that has already gone. */
+.ob-distill-line {
+  min-height: 0;
+  overflow: hidden;
+  padding-block-end: var(--space-3);
+}
+
+/* Arriving. A keyframe rather than a transition because the element is new
+   and a transition has no earlier state to run from. */
+@keyframes ob-distill-arrive {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ob-distill-item[data-age="0"] {
+  animation: ob-distill-arrive var(--distill-glide) var(--distill-ease) both;
+}
+
+/* Leaving: the row closes under it as it fades, so the stack rises into the
+   space rather than snapping up once the line is gone. */
+.ob-distill-item[data-leaving] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.ob-distill-item[data-age="1"] {
+  opacity: 0.78;
+}
+
+.ob-distill-item[data-age="2"] {
+  opacity: 0.58;
+}
+
+.ob-distill-item[data-age="3"] {
+  opacity: 0.4;
+}
+
+.ob-distill-item[data-age="4"] {
+  opacity: 0.26;
+}
+
+.ob-distill-evidence {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  font-style: italic;
+  line-height: var(--lh-relaxed);
+}
+
+/* The eye's anchors in a line, not findings: the accent pair rather than the
+   agent's indigo, because nothing has been decided about these words. */
+.ob-distill-evidence mark {
+  padding-inline: var(--space-1);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--accentText);
+  font-style: normal;
+}
+
+.ob-distill-hears {
+  margin: 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+/* What the agent has heard so far — its reading, so its colour. */
+.ob-distill-hears b {
+  color: var(--aiText);
+  font-weight: var(--fw-semibold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-distill-pulse {
+    animation: none;
+  }
+
+  .ob-distill-item {
+    transition: none;
+    animation: none;
+  }
 }
 
 .ob-voice-scene h2,
@@ -1045,7 +1160,9 @@
 }
 
 /* The scene's own footer: what the floor is, and the one action. */
-.ob-voice-foot {
+/* A scene's way onward: what is left to say on the left, the actions on the
+   right, under one hairline. The voice scenes and the invite share it. */
+.ob-scene-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1056,16 +1173,10 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.ob-voice-foot p {
+.ob-scene-foot p {
   margin: 0;
   color: var(--textSecondary);
   font-size: var(--fs-sm);
-}
-
-.ob-voice-foot-acts {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 /* The speaker decision: one radio card per voice the transcript separated,
@@ -1153,16 +1264,6 @@
   color: var(--textMeta);
   font-family: var(--f-body);
   font-size: var(--fs-meta);
-}
-
-/* The continue/retry actions inside a shared `.ob-triage-continue` bar
-   (conversation.css's pinned-foot pattern every scene's primary action now
-   uses): right-aligned whether or not the bar also carries status text. */
-.ob-voice-continue-acts {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
 }
 
 /* The result scene: the sample on the left, the reading on the right — two
@@ -1628,6 +1729,29 @@
   background: var(--accentLight);
 }
 
+/* The one state where the dashed treatment above is the honest one: this
+   provider cannot be connected until somebody registers the organization's
+   app, which is a different thing from a choice that happens to be settled.
+   It is not a button either, so it carries no :disabled to inherit from. */
+.ob-connect-card[data-state="unavailable"] {
+  border-style: dashed;
+  background: var(--bgPage);
+  cursor: default;
+}
+
+.ob-connect-card[data-state="unavailable"] .ob-connect-mark {
+  opacity: 0.55;
+}
+
+/* The way out of the state, in the CTA's slot and its voice: the reader who
+   can fix this is one link away from where it is fixed. */
+.ob-connect-card-setup {
+  color: var(--accentText);
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+}
+
 .ob-connect-card-head {
   display: flex;
   align-items: center;
@@ -1697,13 +1821,6 @@
   font-family: var(--f-body);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
-}
-
-/* Sits at the foot of the scene now, after both sections — the same
-   section-to-section gap the headings above it use, not the tight one it
-   used to need wedged between the mailbox grid and the network heading. */
-.ob-connect-skip-row {
-  margin: var(--space-5) 0 0;
 }
 
 /* ---- the connect dialog: one provider's ask, its own surface ---- */
@@ -3278,8 +3395,7 @@
 
 /* Keyboard focus on option chips and chip rows reads the same accent-token
  * ring as the atom inputs, not the browser's off-palette native outline. */
-.ob-conv-option:focus-visible,
-.ob-conv-attention-list button:focus-visible {
+.ob-conv-option:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
   box-shadow: var(--focus-glow);
@@ -3347,4 +3463,34 @@
 .ob-conv-field input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
+}
+
+/* ---- the preferences act: the last word before the app ---- */
+
+.ob-prefs-scene {
+  max-width: 48rem;
+  gap: var(--space-5);
+}
+
+.ob-prefs-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background: var(--bgElevated);
+}
+
+.ob-prefs-section h3 {
+  margin: 0;
+  color: var(--textPrimary);
+  font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
+}
+
+.ob-prefs-lead {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
 }

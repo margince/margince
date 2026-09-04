@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { destinationOf, reviewWork, sellerWork } from "./worklist.destinations";
+import {
+  destinationOf,
+  reviewShortfall,
+  reviewWork,
+  sellerWork,
+} from "./worklist.destinations";
 import { row } from "./worklist.testkit";
 
 // Which screen a row belongs on, and the one case that must not go wrong.
@@ -43,5 +48,32 @@ describe("splitting the day by destination", () => {
     expect(destinationOf(legacy)).toBe("today");
     expect(sellerWork([legacy]).map((item) => item.id)).toEqual(["old"]);
     expect(reviewWork([legacy])).toEqual([]);
+  });
+});
+
+// What the Review panel is allowed to say about its own completeness.
+
+describe("saying how much review work is not on screen", () => {
+  it("reports the shortfall when the day holds more than the panel", () => {
+    expect(reviewShortfall(2, 7)).toEqual({ loaded: 2, total: 7 });
+  });
+
+  it("says nothing once the panel holds the whole day", () => {
+    // "3 of 3" is noise on a complete list, and the completeness line above
+    // the queue falls silent on the same condition.
+    expect(reviewShortfall(3, 3)).toBeNull();
+  });
+
+  it("says nothing when the walk outran the day's own count", () => {
+    // The two are counted over different populations — the day's candidates
+    // against the rows this walk has served — so a loaded count above the
+    // total is not a shortfall. Drawing "5 of 3" reads as a broken product.
+    expect(reviewShortfall(5, 3)).toBeNull();
+  });
+
+  it("says nothing when the server sends no partition", () => {
+    // An older server has no buckets. A figure invented here would be a claim
+    // about a day this client cannot count.
+    expect(reviewShortfall(2, undefined)).toBeNull();
   });
 });

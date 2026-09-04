@@ -49,3 +49,40 @@ export function reviewWork(
 ): readonly WorklistItem[] {
   return queue.filter((item) => destinationOf(item) !== "today");
 }
+
+/**
+ * What the Review panel can honestly say about how much it is showing.
+ *
+ * The panel draws the review rows LOADED SO FAR, and it has no cursor of its
+ * own: review rows arrive as a side effect of paging the day. So a reader with
+ * an approval past the page cut sees a panel that looks complete, and nothing
+ * on the screen says otherwise — which is the whole reason this figure exists.
+ *
+ * `buckets.review` is the day's own total, counted over every candidate the
+ * read weighed rather than over the page. Drawn bare beside the panel it would
+ * CLAIM ROWS THE PANEL DOES NOT HOLD, so it is only ever shown as the
+ * denominator of what is loaded.
+ *
+ * Null once the two agree: a panel holding everything the day has needs no
+ * fraction, and "3 of 3" is noise on a complete list. This mirrors the
+ * completeness line above the queue, deliberately — one page should not have
+ * two different ways of admitting it is showing part of something.
+ */
+export function reviewShortfall(
+  loaded: number,
+  total: number | undefined,
+): { loaded: number; total: number } | null {
+  // An older server sends no partition. Saying nothing is right: a figure
+  // invented here would be a claim about a day this client cannot count.
+  if (total === undefined) {
+    return null;
+  }
+  // A total BELOW what is loaded is not a shortfall to report. The two are
+  // counted over different populations — the day's candidates against the rows
+  // this walk has served — and a walk that outran its own total would draw
+  // "5 of 3", which reads as a bug in the product rather than in the number.
+  if (loaded >= total) {
+    return null;
+  }
+  return { loaded, total };
+}

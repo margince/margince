@@ -134,21 +134,6 @@ const (
 	aliasCount = "count"
 )
 
-// moneyDefaultBy is the DEFAULT grouping of a report whose default plan sums
-// money: the report's own dimension, then currency (REPORT-VOCAB-1).
-//
-// Currency belongs in the default grouping and not merely in the vocabulary.
-// amount_minor is a minor-unit integer in the deal's own currency, so a total
-// spanning currencies is a number with no unit — the sum data-semantics §1 r4
-// forbids outright and AC-DS-FX1 fails by construction. The default plan is
-// the one an agent calls first and a screen renders unattended, so a currency
-// split a caller has to opt into leaves that path adding dong to euros.
-// Grouping makes every total mean something; converting to one base currency
-// is the frozen-FX roll-up, a different and larger capability.
-func moneyDefaultBy(dimension string) []string {
-	return []string{dimension, fieldCurrency}
-}
-
 type reportAggregate struct {
 	Fn    string `json:"fn"`
 	Field string `json:"field,omitempty"`
@@ -178,8 +163,18 @@ type reportSpec struct {
 	dimensions   map[string]string
 	measures     map[string]string
 	filters      map[string]string
-	defaultBy    []string
-	defaultAggs  []reportAggregate
+	// nativeMeasures are the measures denominated in the ROW's own currency
+	// rather than in one the whole answer shares. Summing one across a grouping
+	// that does not split by currency adds euros to dollars and returns a plain
+	// integer — a number with no unit, which data-semantics §1 r4 forbids.
+	//
+	// Declared rather than inferred from the `_minor` / `_base_minor` naming
+	// convention. The convention is real and the frontend leans on it, but a
+	// convention is not a rule: the next measure that breaks it is named by
+	// whoever adds it, and nothing would notice.
+	nativeMeasures map[string]bool
+	defaultBy      []string
+	defaultAggs    []reportAggregate
 	// population says whose records this report measures, as against which
 	// rows its reader may see at all. See populationRule: the zero value
 	// measures the caller's own.
@@ -358,6 +353,9 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		// Its own refusal: nothing here is out of vocabulary, so the vocabulary
 		// error would name a field the caller never wrote.
 		return nil, nil, &EmptyReportPlanError{}
+	}
+	if err := refuseUngroupedNativeMoney(spec, groupBy, aggregates); err != nil {
+		return nil, nil, err
 	}
 	return columns, selects, nil
 }

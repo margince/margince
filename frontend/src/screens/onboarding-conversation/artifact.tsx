@@ -17,7 +17,20 @@ import { ManualCompanyInterview } from "../onboarding-manual-interview";
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
 
-export type ArtifactMode = "dossier" | "edit";
+/**
+ * Which of the three review surfaces is on the board.
+ *
+ * `dossier` is the deck, the default: one thing at a time. `profile` is the
+ * whole record with its evidence, for a reader who asked to see everything.
+ * `edit` is the plain field form the manual path ends on, for an installation
+ * with no website to read.
+ *
+ * THREE NAMES because there are three surfaces. `profile` used to borrow
+ * `edit`, and the button that opened it landed on the manual form instead: the
+ * whole-record view was unreachable, and the control that claimed to open it
+ * was telling the reader something untrue.
+ */
+export type ArtifactMode = "dossier" | "profile" | "record" | "edit";
 
 export type FindingHighlight = Readonly<{
   /** The narration entry id that caused the pulse; a new entry re-pulses. */
@@ -212,7 +225,9 @@ function persistLater(): undefined {
 
 function ArtifactBody(props: CompanyActArtifactProps) {
   const t = useT();
-  if (props.review != null && props.mode === "dossier") {
+  // The caller decides WHICH review surface this is (see `ArtifactMode`); both
+  // the deck and the whole record arrive here as `review`.
+  if (props.review != null && props.mode !== "edit") {
     return props.review;
   }
   if (props.manual && props.mode === "dossier") {

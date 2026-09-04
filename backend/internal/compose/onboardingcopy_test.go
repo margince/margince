@@ -37,6 +37,8 @@ func TestNoShippedLanguageAnswersInEnglishByAccident(t *testing.T) {
 				{"statusFailed", said.statusFailed, english.statusFailed},
 				{"statusResearching", said.statusResearching, english.statusResearching},
 				{"statusMissing", said.statusMissing, english.statusMissing},
+				{"selectionRecorded", said.selectionRecorded, english.selectionRecorded},
+				{"selectionReason", said.selectionReason, english.selectionReason},
 			} {
 				if field.got == "" {
 					t.Errorf("%s is empty — a blank line of copy reaches the reader as nothing at all", field.name)

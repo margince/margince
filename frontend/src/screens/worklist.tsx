@@ -24,7 +24,11 @@ import {
   pillCount,
   sourceUnavailableText,
 } from "./worklist.copy";
-import { reviewWork, sellerWork } from "./worklist.destinations";
+import {
+  reviewShortfall,
+  reviewWork,
+  sellerWork,
+} from "./worklist.destinations";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -375,6 +379,11 @@ function WorklistBody({
   // from the figures it is drawn beside.
   const today = sellerWork(queue);
   const review = reviewWork(queue);
+  // How much review work the day holds that this panel has not loaded.
+  const reviewMissing = reviewShortfall(
+    review.length,
+    day.summary.buckets?.review,
+  );
 
   const rowProps: RowContext = {
     // Numbered WITHIN the panel each row is drawn in, not across the day.
@@ -574,12 +583,48 @@ function WorklistBody({
           customer stepped over the product's own housekeeping to find one.
           Below, and never hidden — this work is somebody's, and a screen that
           swallowed it would be the reason it went undone. */}
-      {review.length > 0 && (
-        <Panel title={t("worklist.review")}>
-          <QueueRows items={review} {...rowProps} />
-        </Panel>
-      )}
+      <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
     </>
+  );
+}
+
+// The work that is not the day's, drawn below it and never hidden.
+//
+// Its own component because WorklistBody had grown past what one function
+// should hold: the split, the bands, the pane and the paging all read there,
+// and a panel that also decides what to admit about itself is a sixth job.
+function ReviewPanel({
+  items,
+  shortfall,
+  rows,
+}: Readonly<{
+  items: readonly WorklistItem[];
+  shortfall: { loaded: number; total: number } | null;
+  rows: RowContext;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (items.length === 0) {
+    return null;
+  }
+  return (
+    <Panel title={t("worklist.review")}>
+      <QueueRows items={items} {...rows} />
+      {/* What this panel is NOT showing. It has no cursor of its own — review
+          rows arrive as a side effect of paging the day — so a reader with an
+          approval past the page cut sees a panel that looks complete and
+          nothing that says otherwise. The day's own total is the denominator,
+          never drawn bare: it counts every candidate the read weighed, so
+          alone it would claim rows this panel does not hold. */}
+      {shortfall && (
+        <p className="t-caption worklist-completeness">
+          {t("worklist.review.partial", {
+            loaded: formatNumber(shortfall.loaded, locale),
+            total: formatNumber(shortfall.total, locale),
+          })}
+        </p>
+      )}
+    </Panel>
   );
 }
 

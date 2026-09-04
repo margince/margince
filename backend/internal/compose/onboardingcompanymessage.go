@@ -191,6 +191,19 @@ func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontra
 		}
 		answer, err := a.answer(principal.WithCorrelationID(ctx, runID), message, history, conversation, locale, req.SelectedOption)
 		if err != nil {
+			// A CLICKED option survives a model that will not answer. The
+			// field and the value were authored by this server and proved
+			// against the read by verifySelectedOption above, before anything
+			// was asked of a model — so the change is a fact already, and only
+			// the sentence about it was ever the model's to write.
+			//
+			// Losing it here threw away the one thing the human actually said
+			// and asked them to pick again, into the same outage: the reader
+			// answered "which of these addresses is yours", was told the choice
+			// could not be recorded, and watched the draft stay wrong.
+			if req.SelectedOption != nil {
+				return recordedSelection(*req.SelectedOption, locale), nil, nil, nil
+			}
 			return companyReadModelReply{}, nil, nil, err
 		}
 		// A clarification carries the first STILL-OPEN server-detected
@@ -204,6 +217,31 @@ func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontra
 			}
 		}
 		return answer, clarify, nil, nil
+	}
+}
+
+// recordedSelection is the reply a clicked clarify option earns when no model
+// could write one: the change itself, verbatim, under a sentence this server
+// wrote.
+//
+// A correction, because that is what choosing a value IS — the administrator
+// correcting the draft — and it carries no source ids on purpose: the
+// provenance is the human's own click, not a page anybody crawled.
+func recordedSelection(selection crmcontracts.OnboardingClarifySelection, locale string) companyReadModelReply {
+	said := copyFor(locale)
+	return companyReadModelReply{
+		Kind:    companyConversationCorrection,
+		Message: said.selectionRecorded,
+		// VERBATIM, not trimmed. The caller matches the change it gets back
+		// against the selection it sent, field and value by equality, and
+		// applies only an exact pair — so a server that tidied either one
+		// would hand back a change the screen then discards as unconfirmed,
+		// which is the same lost answer by a quieter route.
+		ProposedChanges: []companyReadProposedChange{{
+			Field:  selection.Field,
+			Value:  selection.Value,
+			Reason: said.selectionReason,
+		}},
 	}
 }
 

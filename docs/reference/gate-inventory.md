@@ -225,13 +225,14 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (22)
+## Shape (23)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the PRINCIPAL, and a principal is not a user row. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that is ONE question with one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |
 | `domainclaimprobe_test.go` | H2 | A domain maps to at most one organization (data-model §4.2), so "is this domain taken?" is one question — and answering it discloses something either way. |
+| `enrichmentpool_test.go` | H2 | A provider handler set that can queue a RUN must carry the pool its visibility check reads through. |
 | `extensionsqlscope_test.go` | H1 | A unit's SQL addresses the unit's own tables. |
 | `fieldnames_test.go` | H2 | A field name published to a caller has to BE a field name. |
 | `geocodestaleness_test.go` | H1 | The staleness rule lives in the SCHEMA, and this holds it there. |
@@ -252,11 +253,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (44)
+## Prohibition (45)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `arch_test.go` | H2 | Structural fitness functions (architecture/03 §1): these tests make the boundary rules mechanical, and they derive the package list from the tree instead of maintaining it by hand — a new package is enrolled the moment it exists (fitness function over point fix). |
+| `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
 | `connectoractor_test.go` | H1 | A connector's actor id is DERIVED from the work, never written down. |
 | `constraintnameleak_test.go` | H2 | A constraint's name goes in the operator's log, never in the caller's refusal. |

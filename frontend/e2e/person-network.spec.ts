@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { signIn, textsOf } from "./waits";
 
 /**
  * The person Network tab against the layout it was rebuilt to.
@@ -25,23 +26,6 @@ test.skip(
   !BASE_URL || !PERSON_ID,
   "set BASE_URL and E2E_PERSON_ID to run the Network tab layout suite",
 );
-
-async function signIn(page: Page) {
-  await page.goto("/#/login", { waitUntil: "networkidle" });
-  const email = page
-    .locator('input[type="email"], input[name="email"]')
-    .first();
-  if ((await email.count()) === 0) {
-    return;
-  }
-  await email.fill(process.env.E2E_EMAIL ?? "admin@demo.test");
-  await page
-    .locator('input[type="password"], input[name="password"]')
-    .first()
-    .fill(process.env.E2E_PASSWORD ?? "demo-password-123");
-  await page.locator('button[type="submit"]').first().click();
-  await expect(page.locator("nav.rail").first()).toBeVisible();
-}
 
 /**
  * Open the tab and wait for the graph read to settle.
@@ -114,7 +98,7 @@ test.describe("Network tab — page shape", () => {
     // The lane heads are what tell the two arrangements apart: the node count
     // is identical either way, which is how the first version of this test
     // passed against the broken layout.
-    const lanes = await page.locator(".rmap text.rmap-lane").allTextContents();
+    const lanes = await textsOf(page.locator(".rmap text.rmap-lane"));
     expect(lanes).toContain("Unser Team");
     expect(lanes).toContain("Ihr Unternehmen");
 

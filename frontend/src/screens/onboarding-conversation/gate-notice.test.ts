@@ -185,7 +185,11 @@ describe("why the reader is back at the gate", () => {
 
   it("ignores narration that is not there to explain an absent read", () => {
     const state = withThread([
-      { kind: "narration", id: "1:welcome", i18nKey: "ob.conv.welcome" },
+      {
+        kind: "narration",
+        id: "1:manual-chosen",
+        i18nKey: "ob.conv.manual.chosen",
+      },
       { kind: "narration", id: "2:started", i18nKey: "ob.conv.read.started" },
       {
         kind: "narration",

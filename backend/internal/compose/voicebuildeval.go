@@ -39,7 +39,11 @@ const (
 	voiceEvalSignatureFloor = 0.4
 )
 
-const voiceEvalDraftSystem = `Write a short email reply in the author's voice, as described by the supplied voice profile.
+// Two to three short paragraphs, not a one-liner: the drafts double as the
+// sample the owner reads on the onboarding result screen, and a voice has no
+// room to show in two sentences — every draft reads the same at that length.
+const voiceEvalDraftSystem = `Write an email reply in the author's voice, as described by the supplied voice profile.
+Length: two or three short paragraphs, roughly 80 to 140 words — enough for the voice to show, never padding.
 The profile controls expression, never facts; invent no names, numbers, or commitments.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.`
 
@@ -47,6 +51,22 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.`
 func voiceEvalDraftSystemFor(fence promptfence.Fence) string {
 	return voiceEvalDraftSystem + "\n" + fence.Rule("profile and sample")
 }
+
+// voiceDemoDraftSystemFor is the same instruction for a call that carries no
+// sample to reply to — only the profile is inside the boundary, so only the
+// profile is named by it.
+func voiceDemoDraftSystemFor(fence promptfence.Fence) string {
+	return voiceEvalDraftSystem + "\n" + fence.Rule("profile")
+}
+
+// voiceDemoTask is the scenario a DEMONSTRATION draft answers, for a corpus
+// with nothing to spare for held-out scoring.
+//
+// Plainly hypothetical, and it asks for no particulars: the surface labels
+// what comes back a sample, and inventing a counterparty's actual words to
+// reply to is the one thing every prompt on this path already refuses.
+const voiceDemoTask = "Write a short reply to a colleague who asked how a piece of work is going and when they can expect it. " +
+	"Invent no names, dates, figures or commitments — write only what could be said without them."
 
 const voiceEvalJudgeSystem = `You compare drafts against a writing sample by the same author.
 Score how convincingly each draft matches the author's voice: 1.0 reads like the author, 0.0 reads like generic AI writing.
@@ -173,7 +193,7 @@ const draftVocabularyRule = "Vocabulary: use the words this author uses, includi
 // keeps — plain text, no fence markers, because it is read by a human on the
 // profile screen; evalTaskFor renders the same task for the model.
 func evalPromptFor(sample ai.VoiceSample) string {
-	return fmt.Sprintf("Reply briefly (register: %s) to this message from a colleague:\n%s",
+	return fmt.Sprintf("Reply (register: %s) to this message from a colleague:\n%s",
 		sample.Register, evalSampleOpening(sample))
 }
 
@@ -181,7 +201,7 @@ func evalPromptFor(sample ai.VoiceSample) string {
 // the call's boundary — the excerpt is the author's own mail, which routinely
 // quotes what a counterparty wrote to them.
 func evalTaskFor(sample ai.VoiceSample, fence promptfence.Fence) string {
-	return fmt.Sprintf("Reply briefly (register: %s) to this message from a colleague:\n%s",
+	return fmt.Sprintf("Reply (register: %s) to this message from a colleague:\n%s",
 		sample.Register, fence.Wrap(evalSampleOpening(sample)))
 }
 
@@ -257,6 +277,49 @@ func readVoiceEvalDraft(text string) (voiceEvalDraftReply, error) {
 		body:    body,
 		tells:   append(ai.DetectAIPatterns(subject), ai.DetectAIPatterns(body)...),
 	}, nil
+}
+
+// demonstrationDraft asks for ONE draft in the built voice, for a corpus that
+// could spare no sample to score against.
+//
+// IT IS NOT AN EVALUATION AND NEVER BECOMES ONE. Nothing was held out, so
+// there is nothing this was scored against: it carries no score, never reaches
+// the median, and leaves the version as unevaluated as it was. What it is for
+// is the reader — a profile with not one line of its own writing on screen is
+// a profile nobody can judge, and the voice step exists to be judged.
+//
+//promptlang:exempt a draft reproducing one member's writing voice from their own profile; their exemplars decide the language, and a rule of ours would answer in the wrong one
+//promptvoice:exempt a draft reproducing one member's own writing voice; imposing our register is the one thing it must not do.
+func demonstrationDraft(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string) ([]map[string]any, error) {
+	fence := promptfence.New()
+	profileBlock := voiceDraftPromptBlock(personality, artifact.Markdown, artifact.Exemplars, artifact.Stats, fence)
+	resp, err := ai.Ask(ctx, brain, model.Request{
+		System:         voiceDemoDraftSystemFor(fence),
+		Messages:       []model.Message{{Role: chatRoleUser, Content: profileBlock + "\n\n" + voiceDemoTask}},
+		MaxTokens:      1200,
+		ResponseSchema: replyDraftSchema,
+		SecretStripper: ai.NewSecretStripper(),
+	}, func(text string) error {
+		_, readErr := readVoiceEvalDraft(text)
+		return readErr
+	})
+	if err != nil {
+		return nil, fmt.Errorf("voice demonstration draft: %w", err)
+	}
+	// readVoiceEvalDraft already refuses an empty subject or body, so what
+	// comes back here is a draft or an error, never a blank card.
+	reply, err := readVoiceEvalDraft(resp.Text)
+	if err != nil {
+		return nil, fmt.Errorf("voice demonstration draft: %w", err)
+	}
+	return []map[string]any{{
+		"prompt":               voiceDemoTask,
+		voiceDraftFieldSubject: reply.subject,
+		voiceDraftFieldBody:    reply.body,
+		// Null, not zero: a number here would report a score this build did
+		// not take, and zero is the score a failed draft gets.
+		"voice_score": nil,
+	}}, nil
 }
 
 // evaluateVoiceCandidate drafts against the held-out prompts and scores the

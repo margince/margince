@@ -62,10 +62,33 @@ const (
 	AvailabilityNoEndpoint ModelAvailability = "no_endpoint"
 )
 
+// AvailableModel is one model this read reports, widened past the
+// three-field model.Info with what only a broker publishes on the same
+// endpoint: a price and, for the one vendor with a published benchmark, a
+// rank score. Every vendor's answer is carried in this shape; model.Info
+// itself stays three fields, because that is what every OTHER adapter's list
+// endpoint can honestly promise.
+type AvailableModel struct {
+	model.Info
+	// ContextLength is absent where the vendor publishes none.
+	ContextLength *int
+	// InputPerMtok and OutputPerMtok are the vendor's own asking price, in
+	// USD-per-million-tokens decimal strings, absent where the vendor
+	// publishes no price.
+	InputPerMtok, OutputPerMtok *string
+	// RankScore is this model's score under AvailableModels.RankedBy, absent
+	// where the list is not ranked.
+	RankScore *string
+}
+
 // AvailableModels is one vendor's answer.
 type AvailableModels struct {
 	Provider string
-	Models   []model.Info
+	Models   []AvailableModel
+	// RankedBy names the measure Models is sorted by, and is empty when the
+	// list is in the vendor's own order — only a vendor that publishes a
+	// benchmark (OpenRouter) can ever set this.
+	RankedBy string
 	// Unavailable is empty when the vendor answered, and names the state when
 	// it did not. Models is empty whenever this is set.
 	Unavailable ModelAvailability
@@ -85,9 +108,15 @@ type AvailableModels struct {
 // validator permits. Asked without it, this read answered for whichever host it
 // happened to find, which is not necessarily the one the lane being edited
 // points at.
+//
+// top asks for a shortlist: honoured only for the one vendor (OpenRouter) that
+// publishes the benchmark it ranks by. Every other vendor answers its full
+// list regardless, per the contract's own description of `top` — a caller
+// that needs the distinction reads AvailableModels.RankedBy, never top itself.
 func (s *RoutingStore) ListAvailableModels(
 	ctx context.Context,
 	provider, tier string,
+	top int,
 ) (AvailableModels, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return AvailableModels{}, err
@@ -100,10 +129,23 @@ func (s *RoutingStore) ListAvailableModels(
 	// The profile decides where inference may happen, and a list call is egress
 	// like any other. Refused here for the same reason a binding is refused at
 	// save time: a sovereign installation must not reach a cloud vendor, and
-	// discovering that at the first call is too late.
+	// discovering that at the first call is too late. OpenRouter is cloud
+	// egress like any other broker, so it is refused here too rather than
+	// falling through to the unauthenticated read below.
 	if cfg.Profile == ProfileSovereign && !ProviderIsLocal(provider) {
 		out.Unavailable = AvailabilityProfileForbids
 		return out, nil
+	}
+	// OpenRouter publishes its list unauthenticated and unbound: there is no
+	// stored binding to resolve a host from, and SelectBrain knows no adapter
+	// by this name, so it is asked directly rather than through the bound
+	// path below.
+	if provider == openRouterProvider {
+		if s.catalogue == nil {
+			out.Unavailable = AvailabilityNotPublished
+			return out, nil
+		}
+		return s.catalogue.List(ctx, top), nil
 	}
 	client, err := SelectBrain(boundProviderConfig(cfg, provider, tier), s.resolvedKeys(ctx))
 	if err != nil {
@@ -125,7 +167,10 @@ func (s *RoutingStore) ListAvailableModels(
 		out.Unavailable = AvailabilityUnreachable
 		return out, nil
 	}
-	out.Models = models
+	out.Models = make([]AvailableModel, len(models))
+	for i, m := range models {
+		out.Models[i] = AvailableModel{Info: m}
+	}
 	return out, nil
 }
 
