@@ -1439,6 +1439,8 @@ export const de = {
   "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":
     "Konnte nicht ausgeblendet werden — es wird weiter angezeigt",
+  "co.suggest.addTaskFailed":
+    "Der Schritt wurde nicht angelegt — nichts wurde gespeichert",
   "co.suggest.viewTasks": "Aufgaben ansehen",
   "co.suggest.commitment.overdueCount": "{count} überfällig",
   "co.suggest.commitment.openCount": "{count} offen",

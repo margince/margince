@@ -1728,6 +1728,16 @@ describe("company view — advice you can act on", () => {
           evidence: [],
           action: null,
         },
+        // An add_task with no prepared body. The contract promises one on
+        // every add_task, so this is a server that broke its word — and the
+        // honest answer is still no button: pressing it would post nothing.
+        {
+          kind: "no_next_step",
+          fingerprint: "f3",
+          reason: "3 open deal(s) here and no task saying what happens next.",
+          evidence: [],
+          action: { kind: "add_task" },
+        },
       ],
       suggestions_dropped: 0,
     });

@@ -54,6 +54,7 @@ import {
   DealsCard,
   NextSteps,
   type Org360Result,
+  ProposedNextSteps,
   recordNamesIn,
   StateStrip,
   type SuggestionAction,
@@ -1993,8 +1994,11 @@ function CompanyPage({
           } else if (action.kind === "open_deal" && action.deal_id) {
             navigate({ screen: "deals", id: action.deal_id });
           }
-          // `add_task` names no surface of its own yet: the row's own dismiss
-          // stays the only control until the brief has one.
+          // `add_task` never reaches here: the advice section writes the step
+          // itself, through the same POST /tasks the task form uses, because
+          // the server prepared the body and this page would only be relaying
+          // it. Routing it through a surface here would put a second author on
+          // a sentence a rule already wrote.
         }}
         decisionsOpen={decisionsOpen}
         onDecisionsOpen={setDecisionsOpen}
@@ -2160,6 +2164,7 @@ function CompanyRecordBody({
           readOnly={readOnly}
           openTaskId={openTaskId}
           onOpenTask={onOpenTask}
+          onOpenRecord={receipt.open}
           taskUpdate={taskUpdate}
         />
       )}
@@ -2526,6 +2531,7 @@ function CompanyDealsAndTasksTabs({
   readOnly,
   openTaskId,
   onOpenTask,
+  onOpenRecord,
   taskUpdate,
 }: Readonly<{
   tab: CompanyTab;
@@ -2535,6 +2541,10 @@ function CompanyDealsAndTasksTabs({
   readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
+  // Where a recommended step's cited records lead. The page's own receipt, so
+  // a chip opened from the Tasks tab lands where the same chip on the overview
+  // does.
+  onOpenRecord: (entityType: string, entityId: string) => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -2567,10 +2577,12 @@ function CompanyDealsAndTasksTabs({
       )}
       {tab === "tasks" && (
         <CompanyTasksTab
+          orgId={org.id}
           view={view}
           failed={failed}
           readOnly={readOnly}
           onOpenTask={onOpenTask}
+          onOpenRecord={onOpenRecord}
           update={taskUpdate}
         />
       )}
@@ -2639,18 +2651,22 @@ function CompanyDealsTab({
 // body that would be a blank tab, exactly what the four-states rule forbids,
 // so the withheld case is caught here before `NextSteps` ever sees it.
 function CompanyTasksTab({
+  orgId,
   view,
   failed,
   readOnly,
   onOpenTask,
+  onOpenRecord,
   update,
 }: Readonly<{
+  orgId: string;
   view?: Organization360View;
   failed: boolean;
   // An archived company takes no new activity, so completing or snoozing a
   // task from here would only be refused server-side.
   readOnly: boolean;
   onOpenTask: (activityId: string) => void;
+  onOpenRecord: (entityType: string, entityId: string) => void;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -2684,6 +2700,18 @@ function CompanyTasksTab({
   return (
     <NextSteps
       view={view}
+      // The recommended steps, above the ones already on the list. An archived
+      // account draws none: writing one would only be refused, and offering a
+      // button that cannot fire is the failure this whole surface avoids.
+      proposed={
+        readOnly ? undefined : (
+          <ProposedNextSteps
+            orgId={orgId}
+            view={view}
+            onOpenRecord={onOpenRecord}
+          />
+        )
+      }
       onOpenTask={(step) => onOpenTask(step.activity_id)}
       update={readOnly ? undefined : update}
       renderAction={

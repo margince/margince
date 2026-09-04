@@ -7,6 +7,7 @@ import {
   CommercialPanel,
   DealsCard,
   NextSteps,
+  ProposedNextSteps,
   RecentActivityPanel,
   StateStrip,
 } from "./company360";
@@ -372,6 +373,59 @@ export const SectionWithheld: Story = {
 };
 
 export const NothingYet: Story = { render: () => <Cards view={empty} /> };
+
+// The open-task list with a step nobody has accepted yet standing above it:
+// the account has an open deal, nothing is scheduled, and the rule that
+// noticed both has worked out the one thing to do about it. The byline and
+// the indigo verb are the claim the row makes — a machine wrote this sentence
+// — and pressing it writes the task the list beneath is currently empty of.
+//
+// No seeded demo account reaches this pairing, and for a structural reason:
+// every one of them already carries an open task, which is exactly the
+// condition that silences the rule.
+const recommending = {
+  ...populated,
+  next_steps: { data: [], page },
+  suggestions: [
+    {
+      kind: "no_next_step",
+      title: 'Agree the next step on "Fleet retrofit 2026"',
+      reason:
+        '"Fleet retrofit 2026" is open and no task says what happens next.',
+      fingerprint: "fp-3",
+      evidence: [{ entity_type: "deal", entity_id: "d-1" }],
+      action: {
+        kind: "add_task",
+        deal_id: "d-1",
+        task: {
+          subject: 'Agree the next step on "Fleet retrofit 2026"',
+          source: "ui",
+          links: [{ entity_type: "deal", entity_id: "d-1" }],
+        },
+      },
+    },
+  ],
+} as unknown as View;
+
+function RecommendedStep() {
+  installFetchStub({
+    "GET /me": meRoute({ organization: ["read", "update"] }),
+  });
+  return (
+    <StoryProviders>
+      <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
+        <NextSteps
+          view={recommending}
+          proposed={<ProposedNextSteps orgId="o-1" view={recommending} />}
+        />
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const NextStepRecommended: Story = {
+  render: () => <RecommendedStep />,
+};
 
 // A connected finance source, shaped exactly like companyfinance.stories.tsx's
 // own `connected` fixture: two stories reading the same wire shape must not

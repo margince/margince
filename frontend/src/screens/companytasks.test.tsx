@@ -94,6 +94,33 @@ const org360WithOpenTask = {
   next_steps: { ...emptySection, data: [openTask] },
 };
 
+// The step nobody has accepted yet: the account has an open deal and nothing
+// scheduled, so the rule worked out what to do and prepared the body that
+// writes it. The tab draws it beside the open work rather than leaving it in
+// the day's brief, where a reader who came looking for what happens next
+// would never meet it.
+const RECOMMENDED = 'Agree the next step on "PIM rollout Phase 2"';
+const preparedStep = {
+  subject: RECOMMENDED,
+  source: "ui",
+  links: [{ entity_type: "deal", entity_id: "d-1" }],
+};
+const org360WithRecommendedStep = {
+  ...org360,
+  suggestions: [
+    {
+      kind: "no_next_step",
+      fingerprint: "f1",
+      title: RECOMMENDED,
+      reason:
+        '"PIM rollout Phase 2" is open and no task says what happens next.',
+      evidence: [{ entity_type: "deal", entity_id: "d-1" }],
+      action: { kind: "add_task", deal_id: "d-1", task: preparedStep },
+    },
+  ],
+  suggestions_dropped: 0,
+};
+
 // A due date that falls on a DIFFERENT calendar day in the two zones this page
 // could read it in. `dueInstant` mints a due date as the end of the picked day
 // in the BROWSER's zone, so this is what a writer in Los Angeles picking 21
@@ -187,6 +214,71 @@ describe("CompanyScreen — the Tasks tab", () => {
     // Row and detail, both open: one deadline, one day.
     expect(await screen.findAllByText(PICKED_DAY)).toHaveLength(2);
     expect(screen.queryByText(DAY_AFTER)).toBeNull();
+  });
+
+  // The button used to do nothing at all: the row said "Add the next step" and
+  // the page had no surface to route it to, so a reader pressed it and the
+  // account stayed exactly as it was. The step is the server's own sentence
+  // now, and the button writes THAT — not one this page recomposed from the
+  // row's words, which is how the sentence a reader accepted and the task they
+  // get come apart.
+  it("writes the recommended step, exactly as the server prepared it", async () => {
+    const user = userEvent.setup();
+    let posted: unknown;
+    const { urls } = stubFetch(
+      async (url, method, request) => {
+        if (method === "POST" && url.endsWith("/tasks")) {
+          posted = await request.json();
+          return jsonResponse({ id: "a-9" }, 201);
+        }
+        return companyBackstop(url);
+      },
+      { org360: org360WithRecommendedStep },
+    );
+    render(<CompanyScreen id="o-1" />);
+    await openTasksTab(user);
+
+    // The ask is the step, in the words the button writes — not "Set the next
+    // step", which hands the reader back the finding as an instruction.
+    await waitFor(() => expect(screen.getByText(RECOMMENDED)).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "Add the next step" }));
+
+    await waitFor(() => expect(posted).toEqual(preparedStep));
+    // The POST returning is not the end of the write: it invalidates the
+    // account's own read, because the advice fired on there being no open task
+    // and there is one now. Waiting for that re-read is what stops this test
+    // finishing with a render still queued behind it — which, in the full
+    // suite, lands in whichever file jsdom has already torn down.
+    await waitFor(() =>
+      expect(urls.filter((url) => url.endsWith("/360")).length).toBeGreaterThan(
+        1,
+      ),
+    );
+  });
+
+  it("recommends no step on an archived account", async () => {
+    // The write would only be refused, and a button that cannot fire is the
+    // control-that-does-nothing this surface exists to avoid.
+    const user = userEvent.setup();
+    stubFetch(
+      async (url) => {
+        if (url.endsWith("/organizations/o-1")) {
+          return jsonResponse({ ...org, archived_at: "2026-07-13T00:00:00Z" });
+        }
+        return companyBackstop(url);
+      },
+      { org360: org360WithRecommendedStep },
+    );
+    render(<CompanyScreen id="o-1" />);
+    await openTasksTab(user);
+
+    await waitFor(() =>
+      expect(screen.getByText("No open task on this account.")).toBeTruthy(),
+    );
+    expect(screen.queryByText(RECOMMENDED)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Add the next step" }),
+    ).toBeNull();
   });
 
   it("says the section is withheld rather than rendering it as empty", async () => {

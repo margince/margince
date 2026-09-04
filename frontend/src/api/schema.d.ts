@@ -17976,7 +17976,7 @@ export interface components {
                 /**
                  * @description `draft_reply` — open the composer on the message that went unanswered.
                  *     `open_deal` — open the deal that stalled.
-                 *     `add_task` — log the next step this account does not have.
+                 *     `add_task` — write the step named in `task`, through `POST /tasks`.
                  * @enum {string}
                  */
                 kind: "draft_reply" | "open_deal" | "add_task";
@@ -17990,6 +17990,20 @@ export interface components {
                  * @description The deal an `open_deal` opens, and the optional link an `add_task` carries.
                  */
                 deal_id?: string | null;
+                /**
+                 * @description The step an `add_task` writes, prepared here as the exact body `POST /tasks` takes
+                 *     — subject, and the record it hangs on. Present on every `add_task`, null otherwise.
+                 *
+                 *     The client SENDS IT UNCHANGED. Composing a task out of the row's words would put a
+                 *     second author on the same sentence, and the two would drift the first time either
+                 *     side was reworded; it would also give the client a say in what the task is linked
+                 *     to, which is a decision the rule that fired already made from records.
+                 *
+                 *     Writing it is still the rep's move: this is a prepared body, not a staged row, and
+                 *     nothing exists until they press the button. The write goes through the same
+                 *     governed endpoint the task form uses, so it is theirs, audited and undoable.
+                 */
+                task?: components["schemas"]["CreateTaskRequest"] | null;
             } | null;
         };
         /**

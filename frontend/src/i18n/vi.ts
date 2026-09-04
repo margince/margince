@@ -1436,6 +1436,7 @@ export const vi = {
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed":
     "Không bỏ qua được mục này — mục đó vẫn hiển thị với bạn",
+  "co.suggest.addTaskFailed": "Chưa tạo được bước này — không có gì được lưu",
   "co.suggest.viewTasks": "Xem công việc",
   "co.suggest.commitment.overdueCount": "{count} quá hạn",
   "co.suggest.commitment.openCount": "{count} đang mở",

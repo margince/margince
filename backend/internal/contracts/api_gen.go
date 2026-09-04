@@ -26085,8 +26085,21 @@ type Organization360Suggestion struct {
 
 		// Kind `draft_reply` — open the composer on the message that went unanswered.
 		// `open_deal` — open the deal that stalled.
-		// `add_task` — log the next step this account does not have.
+		// `add_task` — write the step named in `task`, through `POST /tasks`.
 		Kind Organization360SuggestionActionKind `json:"kind"`
+
+		// Task The step an `add_task` writes, prepared here as the exact body `POST /tasks` takes
+		// — subject, and the record it hangs on. Present on every `add_task`, null otherwise.
+		//
+		// The client SENDS IT UNCHANGED. Composing a task out of the row's words would put a
+		// second author on the same sentence, and the two would drift the first time either
+		// side was reworded; it would also give the client a say in what the task is linked
+		// to, which is a decision the rule that fired already made from records.
+		//
+		// Writing it is still the rep's move: this is a prepared body, not a staged row, and
+		// nothing exists until they press the button. The write goes through the same
+		// governed endpoint the task form uses, so it is theirs, audited and undoable.
+		Task *CreateTaskRequest `json:"task,omitempty"`
 	} `json:"action,omitempty"`
 
 	// DueAt The date the EVIDENCE carries — when the thread went quiet, when the deal last moved.
@@ -26139,7 +26152,7 @@ type Organization360Suggestion struct {
 
 // Organization360SuggestionActionKind `draft_reply` — open the composer on the message that went unanswered.
 // `open_deal` — open the deal that stalled.
-// `add_task` — log the next step this account does not have.
+// `add_task` — write the step named in `task`, through `POST /tasks`.
 type Organization360SuggestionActionKind string
 
 // Organization360SuggestionKind `no_reply` — an outbound message on a thread nobody answered.
