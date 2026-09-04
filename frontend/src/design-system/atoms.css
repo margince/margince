@@ -1280,7 +1280,11 @@
   border-radius: 0;
   height: auto;
   padding: 0 0 0 24px;
-  font-size: 14px;
+  /* NO font-size. The flush variant strips the field's chrome — border, ground,
+     radius — and the type is not chrome. A size here also outranks the iOS
+     floor above by specificity while sitting outside its media query, so a
+     flush field was the one input on a phone that still zoomed the viewport on
+     focus. Inheriting is what keeps that floor reachable. */
 }
 .input-icon-flush .input:focus,
 .input-icon-flush .input:focus-visible {
