@@ -111,6 +111,7 @@ export function PersonToday({
   view,
   onAction,
   onOpenTasks,
+  onOpenEmail,
 }: Readonly<{
   // Absent when the caller lacks a grant the rule needs — the server names the
   // section in `sections_omitted` — and the page still opens on the call and
@@ -126,6 +127,9 @@ export function PersonToday({
   onAction: (action: PersonMomentAction) => void;
   // Where the day's work sends a reader for the whole task list.
   onOpenTasks?: () => void;
+  // Opens a message the thread cites. The page owns its one drawer, so this
+  // card asks rather than mounting a second one over it.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const plural = usePlural();
   const t = useT();
@@ -154,6 +158,7 @@ export function PersonToday({
           <RecordSpine
             source={spineSourceOf(view)}
             commercial={{ next_close_on: view.commercial?.deal?.close_date }}
+            onOpenEmail={onOpenEmail}
           />
         </CallCard>
         <TodayPanel onOpenTasks={onOpenTasks} notice={withheld}>
@@ -207,6 +212,7 @@ export function PersonToday({
         <RecordSpine
           source={spineSourceOf(view)}
           commercial={{ next_close_on: view.commercial?.deal?.close_date }}
+          onOpenEmail={onOpenEmail}
         />
       </CallCard>
       <TodayPanel onOpenTasks={onOpenTasks} notice={withheld}>
