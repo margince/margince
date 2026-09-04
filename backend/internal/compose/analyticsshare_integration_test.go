@@ -194,26 +194,36 @@ func TestASharedSnapshotRecomputesRatherThanServingTheStoredTotal(t *testing.T) 
 		t.Error("nothing was withheld from a reader who sees every deal, and the answer says otherwise")
 	}
 
-	// A rep on one team reads the SAME total, and that is correct rather than a
-	// leak: a deal is an identity table (auth/tableclass.go), read by every seat
-	// of the workspace, and the ruling behind that is recorded there — the
-	// opposite one gave a consultant a 404 on their own project. What narrows a
-	// deal for a colleague is the field mask, which the next test covers.
+	// A rep on one team reads THEIR team's half, not the whole frozen state.
 	//
-	// The assertion is here anyway. Were the recompute silently dropping rows
-	// it should keep, this is where it would show, and a reader who may see
-	// everything being told something was withheld is its own defect.
+	// Two different questions, and only the first was ever asked here. Whether
+	// this seat may READ a deal is row scope, and the answer is yes — a deal is
+	// an identity table (auth/tableclass.go), read by every seat, and the
+	// ruling behind that stands: the opposite once gave a consultant a 404 on
+	// their own project. Whether they may MEASURE a population is the separate
+	// question the analytics scope answers, and a snapshot's readings are a
+	// measurement rather than a list of rows.
+	//
+	// Without that second question a link WIDENED its opener: issue one over
+	// the workspace, hand it to a rep, and they read the whole installation's
+	// forecast — authority lent by sharing rather than granted. A share may
+	// narrow what its opener sees and must not widen it.
 	narrow := e.readShared(e.forecastReader(
 		e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)), t, id)
-	if narrow.Readings.OpenMinor != mine+theirs {
-		t.Errorf("a team-scoped reader read %d open; every seat reads every deal, so it is %d",
-			narrow.Readings.OpenMinor, mine+theirs)
+	if narrow.Readings.OpenMinor != mine {
+		t.Errorf("a team-scoped reader read %d open, want their own team's %d — a link "+
+			"that answers wider than its opener may measure lends authority",
+			narrow.Readings.OpenMinor, mine)
 	}
-	if narrow.Readings.EligibleCount != 2 {
-		t.Errorf("a team-scoped reader counted %d deals and reads 2", narrow.Readings.EligibleCount)
+	if narrow.Readings.EligibleCount != 1 {
+		t.Errorf("a team-scoped reader counted %d deals, want the 1 in their population",
+			narrow.Readings.EligibleCount)
 	}
-	if narrow.Withheld {
-		t.Error("nothing was withheld from a seat that reads every deal, and the answer says otherwise")
+	// And the answer SAYS something was kept back, which is what stops the
+	// narrower total reading as the whole frozen state.
+	if !narrow.Withheld {
+		t.Error("the snapshot held deals outside this reader's population and the answer " +
+			"does not say so — a partial total presented as a complete one")
 	}
 }
 
@@ -551,4 +561,140 @@ func TestASeatThatCanIssueAShareCanCloseIt(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a revoked share answered %v; it must stop serving", err)
 	}
+}
+
+// A team manager cannot issue a link to a population they may not measure.
+//
+// `forecast.create` says they may make a share; it does not say which
+// population they may make one ABOUT. The shape check beside it only asked
+// whether a workspace scope carried no id — never whether this seat held the
+// installation. So a team-lens manager could mint a link to the whole
+// forecast and hand it to anybody, which is authority granted by issuing.
+func TestATeamManagerCannotIssueAWorkspaceShare(t *testing.T) {
+	e := setupForecast(t)
+	id := e.freezeTwoTeams(t, 100_000, 250_000)
+
+	manager := e.forecastReader(e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam))
+	manager = withForecastCreate(manager)
+
+	err := e.issueShare(manager, NewShare{
+		Kind: "snapshot", Target: "someone@example.test",
+		Scope:      forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+		SnapshotID: &id,
+		ExpiresAt:  time.Now().UTC().Add(24 * time.Hour),
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a team-lens manager issued a workspace share and got %v, want a refusal — "+
+			"a link they may mint is a link about a population they may measure", err)
+	}
+}
+
+// A snapshot share's scope must be the snapshot's own.
+//
+// The frozen readings were computed over ONE population. A link claiming a
+// different one labels those numbers with a population nobody computed them
+// for, and the recipient has no way to tell.
+func TestASnapshotShareCannotClaimADifferentPopulation(t *testing.T) {
+	e := setupForecast(t)
+	id := e.freezeTwoTeams(t, 100_000, 250_000)
+
+	// A REAL seat holding the whole workspace, so the issue reaches the scope
+	// check rather than dying on the created_by foreign key — and so removing
+	// the check produces a successfully issued link, which is the thing this
+	// case has to be able to see.
+	issuer := principal.WithCorrelationID(
+		withForecastCreate(e.forecastReader(
+			e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))),
+		ids.NewV7())
+	team := e.Team1
+	err := e.issueShare(issuer, NewShare{
+		Kind: "snapshot", Target: "someone@example.test",
+		Scope:      forecasting.Scope{Kind: forecasting.ScopeTeam, ID: &team},
+		SnapshotID: &id,
+		ExpiresAt:  time.Now().UTC().Add(24 * time.Hour),
+	})
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("a snapshot share naming a different population than the snapshot "+
+			"answered %v, want a refusal — the stored numbers would be labelled with "+
+			"a population nobody computed them for", err)
+	}
+}
+
+// withForecastCreate lends the create grant without widening the row lens,
+// which is the pair the defect needed: authority to share, no authority over
+// the population being shared.
+func withForecastCreate(ctx context.Context) context.Context {
+	p, _ := principal.Actor(ctx)
+	objects := map[string]principal.ObjectGrant{}
+	for name, grant := range p.Permissions.Objects {
+		objects[name] = grant
+	}
+	forecast := objects["forecast"]
+	forecast.Create = true
+	objects["forecast"] = forecast
+	p.Permissions.Objects = objects
+	return principal.WithActor(ctx, p)
+}
+
+// issueShare answers only whether the issue was ALLOWED, which is what these
+// cases ask. The share and its token are dropped rather than returned unused —
+// a test helper handing back values nobody reads invites the next reader to
+// assume something checks them.
+func (e *forecastEnv) issueShare(ctx context.Context, in NewShare) error {
+	return forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			_, _, issueErr := NewAnalyticsShareStore(
+				func() time.Time { return time.Now().UTC() }).Issue(ctx, tx, in)
+			return issueErr
+		})
+}
+
+// A team manager cannot assert the WHOLE installation's forecast.
+//
+// `POST /forecast/calls` took `scope_kind` from the body and wrote it. The RBAC
+// gate asks whether this seat may create a forecast call, never which
+// population they may assert one for — and the field defaults to `workspace`,
+// so a team-lens manager who sent no scope at all was creating the
+// installation's standing call and superseding whatever management had
+// asserted. The app hides the editor for them, which is a courtesy and not a
+// check.
+//
+// Driven through the seam the handler now applies, which is where the answer
+// is decided. That the handler cannot skip it is structural rather than
+// asserted: `resolve` is a required argument to NewHandlers, so a forecast
+// surface built without one does not compile.
+func TestATeamManagerCannotAssertTheWorkspacesForecast(t *testing.T) {
+	e := setupForecast(t)
+	manager := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
+
+	_, err := e.writableScope(manager, forecasting.Scope{Kind: forecasting.ScopeWorkspace})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a team-lens manager claiming the workspace answered %v, want a refusal — "+
+			"the standing forecast of the whole installation is management's to assert", err)
+	}
+
+	// And naming nothing does not silently mean the workspace: it resolves to
+	// what they DO hold, which is the default the contract's own wording made
+	// dangerous by spelling it `workspace`.
+	got, err := e.writableScope(manager, forecasting.Scope{})
+	if err != nil {
+		t.Fatalf("a manager's own default was refused: %v", err)
+	}
+	if got.Kind == forecasting.ScopeWorkspace {
+		t.Errorf("naming no scope resolved to the workspace for a team-lens manager — "+
+			"the defaulting is the whole defect, and it answered %q", got.Kind)
+	}
+}
+
+func (e *forecastEnv) writableScope(
+	ctx context.Context, requested forecasting.Scope,
+) (forecasting.Scope, error) {
+	var out forecasting.Scope
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(e.forecastReader(ctx),
+		func(ctx context.Context, tx pgx.Tx) error {
+			var scopeErr error
+			out, scopeErr = ForecastWritableScope(ctx, tx, requested)
+			return scopeErr
+		})
+	return out, err
 }

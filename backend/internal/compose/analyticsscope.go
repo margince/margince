@@ -60,6 +60,35 @@ type ResolvedScope struct {
 	Label string
 }
 
+// ResolveAnalyticsScope answers the population this caller may measure, or
+// refuses.
+//
+// The resolution WITHOUT the SQL, for the paths that need the authority answer
+// and have nothing to narrow: a forecast call asserts a standing number ABOUT a
+// population rather than reading rows from it, and a share records which
+// population a link is for. Both were taking the caller's word for it.
+//
+// Exported beside the clause builder rather than duplicated inside those paths,
+// and AnalyticsPopulationClause calls it, so there is one answer to "may this
+// seat measure that" and a write path cannot come to a different one than the
+// read path beside it.
+func ResolveAnalyticsScope(
+	ctx context.Context, tx pgx.Tx, requested RequestedScope,
+) (ResolvedScope, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return ResolvedScope{}, errors.New("compose: no actor bound to context")
+	}
+	resolved, err := resolveAnalyticsScope(ctx, tx, p, requested)
+	if err != nil {
+		return ResolvedScope{}, err
+	}
+	if err := labelScope(ctx, tx, &resolved); err != nil {
+		return ResolvedScope{}, err
+	}
+	return resolved, nil
+}
+
 // AnalyticsPopulationClause resolves a requested scope against the caller's
 // lens and renders the SQL that narrows to it.
 //
@@ -72,17 +101,13 @@ type ResolvedScope struct {
 func AnalyticsPopulationClause(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope, alias string, arg func(any) int,
 ) (ResolvedScope, string, error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return ResolvedScope{}, "", errors.New("compose: no actor bound to context")
-	}
-
-	resolved, err := resolveAnalyticsScope(ctx, tx, p, requested)
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
 	if err != nil {
 		return ResolvedScope{}, "", err
 	}
-	if err := labelScope(ctx, tx, &resolved); err != nil {
-		return ResolvedScope{}, "", err
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return ResolvedScope{}, "", errors.New("compose: no actor bound to context")
 	}
 
 	col := paramOwnerID
