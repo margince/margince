@@ -176,62 +176,74 @@ afterEach(() => {
 });
 
 describe("the routed subtree's key", () => {
-  it("keeps the record's chrome while a tab change swaps the panel", async () => {
-    window.location.hash = "#/contacts/p-1/overview";
-    renderApp();
-    await waitFor(() => expect(currentTab()).toBe("Overview"), {
-      timeout: SETTLE_MS,
-    });
-    const chromeBefore = recordHead();
-    const stripBefore = tabStrip();
+  it(
+    "keeps the record's chrome while a tab change swaps the panel",
+    async () => {
+      window.location.hash = "#/contacts/p-1/overview";
+      renderApp();
+      await waitFor(() => expect(currentTab()).toBe("Overview"), {
+        timeout: SETTLE_MS,
+      });
+      const chromeBefore = recordHead();
+      const stripBefore = tabStrip();
 
-    window.location.hash = "#/contacts/p-1/deals";
-    await waitFor(() => expect(currentTab()).toBe("Deals"), {
-      timeout: SETTLE_MS,
-    });
+      window.location.hash = "#/contacts/p-1/deals";
+      await waitFor(() => expect(currentTab()).toBe("Deals"), {
+        timeout: SETTLE_MS,
+      });
 
-    // The same NODES, not merely equal markup: a remount would have replaced
-    // both, and every block between them would have re-animated with them.
-    expect(recordHead()).toBe(chromeBefore);
-    expect(tabStrip()).toBe(stripBefore);
-  }, TWO_SETTLES_MS);
+      // The same NODES, not merely equal markup: a remount would have replaced
+      // both, and every block between them would have re-animated with them.
+      expect(recordHead()).toBe(chromeBefore);
+      expect(tabStrip()).toBe(stripBefore);
+    },
+    TWO_SETTLES_MS,
+  );
 
   // The app mounted, unmounted, and mounted again — the shape of a suite that
   // runs after another one. A `QueryClient` is built per mount, so nothing may
   // survive it: a module-level cache that did would answer the second mount
   // from the first one's reads, and the page would sit at its loading state
   // over a record whose name had already resolved.
-  it("resolves the record again on a second mount of the whole app", async () => {
-    window.location.hash = "#/contacts/p-1/overview";
-    renderApp();
-    await waitFor(() => expect(currentTab()).toBe("Overview"), {
-      timeout: SETTLE_MS,
-    });
+  it(
+    "resolves the record again on a second mount of the whole app",
+    async () => {
+      window.location.hash = "#/contacts/p-1/overview";
+      renderApp();
+      await waitFor(() => expect(currentTab()).toBe("Overview"), {
+        timeout: SETTLE_MS,
+      });
 
-    cleanup();
-    window.location.hash = "#/contacts/p-2/overview";
-    renderApp();
+      cleanup();
+      window.location.hash = "#/contacts/p-2/overview";
+      renderApp();
 
-    await waitFor(() => expect(currentTab()).toBe("Overview"), {
-      timeout: SETTLE_MS,
-    });
-    expect(recordHead().textContent).toContain("Person p-2");
-  }, TWO_SETTLES_MS);
+      await waitFor(() => expect(currentTab()).toBe("Overview"), {
+        timeout: SETTLE_MS,
+      });
+      expect(recordHead().textContent).toContain("Person p-2");
+    },
+    TWO_SETTLES_MS,
+  );
 
-  it("still throws the page away when the record itself changes", async () => {
-    window.location.hash = "#/contacts/p-1/overview";
-    renderApp();
-    await waitFor(() => expect(currentTab()).toBe("Overview"), {
-      timeout: SETTLE_MS,
-    });
-    const chromeBefore = recordHead();
+  it(
+    "still throws the page away when the record itself changes",
+    async () => {
+      window.location.hash = "#/contacts/p-1/overview";
+      renderApp();
+      await waitFor(() => expect(currentTab()).toBe("Overview"), {
+        timeout: SETTLE_MS,
+      });
+      const chromeBefore = recordHead();
 
-    // The control for the case above, and the reason the key exists at all: one
-    // person's screen must never be reconciled into another's, or the state it
-    // holds — an open drawer, a half-typed note — arrives on the wrong record.
-    window.location.hash = "#/contacts/p-2/overview";
-    await waitFor(() => expect(recordHead()).not.toBe(chromeBefore), {
-      timeout: SETTLE_MS,
-    });
-  }, TWO_SETTLES_MS);
+      // The control for the case above, and the reason the key exists at all: one
+      // person's screen must never be reconciled into another's, or the state it
+      // holds — an open drawer, a half-typed note — arrives on the wrong record.
+      window.location.hash = "#/contacts/p-2/overview";
+      await waitFor(() => expect(recordHead()).not.toBe(chromeBefore), {
+        timeout: SETTLE_MS,
+      });
+    },
+    TWO_SETTLES_MS,
+  );
 });
