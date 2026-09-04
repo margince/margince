@@ -201,19 +201,6 @@ func insertPersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, pe
 	return nil
 }
 
-// insertPersonPhones lands the person's phone rows.
-func insertPersonPhones(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, personID ids.PersonID, source, by string, phones []PersonPhoneInput) error {
-	for _, p := range phones {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			personID, p.Phone, p.PhoneType, p.IsPrimary, p.Position, source, by); err != nil {
-			return fmt.Errorf("insert person phone: %w", err)
-		}
-	}
-	return nil
-}
-
 // ensurePersonEmailsUnclaimed is the dedupe pre-check, so the 409 can
 // carry the existing id; the unique index remains the structural
 // guarantee under races. The existing id is disclosed only when the

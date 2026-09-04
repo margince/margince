@@ -16736,18 +16736,7 @@ export interface components {
             };
             address?: components["schemas"]["Address"];
             emails?: components["schemas"]["PersonEmailInput"][];
-            phones?: {
-                phone: string;
-                /**
-                 * @default work
-                 * @enum {string}
-                 */
-                phone_type: "work" | "mobile" | "home" | "other";
-                /** @default false */
-                is_primary: boolean;
-                /** @default 0 */
-                position: number;
-            }[];
+            phones?: components["schemas"]["PersonPhoneInput"][];
             source: string;
         } & {
             [key: string]: unknown;
@@ -16832,6 +16821,22 @@ export interface components {
             /** @default 0 */
             position: number;
         };
+        /**
+         * @description One phone number on a person, as a writer supplies it. One schema for create and
+         *     update, so the two cannot describe a number differently.
+         */
+        PersonPhoneInput: {
+            phone: string;
+            /**
+             * @default work
+             * @enum {string}
+             */
+            phone_type: "work" | "mobile" | "home" | "other";
+            /** @default false */
+            is_primary: boolean;
+            /** @default 0 */
+            position: number;
+        };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdatePersonRequest: {
             full_name?: string;
@@ -16852,12 +16857,22 @@ export interface components {
              *     Omitting the field leaves the addresses untouched, like every other field
              *     here. Sending an empty array removes them all, which is a real answer — a
              *     contact who no longer has a working address is a fact worth recording.
+             */
+            emails?: components["schemas"]["PersonEmailInput"][];
+            /**
+             * @description REPLACES the person's numbers with exactly this list, the same way `emails`
+             *     replaces addresses. A number that has been reassigned is corrected by sending
+             *     the set that should stand; an append-only field could never remove the one
+             *     that now reaches somebody else.
+             *
+             *     Omitting the field leaves the numbers untouched. Sending an empty array
+             *     removes them all.
              *
              *     `Person360.dead_addresses` already names which address bounced; until now the
              *     contract's own remedy for that was to visit the person page, because the write
              *     existed on create and nowhere else.
              */
-            emails?: components["schemas"]["PersonEmailInput"][];
+            phones?: components["schemas"]["PersonPhoneInput"][];
         } & {
             [key: string]: unknown;
         };

@@ -111,6 +111,7 @@ export const vi = {
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
   "history.field.emails": "Địa chỉ email",
+  "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_org_key": "Công ty khớp",
   "history.field.company_name": "Tên công ty",

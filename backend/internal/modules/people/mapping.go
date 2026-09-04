@@ -75,21 +75,7 @@ func personCreateInput(req crmcontracts.CreatePersonRequest) (CreatePersonInput,
 	}
 	in.Address = req.Address
 	in.Emails = personEmailInputs(req.Emails)
-	if req.Phones != nil {
-		for i, p := range *req.Phones {
-			phone := PersonPhoneInput{Phone: p.Phone, PhoneType: "work", Position: i}
-			if p.PhoneType != nil {
-				phone.PhoneType = string(*p.PhoneType)
-			}
-			if p.IsPrimary != nil {
-				phone.IsPrimary = *p.IsPrimary
-			}
-			if p.Position != nil {
-				phone.Position = *p.Position
-			}
-			in.Phones = append(in.Phones, phone)
-		}
-	}
+	in.Phones = personPhoneInputs(req.Phones)
 	return in, nil
 }
 
@@ -122,6 +108,34 @@ func personEmailInputs(emails *[]crmcontracts.PersonEmailInput) []PersonEmailInp
 	return out
 }
 
+// personPhoneInputs maps the contract's numbers onto the store's, for both
+// transports that carry them — the same rule personEmailInputs holds for
+// addresses, and for the same reason: create and update mean the same thing by
+// a number, and two loops would be two answers to "what does position default
+// to" that nothing would notice disagreeing.
+func personPhoneInputs(phones *[]crmcontracts.PersonPhoneInput) []PersonPhoneInput {
+	if phones == nil {
+		return nil
+	}
+	// Non-nil and empty is a real answer — remove every number — and it must
+	// stay distinguishable from absent, which is "leave them alone".
+	out := make([]PersonPhoneInput, 0, len(*phones))
+	for i, p := range *phones {
+		phone := PersonPhoneInput{Phone: p.Phone, PhoneType: "work", Position: i}
+		if p.PhoneType != nil {
+			phone.PhoneType = string(*p.PhoneType)
+		}
+		if p.IsPrimary != nil {
+			phone.IsPrimary = *p.IsPrimary
+		}
+		if p.Position != nil {
+			phone.Position = *p.Position
+		}
+		out = append(out, phone)
+	}
+	return out
+}
+
 // manualSource is this schema's word for "a person did this", as against an
 // import or a capture run.
 //
@@ -147,6 +161,7 @@ func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) U
 	}
 	in.Address = req.Address
 	in.Emails = personEmailInputs(req.Emails)
+	in.Phones = personPhoneInputs(req.Phones)
 	in.Source = manualSource
 	return in
 }

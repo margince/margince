@@ -104,14 +104,19 @@ func TestDescriptionsCarryNoControlCharacters(t *testing.T) {
 }
 
 // The writes real sessions lost data to. Each returned 200 with the value
-// discarded: organization_id is not a person field at all, and phones is a
+// discarded: organization_id is not a person field at all, and `source` is a
 // person field on CREATE and no field at all on UPDATE — the shape a caller is
 // most likely to get wrong, because it exists next door.
 //
-// `emails` was the original second case and is not one any more: it was added
-// to the person update so a bounced address could be corrected, which is the
-// honest way for a case here to stop being real. `phones` is the same asymmetry
-// still standing, and it is what this now watches.
+// Two cases have retired by being FIXED, which is the honest way for one here
+// to stop being real: `emails` was added to the person update so a bounced
+// address could be corrected, and `phones` followed it so a reassigned number
+// could be. `source` is the last create/update asymmetry the person schema
+// still carries — a patch's children are stamped `manual` because the request
+// has no field to carry an origin (people/mapping.go) — so it is what this
+// watches now. If the patch ever gains it, the case retires the same way, and
+// whoever removes it should check whether any asymmetry is left to watch
+// rather than letting the list quietly shrink.
 func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -121,7 +126,7 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 		wantNamed  string
 	}{
 		{"organization_id on a person create", createShapes, "person", `{"full_name":"A","organization_id":"x"}`, "organization_id"},
-		{"phones on a person update", updateShapes, "person", `{"phones":["+49 30 1234"]}`, "phones"},
+		{"source on a person update", updateShapes, "person", `{"source":"manual"}`, "source"},
 		{"a typo next to a real field", createShapes, "organization", `{"displayname":"Firecrawl"}`, "displayname"},
 	}
 	for _, tc := range cases {
