@@ -79,45 +79,6 @@
 
 /* The status ladder under the lead header: five steps on one line, the
    filled ones up to the current step, the terminal pair set apart. */
-.lead-ladder {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-bottom: var(--space-3);
-}
-
-.lead-ladder-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.lead-ladder-sep {
-  color: var(--textMeta);
-  margin-right: var(--space-1);
-}
-
-.lead-ladder-step.is-filled > button:not(:disabled) {
-  font-weight: var(--fw-semibold);
-}
-
-/* The two closures are set apart from the three open steps: they are not the
-   next rung, they are where the ladder ends, and a reader scanning for "what
-   do I do next" should not find them in the same run. */
-.lead-ladder-step.is-terminal {
-  margin-left: var(--space-2);
-}
-
-/* How the lead got to its step. Its own interval under the row, so the
-   sentence reads as an explanation of the ladder rather than as one more
-   thing in it. */
-.lead-ladder-how {
-  margin: var(--space-1) 0 0;
-}
 
 /* The qualify and disqualify dialogs: three blocks, each its own section. */
 .lead-qualify {
