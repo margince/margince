@@ -84,12 +84,14 @@ func TestARowWithNoRecordIsNotAnException(t *testing.T) {
 // piece of hygiene above a customer who has waited since this morning.
 func TestTheWorstKindLeads(t *testing.T) {
 	t.Parallel()
-	found := exceptionsIn([]ranked{materialDeal(), lateLead()}, rankInstant)
+	// Through the page's own answer, not the comparator underneath it. Calling
+	// sortExceptions here passed while the page returned whatever order the
+	// lanes produced — the test proved the rule and nothing proved the page
+	// obeyed it.
+	found := exceptionsFor([]ranked{materialDeal(), lateLead()}, rankInstant)
 	if len(found) != 2 {
 		t.Fatalf("raised %d exceptions, want two", len(found))
 	}
-
-	sortExceptions(found)
 
 	if found[0].Kind != crmcontracts.TeamExceptionResponseBreached {
 		t.Errorf("the page leads with %q, want the breached reply", found[0].Kind)

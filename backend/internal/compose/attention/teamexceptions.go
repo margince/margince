@@ -55,9 +55,7 @@ func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptio
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
-	rows := classifyDay(day, day.AsOf, dayMoney{})
-	found := exceptionsIn(rows, day.AsOf)
-	sortExceptions(found)
+	found := exceptionsFor(classifyDay(day, day.AsOf, dayMoney{}), day.AsOf)
 	out := crmcontracts.TeamExceptions{
 		AsOf:       day.AsOf,
 		Exceptions: found,
@@ -88,6 +86,19 @@ func exceptionsIn(rows []ranked, asOf time.Time) []crmcontracts.TeamException {
 		}
 	}
 	return out
+}
+
+// exceptionsFor is the page's own answer: what is going wrong, worst first.
+//
+// The raise and the ordering are ONE step because a caller cannot want the
+// first without the second — an unordered list of exceptions is a list a lead
+// reads top to bottom looking for the one that matters. Splitting them let a
+// test call the comparator itself and pass while the page returned whatever
+// order the lanes happened to produce, which is what this shape prevents.
+func exceptionsFor(rows []ranked, asOf time.Time) []crmcontracts.TeamException {
+	found := exceptionsIn(rows, asOf)
+	sortExceptions(found)
+	return found
 }
 
 // sortExceptions puts the worst first.
