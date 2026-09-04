@@ -29118,9 +29118,20 @@ export interface components {
              *     deleted, or no longer visible to this reader.
              *
              *     Counted so the reader is told WHY the total fell rather than watching it move.
-             *     It is cumulative over the walk, not per page: the question a reader has is how
-             *     much of their morning has already been dealt with, not how much went between
-             *     two clicks.
+             *     It answers over the WHOLE walk rather than over the last page: the question a
+             *     reader has is how much of their morning is already dealt with, not how much
+             *     went between two clicks.
+             *
+             *     It is not monotonic, and the exception is real rather than theoretical. Each
+             *     page asks the question afresh against the walk's frozen list, so a row that
+             *     comes BACK — a task reopened, a record whose visibility is restored — stops
+             *     counting as gone and this figure falls. That is the honest answer: the row is
+             *     on the reader's queue again, and reporting it as dealt with because it once
+             *     was would be the number lying in the harder direction.
+             *
+             *     A row missing because its own SOURCE could not be read is never counted here.
+             *     The queue has no news about it, which is not the same as it being handled, and
+             *     `sources_unavailable` is where that is said.
              */
             changed_since_snapshot: number;
             /**
