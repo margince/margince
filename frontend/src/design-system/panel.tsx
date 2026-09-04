@@ -238,6 +238,24 @@ export function PanelRow({
  * so rows passed as children run edge to edge the way Panel is built to take
  * them.
  */
+/**
+ * The states a RailPanel can render.
+ *
+ * `stale` and `partial` are deliberately absent. SurfaceState renders each of
+ * them as a caveat WITH the rows beside it — "as of Tuesday" over the figures,
+ * "4 more" under them — and RailPanel hands its rows to Panel undecorated on
+ * `ready` alone. A RailPanel asked for `stale` therefore showed the caveat over
+ * an EMPTY card, which reads as "there is nothing here" rather than "this is
+ * old": the opposite of what the state means, and the same "a refusal is not an
+ * absence" mistake the seats rail was built to stop making.
+ *
+ * Narrowed rather than forwarded. Passing `children` through would light up the
+ * rows and still drop the footer, which this component shows on `ready`/`empty`
+ * only — half-supporting a state is how it stays broken quietly. A caller that
+ * genuinely needs a stale rail gets a compile error and a decision instead.
+ */
+export type RailPanelState = Exclude<SectionState, "stale" | "partial">;
+
 export function RailPanel({
   title,
   state,
@@ -247,7 +265,7 @@ export function RailPanel({
   children,
 }: Readonly<{
   title: string;
-  state: SectionState;
+  state: RailPanelState;
   emptyLabel: string;
   detail?: SectionDetail;
   // A figure belonging to the whole card rather than to one row. Shown only

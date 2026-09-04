@@ -10,8 +10,9 @@ import {
   PanelPlate,
   PanelRow,
   RailPanel,
+  type RailPanelState,
 } from "./panel";
-import type { SectionDetail, SectionState } from "./surfacestate";
+import type { SectionDetail } from "./surfacestate";
 
 // The titled-card shape: a fixed-height header, an optional footer band, and
 // two ways to fill the middle — padded prose in PanelBody, or full-bleed rows
@@ -331,7 +332,12 @@ export const TitleInsideADialog: Story = {
   },
 };
 
-const ALL_STATES: readonly SectionState[] = [
+// The states RailPanel accepts. `stale` and `partial` are absent from RailPanel
+// itself — SurfaceState renders each of them as a caveat BESIDE the rows, and a
+// RailPanel shows rows on `ready` alone, so a stale one was a caveat over an
+// empty card. They are catalogued on SurfaceState, which is the component that
+// can render them.
+const RAIL_PANEL_STATES: readonly RailPanelState[] = [
   "ready",
   "empty",
   "withheld",
@@ -339,8 +345,6 @@ const ALL_STATES: readonly SectionState[] = [
   "loading",
   "unsupported",
   "failed",
-  "stale",
-  "partial",
 ];
 
 // Every field at once, and each state reads exactly one of them: `failed` the
@@ -402,7 +406,7 @@ export const RailPanelMessageStates: StoryObj = {
   ],
   render: () => (
     <>
-      {ALL_STATES.filter((state) => state !== "ready").map((state) => (
+      {RAIL_PANEL_STATES.filter((state) => state !== "ready").map((state) => (
         <RailPanel
           key={state}
           title={`Who is on this deal — ${state}`}
