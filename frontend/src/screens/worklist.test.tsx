@@ -402,6 +402,69 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.textContent).not.toContain("worklist.because");
   });
 
+  // The `because` line is not a fixed cost: it grows by a line every time the
+  // reason vocabulary does, and an ordinary task row is already 108px over the
+  // ceiling AC-WORKLIST-SDR-07 asserts. Without a bound, a reason added
+  // anywhere makes every row carrying it taller and nobody connects the two.
+  it("says at most three reasons, keeping the ones the server weighed first", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "A crowded task",
+            because: [
+              { kind: "overdue" },
+              { kind: "due_today" },
+              { kind: "unassigned" },
+              { kind: "routine" },
+            ],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await screen.findByText("A crowded task");
+    // The first three are said. They arrive "in the order they were weighed",
+    // so a prefix keeps the server's ranking rather than inventing one here.
+    for (const kind of ["overdue", "due_today", "unassigned"] as const) {
+      expect(container.textContent).toContain(en[`worklist.because.${kind}`]);
+    }
+    // The fourth is not, and it is a phrase this build KNOWS — which is what
+    // tells a cap apart from the unknown-reason drop above.
+    expect(container.textContent).not.toContain(en["worklist.because.routine"]);
+  });
+
+  // The cap runs AFTER the unspeakable reasons are dropped. Capping the raw
+  // list first would let a row carrying three reasons this build has no
+  // sentence for say nothing at all, while the two it could have said sat
+  // just past the cut.
+  it("still says the reasons it knows when unknown ones come first", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "A task from a newer server",
+            because: [
+              { kind: "customer_escalated" as never },
+              { kind: "contract_expiring" as never },
+              { kind: "renewal_slipping" as never },
+              { kind: "overdue" },
+              { kind: "unassigned" },
+            ],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await screen.findByText("A task from a newer server");
+    expect(container.textContent).toContain(en["worklist.because.overdue"]);
+    expect(container.textContent).toContain(en["worklist.because.unassigned"]);
+  });
+
   it("offers a verb that goes somewhere, and none that does not", async () => {
     stub(
       day({

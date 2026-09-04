@@ -114,9 +114,15 @@ export function WorklistRow({
       : item.detail;
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
+  //
+  // CAPPED, and capped AFTER the unspeakable ones are dropped. Capping the
+  // reasons before `reasonText` runs would let a row carrying three reasons
+  // this build has no sentence for show nothing at all, while the two it could
+  // have said sat just past the cut.
   const because = phrasedReasons(item)
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)
+    .slice(0, MOST_REASONS_SHOWN)
     .join(" · ");
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
@@ -322,6 +328,33 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
     </div>
   );
 }
+
+/**
+ * How many reasons a row may say before it stops explaining and starts
+ * listing.
+ *
+ * THE COUNT IS A CEILING THE ROW OWES ITS HEIGHT, not a judgement about which
+ * reasons matter — the server already ranked them. `because` arrives "in the
+ * order they were weighed" (the contract says so outright), so the first three
+ * are the three that put the row where it is, and taking a prefix keeps that
+ * ranking rather than inventing a second one here.
+ *
+ * WHY A CAP EXISTS AT ALL. This block is not a fixed cost: it grows by one
+ * line every time the reason vocabulary does, and the vocabulary is still
+ * growing. Measured at 390px on 2026-09-05, an ordinary task row is 284px
+ * against the 176px ceiling AC-WORKLIST-SDR-07 asserts, and 57px of that is
+ * this block with only two reasons in it. Without a bound, every reason added
+ * anywhere makes every row that carries it taller, and the next person to add
+ * one has no way to know they did.
+ *
+ * Three rather than two: a task that is due today AND unassigned AND overdue
+ * is saying three true things a rep acts on differently, and cutting to two
+ * would drop one of them on a row that fits today. This does not by itself
+ * make AC-07 pass — that row carries two reasons — and it is not meant to.
+ * What it does is stop the ceiling being missed again by a change nobody
+ * connected to it.
+ */
+const MOST_REASONS_SHOWN = 3;
 
 /**
  * Everything the row says about itself under the title, in the order a reader
