@@ -32,6 +32,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -64,13 +65,19 @@ func (LinkReconcileArgs) Kind() string { return "link_reconcile" }
 func (LinkReconcileArgs) FleetWide() {}
 
 type linkReconcileWorker struct {
-	pool  *pgxpool.Pool
-	store *people.Store
-	log   *slog.Logger
+	pool    *pgxpool.Pool
+	store   *people.Store
+	pending *capture.PendingStore
+	log     *slog.Logger
 }
 
 func newLinkReconcileWorker(pool *pgxpool.Pool, store *people.Store, log *slog.Logger) *linkReconcileWorker {
-	return &linkReconcileWorker{pool: pool, store: store, log: log}
+	return &linkReconcileWorker{
+		pool:    pool,
+		store:   store,
+		pending: capture.NewPendingStore(InstallationDB(pool)),
+		log:     log,
+	}
 }
 
 // Work enqueues one pass per workspace, so a failure in one leaves the rest
@@ -148,7 +155,54 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 		w.log.InfoContext(ctx, "link reconcile: work-calendar meetings are workspace business again",
 			"workspace", job.Args.Workspace.String(), "meetings", released)
 	}
+	asked, err := w.askAboutStrandedContacts(sweepCtx)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if asked > 0 {
+		w.log.InfoContext(ctx, "link reconcile: captured contacts nobody had been asked about are queued",
+			"workspace", job.Args.Workspace.String(), "contacts", asked)
+	}
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, job.Args.Workspace)))
+}
+
+// askAboutStrandedContactsPerTick bounds the drain, on the same reasoning as
+// the meeting holds above: the population is finite and shrinks as it is
+// worked, so a small bound costs one probe a tick once it is empty.
+const askAboutStrandedContactsPerTick = 200
+
+// askAboutStrandedContacts opens the questions the capture could not.
+//
+// The ceiling on open questions is per workspace and per domain, and a refusal
+// writes nothing. That is deliberate — the question is delayed, not cancelled —
+// but the retry rides the next message from that address, and a correspondence
+// that has gone quiet never sends one. The contact then stays the mailbox
+// owner's for good: invisible to every colleague, their manager and an admin,
+// with nothing left to put it back in the queue.
+//
+// A contact whose question the ceiling refuses again is simply offered again
+// next tick. That is the bound doing its job rather than a failure: the queue
+// drains, and the room appears.
+func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (int, error) {
+	stranded, err := w.pending.StrandedContacts(ctx, askAboutStrandedContactsPerTick)
+	if err != nil {
+		return 0, err
+	}
+	asked := 0
+	var failed error
+	for _, c := range stranded {
+		opened, err := w.pending.AskWhoseRecord(ctx, c)
+		if err != nil {
+			// One contact's failure is not the sweep's: the rest of the page is
+			// still worth asking about, and a joined error still fails the job.
+			failed = errors.Join(failed, fmt.Errorf("asking about %s: %w", c.PersonID, err))
+			continue
+		}
+		if opened {
+			asked++
+		}
+	}
+	return asked, failed
 }
 
 // liftFiledMeetingHoldsPerTick bounds the drain. The population is finite and
