@@ -1,0 +1,3 @@
+-- Repair only: this migration makes a drifted database match what a fresh one
+-- already has, so there is no state to go back to. Reversing it would recreate
+-- the index the send path cannot infer on, which is the fault it exists to fix.
