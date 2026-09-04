@@ -2321,6 +2321,9 @@ export async function mockApi(
     // envelopes the list catch-all below doesn't produce (`{sections:[]}`,
     // `{data:[AgentTool]}` vs `{data:[],page}`) — mock them explicitly so a
     // 360 open or the tool console doesn't crash on an undefined field.
+    // MATCHED BY PREFIX, so a route added later under any `/context` path is
+    // answered with this shape rather than its own: give it a branch of its own
+    // above, as `/analytics/context` has.
     if (path.includes("/context")) {
       return json({ anchor: { type: "person", id: "x" }, sections: [] });
     }
