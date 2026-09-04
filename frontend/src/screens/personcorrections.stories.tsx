@@ -23,6 +23,11 @@ const person: components["schemas"]["Person"] = {
   captured_by: "human:u-1",
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
+  // The server's own per-row answer, which the grant is only half of: a
+  // correction writes to THIS contact, so without it every control here is
+  // correctly withheld and the two editor stories render a card with nothing
+  // to press. The unit fixture has carried this since the row axis landed.
+  writable: true,
 };
 
 const titleRead: ProfileField = {
