@@ -65,8 +65,9 @@ func tierService() *Service {
 // is what a reading SAYS rather than who may ask it.
 //
 // Those tests passed a bare context before these gates existed, which was a
-// reader with no principal at all — now a refusal. Spelled here rather than in
-// each file so the tier they satisfy is stated once, beside the rule.
+// reader with no principal at all — now a refusal. It lives beside the rule it
+// satisfies rather than in each file, so a reader of either file finds the tier
+// explained where requireLeadTier is.
 func aLead() context.Context {
 	return boardReaderAt(principal.RowScopeTeam)
 }
