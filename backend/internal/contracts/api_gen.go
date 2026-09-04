@@ -18302,6 +18302,21 @@ type CaptureActivityResponse struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// CaptureClassifierHealth The sender queue as a whole, across every mailbox.
+type CaptureClassifierHealth struct {
+	// Exhausted Out of attempts, so nothing will ask again without a human.
+	Exhausted               int  `json:"exhausted"`
+	OldestPendingAgeSeconds *int `json:"oldest_pending_age_seconds,omitempty"`
+
+	// Pending Asked and not yet answered.
+	Pending int `json:"pending"`
+
+	// Unsure Answered "cannot tell" and waiting for a human. An installation with no model
+	// configured retires every row here, so a large number beside a small `pending`
+	// says the machine is not running rather than that the mail is hard.
+	Unsure int `json:"unsure"`
+}
+
 // CaptureConnection A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
 // credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
 // server-side by `credential_ref`.
@@ -18456,6 +18471,45 @@ type CaptureExclusionListResponse struct {
 
 // CaptureExclusionScope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 type CaptureExclusionScope string
+
+// CaptureHealth What capture's judgement queues are holding, for an administrator asking whether
+// anything is stuck.
+//
+// COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+// those describe the correspondence, which is what the capture-privacy boundary
+// exists to protect, and an operational page is not an exemption from it. A mailbox
+// is named because an administrator cannot act on "somewhere in the installation";
+// what is waiting inside it is not named at all.
+type CaptureHealth struct {
+	// Classifier The sender queue as a whole, across every mailbox.
+	Classifier  CaptureClassifierHealth `json:"classifier"`
+	GeneratedAt time.Time               `json:"generated_at"`
+
+	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
+	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
+}
+
+// CaptureMailboxHealth defines model for CaptureMailboxHealth.
+type CaptureMailboxHealth struct {
+	// ContactsAwaitingDecision Captured contacts that are still owner-private because nothing has answered the
+	// sender question about them. These are invisible to everyone but their owner —
+	// not even an administrator — so a count is the only thing this page can say, and
+	// a growing one is the signal that nobody is answering.
+	ContactsAwaitingDecision int `json:"contacts_awaiting_decision"`
+
+	// DisplayName The owner's name; absent if the caller may not read it.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// OldestContactAgeSeconds How long the oldest of them has been waiting. Null when none are.
+	OldestContactAgeSeconds *int `json:"oldest_contact_age_seconds,omitempty"`
+	OldestThreadAgeSeconds  *int `json:"oldest_thread_age_seconds,omitempty"`
+
+	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
+	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
+
+	// UserId The mailbox owner.
+	UserId openapi_types.UUID `json:"user_id"`
+}
 
 // CaptureOwnerIdentity defines model for CaptureOwnerIdentity.
 type CaptureOwnerIdentity struct {
@@ -47052,6 +47106,9 @@ type ServerInterface interface {
 	// One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 	// (GET /activities/{id}/transcript-proposals/{readId})
 	GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
+	// What capture's judgement queues are holding, and in whose mailbox.
+	// (GET /admin/capture-health)
+	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -48879,6 +48936,12 @@ func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Re
 // One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 // (GET /activities/{id}/transcript-proposals/{readId})
 func (_ Unimplemented) GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What capture's judgement queues are holding, and in whose mailbox.
+// (GET /admin/capture-health)
+func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53535,6 +53598,26 @@ func (siw *ServerInterfaceWrapper) GetTranscriptRead(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTranscriptRead(w, r, id, readId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCaptureHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCaptureHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77530,6 +77613,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/transcript-proposals/{readId}", wrapper.GetTranscriptRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)

@@ -605,6 +605,39 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /admin/capture-health:
+    get:
+      tags: [Identity]
+      operationId: getCaptureHealth
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: What capture's judgement queues are holding, and in whose mailbox.
+      description: >
+        Admin-only. Reports how much is waiting on a sender decision or a thread verdict,
+        by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a
+        subject, a body, or the reason a thread was held: those describe the correspondence,
+        and an operational page is not an exemption from the capture-privacy boundary.
+
+
+        The contacts it counts are owner-private and invisible to an administrator by
+        design (the importing user only, not even Admin) — which is exactly why a count is
+        worth serving: nobody could otherwise tell that a backlog exists. Human session
+        only (x-agent-access: human-only).
+      responses:
+        '200':
+          description: The workspace's capture-queue health.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller is an agent/passport principal (this endpoint is human-only)
+            or a human without the admin role. Not an object/action RBAC grant denial.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------ /passports --------------------------------
   /passports:
     get:
@@ -33332,6 +33365,68 @@ components:
           items: { $ref: '#/components/schemas/ComposedExtension' }
 
     # ---- Admin (background-job health) ----
+    CaptureHealth:
+      type: object
+      additionalProperties: false
+      description: |
+        What capture's judgement queues are holding, for an administrator asking whether
+        anything is stuck.
+
+        COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+        those describe the correspondence, which is what the capture-privacy boundary
+        exists to protect, and an operational page is not an exemption from it. A mailbox
+        is named because an administrator cannot act on "somewhere in the installation";
+        what is waiting inside it is not named at all.
+      required: [generated_at, mailboxes, classifier]
+      properties:
+        generated_at: { type: string, format: date-time }
+        mailboxes:
+          type: array
+          description: One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
+          items: { $ref: '#/components/schemas/CaptureMailboxHealth' }
+        classifier:
+          $ref: '#/components/schemas/CaptureClassifierHealth'
+
+    CaptureMailboxHealth:
+      type: object
+      additionalProperties: false
+      required: [user_id, contacts_awaiting_decision, threads_awaiting_verdict]
+      properties:
+        user_id: { type: string, format: uuid, description: The mailbox owner. }
+        display_name: { type: string, description: "The owner's name; absent if the caller may not read it." }
+        contacts_awaiting_decision:
+          type: integer
+          description: |
+            Captured contacts that are still owner-private because nothing has answered the
+            sender question about them. These are invisible to everyone but their owner —
+            not even an administrator — so a count is the only thing this page can say, and
+            a growing one is the signal that nobody is answering.
+        oldest_contact_age_seconds:
+          type: [integer, 'null']
+          description: How long the oldest of them has been waiting. Null when none are.
+        threads_awaiting_verdict:
+          type: integer
+          description: Threads whose confidentiality question is still open, so their messages stay held.
+        oldest_thread_age_seconds: { type: [integer, 'null'] }
+
+    CaptureClassifierHealth:
+      type: object
+      additionalProperties: false
+      description: The sender queue as a whole, across every mailbox.
+      required: [pending, unsure, exhausted]
+      properties:
+        pending: { type: integer, description: Asked and not yet answered. }
+        unsure:
+          type: integer
+          description: |
+            Answered "cannot tell" and waiting for a human. An installation with no model
+            configured retires every row here, so a large number beside a small `pending`
+            says the machine is not running rather than that the mail is hard.
+        exhausted:
+          type: integer
+          description: Out of attempts, so nothing will ask again without a human.
+        oldest_pending_age_seconds: { type: [integer, 'null'] }
+
     JobHealth:
       type: object
       additionalProperties: false
