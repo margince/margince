@@ -308,7 +308,7 @@ var catalog = map[string]struct {
 	// them, or put them back. The entity is the person, which is what the
 	// judgement is about — the relationship's silence is a fact about them
 	// rather than about any one message.
-	"relationship_nudge.dismissed": {personStreamEntity, 1},
+	"relationship_nudge.decided": {personStreamEntity, 1},
 	// §5.11: a thread-matched inbound is an activity-family fact, emitted
 	// by capture alongside activity.captured (EVT-SEM-14 — idempotent per
 	// reply; a duplicate inbound for the same reply does not re-emit).

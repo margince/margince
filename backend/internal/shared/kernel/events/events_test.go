@@ -148,12 +148,6 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// question a scan of every event rather than a join of two.
 		"share_issued":  true,
 		"share_revoked": true,
-		// A rep set a lapsed contact aside so their own decay lane stops
-		// raising them, or put them back. The bare verb is enough here, unlike
-		// disposition_recorded above: `relationship_nudge` is a stream with one
-		// thing on it, so "dismissed" cannot be mistaken for a dismissal of
-		// something else.
-		"dismissed": true,
 	}
 
 	for _, typ := range Types() {

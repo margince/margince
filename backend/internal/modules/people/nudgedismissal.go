@@ -21,6 +21,7 @@ package people
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -89,18 +90,36 @@ func (s *Store) DismissRelationshipNudge(
 		// in this store. The tests below assert the SPAN the row carries rather
 		// than an instant, so nothing here needs a clock held still.
 		until := time.Now().UTC().AddDate(0, 0, days)
-		if _, err := tx.Exec(ctx, `
+		// What deadline was already standing, read under the person lock taken
+		// above so the upsert below cannot race it. A re-dismissal REPLACES this
+		// value, and an audit row that named only the new one would leave
+		// nobody able to say what it displaced — which is the before-image every
+		// audited replacement owes.
+		var replaced *time.Time
+		if err := tx.QueryRow(ctx, `
+			SELECT dismissed_until FROM relationship_nudge_dismissal
+			 WHERE person_id = $1 AND reader_id = $2`,
+			personID, reader).Scan(&replaced); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("people: reading the standing dismissal: %w", err)
+		}
+		// Every placeholder derived from the argument slice rather than typed:
+		// nothing checks that a hand-written $N still names the value a caller
+		// appends, and this statement carries five.
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		if _, err := tx.Exec(ctx, fmt.Sprintf(`
 			INSERT INTO relationship_nudge_dismissal
 			       (person_id, reader_id, dismissed_until, set_by, set_at)
-			VALUES ($1, $2, $3, $4, now())
+			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, now())
 			ON CONFLICT (person_id, reader_id) DO UPDATE
 			   SET dismissed_until = EXCLUDED.dismissed_until,
 			       set_by = EXCLUDED.set_by,
 			       set_at = now()`,
-			personID, reader, until, by); err != nil {
+			arg(personID), arg(reader), arg(until), arg(by)),
+			args...); err != nil {
 			return fmt.Errorf("people: dismissing a relationship nudge: %w", err)
 		}
-		return recordNudgeDismissal(ctx, tx, personID, actionDismissed, &until)
+		return recordNudgeDismissal(ctx, tx, personID, actionDismissed, &until, replaced)
 	})
 }
 
@@ -120,19 +139,39 @@ func (s *Store) RestoreRelationshipNudge(ctx context.Context, personID ids.Perso
 		if err := auth.EnsureVisible(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `
+		// The same lock the dismissal takes, and it is not symmetry for its own
+		// sake. EnsureVisible returns without querying for an actor the row
+		// scope does not bound, so on its own this path would answer 204 for a
+		// person id that does not exist and would audit against an archived
+		// one — while a scoped caller got 404 for the same row, which is itself
+		// a way to tell an archived contact from a missing one.
+		if err := lockPersonForAttach(ctx, tx, personID); err != nil {
+			return err
+		}
+		// The row goes whether or not it had lapsed — there is no sweep, so a
+		// stale one would otherwise sit there forever. What decides whether this
+		// is a JUDGEMENT is whether the dismissal was still applying: restoring
+		// a contact who was already back on the lane changed nothing anybody can
+		// see, and announcing it would report a decision nobody made.
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		var wasApplying bool
+		err := tx.QueryRow(ctx, fmt.Sprintf(`
 			DELETE FROM relationship_nudge_dismissal
-			 WHERE person_id = $1 AND reader_id = $2`, personID, reader)
+			 WHERE person_id = $%[1]d AND reader_id = $%[2]d
+			 RETURNING dismissed_until > now()`,
+			arg(personID), arg(reader)), args...).Scan(&wasApplying)
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Never set aside. Idempotent: the reader's goal state holds.
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("people: restoring a relationship nudge: %w", err)
 		}
-		// Audited only when a row actually went. A restore of a contact who was
-		// never set aside changed nothing, and an audit row for it would put a
-		// judgement in the trail that nobody made.
-		if tag.RowsAffected() == 0 {
+		if !wasApplying {
 			return nil
 		}
-		return recordNudgeDismissal(ctx, tx, personID, actionRestored, nil)
+		return recordNudgeDismissal(ctx, tx, personID, actionRestored, nil, nil)
 	})
 }
 
@@ -145,19 +184,31 @@ const (
 // recordNudgeDismissal is the write shape's second half: the audit row and the
 // announcement, in the same transaction as the judgement itself.
 func recordNudgeDismissal(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID, action string, until *time.Time,
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	action string, until, replaced *time.Time,
 ) error {
 	after := map[string]any{"nudge_dismissal": action}
 	if until != nil {
 		after["dismissed_until"] = until.UTC()
 	}
-	auditID, err := storekit.AuditEvent(ctx, tx, "update", "person", personID.UUID, after)
+	// A re-dismissal replaces a deadline that was standing, so it images the
+	// one it displaced. A first dismissal replaces nothing and records an
+	// occurrence — which is the difference between the two, spelled by whether
+	// there was a prior row rather than by which verb was pressed.
+	var auditID ids.UUID
+	var err error
+	if replaced != nil {
+		before := map[string]any{"dismissed_until": replaced.UTC()}
+		auditID, err = storekit.Audit(ctx, tx, "update", "person", personID.UUID, before, after)
+	} else {
+		auditID, err = storekit.AuditEvent(ctx, tx, "update", "person", personID.UUID, after)
+	}
 	if err != nil {
 		return err
 	}
-	payload := crmcontracts.PublicEventRelationshipNudgeDismissed{
+	payload := crmcontracts.PublicEventRelationshipNudgeDecided{
 		PersonId: openapi_types.UUID(personID.UUID),
-		Action:   crmcontracts.PublicEventRelationshipNudgeDismissedAction(action),
+		Action:   crmcontracts.PublicEventRelationshipNudgeDecidedAction(action),
 	}
 	if until != nil {
 		moment := until.UTC()

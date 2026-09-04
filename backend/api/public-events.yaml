@@ -101,7 +101,7 @@ components:
         - weekly_plan.updated
         - weekly_plan.help_requested
         - activity.disposition_recorded
-        - relationship_nudge.dismissed
+        - relationship_nudge.decided
         - notice.read
         - intro_request.created
         - intro_request.decided
@@ -2160,13 +2160,13 @@ components:
             it happen rather than infer it from a row going quiet.
       additionalProperties: false
 
-    PublicEventRelationshipNudgeDismissed:
+    PublicEventRelationshipNudgeDecided:
       type: object
-      x-event-type: relationship_nudge.dismissed
+      x-event-type: relationship_nudge.decided
       x-entity-type: person
       x-version: 1
       description: >-
-        Payload for relationship_nudge.dismissed — a rep set a lapsed contact
+        Payload for relationship_nudge.decided — a rep set a lapsed contact
         aside so their own Worklist stops raising them, or put them back
         (people's nudge dismissal). The entity is the CONTACT, which is what
         the judgement is about.

@@ -206,6 +206,93 @@ func TestASpanOutsideTheRangeIsRefused(t *testing.T) {
 	}
 }
 
+// A RE-dismissal images the deadline it displaced.
+//
+// This is the one case that genuinely replaces something: the first dismissal
+// recorded an occurrence, and the second overwrites a moment that was still
+// standing. Without the before-image the trail would name the new deadline and
+// leave nobody able to say what it replaced — a rep who quietly extended a
+// week to a quarter would look the same as one who set the contact aside once.
+func TestARedismissalNamesTheDeadlineItReplaced(t *testing.T) {
+	e := setupDedupe(t)
+	person := aContact(t, e)
+	if err := e.store.DismissRelationshipNudge(e.as(), person, 3); err != nil {
+		t.Fatalf("dismissing: %v", err)
+	}
+	first := latestPersonAudit(t, e, person)["dismissed_until"]
+
+	if err := e.store.DismissRelationshipNudge(e.as(), person, 30); err != nil {
+		t.Fatalf("re-dismissing: %v", err)
+	}
+
+	before, after := latestPersonAuditPair(t, e, person)
+	if before["dismissed_until"] != first {
+		t.Errorf("the before image says %v, want the deadline that was standing (%v)",
+			before["dismissed_until"], first)
+	}
+	if after["dismissed_until"] == before["dismissed_until"] {
+		t.Error("the images agree, so the row records a replacement of nothing")
+	}
+}
+
+// latestPersonAuditPair reads BOTH images of the newest update on one person.
+func latestPersonAuditPair(t *testing.T, e *dedupeEnv, person ids.PersonID) (before, after map[string]any) {
+	t.Helper()
+	var beforeJSON, afterJSON []byte
+	if err := e.store.db.Pool().QueryRow(e.as(),
+		`SELECT before, after FROM audit_log
+		  WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'
+		  ORDER BY occurred_at DESC, id DESC LIMIT 1`, person.UUID,
+	).Scan(&beforeJSON, &afterJSON); err != nil {
+		t.Fatalf("reading the audit row: %v", err)
+	}
+	if beforeJSON == nil {
+		t.Fatal("the row carries no before image, so it cannot say what it replaced")
+	}
+	if err := json.Unmarshal(beforeJSON, &before); err != nil {
+		t.Fatalf("the before image is not an object: %v", err)
+	}
+	if err := json.Unmarshal(afterJSON, &after); err != nil {
+		t.Fatalf("the after image is not an object: %v", err)
+	}
+	return before, after
+}
+
+// The database refuses a dismissal that would already have lapsed.
+//
+// The store's own range check answers first for every caller, and returns
+// before SQL runs — so nothing above reaches the CHECK, and removing it from
+// the migration would leave every test green. This writes the row the store
+// would never build, which is the only way to ask the constraint anything.
+//
+// It matters because the read side reads `dismissed_until > now()` and never
+// wonders whether a row was meant to apply. A row that expired before it was
+// written is one nobody can act on and nobody can see.
+func TestTheDatabaseRefusesADismissalThatHasAlreadyLapsed(t *testing.T) {
+	e := setupDedupe(t)
+	person := aContact(t, e)
+
+	_, err := e.store.db.Pool().Exec(e.as(), `
+		INSERT INTO relationship_nudge_dismissal
+		       (person_id, reader_id, dismissed_until, set_by)
+		VALUES ($1, $2, now() - interval '1 day', 'test')`,
+		person.UUID, e.rep)
+
+	if err == nil {
+		t.Fatal("a dismissal expiring before it was written was stored — the read " +
+			"would never return it, so nothing else would notice")
+	}
+	// And the honest row IS accepted, without which the refusal above would pass
+	// against a constraint that refused everything.
+	if _, err := e.store.db.Pool().Exec(e.as(), `
+		INSERT INTO relationship_nudge_dismissal
+		       (person_id, reader_id, dismissed_until, set_by)
+		VALUES ($1, $2, now() + interval '1 day', 'test')`,
+		person.UUID, e.rep); err != nil {
+		t.Fatalf("a dismissal ending tomorrow was refused: %v", err)
+	}
+}
+
 // The write shape: domain row, audit row and outbox row in ONE transaction.
 func TestADismissalWritesTheAuditAndTheAnnouncement(t *testing.T) {
 	e := setupDedupe(t)
@@ -222,8 +309,12 @@ func TestADismissalWritesTheAuditAndTheAnnouncement(t *testing.T) {
 	if after["dismissed_until"] == nil {
 		t.Error("the audit row names no moment, so nothing says when the contact returns")
 	}
-	if got := latestPersonEvent(t, e, person); got != "relationship_nudge.dismissed" {
-		t.Errorf("the announcement is %q, want relationship_nudge.dismissed", got)
+	typ, action := latestPersonEvent(t, e, person)
+	if typ != "relationship_nudge.decided" {
+		t.Errorf("the announcement is %q, want relationship_nudge.decided", typ)
+	}
+	if action != "dismissed" {
+		t.Errorf("the announcement carries action %q, want dismissed", action)
 	}
 }
 
@@ -248,6 +339,74 @@ func TestARestoreIsAnnouncedRatherThanInferred(t *testing.T) {
 	if after["dismissed_until"] != nil {
 		t.Errorf("the restore named a moment: %v", after["dismissed_until"])
 	}
+	// The ANNOUNCEMENT too, and its action. The audit row alone would stay green
+	// over a restore that emitted nothing, or one that emitted the dismissal's
+	// action — and a consumer counting how often reps put relationships down
+	// would then count this as another one.
+	typ, action := latestPersonEvent(t, e, person)
+	if typ != "relationship_nudge.decided" {
+		t.Errorf("the announcement is %q, want relationship_nudge.decided", typ)
+	}
+	if action != "restored" {
+		t.Errorf("the announcement carries action %q, want restored", action)
+	}
+}
+
+// Restoring a dismissal that had already LAPSED announces nothing.
+//
+// There is no sweep, so an expired row sits in the table until somebody
+// restores. Deleting it is right; calling it a judgement is not — the contact
+// was already back on the lane, nothing a reader can see changed, and an event
+// would report a decision nobody made.
+func TestRestoringALapsedDismissalAnnouncesNothing(t *testing.T) {
+	e := setupDedupe(t)
+	person := aContact(t, e)
+	if err := e.store.DismissRelationshipNudge(e.as(), person, 1); err != nil {
+		t.Fatalf("dismissing: %v", err)
+	}
+	// Age the whole row into the past, which is what the passage of a day does.
+	// BOTH columns move: the CHECK holds dismissed_until after set_at, so a row
+	// whose end moved back while its start stayed put is one the table refuses
+	// — a shape the passage of time never produces.
+	if _, err := e.store.db.Pool().Exec(e.as(), `
+		UPDATE relationship_nudge_dismissal
+		   SET set_at = now() - interval '2 days',
+		       dismissed_until = now() - interval '1 hour'
+		 WHERE person_id = $1`, person.UUID); err != nil {
+		t.Fatalf("ageing the dismissal: %v", err)
+	}
+	before := countPersonEvents(t, e, person)
+
+	if err := e.store.RestoreRelationshipNudge(e.as(), person); err != nil {
+		t.Fatalf("restoring: %v", err)
+	}
+
+	if got := countPersonEvents(t, e, person); got != before {
+		t.Errorf("restoring a lapsed dismissal announced %d event(s) — the contact "+
+			"was already back on the lane, so nothing was decided", got-before)
+	}
+	// And the row is gone, because nothing else would ever remove it.
+	var left int
+	if err := e.store.db.Pool().QueryRow(e.as(),
+		`SELECT count(*) FROM relationship_nudge_dismissal WHERE person_id = $1`,
+		person.UUID).Scan(&left); err != nil {
+		t.Fatalf("counting what is left: %v", err)
+	}
+	if left != 0 {
+		t.Errorf("the lapsed row survived the restore, and no sweep will take it")
+	}
+}
+
+// countPersonEvents is how many announcements this contact has drawn.
+func countPersonEvents(t *testing.T, e *dedupeEnv, person ids.PersonID) int {
+	t.Helper()
+	var n int
+	if err := e.store.db.Pool().QueryRow(e.as(),
+		`SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1`,
+		person.UUID.String()).Scan(&n); err != nil {
+		t.Fatalf("counting outbox rows: %v", err)
+	}
+	return n
 }
 
 // latestPersonAudit reads the after-image of the newest update on one person.
@@ -268,18 +427,18 @@ func latestPersonAudit(t *testing.T, e *dedupeEnv, person ids.PersonID) map[stri
 	return after
 }
 
-// latestPersonEvent reads the type of the newest outbox row for one person.
-func latestPersonEvent(t *testing.T, e *dedupeEnv, person ids.PersonID) string {
+// latestPersonEvent reads the type and action of the newest outbox row.
+func latestPersonEvent(t *testing.T, e *dedupeEnv, person ids.PersonID) (string, string) {
 	t.Helper()
 	// The type rides INSIDE the envelope; the outbox row itself carries only a
 	// stream, a payload and its ordering columns.
-	var eventType string
+	var eventType, action string
 	if err := e.store.db.Pool().QueryRow(e.as(),
-		`SELECT envelope->>'type' FROM event_outbox
+		`SELECT envelope->>'type', envelope->'payload'->>'action' FROM event_outbox
 		  WHERE envelope->'entity'->>'id' = $1 ORDER BY seq DESC LIMIT 1`,
 		person.UUID.String(),
-	).Scan(&eventType); err != nil {
+	).Scan(&eventType, &action); err != nil {
 		t.Fatalf("reading the outbox row: %v", err)
 	}
-	return eventType
+	return eventType, action
 }
