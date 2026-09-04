@@ -13324,6 +13324,30 @@ func (e WorklistItemConsequence) Valid() bool {
 	}
 }
 
+// Defines values for WorklistItemDestination.
+const (
+	WorklistDestinationReceipt      WorklistItemDestination = "receipt"
+	WorklistDestinationReview       WorklistItemDestination = "review"
+	WorklistDestinationSystemHealth WorklistItemDestination = "system_health"
+	WorklistDestinationToday        WorklistItemDestination = "today"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDestination enum.
+func (e WorklistItemDestination) Valid() bool {
+	switch e {
+	case WorklistDestinationReceipt:
+		return true
+	case WorklistDestinationReview:
+		return true
+	case WorklistDestinationSystemHealth:
+		return true
+	case WorklistDestinationToday:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemDispositions.
 const (
 	WorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
@@ -32604,6 +32628,13 @@ type Worklist struct {
 	// `due` is asked of every item whatever its level, so an overdue promise counts in
 	// both `urgent` and `due` — deliberately, because a reader wants both answers about
 	// it. Read them as four questions about one day rather than four slices of it.
+	//
+	// `buckets` IS the partition, and it is the one to render an additive sentence from.
+	// The figures above it answer four questions about the day; the four inside it slice
+	// that day into parts that sum to `total`. Both are sent because both are wanted: a
+	// reader asking "how much is overdue" wants `due` counted across every level, and a
+	// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+	// parts to add up to the whole they are shown beside.
 	Summary WorklistSummary `json:"summary"`
 }
 
@@ -32698,6 +32729,32 @@ type WorklistBatch struct {
 // is broken, and repeating it eight times is aggregation failure rather than
 // urgency.
 type WorklistBatchKey string
+
+// WorklistBuckets The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+// lands in exactly one of them.
+//
+// The order below is the order they are read in, and it is a precedence rather than a
+// set of independent tests: an overdue promise is urgent, not due-today, because the
+// first arm that matches takes the row. Without a precedence the same item would be
+// counted twice and the sentence would add up to more than the day holds.
+//
+// `review` is every row whose `destination` is not `today` — a judgement to make, a
+// source to restore, a receipt to read. It is counted from that field rather than from
+// the source, so the sentence and the screens cannot disagree about which rows are
+// seller work.
+type WorklistBuckets struct {
+	// DueToday Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends.
+	DueToday int `json:"due_today"`
+
+	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
+	Planned int `json:"planned"`
+
+	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
+	Review int `json:"review"`
+
+	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
+	Urgent int `json:"urgent"`
+}
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
@@ -32866,6 +32923,21 @@ type WorklistItem struct {
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
+	// Destination Which SCREEN this row belongs on. The server decides it once, and every count,
+	// fold and page in this response is computed from the same value the row carries,
+	// so a client that groups by it cannot disagree with the figures above it.
+	//
+	// `today` is work a seller executes. `review` is a judgement somebody must make
+	// before work continues — an approval, a duplicate pair, an introduction.
+	// `system_health` is a source or automation an administrator must restore.
+	// `receipt` is completed work, reported so the reader can see it happened.
+	//
+	// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+	// `source` that a browser could recompute: two rows of one source can differ,
+	// and the mapping is a product decision that moves. A client that re-derived it
+	// would put a row on one screen while the count above it put the row on another.
+	Destination *WorklistItemDestination `json:"destination,omitempty"`
+
 	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
 	// stopped, what an AI task was about.
 	//
@@ -32994,6 +33066,21 @@ type WorklistItemCategory string
 // source, because one source has several honest answers: a deal past its close
 // date slips, one merely idle drifts.
 type WorklistItemConsequence string
+
+// WorklistItemDestination Which SCREEN this row belongs on. The server decides it once, and every count,
+// fold and page in this response is computed from the same value the row carries,
+// so a client that groups by it cannot disagree with the figures above it.
+//
+// `today` is work a seller executes. `review` is a judgement somebody must make
+// before work continues — an approval, a duplicate pair, an introduction.
+// `system_health` is a source or automation an administrator must restore.
+// `receipt` is completed work, reported so the reader can see it happened.
+//
+// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+// `source` that a browser could recompute: two rows of one source can differ,
+// and the mapping is a product decision that moves. A client that re-derived it
+// would put a row on one screen while the count above it put the row on another.
+type WorklistItemDestination string
 
 // WorklistItemDispositions defines model for WorklistItem.Dispositions.
 type WorklistItemDispositions string
@@ -33242,9 +33329,30 @@ type WorklistSourceUnavailableReason string
 // `due` is asked of every item whatever its level, so an overdue promise counts in
 // both `urgent` and `due` — deliberately, because a reader wants both answers about
 // it. Read them as four questions about one day rather than four slices of it.
+//
+// `buckets` IS the partition, and it is the one to render an additive sentence from.
+// The figures above it answer four questions about the day; the four inside it slice
+// that day into parts that sum to `total`. Both are sent because both are wanted: a
+// reader asking "how much is overdue" wants `due` counted across every level, and a
+// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+// parts to add up to the whole they are shown beside.
 type WorklistSummary struct {
 	// BaseCurrency The currency every expected-revenue figure here is converted to.
 	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// Buckets The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+	// lands in exactly one of them.
+	//
+	// The order below is the order they are read in, and it is a precedence rather than a
+	// set of independent tests: an overdue promise is urgent, not due-today, because the
+	// first arm that matches takes the row. Without a precedence the same item would be
+	// counted twice and the sentence would add up to more than the day holds.
+	//
+	// `review` is every row whose `destination` is not `today` — a judgement to make, a
+	// source to restore, a receipt to read. It is counted from that field rather than from
+	// the source, so the sentence and the screens cannot disagree about which rows are
+	// seller work.
+	Buckets *WorklistBuckets `json:"buckets,omitempty"`
 
 	// Due Items carrying a date that has arrived or passed.
 	Due int `json:"due"`
