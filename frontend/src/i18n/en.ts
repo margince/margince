@@ -7988,7 +7988,7 @@ export const en = {
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Reading your day…",
-  "worklist.queue": "What to do next",
+  "worklist.queue": "Today",
   "worklist.more": "Show more",
   "worklist.more.failed": "Could not load more. Try again.",
   "worklist.summary":
@@ -8022,19 +8022,8 @@ export const en = {
   "worklist.pane.lastInbound": "They last wrote",
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
-  "worklist.focus.title": "Do this next",
-  "worklist.nextup.title": "And then",
-  "worklist.focus.verb.decide": "Decide",
-  "worklist.focus.verb.merge": "Review the pair",
-  "worklist.focus.verb.complete": "Complete it",
-  "worklist.focus.verb.act": "Act on it",
   // Required by the template's key type, never produced: worthActingOn
   // excludes primary_action "acknowledge" before this key is ever built.
-  "worklist.focus.verb.acknowledge": "Acknowledge",
-  "worklist.focus.verb.open": "Open it",
-  "worklist.focus.verb.snooze": "Open it",
-  "worklist.focus.verb.dismiss": "Open it",
-  "worklist.focus.verb.set_aside": "Open it",
   "worklist.band.now": "Now",
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
@@ -8270,6 +8259,7 @@ export const en = {
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
+  "worklist.verb.completeFailed": "That task could not be completed.",
   // The frame states the fact and the source follows it, rather than the
   // source standing as the subject. `sourceName` returns a row TITLE — "A
   // mailbox connection needs attention", "Two records look like the same one"

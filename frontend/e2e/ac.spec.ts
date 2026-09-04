@@ -1206,6 +1206,56 @@ test.describe("§3.8: 390px mobile", () => {
     expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
   });
 
+  // AC-WORKLIST-SDR-01: the first action is above the phone fold.
+  //
+  // The whole promise of this screen on a phone is that a rep opens it and can
+  // ACT — not scroll, then act. Everything above the first row competes for
+  // that space: the title, the count sentence, the readings strip, the scope
+  // control. Each was added for a good reason and none of them is the work.
+  //
+  // Measured against the VIEWPORT rather than a fixed pixel budget, because the
+  // number that matters is whether a thumb can reach it without scrolling. The
+  // page is not scrolled first: this asserts the arriving screen.
+  test("AC-WORKLIST-SDR-01: the first primary action is above the fold at 390x844", async ({
+    page,
+  }) => {
+    await page.goto("/#/worklist");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator(".worklist-list li").first()).toBeVisible();
+
+    const reach = await page.evaluate(() => {
+      const row = document.querySelector(".worklist-list li");
+      if (!row) {
+        return null;
+      }
+      // The row's own verbs, the dispositions beside them, and any inline
+      // answer it draws — every control that IS the work, in the order the row
+      // lays them out. The rank button is excluded: it opens context, which is
+      // reading rather than acting.
+      const control = row.querySelector(
+        ".worklist-row-verbs button, .worklist-row-verbs a, .worklist-row-decision button",
+      );
+      if (!control) {
+        return null;
+      }
+      return {
+        bottom: control.getBoundingClientRect().bottom,
+        fold: window.innerHeight,
+        label: (control.textContent ?? "").trim(),
+      };
+    });
+
+    // A day whose first row carries no verb at all is not this test's subject,
+    // and passing vacuously on one would hide exactly the regression it exists
+    // to catch — so it fails rather than skips.
+    expect(reach, "the first row drew no action to measure").not.toBeNull();
+    const seen = reach as { bottom: number; fold: number; label: string };
+    expect(
+      seen.bottom,
+      `"${seen.label}" ends ${Math.round(seen.bottom)}px down a ${seen.fold}px screen`,
+    ).toBeLessThanOrEqual(seen.fold);
+  });
+
   // The queue is WORKABLE with a thumb, not merely present.
   //
   // What stood here asserted that one text node was visible at 390px, and it
@@ -1262,7 +1312,7 @@ test.describe("§3.8: 390px mobile", () => {
     // lay out at zero height, and those are not targets a thumb can miss.
     const small = await page.evaluate(() => {
       const controls = document.querySelectorAll(
-        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button, .worklist-focus button, .worklist-focus a.btn",
+        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button",
       );
       return Array.from(controls)
         .filter((element) => element.getBoundingClientRect().height > 0)

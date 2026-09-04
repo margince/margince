@@ -109,7 +109,6 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"design-system/activitytimeline.tsx": "maps an Activity onto a TimelineEntry, email_summary included, for composed.tsx to draw; it builds the entry and renders nothing",
 	"screens/openemail.ts":               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
 	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
-	"screens/worklist.focus.tsx":         "suppresses its own title when the item carries a summary, leaving the row to WaitingEmailLine; the branch is the whole of its involvement",
 	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
 	"screens/emailaccesseditor.tsx":      "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
 })
