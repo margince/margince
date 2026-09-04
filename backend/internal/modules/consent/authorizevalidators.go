@@ -66,11 +66,14 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		return validateContract(ctx, tx, req, subject)
 	case commsauthz.CategoryPrecontractQuote:
 		return validateQuote(ctx, tx, req, subject)
+	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation:
+		return validateConfirmation(ctx, tx, subject, category)
 	default:
-		// Every other category — the five that serve the subject, marketing,
-		// customer service, account notices — has no record evidence this file
-		// can read today. They stay unsupported and fall through to the legacy
-		// verdict, which is exactly what they did before this file existed.
+		// Every other category — marketing, customer service, account notices,
+		// and the three subject-serving ones that carry no link — has no record
+		// evidence this file can read today. They stay unsupported and fall
+		// through to the legacy verdict, which is exactly what they did before
+		// this file existed.
 		return unsupported, nil
 	}
 }

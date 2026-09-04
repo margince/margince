@@ -758,11 +758,9 @@ export const vi = {
   "consent.askToConfirm": "Đề nghị họ xác nhận thông tin",
   "consent.askToConfirmWhat":
     "Gửi cho liên hệ này một liên kết riêng để họ xem bạn đang lưu gì về họ, sửa lại nếu sai, và cho biết họ có muốn nhận tin từ bạn không. Liên kết chỉ đến địa chỉ đã lưu của họ; bạn không thể gửi đi nơi khác.",
-  "consent.askSent": "Đã gửi tới {address}.",
+  "consent.askQueued": "Đang trên đường tới {address}.",
   "consent.askNotDelivered":
     "Liên kết đã được tạo cho {address} nhưng bản cài đặt này không gửi thư, nên chưa ai nhận được.",
-  "consent.askSendFailed":
-    "Liên kết đã được tạo cho {address} nhưng thư không gửi đi được. Hãy thử lại — liên kết mới sẽ thay thế liên kết này.",
   "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Tổ chức này chưa theo dõi mục đích chấp thuận nào.",
@@ -1564,8 +1562,10 @@ export const vi = {
   "email.aMessage": "Một thư",
   "email.noSubject": "Không có tiêu đề",
   "email.withheldSubject": "Chưa chia sẻ với bạn",
-  "email.receivedFrom": "Nhận từ",
-  "email.sentTo": "Đã gửi tới",
+  "email.receivedFrom": "Nhận từ {who}",
+  "email.received": "Đã nhận",
+  "email.sentTo": "Đã gửi tới {who}",
+  "email.sent": "Đã gửi",
   "email.access.team": "Nhóm",
   "email.access.participants": "Người tham gia",
   "email.access.selected": "Được chọn",
@@ -7903,6 +7903,13 @@ export const vi = {
   "worklist.board.title": "Nhóm của tôi đang thế nào",
   "worklist.exceptions.title": "Việc cần đến bạn",
   "worklist.handled.title": "Đã xử lý giúp bạn",
+  "worklist.walk.arrived":
+    "Có thêm {arrived} kể từ khi bạn bắt đầu. Chúng chờ làm mới để danh sách này đứng yên.",
+  "worklist.walk.gone":
+    "{gone} trong số này đã được xử lý kể từ khi bạn bắt đầu.",
+  "worklist.walk.both":
+    "Có thêm {arrived} kể từ khi bạn bắt đầu, và {gone} đã được xử lý.",
+  "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý giúp bạn.",
   "worklist.handled.loading": "Đang đọc những việc đã xử lý",
   "worklist.handled.what": "Điều đã xảy ra",
@@ -7918,6 +7925,7 @@ export const vi = {
   "worklist.exceptions.owner": "Ai chịu trách nhiệm",
   "worklist.exceptions.basis": "Căn cứ theo",
   "worklist.exceptions.nobody": "Chưa có ai",
+  "worklist.exceptions.ownerWithheld": "Không hiển thị với bạn",
   "worklist.exceptions.truncated":
     "Còn nhiều hơn thế. Danh sách dừng ở mức một lần xem có thể chứa.",
   "worklist.exceptions.kind.response_breached": "Phản hồi đầu tiên đã trễ",
@@ -8113,6 +8121,11 @@ export const vi = {
   "worklist.verb.pinFailed": "Không thể ghim hàng này.",
   "worklist.verb.unpinFailed": "Không thể bỏ ghim hàng này.",
   "worklist.verb.completed": "Đã xong nhiệm vụ.",
+  "worklist.verb.dismiss": "Chưa phải lúc",
+  "worklist.verb.dismissed": "Đã tạm gác lại một tháng.",
+  "worklist.verb.dismissUndo": "Hoàn tác",
+  "worklist.verb.dismissFailed": "Không thể tạm gác liên hệ này.",
+  "worklist.verb.dismissUndoFailed": "Không thể đưa liên hệ này trở lại.",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại nhiệm vụ này.",
   "worklist.source.failed": "Không đọc được một nguồn: {source}",

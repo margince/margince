@@ -268,6 +268,7 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
       ) : (
         <PanelBody>
           <SurfaceState
+            loadingLabel={t("docs.title")}
             state={state}
             emptyLabel={t("docs.empty")}
             detail={

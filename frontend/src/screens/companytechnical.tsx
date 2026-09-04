@@ -125,7 +125,11 @@ function TechnicalSections({
   const t = useT();
   if (facts.length === 0) {
     return (
-      <SurfaceState state="empty" emptyLabel={t("co.tech.empty")}>
+      <SurfaceState
+        state="empty"
+        emptyLabel={t("co.tech.empty")}
+        loadingLabel={t("co.tech.title")}
+      >
         {null}
       </SurfaceState>
     );

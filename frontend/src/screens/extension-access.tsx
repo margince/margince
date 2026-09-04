@@ -286,7 +286,7 @@ export function ExtensionAccessCard() {
           <p className="t-caption ext-lead-sub">{t("extAccess.sub")}</p>
           {/* Gate on the role probe itself so the admin-only notice appears only
               once /me has answered — never as a flash while it loads. */}
-          <QueryGate query={me}>
+          <QueryGate query={me} pendingLabel={t("extAccess.title")}>
             {() =>
               isAdmin ? (
                 <InventoryLead query={query} />
@@ -330,7 +330,7 @@ function InventoryLead({
   const t = useT();
   const units = query.data?.extensions;
   return (
-    <QueryStates query={query}>
+    <QueryStates query={query} pendingLabel={t("extAccess.title")}>
       {units?.length === 0 ? (
         <EmptyState>{t("extAccess.empty")}</EmptyState>
       ) : null}

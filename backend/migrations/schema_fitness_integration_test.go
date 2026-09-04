@@ -156,7 +156,11 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// a promise: nothing writes task_activity_id.
 	"conversation_claim.person_id":          "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(person, update), then auth.EnsureWritableLive on the person inside the write's own transaction — a claim may only be recorded against a person the caller could already change",
 	"conversation_claim.source_activity_id": "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
-	"conversation_claim.task_activity_id":   "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
+	// Held by backend/gates/pendingwriter_test.go, which fails when a column
+	// classified PENDING WRITER gains one — the entry becoming false is
+	// otherwise silent, and five of the seven this file once carried went
+	// stale exactly that way.
+	"conversation_claim.task_activity_id": "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
 	"organization_geocode_state.organization_id": "child row: the sidecar for an organization's own coordinate lookup, and no caller ever names the organization it keys on. " +
@@ -240,7 +244,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// subject a writer may name is the run's own, which QueueRun gated before
 	// the run existed, and a writer that named a person of its own instead
 	// would need its own gate and its own entry.
-	"provider_applied_field.person_id": "PENDING WRITER: the obligation on whoever writes it — the subject must be the run's own, which QueueRun already gated, as its sibling person_provider_claim.person_id is",
+	"provider_applied_field.person_id": "child row: written by ApplyProviderClaims (people/providerclaimapply.go) from the run's own subject, which QueueRun already gated; the writer re-takes the check itself — auth.HoldWritableLive on the person, inside the hand-off transaction — so every fill that puts provider PII on a shareable record is gated where it is written rather than two packages back",
 	// telegram-oa design §6.4: the channel-aware ensure contract creates the
 	// Person (owner_id NULL) and this identity satellite in the same
 	// transaction, from the inbound message's own channel principal —

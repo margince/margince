@@ -118,7 +118,10 @@ export function OwnerIdentitiesCard() {
             description={t("ownerIdentities.notRetroactive")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("ownerIdentities.title")}
+              >
                 {(list) => (
                   <IdentityRows
                     list={list.data}

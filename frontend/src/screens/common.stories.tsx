@@ -33,7 +33,11 @@ function Demo({ empty }: Readonly<{ empty?: boolean }>) {
     },
   });
   return (
-    <QueryGate query={query} empty={empty ? () => true : undefined}>
+    <QueryGate
+      query={query}
+      empty={empty ? () => true : undefined}
+      pendingLabel="Loading the section"
+    >
       {(data) => <p>{data?.name}</p>}
     </QueryGate>
   );

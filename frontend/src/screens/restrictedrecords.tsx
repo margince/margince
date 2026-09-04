@@ -198,7 +198,7 @@ export function RestrictedRecordsCard() {
       <Panel title={t("restricted.title")}>
         <PanelBody>
           <p className="settings-panel-sub">{t("restricted.sub")}</p>
-          <QueryGate query={me}>
+          <QueryGate query={me} pendingLabel={t("restricted.title")}>
             {() => <EmptyState>{t("restricted.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
@@ -306,7 +306,10 @@ export function RestrictedRecordsCard() {
               label={t("restricted.heldLabel")}
               layout="stack"
               control={
-                <QueryStates query={records}>
+                <QueryStates
+                  query={records}
+                  pendingLabel={t("restricted.title")}
+                >
                   {records.data &&
                     (records.data.data.length === 0 ? (
                       <EmptyState>{t("restricted.empty")}</EmptyState>

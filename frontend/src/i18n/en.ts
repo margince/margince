@@ -814,11 +814,9 @@ export const en = {
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
-  "consent.askSent": "Sent to {address}.",
+  "consent.askQueued": "On its way to {address}.",
   "consent.askNotDelivered":
     "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
-  "consent.askSendFailed":
-    "The link was created for {address} but the mail did not go out. Try again — a new link replaces this one.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This organization tracks no consent purposes yet.",
@@ -1626,8 +1624,10 @@ export const en = {
   "email.aMessage": "A message",
   "email.noSubject": "No subject",
   "email.withheldSubject": "Not shared with you",
-  "email.receivedFrom": "Received from",
-  "email.sentTo": "Sent to",
+  "email.receivedFrom": "Received from {who}",
+  "email.received": "Received",
+  "email.sentTo": "Sent to {who}",
+  "email.sent": "Sent",
   "email.access.team": "Team",
   "email.access.participants": "Participants",
   "email.access.selected": "Selected",
@@ -8082,6 +8082,13 @@ export const en = {
   "worklist.board.title": "How my team is doing",
   "worklist.exceptions.title": "What needs me",
   "worklist.handled.title": "Handled for you",
+  "worklist.walk.arrived":
+    "{arrived} more since you started. They wait for a refresh so this list holds still.",
+  "worklist.walk.gone":
+    "{gone} of these have been dealt with since you started.",
+  "worklist.walk.both":
+    "{arrived} more since you started, and {gone} already dealt with.",
+  "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "Nothing was done on your behalf today.",
   "worklist.handled.loading": "Reading what was done",
   "worklist.handled.what": "What happened",
@@ -8097,6 +8104,7 @@ export const en = {
   "worklist.exceptions.owner": "Who answers",
   "worklist.exceptions.basis": "Judged against",
   "worklist.exceptions.nobody": "Nobody yet",
+  "worklist.exceptions.ownerWithheld": "Not shown to you",
   "worklist.exceptions.truncated":
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.kind.response_breached": "A first reply is late",
@@ -8292,6 +8300,11 @@ export const en = {
   "worklist.verb.pinFailed": "That row could not be pinned.",
   "worklist.verb.unpinFailed": "That row could not be unpinned.",
   "worklist.verb.completed": "Task done.",
+  "worklist.verb.dismiss": "Not now",
+  "worklist.verb.dismissed": "Set aside for a month.",
+  "worklist.verb.dismissUndo": "Undo",
+  "worklist.verb.dismissFailed": "That contact could not be set aside.",
+  "worklist.verb.dismissUndoFailed": "That contact could not be put back.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "That task could not be reopened.",
   // The frame states the fact and the source follows it, rather than the

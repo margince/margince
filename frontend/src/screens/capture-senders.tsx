@@ -121,7 +121,7 @@ export function CaptureSendersCard() {
     <Panel title={t("senders.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("senders.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("senders.title")}>
           {(list) =>
             list.data.length === 0 ? (
               <EmptyState title={t("senders.emptyTitle")}>

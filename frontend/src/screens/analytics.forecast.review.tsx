@@ -51,7 +51,7 @@ export function ForecastReview() {
   });
 
   return (
-    <QueryGate query={assurance}>
+    <QueryGate query={assurance} pendingLabel={t("review.title")}>
       {(run) =>
         run === null ? (
           <Panel title={t("review.title")}>
@@ -99,7 +99,7 @@ function ReviewPanel({
             what happened. */}
         <CoverageLine run={run} />
       </PanelBody>
-      <QueryGate query={checks}>
+      <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
           found.length === 0 ? (
             <PanelBody>

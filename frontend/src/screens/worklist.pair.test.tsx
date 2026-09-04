@@ -211,6 +211,96 @@ describe("deciding a duplicate pair on the row", () => {
     expect(screen.queryByText(/Try again/)).toBeNull();
   });
 
+  // A refusal a press cannot fix has to outlast the press. Both reasoned
+  // branches say something the reader must act on somewhere else — hand the
+  // pair to an admin, or reload to see where it stands — and a sentence shown
+  // for three and a half seconds is one they are invited to miss.
+  //
+  // Asserted through the DISMISS control, which is what a sticky toast draws
+  // and a self-withdrawing one does not. No timer, so this says the same thing
+  // on a loaded runner as on an idle laptop.
+  it.each([
+    { what: "a refusal", code: "permission_denied", status: 403 },
+    { what: "a pair somebody else settled", code: "conflict", status: 409 },
+  ])(
+    "keeps $what on screen until it is dismissed",
+    async ({ code, status }) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          async () =>
+            new Response(JSON.stringify({ code }), {
+              status,
+              headers: { "content-type": "application/problem+json" },
+            }),
+        ),
+      );
+      draw(pairRow());
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Not the same" }),
+      );
+
+      expect(await screen.findByRole("button", { name: "Close" })).toBeTruthy();
+    },
+  );
+
+  // And the one that really is retryable still withdraws itself. Without this
+  // the case above passes against a toast that never leaves, which would be a
+  // different defect wearing the fix's clothes.
+  it("lets an unexplained failure withdraw itself", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ code: "internal" }), {
+            status: 500,
+            headers: { "content-type": "application/problem+json" },
+          }),
+      ),
+    );
+    draw(pairRow());
+
+    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+
+    expect(await screen.findByText(/Try again/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  // An identical name is one of the things that MAKES two records look like
+  // duplicates, so this is not the rare case. Two buttons over an irreversible
+  // merge sharing one accessible name leave a reader who is not looking at the
+  // layout unable to tell which record they are about to archive.
+  it("tells the two verbs apart when the records share a name", () => {
+    draw(
+      pairRow({
+        pair: {
+          left: { id: LEFT, label: "Acme GmbH", detail: "acme.de" },
+          right: { id: RIGHT, label: "Acme GmbH", detail: "acme-group.de" },
+          evidence: [],
+        },
+      }),
+    );
+
+    // The visible text is unchanged and is still the prefix of each spoken
+    // name, so what is seen and what is heard do not come apart.
+    expect(
+      screen.getByRole("button", { name: "Keep Acme GmbH — acme.de" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Keep Acme GmbH — acme-group.de" }),
+    ).toBeTruthy();
+  });
+
+  // The ordinary pair keeps the short name: the detail is a disambiguator, not
+  // decoration, and appending it always would make every button longer to say
+  // the same thing.
+  it("keeps the plain verb when the names already differ", () => {
+    draw(pairRow());
+    expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
+  });
+
   // The pair is still SHOWN — a reader who cannot settle it still needs to know
   // a duplicate is waiting — but nothing is offered, because every press would
   // refuse.

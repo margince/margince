@@ -19741,19 +19741,22 @@ type ConfirmFieldOrigin struct {
 	Source     string `json:"source"`
 }
 
-// ConfirmRequestIssued A confirm link that now exists, and what became of the attempt to deliver it. Three
-// outcomes rather than two, because a reader's next move differs: it went, this
-// installation cannot send at all, or the send was tried and failed.
+// ConfirmRequestIssued A confirm link that now exists, and whether a message carrying it was queued. What
+// becomes of that message afterwards is the delivery's own answer, not this one: the
+// dispatcher transmits it later, retries a transient failure, and parks one it cannot send.
 type ConfirmRequestIssued struct {
 	// DeliveredTo The address the link was posted to — the person's own live primary email.
 	DeliveredTo string    `json:"delivered_to"`
 	ExpiresAt   time.Time `json:"expires_at"`
 
-	// ProviderAccepted Whether the relay accepted the message. False while `sendable` is true means the send
-	// was attempted and failed, which is a different fact from an installation that cannot
-	// send at all. It is deliberately not called `delivered`: a relay returns before any
-	// mailbox has seen the message, and a later bounce cannot travel back to change this.
-	ProviderAccepted bool `json:"provider_accepted"`
+	// Queued Whether the message was put on the outbound send lane, in the same transaction that
+	// minted the link. False while `sendable` is true should not happen — staging and
+	// minting commit together — so it reads as an installation that cannot send.
+	//
+	// Deliberately not `delivered`, and no longer `provider_accepted`: the message is
+	// queued here and transmitted later by the dispatcher, which retries and can park. What
+	// became of it is the delivery's own answer and changes as the dispatcher learns more.
+	Queued bool `json:"queued"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.

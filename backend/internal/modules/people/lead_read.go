@@ -17,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,7 +33,7 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // signal. Every lead read is FROM the unaliased table, which is what lets
 // them name lead.id. A restricted activity (A165: held under a statutory
 // retention obligation) is in none of them, the same as in every other read.
-const leadColumns = `id, full_name, email, title, company_name, candidate_org_key,
+var leadColumns = `id, full_name, email, title, company_name, candidate_org_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_person_id, promoted_at, source, captured_by, version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
@@ -55,7 +56,7 @@ const leadColumns = `id, full_name, email, title, company_name, candidate_org_ke
 	-- is not the lead engaging.
 	(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND a.origin <> 'system_remediation'),
+	     ` + auth.OriginIsEngagement("a") + `),
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done),
 	-- The next open task, as the pair it is: its title and its deadline

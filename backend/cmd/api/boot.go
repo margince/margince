@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -442,6 +440,10 @@ func workerHandoffOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *co
 		// one, and one that cannot refuses both rather than accepting a moment
 		// nothing will wake at.
 		compose.WithScheduleTimer(compose.NewScheduleTimer(sendInserter)),
+		// The installation's OWN mail rides the same inserter and delivery
+		// table. Its relay, vault and public origin arrive on their own
+		// options; whichever lands last completes the lane.
+		compose.WithControllerMail(sendInserter),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, vatCheckBaseURL)
@@ -455,42 +457,4 @@ func workerHandoffOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *co
 	opts = append(opts, embedReindex)
 	opts = append(opts, enqueueOpts...)
 	return opts, nil
-}
-
-// serveUntilSignal serves the composed handler with explicit operational
-// limits — a server without timeouts leaks connections under slow clients —
-// until the listener fails or ctx is cancelled. Shutdown drains in-flight
-// requests inside a bounded window of its own: the ctx that ended the serve is
-// already cancelled, and reusing it would abandon those requests rather than
-// give them time to finish.
-func serveUntilSignal(ctx context.Context, cfg apiConfig, handler http.Handler, stdout io.Writer) error {
-	srv := &http.Server{
-		Addr:              cfg.addr,
-		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       2 * time.Minute,
-	}
-
-	errCh := make(chan error, 1)
-	go func() { errCh <- srv.ListenAndServe() }()
-	if cfg.inlineRelay {
-		_, _ = fmt.Fprintf(stdout, "api listening on %s (base path /v1), relaying events to %s\n", cfg.addr, cfg.redisAddr)
-	} else {
-		_, _ = fmt.Fprintf(stdout, "api listening on %s (base path /v1); the outbox relay runs in cmd/worker\n", cfg.addr)
-	}
-
-	//nolint:contextcheck // the drain gets its own context on purpose: ctx is already cancelled by the time this runs, and a cancelled one would abandon in-flight requests instead of bounding them.
-	stopHTTP := func() error {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		return srv.Shutdown(shutdownCtx)
-	}
-	select {
-	case err := <-errCh:
-		return err
-	case <-ctx.Done():
-		return stopHTTP()
-	}
 }

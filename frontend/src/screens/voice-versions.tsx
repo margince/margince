@@ -53,9 +53,10 @@ export function ActiveVoiceInsights({
   canEdit: boolean;
   onChanged: () => void;
 }>) {
+  const t = useT();
   const versions = useVoiceVersions(profileId);
   return (
-    <QueryGate query={versions}>
+    <QueryGate query={versions} pendingLabel={t("settings.voice.title")}>
       {(list) => {
         const active = list.find((version) => version.status === "active");
         const candidate = list.find(
@@ -285,10 +286,14 @@ export function VoiceHistory({
     // `settingrow-measure` is the row primitive's hook for a control that takes
     // a stacked row's full width, which is the only place this list is drawn.
     <div className="settingrow-measure">
-      <QueryGate query={versions}>
+      <QueryGate query={versions} pendingLabel={t("voice.history.label")}>
         {(page) =>
           allVersions.length === 0 ? (
-            <SurfaceState state="empty" emptyLabel={t("voice.history.empty")}>
+            <SurfaceState
+              state="empty"
+              emptyLabel={t("voice.history.empty")}
+              loadingLabel={t("voice.history.label")}
+            >
               {null}
             </SurfaceState>
           ) : (
@@ -318,7 +323,7 @@ export function VoiceHistory({
           )
         }
       </QueryGate>
-      <QueryGate query={learning}>
+      <QueryGate query={learning} pendingLabel={t("voice.history.label")}>
         {(summary) => (
           <p className="t-small vdna-learning">
             {t("voice.history.learning", {
@@ -362,7 +367,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
     },
   });
   return (
-    <QueryGate query={deltas}>
+    <QueryGate query={deltas} pendingLabel={t("voice.history.label")}>
       {(page) =>
         allDeltas.length === 0 ? (
           <p className="t-small">{t("voice.history.deltasEmpty")}</p>

@@ -768,11 +768,9 @@ export const de = {
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
-  "consent.askSent": "An {address} geschickt.",
+  "consent.askQueued": "Unterwegs an {address}.",
   "consent.askNotDelivered":
     "Der Link wurde für {address} erstellt, aber diese Installation verschickt keine Mails — es hat ihn also niemand bekommen.",
-  "consent.askSendFailed":
-    "Der Link wurde für {address} erstellt, aber die Mail ist nicht rausgegangen. Versuch es nochmal — ein neuer Link ersetzt diesen.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":
@@ -1568,8 +1566,10 @@ export const de = {
   "email.aMessage": "Eine Nachricht",
   "email.noSubject": "Kein Betreff",
   "email.withheldSubject": "Nicht für Sie freigegeben",
-  "email.receivedFrom": "Erhalten von",
-  "email.sentTo": "Gesendet an",
+  "email.receivedFrom": "Erhalten von {who}",
+  "email.received": "Erhalten",
+  "email.sentTo": "Gesendet an {who}",
+  "email.sent": "Gesendet",
   "email.access.team": "Team",
   "email.access.participants": "Beteiligte",
   "email.access.selected": "Ausgewählte",
@@ -7989,6 +7989,12 @@ export const de = {
   "worklist.board.title": "Wie es meinem Team geht",
   "worklist.exceptions.title": "Was mich braucht",
   "worklist.handled.title": "Für Sie erledigt",
+  "worklist.walk.arrived":
+    "{arrived} weitere seit Ihrem Start. Sie warten auf eine Aktualisierung, damit diese Liste ruhig bleibt.",
+  "worklist.walk.gone": "{gone} davon wurden seit Ihrem Start erledigt.",
+  "worklist.walk.both":
+    "{arrived} weitere seit Ihrem Start, und {gone} bereits erledigt.",
+  "worklist.walk.refresh": "Aktualisieren",
   "worklist.handled.empty": "Heute wurde nichts für Sie erledigt.",
   "worklist.handled.loading": "Erledigtes wird gelesen",
   "worklist.handled.what": "Was geschehen ist",
@@ -8004,6 +8010,7 @@ export const de = {
   "worklist.exceptions.owner": "Wer antwortet",
   "worklist.exceptions.basis": "Gemessen an",
   "worklist.exceptions.nobody": "Noch niemand",
+  "worklist.exceptions.ownerWithheld": "Für Sie nicht sichtbar",
   "worklist.exceptions.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.kind.response_breached":
@@ -8210,6 +8217,13 @@ export const de = {
   "worklist.verb.pinFailed": "Diese Zeile konnte nicht angeheftet werden.",
   "worklist.verb.unpinFailed": "Diese Zeile konnte nicht gelöst werden.",
   "worklist.verb.completed": "Aufgabe erledigt.",
+  "worklist.verb.dismiss": "Nicht jetzt",
+  "worklist.verb.dismissed": "Für einen Monat zurückgestellt.",
+  "worklist.verb.dismissUndo": "Rückgängig",
+  "worklist.verb.dismissFailed":
+    "Dieser Kontakt konnte nicht zurückgestellt werden.",
+  "worklist.verb.dismissUndoFailed":
+    "Dieser Kontakt konnte nicht zurückgeholt werden.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Diese Aufgabe konnte nicht wieder geöffnet werden.",

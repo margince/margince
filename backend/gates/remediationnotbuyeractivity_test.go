@@ -167,6 +167,10 @@ func sortStrings(s []string) {
 // reader that runs its own max(occurred_at) is invisible to a gate that only
 // reads migrations, and it was four such readers — not the helpers — that
 // still counted remediation work when this column first landed.
+// engagementFragment is the shared exclusion these readers call instead of
+// spelling an origin themselves (internal/platform/auth/engagementorigin.go).
+const engagementFragment = "auth.OriginIsEngagement"
+
 // gatekit:fixture the reader files this census covers and what each computes —
 // expected data naming the subjects, not waivers excusing them.
 var recencyReadersOutsideTheHelpers = map[string]string{
@@ -187,10 +191,22 @@ func TestRecencyReadersOutsideTheHelpersExcludeRemediation(t *testing.T) {
 				"census is guarding a file that moved", file, what, err)
 			continue
 		}
-		if !strings.Contains(string(raw), remediationOrigin) {
-			t.Errorf("%s computes %s and does not mention %q — a second spelling "+
+		// EITHER spelling satisfies this. A reader may name the origin itself,
+		// or call the shared fragment that names every system origin — which is
+		// what all four do now, so that a THIRD system origin reaches them
+		// without anyone having to remember these four files.
+		//
+		// The fragment is the stronger form and is held separately
+		// (TestEveryRecencyReadingExcludesTheSystemOrigins asserts no reader
+		// spells the exclusion by hand, and TestTheOneSpellingExcludesEvery-
+		// SystemOrigin holds the fragment to the vocabulary). This census stays
+		// because it names WHICH files ask the question at all — the fact a
+		// pattern-matching gate cannot recover.
+		body := string(raw)
+		if !strings.Contains(body, remediationOrigin) && !strings.Contains(body, engagementFragment) {
+			t.Errorf("%s computes %s and neither mentions %q nor calls %s — a second spelling "+
 				"of last_activity_at that still counts work the product filed "+
-				"about the record", file, what, remediationOrigin)
+				"about the record", file, what, remediationOrigin, engagementFragment)
 		}
 	}
 }

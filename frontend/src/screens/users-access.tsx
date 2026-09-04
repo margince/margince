@@ -67,7 +67,7 @@ export function AccessPreviewPanel({
   return (
     <div className="users-access-preview" aria-live="polite">
       <p className="t-caption">{t("users.access.title")}</p>
-      <QueryGate query={preview}>
+      <QueryGate query={preview} pendingLabel={t("users.access.title")}>
         {(access) => <AccessSummary access={access} />}
       </QueryGate>
     </div>
@@ -232,7 +232,7 @@ export function TeamsCard() {
             {problemMessageOf(archive.error, t)}
           </Callout>
         )}
-        <QueryGate query={teams}>
+        <QueryGate query={teams} pendingLabel={t("users.teamsTitle")}>
           {(list) => {
             // The roster hook serves users and teams alike, so narrow to the
             // entries that actually carry a team's name rather than asserting
@@ -391,7 +391,7 @@ function TeamMembers({
   }
 
   return (
-    <QueryGate query={users}>
+    <QueryGate query={users} pendingLabel={t("users.teamMembersLabel")}>
       {(list) => {
         // The roster serves users and teams alike, so narrow to the entries
         // that carry an address rather than asserting the shape — and then to

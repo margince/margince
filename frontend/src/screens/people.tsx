@@ -801,7 +801,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={personQuery}>
+      <QueryGate query={personQuery} pendingLabel={t("nav.contacts")}>
         {(person) => (
           <RecordView
             name={person.full_name}

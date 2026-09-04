@@ -652,7 +652,7 @@ function DeliveriesPanel({
 
   return (
     <div className="webhook-deliveries-panel" id={id}>
-      <QueryStates query={query}>
+      <QueryStates query={query} pendingLabel={t("webhooks.deliveries.title")}>
         <DeliveriesBody
           response={query.data}
           subscriptionId={subscription.id}
@@ -966,6 +966,7 @@ export function WebhooksCard() {
             `SettingList` — which is the whole reason the rows no longer space
             themselves. */}
         <QueryGate
+          pendingLabel={t("webhooks.title")}
           query={query}
           empty={(result) => result.deliveryEnabled && result.data.length === 0}
         >

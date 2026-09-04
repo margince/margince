@@ -267,7 +267,7 @@ export function ConsumerMailDomainsCard() {
             label={t("consumerMail.addedTitle")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate query={query} pendingLabel={t("consumerMail.title")}>
                 {(entries) =>
                   entries.length === 0 ? (
                     // `empty`, and only `empty`: nothing has been added, so the

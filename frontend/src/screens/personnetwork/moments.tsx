@@ -70,7 +70,11 @@ export function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
       title={t("person.network.momentsTitle")}
       sub={t("person.network.momentsSub")}
     >
-      <SurfaceState state={state} emptyLabel={t("person.network.noMoments")}>
+      <SurfaceState
+        state={state}
+        emptyLabel={t("person.network.noMoments")}
+        loadingLabel={t("person.network.title")}
+      >
         <ul className="pn-moments">
           {changes.map((change) => (
             <li key={`${change.kind}-${change.at}`} className="pn-moment">

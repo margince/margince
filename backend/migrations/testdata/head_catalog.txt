@@ -15,7 +15,7 @@ public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WIT
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
-public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text])))
+public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text, 'system_notice'::text])))
 public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text]))))
 public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
@@ -665,6 +665,7 @@ public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
 public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID
@@ -673,6 +674,9 @@ public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES p
 public.approval.approval_pkey PRIMARY KEY (id)
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.bundle_id uuid gen=- def=-
+public.approval.co_target_entity_id uuid gen=- def=-
+public.approval.co_target_entity_type text gen=- def=-
+public.approval.co_target_version bigint gen=- def=-
 public.approval.consumed_at timestamp with time zone gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.decided_at timestamp with time zone gen=- def=-
@@ -2875,7 +2879,7 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
-     AND a.origin <> 'system_remediation'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.deal_id = did
 
 public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=- 
@@ -2885,7 +2889,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       FROM activity_link l
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
-       AND a.origin <> 'system_remediation'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
      WHERE l.organization_id = oid
     UNION ALL
     -- Filed against one of its deals.
@@ -2894,7 +2898,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.deal_id = d.id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
-       AND a.origin <> 'system_remediation'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
      WHERE d.organization_id = oid
     UNION ALL
     -- Filed against a contact it currently employs.
@@ -2903,7 +2907,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.person_id = r.person_id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
-       AND a.origin <> 'system_remediation'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
      WHERE r.organization_id = oid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
   ) arms
@@ -2913,7 +2917,7 @@ public.last_activity_of_person(pid uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
-     AND a.origin <> 'system_remediation'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.person_id = pid
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
@@ -2921,7 +2925,7 @@ public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
-     AND a.origin <> 'system_remediation'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.project_id = pid
 
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

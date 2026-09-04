@@ -38,6 +38,7 @@ export type WorklistDisposition = NonNullable<
 export type TeamBoard = components["schemas"]["TeamBoard"];
 export type TeamExceptions = components["schemas"]["TeamExceptions"];
 export type HandledForYou = components["schemas"]["HandledForYou"];
+export type WorklistWalk = components["schemas"]["WorklistWalk"];
 export type Receipt = components["schemas"]["Receipt"];
 export type TeamException = components["schemas"]["TeamException"];
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
@@ -294,6 +295,56 @@ export function useApproval(id: string, enabled: boolean) {
 // reassign mutation states: the rank numbers and the summary above them are the
 // server's, and a row removed locally leaves both describing a page that is no
 // longer on screen.
+/**
+ * Set a lapsed contact aside, and put them back.
+ *
+ * THIRTY DAYS, and the number lives here rather than being asked of the reader.
+ * A duration picker on this verb would ask a rep to predict when a quiet
+ * relationship becomes worth chasing again, which is not a thing anybody knows
+ * — and the contract caps it at ninety precisely because no value means
+ * forever. A relationship worth raising once is worth raising again.
+ */
+export function useNudgeDismissal() {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: worklistKey });
+  };
+  const dismiss = useMutation({
+    mutationFn: async (input: { personId: string }) => {
+      const { error } = await api.PUT("/people/{id}/nudge-dismissal", {
+        params: { path: { id: input.personId } },
+        body: { days: DISMISSAL_DAYS },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: invalidate,
+  });
+  const restore = useMutation({
+    mutationFn: async (input: { personId: string }) => {
+      const { error } = await api.DELETE("/people/{id}/nudge-dismissal", {
+        params: { path: { id: input.personId } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: invalidate,
+  });
+  return { dismiss, restore };
+}
+
+/**
+ * How long a set-aside contact stays off the lane.
+ *
+ * Thirty rather than the contract's ninety-day ceiling: the cap is what the
+ * server will accept, not what a rep means by "not now". A month is long enough
+ * that the row stops being noise and short enough that a relationship worth
+ * keeping comes back while it still is one.
+ */
+const DISMISSAL_DAYS = 30;
+
 export function useSetDisposition() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -388,4 +439,24 @@ export function usePinRow() {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
+}
+
+/**
+ * Start a NEW walk over today's rows.
+ *
+ * `refetch` is not this. An infinite query refetches every page it holds, each
+ * with the cursor it was loaded under — and every page past the first carries
+ * the SNAPSHOT. So a reader who had paged once and then pressed the refresh
+ * this notice offers resumed the very walk they were asking to leave: the work
+ * that arrived behind them stayed absent, and the notice sat there telling them
+ * to do what they had just done.
+ *
+ * Resetting drops the loaded pages, so the next fetch is a first page with no
+ * cursor and the server freezes a fresh snapshot over the day as it stands now.
+ */
+export function useRefreshWalk() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.resetQueries({ queryKey: worklistKey });
+  };
 }

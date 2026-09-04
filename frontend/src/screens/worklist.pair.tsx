@@ -39,6 +39,28 @@ import { type WorklistItem, worklistKey } from "./worklist.queries";
  * buttons for everybody is what produced a control that refused every press a
  * rep made on a colleague's records, then advised trying again.
  */
+// keepLabel is what the Keep button is CALLED, which is not always what it says.
+//
+// The visible text names the record. When the pair's two records share a name —
+// and an identical name is one of the things that makes two records look like
+// duplicates in the first place — that leaves two buttons over an irreversible
+// merge with one accessible name between them.
+//
+// So the side's own detail joins the name where they collide. The visible text
+// stays the prefix of the spoken one, which is what keeps the two from coming
+// apart for somebody reading the screen and hearing it at once.
+function keepLabel(
+  pair: NonNullable<WorklistItem["pair"]>,
+  side: NonNullable<WorklistItem["pair"]>["left"],
+  t: ReturnType<typeof useT>,
+): string {
+  const visible = t("worklist.pair.keep", { name: side.label });
+  if (pair.left.label !== pair.right.label || !side.detail) {
+    return visible;
+  }
+  return `${visible} — ${side.detail}`;
+}
+
 export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -71,7 +93,19 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
               : code === "conflict"
                 ? "worklist.pair.alreadySettled"
                 : "worklist.pair.failed";
-          toast.show(t(message), { mark: false });
+          // The two REASONED refusals stay until the reader dismisses them;
+          // only the unexplained failure withdraws itself.
+          //
+          // Neither of the first two is retryable, and both say something a
+          // reader has to act on somewhere else — hand the pair to an admin,
+          // or reload to see where it stands. A sentence like that shown for
+          // three and a half seconds is a sentence the reader is invited to
+          // miss, and the press that follows fails identically. "Try again"
+          // is the only one of the three that means it.
+          toast.show(t(message), {
+            mark: false,
+            sticky: code === "permission_denied" || code === "conflict",
+          });
         },
       },
     );
@@ -100,12 +134,22 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                 Two identically named buttons over an irreversible merge leave
                 a reader who is not looking at the layout — a screen reader,
                 a keyboard walking the controls — no way to tell which record
-                they are about to archive. */}
+                they are about to archive.
+
+                Which is exactly what a pair whose two records share a name
+                left them with, and that pair is not the rare case: an
+                identical name is one of the things that MAKES two records
+                look like duplicates. So where the labels collide the side's
+                own detail — the line the card already draws under the name —
+                joins the accessible name. The visible text is unchanged and
+                is still its prefix, so the spoken name and the seen one do
+                not come apart. */}
             {mayDecide && (
               <Button
                 small
                 variant="primary"
                 pending={decide.isPending}
+                aria-label={keepLabel(pair, side, t)}
                 onClick={() => answer("merge", side.id)}
               >
                 {t("worklist.pair.keep", { name: side.label })}

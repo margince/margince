@@ -97,7 +97,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (102)
+## Census (105)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -171,6 +171,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportlessagents_test.go` | H1 | An agent principal carrying no passport is a principal nobody can revoke. |
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |
+| `pendingwriter_test.go` | H2 | A "no writer yet" classification stops being true the moment a writer lands. |
 | `personattachlock_test.go` | H2 | A relationship carrying a person is written under that person's row lock. |
 | `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `piicolumncoverage_test.go` | H2 | The Art. 17 redaction, judged by COLUMN rather than by table. |
@@ -181,6 +182,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
+| `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was COMPUTED at. |
@@ -203,6 +205,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `validatedreplypath_test.go` | H2 | A model reply this tree can REFUSE must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
+| `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 
 ## Reachability (16)
 

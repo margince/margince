@@ -161,9 +161,13 @@ export function CompanyFactsPanel({
             onDone={() => setAdding(false)}
           />
         )}
-        <QueryStates query={factsQuery}>
+        <QueryStates query={factsQuery} pendingLabel={t("co.facts.title")}>
           {facts.length === 0 ? (
-            <SurfaceState state="empty" emptyLabel={t("co.facts.empty")}>
+            <SurfaceState
+              state="empty"
+              emptyLabel={t("co.facts.empty")}
+              loadingLabel={t("co.facts.title")}
+            >
               {null}
             </SurfaceState>
           ) : (

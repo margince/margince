@@ -137,7 +137,7 @@ function ConnectGuide() {
     queryFn: fetchConnectorState,
   });
   return (
-    <QueryGate query={state}>
+    <QueryGate query={state} pendingLabel={t("agents.connected")}>
       {(connector) =>
         connector.enabled ? (
           <>
@@ -484,7 +484,7 @@ export function ConnectedAgentsCard() {
             {/* The gate renders straight into the list, so its rows are the
               list's own children and the hairline falls between them. Its
               pending and error surfaces stand in the same place a row would. */}
-            <QueryGate query={list}>
+            <QueryGate query={list} pendingLabel={t("agents.connected")}>
               {() =>
                 connections.length === 0 ? (
                   // Written out here rather than left to QueryGate's generic

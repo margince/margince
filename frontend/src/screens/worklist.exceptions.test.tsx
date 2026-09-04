@@ -129,7 +129,7 @@ function stubExceptions(body: unknown) {
   return fetched;
 }
 
-function renderPanel() {
+function renderPanel(onOwner: (id: string) => void = () => {}) {
   return render(
     <QueryClientProvider
       client={
@@ -137,7 +137,7 @@ function renderPanel() {
       }
     >
       <LocaleProvider initial="en">
-        <TeamExceptionsPanel enabled onOwner={() => {}} />
+        <TeamExceptionsPanel enabled onOwner={onOwner} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -219,3 +219,109 @@ function jsonOf(body: unknown) {
     headers: { "content-type": "application/json" },
   });
 }
+
+// Who answers for a row, when the reader cannot be told who.
+//
+// `WorklistOwner` carries a KIND — `user` or `unassigned` — and separately a
+// label the caller may not be able to resolve. Those are two different facts
+// and the panel was reading only one: any row without a label rendered as
+// "Nobody yet".
+//
+// So an exception a teammate is already carrying was reported to their lead as
+// unassigned work. That is not a display nicety. A lead reads "nobody" as "this
+// is going nowhere" and takes it on, when somebody is already on it — and the
+// row's click sent them to the unassigned scope, which is the one queue the
+// work is definitely not in.
+describe("an owner the reader cannot name is not nobody", () => {
+  const heldByAStranger = {
+    as_of: "2026-09-05T09:00:00Z",
+    truncated: false,
+    exceptions: [
+      {
+        kind: "response_breached",
+        // A real person holds it. The caller may not resolve their name.
+        owner: { kind: "user", id: "01a05500-0000-7000-8000-0000000000aa" },
+        subject: { type: "lead", id: "l1", label: "Kirsten at LOXXESS" },
+        since: "2026-09-01T09:00:00Z",
+        consequence: "customer_waits",
+        threshold: "first reply past target",
+      },
+    ],
+  };
+
+  it("says the owner is withheld rather than absent", async () => {
+    stubExceptions(heldByAStranger);
+    renderPanel();
+
+    await screen.findByText(/Kirsten at LOXXESS/);
+    expect(
+      screen.getByText(en["worklist.exceptions.ownerWithheld"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["worklist.exceptions.nobody"])).toBeNull();
+  });
+
+  // The routing reads the KIND, and the case that tells the two readings apart
+  // is an `unassigned` owner that still carries an id.
+  //
+  // Reading `owner.id ?? ""` gets the withheld-name row right by accident — the
+  // id is there, so it routes correctly — and gets THIS one wrong: it would
+  // send a lead to a person's queue for work the wire says nobody holds. Only a
+  // fixture carrying both an `unassigned` kind and an id can fail one reading
+  // and pass the other.
+  it("opens the unassigned scope for work nobody holds, whatever id rides along", async () => {
+    stubExceptions({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      exceptions: [
+        {
+          kind: "unassigned",
+          owner: {
+            kind: "unassigned",
+            id: "01a05500-0000-7000-8000-0000000000cc",
+          },
+          subject: { type: "lead", id: "l3", label: "A lead nobody took" },
+          since: "2026-09-01T09:00:00Z",
+          consequence: "customer_waits",
+          threshold: "nobody has taken it",
+        },
+      ],
+    });
+    const opened: string[] = [];
+    renderPanel((id) => opened.push(id));
+
+    (await screen.findByText(/A lead nobody took/)).click();
+
+    expect(opened).toEqual([""]);
+  });
+
+  it("opens that owner's queue when a person holds it", async () => {
+    stubExceptions(heldByAStranger);
+    const opened: string[] = [];
+    renderPanel((id) => opened.push(id));
+
+    (await screen.findByText(/Kirsten at LOXXESS/)).click();
+
+    expect(opened).toEqual(["01a05500-0000-7000-8000-0000000000aa"]);
+  });
+
+  it("still says nobody when the wire says nobody", async () => {
+    stubExceptions({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      exceptions: [
+        {
+          kind: "unassigned",
+          owner: { kind: "unassigned" },
+          subject: { type: "lead", id: "l2", label: "An untaken lead" },
+          since: "2026-09-01T09:00:00Z",
+          consequence: "customer_waits",
+          threshold: "nobody has taken it",
+        },
+      ],
+    });
+    renderPanel();
+
+    await screen.findByText(/An untaken lead/);
+    expect(screen.getByText(en["worklist.exceptions.nobody"])).toBeTruthy();
+  });
+});

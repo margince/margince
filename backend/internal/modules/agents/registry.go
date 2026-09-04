@@ -343,6 +343,8 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		TargetType:     info.TargetType,
 		TargetID:       info.TargetID,
 		TargetVersion:  info.TargetVersion,
+		CoTargetType:   info.CoTargetType,
+		CoTargetID:     info.CoTargetID,
 		Summary:        info.Summary,
 	})
 	if err != nil {

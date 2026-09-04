@@ -313,45 +313,6 @@ func lockPendingUnderIdentity(ctx context.Context, tx pgx.Tx, in StageInput, sur
 	return superseded, nil
 }
 
-// resolveTargetVersion reads the staged target's CURRENT version inside the
-// staging transaction, so what a human approves is bound to the row as it
-// stood when they were asked.
-//
-// The pin is taken here, at the ONE place every stager passes through, and
-// never from what the caller supplied. A caller-supplied pin is a pin the
-// caller can decline to supply: on the REST admission path it came from the
-// optional If-Match header, so an agent that simply left the header off
-// staged target_version NULL, and validateRedemptionTarget short-circuits on
-// NULL — the approval then authorized the operation against whatever the row
-// had drifted to inside the TTL, which for a body-less action route (send
-// this offer) is any content state at all. Automation-staged actions carried
-// no pin for the same reason: nothing had computed one.
-//
-// A target type outside versionTables has no version column to read, so it
-// stays unpinned and the diff_hash identical-call binding is what holds. That
-// residue is bounded and declared: TestConfirmFirstTargetsArePinnable holds
-// the confirm-first surface to a ratified list of them.
-// pinned is false for a target with no version column to read, and for a
-// create, which has no prior row to bind to.
-func resolveTargetVersion(ctx context.Context, tx pgx.Tx, in StageInput) (version int64, pinned bool, err error) {
-	if in.TargetID.IsZero() || !TargetVersionCheckable(in.TargetType) {
-		return 0, false, nil
-	}
-	// Two declared waivers, both meaning "this kind stages with no pin", and
-	// each says a different thing about why: the target is context rather than
-	// operand (contextTargetKinds), or it is the operand and the pin still binds
-	// nothing the human judged (unpinnedKinds). Both are read here because this
-	// is the one place a pin is taken.
-	if TargetIsContextOnly(in.Kind) || TargetVersionUnpinned(in.Kind) {
-		return 0, false, nil
-	}
-	current, err := targetVersion(ctx, tx, in.TargetType, in.TargetID)
-	if err != nil {
-		return 0, false, err
-	}
-	return current, true, nil
-}
-
 // StageInTx records a proposal through a caller-owned transaction. Compose
 // uses it when another module's state transition creates the target the
 // proposal refers to, so the target and its separately governed follow-up
@@ -392,6 +353,14 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if pinned {
 		in.TargetVersion = &current
 	}
+	coVersion, coPinned, err := resolveCoTargetVersion(ctx, tx, in)
+	if err != nil {
+		return ids.ApprovalID{}, err
+	}
+	var coTargetVersion *int64
+	if coPinned {
+		coTargetVersion = &coVersion
+	}
 	id := ids.New[ids.ApprovalKind]()
 	evidence, err := marshalEvidence(in.Evidence)
 	if err != nil {
@@ -412,12 +381,15 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO approval (id, kind, proposed_by, on_behalf_of, passport_id,
 			                       target_entity_type, target_entity_id, target_version,
+			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
 			                       bundle_id, evidence)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now() + $13::interval, $14, $15)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+			         now() + $16::interval, $17, $18)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
+		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
 		targetLabel(ctx, tx, in.TargetType, in.TargetID),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence).Scan(&expiresAt); err != nil {
