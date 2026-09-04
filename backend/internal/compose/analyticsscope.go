@@ -85,9 +85,9 @@ func AnalyticsPopulationClause(
 		return ResolvedScope{}, "", err
 	}
 
-	col := "owner_id"
+	col := paramOwnerID
 	if alias != "" {
-		col = alias + ".owner_id"
+		col = alias + "." + paramOwnerID
 	}
 
 	switch resolved.Kind {

@@ -3324,6 +3324,8 @@ export const de = {
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Call speichern",
+  "analytics.scopeLabel": "Welche Datensätze diese Zahlen umfassen",
+  "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Mit Betrag",

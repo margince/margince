@@ -175,7 +175,7 @@ func scopeFromParams(
 	if scope.Kind == ScopeUnset {
 		if scope.ID != nil {
 			return Scope{}, &values.ParseError{
-				Field: "scope_kind", Code: "required",
+				Field: colScopeKind, Code: "required",
 				Message: "a scope_id names whose forecast, so it needs a scope_kind beside it",
 			}
 		}

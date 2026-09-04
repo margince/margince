@@ -321,7 +321,11 @@ const shareRoutes: RouteMap = {
 export const ShareDialogKinds: Story = {
   render: () => (
     <StoryProviders>
-      <ShareViewButton target="forecast" snapshotId="snap-1" />
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole workspace" }}
+        snapshotId="snap-1"
+      />
     </StoryProviders>
   ),
   beforeEach: () => installFetchStub(shareRoutes),
@@ -331,7 +335,11 @@ export const ShareDialogKinds: Story = {
 export const ShareDialogLinkShownOnce: Story = {
   render: () => (
     <StoryProviders>
-      <ShareViewButton target="forecast" snapshotId="snap-1" />
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole workspace" }}
+        snapshotId="snap-1"
+      />
     </StoryProviders>
   ),
   beforeEach: () => installFetchStub(shareRoutes),

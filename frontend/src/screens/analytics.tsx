@@ -25,7 +25,12 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  useAnalyticsContext,
+  useAnalyticsSelection,
+} from "./analytics.context";
 import { ForecastView } from "./analytics.forecast";
+import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import {
   OverlayUnavailable,
@@ -838,6 +843,11 @@ export function AnalyticsScreen() {
   // does not hold (the report endpoints answer 422 unsupported_by_sor in
   // overlay), so the sections show the honest unavailable state.
   const overlay = useSorMode() === "overlay";
+  // The server decides which population this reader measures and which ones
+  // they may choose. Read once here and handed down, so every card on the page
+  // is answering about the same set.
+  const context = useAnalyticsContext();
+  const { selection, selectScope } = useAnalyticsSelection(context.data);
 
   const pipelineQuery = useQuery({
     queryKey: ["pipelines"],
@@ -868,7 +878,16 @@ export function AnalyticsScreen() {
         }}
         label={t("analytics.sections")}
       />
-      {section === "forecast" && <ShareViewButton target="forecast" />}
+      {selection && context.data ? (
+        <AnalyticsScopePicker
+          scopes={context.data.allowed_scopes}
+          selected={selection.scope}
+          onSelect={selectScope}
+        />
+      ) : null}
+      {section === "forecast" && selection ? (
+        <ShareViewButton target="forecast" scope={selection.scope} />
+      ) : null}
     </div>
   );
 
@@ -885,7 +904,12 @@ export function AnalyticsScreen() {
     <div className="wrap">
       {header}
       {section === "forecast" ? (
-        <ForecastView />
+        selection && context.data ? (
+          <ForecastView
+            selection={selection}
+            canSubmit={context.data.capabilities.submit_manager_forecast}
+          />
+        ) : null
       ) : (
         SECTION_REPORTS[section].map((report) => (
           <ReportCard
