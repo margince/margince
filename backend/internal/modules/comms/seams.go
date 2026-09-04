@@ -43,6 +43,11 @@ type deliveryStore interface {
 	// guarantee is WHEN the dispatcher calls them (sendseam.go).
 	MarkInFlight(ctx context.Context, id ids.UUID) error
 	ClearInFlight(ctx context.Context, id ids.UUID) error
+	// ClearPayloadRef retires a controller message's one-time link material
+	// once the message can no longer be sent. The row stays: it is still the
+	// record that a message went out, and what must not survive is a live
+	// credential pointing at somebody's mailbox.
+	ClearPayloadRef(ctx context.Context, id ids.UUID) error
 }
 
 var _ deliveryStore = (*Store)(nil)

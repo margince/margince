@@ -68,11 +68,12 @@ var directMailHolders = gatekit.Waive(map[string]string{
 		"granted access to: the link IS the act the operator performed, not a message about the " +
 		"relationship, and the recipient cannot use the room without receiving it",
 
-	"internal/modules/consent/confirmmail.go": "KNOWN DEBT, not a settled exemption. The confirm-details " +
-		"link asks somebody to check what is held about them and is mailed straight to SMTP, so the one " +
-		"message most owed a record has none: it writes no comms_outbound row, takes no authorization " +
-		"decision and appears in no subject-access export. The consent plan's controller-mail lane was " +
-		"to fix this and never landed. Waived because refusing it would delete a working feature",
+	"internal/compose/controllermailwiring.go": "the TRANSPORT UNDER the lane, not a way around it. " +
+		"This is the adapter the dispatcher's controller seam calls to put a message on the wire, and " +
+		"it runs only after comms_outbound holds the row, consent has recorded the staging decision and " +
+		"the transmit gate has answered again — the same position the Gmail and Graph adapters occupy " +
+		"for a rep's mail. Every other entry here is a caller that reaches the relay INSTEAD of staging " +
+		"a delivery; this one is what a staged delivery is finally handed to",
 })
 
 func TestOnlyRatifiedCodeMailsWithoutTheDeliveryLane(t *testing.T) {

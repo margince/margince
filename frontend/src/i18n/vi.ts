@@ -758,11 +758,9 @@ export const vi = {
   "consent.askToConfirm": "Đề nghị họ xác nhận thông tin",
   "consent.askToConfirmWhat":
     "Gửi cho liên hệ này một liên kết riêng để họ xem bạn đang lưu gì về họ, sửa lại nếu sai, và cho biết họ có muốn nhận tin từ bạn không. Liên kết chỉ đến địa chỉ đã lưu của họ; bạn không thể gửi đi nơi khác.",
-  "consent.askSent": "Đã gửi tới {address}.",
+  "consent.askQueued": "Đang trên đường tới {address}.",
   "consent.askNotDelivered":
     "Liên kết đã được tạo cho {address} nhưng bản cài đặt này không gửi thư, nên chưa ai nhận được.",
-  "consent.askSendFailed":
-    "Liên kết đã được tạo cho {address} nhưng thư không gửi đi được. Hãy thử lại — liên kết mới sẽ thay thế liên kết này.",
   "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Tổ chức này chưa theo dõi mục đích chấp thuận nào.",

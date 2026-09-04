@@ -768,11 +768,9 @@ export const de = {
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
-  "consent.askSent": "An {address} geschickt.",
+  "consent.askQueued": "Unterwegs an {address}.",
   "consent.askNotDelivered":
     "Der Link wurde für {address} erstellt, aber diese Installation verschickt keine Mails — es hat ihn also niemand bekommen.",
-  "consent.askSendFailed":
-    "Der Link wurde für {address} erstellt, aber die Mail ist nicht rausgegangen. Versuch es nochmal — ein neuer Link ersetzt diesen.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":

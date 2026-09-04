@@ -54,6 +54,12 @@ type Dispatcher struct {
 	now         func() time.Time
 	maxAge      time.Duration
 	maxAttempts int
+	// relay and payloads serve the controller lane only. Both nil on an
+	// installation that sends no controller mail, which resolveSeam reports as
+	// a parked delivery rather than a retry: an unconfigured relay is a
+	// deployment fact and waiting does not change it.
+	relay    ControllerRelay
+	payloads PayloadVault
 }
 
 // defaultMaxAttempts bounds a dispatcher whose ladder length was not
@@ -112,6 +118,19 @@ func NewDispatcher(
 	}
 }
 
+// WithControllerRelay wires the transport for the installation's own mail, and
+// the vault holding the one-time links it carries.
+//
+// An OPTION rather than a constructor parameter because the lane is optional:
+// every other send needs a resolver, a seat authority and a consent gate, and a
+// deployment that sends no confirmation mail should not have to name two nils
+// to say so.
+func (d *Dispatcher) WithControllerRelay(relay ControllerRelay, payloads PayloadVault) *Dispatcher {
+	d.relay = relay
+	d.payloads = payloads
+	return d
+}
+
 // DispatchWithWait runs one delivery attempt and reports how long to wait when
 // the outcome is OutcomePostponed (zero for every other outcome).
 //
@@ -135,23 +154,48 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 		return OutcomeRetry, 0, err
 	}
 
-	// Resolve first, because the authority gate reads the scopes the provider
-	// says this grant holds right now — not a copy stored when it was granted.
-	// resolveSeam is the ONE branch on provider class (sendseam.go); everything
-	// from here down is one path for both transports.
-	seam, err := d.resolveSeam(ctx, del)
+	if del.carriesLiveLink() {
+		return d.dispatchClosingLink(ctx, del)
+	}
+	return d.dispatchLoaded(ctx, del)
+}
+
+// dispositionForUnresolvedSeam turns a failure to resolve the transmitting
+// credential into the disposition it deserves.
+//
+// The split between park and retry is the whole point, and getting it backwards
+// is expensive in both directions: parking on an outage destroys a legitimate
+// send, and retrying an ANSWER — no mailbox connected, no relay configured —
+// leaves a message rattling round the ladder while nobody learns the thing they
+// have to fix. Every named case here is an answer; anything else is a failure to
+// get one.
+func (d *Dispatcher) dispositionForUnresolvedSeam(ctx context.Context, del Delivery, err error) (Outcome, time.Duration, error) {
 	switch {
 	case errors.Is(err, ErrNoMailbox):
 		return d.park(ctx, del.ID, fmt.Sprintf(
 			"nothing is connected for %s to transmit through; connect it to enable sending", del.Provider))
 	case errors.Is(err, ErrCannotSend):
 		return d.park(ctx, del.ID, fmt.Sprintf("the %s connection cannot transmit messages", del.Provider))
+	case errors.Is(err, ErrNoControllerRelay):
+		return d.park(ctx, del.ID,
+			"this installation has no mail relay configured to send its own notices through; configure one, then re-send")
 	case errors.Is(err, ErrProviderNotConfigured):
 		return d.park(ctx, del.ID, fmt.Sprintf(
 			"this installation has no %s integration configured to transmit through; configure it, then re-send", del.Provider))
-	case err != nil:
-		// Park only on an answer, never on a failure to get one.
+	default:
 		return d.retry(ctx, del.ID, err)
+	}
+}
+
+// dispatchLoaded runs the gates and the transmit for a delivery already loaded.
+func (d *Dispatcher) dispatchLoaded(ctx context.Context, del Delivery) (Outcome, time.Duration, error) {
+	// Resolve first, because the authority gate reads the scopes the provider
+	// says this grant holds right now — not a copy stored when it was granted.
+	// resolveSeam is the ONE branch on provider class (sendseam.go); everything
+	// from here down is one path for both transports.
+	seam, err := d.resolveSeam(ctx, del)
+	if err != nil {
+		return d.dispositionForUnresolvedSeam(ctx, del, err)
 	}
 
 	// Which of the gates below apply at all. A controller message has no seat,
@@ -304,6 +348,9 @@ func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam, 
 		// lost.
 		return OutcomeRetry, 0, fmt.Errorf("comms: recording the send receipt: %w", err)
 	}
+
+	// The one-time link has now been sent and must stop being live.
+	d.retireLink(ctx, del)
 
 	// Metering follows the DURABLE record, not the provider call, because the
 	// send call is not the countable event: a receipt that failed to record
