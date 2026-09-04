@@ -23,8 +23,9 @@ import (
 // substitute — the task key — is the leak the name exists to close. A task
 // added without a name would silently rejoin that fallback.
 //
-// Refused when it looks like the key: snake_case, or the key itself with the
-// underscores swapped for spaces. Both are the vocabulary wearing a hat, and
+// Refused when it looks like the key: snake_case, or the key restyled — a
+// different case, spaces or hyphens for the underscores, or the words run
+// together. All of them are the vocabulary wearing a hat, and
 // `TestAMintedLabelIsWordsAndNotVocabulary` refuses the first downstream — this
 // refuses it at the source, where the author can still pick words.
 func checkDisplayName(name, display string) error {
@@ -34,7 +35,7 @@ func checkDisplayName(name, display string) error {
 	if display != strings.TrimSpace(display) {
 		return fmt.Errorf("task %q: display_name %q has surrounding whitespace", name, display)
 	}
-	if snakeCaseRE.MatchString(display) || strings.EqualFold(display, strings.ReplaceAll(name, "_", " ")) {
+	if snakeCaseRE.MatchString(display) || keyShape(display) == keyShape(name) {
 		return fmt.Errorf("task %q: display_name %q is the task key in words — say what the task DOES, in the language a rep reads", name, display)
 	}
 	return nil
@@ -42,3 +43,23 @@ func checkDisplayName(name, display string) error {
 
 // snakeCaseRE recognises a display name that is simply the key pasted in.
 var snakeCaseRE = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+
+// keyShape reduces a string to the letters and digits that carry its sense, so
+// that comparing two of them asks whether they are the same WORDS rather than
+// the same typing.
+//
+// Case and separator are the two ways the key came back in wearing a disguise:
+// `SITE_TRIAGE` cleared the lowercase-only pattern, and `Site_Triage` cleared
+// both it and a comparison that had already swapped underscores for spaces. A
+// reduction refuses the whole family, including the spellings nobody has tried
+// yet — `site-triage`, `SiteTriage` — rather than growing one clause per
+// spelling somebody does try.
+func keyShape(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}

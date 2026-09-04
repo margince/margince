@@ -40,14 +40,25 @@ func TestATaskWithoutADisplayNameIsRefused(t *testing.T) {
 	}
 }
 
-// The key with its underscores swapped for spaces is the vocabulary wearing a
-// hat: it reads as words and says exactly what the key said. Refused here
-// rather than downstream, where the reader has already been shown it.
+// The key restyled is the vocabulary wearing a hat: it reads as words and says
+// exactly what the key said. Refused here rather than downstream, where the
+// reader has already been shown it.
+//
+// Case and separator are both disguises, and each was a hole: the lowercase-only
+// pattern let `SITE_TRIAGE` through, and `Site_Triage` cleared that AND a
+// comparison that had already swapped underscores for spaces. The cases below
+// span the family rather than the two spellings that were reported, because the
+// check now compares word shape and a per-spelling list would go stale the next
+// time somebody invents one.
 func TestADisplayNameThatIsJustTheKeyIsRefused(t *testing.T) {
 	for name, display := range map[string]string{
-		"the key itself":       `"site_triage"`,
-		"the key with spaces":  `"site triage"`,
-		"the key, capitalised": `"Site Triage"`,
+		"the key itself":        `"site_triage"`,
+		"the key with spaces":   `"site triage"`,
+		"the key, capitalised":  `"Site Triage"`,
+		"the key SHOUTED":       `"SITE_TRIAGE"`,
+		"the key, title-cased":  `"Site_Triage"`,
+		"the key, hyphenated":   `"site-triage"`,
+		"the key, run together": `"SiteTriage"`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := parseContract([]byte(displayNameContract(display)))
