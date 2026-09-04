@@ -3,6 +3,11 @@
 
 import type { ReactNode } from "react";
 import { Eyebrow } from "./eyebrow";
+import {
+  type SectionDetail,
+  type SectionState,
+  SurfaceState,
+} from "./surfacestate";
 import "./panel.css";
 
 // Panel is the titled-card shape Card does not offer: a fixed-height header
@@ -218,5 +223,51 @@ export function PanelRow({
     >
       {children}
     </div>
+  );
+}
+
+/**
+ * RailPanel is a Panel that knows the difference between "there is nothing
+ * here" and "you may not read this" — the distinction that makes a record page
+ * honest. A section the caller's role cannot read is ABSENT from the payload
+ * and named in `sections_omitted`, so the card says "hidden from you" instead
+ * of drawing an empty list that reads as "there is none".
+ *
+ * The message states (empty, withheld, unavailable, loading, failed) are
+ * SurfaceState verbatim, padded in a PanelBody; `ready` is left to the caller,
+ * so rows passed as children run edge to edge the way Panel is built to take
+ * them.
+ */
+export function RailPanel({
+  title,
+  state,
+  emptyLabel,
+  detail,
+  footer,
+  children,
+}: Readonly<{
+  title: string;
+  state: SectionState;
+  emptyLabel: string;
+  detail?: SectionDetail;
+  // A figure belonging to the whole card rather than to one row. Shown only
+  // on `ready`/`empty` — the states RailPanel's callers ever reach — because a
+  // withheld or unavailable section has no figure to report either.
+  footer?: ReactNode;
+  children: ReactNode;
+}>) {
+  const present = state === "ready" || state === "empty";
+  return (
+    <Panel title={title} footer={present ? footer : undefined}>
+      {state === "ready" ? (
+        children
+      ) : (
+        <PanelBody>
+          <SurfaceState state={state} emptyLabel={emptyLabel} detail={detail}>
+            {null}
+          </SurfaceState>
+        </PanelBody>
+      )}
+    </Panel>
   );
 }
