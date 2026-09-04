@@ -235,7 +235,16 @@ function squircleSelectors(tokens: string): string[] {
   );
   const rule = /([^{}]*)\{([^{}]*)\}/g;
   for (let m = rule.exec(block); m; m = rule.exec(block)) {
-    if (!/corner-shape\s*:\s*squircle/.test(m[2])) {
+    // Declaration boundaries, not a substring: `--corner-shape: squircle` is a
+    // custom property that paints nothing, and `squircle-variant` is a
+    // different value. Either would have identified a rule that does not set
+    // the shape, and the coverage check would then be reading the selector
+    // list of the wrong rule.
+    if (
+      !/(?:^|;)\s*corner-shape\s*:\s*squircle\s*(?:!important\s*)?(?:;|$)/.test(
+        m[2],
+      )
+    ) {
       continue;
     }
     // Whitespace inside a selector is the DESCENDANT combinator, so it is
@@ -547,6 +556,24 @@ describe("the corner detector sees what it claims to", () => {
       squircleSelectors(commented),
       "a commented-out declaration declares nothing",
     ).toEqual([]);
+    const customProperty =
+      "@supports (corner-shape: squircle) {\n" +
+      "  :where(*)::before { --corner-shape: squircle; }\n}";
+    expect(
+      squircleSelectors(customProperty),
+      "a custom property of a similar name paints no corner",
+    ).toEqual([]);
+    const otherValue =
+      "@supports (corner-shape: squircle) {\n" +
+      "  :where(*)::before { corner-shape: squircle-variant; }\n}";
+    expect(
+      squircleSelectors(otherValue),
+      "a different value is a different shape",
+    ).toEqual([]);
+    const important =
+      "@supports (corner-shape: squircle) {\n" +
+      "  :where(*) { corner-shape: squircle !important; }\n}";
+    expect(squircleSelectors(important)).toEqual([":where(*)"]);
   });
 
   it("reads a round corner in every spelling it is written in", () => {
