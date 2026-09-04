@@ -341,17 +341,23 @@ func assertReaches(t *testing.T, idx funcIndex, from string, wantChain ...string
 // borrowing body, and the acquirer it called was one hop out of sight.
 func TestTheGateSeesAnAcquirerOneCallAway(t *testing.T) {
 	t.Parallel()
+	// INVENTED names, not the ones the reported defect used. The wrapper it
+	// was found in called `labelDerivationRows`, and #4116 has since put that
+	// name in connectionAcquirers — so a fixture borrowing it stopped testing
+	// the REACH and started testing the direct match, one hop earlier. A
+	// fixture that names a real acquirer is coupled to a registry it has no
+	// reason to track.
 	const wrapper = fixtureImports + `
 func decorateRows(ctx context.Context, names Names, rows []map[string]any) {
-	labelDerivationRows(ctx, names, "deal", rows)
+	stampRowLabels(ctx, names, "deal", rows)
 }
 
-func labelDerivationRows(ctx context.Context, names Names, kind string, rows []map[string]any) {
+func stampRowLabels(ctx context.Context, names Names, kind string, rows []map[string]any) {
 	_ = names.pool.Acquire(ctx)
 }
 `
 	assertReaches(t, fixtureIndex(t, wrapper), "decorateRows",
-		"decorateRows", "labelDerivationRows", "Acquire")
+		"decorateRows", "stampRowLabels", "Acquire")
 }
 
 // Two hops, and then the same chain reached from the middle: a walk that only
