@@ -3399,6 +3399,10 @@ export const en = {
   "analytics.noCompany": "No company",
   "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
+  "explain.col.record": "Deal",
+  "explain.col.stage": "Stage",
+  "explain.col.owner": "Owner",
+  "explain.col.pipeline": "Pipeline",
 
   "ai.sub": "bring your own agent — governed by the two-tier contract",
   "ai.tiers": "What an agent may do",

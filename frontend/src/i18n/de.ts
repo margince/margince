@@ -3347,6 +3347,10 @@ export const de = {
   "analytics.noCompany": "Kein Unternehmen",
   "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
+  "explain.col.record": "Deal",
+  "explain.col.stage": "Phase",
+  "explain.col.owner": "Zuständig",
+  "explain.col.pipeline": "Pipeline",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
   "ai.tiers": "Was ein Agent darf",
