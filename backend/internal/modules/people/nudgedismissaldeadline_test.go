@@ -23,12 +23,18 @@ var nanosecondClock = time.Date(2026, 9, 4, 6, 46, 20, 317_417_328, time.UTC)
 func TestADismissalDeadlineCarriesNoPrecisionTheColumnCannotHold(t *testing.T) {
 	t.Parallel()
 
-	got := dismissalDeadline(nanosecondClock, 3)
+	// The exact instant, not merely one aligned to a microsecond. Alignment
+	// alone is satisfied by truncating to the millisecond or the second, which
+	// would move the expiry while still reading as a precision fix — so the
+	// assertion names the deadline that must come out: the clock plus three
+	// days, with the 328ns remainder gone and NOTHING else removed.
+	want := time.Date(2026, 9, 7, 6, 46, 20, 317_417_000, time.UTC)
 
-	if remainder := got.Nanosecond() % int(time.Microsecond/time.Nanosecond); remainder != 0 {
-		t.Errorf("the deadline carries %dns below a microsecond (%s) — timestamptz stores "+
-			"microseconds, so the audit would claim a precision the row does not have and "+
-			"a re-dismissal's before-image would not match it", remainder, got.Format(time.RFC3339Nano))
+	if got := dismissalDeadline(nanosecondClock, 3); !got.Equal(want) {
+		t.Errorf("the deadline is %s, want %s — timestamptz stores microseconds, so the "+
+			"audit must claim that precision and no other: less and the dismissal lapses "+
+			"at a different moment, more and a re-dismissal's before-image will not match it",
+			got.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
 	}
 }
 
