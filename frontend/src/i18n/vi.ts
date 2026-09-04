@@ -4154,7 +4154,7 @@ export const vi = {
   "ob.s4.provImap": "Hộp thư khác (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Cho phép truy cập Microsoft của tôi",
   "ob.s4.microsoftHint":
-    "Chỉ đọc email. Bạn ngắt kết nối lúc nào cũng được trong Cài đặt.",
+    "Đọc thư của bạn và chỉ gửi những gì bạn duyệt. Bạn ngắt kết nối lúc nào cũng được trong Cài đặt.",
   "ob.s4.microsoftUnverified":
     "Bạn có thể thấy thông báo “ứng dụng chưa xác minh” — đó chính là bản tự vận hành này, không phải bên thứ ba.",
   "ob.s4.microsoftFailed": "Kết nối Microsoft chưa hoàn tất.",
