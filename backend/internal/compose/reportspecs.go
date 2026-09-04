@@ -198,6 +198,42 @@ var prebuiltReports = map[string]reportSpec{
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
 		},
 	},
+	// Every lead by status, INCLUDING the two terminal ones.
+	//
+	// It is the only lead read that counts the promoted and the disqualified.
+	// A lead is archived the moment it reaches either, and every list this
+	// product serves hides archived rows by default — which is right for a
+	// work queue and leaves the two terminal board columns with no count to
+	// show. That is the gap this key fills, and it is why baseWhere is empty
+	// where every neighbour here excludes archived rows: an archived lead is
+	// not noise on this report, it IS the report.
+	//
+	// Row scope still applies — the engine binds the lead scope clause like
+	// any other key — so a count here never names leads the caller's own list
+	// would withhold.
+	"leads-by-status": {
+		entity:    datasource.EntityLead,
+		table:     tableLead,
+		baseWhere: "",
+		basePlain: "every lead, including the promoted and disqualified ones a work queue hides",
+		dimensions: map[string]string{
+			fieldStatus:  colStatus,
+			fieldOwnerID: colOwnerID,
+			fieldSource:  colSource,
+		},
+		measures: map[string]string{},
+		filters: map[string]string{
+			fieldStatus:  colStatus,
+			fieldOwnerID: colOwnerID,
+			fieldSource:  colSource,
+		},
+		defaultBy: []string{fieldStatus},
+		defaultAggs: []reportAggregate{
+			{Fn: aggFnCount, As: "leads"},
+		},
+		notes: "counts every lead whatever its status: promoted and disqualified leads are archived, " +
+			"and this is the one lead key that still counts them",
+	},
 	"activities-by-kind": {
 		entity:       datasource.EntityActivity,
 		table:        tableActivity,

@@ -2065,7 +2065,7 @@ export const de = {
   "lead.callNotInOverlay":
     "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardTerminalOnly":
-    "Das Board zeigt nur offene Leads. Diese Leads sind übernommen oder disqualifiziert.",
+    "Keiner dieser Leads ist noch offen \u2014 sie z\u00e4hlen unter Qualifiziert und Disqualifiziert.",
   "person.fromLead": "Aus Lead übernommen",
   "lead.promotedTitle": "Als Kontakt übernommen",
   "lead.promotedMerged":

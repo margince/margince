@@ -143,7 +143,15 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 // the validated caller filters (sorted for a deterministic plan echo), and
 // the caller's row-scope clause — binding every value through arg.
 func buildReportWhere(ctx context.Context, spec reportSpec, req reportRequest, arg func(any) int) ([]string, error) {
-	where := []string{spec.baseWhere}
+	// A spec may restrict nothing: leads-by-status counts every lead whatever
+	// its status, because the archived ones ARE its subject. An empty base
+	// joined in with the rest would render `WHERE  AND …`, so the absence is
+	// dropped here rather than paid for with a `TRUE` in every such spec — a
+	// spec should not have to spell a no-op to say it has no restriction.
+	var where []string
+	if spec.baseWhere != "" {
+		where = append(where, spec.baseWhere)
+	}
 	// Deterministic filter order — the plan echo and the SQL must not
 	// depend on map iteration.
 	filterKeys := make([]string, 0, len(req.Filters))
@@ -307,8 +315,14 @@ func referenceScopeClauses(ctx context.Context, spec reportSpec, arg func(any) i
 // spec's FROM and WHERE, grouped and ordered by the dimension positions,
 // bounded by the report row limit.
 func reportSQL(spec reportSpec, selects, where, groupBy []string) string {
-	sql := fmt.Sprintf("SELECT %s FROM %s WHERE %s",
-		strings.Join(selects, ", "), spec.fromClause(), strings.Join(where, " AND "))
+	sql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selects, ", "), spec.fromClause())
+	// A report can legitimately restrict NOTHING: leads-by-status counts every
+	// lead whatever its status, and an admin's row scope adds no clause of its
+	// own. A bare WHERE would then be a syntax error, so the keyword is written
+	// only when there is something to write after it.
+	if len(where) > 0 {
+		sql += " WHERE " + strings.Join(where, " AND ")
+	}
 	if len(groupBy) > 0 {
 		positions := make([]string, len(groupBy))
 		for i := range groupBy {

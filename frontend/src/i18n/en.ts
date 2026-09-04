@@ -2115,7 +2115,7 @@ export const en = {
   "lead.callNotInOverlay":
     "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardTerminalOnly":
-    "The board shows open leads only. These leads are promoted or disqualified.",
+    "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
   "person.fromLead": "From lead",
   "lead.promotedTitle": "Promoted to a contact",
   "lead.promotedMerged":
