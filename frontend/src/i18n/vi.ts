@@ -7903,6 +7903,13 @@ export const vi = {
   "worklist.board.title": "Nhóm của tôi đang thế nào",
   "worklist.exceptions.title": "Việc cần đến bạn",
   "worklist.handled.title": "Đã xử lý giúp bạn",
+  "worklist.walk.arrived":
+    "Có thêm {arrived} kể từ khi bạn bắt đầu. Chúng chờ làm mới để danh sách này đứng yên.",
+  "worklist.walk.gone":
+    "{gone} trong số này đã được xử lý kể từ khi bạn bắt đầu.",
+  "worklist.walk.both":
+    "Có thêm {arrived} kể từ khi bạn bắt đầu, và {gone} đã được xử lý.",
+  "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý giúp bạn.",
   "worklist.handled.loading": "Đang đọc những việc đã xử lý",
   "worklist.handled.what": "Điều đã xảy ra",

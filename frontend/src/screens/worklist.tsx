@@ -42,9 +42,11 @@ import {
   type WorklistFilter,
   type WorklistItem,
   type WorklistScope,
+  type WorklistWalk,
 } from "./worklist.queries";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
+import { WalkNotice } from "./worklist.walknotice";
 import "./worklist.css";
 
 // The Worklist: one ranked list, not fourteen lanes.
@@ -336,6 +338,8 @@ function QueueRows({
 // describe a slice as though it were the day.
 function WorklistBody({
   day,
+  walk,
+  onRefresh,
   queue,
   scope,
   filter,
@@ -363,6 +367,11 @@ function WorklistBody({
   onSelect: (next: string) => void;
   // Opens a waiting email into the page's one drawer.
   onOpenEmail: (activityId: string) => void;
+  // What has moved since this walk started, from the LATEST page: the two
+  // figures answer over the whole walk and are recomputed on every page, so
+  // page one's copy is stale the moment a reader pages once.
+  walk: WorklistWalk | undefined;
+  onRefresh: () => void;
   hasMore: boolean;
   loadingMore: boolean;
   moreFailed: boolean;
@@ -484,6 +493,10 @@ function WorklistBody({
       {owner === "" && scope === "mine" && (
         <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
       )}
+      {/* What has moved since the reader started paging. An offer to refresh
+          rather than a fault: the day on screen is correct, it is simply no
+          longer complete. */}
+      <WalkNotice walk={walk} onRefresh={onRefresh} />
       {/* A day cannot read as clear while something that would have filled it
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}
@@ -750,6 +763,12 @@ export function WorklistScreen({
   // reader pages, so they are read from page one rather than from the latest
   // page, whose numbers describe only its own slice.
   const first = day.data?.pages[0];
+  // The WALK is the exception to the rule above, and the reason it is spelled
+  // apart from it. `changed_since_snapshot` and `new_available` answer over the
+  // whole walk and are recomputed on every page, so page one's copy is stale
+  // the moment a reader pages once — the opposite of the day figures beside it,
+  // which describe an assembly that does not move.
+  const walk = day.data?.pages.at(-1)?.walk;
   // The rows, which DO grow. Deduped in the query, because a re-rank between
   // reads can serve one row on two pages.
   const queue = day.data ? loadedQueue(day.data.pages) : [];
@@ -776,6 +795,12 @@ export function WorklistScreen({
         {first && (
           <WorklistBody
             day={first}
+            walk={walk}
+            // Refreshing starts a NEW walk, which is what brings in the work
+            // that arrived behind the reader. Refetching the query is exactly
+            // that: the first page is fetched without a cursor, so the server
+            // freezes a fresh snapshot over today's rows.
+            onRefresh={() => void day.refetch()}
             queue={queue}
             scope={scope}
             filter={filter}
