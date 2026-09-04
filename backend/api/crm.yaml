@@ -38192,13 +38192,13 @@ components:
             the sum rather than counted as nothing, so a partly priced day reports what it
             could price and says so through `revenue_currency`.
 
-            It is a FLOOR on what is drifting, never a total, and two things put work
-            outside it. A deal nobody could price is one. The other is that only the
-            at-risk lane goes through the currency conversion, so a deal reaching the page
-            from the overnight brief draws an amount on its own card and adds nothing
-            here. Both are why `more_available` matters: read this figure as "at least
-            this much", and read the `deals_at_risk` entry in `counts` for how many deals
-            stand behind it.
+            It is a FLOOR on what is drifting, never a total: a deal nobody could price
+            is left out, whichever lane surfaced it. A deal reaching the page from both
+            the overnight brief and the at-risk lane at once is counted only ONCE — it
+            is one deal's value, not one value per card it happens to appear on. This is
+            why `more_available` matters: read this figure as "at least this much", and
+            read the `deals_at_risk` entry in `counts` for how many deals stand behind
+            it.
         revenue_currency:
           type: [string, 'null']
           pattern: '^[A-Z]{3}$'

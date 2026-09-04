@@ -15,10 +15,12 @@ package attention
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // stubFX answers a conversion the fixtures state outright, keyed by the
@@ -411,8 +413,69 @@ func TestTheBriefItemLaneCountsTowardRevenueAtRisk(t *testing.T) {
 
 	out := pricedWorklist(t, fx, day)
 
-	if out.Readings.RevenueAtRiskMinor == nil || *out.Readings.RevenueAtRiskMinor != 3_000_000 {
-		t.Fatalf("revenue_at_risk_minor = %v, wanted 3000000 — the brief item's own priced amount",
-			out.Readings.RevenueAtRiskMinor)
+	if got := out.Readings.RevenueAtRiskMinor; got == nil || *got != 3_000_000 {
+		t.Fatalf("revenue_at_risk_minor = %s, wanted 3000000 — the brief item's own priced amount", ptrInt64(got))
 	}
+}
+
+// The same deal genuinely reaches the page from BOTH lanes at once —
+// TestABoundResolverNamesEveryCardOnce (labels_test.go) is production's own
+// proof of the shape: two brief entries and one at-risk row, all naming one
+// deal. Each row is priced independently (a different id per row: the risk
+// row's own id equals the deal's, a brief row's id is the brief entry's own —
+// render.go/rendersilence.go), so summing every priced row without deduping
+// by the DEAL they share would count that one deal's value once per row it
+// happens to appear in.
+func TestASharedDealCountsOnceTowardRevenueAtRiskAcrossBothLanes(t *testing.T) {
+	deal := ids.NewV7()
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		AtRisk: lane(item("risk-row", "deal_at_risk",
+			withPricedDeal(fiveMillionYen), withDealSubject(deal))),
+		ThisMorning: []crmcontracts.AttentionItem{
+			item("brief-row-1", "brief_item", withPricedDeal(fiveMillionYen), withDealSubject(deal)),
+			item("brief-row-2", "brief_item", withPricedDeal(fiveMillionYen), withDealSubject(deal)),
+		},
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	if got := out.Readings.RevenueAtRiskMinor; got == nil || *got != 3_000_000 {
+		t.Fatalf("revenue_at_risk_minor = %s, wanted 3000000 once — three cards, one deal, one figure", ptrInt64(got))
+	}
+}
+
+// Pricing the brief lane is not free of ranking consequences, and this is the
+// one the fix genuinely changes: a brief item and a plain task both classify
+// at levelAgreed with no deadline, so before this fix they always tied
+// through to id order — the brief item's ExpectedMinorBase was always unset.
+// Now a priced brief item's money tiebreak (byExpected, rank.go) beats a
+// task with none, the same way a material deal already beats an unpriced one.
+// Named here rather than left as a side effect an unrelated test would need
+// to notice breaking.
+func TestAPricedBriefItemNowWinsTheMoneyTiebreakOverAPlainTask(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:        rankInstant,
+		ThisMorning: []crmcontracts.AttentionItem{item("brief", "brief_item", withPricedDeal(fiveMillionYen))},
+		Planned:     []crmcontracts.AttentionItem{item("task", "task")},
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	assertOrder(t, out.Queue, "brief", "task")
+	comparison := out.Queue[0].AboveNext
+	if comparison == nil || comparison.Comparator != crmcontracts.WorklistComparisonComparatorExpectedRevenue {
+		t.Fatalf("the brief item leads the task by %+v, wanted expected_revenue", comparison)
+	}
+}
+
+// ptrInt64 prints a *int64's VALUE in a failure message, never the pointer's
+// own address — %v on the field directly names an address nobody asked for.
+func ptrInt64(p *int64) string {
+	if p == nil {
+		return "nil"
+	}
+	return fmt.Sprint(*p)
 }

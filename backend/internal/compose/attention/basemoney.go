@@ -66,8 +66,9 @@ type dayMoney struct {
 	// which is why ran is what the readers below ask.
 	base string
 	// byItem is each priced lane item's expected revenue in the base currency,
-	// keyed by the item's id. An at-risk item absent here, on a day that ran,
-	// is one the estate could not price.
+	// keyed by the item's id — an at-risk row's own id, or a brief row's own
+	// entry id, never the deal id the two can share. A deals_at_risk item
+	// absent here, on a day that ran, is one the estate could not price.
 	byItem map[string]int64
 }
 
@@ -147,8 +148,8 @@ func (s *Service) priceTheDay(ctx context.Context, day crmcontracts.Attention) (
 	if len(amounts) == 0 {
 		// The seam is bound and there was nothing to ask it. That is a day
 		// that RAN with nothing priced, not a day with no conversion: every
-		// at-risk deal is unpriced, and none of them may be compared as a raw
-		// integer.
+		// deals_at_risk item across both lanes is unpriced, and none of them
+		// may be compared as a raw integer.
 		return dayMoney{ran: true}, nil
 	}
 	converted, base, err := s.fx.ToBase(ctx, day.AsOf, amounts)
