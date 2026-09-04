@@ -152,12 +152,14 @@ func derivationWhere(
 	// And the same POPULATION the aggregate was taken over. A drill-through
 	// narrowed differently from its own headline opens records the number
 	// never counted, which is the one thing an explanation must not do.
-	population, err := reportPopulationClause(ctx, tx, requested, arg)
-	if err != nil {
-		return nil, err
-	}
-	if population != "" {
-		where = append(where, population)
+	if spec.population == measureCallersOwn {
+		population, err := reportPopulationClause(ctx, tx, requested, arg)
+		if err != nil {
+			return nil, err
+		}
+		if population != "" {
+			where = append(where, population)
+		}
 	}
 	// The drill-through puts every dimension on its rows, so every reference
 	// the spec carries takes its row scope here too — the explanation must

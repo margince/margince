@@ -18,6 +18,29 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// populationRule says WHOSE records a surface measures.
+//
+// measureCallersOwn is the zero value on purpose. A report added to the
+// catalog that says nothing about its population measures the caller's own,
+// so the narrow answer is the one you get by omission and widening is a thing
+// somebody had to write down.
+type populationRule int
+
+const (
+	measureCallersOwn populationRule = iota
+	// measureEveryReadableRow measures every row the caller may READ, with no
+	// narrowing of its own.
+	//
+	// The ad-hoc datasource plan is the one surface that takes it. A tool
+	// asking "how many projects are in delivery" is asking about the
+	// installation, not about the asker: a project is read by every seat
+	// holding the object grant, and an aggregate that narrowed it to the
+	// caller's team would tell a delivery lead their department has no
+	// projects running. Row scope still applies — this widens the POPULATION,
+	// never the reader's authority.
+	measureEveryReadableRow
+)
+
 // callersOwnPopulation is the population a prebuilt report measures.
 //
 // Empty, deliberately: `POST /reports/{report}` carries no scope parameter, so
