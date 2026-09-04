@@ -21640,11 +21640,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-             *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-             *     `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * Format: date-time
              * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
@@ -21862,11 +21867,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-             *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-             *     `person_consent` for THIS purpose.
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * Format: date-time
              * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
@@ -21952,11 +21962,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under (e.g. `transactional`). The send is
-             *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-             *     `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * @description Files already in the record library to send with this message, named by id
              *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so

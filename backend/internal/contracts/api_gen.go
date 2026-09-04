@@ -30072,10 +30072,15 @@ type SendAccountEmailRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-	// suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-	// `person_consent` for THIS purpose.
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
 	// Omit for independently composed mail.
@@ -30237,10 +30242,15 @@ type SendEmailRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-	// The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-	// `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// DraftRef Opaque reference returned by the drafting operation. After a successful send, the
 	// server compares this protected original with the final body and records accepted or
@@ -30363,10 +30373,15 @@ type SendMessageRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
-	// suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-	// `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
