@@ -124,7 +124,11 @@ func forecastAsOf(req agents.ForecastRequest, now func() time.Time) (time.Time, 
 // unknown scope_kind is refused downstream by checkScope, which holds the
 // table's own CHECK and names the field.
 func forecastToolScope(req agents.ForecastRequest) forecasting.Scope {
-	scope := forecasting.Scope{Kind: forecasting.ScopeWorkspace}
+	// An agent that named no scope is asking about ITS OWN population, the same
+	// as a person who named none. Starting at the workspace made the omission
+	// an explicit request for the installation, which a rep- or team-lens
+	// passport is now refused outright — so the default answered nothing.
+	var scope forecasting.Scope
 	if req.ScopeKind != "" {
 		scope.Kind = req.ScopeKind
 	}

@@ -135,17 +135,14 @@ func requestedFromForecastScope(scope forecasting.Scope) RequestedScope {
 	return RequestedScope{Kind: scope.Kind, ID: scope.ID}
 }
 
-// forecastScopeFromResolved carries the decision back.
+// forecastScopeFromResolved carries the decision back, without flattening it.
 //
-// A manager's default resolves to their teams AND themselves, which the
-// forecast vocabulary has no single word for. It is reported as the team scope
-// when exactly one team is managed, and otherwise as the workspace-shaped
-// answer it is: the reading covers more than one team, and naming one of them
-// would be a narrower claim than the number.
+// A manager's default covers their teams AND themselves, and the forecast
+// vocabulary now has its own word for that. Reporting it as the workspace
+// instead — which an earlier spelling of this did — makes the answer claim a
+// population it did not measure, and the standing call is looked up BY the
+// scope, so the manager would have been handed management's workspace call.
 func forecastScopeFromResolved(resolved ResolvedScope) forecasting.Scope {
-	if resolved.Kind == ScopeKindManagedTeams {
-		return forecasting.Scope{Kind: forecasting.ScopeWorkspace}
-	}
 	return forecasting.Scope{Kind: resolved.Kind, ID: resolved.ID}
 }
 

@@ -95,20 +95,37 @@ func AnalyticsPopulationClause(
 		return resolved, fmt.Sprintf("%s = $%d", col, arg(*resolved.ID)), nil
 	case ScopeKindTeam:
 		return resolved, fmt.Sprintf(
-			"%s IN (SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = $%d)",
-			col, arg(*resolved.ID)), nil
+			"%s IN (%s)", col, liveTeamMembersSQL(arg(*resolved.ID), "= $%d")), nil
 	case ScopeKindManagedTeams:
 		// A team manager who named nothing is asking about the work they are
 		// accountable for, which is their teams AND themselves. Themselves
 		// explicitly: a manager carrying deals of their own is not a member of
 		// their own team in every installation, and dropping their pipeline
 		// from their own default answer reads as data loss.
+		me := arg(p.UserID)
+		teams := arg(p.TeamIDs)
 		return resolved, fmt.Sprintf(
-			"(%s = $%d OR %s IN (SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = ANY($%d)))",
-			col, arg(p.UserID), col, arg(p.TeamIDs)), nil
+			"(%s = $%d OR %s IN (%s))",
+			col, me, col, liveTeamMembersSQL(teams, "= ANY($%d)")), nil
 	default:
 		return resolved, "", nil
 	}
+}
+
+// liveTeamMembersSQL selects the members of a team, as the installation stands
+// today: a live team, and a member who can still act.
+//
+// Membership rows deliberately outlive both — an archived team keeps its rows so
+// a restore brings them back, and deactivating a seat leaves the row alone. A
+// predicate reading team_membership by itself therefore measures people who left,
+// which is the defect this replaces: the resolver refuses a departed colleague as
+// a population of their own while their deals went on counting inside their old
+// team's total.
+func liveTeamMembersSQL(pos int, match string) string {
+	return fmt.Sprintf(`SELECT tm.user_id FROM team_membership tm
+		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
+		JOIN app_user u ON u.id = tm.user_id AND `+identity.LiveMemberSQL("u")+`
+		WHERE tm.team_id `+match, pos)
 }
 
 // ScopeKindManagedTeams is the resolved-only kind for "my teams and me". It is

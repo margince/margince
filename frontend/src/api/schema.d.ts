@@ -23250,8 +23250,11 @@ export interface components {
              * @description The last day INSIDE the period, not an exclusive bound.
              */
             period_end: string;
-            /** @enum {string} */
-            scope_kind: "workspace" | "team" | "owner";
+            /**
+             * @description Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
+             * @enum {string}
+             */
+            scope_kind: "workspace" | "managed_teams" | "team" | "owner";
             /** Format: uuid */
             scope_id?: string;
             /**

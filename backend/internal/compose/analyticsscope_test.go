@@ -20,6 +20,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -198,5 +199,30 @@ func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 	}
 	if got.Kind != ScopeKindOwner || got.ID == nil || *got.ID != me {
 		t.Fatalf("naming yourself resolved to %q/%v", got.Kind, got.ID)
+	}
+}
+
+// A manager's default is its own population and must not be reported as the
+// workspace.
+//
+// The standing forecast call is looked up BY the scope, so flattening this to
+// "workspace" — which an earlier spelling did — handed a team manager
+// management's own call: its amount, its author and its note, printed beside
+// totals covering only the manager's teams. Asking for the workspace explicitly
+// would have been refused, which is what makes the flattened answer a
+// disclosure rather than a mislabel.
+func TestAManagersDefaultIsNotReportedAsTheWorkspace(t *testing.T) {
+	resolved := ResolvedScope{Kind: ScopeKindManagedTeams, Label: managedTeamsLabel}
+
+	got := forecastScopeFromResolved(resolved)
+
+	if got.Kind == forecasting.ScopeWorkspace {
+		t.Fatal("a manager's teams were reported as the whole workspace")
+	}
+	if got.Kind != forecasting.ScopeManagedTeams {
+		t.Fatalf("resolved scope reported as %q", got.Kind)
+	}
+	if got.ID != nil {
+		t.Errorf("the managed-teams population names a subject: %v", got.ID)
 	}
 }

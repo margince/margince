@@ -5760,14 +5760,17 @@ func (e ForecastMovementBucketName) Valid() bool {
 
 // Defines values for ForecastReadingsScopeKind.
 const (
-	ForecastReadingsScopeKindOwner     ForecastReadingsScopeKind = "owner"
-	ForecastReadingsScopeKindTeam      ForecastReadingsScopeKind = "team"
-	ForecastReadingsScopeKindWorkspace ForecastReadingsScopeKind = "workspace"
+	ForecastReadingsScopeKindManagedTeams ForecastReadingsScopeKind = "managed_teams"
+	ForecastReadingsScopeKindOwner        ForecastReadingsScopeKind = "owner"
+	ForecastReadingsScopeKindTeam         ForecastReadingsScopeKind = "team"
+	ForecastReadingsScopeKindWorkspace    ForecastReadingsScopeKind = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the ForecastReadingsScopeKind enum.
 func (e ForecastReadingsScopeKind) Valid() bool {
 	switch e {
+	case ForecastReadingsScopeKindManagedTeams:
+		return true
 	case ForecastReadingsScopeKindOwner:
 		return true
 	case ForecastReadingsScopeKindTeam:
@@ -22140,9 +22143,11 @@ type ForecastReadings struct {
 	PeriodStart openapi_types.Date `json:"period_start"`
 
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
-	PricedCount int                       `json:"priced_count"`
-	ScopeId     *openapi_types.UUID       `json:"scope_id,omitempty"`
-	ScopeKind   ForecastReadingsScopeKind `json:"scope_kind"`
+	PricedCount int                 `json:"priced_count"`
+	ScopeId     *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
+	ScopeKind ForecastReadingsScopeKind `json:"scope_kind"`
 
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
@@ -22157,7 +22162,7 @@ type ForecastReadings struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastReadingsScopeKind defines model for ForecastReadings.ScopeKind.
+// ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.

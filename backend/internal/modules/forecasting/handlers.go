@@ -96,6 +96,13 @@ func (h Handlers) GetForecast(
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
 		out.ScopeLimited = &limited
 
+		// A standing call is an assertion about ONE named population. The
+		// managed-teams reading covers several, so there is no call to look up
+		// — and looking one up under a flattened scope would fetch a different
+		// population's call and print it beside these totals.
+		if scope.Kind == ScopeManagedTeams {
+			return nil
+		}
 		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
 		switch {
 		case err == nil:
