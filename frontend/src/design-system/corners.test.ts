@@ -118,15 +118,30 @@ function blocks(text: string): Block[] {
 
 type Radius = { property: string; value: string; waived: boolean };
 
-/** The radius declarations in one block, with any in-line waiver noted. */
+/**
+ * The radius declarations in one block, with any in-line waiver noted.
+ *
+ * The scan runs over a copy whose COMMENT SPANS are blanked, so a declaration
+ * somebody commented out is not a declaration — it draws nothing, and reporting
+ * it would send the next author to a line that is already inert. The offsets
+ * survive the blanking (comments become spaces of the same length), so the
+ * waiver is still read from the ORIGINAL text, where it lives inside a comment
+ * of its own.
+ */
 function radii(body: string): Radius[] {
   const out: Radius[] = [];
-  const decl = /(border(?:-[a-z]+)*-radius)\s*:\s*([^;}]+)(;?)([^\n]*)/g;
-  for (let m = decl.exec(body); m; m = decl.exec(body)) {
+  const active = body.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+    " ".repeat(comment.length),
+  );
+  const decl = /(border(?:-[a-z]+)*-radius)\s*:\s*([^;}]+)(;?)/g;
+  for (let m = decl.exec(active); m; m = decl.exec(active)) {
+    const lineEnd = body.indexOf("\n", m.index + m[0].length);
     out.push({
       property: m[1],
       value: m[2].trim(),
-      waived: waivedWithReason(m[4] ?? ""),
+      waived: waivedWithReason(
+        body.slice(m.index + m[0].length, lineEnd === -1 ? undefined : lineEnd),
+      ),
     });
   }
   return out;
@@ -198,6 +213,29 @@ function namedRungs(text: string, rungs: Set<string>): string[] {
     }
   }
   return out;
+}
+
+/**
+ * The selectors the squircle rule is declared against, one per entry. Read from
+ * the rule that actually sets `corner-shape`, so the coverage check below is
+ * asking about the declaration rather than about the text of the file.
+ */
+function squircleSelectors(tokens: string): string[] {
+  const block = tokens.slice(
+    tokens.indexOf("@supports (corner-shape: squircle)"),
+  );
+  const rule = /([^{}]*)\{([^{}]*)\}/g;
+  for (let m = rule.exec(block); m; m = rule.exec(block)) {
+    if (!/corner-shape\s*:\s*squircle/.test(m[2])) {
+      continue;
+    }
+    return m[1]
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split(",")
+      .map((one) => one.trim().replace(/\s+/g, ""))
+      .filter(Boolean);
+  }
+  return [];
 }
 
 /**
@@ -286,13 +324,13 @@ describe("every corner in the tree reads one ladder", () => {
 
   it("names every cornered pseudo-element beside the universal selector", () => {
     const tokens = readFileSync(tokensFile, "utf8");
-    const squircleRule = tokens
-      .slice(tokens.indexOf("@supports (corner-shape: squircle)"))
-      .replace(/\/\*[\s\S]*?\*\//g, "");
     const unlisted: string[] = [];
     for (const file of sheets) {
       for (const pseudo of corneredPseudoElements(readFileSync(file, "utf8"))) {
-        if (!squircleRule.includes(`::${pseudo.slice(2)}`)) {
+        // The UNIVERSAL form, not the bare name: `.card::before` appearing
+        // anywhere under the query would otherwise satisfy a rule that never
+        // covers the tree's own generated boxes.
+        if (!squircleSelectors(tokens).includes(`:where(*)${pseudo}`)) {
           unlisted.push(`${relative(frontendRoot, file)}: \`${pseudo}\``);
         }
       }
@@ -456,11 +494,31 @@ describe("the corner detector sees what it claims to", () => {
       corneredPseudoElements(".a::after { border-radius: var(--r-sm); }"),
     ).toEqual(["::after"]);
     expect(
+      corneredPseudoElements(".a::before { /* border-radius: 4px; */ }"),
+      "a commented-out radius draws nothing, so it corners nothing",
+    ).toEqual([]);
+    expect(
       corneredPseudoElements('.a::before { content: ""; opacity: 0.5; }'),
     ).toEqual([]);
     expect(
       corneredPseudoElements(".a::marker { border-radius: 50%; }"),
     ).toEqual(["::marker"]);
+  });
+
+  it("reads the squircle rule's own selector list, not the file's text", () => {
+    const real =
+      "@supports (corner-shape: squircle) {\n" +
+      "  :root { --r-sm: 16px; }\n" +
+      "  :where(*),\n  :where(*)::before {\n    corner-shape: squircle;\n  }\n}";
+    expect(squircleSelectors(real)).toEqual([":where(*)", ":where(*)::before"]);
+    const decoy =
+      "@supports (corner-shape: squircle) {\n" +
+      "  .card::before { border-radius: var(--r-sm); }\n" +
+      "  :where(*) { corner-shape: squircle; }\n}";
+    expect(
+      squircleSelectors(decoy).includes(":where(*)::before"),
+      "a pseudo-element named on an unrelated rule under the query covers nothing",
+    ).toBe(false);
   });
 
   it("reads a round corner in every spelling it is written in", () => {
