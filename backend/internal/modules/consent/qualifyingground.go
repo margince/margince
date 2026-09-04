@@ -219,7 +219,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 // the field unset — which is exactly why the mail-shaped derivation above could
 // never answer for one.
 //
-// THREE BOUNDS, and every one of them is what stops this being a way to write
+// FOUR BOUNDS, and every one of them is what stops this being a way to write
 // your own permission slip. A qualifying event makes it LAWFUL to mail somebody,
 // and everything below is caller-supplied unless it is bounded.
 //
@@ -230,6 +230,17 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 // strength of it. A connector-captured meeting came from a calendar the mailbox
 // owner actually holds. This is the same boundary capture's own noise sweep
 // draws, for the same reason.
+//
+// And it must NAME NOBODY, which is the bound the connector clause cannot carry.
+// A connector reports the kind per message and the extension ingress copies it
+// off a third-party unit's record with no vocabulary check in front of it
+// (compose/extingress.go), so a message a connector really did capture can wear
+// this kind and still be mail. Mail is what the arm above weighs, on the
+// authorship test this one deliberately does not apply — so without this clause
+// a message somebody was merely copied on, relabelled, is a permission slip to
+// write to everyone who was on it. Counterparty-less is the shape no caller
+// forges by choosing a string: attendance is a list, and the calendar mapper is
+// what leaves the field unset.
 //
 // The meeting must not have been DECLINED or abandoned. meeting_status carries
 // `no_show` and `canceled`, and neither is a meeting that happened: an invitation
@@ -255,6 +266,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.person_id = $1::uuid
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
 		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
 		  AND a.occurred_at >= $2

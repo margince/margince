@@ -430,16 +430,28 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 // invitation named — a person the workspace does not have yet is exactly the
 // case this decides.
 //
-// THREE BOUNDS, the same three the consent arm applies (consent's
+// FOUR BOUNDS, the same four the consent arm applies (consent's
 // meetingQualifyingEvent), because they answer the same question about the same
 // row and two readings of one fact drift:
 //
 //   - a CONNECTOR captured it, so a hand-logged "meeting" cannot mint a contact;
+//   - it NAMES NOBODY, the shape a calendar record has and mail never does;
 //   - it was not declined or abandoned (no_show, canceled);
 //   - it is not dated past the horizon, so a far-future date cannot stand in for
 //     a relationship.
 //
-// An ARCHIVED meeting is excluded too, which is not one of the three: a meeting
+// The counterparty bound carries the weight the connector bound cannot. A
+// connector reports the kind per message and the extension ingress copies it off
+// a third-party unit's record with no vocabulary check (compose/extingress.go),
+// so a connector-captured message can arrive wearing this kind and still be
+// mail. Mail is what T1's other two clauses already weigh, and weighing it twice
+// is the whole difference: this query runs inside the capture transaction, after
+// the row is written, so a mail-shaped record calling itself a meeting would
+// answer for ITSELF — one message would be its own evidence that the workspace
+// deals with its sender, and a sender the ladder judged would get a record and a
+// workspace-readable message out of the word.
+//
+// An ARCHIVED meeting is excluded too, which is not one of the four: a meeting
 // somebody removed is not evidence of anything, and the activity kind index is
 // partial on archived_at IS NULL, so naming it here is also what lets this
 // query use one — it runs per captured address.
@@ -456,6 +468,7 @@ func metInPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 		    JOIN activity_participant p ON p.activity_id = a.id
 		   WHERE a.kind = 'meeting'
 		     AND a.archived_at IS NULL
+		     AND a.counterparty_email IS NULL
 		     AND a.captured_by LIKE 'connector:%'
 		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
 		     AND a.occurred_at <= now() + $2::interval

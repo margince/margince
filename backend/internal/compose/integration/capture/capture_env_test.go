@@ -237,11 +237,11 @@ func emailAbout(msgID, refs, subject string) []byte {
 	return []byte(strings.Join(lines, "\r\n"))
 }
 
-func countRows(t *testing.T, e *integration.SearchEnv, query string) int {
+func countRows(t *testing.T, e *integration.SearchEnv, query string, args ...any) int {
 	t.Helper()
 	var n int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), query).Scan(&n)
+		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	})
 	if err != nil {
 		t.Fatal(err)
