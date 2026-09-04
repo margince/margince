@@ -26,7 +26,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TeamBoard answers what each teammate is carrying.
@@ -42,14 +41,8 @@ import (
 // members' counts be read at different instants, so a message answered mid-read
 // could be absent from both columns.
 func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return crmcontracts.TeamBoard{}, apperrors.ErrPermissionDenied
-	}
-	switch actor.Permissions.RowScope {
-	case principal.RowScopeTeam, principal.RowScopeAll:
-	default:
-		return crmcontracts.TeamBoard{}, apperrors.ErrPermissionDenied
+	if err := requireLeadTier(ctx); err != nil {
+		return crmcontracts.TeamBoard{}, err
 	}
 	if s.teammates == nil {
 		// Nil is a REFUSAL here, matching resolveOwner: a board assembled

@@ -10144,6 +10144,14 @@ paths:
         access to. So this answers "how much is hidden from YOU", which is the only
         honest reading available without giving one person a licence to read another's
         records.
+
+        Read by a LEAD, and refused below a row scope of `team` — the same tier
+        `/worklist/team` and `/worklist/response` take. Not a confinement: the figures are
+        already the caller's own and an ungated read would disclose no row they cannot
+        open. It is that two of the five rules are a horizon somebody configured and a
+        reader who works the queue cannot change either, so the surface belongs to whoever
+        can. A rep asking whether their own day is honest is a real question and a
+        different endpoint from this one.
       x-agent-access: human-only
       responses:
         '200':
@@ -10183,6 +10191,11 @@ paths:
         timestamp rather than content, and it is the price of the two readers agreeing
         about which threads were answered — but it is a real disclosure and this is where
         it is written down.
+
+        Read by a LEAD, and refused below a row scope of `team`, the same tier
+        `/worklist/team` and `/worklist/hidden` take. "How fast does the workspace answer"
+        is a question about how the work is going rather than about what to do next, and
+        the rep answering the queue is not the person who changes the answer.
       x-agent-access: human-only
       parameters:
         - name: days
