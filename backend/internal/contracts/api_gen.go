@@ -14554,6 +14554,45 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ListForecastCallsParamsPeriod.
+const (
+	ForecastCallsPeriodMonth   ListForecastCallsParamsPeriod = "month"
+	ForecastCallsPeriodQuarter ListForecastCallsParamsPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the ListForecastCallsParamsPeriod enum.
+func (e ListForecastCallsParamsPeriod) Valid() bool {
+	switch e {
+	case ForecastCallsPeriodMonth:
+		return true
+	case ForecastCallsPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListForecastCallsParamsScopeKind.
+const (
+	ListForecastCallsParamsScopeKindOwner     ListForecastCallsParamsScopeKind = "owner"
+	ListForecastCallsParamsScopeKindTeam      ListForecastCallsParamsScopeKind = "team"
+	ListForecastCallsParamsScopeKindWorkspace ListForecastCallsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListForecastCallsParamsScopeKind enum.
+func (e ListForecastCallsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListForecastCallsParamsScopeKindOwner:
+		return true
+	case ListForecastCallsParamsScopeKindTeam:
+		return true
+	case ListForecastCallsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetForecastMovementParamsReading.
 const (
 	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
@@ -34862,6 +34901,25 @@ type GetForecastParamsPeriod string
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
 
+// ListForecastCallsParams defines parameters for ListForecastCalls.
+type ListForecastCallsParams struct {
+	// Period The window length. Quarters follow the installation's financial year.
+	Period *ListForecastCallsParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// AsOf Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in.
+	AsOf      *openapi_types.Date               `form:"as_of,omitempty" json:"as_of,omitempty"`
+	ScopeKind *ListForecastCallsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Whose forecast, for a team or owner scope. A workspace scope names none.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// ListForecastCallsParamsPeriod defines parameters for ListForecastCalls.
+type ListForecastCallsParamsPeriod string
+
+// ListForecastCallsParamsScopeKind defines parameters for ListForecastCalls.
+type ListForecastCallsParamsScopeKind string
+
 // GetForecastMovementParams defines parameters for GetForecastMovement.
 type GetForecastMovementParams struct {
 	// From The opening snapshot.
@@ -47104,6 +47162,9 @@ type ServerInterface interface {
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// What this period's forecast has been called, newest first.
+	// (GET /forecast/calls)
+	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
@@ -49531,6 +49592,12 @@ func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 // Answer a finding from the nightly input check.
 // (POST /forecast/assurance/exceptions/{id}/resolve)
 func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this period's forecast has been called, newest first.
+// (GET /forecast/calls)
+func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60927,6 +60994,86 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveInputCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListForecastCalls operation middleware
+func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListForecastCallsParams
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListForecastCalls(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77423,6 +77570,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/calls", wrapper.ListForecastCalls)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
