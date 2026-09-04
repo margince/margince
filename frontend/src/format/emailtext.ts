@@ -5,6 +5,12 @@
 // that is what this file finds. The rest is handed back separately and folded
 // behind a control rather than dropped: a heuristic that guesses wrong must
 // stay one click from being wrong in public.
+//
+// A deliberate mirror of backend/internal/modules/activities/emailtext.go: the
+// server composes a row's preview and this folds the tail in the drawer, so a
+// table that drifted would make a row disagree with the message it opens.
+// backend/gates/emailsplitterparity_test.go compares the two in both
+// directions — an entry added on one side and not the other is a red build.
 
 export type EmailBodyParts = {
   /** The `From:/To:` preamble capture folds into the body, when present. */
