@@ -401,6 +401,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		// boot ends up placing it.
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
+		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
 		periodicFor(cfg, VoiceBuildRetryArgs{}),
 		periodicFor(cfg, IdempotencyRetentionArgs{}),

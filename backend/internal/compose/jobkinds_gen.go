@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "951f9851b633a7ea201a8c1374cda5ad3b917bc9fcf8e33606f2373b1c3a2a81"
+const jobContractHash = "1e7c3f832c0d019e73fd35f02efba671b5a88409e224a5735d93daa98a108b71"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -64,6 +64,8 @@ type declaredJobArgs interface {
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
 		FollowUpWorkspaceArgs |
+		ForecastSnapshotSweepArgs |
+		ForecastSnapshotWorkspaceArgs |
 		FxRateRefreshArgs |
 		GeocodeBackfillArgs |
 		GeocodeOrganizationArgs |
@@ -156,6 +158,7 @@ var (
 	_ jobs.FleetWide = EmbedDriftSweepArgs{}
 	_ jobs.FleetWide = FinanceSyncSweepArgs{}
 	_ jobs.FleetWide = FollowUpReconcileArgs{}
+	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
 	_ jobs.FleetWide = GmailSyncArgs{}
 	_ jobs.FleetWide = GmailWatchArgs{}
 	_ jobs.FleetWide = GraphEdgeReconcileArgs{}
@@ -197,6 +200,7 @@ var (
 	_ jobs.WorkspaceScoped = EmbedDriftWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = FinanceSyncArgs{}
 	_ jobs.WorkspaceScoped = FollowUpWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = ForecastSnapshotWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}

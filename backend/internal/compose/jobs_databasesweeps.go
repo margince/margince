@@ -5,6 +5,7 @@ package compose
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -38,6 +39,10 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool})
 	addDeclaredWorker[FollowUpWorkspaceArgs](reg, &followUpWorkspaceWorker{reconciler: NewFollowUpReconciler(pool, log)})
+	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{pool: pool})
+	addDeclaredWorker[ForecastSnapshotWorkspaceArgs](reg, &forecastSnapshotWorkspaceWorker{
+		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
+	})
 	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool})
 	addDeclaredWorker[TimeScanWorkspaceArgs](reg, &timeScanWorkspaceWorker{pool: pool, log: log})
 	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{pool: pool})

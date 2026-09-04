@@ -135,7 +135,14 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 	// and money does not — how many deals a run considered is what says whether
 	// it ran completely, and totals on a bus are a second place to correct when
 	// a definition changes.
-	if err := storekit.EmitEvent(ctx, tx, auditID, actorForEvent(ctx),
+	// The SNAPSHOT's id, which is what EmitEvent's fourth argument is: the
+	// subject the envelope names, the routing key its stream is keyed by, and
+	// the handle a consumer reads back under its own RLS. It used to be the
+	// acting user's id, which named the wrong subject on every snapshot a human
+	// took — and refused outright on one taken by the fleet, whose principal
+	// has no user id, so the envelope came out half-filled. That is why nothing
+	// outside a test could ever write this table.
+	if err := storekit.EmitEvent(ctx, tx, auditID, id,
 		crmcontracts.PublicEventForecastSnapshotCreated{
 			SnapshotId:    openapi_types.UUID(id),
 			PeriodStart:   openapi_types.Date{Time: in.Period.StartDate},
@@ -146,18 +153,6 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 		return ids.Nil, err
 	}
 	return id, nil
-}
-
-// actorForEvent is who the snapshot is attributed to.
-//
-// A nightly run has no human behind it, and the entity a stream is keyed by
-// cannot be absent — so the system's own runs carry the nil id rather than
-// borrowing a person who did not ask for them.
-func actorForEvent(ctx context.Context) ids.UUID {
-	if actor, ok := principal.Actor(ctx); ok {
-		return actor.UserID
-	}
-	return ids.Nil
 }
 
 // writeContributions inserts the per-deal rows behind one snapshot.

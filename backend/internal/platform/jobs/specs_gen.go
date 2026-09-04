@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "951f9851b633a7ea201a8c1374cda5ad3b917bc9fcf8e33606f2373b1c3a2a81"
+const JobContractHash = "1e7c3f832c0d019e73fd35f02efba671b5a88409e224a5735d93daa98a108b71"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -430,6 +430,27 @@ var specs = map[string]Spec{
 		Queue:       "default",
 		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
 		MaxAttempts: 5,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
+	},
+	"forecast_snapshot_sweep": {
+		Kind:       "forecast_snapshot_sweep",
+		GoType:     "ForecastSnapshotSweepArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "forecast_snapshot_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 24 * time.Hour},
+	},
+	"forecast_snapshot_workspace": {
+		Kind:        "forecast_snapshot_workspace",
+		GoType:      "ForecastSnapshotWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
 		OptsOwner:   OptsFanOut,
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
