@@ -11,13 +11,44 @@ package compose
 // company-page one.
 
 import (
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/personbrief"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
+
+// WithPersonBrief binds the summarize lane that writes the person page's
+// standing relationship brief, and the routing version that identifies the
+// binding in every cached brief's fingerprint.
+//
+// Without it the brief serves its deterministic floor rather than failing, and
+// generated_by tells the reader which of the two they have. That floor is a
+// composition of the same records under the same citations — a plainer brief,
+// never a blank card.
+//
+// The routing version rides along because the brief IS cached: text written
+// under one routing configuration must not be served after the configuration
+// changes, so the version is part of the fingerprint.
+//
+// It rebuilds the service over the SAME composite read wirePerson360 built, so
+// the brief's scope stays the caller's own gated read rather than a second one
+// assembled here.
+func WithPersonBrief(brain completer, routingVersion string) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		if s.person360Svc == nil {
+			return
+		}
+		s.personBriefHandlers = personbrief.NewHandlers(
+			personbrief.NewService(pool, s.person360Svc, brain, routingVersion, time.Now),
+			s.sorDispatch.isOverlay,
+		)
+	}
+}
 
 // WithPersonDraft binds the lane that writes an email to one contact — the
 // person-side mirror of WithAccountDraft, whose sending half is likewise
