@@ -103,8 +103,8 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 //
 // It names them too, and that is not a leak: every seat holding the object
 // grant reads every project (platform/auth tableclass.go), and a project
-// cannot be capture-private since migration 1787320003 narrowed its
-// visibility CHECK to 'workspace'. A refusal that counted these without
+// cannot be capture-private at all: project_visibility_check admits only
+// 'workspace'. A refusal that counted these without
 // naming them would be withholding from a caller who can open both records
 // on the project page a moment later — precision, not silence, is the point.
 func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) {
