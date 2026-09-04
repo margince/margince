@@ -32,7 +32,9 @@ import (
 // Every row here shares ONE target, so the target-visibility half of
 // decidable is asked once for the record rather than once per row — the
 // inbox's per-row probe exists because its rows point at different records.
-// The per-kind grant check still varies by row and stays in the loop.
+// The two halves that vary by row stay in the loop: the per-kind grant check,
+// and the self-only narrowing (withheldFromOtherSeats), which compares the
+// caller against the seat each ROW was staged for and not against the target.
 //
 // The scan is bounded at PendingScanCap rows so one record page cannot pay
 // for an unbounded backlog. A caller counting rather than listing must treat
@@ -75,6 +77,13 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 			continue
 		}
 		if requireDecisionGrants(p, a) != nil {
+			continue
+		}
+		if withheldFromOtherSeats(p, a) {
+			// A self-only staging is one seat's own business, so it is absent
+			// from a colleague's record page for the same reason it is absent
+			// from their inbox — the panel is the same side channel List
+			// refuses to be.
 			continue
 		}
 		out = append(out, wire(a, now))

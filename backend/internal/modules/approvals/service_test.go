@@ -632,13 +632,10 @@ func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 		t.Fatal("linkedin_match is not self-only — a colleague's imported network is readable from the inbox")
 	}
 
-	// The predicate itself, exercised the way decidable applies it.
-	selfOnly := func(p principal.Principal, a row) bool {
-		if !selfOnlyKinds[a.Kind] {
-			return true
-		}
-		return a.OnBehalfOf != nil && p.UserID != ids.Nil && a.OnBehalfOf.UUID == p.UserID
-	}
+	// The production predicate itself, not a copy of it: a re-spelled rule in a
+	// test proves the test, and this one went on passing while the two
+	// target-filtered readers had no self-only narrowing at all.
+	selfOnly := func(p principal.Principal, a row) bool { return !withheldFromOtherSeats(p, a) }
 	if selfOnly(admin, staged) {
 		t.Error("an all-scope admin can decide a LinkedIn match staged for somebody else")
 	}
@@ -648,6 +645,72 @@ func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 	// A proposal with no recorded subject is nobody's to read, not everybody's.
 	if selfOnly(owner, row{Kind: "linkedin_match"}) {
 		t.Error("a self-only proposal with no subject was treated as decidable")
+	}
+}
+
+// withheldFromOtherSeats is the half of decidable the two target-filtered reads
+// (inbox.listForTarget, Service.PendingForTarget) have to spell for themselves,
+// because they settle target visibility once for the record instead of per row.
+// Both once spelled only the grant half, so a colleague's linkedin_match,
+// vcard_create and held_draft were readable from any record page they were
+// staged against.
+//
+// The walk is DERIVED over selfOnlyKinds and over the probe classification
+// stagedForStagerOnly reads, so a kind or a personal table enrolled tomorrow is
+// covered without anybody remembering this test exists. Each shape is asserted
+// three ways — withheld from a colleague, served to its own seat, withheld from
+// everyone when no seat is recorded — because a predicate that answers "withheld"
+// unconditionally also passes a test that only checks the refusal.
+func TestEverySelfOnlyShapeIsWithheldFromEverySeatButTheOneItWasStagedFor(t *testing.T) {
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	subject := ids.From[ids.UserKind](mine)
+	stager := principal.Principal{UserID: mine, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	colleague := principal.Principal{UserID: theirs, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+
+	shapes := map[string]row{}
+	for kind := range selfOnlyKinds {
+		shapes["kind "+kind] = row{Kind: kind}
+	}
+	// The other route to the same predicate: a create staged against a table
+	// whose rows belong to one human each, where no row exists yet for an
+	// ownership probe to ask. Read off the probe table rather than named, so an
+	// enrolment there lands here too.
+	for targetType, probe := range targetProbes {
+		if probe != probeOwnerOnly {
+			continue
+		}
+		shapes["id-less create against "+targetType] = row{Kind: "create_record", TargetType: &targetType}
+	}
+	if len(shapes) == 0 {
+		t.Fatal("no self-only shape found at all — this walk covers nothing")
+	}
+
+	for name, staged := range shapes {
+		t.Run(name, func(t *testing.T) {
+			forMe := staged
+			forMe.OnBehalfOf = &subject
+			if !withheldFromOtherSeats(colleague, forMe) {
+				t.Error("a colleague may read a staging filed for somebody else — the inbox is a side channel over one member's private business")
+			}
+			if withheldFromOtherSeats(stager, forMe) {
+				t.Error("the member it was staged for cannot read their own staging, so the narrowing withholds it from everybody")
+			}
+			// Fail-closed: a proposal nobody is recorded for is one nobody may
+			// read, not one everybody may.
+			if !withheldFromOtherSeats(stager, staged) {
+				t.Error("a staging with no recorded seat was served")
+			}
+		})
+	}
+
+	// The positive control. Without it this test also passes when the predicate
+	// withholds every row of every kind and the inbox serves nothing at all.
+	shared := row{Kind: "merge_records", OnBehalfOf: &subject}
+	if selfOnlyKinds[shared.Kind] {
+		t.Fatal("the control kind is itself self-only, so it proves nothing about a shared one")
+	}
+	if withheldFromOtherSeats(colleague, shared) {
+		t.Error("a SHARED kind was withheld from a colleague — the inbox is a shared surface and triage is the point")
 	}
 }
 

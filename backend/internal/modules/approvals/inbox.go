@@ -265,8 +265,10 @@ func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInp
 //
 // Every row shares that target, so the target-visibility half of decidable is
 // asked ONCE for the record rather than once per row — the inbox's per-row
-// probe exists only because its rows point at different records. The per-kind
-// grant check still varies by row and stays in the loop.
+// probe exists only because its rows point at different records. The two halves
+// that vary by row stay in the loop: the per-kind grant check, and the self-only
+// narrowing (withheldFromOtherSeats), which is per-row because it compares the
+// caller against the seat THAT ROW was staged for and not against the target.
 //
 // A target the caller could not read — its type ungranted, or its row outside
 // their scope — answers an EMPTY list, never a refusal: nothing staged against a
@@ -293,7 +295,9 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 	if len(batch) == PendingScanCap {
 		scanned = &batch[len(batch)-1]
 	}
-	granted := func(a row) (bool, error) { return requireDecisionGrants(p, a) == nil, nil }
+	granted := func(a row) (bool, error) {
+		return requireDecisionGrants(p, a) == nil && !withheldFromOtherSeats(p, a), nil
+	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {
 		return nil, storekit.Page{}, err

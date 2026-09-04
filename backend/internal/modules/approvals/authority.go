@@ -363,17 +363,33 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 	if requireDecisionGrants(p, a) != nil {
 		return false, nil
 	}
-	if selfOnlyKinds[a.Kind] || stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
-		// Two routes to the same predicate: a kind whose subject is one member's
-		// own business, and a staged create against a table whose rows belong to
-		// one human each — where no row exists yet for an ownership probe to ask.
-		// Fail-closed on a missing stager: a proposal nobody is recorded for is
-		// one nobody may read, not one everybody may.
-		if a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID {
-			return false, nil
-		}
+	if withheldFromOtherSeats(p, a) {
+		return false, nil
 	}
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
+}
+
+// withheldFromOtherSeats is the self-only narrowing of decidable, spelled once
+// because three reads apply it: the inbox scan through decidable, and the two
+// target-filtered reads (inbox.listForTarget, Service.PendingForTarget) which
+// settle target visibility for the record instead of per row and so cannot call
+// decidable itself. It reports the rows this caller must NOT see — true when the
+// staging is bound to one seat and p is not it.
+//
+// Two routes to the same predicate: a kind whose subject is one member's own
+// business, and a staged create against a table whose rows belong to one human
+// each — where no row exists yet for an ownership probe to ask. Fail-closed on a
+// missing stager: a proposal nobody is recorded for is one nobody may read, not
+// one everybody may.
+//
+// Held by: TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing
+// (backend/gates/approvalselfonlyreaders_test.go) — it fails when a reader
+// filters rows with requireDecisionGrants and does not also call this.
+func withheldFromOtherSeats(p principal.Principal, a row) bool {
+	if !selfOnlyKinds[a.Kind] && !stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
+		return false
+	}
+	return a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {
