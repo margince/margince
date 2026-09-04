@@ -310,13 +310,13 @@ export function EmbedReindexCard() {
   let body: ReactNode;
   if (!canRead) {
     body = (
-      <QueryGate query={me}>
+      <QueryGate query={me} pendingLabel={t("embedreindex.title")}>
         {() => <EmptyState>{t("embedreindex.withheld")}</EmptyState>}
       </QueryGate>
     );
   } else {
     body = (
-      <QueryGate query={status}>
+      <QueryGate query={status} pendingLabel={t("embedreindex.title")}>
         {(data) => {
           const isRunning = data.status === "reembedding";
           return (

@@ -358,7 +358,9 @@ export function ConsentSection({
       title={t("person.consent")}
       sub={t("consent.defaultDeny")}
     >
-      <QueryStates query={consentQuery}>{body}</QueryStates>
+      <QueryStates query={consentQuery} pendingLabel={t("person.consent")}>
+        {body}
+      </QueryStates>
       {/* Per PERSON rather than per purpose, so it sits under the rows instead
           of inside one: the link opens everything held about them and asks the
           marketing question once, which is not a fact about any single

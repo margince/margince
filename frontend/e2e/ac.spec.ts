@@ -744,9 +744,10 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   expect(body.consent.wording).toBe(shownWording);
   expect(body.consent.purpose_id).toBeTruthy();
   expect(body.consent.policy_version).toBeTruthy();
-  await expect(
-    page.getByText("Gebucht."),
-  ).toBeVisible();
+  // Exact: this build transmits nothing, so the card confirms the slot and
+  // promises nothing beyond it. A substring is satisfied by a longer sentence
+  // that does promise something, which is the claim this copy had removed.
+  await expect(page.getByText("Gebucht.", { exact: true })).toBeVisible();
 });
 
 test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({

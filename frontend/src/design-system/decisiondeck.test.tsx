@@ -33,6 +33,7 @@ const CARD_LABELS: DecisionCardLabels = {
   draftSubject: "Subject",
   draftBody: "Message",
   noContent: "Nothing to read.",
+  loading: "Reading the proposal",
 };
 
 const LABELS: DecisionDeckLabels = {
@@ -85,6 +86,7 @@ function deck(over: Partial<Parameters<typeof DecisionDeck>[0]> = {}) {
     <DecisionDeck
       items={THREE}
       now={NOW}
+      loadingLabel="Reading the proposals"
       labels={LABELS}
       onCommit={() => undefined}
       {...over}

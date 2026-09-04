@@ -140,16 +140,33 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 }
 
 func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
-	if a.TargetVersion == nil || a.TargetID == nil || a.TargetType == nil {
+	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "target"); err != nil {
+		return err
+	}
+	// The SECOND row, where the proposal declared one. A tag merge names two
+	// words and the human judged both, so both have to still be what they were
+	// — the retired side has always been checked here, and the survivor being
+	// exempt is what let a rename slip between the card and the merge.
+	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "co-target")
+}
+
+// checkPin re-reads one pinned row and refuses if it has moved since the
+// approval was staged. A pin that is not set short-circuits, which is every
+// approval that rests on a single row.
+func checkPin(
+	ctx context.Context, tx pgx.Tx,
+	entityType *string, id *ids.UUID, pinned *int64, which string,
+) error {
+	if pinned == nil || id == nil || entityType == nil {
 		return nil
 	}
-	current, err := targetVersion(ctx, tx, *a.TargetType, *a.TargetID)
+	current, err := targetVersion(ctx, tx, *entityType, *id)
 	if err != nil {
 		return err
 	}
-	if current != *a.TargetVersion {
-		return fmt.Errorf("target changed since approval (v%d → v%d): %w",
-			*a.TargetVersion, current, apperrors.ErrVersionSkew)
+	if current != *pinned {
+		return fmt.Errorf("%s changed since approval (v%d → v%d): %w",
+			which, *pinned, current, apperrors.ErrVersionSkew)
 	}
 	return nil
 }

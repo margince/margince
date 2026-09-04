@@ -1403,7 +1403,7 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={orgQuery}>
+      <QueryGate query={orgQuery} pendingLabel={t("nav.companies")}>
         {(org) => (
           <CompanyRecord org={org} view={view} tab={tab} onTab={setTab} t={t} />
         )}

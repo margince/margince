@@ -1007,7 +1007,7 @@ function AccountCard() {
       }
     >
       <PanelBody className="form-stack">
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("settings.accountCard")}>
           {(me) => (
             <div className="settings-identity">
               {/* Both halves are required on the wire, so the `?? ""` is not a
@@ -1466,6 +1466,7 @@ function PassportCard() {
               rather than wrapped in a list of their own: the hairline between
               two credentials belongs to the card that holds both. */}
           <QueryGate
+            pendingLabel={t("settings.passports")}
             query={list}
             empty={(page) =>
               page.data.every((passport) => passport.connection != null)
@@ -1833,7 +1834,11 @@ function AgentToolsCard() {
               One row per governed tool, handed to the list inside as its own
               children so the hairline between two tools comes from the list
               that holds both. */}
-          <QueryGate query={tools} empty={(data) => data.data.length === 0}>
+          <QueryGate
+            query={tools}
+            empty={(data) => data.data.length === 0}
+            pendingLabel={t("tools.title")}
+          >
             {(data) => (
               <Disclosure
                 summary={t("tools.inventory", {
@@ -2534,6 +2539,7 @@ export function PipelinesCard() {
         )}
         <SettingList>
           <QueryGate
+            pendingLabel={t("settings.pipelines")}
             query={query}
             empty={(pipelines) => pipelines.length === 0}
           >

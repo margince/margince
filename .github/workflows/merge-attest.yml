@@ -110,6 +110,13 @@ jobs:
             # as an array and .[].check_runs[] flattens them into the one list
             # the judge expects.
             #
+            # The filter runs in a SEPARATE jq rather than gh's --jq: gh
+            # refuses `--slurp` together with `--jq` ("the --slurp option is
+            # not supported with --jq or --template") and exits 1, which is
+            # what this step had been doing on every merge — writing no
+            # delimiter and taking the judge down with it. Piping keeps the
+            # slurped array and the filter exactly as they were.
+            #
             # A KNOWN CEILING remains and is GitHub's rather than ours: this
             # endpoint stops at the 1000 most recent check SUITES for a ref.
             # Reaching that would need a commit re-run into four figures, and
@@ -117,7 +124,7 @@ jobs:
             # more request budget on every push to cover a case nothing here
             # has approached. Named rather than silently inherited.
             gh api --paginate --slurp "repos/${{ github.repository }}/commits/${{ steps.pulls.outputs.head }}/check-runs?per_page=100&filter=all" \
-              --jq '{check_runs: [.[].check_runs[] | {name, status, conclusion, completed_at}]}'
+              | jq -c '{check_runs: [.[].check_runs[] | {name, status, conclusion, completed_at}]}'
             echo "EOF"
           } >>"$GITHUB_OUTPUT"
       - name: Was there a verdict behind this merge?

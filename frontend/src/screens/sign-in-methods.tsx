@@ -63,7 +63,7 @@ export function SignInMethodsCard() {
     <Panel title={t("signInMethods.title")}>
       <PanelBody>
         <p className="t-body">{t("signInMethods.sub")}</p>
-        <QueryGate query={settings}>
+        <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
           {(current) => {
             // Defaulted, not asserted. The field is contract-required, but a
             // body that lost one hands over `undefined` anyway, and this card

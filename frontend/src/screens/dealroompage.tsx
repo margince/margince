@@ -51,7 +51,11 @@ export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
   // element is on screen for all three.
   return (
     <div className="wrap">
-      <QueryStates query={roomQuery} pendingLines={6}>
+      <QueryStates
+        query={roomQuery}
+        pendingLines={6}
+        pendingLabel={t("roompage.text.title")}
+      >
         {room ? (
           <RoomPage room={room} dealId={dealId} />
         ) : roomQuery.isSuccess ? (

@@ -840,51 +840,6 @@
   color: var(--textContent);
 }
 
-/* Deal 360 stage stepper */
-/* A fieldset because the steps are a group of controls that act on one deal;
-   the browser's own border, padding and margin are not wanted with it. */
-.stepper {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin: 0 0 16px;
-  padding: 0;
-  border: 0;
-  min-inline-size: 0;
-}
-/* In a record stack the stack's own gap is the interval. */
-.record-stack > .stepper {
-  margin: 0;
-}
-.stepper .step {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--textMeta);
-  background: var(--bgCard);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 4px 12px;
-  border: 0;
-  font-family: var(--f-body);
-}
-/* Every step but the current one is a button that moves the deal there, so it
-   has to read as pressable rather than as the label it sits beside. */
-.stepper button.step {
-  cursor: pointer;
-}
-.stepper button.step:hover:not(:disabled) {
-  color: var(--textOnAccentControl);
-  background: var(--accent);
-}
-.stepper button.step:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-.stepper .step.current {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-}
-
 /* The deals table's signal cell: the age, and the flag when the server says the
  * deal has gone quiet, kept on one line so the column stays scannable. */
 .deal-signal {

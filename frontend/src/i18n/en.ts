@@ -8084,6 +8084,13 @@ export const en = {
   "worklist.board.title": "How my team is doing",
   "worklist.exceptions.title": "What needs me",
   "worklist.handled.title": "Handled for you",
+  "worklist.walk.arrived":
+    "{arrived} more since you started. They wait for a refresh so this list holds still.",
+  "worklist.walk.gone":
+    "{gone} of these have been dealt with since you started.",
+  "worklist.walk.both":
+    "{arrived} more since you started, and {gone} already dealt with.",
+  "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "Nothing was done on your behalf today.",
   "worklist.handled.loading": "Reading what was done",
   "worklist.handled.what": "What happened",

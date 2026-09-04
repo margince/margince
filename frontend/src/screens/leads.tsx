@@ -1512,6 +1512,7 @@ function LeadOverviewPane({
           write. */}
       {!lead.archived_at && overlay && askedToLogCall && (
         <SurfaceState
+          loadingLabel={t("tab.overview")}
           state="unsupported"
           // Never drawn — the state above is fixed — but the primitive asks
           // every caller for the sentence it would say if it were empty.
@@ -1959,6 +1960,7 @@ function LeadRecord({
 }
 
 export function LeadScreen({ id }: Readonly<{ id: string }>) {
+  const t = useT();
   const cf = useObjectCustomFields("lead");
   // The seam serves update for a mirrored lead (write-back projects onto the
   // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
@@ -1982,7 +1984,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap lead-surface">
-      <QueryGate query={leadQuery}>
+      <QueryGate query={leadQuery} pendingLabel={t("nav.leads")}>
         {(lead) => (
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and

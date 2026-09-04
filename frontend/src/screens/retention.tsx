@@ -482,7 +482,7 @@ export function RetentionCard() {
       <Panel title={t("retention.title")}>
         <PanelBody>
           <p className="settings-panel-sub">{t("retention.sub")}</p>
-          <QueryGate query={me}>
+          <QueryGate query={me} pendingLabel={t("retention.title")}>
             {() => <EmptyState>{t("retention.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
@@ -632,5 +632,9 @@ function PolicyList({
   // hand-rolled copy: the skeleton announces itself as busy, and the failure is
   // an assertive live region carrying the server's own explanation beside the
   // retry. The hand-rolled version said neither out loud.
-  return <QueryStates query={query}>{body}</QueryStates>;
+  return (
+    <QueryStates query={query} pendingLabel={t("retention.title")}>
+      {body}
+    </QueryStates>
+  );
 }

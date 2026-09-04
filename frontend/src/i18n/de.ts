@@ -7991,6 +7991,12 @@ export const de = {
   "worklist.board.title": "Wie es meinem Team geht",
   "worklist.exceptions.title": "Was mich braucht",
   "worklist.handled.title": "Für Sie erledigt",
+  "worklist.walk.arrived":
+    "{arrived} weitere seit Ihrem Start. Sie warten auf eine Aktualisierung, damit diese Liste ruhig bleibt.",
+  "worklist.walk.gone": "{gone} davon wurden seit Ihrem Start erledigt.",
+  "worklist.walk.both":
+    "{arrived} weitere seit Ihrem Start, und {gone} bereits erledigt.",
+  "worklist.walk.refresh": "Aktualisieren",
   "worklist.handled.empty": "Heute wurde nichts für Sie erledigt.",
   "worklist.handled.loading": "Erledigtes wird gelesen",
   "worklist.handled.what": "Was geschehen ist",

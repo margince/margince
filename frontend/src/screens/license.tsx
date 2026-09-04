@@ -70,9 +70,10 @@ export function useLicenseEntitlement(enabled = true) {
 }
 
 export function LicenseCard() {
+  const t = useT();
   const query = useLicenseEntitlement();
   return (
-    <QueryGate query={query}>
+    <QueryGate query={query} pendingLabel={t("license.seats.title")}>
       {(entitlement) => (
         <>
           {/* Only a verified license has a holder. An unlicensed installation

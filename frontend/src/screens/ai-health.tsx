@@ -40,7 +40,7 @@ export function AiHealthCard() {
     <Panel title={t("aiHealth.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("aiHealth.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("aiHealth.title")}>
           {(health) =>
             health.rungs.length === 0 ? (
               // No rung called anything in the window. That is not an outage —

@@ -60,6 +60,7 @@ const CARD_LABELS: DecisionCardLabels = {
   showMore: "Show the whole message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
+  loading: "Reading the proposal",
 };
 
 const LABELS: DecisionDeckLabels = {
@@ -184,6 +185,7 @@ const CHIPS = (
 
 const BASE = {
   now: NOW,
+  loadingLabel: "Reading the proposals",
   labels: LABELS,
   chips: CHIPS,
   onCommit: () => undefined,

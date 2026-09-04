@@ -1775,9 +1775,12 @@ describe("LeadScreen — status control (P-12)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("lead-step-engaged")).toBeTruthy(),
     );
-    expect(
-      (screen.getByTestId("lead-step-contacted") as HTMLButtonElement).disabled,
-    ).toBe(true);
+    // Where the lead stands is a MARKER, not a control: the ladder offers no
+    // way to set a lead to the step it is already on, rather than offering one
+    // and refusing it.
+    const here = document.querySelector("[aria-current='step']");
+    expect(here?.textContent).toContain("Contacted");
+    expect(here?.querySelector("button")).toBeNull();
     await userEvent.click(screen.getByTestId("lead-step-engaged"));
 
     await waitFor(() => expect(patchBody).toBeTruthy());
@@ -1802,9 +1805,10 @@ describe("LeadScreen — status control (P-12)", () => {
       ) as HTMLButtonElement;
       expect(control.disabled).toBe(true);
     }
-    expect(
-      (screen.getByTestId("lead-step-promoted") as HTMLButtonElement).disabled,
-    ).toBe(true);
+    // The step it is ON draws no control at all, so there is nothing to freeze.
+    const here = document.querySelector("[aria-current='step']");
+    expect(here?.textContent).toContain("Qualified");
+    expect(here?.querySelector("button")).toBeNull();
   });
 });
 
