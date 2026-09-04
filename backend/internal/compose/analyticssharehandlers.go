@@ -152,10 +152,15 @@ func (h analyticsShareHandlers) serveLive(
 	if err != nil {
 		return err
 	}
-	deals, limited, err := ForecastDeals(ctx, tx, period, share.Scope, at, baseCurrency)
+	// A share carries the scope it was ISSUED with, which is already resolved;
+	// the resolver hands it straight back. Taking the returned one anyway keeps
+	// one answer to "which population" rather than two spellings that could
+	// drift.
+	deals, resolved, limited, err := ForecastDeals(ctx, tx, period, share.Scope, at, baseCurrency)
 	if err != nil {
 		return err
 	}
+	share.Scope = resolved
 	readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
 	if err != nil {
 		return err

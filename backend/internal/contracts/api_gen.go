@@ -901,6 +901,30 @@ func (e AnalyticsMeasureFn) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsScopeKind.
+const (
+	AnalyticsScopeKindManagedTeams AnalyticsScopeKind = "managed_teams"
+	AnalyticsScopeKindOwner        AnalyticsScopeKind = "owner"
+	AnalyticsScopeKindTeam         AnalyticsScopeKind = "team"
+	AnalyticsScopeKindWorkspace    AnalyticsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsScopeKind enum.
+func (e AnalyticsScopeKind) Valid() bool {
+	switch e {
+	case AnalyticsScopeKindManagedTeams:
+		return true
+	case AnalyticsScopeKindOwner:
+		return true
+	case AnalyticsScopeKindTeam:
+		return true
+	case AnalyticsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyTagRequestEntityType.
 const (
 	ApplyTagRequestEntityTypeDeal         ApplyTagRequestEntityType = "deal"
@@ -5736,14 +5760,17 @@ func (e ForecastMovementBucketName) Valid() bool {
 
 // Defines values for ForecastReadingsScopeKind.
 const (
-	ForecastReadingsScopeKindOwner     ForecastReadingsScopeKind = "owner"
-	ForecastReadingsScopeKindTeam      ForecastReadingsScopeKind = "team"
-	ForecastReadingsScopeKindWorkspace ForecastReadingsScopeKind = "workspace"
+	ForecastReadingsScopeKindManagedTeams ForecastReadingsScopeKind = "managed_teams"
+	ForecastReadingsScopeKindOwner        ForecastReadingsScopeKind = "owner"
+	ForecastReadingsScopeKindTeam         ForecastReadingsScopeKind = "team"
+	ForecastReadingsScopeKindWorkspace    ForecastReadingsScopeKind = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the ForecastReadingsScopeKind enum.
 func (e ForecastReadingsScopeKind) Valid() bool {
 	switch e {
+	case ForecastReadingsScopeKindManagedTeams:
+		return true
 	case ForecastReadingsScopeKindOwner:
 		return true
 	case ForecastReadingsScopeKindTeam:
@@ -7791,19 +7818,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
-	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
-	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
+	Assessment     OrganizationBriefSentenceNature = "assessment"
+	Fact           OrganizationBriefSentenceNature = "fact"
+	Recommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case OrganizationBriefSentenceNatureAssessment:
+	case Assessment:
 		return true
-	case OrganizationBriefSentenceNatureFact:
+	case Fact:
 		return true
-	case OrganizationBriefSentenceNatureRecommendation:
+	case Recommendation:
 		return true
 	default:
 		return false
@@ -16364,6 +16391,36 @@ type AnalyticsAnswer struct {
 	Withheld bool `json:"withheld"`
 }
 
+// AnalyticsCapabilities What this caller may actually do, so a screen never offers a control the server will refuse.
+type AnalyticsCapabilities struct {
+	// SubmitManagerForecast Whether this caller may publish a forecast for the population they are measuring. False hides the action rather than letting the save fail.
+	SubmitManagerForecast bool `json:"submit_manager_forecast"`
+
+	// ViewManagerForecast Whether the manager forecast is a destination for this caller at all.
+	ViewManagerForecast bool `json:"view_manager_forecast"`
+}
+
+// AnalyticsContext The frame every analytics answer for this caller is placed in.
+type AnalyticsContext struct {
+	// AllowedScopes What the screen may offer. Every data route validates a requested population again; this list only keeps a control from offering a refusal.
+	AllowedScopes []AnalyticsScope `json:"allowed_scopes"`
+
+	// AsOf The instant this frame was resolved.
+	AsOf time.Time `json:"as_of"`
+
+	// BaseCurrency The currency money readings are counted in.
+	BaseCurrency string `json:"base_currency"`
+
+	// Capabilities What this caller may actually do, so a screen never offers a control the server will refuse.
+	Capabilities AnalyticsCapabilities `json:"capabilities"`
+
+	// DefaultScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	DefaultScope AnalyticsScope `json:"default_scope"`
+
+	// Timezone The zone whose days a period is cut in.
+	Timezone string `json:"timezone"`
+}
+
 // AnalyticsEntity defines model for AnalyticsEntity.
 type AnalyticsEntity struct {
 	// GroupBy The fields this population can be grouped by.
@@ -16453,6 +16510,21 @@ type AnalyticsSchema struct {
 	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
 	Version string `json:"version"`
 }
+
+// AnalyticsScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+type AnalyticsScope struct {
+	// Id The team or person measured. Absent for workspace and managed_teams, which name no single subject.
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
+	Kind AnalyticsScopeKind `json:"kind"`
+
+	// Label What to call this population on screen.
+	Label string `json:"label"`
+}
+
+// AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
+type AnalyticsScopeKind string
 
 // AnnotateBriefItem One finding about one queued deal.
 type AnnotateBriefItem struct {
@@ -22071,9 +22143,11 @@ type ForecastReadings struct {
 	PeriodStart openapi_types.Date `json:"period_start"`
 
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
-	PricedCount int                       `json:"priced_count"`
-	ScopeId     *openapi_types.UUID       `json:"scope_id,omitempty"`
-	ScopeKind   ForecastReadingsScopeKind `json:"scope_kind"`
+	PricedCount int                 `json:"priced_count"`
+	ScopeId     *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
+	ScopeKind ForecastReadingsScopeKind `json:"scope_kind"`
 
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
@@ -22088,7 +22162,7 @@ type ForecastReadings struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastReadingsScopeKind defines model for ForecastReadings.ScopeKind.
+// ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
@@ -29373,7 +29447,9 @@ type ReportResult struct {
 	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
 	AsOf time.Time `json:"as_of"`
 
-	// BaseCurrency The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve.
+	// BaseCurrency The installation's configured base currency, as an ISO-4217 code.
+	// WHICH COLUMNS IT DENOMINATES DEPENDS ON THE REPORT. A native money measure (`amount_minor`, `weighted_amount_minor`) carries each record's OWN currency, so a report offering one groups by `currency` and this code labels the frame rather than those columns. A BASE measure (`amount_base_minor`, `weighted_base_minor`) is already converted per record before summing, and this code is its denomination.
+	// `pipeline-current` is the first report of the second kind: it offers base measures only, precisely so a plan cannot ask it for a sum of minor units across currencies.
 	BaseCurrency string   `json:"base_currency"`
 	Columns      []string `json:"columns"`
 
@@ -32963,6 +33039,20 @@ type WorklistMove struct {
 // read the same to a reader, so the producers drop it and send no `move`. A
 // client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
+
+// WorklistPinRequest defines model for WorklistPinRequest.
+type WorklistPinRequest struct {
+	// RowId The row's own id within that lane. A string rather than a uuid: most rows
+	// carry a record id, but a folded group carries a synthetic key its lane mints,
+	// and a uuid-only field would leave those rows unpinnable for a reason no reader
+	// could see.
+	RowId string `json:"row_id"`
+
+	// Source The lane the row came from. Paired with `row_id` because that pair is what
+	// identifies a row: the lanes mint ids independently, so an id alone can name a
+	// row in a lane the caller was not looking at.
+	Source string `json:"source"`
+}
 
 // WorklistReach What one source contributed, in numbers that say what they counted.
 //
@@ -37839,6 +37929,15 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// UnpinWorklistRowParams defines parameters for UnpinWorklistRow.
+type UnpinWorklistRowParams struct {
+	// Source The lane the row came from, paired with `row_id` to name it.
+	Source string `form:"source" json:"source"`
+
+	// RowId The row's own id within that lane.
+	RowId string `form:"row_id" json:"row_id"`
+}
+
 // GetResponseMetricsParams defines parameters for GetResponseMetrics.
 type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
@@ -38536,6 +38635,9 @@ type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBod
 
 // SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
 type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
+
+// PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
+type PinWorklistRowJSONRequestBody = WorklistPinRequest
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -46432,6 +46534,9 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
+	// Which population this caller measures by default, and which they may choose.
+	// (GET /analytics/context)
+	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
@@ -48043,6 +48148,12 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// Let the ranking have the row back — the undo behind the pin.
+	// (DELETE /worklist/pins)
+	UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams)
+	// Put a row at the top of your own day, above what the ranking chose.
+	// (PUT /worklist/pins)
+	PinWorklistRow(w http.ResponseWriter, r *http.Request)
 	// How fast the workspace answers, and how much of the queue it puts down.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
@@ -48292,6 +48403,12 @@ func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) 
 // AI usage + budget — the spend is never invisible.
 // (GET /ai/usage)
 func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which population this caller measures by default, and which they may choose.
+// (GET /analytics/context)
+func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -51517,6 +51634,18 @@ func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Let the ranking have the row back — the undo behind the pin.
+// (DELETE /worklist/pins)
+func (_ Unimplemented) UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a row at the top of your own day, above what the ranking chose.
+// (PUT /worklist/pins)
+func (_ Unimplemented) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // How fast the workspace answers, and how much of the queue it puts down.
 // (GET /worklist/response)
 func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
@@ -53311,6 +53440,28 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiUsage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAnalyticsContext operation middleware
+func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnalyticsContext(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -76335,6 +76486,78 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// UnpinWorklistRow operation middleware
+func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UnpinWorklistRowParams
+
+	// ------------- Required query parameter "source" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "source", r.URL.Query(), &params.Source, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "row_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "row_id", r.URL.Query(), &params.RowId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "row_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "row_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpinWorklistRow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PinWorklistRow operation middleware
+func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PinWorklistRow(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetResponseMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
 
@@ -76630,6 +76853,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/context", wrapper.GetAnalyticsContext)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
@@ -78241,6 +78467,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/worklist/pins", wrapper.UnpinWorklistRow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/worklist/pins", wrapper.PinWorklistRow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)
