@@ -90,7 +90,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (92)
+## Census (93)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -139,6 +139,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `leadpersonlockorder_test.go` | H2 | ONE lock order over the lead and the person it was promoted into. |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
+| `machineryapplied_test.go` | H2 | Every setting read through settings.ApplyTx is declared MachineryApplied. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
@@ -281,7 +282,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (6)
+## Claim (7)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -289,6 +290,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. |
+| `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 

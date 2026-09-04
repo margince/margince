@@ -217,6 +217,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"relinkThread":           relinkThreadCommand,
 	"relinkActivities":       relinkActivitiesCommand,
 	"runReport":              runReportCommand,
+	"renderAnalyticsReport":  composeReportCommand,
 
 	// The two decisions, over four routes. They are the only entries here whose
 	// command names no target record, and the resolver says why: the row a

@@ -1747,16 +1747,18 @@ export interface paths {
          *     would make every 360 pay for them.
          *
          *     **The default order is a recommendation, not an alphabet.** `recommended` puts
-         *     whoever has answered first, because they are the way in; then whoever nobody has
-         *     tried, because on an account where everyone has gone quiet they are the only move
-         *     that is not a fourth follow-up; then whoever we wrote to and heard nothing from.
-         *     Within a state the stronger relationship leads. This is the one ranking, shared
-         *     with the 360's section — a client that re-sorts is answering a different question
-         *     than the server did.
+         *     whoever is waiting on a reply from us first, because answering them is the one
+         *     move that is already owed; then whoever we replied to, because that conversation
+         *     is alive; then whoever nobody has tried, because on an account where everyone has
+         *     gone quiet they are the only move that is not a fourth follow-up; then whoever we
+         *     wrote to and heard nothing from. Within a state the stronger relationship leads.
+         *     This is the one ranking, shared with the 360's section — a client that re-sorts
+         *     is answering a different question than the server did.
          *
-         *     **Engagement is three states and they are not degrees of one thing.** `answered`
-         *     means they have written back inside the 90-day window. `no_reply` means we wrote
-         *     and heard nothing. `untried` means nobody has written to them at all. Untried and
+         *     **Engagement is four states and they are not degrees of one thing.** `waiting`
+         *     means their latest message has no reply from us. `answered` means we replied to
+         *     their latest message, inside the 90-day window. `no_reply` means we wrote and
+         *     heard nothing. `untried` means nobody has written to them at all. Untried and
          *     no-reply look alike in a roster and call for opposite next actions, which is why
          *     they are separate values rather than a boolean plus a date.
          *
@@ -6804,6 +6806,14 @@ export interface paths {
          *     access to. So this answers "how much is hidden from YOU", which is the only
          *     honest reading available without giving one person a licence to read another's
          *     records.
+         *
+         *     Read by a LEAD, and refused below a row scope of `team` — the same tier
+         *     `/worklist/team` and `/worklist/response` take. Not a confinement: the figures are
+         *     already the caller's own and an ungated read would disclose no row they cannot
+         *     open. It is that two of the five rules are a horizon somebody configured and a
+         *     reader who works the queue cannot change either, so the surface belongs to whoever
+         *     can. A rep asking whether their own day is honest is a real question and a
+         *     different endpoint from this one.
          */
         get: operations["getHiddenBacklog"];
         put?: never;
@@ -6832,18 +6842,26 @@ export interface paths {
          *     number taken from today would swing on one slow afternoon. The window defaults to
          *     the last 14 days.
          *
-         *     Counted under the CALLER's own visibility — but only on the INBOUND side, and the
-         *     difference is worth stating rather than glossing. A message the caller may not read
-         *     contributes to no figure here. The REPLY that answered it is not gated: the waiting
-         *     lane deliberately ignores the audience arm on its own reply anti-join, because a
-         *     reply somebody else may see still answered the customer, and skipping it would
-         *     report an answered message as waiting.
+         *     Counted under the CALLER's own visibility, all four figures. A conversation this
+         *     caller may not open contributes to no median, and a judgement recorded against one
+         *     counts in neither disposal figure.
+         *
+         *     With ONE exception, on the reply side of the median, worth stating rather than
+         *     glossing. The REPLY that answered an inbound is not gated: the waiting lane
+         *     deliberately ignores the audience arm on its own reply anti-join, because a reply
+         *     somebody else may see still answered the customer, and skipping it would report an
+         *     answered message as waiting.
          *
          *     So a caller who can read an inbound but not the audience-limited reply to it learns
          *     WHEN a colleague answered, to the minute, folded into the median. That is a
          *     timestamp rather than content, and it is the price of the two readers agreeing
          *     about which threads were answered — but it is a real disclosure and this is where
          *     it is written down.
+         *
+         *     Read by a LEAD, and refused below a row scope of `team`, the same tier
+         *     `/worklist/team` and `/worklist/hidden` take. "How fast does the workspace answer"
+         *     is a question about how the work is going rather than about what to do next, and
+         *     the rep answering the queue is not the person who changes the answer.
          */
         get: operations["getResponseMetrics"];
         put?: never;
@@ -11195,6 +11213,80 @@ export interface paths {
         get: operations["getReportRun"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/runs/{run_id}/cells/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records behind one cell of a saved run.
+         * @description The evidence a report block's drawer opens. A block cites a run and a cell; this
+         *     turns that citation into the records the number was computed from.
+         *
+         *     THE QUESTION COMES FROM THE SAVED RUN, not from the request. That is the whole
+         *     difference between this and `/analytics/explain`, which carries the question whole
+         *     because a caller-supplied handle they could edit would let an explanation describe a
+         *     DIFFERENT query than the number came from. A saved run is immutable, so its id names
+         *     one question and cannot be edited into another.
+         *
+         *     The records are read under the CALLER's authority and re-judged against the current
+         *     floor, exactly as the run's own answer is. A cell the floor withholds explains to
+         *     `withheld` with no rows: handing those records over one at a time is the same
+         *     disclosure at a slower pace.
+         *
+         *     The cell is named by its group key values, in the saved question's own `group_by`
+         *     order. A wrong-length group is refused rather than matched positionally against what
+         *     happens to line up.
+         */
+        post: operations["explainReportRunCell"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a report document's figures for this reader.
+         * @description A report document carries STRUCTURE and WORDS. It never carries a figure: every
+         *     number names a saved run and a cell inside it, and this is where those handles turn
+         *     into numbers.
+         *
+         *     THE DOCUMENT IS REFUSED IF IT CARRIES A NUMBER OF ITS OWN — and it is refused even
+         *     when a valid handle sits beside the literal. That case is the dangerous one rather
+         *     than the harmless one: the literal is what would render, the two can disagree, and
+         *     no reader could tell the page is showing a figure the database never computed.
+         *
+         *     Each cited run is resolved the way reading a run directly resolves: the saved
+         *     QUESTION is re-asked under this caller's own authority and re-judged against the
+         *     current privacy floor. So the same document shows different figures to readers who
+         *     may see different populations, and a cell the floor withholds renders as withheld
+         *     rather than as a number.
+         *
+         *     The blocks come back in the order they were composed, each carrying the resolved
+         *     values for its cells. Nothing is dropped: a document that cannot be rendered whole
+         *     is refused, because a report missing a block it was composed with says something
+         *     different from the report that was composed.
+         */
+        post: operations["renderAnalyticsReport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19218,7 +19310,9 @@ export interface components {
         OrganizationCoverageSummary: {
             /** @description Every contact the caller may see at this account, not a page of them. */
             contacts_total: number;
-            /** @description Contacts who have written back inside the 90-day window. */
+            /** @description Contacts whose latest message we have not replied to. */
+            waiting: number;
+            /** @description Contacts whose latest message we replied to inside the 90-day window. */
             answered: number;
             /** @description Contacts we have written to with nothing back. */
             no_reply: number;
@@ -19363,17 +19457,24 @@ export interface components {
         };
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
-         *     score uses.
+         *     score uses. What decides between the two conversational states is who wrote
+         *     LAST, not whether both directions have traffic.
          *
-         *     `answered` — they have written back inside the window. The way in.
+         *     `waiting` — their latest message has no reply from us. They are waiting on us,
+         *     and answering is the obvious next move.
+         *     `answered` — we replied to their latest message. The conversation is current
+         *     from our side; the ball is with them.
          *     `no_reply` — we have written and had nothing back. Writing again is a decision.
          *     `untried` — nobody has written to them at all. Free to approach.
          *
-         *     Untried is deliberately not folded into no-reply: "never asked" and "asked and
-         *     ignored" look identical in a roster and call for opposite next actions.
+         *     Waiting is deliberately not folded into answered: one inbound mail nobody has
+         *     replied to is not a success, and showing it as one hides the account's most
+         *     urgent row. Untried is likewise not folded into no-reply: "never asked" and
+         *     "asked and ignored" look identical in a roster and call for opposite next
+         *     actions.
          * @enum {string}
          */
-        ContactEngagement: "answered" | "no_reply" | "untried";
+        ContactEngagement: "waiting" | "answered" | "no_reply" | "untried";
         OrganizationContact: {
             /** Format: uuid */
             person_id: string;
@@ -23340,6 +23441,66 @@ export interface components {
             asked_by: string;
             /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
             stored_floor: number;
+        };
+        /** @description A report as composed: structure and words, with every figure named by a handle. */
+        ReportDocument: {
+            blocks: components["schemas"]["ReportBlock"][];
+        };
+        /** @description One element of a report. What fields are legal is decided by `kind`. */
+        ReportBlock: {
+            /**
+             * @description The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+             * @enum {string}
+             */
+            kind: "title" | "subtitle" | "scope" | "generated_at" | "summary" | "methodology" | "follow_ups" | "stat_strip" | "bar" | "waterfall" | "ranked_list" | "record_table" | "callout" | "evidence_drawer";
+            /** @description The composer's own words. Prose, never a figure. */
+            text?: string;
+            /** @description The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown. */
+            cells?: components["schemas"]["ReportCell"][];
+            /**
+             * @description Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+             * @enum {string}
+             */
+            severity?: "note" | "warning" | "partial" | "unknown" | "unsupported";
+            /**
+             * Format: double
+             * @description ALWAYS REFUSED, and the field exists so the refusal can name what it found. A composer that puts a number here is asking the renderer to draw a figure the database never computed. Carrying one beside a valid handle is refused too, and that case is worse: the literal is what renders, the two can disagree, and nothing downstream can tell.
+             */
+            value?: number;
+        };
+        /** @description One figure, named by the run it lives in and the cell within it. */
+        ReportCell: {
+            /**
+             * Format: uuid
+             * @description The saved run. Resolved under the reading caller's own authority.
+             */
+            run_id: string;
+            /** @description The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell. */
+            group?: unknown[];
+            /** @description Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick. */
+            column: string;
+        };
+        /** @description The composed document with every figure resolved for this reader. */
+        RenderedReport: {
+            blocks: components["schemas"]["RenderedBlock"][];
+        };
+        RenderedBlock: {
+            kind: string;
+            text?: string;
+            severity?: string;
+            /** @description One entry per cell the block named, in the same order. */
+            values: components["schemas"]["RenderedValue"][];
+        };
+        RenderedValue: {
+            /** @description The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back. */
+            value?: unknown;
+            /** @description The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less. */
+            withheld: boolean;
+        };
+        /** @description One cell of a saved run, named by its group keys. */
+        ReportRunCell: {
+            /** @description The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none. */
+            group?: unknown[];
         };
         /** @description One cell of an answer, named by the question and its group keys. */
         AnalyticsExplainRequest: {
@@ -28590,9 +28751,26 @@ export interface components {
              */
             as_of: string;
             /**
-             * @description What the queue itself would carry. Here so the others read as a proportion
-             *     rather than as bare volumes — three hidden against four shown is a broken
-             *     queue, and three against three hundred is a rep tidying up.
+             * @description What the eligibility query FOUND under the rules as they stand. Here so the
+             *     others read as a proportion rather than as bare volumes — three hidden against
+             *     four found is a broken queue, and three against three hundred is a rep tidying
+             *     up.
+             *
+             *     Not quite what the queue draws, and the difference is stated rather than
+             *     glossed. Machine senders are filtered TWICE, deliberately: the query removes
+             *     the obvious ones before its scan cap, because two hundred notification threads
+             *     would otherwise fill the scan and push a real customer past it, and the queue
+             *     then applies a fuller address rule over the survivors — a baseline of
+             *     transactional relay domains no pattern list could stand in for. A repeat thread
+             *     from one sender is folded there too, statefully across rows.
+             *
+             *     So a mail relayed by one of those domains is counted here and absent from the
+             *     page. Measuring it here would mean a second copy of that baseline inside the
+             *     database, drifting from the first.
+             *
+             *     The four hidden figures are differences between runs of THIS query, so they
+             *     are counted the same way and the proportions hold. It is the absolute figure
+             *     that is a near neighbour of the page's own count rather than equal to it.
              */
             shown: number;
             /**
@@ -28690,6 +28868,10 @@ export interface components {
              *     that lifted and a not_mine somebody withdrew leave no trace in the current
              *     state, so a figure read from there would FALL as readers tidied up — reporting
              *     less judgement the more of it happened.
+             *
+             *     Over the conversations THIS caller may open, like every figure beside it. Two
+             *     readers of the same workspace can therefore see different totals here, and each
+             *     is answering "how much of the work I can see is being put down".
              */
             disposed: number;
             /**
@@ -47158,6 +47340,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainReportRunCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRunCell"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this caller may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The cell names a different number of group keys than the saved question grouped by. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    renderAnalyticsReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportDocument"];
+            };
+        };
+        responses: {
+            /** @description The document with every figure resolved for this caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderedReport"];
+                };
+            };
+            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout. The message names the block by index. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             401: components["responses"]["Unauthorized"];

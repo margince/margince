@@ -3666,6 +3666,7 @@ const (
 	ContactEngagementAnswered ContactEngagement = "answered"
 	ContactEngagementNoReply  ContactEngagement = "no_reply"
 	ContactEngagementUntried  ContactEngagement = "untried"
+	ContactEngagementWaiting  ContactEngagement = "waiting"
 )
 
 // Valid indicates whether the value is a known member of the ContactEngagement enum.
@@ -3676,6 +3677,8 @@ func (e ContactEngagement) Valid() bool {
 	case ContactEngagementNoReply:
 		return true
 	case ContactEngagementUntried:
+		return true
+	case ContactEngagementWaiting:
 		return true
 	default:
 		return false
@@ -10141,6 +10144,87 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for ReportBlockKind.
+const (
+	ReportBlockKindBar            ReportBlockKind = "bar"
+	ReportBlockKindCallout        ReportBlockKind = "callout"
+	ReportBlockKindEvidenceDrawer ReportBlockKind = "evidence_drawer"
+	ReportBlockKindFollowUps      ReportBlockKind = "follow_ups"
+	ReportBlockKindGeneratedAt    ReportBlockKind = "generated_at"
+	ReportBlockKindMethodology    ReportBlockKind = "methodology"
+	ReportBlockKindRankedList     ReportBlockKind = "ranked_list"
+	ReportBlockKindRecordTable    ReportBlockKind = "record_table"
+	ReportBlockKindScope          ReportBlockKind = "scope"
+	ReportBlockKindStatStrip      ReportBlockKind = "stat_strip"
+	ReportBlockKindSubtitle       ReportBlockKind = "subtitle"
+	ReportBlockKindSummary        ReportBlockKind = "summary"
+	ReportBlockKindTitle          ReportBlockKind = "title"
+	ReportBlockKindWaterfall      ReportBlockKind = "waterfall"
+)
+
+// Valid indicates whether the value is a known member of the ReportBlockKind enum.
+func (e ReportBlockKind) Valid() bool {
+	switch e {
+	case ReportBlockKindBar:
+		return true
+	case ReportBlockKindCallout:
+		return true
+	case ReportBlockKindEvidenceDrawer:
+		return true
+	case ReportBlockKindFollowUps:
+		return true
+	case ReportBlockKindGeneratedAt:
+		return true
+	case ReportBlockKindMethodology:
+		return true
+	case ReportBlockKindRankedList:
+		return true
+	case ReportBlockKindRecordTable:
+		return true
+	case ReportBlockKindScope:
+		return true
+	case ReportBlockKindStatStrip:
+		return true
+	case ReportBlockKindSubtitle:
+		return true
+	case ReportBlockKindSummary:
+		return true
+	case ReportBlockKindTitle:
+		return true
+	case ReportBlockKindWaterfall:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportBlockSeverity.
+const (
+	ReportBlockSeverityNote        ReportBlockSeverity = "note"
+	ReportBlockSeverityPartial     ReportBlockSeverity = "partial"
+	ReportBlockSeverityUnknown     ReportBlockSeverity = "unknown"
+	ReportBlockSeverityUnsupported ReportBlockSeverity = "unsupported"
+	ReportBlockSeverityWarning     ReportBlockSeverity = "warning"
+)
+
+// Valid indicates whether the value is a known member of the ReportBlockSeverity enum.
+func (e ReportBlockSeverity) Valid() bool {
+	switch e {
+	case ReportBlockSeverityNote:
+		return true
+	case ReportBlockSeverityPartial:
+		return true
+	case ReportBlockSeverityUnknown:
+		return true
+	case ReportBlockSeverityUnsupported:
+		return true
+	case ReportBlockSeverityWarning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	AddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -13926,25 +14010,25 @@ func (e StartOidcSignInParamsProvider) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	Blocked           ListAutomationRunsParamsOutcome = "blocked"
-	Failed            ListAutomationRunsParamsOutcome = "failed"
-	Fired             ListAutomationRunsParamsOutcome = "fired"
-	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	Skipped           ListAutomationRunsParamsOutcome = "skipped"
+	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
+	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
+	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
+	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case Blocked:
+	case ListAutomationRunsParamsOutcomeBlocked:
 		return true
-	case Failed:
+	case ListAutomationRunsParamsOutcomeFailed:
 		return true
-	case Fired:
+	case ListAutomationRunsParamsOutcomeFired:
 		return true
-	case QueuedForApproval:
+	case ListAutomationRunsParamsOutcomeQueuedForApproval:
 		return true
-	case Skipped:
+	case ListAutomationRunsParamsOutcomeSkipped:
 		return true
 	default:
 		return false
@@ -19334,14 +19418,21 @@ type ConsumerMailDomainListResponse struct {
 }
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
-// score uses.
+// score uses. What decides between the two conversational states is who wrote
+// LAST, not whether both directions have traffic.
 //
-// `answered` — they have written back inside the window. The way in.
+// `waiting` — their latest message has no reply from us. They are waiting on us,
+// and answering is the obvious next move.
+// `answered` — we replied to their latest message. The conversation is current
+// from our side; the ball is with them.
 // `no_reply` — we have written and had nothing back. Writing again is a decision.
 // `untried` — nobody has written to them at all. Free to approach.
 //
-// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-// ignored" look identical in a roster and call for opposite next actions.
+// Waiting is deliberately not folded into answered: one inbound mail nobody has
+// replied to is not a success, and showing it as one hides the account's most
+// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+// "asked and ignored" look identical in a roster and call for opposite next
+// actions.
 type ContactEngagement string
 
 // ContextEntityRef defines model for ContextEntityRef.
@@ -22054,9 +22145,26 @@ type HiddenBacklog struct {
 	// lift at all.
 	SetAside int `json:"set_aside"`
 
-	// Shown What the queue itself would carry. Here so the others read as a proportion
-	// rather than as bare volumes — three hidden against four shown is a broken
-	// queue, and three against three hundred is a rep tidying up.
+	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
+	// others read as a proportion rather than as bare volumes — three hidden against
+	// four found is a broken queue, and three against three hundred is a rep tidying
+	// up.
+	//
+	// Not quite what the queue draws, and the difference is stated rather than
+	// glossed. Machine senders are filtered TWICE, deliberately: the query removes
+	// the obvious ones before its scan cap, because two hundred notification threads
+	// would otherwise fill the scan and push a real customer past it, and the queue
+	// then applies a fuller address rule over the survivors — a baseline of
+	// transactional relay domains no pattern list could stand in for. A repeat thread
+	// from one sender is folded there too, statefully across rows.
+	//
+	// So a mail relayed by one of those domains is counted here and absent from the
+	// page. Measuring it here would mean a second copy of that baseline inside the
+	// database, drifting from the first.
+	//
+	// The four hidden figures are differences between runs of THIS query, so they
+	// are counted the same way and the proportions hold. It is the absolute figure
+	// that is a near neighbour of the page's own count rather than equal to it.
 	Shown int `json:"shown"`
 
 	// Truncated True when a read stopped at its own scan bound, which makes every figure above
@@ -25582,14 +25690,21 @@ type OrganizationBriefSentenceNature string
 // OrganizationContact defines model for OrganizationContact.
 type OrganizationContact struct {
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement ContactEngagement `json:"engagement"`
 	FullName   string            `json:"full_name"`
 
@@ -25668,14 +25783,21 @@ type OrganizationCoverageDeal struct {
 // ranking the contact list opens on.
 type OrganizationCoverageRoute struct {
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement    ContactEngagement  `json:"engagement"`
 	FullName      string             `json:"full_name"`
 	LastInboundAt *time.Time         `json:"last_inbound_at,omitempty"`
@@ -25701,14 +25823,21 @@ type OrganizationCoverageSeat struct {
 	AiSuggested *bool `json:"ai_suggested,omitempty"`
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement *ContactEngagement `json:"engagement,omitempty"`
 	FullName   string             `json:"full_name"`
 	PersonId   openapi_types.UUID `json:"person_id"`
@@ -25750,7 +25879,7 @@ type OrganizationCoverageSeat struct {
 
 // OrganizationCoverageSummary defines model for OrganizationCoverageSummary.
 type OrganizationCoverageSummary struct {
-	// Answered Contacts who have written back inside the 90-day window.
+	// Answered Contacts whose latest message we replied to inside the 90-day window.
 	Answered int `json:"answered"`
 
 	// ContactsTotal Every contact the caller may see at this account, not a page of them.
@@ -25761,6 +25890,9 @@ type OrganizationCoverageSummary struct {
 
 	// Untried Contacts nobody has written to at all.
 	Untried int `json:"untried"`
+
+	// Waiting Contacts whose latest message we have not replied to.
+	Waiting int `json:"waiting"`
 }
 
 // OrganizationDomain defines model for OrganizationDomain.
@@ -28939,6 +29071,30 @@ type RenameCustomFieldRequest struct {
 	Label *string `json:"label,omitempty"`
 }
 
+// RenderedBlock defines model for RenderedBlock.
+type RenderedBlock struct {
+	Kind     string  `json:"kind"`
+	Severity *string `json:"severity,omitempty"`
+	Text     *string `json:"text,omitempty"`
+
+	// Values One entry per cell the block named, in the same order.
+	Values []RenderedValue `json:"values"`
+}
+
+// RenderedReport The composed document with every figure resolved for this reader.
+type RenderedReport struct {
+	Blocks []RenderedBlock `json:"blocks"`
+}
+
+// RenderedValue defines model for RenderedValue.
+type RenderedValue struct {
+	// Value The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back.
+	Value interface{} `json:"value,omitempty"`
+
+	// Withheld The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less.
+	Withheld bool `json:"withheld"`
+}
+
 // RenewContractRequest The successor's terms. It freezes its own rate and inherits none — the counterparty
 // excepted, which comes from the predecessor because a renewal that changed companies would
 // be a different agreement wearing this one's history.
@@ -28990,6 +29146,42 @@ type ReplyRecipient struct {
 	FullName string `json:"full_name"`
 }
 
+// ReportBlock One element of a report. What fields are legal is decided by `kind`.
+type ReportBlock struct {
+	// Cells The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown.
+	Cells *[]ReportCell `json:"cells,omitempty"`
+
+	// Kind The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+	Kind ReportBlockKind `json:"kind"`
+
+	// Severity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+	Severity *ReportBlockSeverity `json:"severity,omitempty"`
+
+	// Text The composer's own words. Prose, never a figure.
+	Text *string `json:"text,omitempty"`
+
+	// Value ALWAYS REFUSED, and the field exists so the refusal can name what it found. A composer that puts a number here is asking the renderer to draw a figure the database never computed. Carrying one beside a valid handle is refused too, and that case is worse: the literal is what renders, the two can disagree, and nothing downstream can tell.
+	Value *float64 `json:"value,omitempty"`
+}
+
+// ReportBlockKind The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+type ReportBlockKind string
+
+// ReportBlockSeverity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+type ReportBlockSeverity string
+
+// ReportCell One figure, named by the run it lives in and the cell within it.
+type ReportCell struct {
+	// Column Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick.
+	Column string `json:"column"`
+
+	// Group The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell.
+	Group *[]interface{} `json:"group,omitempty"`
+
+	// RunId The saved run. Resolved under the reading caller's own authority.
+	RunId openapi_types.UUID `json:"run_id"`
+}
+
 // ReportDerivation The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
@@ -29014,6 +29206,11 @@ type ReportDerivation struct {
 
 	// TotalRows Source rows matched (rows is capped at the report row limit).
 	TotalRows *int `json:"total_rows,omitempty"`
+}
+
+// ReportDocument A report as composed: structure and words, with every figure named by a handle.
+type ReportDocument struct {
+	Blocks []ReportBlock `json:"blocks"`
 }
 
 // ReportResult defines model for ReportResult.
@@ -29061,6 +29258,12 @@ type ReportRun struct {
 
 	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.
 	StoredFloor int `json:"stored_floor"`
+}
+
+// ReportRunCell One cell of a saved run, named by its group keys.
+type ReportRunCell struct {
+	// Group The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -29112,6 +29315,10 @@ type ResponseMetrics struct {
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
 	// state, so a figure read from there would FALL as readers tidied up — reporting
 	// less judgement the more of it happened.
+	//
+	// Over the conversations THIS caller may open, like every figure beside it. Two
+	// readers of the same workspace can therefore see different totals here, and each
+	// is answering "how much of the work I can see is being put down".
 	Disposed int `json:"disposed"`
 
 	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
@@ -37481,6 +37688,12 @@ type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
+
+// RenderAnalyticsReportJSONRequestBody defines body for RenderAnalyticsReport for application/json ContentType.
+type RenderAnalyticsReportJSONRequestBody = ReportDocument
+
+// ExplainReportRunCellJSONRequestBody defines body for ExplainReportRunCell for application/json ContentType.
+type ExplainReportRunCellJSONRequestBody = ReportRunCell
 
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
@@ -45953,9 +46166,15 @@ type ServerInterface interface {
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// Resolve a report document's figures for this reader.
+	// (POST /analytics/reports/render)
+	RenderAnalyticsReport(w http.ResponseWriter, r *http.Request)
 	// The answer a report sentence points at.
 	// (GET /analytics/runs/{run_id})
 	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// The records behind one cell of a saved run.
+	// (POST /analytics/runs/{run_id}/cells/explain)
+	ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
@@ -47810,9 +48029,21 @@ func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Resolve a report document's figures for this reader.
+// (POST /analytics/reports/render)
+func (_ Unimplemented) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The answer a report sentence points at.
 // (GET /analytics/runs/{run_id})
 func (_ Unimplemented) GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records behind one cell of a saved run.
+// (POST /analytics/runs/{run_id}/cells/explain)
+func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52853,6 +53084,28 @@ func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// RenderAnalyticsReport operation middleware
+func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenderAnalyticsReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetReportRun operation middleware
 func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.Request) {
 
@@ -52878,6 +53131,40 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetReportRun(w, r, runId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainReportRunCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "run_id" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "run_id", chi.URLParam(r, "run_id"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "run_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainReportRunCell(w, r, runId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75943,7 +76230,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/render", wrapper.RenderAnalyticsReport)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/runs/{run_id}/cells/explain", wrapper.ExplainReportRunCell)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)

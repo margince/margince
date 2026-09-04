@@ -19,13 +19,16 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -317,4 +320,350 @@ func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
 				"readable through an append-only log that outlives the run: %s", leaked, after)
 		}
 	}
+}
+
+// A cited cell opens to the records behind it.
+//
+// The drawer's whole job: a report block names a run and a cell, and this turns
+// that citation into rows somebody can read.
+func TestACitedCellOpensToItsRecords(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	out, err := e.explainRunCell(ctx, t, runID, nil)
+	if err != nil {
+		t.Fatalf("opening a cited cell: %v", err)
+	}
+	if out.Withheld {
+		t.Fatal("six deals were withheld from a floor of five")
+	}
+	if len(out.Rows) != 6 {
+		t.Errorf("the cell opened to %d records and six deals were seeded", len(out.Rows))
+	}
+}
+
+// A cell naming the wrong number of groupings is refused.
+//
+// The refusal comes from CompileExplain rather than from this path, and the
+// test asserts the MESSAGE for that reason: it is the existing rule being
+// reached through a new door, not a second copy of it, and a change that
+// stopped the door reaching it would leave a citation explainable as a broader
+// cell than the one cited.
+func TestACitedCellIsRefusedWhenItNamesTheWrongNumberOfGroups(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	// Ungrouped: the saved question has zero groupings, so one group key is
+	// one too many. Matched positionally it would explain the whole population
+	// while claiming to explain a narrower cell.
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	_, err := e.explainRunCell(ctx, t, runID, []any{"anything"})
+	if err == nil {
+		t.Fatal("a cell naming a grouping the saved question does not have was explained " +
+			"anyway, so a citation can be widened into one covering more records")
+	}
+	var refusal *analyticsquery.RefusalError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("the refusal is %v and should be a typed refusal naming the mismatch", err)
+	}
+	// Both counts, so a reader knows which end is wrong.
+	if !strings.Contains(refusal.Message, "1 group") || !strings.Contains(refusal.Message, "by 0") {
+		t.Errorf("the refusal does not name both counts: %s", refusal.Message)
+	}
+}
+
+// An unknown run explains to not-found, not to a server error.
+func TestAnUnknownRunHasNoCellToExplain(t *testing.T) {
+	e := setupForecast(t)
+	if _, err := e.explainRunCell(e.askerCtx(), t, ids.NewV7(), nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("explaining a cell of an unknown run answered %v", err)
+	}
+}
+
+// A reader who may not read the population is refused the records too.
+//
+// The drawer must not be a way around the gate the number itself passes: if the
+// answer refuses, the evidence behind it refuses identically.
+//
+// TWO independent guards hold this, and the test does not distinguish them:
+// ExplainAnalyticsCell asks auth.Require on the population, and the schema
+// derivation drops an entity this caller cannot read so the compile fails with
+// its own denial (deal.read: permission denied). Mutating either alone leaves
+// this green — defence in depth rather than a redundant check to delete.
+func TestACitedCellIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"forecast": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if _, err := e.explainRunCell(ctx, t, runID, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a seat with no grant on the population opened the evidence drawer: %v", err)
+	}
+}
+
+func (e *forecastEnv) explainRunCell(
+	ctx context.Context, t *testing.T, id ids.UUID, group []any,
+) (AnalyticsExplanation, error) {
+	t.Helper()
+	var out AnalyticsExplanation
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			out, err = ExplainReportRunCell(ctx, tx, id, group, analyticsquery.DefaultFloor)
+			return err
+		})
+	return out, err
+}
+
+// A composed report resolves its figures for whoever is reading.
+//
+// The document carries a handle where the number goes; this is the proof that
+// the number arrives from the database rather than from the document.
+func TestAComposedReportResolvesItsFiguresFromTheRun(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	blocks, err := e.render(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindTitle, Text: "Open deals"},
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}})
+	if err != nil {
+		t.Fatalf("rendering a report: %v", err)
+	}
+	if len(blocks) != 2 {
+		t.Fatalf("a two-block document rendered %d blocks", len(blocks))
+	}
+	if len(blocks[0].Values) != 0 {
+		t.Errorf("the title rendered %d figures and carries none", len(blocks[0].Values))
+	}
+	if len(blocks[1].Values) != 1 {
+		t.Fatalf("the stat strip rendered %d figures and named one", len(blocks[1].Values))
+	}
+	got := blocks[1].Values[0]
+	if got.Withheld {
+		t.Fatal("six deals were withheld from a floor of five")
+	}
+	if fmt.Sprint(got.Value) != "6" {
+		t.Errorf("the figure resolved to %v and six deals were seeded", got.Value)
+	}
+}
+
+// A figure the floor withholds renders as withheld, not as a number.
+//
+// The block still renders: a figure that vanished would leave the report
+// reading as complete while saying less.
+func TestAWithheldFigureRendersAsWithheld(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	// Two deals, under the floor of five.
+	for i := 0; i < 2; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	blocks, err := e.render(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}})
+	if err != nil {
+		t.Fatalf("rendering a withheld report: %v", err)
+	}
+	if len(blocks) != 1 || len(blocks[0].Values) != 1 {
+		t.Fatalf("the document rendered %d blocks", len(blocks))
+	}
+	if !blocks[0].Values[0].Withheld {
+		t.Error("a figure under the floor rendered as a number rather than as withheld")
+	}
+	if blocks[0].Values[0].Value != nil {
+		t.Errorf("a withheld figure carried the value %v", blocks[0].Values[0].Value)
+	}
+}
+
+// A report citing a run this reader may not read is refused whole.
+func TestAReportCitingAnUnreadableRunIsRefused(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"forecast": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if _, err := e.render(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}}); err == nil {
+		t.Fatal("a reader with no grant on the population rendered a report of it")
+	}
+}
+
+func (e *forecastEnv) render(
+	ctx context.Context, t *testing.T, doc reportdoc.Document,
+) ([]RenderedBlock, error) {
+	t.Helper()
+	var out []RenderedBlock
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			out, err = RenderReport(ctx, tx, doc, analyticsquery.DefaultFloor)
+			return err
+		})
+	return out, err
+}
+
+// The tool surface and the web surface answer with one engine.
+//
+// Not a style point. A model composing a report and a person composing the same
+// one must get the same figures and the same refusals — two renderers would
+// drift, and the first sign of it would be a model reporting a number the
+// screen does not show.
+func TestTheReportToolAndTheRouteRenderTheSameDocument(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	doc := reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}}
+
+	viaRoute, err := e.render(ctx, t, doc)
+	if err != nil {
+		t.Fatalf("rendering through the route: %v", err)
+	}
+	viaTool, err := e.composeTool(ctx, t, doc)
+	if err != nil {
+		t.Fatalf("rendering through the tool: %v", err)
+	}
+
+	// Compared against the CONTRACT's own field names, not against
+	// json.Marshal of the route's struct. Marshalling both sides would move
+	// them together: renaming a json tag would change the expectation and the
+	// answer at once, and the test would pass through the exact divergence it
+	// exists to catch. These strings come from crm.yaml's RenderedBlock.
+	var toolDoc struct {
+		Blocks []struct {
+			Kind   string `json:"kind"`
+			Values []struct {
+				Value    any  `json:"value"`
+				Withheld bool `json:"withheld"`
+			} `json:"values"`
+		} `json:"blocks"`
+	}
+	if err := json.Unmarshal(viaTool, &toolDoc); err != nil {
+		t.Fatalf("the tool's answer is not the contract's shape: %v (%s)", err, viaTool)
+	}
+	if len(toolDoc.Blocks) != len(viaRoute) {
+		t.Fatalf("the route rendered %d blocks and the tool %d",
+			len(viaRoute), len(toolDoc.Blocks))
+	}
+	for i, want := range viaRoute {
+		got := toolDoc.Blocks[i]
+		if got.Kind != want.Kind {
+			t.Errorf("block %d: the route calls it %q and the tool %q", i, want.Kind, got.Kind)
+		}
+		if len(got.Values) != len(want.Values) {
+			t.Fatalf("block %d: the route rendered %d figures and the tool %d",
+				i, len(want.Values), len(got.Values))
+		}
+		for j, wantValue := range want.Values {
+			gotValue := got.Values[j]
+			if fmt.Sprint(gotValue.Value) != fmt.Sprint(wantValue.Value) {
+				t.Errorf("block %d figure %d: the route says %v and the tool %v",
+					i, j, wantValue.Value, gotValue.Value)
+			}
+			if gotValue.Withheld != wantValue.Withheld {
+				t.Errorf("block %d figure %d: the route says withheld=%v and the tool %v",
+					i, j, wantValue.Withheld, gotValue.Withheld)
+			}
+		}
+	}
+}
+
+// The literal rule holds on the tool surface too.
+//
+// This is the one a model is most likely to break: it has a number in hand from
+// its own reasoning and a handle beside it, and writing both looks like being
+// helpful. The refusal must reach it with the reason.
+func TestTheReportToolRefusesALiteralBesideAHandle(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	plausible := 6.0
+	_, err := e.composeTool(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{
+			Kind:  reportdoc.KindStatStrip,
+			Value: &plausible,
+			Cells: []reportdoc.Cell{{RunID: runID.String(), Column: measureAlias}},
+		},
+	}})
+	if err == nil {
+		t.Fatal("the tool accepted a literal beside a handle — and the literal was the " +
+			"CORRECT number, which is the case a reader could never catch")
+	}
+	if !strings.Contains(err.Error(), "BOTH") {
+		t.Errorf("the tool's refusal does not tell the model why carrying both is the "+
+			"problem: %v", err)
+	}
+}
+
+func (e *forecastEnv) composeTool(
+	ctx context.Context, t *testing.T, doc reportdoc.Document,
+) (json.RawMessage, error) {
+	t.Helper()
+	encoded, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatalf("encoding the document: %v", err)
+	}
+	return analyticsReportComposer(e.Pool, analyticsquery.DefaultFloor)(ctx, encoded)
 }

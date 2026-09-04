@@ -49,7 +49,12 @@ func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if facts := item.Relationship; facts != nil && facts.HasOpenDeal != nil && *facts.HasOpenDeal {
 		row.Because = append(row.Because, reason("expected_revenue", nil))
 	}
-	return ranked{item: row, waitingDays: quiet, occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		item:        row,
+		waitingDays: quiet,
+		waitingRank: orderingAge(quiet),
+		occurredAt:  occurredOf(item, asOf),
+	}
 }
 
 // decayMatters says whether a lapsed relationship is worth more than routine

@@ -45,6 +45,16 @@ const (
 	stateNotMine = "not_mine"
 )
 
+// The thread-scoped judgement and the two UNDO verbs, named for the reason the
+// pair above are: the response metric counts what was put DOWN and must not
+// count a reader taking it back, and a literal at each of those sites is a
+// filter that silently stops matching.
+const (
+	stateNotSales   = "not_sales"
+	stateSalesAgain = "sales_again"
+	statePickedUp   = "picked_up"
+)
+
 // readerOrNobody is whose set-asides a read should apply.
 //
 // The nil UUID for a caller with no person behind it, which matches no
@@ -84,7 +94,7 @@ func (s *Store) SetThreadNotSales(ctx context.Context, id ids.ActivityID) error 
 			thread.key, thread.kind, thread.provider, capturedBy); err != nil {
 			return fmt.Errorf("activities: recording the thread as not sales: %w", err)
 		}
-		return s.recordDisposition(ctx, tx, id, "not_sales", nil)
+		return s.recordDisposition(ctx, tx, id, stateNotSales, nil)
 	})
 }
 
@@ -110,7 +120,7 @@ func (s *Store) ClearThreadNotSales(ctx context.Context, id ids.ActivityID) erro
 			// decision that was never made.
 			return nil
 		}
-		return s.recordDisposition(ctx, tx, id, "sales_again", nil)
+		return s.recordDisposition(ctx, tx, id, stateSalesAgain, nil)
 	})
 }
 
@@ -227,7 +237,7 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 			// sibling above states, and silent for the same one.
 			return nil
 		}
-		return s.recordDisposition(ctx, tx, id, "picked_up", nil)
+		return s.recordDisposition(ctx, tx, id, statePickedUp, nil)
 	})
 }
 

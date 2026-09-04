@@ -22,11 +22,13 @@ const COPY: MapCopy = {
   missing: (role) => `${role} missing`,
   assign: "Assign",
   engagement: {
+    waiting: "Needs reply",
     answered: "Answered",
     no_reply: "No reply",
     untried: "Not approached",
   },
   awaitingReply: "awaiting reply",
+  replyOwed: "reply owed",
   theyReplied: "they replied",
   neverWritten: "never written to",
   onDeal: "on the deal",
@@ -36,7 +38,13 @@ const COPY: MapCopy = {
 function coverage(over: Partial<Coverage> = {}): Coverage {
   return {
     as_of: "2026-08-31T09:00:00Z",
-    summary: { contacts_total: 3, answered: 1, no_reply: 0, untried: 2 },
+    summary: {
+      contacts_total: 3,
+      waiting: 0,
+      answered: 1,
+      no_reply: 0,
+      untried: 2,
+    },
     deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
     selected_deal_id: "d-1",
     completeness: { committee_read: true },

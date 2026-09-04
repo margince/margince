@@ -27,6 +27,11 @@ import "./worklist.css";
  * `enabled` carries the same tier the team board's does: this is a lead's
  * reading, not a rep's, and a seat with no route to it should not fire the
  * request.
+ *
+ * The SERVER refuses below that tier too, which is what makes this a courtesy
+ * rather than the control. It was the control until the endpoint gained its own
+ * gate, and a permission held only in the browser is one an unmodified client
+ * enforces and nothing else does.
  */
 export function HiddenBacklogPanel({
   enabled,

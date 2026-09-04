@@ -1641,6 +1641,7 @@ export const en = {
   "co.people.band.noWayInWhy":
     "Everyone here was written to and nobody replied",
   "co.people.band.showAnswered": "Show who answered",
+  "co.people.band.showWaiting": "Show who is waiting",
   "co.people.band.committee": "Buying team",
   "co.people.band.missing": "No {role}",
   "co.people.band.committeeComplete": "Champion and economic buyer named",
@@ -1680,6 +1681,7 @@ export const en = {
   "co.people.map.account": "Account",
   "co.people.map.missing": "{role} missing",
   "co.people.map.awaiting": "awaiting reply",
+  "co.people.map.owed": "reply owed",
   "co.people.map.replied": "they replied",
   "co.people.map.never": "never written to",
   "co.people.map.onDeal": "on the deal",
@@ -1717,6 +1719,7 @@ export const en = {
   "co.people.board.confirm": "Confirm",
   "co.people.board.confirming": "Confirming",
   "co.people.board.change": "Change role",
+  "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",
@@ -7941,6 +7944,13 @@ export const en = {
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
+  // A band holding nothing, said rather than left out. Each says what is
+  // absent, because "nothing here" four times over tells a reader less than
+  // one line naming what they are clear of.
+  "worklist.bandClear.now": "Nothing needs you today.",
+  "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
+  "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
+  "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Later",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",

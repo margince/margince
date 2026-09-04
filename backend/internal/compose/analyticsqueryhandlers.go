@@ -17,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -155,6 +156,109 @@ func queryFromWire(in crmcontracts.AnalyticsQuery) analyticsquery.Query {
 				Field: f.Field, Op: analyticsquery.FilterOp(f.Op), Value: f.Value,
 			})
 		}
+	}
+	return out
+}
+
+// ExplainReportRunCell implements POST /analytics/runs/{run_id}/cells/explain.
+func (h analyticsQueryHandlers) ExplainReportRunCell(
+	w http.ResponseWriter, r *http.Request, runID openapi_types.UUID,
+) {
+	var body crmcontracts.ReportRunCell
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	var group []any
+	if body.Group != nil {
+		group = *body.Group
+	}
+
+	ctx := r.Context()
+	var out AnalyticsExplanation
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = ExplainReportRunCell(ctx, tx, ids.UUID(runID), group, h.floor)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
+		Columns: out.Columns, Rows: out.Rows,
+		Withheld: out.Withheld, Truncated: out.Truncated,
+	})
+}
+
+// RenderAnalyticsReport implements POST /analytics/reports/render.
+func (h analyticsQueryHandlers) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+	var body crmcontracts.ReportDocument
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+
+	ctx := r.Context()
+	var blocks []RenderedBlock
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		blocks, err = RenderReport(ctx, tx, documentFromWire(body), h.floor)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+
+	out := crmcontracts.RenderedReport{Blocks: make([]crmcontracts.RenderedBlock, 0, len(blocks))}
+	for _, b := range blocks {
+		block := crmcontracts.RenderedBlock{
+			Kind:   b.Kind,
+			Values: make([]crmcontracts.RenderedValue, 0, len(b.Values)),
+		}
+		if b.Text != "" {
+			text := b.Text
+			block.Text = &text
+		}
+		if b.Severity != "" {
+			severity := b.Severity
+			block.Severity = &severity
+		}
+		for _, v := range b.Values {
+			value := crmcontracts.RenderedValue{Withheld: v.Withheld}
+			if v.Value != nil {
+				held := v.Value
+				value.Value = &held
+			}
+			block.Values = append(block.Values, value)
+		}
+		out.Blocks = append(out.Blocks, block)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// documentFromWire converts the request without validating it.
+//
+// Validation belongs to reportdoc, which is the thing that decides what may
+// render. A second check here would be a second answer to what a report may
+// contain, and the two would drift the first time a block was added.
+func documentFromWire(in crmcontracts.ReportDocument) reportdoc.Document {
+	out := reportdoc.Document{Blocks: make([]reportdoc.Block, 0, len(in.Blocks))}
+	for _, b := range in.Blocks {
+		block := reportdoc.Block{Kind: reportdoc.Kind(b.Kind), Value: b.Value}
+		if b.Text != nil {
+			block.Text = *b.Text
+		}
+		if b.Severity != nil {
+			block.Severity = reportdoc.Severity(*b.Severity)
+		}
+		if b.Cells != nil {
+			for _, c := range *b.Cells {
+				cell := reportdoc.Cell{RunID: c.RunId.String(), Column: c.Column}
+				if c.Group != nil {
+					cell.Group = *c.Group
+				}
+				block.Cells = append(block.Cells, cell)
+			}
+		}
+		out.Blocks = append(out.Blocks, block)
 	}
 	return out
 }
