@@ -431,7 +431,7 @@ list, approval, signal) and durably own no business entity. See
 | Table-ownership ruling | `backend/gates/tableownership_test.go` |
 | The screen | `frontend/src/screens/organizations.tsx` (`CompanyScreen`) |
 | Data layer + right-rail cards | `frontend/src/screens/company360.tsx`, `company360.css` |
-| The connections card | `frontend/src/screens/connections.tsx` |
+| The connections card | `frontend/src/screens/network.tsx`, with `organizationgraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
 
 ## Where to go next

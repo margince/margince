@@ -98,3 +98,11 @@ as such before another one is added.
   in a browser.
 - The cold-start company-context onboarding gate is cleared in the first seconds of the recording.
   It is core onboarding, not the extension tier.
+
+## The rest of this record
+
+- [DESIGN.md](DESIGN.md) — what the tier was asked to prove, and the capability
+  expansion this run accepted.
+- [NOTES-SCOPE.md](NOTES-SCOPE.md) — the scope of the `extensions/notes` unit the
+  run exercised. It describes a unit no longer in the tree; the note at the top
+  of this page says why it is kept.

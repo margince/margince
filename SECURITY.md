@@ -1,8 +1,9 @@
 # Security Policy
 
-Margince handles customer relationship data under a multi-tenant,
-agent-governed security model. Reports about weaknesses in that model
-are welcome and taken seriously.
+Margince handles customer relationship data under a single-tenant,
+agent-governed security model: one installation serves one organization,
+and boot refuses a second. Reports about weaknesses in that model are
+welcome and taken seriously.
 
 ## Reporting a vulnerability
 
@@ -31,8 +32,11 @@ deadline; we do commit to telling you where the report stands.
 In scope — anything that breaks a documented security invariant of this
 codebase, in particular:
 
-- **Tenant isolation**: reading or writing another workspace's rows
-  despite RLS and the composite same-workspace foreign keys.
+- **Workspace isolation**: reading or writing rows outside the caller's
+  workspace. No table carries row-level security — isolation is
+  application-side SQL predicates reached only through the one
+  workspace-transaction helper, so a path that leaves that helper is
+  itself the weakness.
 - **Row-scope / RBAC**: access to records outside the caller's
   own/team/all scope, including via error, replay, or conflict paths
   (existence-hiding is a contract: out-of-scope answers 404).

@@ -2554,10 +2554,13 @@ export function PipelinesCard() {
   );
 }
 
-// The two-tier table (03b): informational, and the advance-stage row is
-// locked 🟡 — there is no toggle that could soften it (AC-settings). It reads
-// AFTER the passports and the tools it governs, because nothing on it can be
-// acted on: it is the reference for the tiers those rows are marked with.
+// The tier table: informational, and the advance-stage row is locked — there
+// is no toggle that could soften it (AC-settings). It reads AFTER the passports
+// and the tools it governs, because nothing on it can be acted on: it is the
+// reference for the tiers those rows are marked with. "Locked" is about the
+// FLOOR, not about waiting every time: advancing resolves its tier per move and
+// only stages when the move closes the deal, and that floor is what no toggle
+// reaches.
 function AutonomyCard() {
   const t = useT();
   return (
@@ -2567,11 +2570,13 @@ function AutonomyCard() {
           gave the cards on this page two different intervals. */}
       <PanelBody>
         <p className="settings-panel-sub">{t("settings.autonomySub")}</p>
-        {/* Three rows in the page's own language, even though none of them is
+        {/* Four rows in the page's own language, even though none of them is
             settable: what the tier COVERS reads left as prose, and the tier it
             runs at — the dot, and on the locked row the badge saying the answer
             cannot move — sits at the same x as every answer on this page. A
-            reader coming from the tool inventory above is matching dots. */}
+            reader coming from the tool inventory above is matching dots, which
+            is why sending carries the green one: a person's grant of the `send`
+            scope IS the approval, so a funded send does not stage a second. */}
         <SettingList>
           <SettingRow
             label={t("settings.tierRead")}
@@ -2579,6 +2584,10 @@ function AutonomyCard() {
           />
           <SettingRow
             label={t("settings.tierSend")}
+            control={<AutonomyDot tier="auto" />}
+          />
+          <SettingRow
+            label={t("settings.tierWait")}
             control={<AutonomyDot tier="confirm" />}
           />
           <SettingRow
