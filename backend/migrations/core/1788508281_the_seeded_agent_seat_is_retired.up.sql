@@ -31,12 +31,16 @@
 -- installation that has since minted a real agent identity keeps it. Widening
 -- this would deactivate a runner somebody is using.
 --
--- The last two clauses are what make the DOWN a true inverse. Every row this
--- statement touches held exactly (`active`, NULL), so restoring exactly that is
--- correct for exactly those rows — no prior state has to be recorded anywhere.
--- A seat an operator had already deactivated or archived is skipped, which costs
--- nothing: it is already out of the meter and out of the roster, which is all
--- this migration is for.
+-- `status = 'active'` IS THE WHOLE CONDITION, and it is deliberately not paired
+-- with `archived_at IS NULL`. The licence meter reads `status` and never reads
+-- `archived_at`, so an active-but-archived seat is metered exactly like any
+-- other — skipping it would leave the licence seat this migration exists to free.
+-- No product path writes that combination, but an operator with SQL can, so the
+-- predicate answers the meter's question rather than a shape assumption.
+--
+-- COALESCE preserves an archival somebody else performed. A seat an operator had
+-- already DEACTIVATED is skipped, which costs nothing: it is already out of the
+-- meter, which is all this migration is for.
 --
 -- The two CHECK constraints stay. `is_agent` remains a supported column —
 -- `overlay`'s mappable-seat predicate and `federatedidentity`'s sign-in refusal
@@ -49,9 +53,8 @@ SET LOCAL lock_timeout = '3s';
 
 UPDATE app_user
    SET status = 'deactivated',
-       archived_at = now()
+       archived_at = COALESCE(archived_at, now())
  WHERE is_agent
    AND password_hash IS NULL
    AND email LIKE 'agent@%.gradion.local'
-   AND status = 'active'
-   AND archived_at IS NULL;
+   AND status = 'active';

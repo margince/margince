@@ -160,12 +160,30 @@ func TestRetiringTheAgentSeatRoundTrips(t *testing.T) {
 	seat := seedRetirableSeat(t, conn, "agent@roundtrip.gradion.local", "active", nil)
 	// The boundary: an operator stopped this one and did not archive it.
 	byHand := seedRetirableSeat(t, conn, "agent@stopped.gradion.local", "deactivated", nil)
+	// ACTIVE BUT ARCHIVED. The schema permits it, and the licence meter reads
+	// `status` without reading `archived_at`, so this row is metered exactly like
+	// any other and the up must retire it. A predicate that also demanded
+	// `archived_at IS NULL` would skip it and leave the licence seat behind.
+	archivedEarlier := time.Date(2026, 8, 14, 9, 0, 0, 0, time.UTC)
+	metered := seedRetirableSeat(t, conn, "agent@metered.gradion.local", "active", &archivedEarlier)
 
 	applyMigrationFile(t, conn, retireAgentSeatMigration)
 	assertSeatState(t, conn, seat, "deactivated", true)
 	// Skipped by the up: already out of the meter, so there is nothing to do to
 	// it, and touching it would invent an archival the operator did not ask for.
 	assertSeatState(t, conn, byHand, "deactivated", false)
+	// Retired, and COALESCE kept the archival somebody else performed rather than
+	// overwriting it with the migration's own clock.
+	assertSeatState(t, conn, metered, "deactivated", true)
+	var kept time.Time
+	if err := conn.QueryRow(context.Background(),
+		`SELECT archived_at FROM app_user WHERE id = $1`, metered).Scan(&kept); err != nil {
+		t.Fatalf("reading the metered seat's archival: %v", err)
+	}
+	if !kept.Equal(archivedEarlier) {
+		t.Errorf("archived_at moved to %s, want the existing %s — COALESCE must preserve it",
+			kept, archivedEarlier)
+	}
 
 	applyMigrationFile(t, conn, strings.Replace(retireAgentSeatMigration, ".up.sql", ".down.sql", 1))
 	// The one the up retired is back exactly as the up found it.
