@@ -51,6 +51,7 @@ type fixedStateSigner struct{ provider, clientID, nonce, codeVerifier string }
 func (f fixedStateSigner) Sign(string, string, string, string, time.Duration) string {
 	return "irrelevant"
 }
+
 func (f fixedStateSigner) Verify(string) (string, string, string, string, error) {
 	return f.provider, f.clientID, f.nonce, f.codeVerifier, nil
 }
