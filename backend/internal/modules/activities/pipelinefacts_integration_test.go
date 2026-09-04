@@ -348,3 +348,50 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 		t.Errorf("an open message was not labelled (wrote=%v err=%v) — the re-check refuses more than the audience", wrote, err)
 	}
 }
+
+// The same window, and the third exclusion the write owes: the message is taken
+// off the timeline while the model is thinking.
+//
+// A noise disposition and the retention sweep both archive a captured message,
+// and the backlog excludes archived rows — so a label that lands afterwards is
+// never revisited by any later pass. What it leaves is a hidden message on a
+// shared worklist, which is the same defect the narrowing case above describes
+// with a different cause.
+func TestTheLabelWriteLosesToAnArchiveThatLandedWhileTheModelThought(t *testing.T) {
+	e := setupFacts(t)
+	ctx := e.as()
+
+	open := e.seed(t, capturedRow{kind: "email"})
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, 200, 200)
+	if err != nil {
+		t.Fatalf("reading the backlog: %v", err)
+	}
+	offered := false
+	for _, row := range backlog {
+		if row.ID == open {
+			offered = true
+		}
+	}
+	if !offered {
+		t.Fatalf("the open message was not offered to the classifier — the fixture proves nothing about the race")
+	}
+
+	// The model call happens here, in production. The archive lands during it.
+	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, open)
+
+	applied, err := e.store.SetCaptureLabel(ctx, open, "commitment")
+	if err != nil {
+		t.Fatalf("writing the label: %v", err)
+	}
+	if applied {
+		t.Error("the classifier labelled a message archived while it was thinking — nothing revisits an archived row to clear it")
+	}
+	var label *string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT capture_label FROM activity WHERE id = $1`, open).Scan(&label); err != nil {
+		t.Fatal(err)
+	}
+	if label != nil {
+		t.Errorf("the archived message carries label %q", *label)
+	}
+}

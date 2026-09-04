@@ -141,7 +141,8 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		if err := carryLeadConsent(ctx, tx, id, personID, by); err != nil {
 			return fmt.Errorf("carry lead consent: %w", err)
 		}
-		if err := carryLeadActivities(ctx, tx, id, personID); err != nil {
+		carried, err := carryLeadActivities(ctx, tx, id, personID)
+		if err != nil {
 			return err
 		}
 
@@ -149,7 +150,7 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		if err != nil {
 			return err
 		}
-		out.Person, err = finalizeLeadPromotion(ctx, tx, id, in, lead, personID, out.Merged, mergeFields, active, out.DealID)
+		out.Person, err = finalizeLeadPromotion(ctx, tx, id, in, lead, personID, out.Merged, mergeFields, active, out.DealID, carried)
 		return err
 	})
 	return out, err
@@ -177,7 +178,17 @@ func carryLeadConsent(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personI
 // person — a lead whose reply was captured against a contact we already knew,
 // which is exactly the merge path. uq_activity_link would reject the duplicate,
 // so the row is dropped instead of converted; the person keeps the link it had.
-func carryLeadActivities(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personID ids.PersonID) error {
+// It ANSWERS what it moved. The activity ids ride the lead.promoted event so a
+// consumer can act on the tasks this promotion carried rather than on every
+// task the person happens to hold — a distinction that does not exist for a
+// freshly created person and is the whole question for a merge.
+//
+// The re-pointed rows only. An activity the survivor already carried has its
+// lead link deleted above rather than moved: the promotion did not bring it,
+// and naming it would hand a consumer work that was already there.
+func carryLeadActivities(
+	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personID ids.PersonID,
+) ([]ids.UUID, error) {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_link a
 		WHERE a.lead_id = $1 AND EXISTS (
@@ -185,16 +196,23 @@ func carryLeadActivities(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, pers
 		  WHERE b.activity_id = a.activity_id
 		    AND b.entity_type = 'person' AND b.person_id = $2)`,
 		leadID, personID); err != nil {
-		return fmt.Errorf("drop already-linked lead activities: %w", err)
+		return nil, fmt.Errorf("drop already-linked lead activities: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		UPDATE activity_link
 		SET entity_type = 'person', person_id = $2, lead_id = NULL
-		WHERE lead_id = $1`,
-		leadID, personID); err != nil {
-		return fmt.Errorf("carry lead activities: %w", err)
+		WHERE lead_id = $1
+		RETURNING activity_id`,
+		leadID, personID)
+	if err != nil {
+		return nil, fmt.Errorf("carry lead activities: %w", err)
 	}
-	return nil
+	defer rows.Close()
+	carried, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("carry lead activities: %w", err)
+	}
+	return carried, nil
 }
 
 // finalizeLeadPromotion retires the lead and lands the write shape for the
@@ -202,7 +220,7 @@ func carryLeadActivities(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, pers
 // recording trigger + evidence + the resulting person), and the paired
 // lead.promoted + person.* events — all inside the caller's transaction,
 // still under the lead row lock taken by PromoteLead.
-func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, personID ids.PersonID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID) (crmcontracts.Person, error) {
+func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, personID ids.PersonID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Person, error) {
 	now := time.Now().UTC()
 	setBy, err := statusSetByFor(ctx)
 	if err != nil {
@@ -253,7 +271,7 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 
 	// lead.promoted is the first-class verb (events.md §5.5) — the
 	// moment the context graph adds the node; never a lead.updated.
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, leadPromotedPayload(personID, outcome, in.Trigger, in.EvidenceActivityID)); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, leadPromotedPayload(personID, outcome, in.Trigger, in.EvidenceActivityID, carried)); err != nil {
 		return crmcontracts.Person{}, fmt.Errorf("emit lead.promoted: %w", err)
 	}
 	// A fill-only merge that changed nothing has no person.updated to emit —

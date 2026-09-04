@@ -30,6 +30,7 @@
   padding: 0;
   border: 0;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: transparent;
   color: var(--textPrimary);
   font-family: var(--f-body);
@@ -149,7 +150,7 @@
   padding: 7px 9px; /* ds:ignore the menu row's own optics, unchanged from the menu it replaces */
   width: 100%;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--textContent);
   font-family: var(--f-body);

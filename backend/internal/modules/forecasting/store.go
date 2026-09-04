@@ -33,9 +33,31 @@ const codeInvalid = "invalid"
 
 // The scopes a call or a snapshot can be about.
 const (
+	// ScopeUnset is what a caller who named no scope asked for, and it is NOT
+	// the workspace. Which population an unnamed request means depends on who
+	// is asking — a rep means their own — and this module cannot answer that:
+	// the lens lives in the principal, and resolving it needs a read the
+	// composition owns. So the omission is carried, not decided, and the seam
+	// that fetches the deals resolves it.
+	//
+	// Spelling it as the empty string is deliberate: a zero Scope is unset, so
+	// a caller who forgets to resolve gets the honest "which population?" from
+	// checkScope rather than silently measuring the installation.
+	ScopeUnset     = ""
 	ScopeWorkspace = "workspace"
-	ScopeTeam      = "team"
-	ScopeOwner     = "owner"
+	// ScopeManagedTeams is a READ result and never a request or a write: it is
+	// what a manager's omitted scope resolves to — their teams and themselves —
+	// and it names no single subject a forecast could be recorded against.
+	//
+	// It is a kind of its own rather than being reported as the workspace,
+	// because the two are different populations and a standing call is looked
+	// up BY the scope. Reported as workspace, a manager's reading would fetch
+	// management's own workspace call and print its amount, author and note
+	// beside team-only totals — a disclosure the same manager asking for the
+	// workspace explicitly would have been refused.
+	ScopeManagedTeams = "managed_teams"
+	ScopeTeam         = "team"
+	ScopeOwner        = "owner"
 )
 
 // Store owns the forecast tables.

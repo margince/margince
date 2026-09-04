@@ -339,6 +339,37 @@ kinds:
       much one hourly tick drains rather than whether work is lost — and it is
       what keeps a hung model lane from holding one of two ai_capture workers.
 
+  owed_verdict:
+    role: dispatcher
+    go_type: OwedVerdictArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [OwedBrain], absent: registers_nothing}
+    fans_out_to: owed_verdict_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Hourly, like the capture-label pass it is modelled on, and for the same
+      reason: the backlog is a query, so a caught-up tenant costs one cheap
+      probe and a busy one gets its answer inside the hour a rep is working.
+
+  owed_verdict_workspace:
+    role: worker
+    go_type: OwedVerdictWorkspaceArgs
+    queue: ai_capture
+    timeout: 15m
+    max_attempts: 3
+    opts_owner: fan_out
+    registration: {when: [OwedBrain], absent: registers_nothing}
+    args:
+      Workspace: id
+    reason: >-
+      Up to fifty serial model calls (owedCatchUpCap 500 verdicts, ten messages
+      per prompt) — the same shape and the same bound as the capture-label
+      worker beside it. The engine commits per batch, so the cap decides how
+      much one tick drains rather than whether work is lost.
+
   capture_counterparty_verdict:
     role: dispatcher
     go_type: CounterpartyVerdictArgs
@@ -665,6 +696,28 @@ kinds:
       One attempt unseals a credential from the vault, refreshes an OAuth token,
       may run the connector's prior-send lookup, and then transmits — four
       network round trips, each of which can be slow before it is wrong.
+
+  comms_authz_disagreement:
+    role: worker
+    go_type: AuthzDisagreementArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 24h
+    args: {}
+    reason: >-
+      The outbound engine has run in observe mode since it shipped: it decides,
+      records, and the old purpose gate rules. Ending that is a decision
+      somebody has to make on evidence, and this pass is what produces the
+      evidence without anybody remembering to ask for it. Daily, because the
+      question it answers moves at the speed of a rollout rather than a request,
+      and because the window it reads is a day: each pass reports what the two
+      authorities did differently SINCE THE LAST ONE, so two consecutive lines
+      can be compared. Unbounded the reading only ever grows, and a
+      disagreement that appeared this week disappears under the weight of one
+      fixed months ago. Cheap: one grouped read over an index on decided_at,
+      and on an installation whose authorities agree it finds nothing and says
+      so once.
 
   comms_scheduled_send_recovery:
     role: worker

@@ -42,6 +42,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	}
 
 	oneShot(ai.TaskCaptureClassify, "classify", captureClassifyCases{})
+	oneShot(ai.TaskOwedVerdict, "owed", owedVerdictCases{})
 	oneShot(ai.TaskCaptureCounterpartyVerdict, "verdict", counterpartyVerdictCases{})
 	oneShot(ai.TaskCaptureConfidentialityVerdict, "thread", confidentialityCases{})
 	oneShot(ai.TaskEnrich, "signature", signatureEnrichCases{})
@@ -65,6 +66,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "org_brief", orgBriefCases{})
 	oneShot(ai.TaskSummarize, "org_ask", orgAskCases{})
 	oneShot(ai.TaskSummarize, "org_dossier", orgDossierCases{})
+	oneShot(ai.TaskSummarize, "person_brief", personBriefCases{})
 	oneShot(ai.TaskTranscriptPropose, "next_steps", transcriptProposeCases{})
 	oneShot(ai.TaskDocumentExtract, "fields", documentFieldsCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})

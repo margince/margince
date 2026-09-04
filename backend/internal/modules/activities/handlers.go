@@ -27,6 +27,12 @@ type Handlers struct {
 	emailDrafter EmailDrafter
 	// consent gates the send path; nil fails closed (WithConsent wires it).
 	consent ConsentGate
+	// preview answers what the engine WOULD decide, for a message nobody has
+	// written. Separate from consent because it is a different question asked
+	// of the same authority: the gate is the send path's default-deny door,
+	// and this is the read in front of it. Nil leaves the preview endpoints
+	// answering a wiring fault rather than a permission.
+	preview SendPreviewer
 	// delivery records an accepted send for transmission; nil fails closed
 	// (WithDelivery wires it), because a 202 for a message nothing will
 	// carry is a promise this surface cannot keep.

@@ -56,9 +56,9 @@ import { usePhoneViewport } from "./viewport";
 import "./shell.css";
 
 // The app shell: one sidebar against the left edge of the viewport, and the
-// content beside it. Collapsed the sidebar is the canonical 64px rail WDS-NAV-1
+// content beside it. Collapsed the sidebar is the canonical 56px rail WDS-NAV-1
 // specifies, unchanged — the labeled state is additive, so the spec stays true
-// at 64px rather than being replaced.
+// at 56px rather than being replaced.
 //
 // The chrome is an L: the sidebar carries where you can GO, and the top bar
 // above the content (app/topbar.tsx) carries everything else that is true of the
@@ -272,7 +272,7 @@ export function WorkspaceRail({
 
   // Which of the route's levels the panel is showing, and the two ways the
   // reader moves between them (app/navlevel.tsx). A section's entries take the
-  // panel OVER rather than hanging off the destinations: 64px cannot carry two
+  // panel OVER rather than hanging off the destinations: 56px cannot carry two
   // levels, and 224px carrying both reads as a list of twenty places to go.
   //
   // At phone width the panel is a bottom bar of four destinations, and it KEEPS
@@ -444,7 +444,7 @@ export function WorkspaceRail({
             unfinished and nothing else, where a version says that AND which
             build a reader is looking at — which is the thing worth having in
             front of somebody the first time they see the product.
-            It stays at 64px, where every label in the panel is gone: the
+            It stays at 56px, where every label in the panel is gone: the
             sentence is four characters wide and it is the one line here that a
             reader may need to read back to us. It goes on a drilled-in level
             too, because it is a fact about the BUILD rather than about the

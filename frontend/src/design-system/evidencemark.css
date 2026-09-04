@@ -62,7 +62,7 @@
 }
 
 .evmark-confidence {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -73,14 +73,14 @@
   margin: 0;
   border-left: 2px solid var(--aiMed);
   padding-left: var(--space-2);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--textContent);
 }
 
 .evmark-source,
 .evmark-at {
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   overflow-wrap: anywhere;
 }

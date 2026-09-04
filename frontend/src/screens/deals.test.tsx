@@ -1653,6 +1653,34 @@ describe("DealsScreen filters", () => {
       expect(urls.some((u) => u.includes("stalled=true"))).toBe(true),
     );
   });
+
+  // The forecast's buckets, as a dial. Five tiles on the analytics page
+  // partition the pipeline into named buckets and each was a figure with no
+  // door — "which deals are in commit" is the first question anyone asks of
+  // one, and no wire filter could express it.
+  it("the forecast filter narrows the deals query to one bucket", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onDealsUrl: (u) => urls.push(u) }),
+    );
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const menu = screen.getByRole("group", { name: "Filter" });
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Forecast" }),
+    );
+    await userEvent.click(within(menu).getByRole("button", { name: "Commit" }));
+
+    await waitFor(() =>
+      expect(urls.some((u) => u.includes("forecast_category=commit"))).toBe(
+        true,
+      ),
+    );
+  });
 });
 
 /**
@@ -1815,7 +1843,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await screen.findByRole("button", { name: "Northgate" });
-    const line = document.querySelector(".record-sub")?.textContent ?? "";
+    const line = document.querySelector(".identity-line")?.textContent ?? "";
 
     expect(line).toContain("·");
     expect(line).not.toContain("€48,000.00Acme");

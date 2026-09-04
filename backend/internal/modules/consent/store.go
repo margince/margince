@@ -32,6 +32,10 @@ type Store struct {
 	// module never imports a sibling; nil on any installation that has not
 	// wired it, which the page renders as an omission rather than a blank.
 	installationName InstallationNameReader
+	// country selects which jurisdiction's messaging rules a decision is taken
+	// under. Injected by compose because the setting lives in identity
+	// (installationcountry.go).
+	country InstallationCountryReader
 }
 
 // NewStore binds the store to the pool every read and write runs through.

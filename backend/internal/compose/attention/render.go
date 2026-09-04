@@ -42,8 +42,16 @@ const actionOpen crmcontracts.AttentionItemActions = "open"
 // reader is told a duplicate is waiting and cannot act on it here, which is the
 // honest answer: the alternative is a merge button over a record they cannot
 // read.
+//
+// The verb needs MORE than that read, and this is where the two questions part.
+// Settling a pair archives one record and rewrites the other, so it is offered
+// only to a reader who could change BOTH — the records' owner, or a seat that
+// writes the whole workspace. Everyone else sees the pair and no verb, because
+// they are the ones who cannot act on it. Offered on visibility alone, the
+// button refused every press on a pair whose two records had different owners,
+// and the surface then advised trying again.
 func (s *Service) duplicateItem(
-	pair DuplicatePair, known pairFaces,
+	pair DuplicatePair, known pairFaces, decidable pairAuthority,
 ) crmcontracts.AttentionItem {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
@@ -64,13 +72,26 @@ func (s *Service) duplicateItem(
 		Right:    right,
 		Evidence: evidenceRows(pair.Evidence),
 	}
-	item.Actions = []crmcontracts.AttentionItemActions{"merge"}
+	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
+		item.Actions = []crmcontracts.AttentionItemActions{"merge"}
+	}
 	return item
 }
 
 // pairFaces holds the records a page names, keyed by entity type then by id. An
 // id with no entry is one this reader may not see.
 type pairFaces map[string]map[ids.UUID]RecordFace
+
+// pairAuthority holds which records the reader could change, keyed the same way
+// pairFaces is. An id with no entry is one they could not.
+type pairAuthority map[string]map[ids.UUID]bool
+
+// both is the pair's own question: a merge touches two records, so authority
+// over one of them is not authority to decide it.
+func (a pairAuthority) both(entityType string, left, right ids.UUID) bool {
+	rows := a[entityType]
+	return rows[left] && rows[right]
+}
 
 func (f pairFaces) side(entityType string, id ids.UUID) (crmcontracts.AttentionPairSide, bool) {
 	face, ok := f[entityType][id]
@@ -110,6 +131,33 @@ func (s *Service) namePairs(ctx context.Context, pairs []DuplicatePair) (pairFac
 		named[entityType] = faces
 	}
 	return named, nil
+}
+
+// decidablePairs asks which of the page's records the reader could change, one
+// query per entity type, exactly as namePairs asks who they may see.
+//
+// A refusal is treated the same way and for the same reason: it means "no verb
+// on these", which is a complete answer, and letting it empty the whole lane
+// would cost the reader pairs they are entitled to look at. Any other error is
+// returned, because a database that will not answer is not a permission
+// verdict.
+func (s *Service) decidablePairs(ctx context.Context, pairs []DuplicatePair) (pairAuthority, error) {
+	wanted := map[string][]ids.UUID{}
+	for _, pair := range pairs {
+		wanted[pair.EntityType] = append(wanted[pair.EntityType], pair.LeftID, pair.RightID)
+	}
+	authority := make(pairAuthority, len(wanted))
+	for entityType, rowIDs := range wanted {
+		writable, err := s.duplicates.DecidableSubset(ctx, entityType, rowIDs)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+			continue
+		case err != nil:
+			return nil, err
+		}
+		authority[entityType] = writable
+	}
+	return authority, nil
 }
 
 func pairSide(id ids.UUID, face RecordFace) crmcontracts.AttentionPairSide {

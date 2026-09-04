@@ -127,6 +127,7 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		"AgentScheduler.Service": cfg.AgentScheduler.Service != nil,
 		"ChannelVault":           cfg.ChannelVault != nil,
 		"ClassifyBrain":          cfg.ClassifyBrain != nil,
+		"OwedBrain":              cfg.OwedBrain != nil,
 		"DeepReadBrain":          cfg.DeepReadBrain != nil,
 		"Embedder":               cfg.Embedder != nil,
 		"EnrichBrain":            cfg.EnrichBrain != nil,

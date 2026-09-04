@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // DealsFunc reads the deals in scope for a period, already row-scoped.
@@ -27,7 +28,11 @@ import (
 // asOf and baseCurrency travel with the request because the conversion needs
 // both: a rate is looked up as of a DAY, and there is no base amount without a
 // currency to convert into.
-type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, bool, error)
+// The Scope it returns is the one it RESOLVED, which is not always the one it
+// was handed: an unset scope means the caller named nothing, and what that
+// means depends on their lens. The reading reports the resolved one, so an
+// answer always says which population it is about.
+type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, Scope, bool, error)
 
 // PeriodFunc resolves the installation's window for a day, and the currency its
 // money is counted in. Injected for the same reason: the fiscal settings belong
@@ -75,10 +80,11 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		deals, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
+		deals, resolved, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
+		scope = resolved
 		// The as-of DAY, not the instant. The slipped rule compares calendar
 		// days, and handing it a clock makes a deal due today read as slipped
 		// from noon onward — which the report engine, comparing dates, would
@@ -90,6 +96,13 @@ func (h Handlers) GetForecast(
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
 		out.ScopeLimited = &limited
 
+		// A standing call is an assertion about ONE named population. The
+		// managed-teams reading covers several, so there is no call to look up
+		// — and looking one up under a flattened scope would fetch a different
+		// population's call and print it beside these totals.
+		if scope.Kind == ScopeManagedTeams {
+			return nil
+		}
 		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
 		switch {
 		case err == nil:
@@ -155,13 +168,42 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 func scopeFromParams(
 	kind *crmcontracts.GetForecastParamsScopeKind, id *openapi_types.UUID,
 ) (Scope, error) {
-	scope := Scope{Kind: ScopeWorkspace}
+	var spelled string
 	if kind != nil {
-		scope.Kind = string(*kind)
+		spelled = string(*kind)
 	}
+	return readScope(spelled, id)
+}
+
+// readScope is the READ door's rule, spelled once for the endpoints that take
+// a scope off the query string. Each arrives carrying its OWN generated
+// scope_kind type for the same three values, so the shared rule takes the
+// string they both convert to — a copy per endpoint is how one comes to admit
+// a scope the other refuses.
+//
+// Held by: TestTheReadScopeRuleHasOneSpelling (scope_test.go)
+//
+// Distinct from callScopeFromBody below, which is the WRITE door and defaults
+// an omission to the workspace. Here an omission stays unset for the seam to
+// resolve against the caller's own lens, because a reader who names no scope
+// is asking about whatever they can see rather than about the whole company.
+func readScope(kind string, id *openapi_types.UUID) (Scope, error) {
+	scope := Scope{Kind: kind}
 	if id != nil {
 		asID := ids.UUID(*id)
 		scope.ID = &asID
+	}
+	// An omission is carried through as unset for the seam to resolve against
+	// the caller's own lens. Naming an id without a kind is still malformed,
+	// and says so rather than being read as one of the named scopes.
+	if scope.Kind == ScopeUnset {
+		if scope.ID != nil {
+			return Scope{}, &values.ParseError{
+				Field: colScopeKind, Code: "required",
+				Message: "a scope_id names whose forecast, so it needs a scope_kind beside it",
+			}
+		}
+		return scope, nil
 	}
 	if err := checkScope(scope); err != nil {
 		return Scope{}, err

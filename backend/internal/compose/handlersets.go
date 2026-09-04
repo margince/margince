@@ -106,11 +106,12 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	s.person360Svc = person360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
 	s.person360Handlers = person360.NewHandlers(s.person360Svc, s.sorDispatch.isOverlay)
 	// The relationship brief is assembled from the SAME composite read the page
-	// serves, so the two cannot disagree about what this caller may see. No
-	// model lane is wired: the brief is the deterministic floor and says so in
+	// serves, so the two cannot disagree about what this caller may see. The
+	// model lane is nil here: WithPersonBrief binds the api role's, and a role
+	// that wires none serves the deterministic floor and says so in
 	// generated_by, rather than 501-ing on a workspace without a model.
 	s.personBriefHandlers = personbrief.NewHandlers(
-		personbrief.NewService(pool, s.person360Svc, "", time.Now),
+		personbrief.NewService(pool, s.person360Svc, nil, "", time.Now),
 		s.sorDispatch.isOverlay,
 	)
 	// The pre-meeting brief shares that composite read and adds the claim

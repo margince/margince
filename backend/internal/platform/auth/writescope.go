@@ -78,10 +78,9 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // It is deliberately NOT stated as "any child of an archived anchor is frozen",
 // which is the wider rule it looks like. A gate shared by writes that GRANT and
 // writes that REVOKE cannot take this probe wholesale: freezing a revocation
-// because its anchor was retired is the opposite of what retiring it meant, and
-// where to draw that line is a product ruling rather than a call-site judgement.
-// consent.Record shows the shape the answer takes — the probe is chosen by what
-// is being written, not by the table alone.
+// because its anchor was retired is the opposite of what retiring it meant. The
+// half this probe does not cover is EnsureRetractable, and the pair is chosen by
+// what is being written rather than by the table alone.
 //
 // Where a caller must reach an archived row ON PURPOSE — Art. 17 erasure, the
 // retention sweep, the archive transition itself, a merge retiring its source,
@@ -101,6 +100,33 @@ func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 		return err
 	}
 	return ensureWriteAuthority(ctx, tx, table, id)
+}
+
+// EnsureRetractable is EnsureWritableLive's twin for the writes that RELEASE
+// rather than add — revoke, void, cancel, retract, delist. The row must be
+// visible and the caller's to change, and it deliberately does NOT have to be
+// live.
+//
+// It runs exactly the probes EnsureWritable runs, and the difference is that it
+// says so. A gate reading EnsureWritable cannot tell a deliberate reach for an
+// archived row from a forgotten live filter, and every archived-write defect
+// this pair was written for was individually defensible where it sat. Naming
+// the choice is what makes a new operation pick a side at its own call site,
+// the way consent.Record picks one on the state it is recording.
+//
+// The rule it holds: an archived anchor freezes what its children GRANT,
+// PUBLISH or ACCRUE, and never freezes what they REVOKE, VOID, CANCEL or
+// RETRACT. A retraction against a retired record is not a change to the record
+// — it is the cleanup the retirement implies, so freezing one protects nobody.
+// The decisive case is a deal room: archiving the deal must not take away the
+// ability to cut off a buyer's access to it, which is the moment somebody
+// reaches for it.
+//
+// This is the same asymmetry consent already applies one level down — refuse
+// the claim, allow the withdrawal — so a caller weighing which spelling it owes
+// asks what the write DOES, never which table it lands on.
+func EnsureRetractable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	return EnsureWritable(ctx, tx, table, id)
 }
 
 // HoldWritableLive is EnsureWritableLive and LockSubjectLive as one decision,

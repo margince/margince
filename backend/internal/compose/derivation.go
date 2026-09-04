@@ -40,10 +40,21 @@ const reservedDerivationColumn = "derivation_url"
 // absence is stated separately.
 const nullPredicateKey = "isnull"
 
+// asOfKey names the instant the headline was computed at.
+//
+// A handle without it resolves at whatever the rate sheet says NOW, which is
+// the same answer for every report whose money is native — none of them convert,
+// so the frame's as-of reaches no arithmetic. It is a different answer for a
+// CONVERTED report: a stage totalled at Thursday's rate, opened on Friday,
+// recomputes at Friday's. The drill-through is where a reader checks a figure
+// they doubt, so a detail set that reconciles to something else is worse than
+// none — it looks like proof.
+const asOfKey = "as_of"
+
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{"by", "agg", nullPredicateKey, reservedDerivationColumn}
+var reservedDerivationKeys = []string{"by", "agg", nullPredicateKey, asOfKey, reservedDerivationColumn}
 
 // derivationQuery is one parsed derivation handle: the equality
 // predicates that pin the explained cell (plan filters + the row's
@@ -57,6 +68,10 @@ type derivationQuery struct {
 	Unset      map[string]bool
 	GroupBy    []string
 	Aggregates []reportAggregate
+	// AsOf is the instant the headline was computed at, carried so the detail
+	// converts the same way. Zero when the handle predates this key, which
+	// resolves at the current instant exactly as it always did.
+	AsOf time.Time
 }
 
 // derivationOutcome is a resolved handle: definition, drill-through
@@ -79,8 +94,14 @@ type derivationOutcome struct {
 // row, for the whole filtered result). parseDerivationQuery is its exact
 // inverse; the round trip is unit-tested so a handle we mint always
 // resolves.
-func derivationURL(report string, filters map[string]any, groupBy []string, aggregates []reportAggregate, row map[string]any) string {
+func derivationURL(
+	report string, filters map[string]any, groupBy []string,
+	aggregates []reportAggregate, row map[string]any, asOf time.Time,
+) string {
 	values := url.Values{}
+	if !asOf.IsZero() {
+		values.Set(asOfKey, asOf.UTC().Format(time.RFC3339Nano))
+	}
 	for _, agg := range aggregates {
 		values.Add("agg", agg.Fn+":"+agg.Field+":"+agg.As)
 	}
@@ -139,6 +160,15 @@ func parseDerivationQuery(values url.Values) (derivationQuery, error) {
 			for _, field := range vals {
 				q.Unset[field] = true
 			}
+		case asOfKey:
+			if len(vals) != 1 {
+				return derivationQuery{}, &FieldNotAllowedError{Field: asOfKey}
+			}
+			at, err := time.Parse(time.RFC3339Nano, vals[0])
+			if err != nil {
+				return derivationQuery{}, &FieldNotAllowedError{Field: asOfKey + "=" + vals[0]}
+			}
+			q.AsOf = at
 		case "agg":
 			for _, v := range vals {
 				parts := strings.SplitN(v, ":", 3)
@@ -194,6 +224,9 @@ type derivationPlan struct {
 	selects    []string
 	aggColumns []string
 	aggSelects []string
+	// asOf is the instant the headline was computed at, from the handle. Zero
+	// for a handle minted before this key existed.
+	asOf time.Time
 }
 
 // Derive resolves one handle against a prebuilt report's vocabulary.
@@ -230,12 +263,27 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 			"group_by":   q.GroupBy,
 			"aggregates": plan.aggregates,
 		},
-		Columns:     plan.columns,
+		// The outcome's own slice: the fetch appends the label column to it
+		// when a row was named, while plan.columns still drives the scan.
+		Columns:     slices.Clone(plan.columns),
 		Aggregates:  map[string]any{},
 		GeneratedAt: time.Now().UTC(),
 	}
 	if err := e.fetchDerivation(ctx, report, spec, plan, &out); err != nil {
 		return derivationOutcome{}, err
+	}
+	// Name the rows for a human reader, under that reader's own grants —
+	// AFTER the fetch's transaction has closed, never inside it. Each store's
+	// label read takes a connection of its own, so naming rows while still
+	// holding the fetch's would have every concurrent request wait on a
+	// connection the pool cannot give it, and the whole API stalls on a
+	// screen that only wanted display names. The attention feed labels
+	// outside its reads for the same reason (attention/feed.go).
+	//
+	// Nothing here needs the transaction: a label is presentation and never
+	// a term in the aggregate, so it changes no number the rows add up to.
+	if labelDerivationRows(ctx, e.names, string(spec.entity), out.Rows) {
+		out.Columns = append(out.Columns, derivationLabelColumn)
 	}
 	return out, nil
 }
@@ -297,6 +345,7 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 		return derivationPlan{}, err
 	}
 	plan.definition = definition
+	plan.asOf = q.AsOf
 
 	// Drill-through columns: the row identity plus every dimension and
 	// measure the vocabulary declares — a derived measure (e.g. the

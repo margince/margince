@@ -285,6 +285,61 @@ expect_health "an unsigned commit on main is filed with its suspect range" \
 expect_health "an unsigned commit with no range still files" \
 	MAIN_DCO_RESULT "$DCO_TITLE" ""
 
+# --- merge-attest.yml -------------------------------------------------------------
+#
+# The push-time arm. It carries no suspect range and does not want one: it names
+# the offending pull request exactly, which is the whole difference between this
+# alarm and the two-hourly one above.
+
+expect_merge() {
+	local name="$1" pr="$2" want_title="$3" must_say="$4" out status got body
+	export ACTION_LOG="$stub_dir/actions"
+	export BODY_LOG="$stub_dir/body"
+	: >"$ACTION_LOG"
+	: >"$BODY_LOG"
+	set +e
+	out="$(env OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
+		MERGE_VERDICT_RESULT=failure MERGE_VERDICT_PR="$pr" \
+		MERGE_VERDICT_WHY="pull request #2516 merged while its required \`ci\` check was \`failure\`" \
+		"$root/scripts/scheduled-report.sh" 2>&1)"
+	status=$?
+	set -e
+	got="$(paste -sd, - <"$ACTION_LOG")"
+	body="$(cat "$BODY_LOG" 2>/dev/null || true)"
+
+	if [ "$status" -ne 0 ] || [ "$got" != "create $want_title" ]; then
+		echo "FAIL: $name"
+		echo "  exit    want 0 got $status"
+		echo "  actions want 'create $want_title' got '$got'"
+		printf '  output: %s\n' "$out" | head -5
+		failures=$((failures + 1))
+		return
+	fi
+	# The reason has to REACH the issue. An arm that files under the right title
+	# and then explains nothing sends the reader back to the run log, which is
+	# the trip this alarm exists to save.
+	if ! grep -qF -- "$must_say" <<<"$body"; then
+		echo "FAIL: $name — filed, but the body never said '$must_say'"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+
+# One issue per offending pull request, so the number is IN the title. A standing
+# title would collect every case under one issue, be closed once, and go stale —
+# which is the dedupe above working exactly as designed against a subject it does
+# not fit.
+expect_merge "a merge over a red check is filed against its pull request" \
+	2516 "A merge landed on main without a verdict behind it (#2516)" \
+	'merged while its required `ci` check was `failure`'
+
+# A commit with no pull request has no number to name, and the title must still
+# be a title rather than one ending in an empty parenthesis.
+expect_merge "a merge with no pull request still files under a legible title" \
+	"" "A merge landed on main without a verdict behind it" \
+	"merged while its required"
+
 # --- the census -----------------------------------------------------------------
 #
 # Derived from the reporter, not from a list here. Every MAIN_*_RESULT arm it
@@ -337,6 +392,78 @@ for lane in $lanes; do
 		;;
 	esac
 done
+
+# The same wiring question, asked of the push-time alarm.
+#
+# MERGE_VERDICT_RESULT is fed by merge-attest.yml, not by main-health.yml, so
+# the census above cannot see it — it is keyed on MAIN_*_RESULT and on that one
+# workflow. An arm nothing asks about is an arm that can be added with its cases
+# and still file nothing, which is exactly the `dco` failure recorded below.
+#
+# The limit, stated rather than implied: this covers the arms fed by a workflow
+# job result. The daily lane's own arms (VULN_RESULT, GATE_RESULT, PERF_RESULT
+# and the rest) are reached through scheduled.yml and are not checked here.
+attest="$root/.github/workflows/merge-attest.yml"
+if ! grep -qE "needs\.verdict\.result == 'failure'" "$attest"; then
+	echo "FAIL: scheduled-report has a MERGE_VERDICT_RESULT arm, but merge-attest's report job does not run for a failing verdict — the arm is unreachable"
+	failures=$((failures + 1))
+else
+	echo "ok: the push-time alarm's report job runs when the verdict fails"
+fi
+for key in MERGE_VERDICT_RESULT MERGE_VERDICT_PR MERGE_VERDICT_WHY; do
+	if ! grep -qE "^ *${key}: \\$\{\{ needs\.verdict\." "$attest"; then
+		echo "FAIL: merge-attest's report job does not pass $key to the reporter, so the arm reads an unset variable"
+		failures=$((failures + 1))
+	fi
+done
+# Three wiring facts the judge cannot check for itself, because each is a
+# property of the QUERY that feeds it rather than of the payload it receives. A
+# judge fed the wrong data agrees with it.
+# Matched on the QUERY STRING, not on the words: both of these appear in the
+# comments explaining them, and a check that matched prose would pass with the
+# code gone — which is the failure mode these exist to prevent, one level up.
+if ! grep -qF 'gh api --paginate --slurp' "$attest"; then
+	echo "FAIL: merge-attest reads check runs without --paginate --slurp. per_page caps at 100 and"
+	echo "      filter=all counts every ATTEMPT, so a re-run pull request passes it — and the tail"
+	echo "      that gets dropped is the OLDEST attempt, which is the one the judge reads."
+	failures=$((failures + 1))
+else
+	echo "ok: the check-run query is paginated, so a re-run pull request does not truncate"
+fi
+if ! grep -qF 'check-runs?per_page=100&filter=all' "$attest"; then
+	echo "FAIL: merge-attest asks for check runs without filter=all. The endpoint defaults to"
+	echo "      filter=latest, which returns only the most recent attempt per check — and the judge"
+	echo "      reads the OLDEST attempt precisely so a re-run after the merge cannot clear the"
+	echo "      record of the merge it was absent for. The default makes that rule unenforceable."
+	failures=$((failures + 1))
+else
+	echo "ok: the check-run query asks for every attempt, not only the latest"
+fi
+if ! grep -qE "^ *--jq '\\[\\[\\.\\[\\] \\| \\{number, merged_at, head_sha: \\.head\\.sha\\}\\] \\| min_by\\(\\.number\\)\\]" "$attest"; then
+	echo "FAIL: merge-attest does not narrow the commit's pull requests to one before reading a head."
+	echo "      The endpoint can return several for one commit, and taking the head from a different"
+	echo "      element than the judge reports on means describing pull request A while judging B's"
+	echo "      checks against A's merge time."
+	failures=$((failures + 1))
+else
+	echo "ok: one pull request is chosen once, and the head comes from that same element"
+fi
+if ! grep -qF "needs.verdict.outputs.why != ''" "$attest"; then
+	echo "FAIL: merge-attest's report job runs on a failed verdict without requiring a REASON."
+	echo "      The judge exits 2 with no reason when its input is missing, and a failed API step"
+	echo "      leaves the same shape — either would file the default merge-accusing issue with"
+	echo "      nothing behind it."
+	failures=$((failures + 1))
+else
+	echo "ok: the report job requires a reason, not merely a failure"
+fi
+
+if ! grep -qF 'scripts/check-merge-verdict.sh' "$attest"; then
+	echo "FAIL: merge-attest.yml never runs the judge, so its verdict job cannot fail for the reason the arm reports"
+	failures=$((failures + 1))
+else
+	echo "ok: the push-time alarm runs the judge it reports on"
+fi
 
 # --- the other half of the same invariant ---------------------------------------
 #

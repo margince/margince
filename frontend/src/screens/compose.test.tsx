@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { ComposeModal, RelinkModal } from "./compose";
+import { ChannelReplyAction, ComposeModal, RelinkModal } from "./compose";
 import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
@@ -1828,6 +1828,59 @@ describe("TimelineActions", () => {
     );
   });
 
+  // `Write email` has to be able to SEND.
+  //
+  // Withholding the anchor is what makes the dialog match the button — it is
+  // not a reply, so it must not claim to read the message it answers. But the
+  // modal reads `kind: "message"` as a CHANNEL reply and posts to
+  // send-message, which needs the very conversation that was withheld: the
+  // dialog opened and its own Send threw "a channel reply needs the
+  // conversation it answers".
+  //
+  // Asserted through the To and Subject fields, which a channel reply does not
+  // render and an account-started email does. They are the same two fields the
+  // modal's validation requires when it is not a channel reply, so a mode that
+  // showed them and still posted to send-message could not pass this.
+  it("opens a sendable email composer when the channel message is withheld", async () => {
+    // Reachable, or the action renders nothing and the case would pass over an
+    // empty tree — the button being absent is a different answer entirely.
+    stubRoutes({
+      "GET /people/p-1": () =>
+        jsonResponse({
+          id: "p-1",
+          full_name: "Jane Doe",
+          reachability: [
+            {
+              provider: "telegram",
+              reachable: true,
+              since: "2026-07-01T00:00:00Z",
+            },
+          ],
+          version: 1,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+    });
+    render(
+      <ChannelReplyAction
+        activityId="a9"
+        kind="message"
+        channelProvider="telegram"
+        entityType="person"
+        entityId="p-1"
+        personId="p-1"
+        contentWithheld
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Write email" }),
+    );
+
+    expect(await screen.findByLabelText("To")).toBeTruthy();
+    expect(screen.getByLabelText("Subject")).toBeTruthy();
+  });
+
   // An EMAIL's audience is changed from the message, in the drawer, where the
   // server states which of the two writes it would accept as `change_mode`.
   // The row used to decide that here by testing `captured_by` for a
@@ -1867,8 +1920,55 @@ describe("TimelineActions", () => {
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
-  // A note, a call or a meeting has no drawer to be sent to, and its audience
-  // is never derived — so the row keeps the control for every kind but email.
+  // A connector-captured conversation derives its audience from what each
+  // importing mailbox asked for, exactly as an email does. Offering the
+  // per-message control anyway gave a member a dialog that opened, took their
+  // answer, and refused it with `audience_is_derived` — naming a thread-level
+  // control the page does not have. A control that cannot work is worse than
+  // none: it is the one somebody trying to keep a conversation private presses.
+  it("offers no audience control on a captured message whose audience is derived", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a8",
+          kind: "message",
+          captured_by: "connector:ext:openchannel:1",
+          thread_key: "openchannel:abc",
+          audience_reason: "posture",
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    // The row is still actionable — this withholds one control, not the row.
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
+  });
+
+  // `manual` is a HUMAN's own answer, not the system's, so it stays theirs to
+  // change. Without this the fix above would read as "any reason at all hides
+  // the control", which withholds it from every row somebody has already set.
+  it("keeps the audience control on a row a human set the audience of", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a9",
+          kind: "message",
+          audience_reason: "manual",
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+  });
+
+  // A note, a call or a meeting derives no audience, so the row keeps the
+  // control for every kind but email.
   it("keeps the audience control on a row that is not an email", () => {
     stubRoutes();
     render(

@@ -113,6 +113,9 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 		// Saying who owns the row is the general answer, and it costs the next
 		// source no case of its own.
 		owner: lead.OwnerID,
+		// And the same answer for the client. A lead nobody has taken is the
+		// state this lane exists to surface, so a zero id here means it.
+		ownerRef: ownerFrom(lead.OwnerID),
 	}
 }
 

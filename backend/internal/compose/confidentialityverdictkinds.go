@@ -99,8 +99,14 @@ Emit exactly one kind for the thread you are given:
     health, their own household or personal services.
   "security_incident" — a breach, an intrusion, leaked credentials, a vulnerability under
     embargo.
-  "explicitly_confidential" — the message itself asks for confidence: an NDA, a marked
-    "vertraulich" or "confidential", an explicit request not to forward.
+  "explicitly_confidential" — the message itself ASKS for confidence: it is marked
+    "vertraulich" or "confidential", or it says in words not to forward it or to keep it to a
+    small circle. The ASK is what decides, never the subject matter.
+    Mentioning an NDA is not asking. "I have the NDA", "the NDA is signed", "we need an NDA
+    before we share the numbers" are ordinary commercial status: an NDA is a routine agreement
+    between two COMPANIES, it is signed by the company rather than by one person, and that one
+    exists is not itself a secret. Answer "ordinary" for those. Only the material a signed NDA
+    covers, sent together with a request to keep it close, is this kind.
 Only "ordinary" makes a thread readable by colleagues, so answer "ordinary" only when you are
 confident the conversation is routine company business. When a thread is about ordinary trade
 AND something sensitive, the sensitive kind wins.

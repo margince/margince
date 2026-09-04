@@ -71,9 +71,9 @@ export function TodayPanel({
         {footer}
       </div>
       {onOpenTasks && (
-        <Button small variant="ghost" onClick={onOpenTasks}>
+        <button type="button" className="link-button" onClick={onOpenTasks}>
           {t("co.suggest.viewTasks")}
-        </Button>
+        </button>
       )}
     </PanelBody>
   );
@@ -140,9 +140,10 @@ export function WithheldNotice({
 }
 
 /**
- * FoundMove is the move the agent found: who found it and when, the ask at
- * the row's loudest weight, the reason under it — which is the part a rep
- * judges — and, opposite all of it, what a reader can do about it.
+ * FoundMove is the move the agent is asking for: whose ask it is and when it
+ * was read, the ask at the row's loudest weight, the reason under it — which
+ * is the part a rep judges — and, opposite all of it, what a reader can do
+ * about it.
  *
  * The reason is also the handle on what the advice rests on. Behind it the
  * records are one glance away for the reader who is questioning the advice,
@@ -155,7 +156,13 @@ export function FoundMove({
   basis,
   action,
   defer,
+  suggested = true,
 }: Readonly<{
+  // Whether the agent is ASKING for this move. False on the answer that
+  // nothing needs doing today: nobody suggested that, and the byline over it
+  // spent the card's one authorship claim on a non-event — it read as a find
+  // where the row's whole point is that there was nothing to find.
+  suggested?: boolean;
   // When the reading behind the row is dated. Never a deadline the system
   // chose.
   when?: string;
@@ -179,11 +186,13 @@ export function FoundMove({
   return (
     <PanelRow className="co-move">
       <span className="co-move-body">
-        <span className="co-move-by">
-          <Sparkles aria-hidden="true" className="co-move-spark" />
-          {t("co.suggest.found")}
-          {when && <span className="t-mono co-move-when">{when}</span>}
-        </span>
+        {suggested && (
+          <span className="co-move-by">
+            <Sparkles aria-hidden="true" className="co-move-spark" />
+            {t("co.suggest.byline")}
+            {when && <span className="t-mono co-move-when">{when}</span>}
+          </span>
+        )}
         <span className="co-move-ask">{title}</span>
         {why && basis && (
           <Popover className="co-move-why" onHover label={why}>

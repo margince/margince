@@ -38,6 +38,7 @@ it can be answered for.
 | `growth_fit` | `cheap_cloud` → `premium` | no | no | shipped |
 | `nl_search` | `cheap_cloud` → `premium` | no | no | planned |
 | `offer_draft` | `cheap_cloud` → `premium` | no | no | shipped |
+| `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | shipped |
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | shipped |
 | `rate_extract` | `premium` → `cheap_cloud` | no | no | shipped |
 | `signal_extract` | `cheap_cloud` → `premium` | no | yes | shipped |

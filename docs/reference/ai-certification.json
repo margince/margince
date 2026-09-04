@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 38,
+    "sites": 40,
     "sites_best_current": 35,
     "sites_best_partial": 0,
     "sites_best_stale": 3,
-    "sites_absent": 0,
-    "scenarios": 129,
+    "sites_absent": 2,
+    "scenarios": 135,
     "records": 59,
     "bindings": 10
   },
@@ -20,14 +20,14 @@
       "sites_current": 16,
       "sites_partial": 1,
       "sites_stale": 3,
-      "runs": 249,
-      "passed": 225,
-      "reliability": 0.9036144578313253,
+      "runs": 236,
+      "passed": 215,
+      "reliability": 0.9110169491525424,
       "slowest_p95_ms": 3370,
       "bands": {
-        "certified": 12,
+        "certified": 13,
         "supported_degraded": 1,
-        "not_supported": 7
+        "not_supported": 6
       }
     },
     {
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 31,
-      "sites_current": 28,
+      "sites_current": 27,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 333,
       "passed": 269,
       "reliability": 0.8078078078078078,
@@ -658,8 +658,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -698,6 +698,11 @@
           "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml"
         },
         {
+          "name": "mentioning_an_nda_does_not_hold_an_ordinary_deal_thread",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_02.yaml"
+        },
+        {
           "name": "text_claiming_the_thread_was_cleared_does_not_open_it",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml"
@@ -711,17 +716,17 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
-          "scenarios_measured": 7,
-          "scenarios_total": 7,
-          "runs": 21,
-          "passed": 18,
-          "reliability": 0.8571428571428571,
-          "latency_p50_ms": 1024,
-          "latency_p95_ms": 1337,
+          "band": "certified",
+          "scenarios_measured": 8,
+          "scenarios_total": 8,
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
+          "latency_p50_ms": 1187,
+          "latency_p95_ms": 1646,
           "reported": {
-            "accepted": 18,
-            "wrong_answer": 3,
+            "accepted": 8,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -733,10 +738,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 7,
-          "scenarios_total": 7,
+          "scenarios_measured": 0,
+          "scenarios_total": 8,
           "runs": 21,
           "passed": 21,
           "reliability": 1,
@@ -748,7 +753,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "7 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 1 more"
         }
       ]
     },
@@ -2557,6 +2562,33 @@
       ]
     },
     {
+      "task": "owed_verdict",
+      "site": "owed",
+      "key": "owed_verdict/owed",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_direct_question_asks_us_and_a_report_does_not",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml"
+        },
+        {
+          "name": "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml"
+        },
+        {
+          "name": "the_recipient_line_separates_a_request_from_a_copy",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
       "task": "propose_roles",
       "site": "committee",
       "key": "propose_roles/committee",
@@ -3470,6 +3502,28 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "summarize",
+      "site": "person_brief",
+      "key": "summarize/person_brief",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "person_brief_reads_what_was_said",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_reads_what_was_said_01.yaml"
+        },
+        {
+          "name": "person_brief_stays_silent_about_what_the_reader_may_not_see",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_withheld_and_omitted_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "transcript_propose",

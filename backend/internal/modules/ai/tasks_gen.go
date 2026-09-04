@@ -34,6 +34,8 @@ const (
 	// TaskNlSearch is Declared, not built (ADR-0074).
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
+	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. A verdict may only DEMOTE a row within the queue — never delete, archive or hide one (ADR-0063 §3.2, the floor the capture label sits under). The reason is sharper here than there: this is one model call's opinion about a customer's mail, so being wrong has to cost a rep a scroll rather than a customer. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
+	TaskOwedVerdict Task = "owed_verdict"
 	// TaskProposeRoles is Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the person who WROTE that message must be the person the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title.
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
@@ -46,7 +48,7 @@ const (
 	TaskSiteFactExtract Task = "site_fact_extract"
 	// TaskSiteTriage is what a mail domain's own site says it IS, before any organization is created from it: a company, one person's site, or a mailbox vendor selling addresses to the public. Runs on the SEED PAGE ALONE and leads with a fast tier because its whole job is to stop the crawl early — a personal page answered here costs one page instead of twelve. The provider class is the live.fr trap: that site belongs to a real company (Microsoft's) which is emphatically not the sender's employer.
 	TaskSiteTriage Task = "site_triage"
-	// TaskSummarize is Four grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what people actually wrote.
+	// TaskSummarize is Five grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what people actually wrote. person_brief — the person page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system.
 	TaskSummarize Task = "summarize"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
@@ -57,6 +59,47 @@ const (
 	// TaskWeeklyReview is weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which.
 	TaskWeeklyReview Task = "weekly_review"
 )
+
+// taskDisplayNames is what each task is CALLED, for a surface that has to
+// name one to a person. The constant is vocabulary — a reader shown
+// "site_triage failed 8 times" learns nothing they can act on.
+//
+// Generated from the same declaration as the constants, so a task cannot
+// be added without a name and the two cannot drift.
+var taskDisplayNames = map[Task]string{
+	TaskAgentLoop:                     "Agent reasoning loop",
+	TaskBriefRanking:                  "Morning brief ranking",
+	TaskCaptureClassify:               "Message classification",
+	TaskCaptureConfidentialityVerdict: "Thread confidentiality check",
+	TaskCaptureCounterpartyVerdict:    "First-time sender check",
+	TaskCertJudge:                     "Certification judging",
+	TaskColdStart:                     "Onboarding read",
+	TaskCorpusAsk:                     "Document corpus question",
+	TaskDealHealth:                    "Deal status card",
+	TaskDocumentExtract:               "Document extraction",
+	TaskDraftReply:                    "Reply drafting",
+	TaskEnrich:                        "Signature enrichment",
+	TaskGrowthFit:                     "Company fit assessment",
+	TaskNlSearch:                      "Natural-language search",
+	TaskOfferDraft:                    "Offer drafting",
+	TaskOwedVerdict:                   "Unanswered-message triage",
+	TaskProposeRoles:                  "Buying-role reading",
+	TaskRateExtract:                   "Model pricing extraction",
+	TaskSignalExtract:                 "Signal extraction",
+	TaskSiteExtract:                   "Website deep read",
+	TaskSiteFactExtract:               "Website fact extraction",
+	TaskSiteTriage:                    "Website triage",
+	TaskSummarize:                     "Record summary",
+	TaskTranscript:                    "Transcript reading",
+	TaskTranscriptPropose:             "Meeting follow-up extraction",
+	TaskVoiceBuild:                    "Voice DNA build",
+	TaskWeeklyReview:                  "Weekly review narrative",
+}
+
+// DisplayName is what to call this task in front of a person. An unknown
+// task answers the empty string: a caller with nothing to show is better
+// served saying nothing than showing the key it was handed.
+func DisplayName(t Task) string { return taskDisplayNames[t] }
 
 // ExecutionMode distinguishes request-bound work from work carried by a
 // durable background job. Budget exhaustion degrades the former and
@@ -83,7 +126,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "b389ced457e8cca7b8d4cabbfd7432ecdbaf2d73c826a82e399f13b60e7e55f1"
+const TaskContractHash = "fc1108b4e0953f5f3416a642133098287b6b03d5938ca670888f3faf1088b5d5"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -105,6 +148,7 @@ func AllTasks() []Task {
 		TaskGrowthFit,
 		TaskNlSearch,
 		TaskOfferDraft,
+		TaskOwedVerdict,
 		TaskProposeRoles,
 		TaskRateExtract,
 		TaskSignalExtract,
@@ -137,6 +181,7 @@ var taskLadders = map[Task][]Tier{
 	TaskGrowthFit:                     {TierCheapCloud, TierPremium},
 	TaskNlSearch:                      {TierCheapCloud, TierPremium},
 	TaskOfferDraft:                    {TierCheapCloud, TierPremium},
+	TaskOwedVerdict:                   {TierLocalSmall, TierCheapCloud},
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
 	TaskSignalExtract:                 {TierCheapCloud, TierPremium},
@@ -178,6 +223,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskGrowthFit:                     ExecutionModeInteractive,
 	TaskNlSearch:                      ExecutionModeInteractive,
 	TaskOfferDraft:                    ExecutionModeInteractive,
+	TaskOwedVerdict:                   ExecutionModeBackground,
 	TaskProposeRoles:                  ExecutionModeInteractive,
 	TaskRateExtract:                   ExecutionModeBackground,
 	TaskSignalExtract:                 ExecutionModeBackground,
@@ -226,6 +272,7 @@ var taskStatus = map[Task]string{
 	TaskGrowthFit:                     "shipped",
 	TaskNlSearch:                      "planned",
 	TaskOfferDraft:                    "shipped",
+	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
 	TaskSignalExtract:                 "shipped",
@@ -309,6 +356,9 @@ var taskSites = map[Task][]Site{
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
 	},
+	TaskOwedVerdict: {
+		{Name: "owed", Kind: "one_shot"},
+	},
 	TaskProposeRoles: {
 		{Name: "committee", Kind: "one_shot"},
 	},
@@ -333,6 +383,7 @@ var taskSites = map[Task][]Site{
 		{Name: "org_ask", Kind: "one_shot"},
 		{Name: "org_dossier", Kind: "one_shot"},
 		{Name: "meeting_plan", Kind: "one_shot"},
+		{Name: "person_brief", Kind: "one_shot"},
 	},
 	TaskTranscriptPropose: {
 		{Name: "next_steps", Kind: "one_shot"},
@@ -382,6 +433,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureConfidentialityVerdict: true,
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
+	TaskOwedVerdict:                   true,
 	TaskSignalExtract:                 true,
 }
 
@@ -415,6 +467,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
 	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
+	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},

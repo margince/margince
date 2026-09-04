@@ -102,16 +102,13 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	// (e) No session → 401, before we lean on the authenticated reads.
 	assertRosterUnauthorized(t, e)
 
-	// (a) The roster lists workspace A's members: the bootstrap admin, the two
-	// seeded reps, the agent seat bootstrap writes beside them, and nothing else.
+	// (a) The roster lists the installation's members: the bootstrap admin and
+	// the two seeded reps, and nothing else.
 	//
-	// The agent seat is LISTED rather than filtered out, because it owns records
-	// — the spec calls it the human-visible owner of agent-created ones — so a
-	// client resolving an owner id has to be able to find it, and `is_agent` on
-	// User is what tells a picker of humans to leave it out. Filtering it here
-	// would make that flag unreachable on the one row it describes, and would
-	// hide from an admin both that the identity exists and that anything has
-	// been done to it.
+	// THREE, and every one of them a person. `is_agent` stays on the wire and the
+	// roster lists such a row where one exists — that flag is what tells a picker
+	// of humans to leave it out. What is asserted here is that no PRODUCT PATH
+	// creates one, which is why this counts rather than filtering.
 	var users struct {
 		Data []rosterUser `json:"data"`
 	}
@@ -122,20 +119,20 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	for _, u := range users.Data {
 		got[u.Email] = u
 	}
-	agentSeat := "agent@" + e.Slug + ".gradion.local"
-	for _, want := range []string{"ada@example.com", "rep@example.com", "bob@example.com", agentSeat} {
+	for _, want := range []string{"ada@example.com", "rep@example.com", "bob@example.com"} {
 		if _, ok := got[want]; !ok {
 			t.Errorf("roster missing %q; got %+v", want, users.Data)
 		}
 	}
-	// The one non-human row says so. A client that cannot tell it apart would
-	// offer it wherever it offers a person — as an assignee, as a recipient.
-	if seat, listed := got[agentSeat]; listed && !seat.IsAgent {
-		t.Errorf("the agent seat is listed with is_agent = false, so nothing on the wire "+
-			"distinguishes it from a colleague: %+v", seat)
+	for _, u := range users.Data {
+		if u.IsAgent {
+			t.Errorf("the roster lists an agent identity (%q) on a fresh installation; bootstrap "+
+				"seeds none, so this is a full seat metered against the licence for a row nothing "+
+				"reads: %+v", u.Email, u)
+		}
 	}
-	if len(users.Data) != 4 {
-		t.Fatalf("roster size = %d, want exactly the 4 members: %+v", len(users.Data), users.Data)
+	if len(users.Data) != 3 {
+		t.Fatalf("roster size = %d, want exactly the 3 members: %+v", len(users.Data), users.Data)
 	}
 	// The role aggregate still has to be EMITTED for an admin. Counted rather
 	// than inspected, because the withholding assertion further down is only

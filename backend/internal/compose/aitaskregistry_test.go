@@ -29,6 +29,9 @@ var narrowedSites = map[string]string{
 	"capture_classify/classify": aitasks.ScopeSingleCall,
 	// A below-floor verdict is re-asked once, unbound, and that answer applies.
 	"capture_counterparty_verdict/verdict": aitasks.ScopeSingleCall,
+	// A below-floor message is re-asked SOLO on the next rung, and whether the
+	// row ends up judged at all is decided there rather than here.
+	"owed_verdict/owed": aitasks.ScopeSingleCall,
 	// An unreadable verdict is asked again, and the retry's score is the score.
 	"cert_judge/judge": aitasks.ScopeSingleCall,
 	// A deep read calls this once per crawled page and merges the answers.

@@ -15,8 +15,8 @@ const minimalContract = `
 tiers: [alpha, beta]
 
 tasks:
-  foo: {ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
-  bar: {ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
+  foo: {display_name: "Test task foo", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
+  bar: {display_name: "Test task bar", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
 
 degrade_to:
   beta: alpha
@@ -64,7 +64,7 @@ func TestParseContractRejectsUnknownLadderTier(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {ladder: [alpha, gamma], execution_mode: background, on_budget_exhausted: queue, status: planned}
+  foo: {display_name: "Test task foo", ladder: [alpha, gamma], execution_mode: background, on_budget_exhausted: queue, status: planned}
 
 degrade_to:
   alpha: alpha
@@ -86,7 +86,7 @@ func TestParseContractRejectsUnknownDegradeToTier(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: planned}
+  foo: {display_name: "Test task foo", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: planned}
 
 degrade_to:
   alpha: gamma
@@ -117,7 +117,7 @@ func TestParseContractRejectsExecutionModeBudgetPolicyMismatch(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {ladder: [alpha], execution_mode: MODE, on_budget_exhausted: POLICY, status: planned}
+  foo: {display_name: "Test task foo", ladder: [alpha], execution_mode: MODE, on_budget_exhausted: POLICY, status: planned}
 
 degrade_to:
   alpha: alpha
@@ -189,6 +189,7 @@ func TestValidateRefusesAStatusAndSitesMismatch(t *testing.T) {
 degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
+    display_name: "Test task t"
     ladder: [cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -216,6 +217,7 @@ func TestValidateRefusesAnIncoherentCompanyContextPolicy(t *testing.T) {
 degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
+    display_name: "Test task t"
     ladder: [cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -261,6 +263,7 @@ const mergeSafetyBase = `tiers: [alpha]
 degrade_to: {alpha: alpha}
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -292,6 +295,7 @@ func TestAITasksRejectsDuplicateKey(t *testing.T) {
 degrade_to: {alpha: alpha}
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha]
     ladder: [alpha]
     execution_mode: background
@@ -302,6 +306,7 @@ tasks:
 degrade_to: {alpha: alpha}
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -334,6 +339,7 @@ func TestAITasksRejectsSecondDocument(t *testing.T) {
 tiers: [beta]
 tasks:
   smuggled:
+    display_name: "Test task smuggled"
     ladder: [beta]
     execution_mode: background
     on_budget_exhausted: queue
@@ -376,6 +382,7 @@ func TestAITasksRejectsUnknownField(t *testing.T) {
 degrade_to: {alpha: alpha}
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -386,6 +393,7 @@ tasks:
 degrade_to: {alpha: alpha}
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -415,6 +423,7 @@ func TestStrictDecodingKeepsTheScalarShorthands(t *testing.T) {
 degrade_to: {alpha: alpha}
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -442,6 +451,7 @@ func TestValidateAcceptsEveryCoherentCompanyContextPolicy(t *testing.T) {
 degrade_to: {cheap_cloud: cheap_cloud}
 tasks:
   t:
+    display_name: "Test task t"
     ladder: [cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -469,6 +479,7 @@ tiers: [alpha, beta]
 
 tasks:
   foo:
+    display_name: "Test task foo"
     ladder: [alpha, beta]
     execution_mode: background
     on_budget_exhausted: queue
@@ -480,7 +491,7 @@ tasks:
         tools: [list_records, read_record]
       overnight_sweep:
         tools: [list_records, log_activity]
-  bar: {ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
+  bar: {display_name: "Test task bar", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
 
 degrade_to:
   beta: alpha

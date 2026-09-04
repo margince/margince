@@ -36,7 +36,18 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// would put one decision in two groups across two reads.
 	facts := stagedFactsOf(item)
 	return ranked{
-		item:          row,
+		item: row,
+		// NOBODY, until somebody takes it. A duplicate pair and a staged
+		// approval are read under the caller's ROW SCOPE — a team-scoped reader
+		// sees their whole team's — so the read is not bound to one person and
+		// "whoever is reading" would be the very inference this field exists to
+		// refuse: it would name a manager as the owner of every pair on their
+		// team, and each rep as the owner of the same pair when they looked.
+		//
+		// These queues have no owner column. Saying so is the honest answer and
+		// the one the unassigned scope is for; a claim endpoint is what would
+		// change it, and none exists yet.
+		ownerRef:      unassigned(),
 		occurredAt:    occurredOf(item, asOf),
 		machineSender: facts.MachineSender,
 		knownCompany:  facts.KnownCompany,

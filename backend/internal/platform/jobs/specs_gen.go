@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "55d44c83adbe4ac7d484b31dfa7f5138ebf219f4f0020035be110be7a8cecc81"
+const JobContractHash = "866f761a923c8a1e38bcf0899d0aac3d280fa739a277c726711914ff8269d37d"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -336,6 +336,15 @@ var specs = map[string]Spec{
 		MaxAttempts: 5,
 		OptsOwner:   OptsFanOut,
 		Args:        []ArgField{{Name: "Workspace"}},
+	},
+	"comms_authz_disagreement": {
+		Kind:      "comms_authz_disagreement",
+		GoType:    "AuthzDisagreementArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"comms_scheduled_send": {
 		Kind:         "comms_scheduled_send",
@@ -700,6 +709,29 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"OverlayVault"}},
 		Args:         []ArgField{{Name: "ExternalID"}, {Name: "IncumbentClass", Scalar: true, Reason: "the incumbent's object class (contacts, companies, deals, leads). It is half the coalescing key River dedupes these re-fetches by -- the args ARE that key — so it cannot be resolved at work time; it names a class of record in another system, never a record."}, {Name: "Workspace"}},
+	},
+	"owed_verdict": {
+		Kind:         "owed_verdict",
+		GoType:       "OwedVerdictArgs",
+		Role:         Dispatcher,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutWorkspace,
+		FanOutTo:     "owed_verdict_workspace",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Hour},
+		Registration: Registration{When: []string{"OwedBrain"}},
+	},
+	"owed_verdict_workspace": {
+		Kind:         "owed_verdict_workspace",
+		GoType:       "OwedVerdictWorkspaceArgs",
+		Role:         Worker,
+		Queue:        "ai_capture",
+		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsFanOut,
+		Registration: Registration{When: []string{"OwedBrain"}},
+		Args:         []ArgField{{Name: "Workspace"}},
 	},
 	"participant_backfill": {
 		Kind:       "participant_backfill",

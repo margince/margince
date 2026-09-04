@@ -114,16 +114,38 @@ func readEntry(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID) (crmcon
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
-
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
+	return entryUnder(ctx, tx, idPos, scope, args)
+}
+
+// readRetractableEntry is readEntry for the void, which has to reach an entry
+// whose deal has since been archived — a row the default scope refuses.
+//
+// A second small function rather than a scope argument, because the censuses
+// that hold this package read the call graph: a clause reached through a
+// function VALUE is a clause no gate can attribute to the path that composed
+// it, and the silence looks exactly like a path with no clause at all.
+func readRetractableEntry(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID) (crmcontracts.CommissionEntry, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos := arg(id)
+	scope, err := RetractableClause(ctx, "", arg)
+	if err != nil {
+		return crmcontracts.CommissionEntry{}, err
+	}
+	return entryUnder(ctx, tx, idPos, scope, args)
+}
+
+// entryUnder resolves one entry by id under an already-rendered row scope — the
+// half the two reads above share.
+func entryUnder(ctx context.Context, tx pgx.Tx, idPos int, scope string, args []any) (crmcontracts.CommissionEntry, error) {
 	where := storekit.SQLf("id = $%d", idPos)
 	if scope != "" {
 		where += " AND " + scope
 	}
-
 	e, err := scanEntry(tx.QueryRow(ctx,
 		`SELECT `+commissionColumns+` FROM commission_entry WHERE `+where, args...))
 	if errors.Is(err, pgx.ErrNoRows) {

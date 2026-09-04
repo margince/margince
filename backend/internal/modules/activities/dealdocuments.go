@@ -200,7 +200,16 @@ func (s *Store) setDealDocumentHidden(ctx context.Context, dealID, attachmentID 
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, linkEntityDeal, dealID); err != nil {
+		// Hiding DELISTS a file and unhiding puts it back on the deal, so the
+		// two halves of this gate take different probes: an archived deal must
+		// never freeze a delisting, and must never admit a re-listing.
+		var err error
+		if hidden {
+			err = auth.EnsureRetractable(ctx, tx, linkEntityDeal, dealID)
+		} else {
+			err = auth.EnsureWritableLive(ctx, tx, linkEntityDeal, dealID)
+		}
+		if err != nil {
 			return err
 		}
 		if err := ensureInDealDocuments(ctx, tx, dealID, attachmentID); err != nil {

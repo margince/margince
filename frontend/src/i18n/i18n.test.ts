@@ -22,6 +22,14 @@ import { vi as viCatalog } from "./vi";
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface.
   "room.card.title",
+  // Two sales nouns Vietnamese borrows rather than translates, on the
+  // drill-through's column headers. The vi catalog already carries both
+  // untranslated where they appear as words in a sentence — "Thuộc deal" on
+  // the partner and commission columns, "Pipeline" on the deal's own field —
+  // so translating them only here would give one screen a vocabulary the
+  // rest of the product does not use.
+  "explain.col.record",
+  "explain.col.pipeline",
   // The area's name, which is the same word in all three catalogs by decision:
   // "Analytics" is what the product calls this surface, and both German and
   // Vietnamese borrow it as a term of art rather than translating it. The
@@ -223,6 +231,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.
   "lead.marker",
+  // The SINGULAR kind name on a search hit's second line. vi carries "Deal",
+  // "Lead" and "Tag" as loanwords — the same words the plural group headings
+  // above them already use — and those headings only escape this check because
+  // en pluralises and vi does not. A singular pair is therefore identical for
+  // the same reason the plural pair is not: the word is borrowed, not missed.
+  "search.kind.deal",
+  "search.kind.lead",
+  "search.kind.tag",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client

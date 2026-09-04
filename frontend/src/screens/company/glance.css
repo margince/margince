@@ -21,71 +21,34 @@
   gap: var(--space-5);
   min-width: 0;
 }
-/* A glance pane's head is its first line, not a band: the title in the
-   display face with the pane's own link at the row's end, and the body
-   following on the same ground with no rule between (DESIGN.md §7). */
+/* A glance pane's head is its first LINE, not a band: the title in the display
+   face, whatever count it carries on the same baseline, and the way to the
+   rest of it at the row's end as a TEXT link — a column of bordered buttons
+   down the right of four panes read as four controls before it read as four
+   heads (DESIGN.md §7). The body follows on the same ground with no rule
+   between. */
 .co-glance-cols .panel > .panel-head {
   min-height: 0;
+  align-items: baseline;
   padding-top: var(--space-5);
   padding-bottom: 0;
   border-bottom: 0;
 }
-/* The needs list heads itself the same way, at the same size: it is a glance
-   pane like the ones beside it, and an eyebrow over a display-face title on
-   the next pane read as two kinds of pane. */
-.co-glance-cols .co-360-head {
-  padding-top: var(--space-5);
-  padding-bottom: 0;
-}
-.co-glance-cols .co-360-head .co-360-title-text {
-  margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
-  color: var(--textPrimary);
+/* One rung up from a card title: a glance pane is a section of the account's
+   own reading rather than one card among many, and at the card size the four
+   heads sat under the 360 without leading anything. */
+.co-glance-cols .panel > .panel-head .panel-title {
+  font-size: var(--fs-h2);
 }
 /* One column as soon as two would squeeze a list to nothing. Measured against
-   the WORK column (the `work` container, app/shell.css), not the window: with
-   the details column open a 1440px window leaves the record less room than a
-   1200px one with it closed. */
-@container work (max-width: 60rem) {
+   the STACK these columns sit in (company360.css's `.co-overview-stack`), not
+   the window and not the `work` container: `work` is the record's whole
+   region, details column included, so it does not narrow when that column
+   opens — which is the case this fold exists for. */
+@container (max-width: 60rem) {
   .co-glance-cols {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-
-/* The three rated dimensions under the verdict: a dot in the dimension's
-   tone, the dimension, its rating. Inline, because they qualify the word
-   above them rather than standing as readings of their own. */
-.co-360-dims {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  padding-top: 0;
-}
-.co-dim {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
-}
-.co-dim::before {
-  content: "";
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: var(--r-full);
-  background: var(--textTertiary);
-}
-.co-dim-calm::before {
-  background: var(--success);
-}
-.co-dim-warn::before {
-  background: var(--warn);
-}
-.co-dim-danger::before {
-  background: var(--danger);
 }
 
 /* The 360's foot: the fold that opens the thread, and the way to the whole
@@ -111,15 +74,10 @@
 .co-move-lead .co-move-by {
   color: var(--textSecondary);
 }
-/* The lead's evidence and its one verb on one line, from the left: the row
-   reads top to bottom as a claim, why, what it rests on, what to do, and a
-   verb pushed to the far edge broke that line into two corners. */
+/* The lead's verb ends its row like every other verb in the list: one margin
+   for everything a reader can press, whichever row they are on. */
 .co-move-lead .co-move-do {
-  justify-content: flex-start;
-  margin-top: var(--space-2);
-}
-.co-move-lead .co-move-actions {
-  margin-left: 0;
+  margin-top: var(--space-3);
 }
 
 /* People as chips: a face and a name, wrapping, with the remainder as one
@@ -141,6 +99,7 @@
   padding: 0 var(--space-3) 0 var(--space-1);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textPrimary);
   font-size: var(--fs-sm);
@@ -170,4 +129,26 @@ a.co-person-chip:hover {
 .co-glance-ask .co-ask-questions .btn:hover {
   background: var(--aiLight);
   color: var(--aiText);
+}
+
+/* The signals pane heads itself with a disclosure rather than a title, because
+   the section folds — so its summary has to stand on the pane's own gutter the
+   way every other head on the glance does. It wears the rail's `.co-sect`,
+   whose anatomy is spelled under `.co-rail` (company360.css) and therefore
+   reached this pane not at all: the caret sat hard against the card's edge, a
+   gutter to the left of the text it belongs to, under a rule dividing the pane
+   from nothing. */
+.co-signals > .co-sect {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.co-signals > .co-sect > summary {
+  padding: var(--space-5) var(--space-5) 0;
+}
+/* The body's first block is a `PanelBody` and already pays the pane's own
+   interval; the disclosure's default margin on top of it opened a gap the
+   width of two. */
+.co-signals > .co-sect > .disclosure-body {
+  margin-top: 0;
 }
