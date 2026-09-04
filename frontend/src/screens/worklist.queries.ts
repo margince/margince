@@ -36,6 +36,8 @@ export type WorklistDisposition = NonNullable<
   WorklistItem["dispositions"]
 >[number];
 export type TeamBoard = components["schemas"]["TeamBoard"];
+export type TeamExceptions = components["schemas"]["TeamExceptions"];
+export type TeamException = components["schemas"]["TeamException"];
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
 export type HiddenBacklog = components["schemas"]["HiddenBacklog"];
 
@@ -118,6 +120,27 @@ export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
 // so the two cannot disagree. A seat that may not ask for `team` is refused this
 // endpoint as well, and fetching anyway would put a 403 behind a surface the
 // reader was never shown a way into.
+/**
+ * What is going wrong on this lead's team.
+ *
+ * `enabled` for the reason the board takes one: the read is gated to the lead
+ * tier, so asking it as a rep earns a 403 the screen would have to render as
+ * something. A caller that cannot hold the tier does not ask.
+ */
+export function useTeamExceptions(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "exceptions"],
+    queryFn: async (): Promise<TeamExceptions> => {
+      const { data, error } = await api.GET("/worklist/exceptions", {});
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 export function useTeamBoard(enabled: boolean) {
   return useQuery({
     enabled,

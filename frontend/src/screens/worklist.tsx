@@ -29,6 +29,7 @@ import {
   reviewWork,
   sellerWork,
 } from "./worklist.destinations";
+import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -438,6 +439,17 @@ function WorklistBody({
           Drawn only on the reader's OWN day. On a named person's queue the
           reader has already chosen who to look at, and a board above it would
           offer them the choice they just made. */}
+      {/* WHAT is going wrong, above WHO is carrying what. A lead opens this
+          page for the first question — the board answers the second, and
+          answering it first asks them to infer the trouble from three counts
+          per teammate. Same tier and same condition as the board: both are the
+          lead's read of a team, and a rep is refused both. */}
+      {owner === "" && day.scope_options.includes("team") && (
+        <TeamExceptionsPanel
+          enabled={day.scope_options.includes("team")}
+          onOwner={onOwner}
+        />
+      )}
       {owner === "" && day.scope_options.includes("team") && (
         <TeamBoard
           onOwner={onOwner}

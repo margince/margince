@@ -7986,6 +7986,22 @@ export const de = {
   "worklist.manager.kind.review_backlog": "Prüfarbeit",
   "worklist.manager.kind.general": "Etwas anderes",
   "worklist.board.title": "Wie es meinem Team geht",
+  "worklist.exceptions.title": "Was mich braucht",
+  "worklist.exceptions.empty": "Im Team braucht Sie gerade nichts.",
+  "worklist.exceptions.loading": "Team wird gelesen",
+  "worklist.exceptions.condition": "Was",
+  "worklist.exceptions.subject": "Wozu",
+  "worklist.exceptions.owner": "Wer antwortet",
+  "worklist.exceptions.basis": "Gemessen an",
+  "worklist.exceptions.nobody": "Noch niemand",
+  "worklist.exceptions.truncated":
+    "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
+  "worklist.exceptions.kind.response_breached":
+    "Eine erste Antwort ist überfällig",
+  "worklist.exceptions.kind.revenue_at_risk": "Umsatz in Gefahr",
+  "worklist.exceptions.kind.unassigned": "Niemand hat es übernommen",
+  "worklist.exceptions.kind.repeated_failure":
+    "Dasselbe scheitert immer wieder",
   "worklist.board.loading": "Die Arbeit deines Teams wird gelesen…",
   "worklist.board.empty": "Bisher ist niemand mit dir in einem Team.",
   "worklist.board.member": "Wer",
