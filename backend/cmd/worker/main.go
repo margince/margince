@@ -158,11 +158,20 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// routing into the database was meant to end (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, &modelPath, config.FromOS, logger).Run(ctx)
 
-	// Deferred BEFORE the error is checked: a failure here still leaves earlier
-	// lanes running on the bus and the pool whose closes are deferred above, and
-	// LIFO is what puts this join ahead of them.
-	lanes, err := startEventLanes(ctx, cfg, pool, rdb, vault, modelPath, logger, stdout)
-	defer lanes.join()
+	// The lanes' lifetime is created and DEFERRED HERE, before anything can
+	// start on it. That ordering used to live inside startEventLanes and be
+	// remembered by the caller — `defer lanes.join()` on the line after the
+	// call, correct and one edit from silently wrong. Deleting that defer, or
+	// hoisting the call above the pool so LIFO reversed, left every test in the
+	// repository passing (#454). Now no lane can exist before its own shutdown
+	// is registered, because the shutdown is registered before the function
+	// that starts them is called.
+	//
+	// Registered after the pool's close, so LIFO runs this FIRST and the lanes
+	// are down before the pool they read goes away.
+	laneCtx, laneGroup, endLanes := laneLifetime(ctx, logger)
+	defer endLanes()
+	lanes, err := startEventLanes(laneCtx, laneGroup, cfg, pool, rdb, vault, modelPath, logger, stdout)
 	if err != nil {
 		return err
 	}
