@@ -43,8 +43,8 @@ import (
 // principal minted there without one would be a defect rather than an
 // exception, so the census reads that package too.
 var passportlessAgentPrincipals = gatekit.Waive(map[string]string{
-	"internal/compose/extjobsrun.go:deriveAuthority": "an extension job TICK, not a credential: the authority is the job owner's, read live from identity as the tick starts, plus the single scope the extension's manifest declared. Nothing issues a token for it and nothing can hold one after the tick ends, so there is no revocation for the gate to re-ask about — killing it is killing the job or the owner's own authority, both of which the seat and RBAC re-read already bind",
-	"internal/compose/autoapply.go:asOwnersAgent":    "the auto-apply actor, minted per decision from the record owner's live authority (EffectiveAuthority) and carrying write and nothing else. It exists for the length of one staged action; the owner losing their seat or their grants stops it at the next admission, which is the whole of what revoking it would mean",
+	"internal/compose/extjobsrun.go:extensionJobPrincipal": "an extension job TICK, not a credential: it names the JOB and carries no user, no seat and no permissions — just the single scope the extension's manifest declared. There is no authority for a passport to attest and none for the gate to re-ask about: every object is denied to it (extjobprincipal_test.go), and the records a tick lands go through Runtime.Ingest, which resolves the member's own live grants and discards this principal entirely",
+	"internal/compose/autoapply.go:asOwnersAgent":          "the auto-apply actor, minted per decision from the record owner's live authority (EffectiveAuthority) and carrying write and nothing else. It exists for the length of one staged action; the owner losing their seat or their grants stops it at the next admission, which is the whole of what revoking it would mean",
 })
 
 // TestEveryPassportlessAgentPrincipalIsRatified is the census.

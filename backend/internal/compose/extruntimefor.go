@@ -30,11 +30,10 @@ func runtimeFor(ctx context.Context, unit, version, via string, deps extensionRu
 // jobRuntimeFor mints the Runtime for one JOB tick, which differs from an
 // invocation in exactly one way: who it answers as.
 //
-// A tick's context carries a principal — deriveAuthority re-reads the
-// dispatcher's seat at execution and binds it, because the tenant policies and
-// the audit rows need an actor. That actor is an AGENT seat with no human
-// behind it: its OnBehalfOf is zero and its UserID is the workspace's is_agent
-// app_user, which bootstrap wrote and the dispatcher resolved. Mapping it
+// A tick's context carries a principal — extensionJobPrincipal mints it from
+// the declaration and Work binds it, because the tenant policies and the audit
+// rows need an actor. That actor is the JOB, with no human behind it and no
+// user at all: its OnBehalfOf and its UserID are both zero. Mapping it
 // through Caller's ordinary rules
 // would hand a unit precisely the thing Caller.UserID promises never to be —
 // "a synthetic id for the agent" rather than the person accountable for the

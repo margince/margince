@@ -142,12 +142,11 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 //
 // Two wrong answers were available here, and this test pins the third.
 //
-// Falling back to the principal's UserID for `agent_on_behalf_of` is wrong: a
-// passport-less agent principal's UserID is an AGENT's own app_user row
-// (compose/extjobsrun.go selects it `WHERE id = $1 AND is_agent`), so it writes
-// an agent's id into a column meaning "the human behind this". The fire path
-// hands that to actor.OnBehalfOf, which auth.Admit reads to derive seat and
-// RBAC — a fabricated authority.
+// Falling back to the principal's UserID for `agent_on_behalf_of` is wrong: an
+// agent principal's UserID may name the AGENT's own app_user row rather than a
+// person, so it writes an agent's id into a column meaning "the human behind
+// this". The fire path hands that to actor.OnBehalfOf, which auth.Admit reads to
+// derive seat and RBAC — a fabricated authority.
 //
 // Storing NOTHING is also wrong, and less obviously so: a new row with no actor
 // id is indistinguishable from a pre-0260 row, and the fire path reads that as
@@ -160,8 +159,8 @@ func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	// No OnBehalfOf and no passport — the extension-tick shape. UserID is the
-	// agent's OWN row, which is exactly what must not be copied.
+	// No OnBehalfOf and no passport. UserID is the agent's OWN row, which is
+	// exactly what must not be copied into a column meaning "the human".
 	agent := principal.Principal{
 		Type:     principal.PrincipalAgent,
 		ID:       "agent:extension-tick",

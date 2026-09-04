@@ -222,8 +222,11 @@ full — a read seat never is.
 
 The last active administrator cannot be deactivated or demoted.
 
-Deactivating the **agent identity** stops every unattended job in the
-installation, extensions included. Do that deliberately.
+Deactivating an **agent identity** stops what that agent was doing on your data.
+It does not stop scheduled extension jobs: a tick acts as the job, not as an
+identity, and each record it captures is landed under the live authority of the
+member whose connection produced it. To stop one of those, disconnect the member
+or retire the unit.
 
 ## Field masking
 

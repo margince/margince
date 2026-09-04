@@ -8,8 +8,8 @@ package compose
 // The extension job seam, exercised end to end over a real migrated Postgres
 // and a real River runner: a composed declaration becomes a cadenced
 // dispatcher and a workspace child, the fan-out reaches every live tenant, the
-// tick runs pinned to its own workspace under an authority re-derived at
-// execution, and the two shapes this seam must never run are refused at boot.
+// tick runs pinned to its own workspace under the authority of the JOB, and the
+// two shapes this seam must never run are refused at boot.
 
 import (
 	"bytes"
@@ -119,15 +119,19 @@ func startRunnerLogging(t *testing.T, pool *pgxpool.Pool, log *slog.Logger) (*jo
 	return runner, sub
 }
 
-// seedWorkspaces adds n further live workspaces beside the fixture's, each with
-// its own agent seat, and answers every live workspace id.
+// seedWorkspaces adds n further live workspaces beside the fixture's and answers
+// every live workspace id.
+//
+// No agent seat is seeded. It used to be, in every workspace, for one reason:
+// the dispatcher skipped a tenant it could not resolve one for. Nothing reads a
+// seat on this path any more, so seeding one would be a fixture propping up a
+// precondition the code no longer has.
 func seedWorkspaces(t *testing.T, e *integration.Env, n int) []ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	// The OWNER connection, not e.Pool: the app pool is workspace-bound and the rows
 	// below are the tenant boundary itself, which no tenant may write.
 	owner := integration.OwnerConn(t)
-	seedAgentSeat(t, e.WS)
 	live := []ids.UUID{e.WS}
 	for range n {
 		ws := ids.NewV7()
@@ -135,20 +139,9 @@ func seedWorkspaces(t *testing.T, e *integration.Env, n int) []ids.UUID {
 			`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 			t.Fatalf("seeding workspace: %v", err)
 		}
-		seedAgentSeat(t, ws)
 		live = append(live, ws)
 	}
 	return live
-}
-
-func seedAgentSeat(t *testing.T, ws ids.UUID) ids.UUID {
-	t.Helper()
-	id := ids.NewV7()
-	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`INSERT INTO app_user (id, email, display_name, is_agent) VALUES ($1, $2, 'Agent', true)`, id, id.String()+"@agent.test"); err != nil {
-		t.Fatalf("seeding agent seat: %v", err)
-	}
-	return id
 }
 
 // awaitRows blocks until the job table holds want rows of kind, or the deadline
@@ -203,18 +196,19 @@ func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
 	}
 }
 
-// TestASeatlessInstallationIsSkippedAndCounted pins the skip an operator can
-// still cause. extensionJobActor's own doc says it: bootstrap writes every new
-// installation its agent seat, so a seatless read means an operator has since
-// archived or deactivated it, which is a posture they are entitled to hold.
+// TestAnInstallationWithNoAgentSeatStillTicks is the whole change, observable
+// in one action.
 //
-// The fixture reached that state by seeding a second, seatless workspace until
-// ADR-0091 §8 phase D took the tenant column off app_user. It archives the seat
-// instead — the state the code actually names, and the same move the seat-budget
-// floor uses. What must hold is unchanged: no child row of ANY state, no failure
-// moved rather than avoided, and the condition reported on the gauge, because a
-// silent skip is the objection the enqueue-anyway posture was written to answer.
-func TestASeatlessInstallationIsSkippedAndCounted(t *testing.T) {
+// An operator who archives the agent identity used to stop every scheduled
+// extension job in the installation — inbound message capture included — and
+// the only signal was a gauge. That coupling is gone because the tick no longer
+// resolves a seat to name: it answers as the JOB. So the seat is archived here
+// and the assertion is that the tick RUNS, with no failed row anywhere.
+//
+// This test asserted the opposite until the tick stopped needing a seat. Its
+// subject did not disappear; its answer inverted, which is why it is rewritten
+// rather than deleted.
+func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 
@@ -224,28 +218,40 @@ func TestASeatlessInstallationIsSkippedAndCounted(t *testing.T) {
 	}
 
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
+	ticked := make(chan principal.Principal, 1)
+	composeJob(t, decl, func(ctx context.Context, _ extension.Runtime) error {
+		actor, ok := principal.Actor(ctx)
+		if !ok {
+			return errors.New("the tick ran with no actor bound")
+		}
+		select {
+		case ticked <- actor:
+		default:
+		}
+		return nil
+	})
 	startRunner(t, e.Pool)
 
-	// The gauge is what says the skip happened, so it is what this waits on —
-	// there is no child row to await, which is the whole point.
-	awaitSeatlessGauge(t, 1)
+	awaitRows(t, e.Pool, decl.ChildKind(), 1)
 
-	// No row of any state — not a failed one, not a discarded one, not a
-	// retrying one. An error stream is made of rows, and there are none.
-	var rows int
-	if err := e.Pool.QueryRow(context.Background(),
-		`SELECT count(*) FROM river_job WHERE kind = $1`, decl.ChildKind()).Scan(&rows); err != nil {
-		t.Fatalf("counting the child rows: %v", err)
-	}
-	if rows != 0 {
-		t.Fatalf("a seatless installation has %d child row(s) — every one of them fails at the authority derivation, three times per cadence interval, forever", rows)
+	select {
+	case actor := <-ticked:
+		// The handler ran, and the authority it ran under names the job. A
+		// UserID here would mean a seat crept back in by another route.
+		if want := "agent:" + decl.DispatcherKind(); actor.ID != want {
+			t.Errorf("the tick acted as %q, want %q", actor.ID, want)
+		}
+		if actor.UserID != ids.Nil {
+			t.Errorf("the tick acted for user %s, want none", actor.UserID)
+		}
+	case <-time.After(awaitBudget):
+		t.Fatal("the child row was enqueued but the unit's handler never ran")
 	}
 
-	// And the skip did not merely MOVE the failure. Scoped to these two kinds
-	// rather than to river_job as a whole: the table is shared with every other
-	// test in the package, so an unscoped count reports another test's expected
-	// failure as this one's regression (#1015).
+	// And nothing failed on the way. Scoped to these two kinds rather than to
+	// river_job as a whole: the table is shared with every other test in the
+	// package, so an unscoped count reports another test's expected failure as
+	// this one's regression.
 	var failed int
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT count(*) FROM river_job
@@ -255,35 +261,7 @@ func TestASeatlessInstallationIsSkippedAndCounted(t *testing.T) {
 		t.Fatalf("counting failed rows: %v", err)
 	}
 	if failed != 0 {
-		t.Fatalf("the dispatcher and its child hold %d failed/retrying row(s); the skip must be clean, not quiet", failed)
-	}
-
-	var exposition bytes.Buffer
-	if err := WriteSeatlessWorkspacesGauge(&exposition); err != nil {
-		t.Fatalf("rendering the gauge: %v", err)
-	}
-	if !strings.Contains(exposition.String(), "margince_extension_job_seatless_workspaces 1") {
-		t.Fatalf("the gauge is not in the exposition:\n%s", exposition.String())
-	}
-}
-
-// awaitSeatlessGauge waits on the gauge rather than on a clock, in the shape
-// awaitRows above uses: there is no child row to wait for here — that absence is
-// the assertion — so the report is the only signal the dispatcher has run.
-func awaitSeatlessGauge(t *testing.T, want int64) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), awaitBudget)
-	defer cancel()
-	for {
-		if got := SeatlessWorkspaces(); got == want {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			t.Fatalf("the seatless gauge reads %d, want %d — the skipped installation is invisible to an operator",
-				SeatlessWorkspaces(), want)
-		case <-time.After(50 * time.Millisecond):
-		}
+		t.Fatalf("the dispatcher and its child hold %d failed/retrying row(s) with no seat present", failed)
 	}
 }
 
@@ -490,79 +468,6 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
 }
 
-// TestStalePrincipalFailsClosed: the child row persists the initiating
-// principal as a REFERENCE, and the authority behind it is re-derived at
-// execution. A row can sit in the queue across a deactivation — enqueued,
-// backed off, or rescued after a crash — and a principal serialised at enqueue
-// time would keep working right through the revocation that was meant to end
-// it. So a stale reference FAILS; it does not run reduced, and it does not
-// quietly succeed having done nothing.
-func TestStalePrincipalFailsClosed(t *testing.T) {
-	e := integration.Setup(t)
-	integration.ApplyRiverSchema(t)
-	decl := testJobDecl()
-	worker := &extJobWorkspaceWorker{
-		pool: e.Pool, decl: decl, log: slog.New(slog.DiscardHandler),
-		handle: func(context.Context, extension.Runtime) error {
-			t.Error("the tick ran with an authority that no longer exists")
-			return nil
-		},
-	}
-	ctx := context.Background()
-
-	// A live seat derives, so the failures below are about the principal's
-	// STATE and not about the derivation refusing everything.
-	live := seedAgentSeat(t, e.WS)
-	if _, err := worker.deriveAuthority(principal.WithWorkspaceID(ctx, e.WS),
-		extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: live}); err != nil {
-		t.Fatalf("deriving authority for a live seat: %v", err)
-	}
-
-	for _, tc := range []struct {
-		name    string
-		mutate  func(t *testing.T, id ids.UUID)
-		absent  bool
-		explain string
-	}{
-		{name: "deactivated", mutate: func(t *testing.T, id ids.UUID) {
-			execAsOwner(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, id)
-		}, explain: "a deactivated seat"},
-		{name: "suspended", mutate: func(t *testing.T, id ids.UUID) {
-			execAsOwner(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, id)
-		}, explain: "a suspended seat"},
-		{name: "archived", mutate: func(t *testing.T, id ids.UUID) {
-			execAsOwner(t, `UPDATE app_user SET archived_at = now() WHERE id = $1`, id)
-		}, explain: "an archived seat"},
-		{name: "never existed", absent: true, explain: "a principal that is not in this workspace at all"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			id := ids.NewV7()
-			if !tc.absent {
-				id = seedAgentSeat(t, e.WS)
-				tc.mutate(t, id)
-			}
-			args := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: id}
-			err := worker.Work(ctx, &river.Job[extJobWorkspaceArgs]{Args: args})
-			if err == nil {
-				t.Fatalf("%s ran the tick — a stale principal must fail the attempt, not run with the authority it held when the job was enqueued", tc.explain)
-			}
-			if !errors.Is(err, errStaleJobPrincipal) {
-				t.Fatalf("%s failed with %v, want the stale-principal refusal", tc.explain, err)
-			}
-		})
-	}
-
-	// The zero reference is the same failure and not a special case: a
-	// dispatcher that could not name an actor for a workspace still enqueues
-	// the child (the fan-out stays total), and the tick is what says so.
-	err := worker.Work(ctx, &river.Job[extJobWorkspaceArgs]{
-		Args: extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS},
-	})
-	if !errors.Is(err, errStaleJobPrincipal) {
-		t.Fatalf("a child carrying no principal failed with %v, want the stale-principal refusal", err)
-	}
-}
-
 // TestOverlappingTicksAreBounded asserts the two bounds rather than inheriting
 // them from River's defaults, because both defaults are wrong here: an unset
 // attempt cap is a 25-rung ladder on attempt⁴ backoff in place of the
@@ -604,7 +509,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 
 	// And a second CHILD for one workspace while its pass is in flight, which
 	// is the same window plus ByArgs.
-	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: ids.NewV7()}
+	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
 	for range 2 {
 		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(decl.ChildKind())); err != nil {
 			t.Fatalf("enqueueing the child: %v", err)
@@ -615,7 +520,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	}
 	// A DIFFERENT workspace is not suppressed — the window bounds overlap, it
 	// does not bound the fan-out.
-	other := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: ids.NewV7(), Principal: ids.NewV7()}
+	other := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: ids.NewV7()}
 	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(decl.ChildKind())); err != nil {
 		t.Fatalf("enqueueing a second workspace's child: %v", err)
 	}
@@ -662,87 +567,6 @@ func waitUntil(t *testing.T, cond func() bool, what string) {
 			t.Fatalf("timed out waiting for %s", what)
 		case <-time.After(50 * time.Millisecond):
 		}
-	}
-}
-
-// TestTheChildUniquenessKeyIsTheWorkspaceAlone is the other half of the ByArgs
-// story, and the half a naive reading gets wrong.
-//
-// ByArgs hashes the WHOLE encoded args unless some field carries
-// `river:"unique"`, and River adds the kind to that hash itself. Untagged, the
-// key would be (kind, workspace, principal_id) — so a workspace whose recorded
-// agent seat CHANGES between ticks gets a second concurrent child while the
-// first is still in flight, and the overlap bound TestOverlappingTicksAreBounded
-// asserts is not a bound at all. The reseat is not hypothetical: it is the
-// deactivate-and-replace case deriveAuthority exists for.
-//
-// Deliberately not folded into TestOverlappingTicksAreBounded: that test reuses
-// one args value for both enqueues, which cannot see this whatever the tag says.
-func TestTheChildUniquenessKeyIsTheWorkspaceAlone(t *testing.T) {
-	e := integration.Setup(t)
-	integration.ApplyRiverSchema(t)
-	seedWorkspaces(t, e, 0)
-	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
-
-	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
-	if err != nil {
-		t.Fatalf("NewInserter: %v", err)
-	}
-	ctx := context.Background()
-	opts := workspaceSweepOpts(decl.ChildKind())
-
-	// The SAME workspace, a DIFFERENT principal — the reseat. One tick's child
-	// is still in flight when the next tick reads a new agent seat.
-	first := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: ids.NewV7()}
-	reseated := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: ids.NewV7()}
-	if first.Principal == reseated.Principal {
-		t.Fatal("the two principals are equal, so this test would pass with no tag at all")
-	}
-	for _, args := range []extJobWorkspaceArgs{first, reseated} {
-		if err := inserter.Enqueue(ctx, args, opts); err != nil {
-			t.Fatalf("enqueueing %s: %v", args.Principal, err)
-		}
-	}
-	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 1 {
-		t.Fatalf("child rows for one workspace across a reseat: got %d, want 1 — the uniqueness key is reading "+
-			"principal_id, so a changed agent seat starts a second concurrent pass for that tenant", got)
-	}
-
-	// And the tag narrows the key without collapsing the fan-out: a different
-	// WORKSPACE still gets its own row.
-	other := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: ids.NewV7(), Principal: first.Principal}
-	if err := inserter.Enqueue(ctx, other, opts); err != nil {
-		t.Fatalf("enqueueing a second workspace's child: %v", err)
-	}
-	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 2 {
-		t.Fatalf("child rows across two workspaces: got %d, want 2 — the tag narrowed the key too far", got)
-	}
-}
-
-// TestAHumanSeatIsNotAcceptedAsAJobPrincipal: deriveAuthority mints a
-// PrincipalAgent, so the row it reads has to still BE an agent seat. Only the
-// dispatcher writes the field today, which is why this is not reachable in
-// production — but the function's premise is that the enqueue-time record is
-// not trusted, and "the only writer is careful" is a property of today's
-// callers rather than of the row.
-func TestAHumanSeatIsNotAcceptedAsAJobPrincipal(t *testing.T) {
-	e := integration.Setup(t)
-	integration.ApplyRiverSchema(t)
-	decl := testJobDecl()
-	worker := &extJobWorkspaceWorker{
-		pool: e.Pool, decl: decl, log: slog.New(slog.DiscardHandler),
-		handle: func(context.Context, extension.Runtime) error {
-			t.Error("the tick ran as an agent principal derived from a human seat")
-			return nil
-		},
-	}
-	// e.Rep1 is the fixture's ordinary human: live, active, and not an agent.
-	err := worker.Work(context.Background(), &river.Job[extJobWorkspaceArgs]{
-		Args: extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: e.Rep1},
-	})
-	if !errors.Is(err, errStaleJobPrincipal) {
-		t.Fatalf("a human seat gave %v, want the stale-principal refusal", err)
 	}
 }
 

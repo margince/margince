@@ -43,11 +43,12 @@ type agentProvenance struct {
 //
 // On the agent path that can reach a send the two hold the same value anyway:
 // identity mints the principal from one field (AgentIdentity.Principal sets
-// UserID and OnBehalfOf from the same a.OnBehalfOf). But a passport-less agent
-// principal exists in this tree whose UserID is an AGENT's own app_user row —
-// compose/extjobsrun.go selects it `WHERE id = $1 AND is_agent` — and copying
-// that into a column meaning "the human behind this" would write an agent's id
-// where a human's belongs. The fire path then hands it to actor.OnBehalfOf,
+// UserID and OnBehalfOf from the same a.OnBehalfOf). The rule is not about
+// today's callers though: an agent principal whose UserID names the agent's own
+// app_user row rather than a person is a shape this tree has carried before, and
+// copying that into a column meaning "the human behind this" would write an
+// agent's id where a human's belongs. The fire path then hands it to
+// actor.OnBehalfOf,
 // which auth.Admit reads to derive seat and RBAC: a fabricated authority, which
 // is the same class of defect this whole record exists to end.
 //
