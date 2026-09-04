@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -503,4 +504,176 @@ func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
 	}); err != nil {
 		t.Fatalf("seeding a classified gmail connection: %v", err)
 	}
+}
+
+// TestAContactTheCeilingRefusedIsAskedAboutByTheSweep closes the hole the cap
+// leaves when the correspondence goes quiet.
+//
+// The ceiling delays a question rather than cancelling it, and the retry rides
+// the NEXT message from that address. A sender who does not write again never
+// triggers one, so the contact stays the mailbox owner's for good — invisible
+// to every colleague, their manager and an admin — with nothing left to put it
+// back in the queue.
+//
+// Driven through the real cap: the refusal has to be the one production
+// produces, not a state the test invented.
+func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "quiet@partner.example"
+
+	// Fill this domain's share of the ceiling, so the create below finds no
+	// room to ask.
+	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+		other := fmt.Sprintf("filler%d@partner.example", i)
+		seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("quiet-fill-in-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+	}
+
+	seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "quiet-in-1", sender, "quiet-t1")
+
+	visibility, found := personVisibility(t, e, sender)
+	if !found {
+		t.Fatal("the capture created no person for a corresponded sender")
+	}
+	if visibility != "owner" {
+		t.Fatalf("the new contact is %q, want owner: an unjudged capture is the mailbox owner's", visibility)
+	}
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the ceiling did not refuse the question, so this test is not exercising the " +
+			"case it exists for — the fixture no longer fills the cap")
+	}
+
+	// The sender never writes again. The queue drains, and the sweep is what
+	// notices the contact nobody was ever asked about.
+	runVerdict(t, e, &scriptedVerdictBrain{})
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+
+	dispositionID, queued := openDisposition(t, e, sender)
+	if !queued {
+		t.Fatal("a contact whose question the ceiling refused was never asked about again — " +
+			"it stays the mailbox owner's for good, which is the defect this sweep exists to close")
+	}
+
+	// And the answer reaches the record: the whole point of asking.
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	runVerdict(t, e, brain)
+	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+		t.Errorf("after the delayed verdict the contact is %q, want workspace", got)
+	}
+}
+
+// TestTheSweepDoesNotReaskASettledSender holds the other side of the rule.
+//
+// Any terminal answer counts as asked, `advisor` included: re-asking a settled
+// question would put a decided sender back in front of a model, and an advisor
+// whose record is deliberately the owner's would be judged again every night.
+func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
+	e := integration.Setup(t)
+	const advisor = "berater@kanzlei.example"
+
+	seedAttestedOutbound(t, e, "advisor-sweep-out-1", advisor, "advisor-sweep-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "advisor-sweep-in-1", advisor, "advisor-sweep-t1")
+	dispositionID, queued := openDisposition(t, e, advisor)
+	if !queued {
+		t.Fatal("no question was opened for a corresponded sender")
+	}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
+	runVerdict(t, e, brain)
+	if got, _ := personVisibility(t, e, advisor); got != "owner" {
+		t.Fatalf("an advisor's record is %q, want owner", got)
+	}
+
+	before := countDispositions(t, e, advisor)
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+	if after := countDispositions(t, e, advisor); after != before {
+		t.Fatalf("the sweep opened %d new question(s) about a settled sender; an advisor whose "+
+			"record is deliberately the owner's would be judged again every night", after-before)
+	}
+}
+
+// countDispositions counts every ledger row for an address, settled or not.
+func countDispositions(t *testing.T, e *integration.Env, email string) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM capture_pending_counterparty WHERE email = $1`, email).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting dispositions: %v", err)
+	}
+	return n
+}
+
+// TestTheSweepLeavesAContactAHumanKeptPrivate holds the decision a person made.
+//
+// A captured contact somebody has worked on is not retracted when the
+// conversation turns out to be private: people.RetractCaptureOnlyPersonTx
+// refuses to archive one carrying a human audit row, and it stays owner-private.
+// That is a decision, and asking about it again would put it in front of a
+// model whose `person` answer publishes it to the workspace — a transition
+// nothing reverses.
+func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "privat@kunde.example"
+
+	// Fill the domain ceiling so the capture's own question is refused, which
+	// is what puts this contact in the sweep's selector at all.
+	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+		other := fmt.Sprintf("kept%d@kunde.example", i)
+		seedAttestedOutbound(t, e, fmt.Sprintf("kept-fill-out-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("kept-fill-in-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
+	}
+	seedAttestedOutbound(t, e, "kept-out-1", sender, "kept-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "kept-in-1", sender, "kept-t1")
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the ceiling did not refuse the question, so the fixture no longer fills the cap")
+	}
+
+	// Somebody works on the contact: the evidence a human touched it.
+	personID := personIDFor(t, e, sender)
+	seedHumanEdit(t, e, personID)
+
+	runVerdict(t, e, &scriptedVerdictBrain{})
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the sweep re-asked about a contact a person had already worked on and kept " +
+			"private; a `person` answer to that question publishes it to the workspace")
+	}
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("the contact is %q, want owner", got)
+	}
+}
+
+// personIDFor reads the person minted for an address.
+func personIDFor(t *testing.T, e *integration.Env, email string) ids.PersonID {
+	t.Helper()
+	var id ids.PersonID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT person_id FROM person_email WHERE email = $1`, email).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the person for %s: %v", email, err)
+	}
+	return id
 }

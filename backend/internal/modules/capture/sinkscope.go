@@ -53,20 +53,33 @@ import (
 // path exists to close, reachable by anyone able to fill the queue with fresh
 // addresses.
 func (s *Sink) askWhoseRecord(ctx context.Context, tx pgx.Tx, row dispositionRow) error {
-	answered, err := s.dispositionAnswered(ctx, tx, row.Email)
+	_, err := askWhoseRecordTx(ctx, tx, row)
+	return err
+}
+
+// askWhoseRecordTx is that write with the sink taken away, shared by the capture
+// path and the sweep that finds the contacts it could not ask about. Both reach
+// the ledger through here, so the ceiling, the terminal-answer check and the
+// suppression check are applied the same way to both. It reports whether a
+// question was actually opened.
+//
+// The ceiling's answer is not a fault. On the deferred tier a cap means the
+// message stands unjudged and the member is told so; here the record is created
+// either way, and the only cost is that it stays the owner's until something
+// asks again — which is why asking is keyed on the answer rather than on the
+// attempt. What the caller does with a refusal is the caller's: the capture
+// path waits for the next message, and the sweep offers the contact again.
+func askWhoseRecordTx(ctx context.Context, tx pgx.Tx, row dispositionRow) (bool, error) {
+	answered, err := dispositionAnsweredTx(ctx, tx, row.Email)
 	if err != nil || answered {
-		return err
+		return false, err
 	}
 	row.Status = PendingStatusPending
-	// The ceiling's answer is deliberately dropped. On the deferred tier a cap
-	// means the message stands unjudged and the member is told so; here the
-	// record is created either way, and the only cost is that it stays the
-	// owner's until the next message asks again — which is why asking is keyed
-	// on the answer rather than on the attempt.
-	if _, err := recordDisposition(ctx, tx, row); err != nil {
-		return err
+	capped, err := recordDisposition(ctx, tx, row)
+	if err != nil {
+		return false, err
 	}
-	return nil
+	return capped == "", nil
 }
 
 // dispositionAnswered reports whether the ledger holds a settled verdict for
@@ -77,7 +90,7 @@ func (s *Sink) askWhoseRecord(ctx context.Context, tx pgx.Tx, row dispositionRow
 // owner-scoped, so a check for "still owner-scoped" would re-ask it on every
 // later message and give the classifier repeated chances to overturn a decision
 // whose whole point is that the contact stays private.
-func (s *Sink) dispositionAnswered(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+func dispositionAnsweredTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	var answered bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
