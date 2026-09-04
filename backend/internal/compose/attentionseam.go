@@ -398,6 +398,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
 		now: now,
 	}).
+		// The reader's own override. The ranking has carried a pin level since
+		// it was written and nothing could set it, so the one control that says
+		// "I know, and I want this first anyway" did not exist.
+		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
 		// contact's Network tab, so an ask nobody went looking for expired

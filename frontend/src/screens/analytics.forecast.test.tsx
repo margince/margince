@@ -12,6 +12,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ForecastView } from "./analytics.forecast";
 
+// The population these tests read under. Workspace because that is what a
+// manager sees, and because a nameable scope is what the editor requires.
+const WORKSPACE_SELECTION = {
+  scope: { kind: "workspace" as const, label: "Whole workspace" },
+};
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -128,7 +134,7 @@ describe("ForecastView", () => {
         }),
       }),
     );
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const answer = await screen.findByText(/current call is/i);
     expect(answer.textContent).toContain("2,000.00");
     expect(answer.textContent).toContain("1,200.00");
@@ -138,7 +144,7 @@ describe("ForecastView", () => {
   // zero. It must not render as "the current call is €0".
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     expect(await screen.findByText(/Nobody has called/i)).toBeTruthy();
   });
 
@@ -149,13 +155,13 @@ describe("ForecastView", () => {
       "fetch",
       forecastStub({ readings: readings({ priced_count: 9 }) }),
     );
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     expect(await screen.findByText(/9 of 12 deals/i)).toBeTruthy();
   });
 
   it("says nothing about pricing when every deal carries an amount", async () => {
     vi.stubGlobal("fetch", forecastStub());
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     await screen.findByText(/Nobody has called/i);
     expect(screen.queryByText(/of 12 deals/i)).toBeNull();
   });
@@ -166,7 +172,7 @@ describe("ForecastView", () => {
   it("posts the amount and the note the author typed", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
     await user.click(
@@ -188,7 +194,7 @@ describe("ForecastView", () => {
   it("sends no note at all when the author wrote none", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
     await user.click(
@@ -206,7 +212,7 @@ describe("ForecastView", () => {
       "fetch",
       forecastStub({ readings: readings({ fx_missing_count: 2 }) }),
     );
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     expect(await screen.findByText("Eligible deals")).toBeTruthy();
     expect(screen.getByText("Exchange rate missing")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
@@ -221,7 +227,7 @@ describe("ForecastView", () => {
   // wrong one is worth a test rather than a glance.
   it("says nothing has been checked when no run has completed", async () => {
     vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     expect(
       await screen.findByText(/Nothing has been checked yet/),

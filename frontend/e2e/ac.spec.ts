@@ -1145,10 +1145,11 @@ test.describe("B-EP09.23: overlay mode", () => {
         exact: true,
       }),
     ).toBeVisible();
-    // The stakeholder card is in the record's collapsible context panel. Open
-    // that panel before counting it alongside the four overview refusals; a
-    // closed panel is intentionally absent from the accessibility tree.
-    await page.getByRole("button", { name: "Panel zeigen" }).click();
+    // The stakeholder card is in the record's details column, which starts
+    // folded. Open it before counting that card alongside the four overview
+    // refusals; a closed pane is intentionally absent from the accessibility
+    // tree. The switch carries the word Details rather than a bare glyph.
+    await page.getByRole("button", { name: "Details" }).click();
     await expect(page.getByText(unavailable)).toHaveCount(5);
     await expect(page.getByText(errorBox)).toHaveCount(0);
   });

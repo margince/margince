@@ -87,6 +87,14 @@ type Identity struct {
 	// when they never chose one. Distinct from the installation's base
 	// language, which is what AI writes in for the whole team.
 	Locale string
+	// Timezone is the IANA zone this member's own display and send-times are
+	// localized in, empty when the row carries none.
+	//
+	// It is the PERSONAL zone, and the workspace's reporting zone is a
+	// different value that buckets periods and as-of dates for everyone
+	// (data-semantics §2.2). Both are stored; only this one is a property of
+	// the seat.
+	Timezone string
 	// MustChangePassword is true while this account is still using a password
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
@@ -334,14 +342,15 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		// first-class entity id — its row id has no kind and stays ids.UUID.
 		var sessionID ids.UUID
 		var userID ids.UserID
-		// The locale rides the session read because /me carries it: the SPA
-		// needs to know which catalog to render before it draws anything, and a
-		// second round-trip for one column would paint the wrong language
-		// first.
-		var locale *string
+		// The locale and the zone ride the session read because /me carries
+		// both: the SPA needs to know which catalog to render before it draws
+		// anything, and which zone to render an instant in before it prints a
+		// date. A second round-trip for two columns would paint the wrong
+		// language and the wrong day first.
+		var locale, timezone *string
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
-			        u.locale,
+			        u.locale, u.timezone,
 			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
@@ -350,7 +359,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -363,6 +372,14 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		// the first case.
 		if locale != nil {
 			id.Locale = *locale
+		}
+		// NULL stays empty here too, and for a sharper reason than locale's: a
+		// seat with no stored zone must not be reported as UTC, because UTC is
+		// a real answer somebody could have chosen. The caller decides what to
+		// fall back to, and can only do that if absent and chosen are
+		// distinguishable.
+		if timezone != nil {
+			id.Timezone = *timezone
 		}
 
 		if _, err := tx.Exec(ctx,
@@ -416,77 +433,4 @@ func logAuthEvent(ctx context.Context, tx pgx.Tx, userID ids.UserID, action, det
 		 VALUES ('human', $1, $2, jsonb_build_object('detail', $3::text))`,
 		"human:"+userID.String(), action, detail)
 	return err
-}
-
-func loadGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (roles []string, teams []ids.TeamID, perms principal.Permissions, err error) {
-	rows, err := tx.Query(ctx,
-		`SELECT r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id WHERE ra.user_id = $1`, userID)
-	if err != nil {
-		return nil, nil, principal.Permissions{}, err
-	}
-	defer rows.Close()
-	byRole := map[string]policy.Document{}
-	for rows.Next() {
-		var key string
-		var raw []byte
-		if err := rows.Scan(&key, &raw); err != nil {
-			return nil, nil, principal.Permissions{}, err
-		}
-		doc, err := policy.Parse(raw)
-		if err != nil {
-			// A role carrying an UNREADABLE policy document is a data defect
-			// the login must surface, not silently downgrade to no access.
-			//
-			// "Unreadable" is now a much narrower set than it was: malformed
-			// JSON, or a row_scope nothing can interpret. An object this
-			// installation does not know is dropped by Parse with a log line
-			// instead of failing here — because failing here failed the whole
-			// LOGIN, so removing a composed extension locked out every user
-			// whose role still carried its object (Task 14 UAT, F4).
-			return nil, nil, principal.Permissions{}, fmt.Errorf("crmauth: role %q: %w", key, err)
-		}
-		roles = append(roles, key)
-		byRole[key] = doc
-	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, principal.Permissions{}, err
-	}
-
-	// Live teams only: an archived team keeps its membership rows so a
-	// restore brings them back, but while archived it resolves neither row
-	// scope nor a team share.
-	teamRows, err := tx.Query(ctx,
-		`SELECT tm.team_id FROM team_membership tm JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		  WHERE tm.user_id = $1`, userID)
-	if err != nil {
-		return nil, nil, principal.Permissions{}, err
-	}
-	defer teamRows.Close()
-	for teamRows.Next() {
-		var t ids.TeamID
-		if err := teamRows.Scan(&t); err != nil {
-			return nil, nil, principal.Permissions{}, err
-		}
-		teams = append(teams, t)
-	}
-	if err := teamRows.Err(); err != nil {
-		return nil, nil, principal.Permissions{}, err
-	}
-	perms = policy.Merge(byRole)
-	perms.FieldMasks, err = loadFieldMasks(ctx, tx, roles)
-	return roles, teams, perms, err
-}
-
-// rawTeamIDs widens typed team ids to the untyped []ids.UUID the kernel
-// principal and the authz port carry — the row-scope seams stay untyped
-// (they compare team membership against polymorphic scope clauses).
-func rawTeamIDs(teams []ids.TeamID) []ids.UUID {
-	if teams == nil {
-		return nil
-	}
-	out := make([]ids.UUID, len(teams))
-	for i, t := range teams {
-		out[i] = t.UUID
-	}
-	return out
 }
