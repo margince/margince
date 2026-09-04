@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -50,7 +51,7 @@ func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 	e.seedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, project_id) VALUES ($1, $2, 'project', $3)`, activity, project)
 
 	byProject := derivationURL("activities-by-kind", nil, []string{"project_id"}, nil,
-		map[string]any{"project_id": project.String()})
+		map[string]any{"project_id": project.String()}, time.Now().UTC())
 	if status := e.explainStatus(e.activityReader(), "activities-by-kind", byProject); status != http.StatusForbidden {
 		t.Fatalf("drill-through grouped by project without project.read → %d, want 403", status)
 	}
@@ -58,7 +59,8 @@ func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 		t.Fatalf("drill-through grouped by project with project.read → %d, want 200", status)
 	}
 
-	byKind := derivationURL("activities-by-kind", nil, []string{"kind"}, nil, map[string]any{"kind": "meeting"})
+	byKind := derivationURL("activities-by-kind", nil, []string{"kind"}, nil,
+		map[string]any{"kind": "meeting"}, time.Now().UTC())
 	rows := e.explainReport(e.activityReader(), t, "activities-by-kind", byKind)
 	if rows.TotalRows != 1 {
 		t.Fatalf("drill-through by kind = %d rows, want the one meeting", rows.TotalRows)

@@ -264,6 +264,8 @@ export const en = {
   "common.close": "Close",
 
   "explain.open": "Explain this number",
+  "explain.mayHaveMoved":
+    "This link does not say when the number was worked out, so these figures were recalculated just now. If an exchange rate changed in between, they will not add up to the number you clicked.",
   "explain.title": "How this number is built",
   "explain.rate": "rate {rate} on {date}",
 

@@ -40,10 +40,21 @@ const reservedDerivationColumn = "derivation_url"
 // absence is stated separately.
 const nullPredicateKey = "isnull"
 
+// asOfKey carries the instant the explained number was computed at.
+//
+// A handle pins WHICH rows the cell covered; without this it did not pin WHEN.
+// That cost nothing while every report summed money in its own currency — the
+// frame's as-of reached no arithmetic — and became a defect the moment a report
+// CONVERTED, because the drill-through sampled a fresh `now()` and could pick a
+// different rate sheet. The headline said EUR 5,000 and the detail behind it
+// said EUR 9,000, and the detail is where a reader goes to check a number they
+// already doubt.
+const asOfKey = "asof"
+
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{"by", "agg", nullPredicateKey, reservedDerivationColumn}
+var reservedDerivationKeys = []string{"by", "agg", asOfKey, nullPredicateKey, reservedDerivationColumn}
 
 // derivationQuery is one parsed derivation handle: the equality
 // predicates that pin the explained cell (plan filters + the row's
@@ -57,6 +68,11 @@ type derivationQuery struct {
 	Unset      map[string]bool
 	GroupBy    []string
 	Aggregates []reportAggregate
+	// AsOf is the instant the explained number was computed at, nil when the
+	// handle predates this key. Nil is not an error: links already minted, and
+	// links a reader saved, must keep resolving — but the answer says it was
+	// recomputed at a fresh instant rather than passing it off as the same one.
+	AsOf *time.Time
 }
 
 // derivationOutcome is a resolved handle: definition, drill-through
@@ -73,14 +89,26 @@ type derivationOutcome struct {
 	// nil when no mask applied, exactly like the report envelope it explains.
 	ExcludedByPermission *int
 	GeneratedAt          time.Time
+	// AsOf is the instant this detail was computed at: the headline's, when the
+	// handle pinned one, and a fresh reading when it did not.
+	AsOf time.Time
+	// AsOfPinned says which of those it was. False means the figures below may
+	// have moved since the number they explain, which a reader checking a
+	// total they doubt has to be told rather than left to discover.
+	AsOfPinned bool
 }
 
 // derivationURL mints the handle for one aggregate row (or, with a nil
 // row, for the whole filtered result). parseDerivationQuery is its exact
 // inverse; the round trip is unit-tested so a handle we mint always
 // resolves.
-func derivationURL(report string, filters map[string]any, groupBy []string, aggregates []reportAggregate, row map[string]any) string {
+func derivationURL(report string, filters map[string]any, groupBy []string, aggregates []reportAggregate, row map[string]any, asOf time.Time) string {
 	values := url.Values{}
+	// RFC3339 with nanoseconds, which round-trips a timestamptz exactly: the
+	// instant came from the database and carries microseconds, and a format
+	// that truncated would hand the detail a different moment from the one the
+	// headline converted at — this defect again, one decimal place down.
+	values.Set(asOfKey, asOf.UTC().Format(time.RFC3339Nano))
 	for _, agg := range aggregates {
 		values.Add("agg", agg.Fn+":"+agg.Field+":"+agg.As)
 	}
@@ -139,6 +167,19 @@ func parseDerivationQuery(values url.Values) (derivationQuery, error) {
 			for _, field := range vals {
 				q.Unset[field] = true
 			}
+		case asOfKey:
+			if len(vals) != 1 {
+				return derivationQuery{}, &FieldNotAllowedError{Field: asOfKey}
+			}
+			at, err := time.Parse(time.RFC3339Nano, vals[0])
+			if err != nil {
+				// Refused rather than ignored. A handle carrying an unreadable
+				// instant is not an old link — it is a link that MEANT to pin
+				// one, and silently recomputing would answer at a moment
+				// nobody asked for while looking pinned.
+				return derivationQuery{}, &FieldNotAllowedError{Field: asOfKey + "=" + vals[0]}
+			}
+			q.AsOf = &at
 		case "agg":
 			for _, v := range vals {
 				parts := strings.SplitN(v, ":", 3)
@@ -194,6 +235,10 @@ type derivationPlan struct {
 	selects    []string
 	aggColumns []string
 	aggSelects []string
+	// asOf is the instant the explained number was computed at, nil when the
+	// handle predates the key. The execution half binds it in place of a fresh
+	// reading, so the detail converts at the moment the headline did.
+	asOf *time.Time
 }
 
 // Derive resolves one handle against a prebuilt report's vocabulary.
@@ -233,6 +278,7 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 		Columns:     plan.columns,
 		Aggregates:  map[string]any{},
 		GeneratedAt: time.Now().UTC(),
+		AsOfPinned:  q.AsOf != nil,
 	}
 	if err := e.fetchDerivation(ctx, report, spec, plan, &out); err != nil {
 		return derivationOutcome{}, err
@@ -243,7 +289,7 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 // compileDerivation validates a parsed handle against the report's
 // closed vocabulary and renders every SQL fragment and the definition.
 func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, error) {
-	plan := derivationPlan{aggregates: q.Aggregates, predicates: q.Predicates}
+	plan := derivationPlan{aggregates: q.Aggregates, predicates: q.Predicates, asOf: q.AsOf}
 	if len(plan.aggregates) == 0 {
 		plan.aggregates = spec.defaultAggs
 	}

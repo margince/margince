@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The definition is the (a) half of AC-R6: the exact filter + group +
@@ -93,11 +94,16 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 		{Fn: "count", As: "deals"},
 		{Fn: "sum", Field: "amount_minor", As: "unweighted_minor"},
 	}
+	// A microsecond-precision instant, which is what a timestamptz hands back.
+	// The round trip has to preserve it exactly: a format that truncated would
+	// let the detail read a rate sheet the headline did not.
+	headlineAt := time.Date(2026, 9, 4, 11, 30, 15, 123_456_000, time.UTC)
 	minted := derivationURL("forecast",
 		map[string]any{"pipeline_id": "018f-pipe"},
 		[]string{"owner_id", "forecast_category"},
 		aggs,
-		map[string]any{"owner_id": "018f-owner", "forecast_category": nil, "deals": int64(3)})
+		map[string]any{"owner_id": "018f-owner", "forecast_category": nil, "deals": int64(3)},
+		headlineAt)
 
 	parsed, err := url.Parse(minted)
 	if err != nil {
@@ -128,6 +134,16 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 	if !reflect.DeepEqual(q.Unset, map[string]bool{"forecast_category": true}) {
 		t.Errorf("unset = %v, want forecast_category", q.Unset)
 	}
+	// The instant is part of the round trip, not decoration: it is what makes
+	// the drill-through convert at the moment its headline did.
+	if q.AsOf == nil {
+		t.Fatal("the handle carries no as-of — a converted report's detail would " +
+			"sample a fresh rate sheet and reconcile to a number nobody sees")
+	}
+	if !q.AsOf.Equal(headlineAt) {
+		t.Errorf("as-of round-tripped to %s, want %s",
+			q.AsOf.Format(time.RFC3339Nano), headlineAt.Format(time.RFC3339Nano))
+	}
 }
 
 func TestParseDerivationQueryRejectsMalformedHandles(t *testing.T) {
@@ -135,6 +151,11 @@ func TestParseDerivationQueryRejectsMalformedHandles(t *testing.T) {
 		"agg without triplet": "agg=sum",
 		"agg without fn":      "agg=:amount_minor:x",
 		"repeated predicate":  "owner_id=a&owner_id=b",
+		// A handle MEANT to pin an instant and failed to say which. Recomputing
+		// at a fresh one would answer at a moment nobody asked for while
+		// looking pinned, so it is refused rather than ignored.
+		"unreadable as-of": asOfKey + "=yesterday",
+		"repeated as-of":   asOfKey + "=2026-09-04T11:30:15Z&" + asOfKey + "=2026-09-05T11:30:15Z",
 	} {
 		values, err := url.ParseQuery(raw)
 		if err != nil {

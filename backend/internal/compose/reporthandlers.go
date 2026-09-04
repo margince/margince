@@ -45,9 +45,11 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	rows := make([]map[string]interface{}, len(outcome.Rows))
 	copy(rows, outcome.Rows)
 	for _, row := range rows {
-		row[reservedDerivationColumn] = derivationURL(outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row)
+		row[reservedDerivationColumn] = derivationURL(
+			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt)
 	}
-	resultURL := derivationURL(outcome.Report, outcome.Filters, nil, outcome.Aggregates, nil)
+	resultURL := derivationURL(
+		outcome.Report, outcome.Filters, nil, outcome.Aggregates, nil, outcome.GeneratedAt)
 	totalRows := len(rows)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportResult{
 		Report:               outcome.Report,
@@ -94,5 +96,7 @@ func (h reportHandlers) ExplainReport(w http.ResponseWriter, r *http.Request, re
 		TotalRows:            &outcome.TotalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
 		GeneratedAt:          &outcome.GeneratedAt,
+		AsOf:                 &outcome.AsOf,
+		AsOfPinned:           &outcome.AsOfPinned,
 	})
 }

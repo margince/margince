@@ -403,6 +403,18 @@ describe("parseDerivationQuery", () => {
     expect(q.agg).toEqual(["sum:amount_minor:raw"]);
     expect(q.stage_id).toBe("s1");
   });
+
+  // The instant rides through as an ordinary extra key, which is what the
+  // caller forwards wholesale. Dropping it here would send the drill-through
+  // unpinned and it would re-read the rate sheet — the defect this key exists
+  // to close, reintroduced one layer up.
+  it("carries the as-of through as a forwarded key", () => {
+    const q = parseDerivationQuery(
+      "/v1/reports/pipeline-current/derivation?by=stage_id&asof=2026-09-04T11%3A30%3A15Z&stage_id=s1",
+    );
+    expect(q.asof).toBe("2026-09-04T11:30:15Z");
+    expect(q.by).toEqual(["stage_id"]);
+  });
 });
 
 // Money never sums across currencies (data-semantics §1 r4, AC-DS-FX1): every

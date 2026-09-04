@@ -41,6 +41,15 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		if err != nil {
 			return err
 		}
+		// The instant the headline converted at, when the handle carried one.
+		// Everything below binds the frame — the mask count, the rows, the
+		// aggregate recompute — so overriding it here is what makes the detail
+		// reconcile to the number it explains rather than to a fresh reading of
+		// the rate sheet.
+		if plan.asOf != nil {
+			frame.AsOf = *plan.asOf
+		}
+		out.AsOf = frame.AsOf
 		maskClauses, masked, err := maskExclusionClauses(ctx, spec, arg)
 		if err != nil {
 			return err

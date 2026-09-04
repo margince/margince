@@ -691,6 +691,13 @@ function ExplainCard({
           </div>
         </>
       )}
+      {/* A link minted before the handle carried an instant. The figures below
+          were recomputed at a NEW moment, so a rate sheet effective in between
+          makes them disagree with the number they explain — said plainly,
+          because a reader opens this to check a figure they already doubt. */}
+      {query.data?.as_of_pinned === false && (
+        <p className="surfacestate-stale">{t("explain.mayHaveMoved")}</p>
+      )}
       {query.data && <DerivationRows derivation={query.data} />}
     </Card>
   );

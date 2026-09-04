@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // REPORT-VOCAB-1 pins win-loss's four vocabularies. These assert the
@@ -100,7 +101,8 @@ func TestPeriodBucketValuesSurviveTheDerivationHandleRoundTrip(t *testing.T) {
 	} {
 		minted := derivationURL("win-loss", map[string]any{"status": "won"},
 			[]string{bucket.dimension}, aggs,
-			map[string]any{bucket.dimension: bucket.value, "amount_minor_sum": int64(35000)})
+			map[string]any{bucket.dimension: bucket.value, "amount_minor_sum": int64(35000)},
+			time.Date(2026, 9, 4, 11, 30, 15, 0, time.UTC))
 
 		parsed, err := url.Parse(minted)
 		if err != nil {

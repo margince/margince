@@ -17,7 +17,11 @@ package compose
 // against a formula recomputed here, because a test that reproduces the
 // production expression proves only that it was copied correctly.
 
-import "testing"
+import (
+	"net/url"
+	"testing"
+	"time"
+)
 
 const pipelineCurrentPlan = `{"group_by":["stage_id"],"aggregates":[` +
 	`{"fn":"count","as":"deals"},` +
@@ -188,4 +192,95 @@ func TestPipelineCurrentDetailReconcilesToTheConvertedHeadline(t *testing.T) {
 	if got := wireInt(t, row, "base"); got != 15_000 {
 		t.Fatalf("headline was %d, want the converted 15000", got)
 	}
+}
+
+// The detail behind a converted number reads the rate sheet its headline read.
+//
+// A handle pins WHICH rows a cell covered. Until the report engine converted
+// money, it did not need to pin WHEN: the frame's as-of reached no arithmetic,
+// so a drill-through sampling a fresh `now()` answered the same question. It
+// stopped being harmless the moment a rate sheet could take effect between the
+// two, because the drill-through is where a reader goes to check a figure they
+// already doubt — and a detail set that reconciles to something else does not
+// read as a discrepancy, it reads as proof.
+//
+// Two sheets either side of a day boundary, one deal, three readings.
+func TestADerivationConvertsAtTheInstantItsHeadlineDid(t *testing.T) {
+	e := setupForecast(t)
+	seedRate(t, e, "0.5", 2)
+	seedRate(t, e, "0.9", 0)
+	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
+
+	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
+	if got := wireInt(t, row, "base"); got != 9_000 {
+		t.Fatalf("the headline converted to %d, want 9000 at today's 0.9 — the rest of "+
+			"this case compares against it, so it has to be the sheet in force now", got)
+	}
+	handle, ok := row["derivation_url"].(string)
+	if !ok || handle == "" {
+		t.Fatalf("the converted stage row minted no derivation handle: %+v", row)
+	}
+
+	// Opened now, pinned to now: the same sheet, the same number.
+	live := e.explainReport(e.Admin(), t, "pipeline-current", handle)
+	if live.AsOfPinned == nil || !*live.AsOfPinned {
+		t.Errorf("a freshly minted handle reports as_of_pinned %v — the mint is what "+
+			"puts the instant in it, so an unpinned one here means it never went in",
+			live.AsOfPinned)
+	}
+	if got := derivationSum(t, live, "base"); got != 9_000 {
+		t.Errorf("the detail behind a 9000 headline recomputed %d", got)
+	}
+
+	// The same handle as it would have been minted the day before yesterday,
+	// when 0.5 was the sheet in force. This is the reported defect: the pin has
+	// to beat `now()`, or the detail prices the deal at today's rate and
+	// silently disagrees with the number it explains.
+	yesterday := e.explainReport(e.Admin(), t, "pipeline-current",
+		rehandle(t, handle, asOfKey, time.Now().UTC().AddDate(0, 0, -1).Format(time.RFC3339Nano)))
+	if got := derivationSum(t, yesterday, "base"); got != 5_000 {
+		t.Errorf("a handle pinned before today's sheet recomputed %d, want 5000 at 0.5 — "+
+			"the detail re-read the rate sheet instead of the one its headline used", got)
+	}
+
+	// A link minted before this key existed still resolves, and says so. It
+	// recomputes at a fresh instant, which is honest only because the answer
+	// carries as_of_pinned=false rather than passing it off as the headline's.
+	old := e.explainReport(e.Admin(), t, "pipeline-current", rehandle(t, handle, asOfKey, ""))
+	if old.AsOfPinned == nil || *old.AsOfPinned {
+		t.Errorf("an unpinned handle reports as_of_pinned %v, want false — a reader "+
+			"cannot tell the figures may have moved unless the answer says so",
+			old.AsOfPinned)
+	}
+	if got := derivationSum(t, old, "base"); got != 9_000 {
+		t.Errorf("the unpinned handle recomputed %d, want today's 9000", got)
+	}
+}
+
+// rehandle rewrites one query parameter of a minted handle; an empty value
+// removes it, which is what a link minted before that key looks like.
+func rehandle(t *testing.T, handle, key, value string) string {
+	t.Helper()
+	parsed, err := url.Parse(handle)
+	if err != nil {
+		t.Fatalf("parsing the minted handle: %v", err)
+	}
+	q := parsed.Query()
+	if value == "" {
+		q.Del(key)
+	} else {
+		q.Set(key, value)
+	}
+	parsed.RawQuery = q.Encode()
+	return parsed.String()
+}
+
+// derivationSum reads one recomputed aggregate off a derivation answer.
+func derivationSum(t *testing.T, d derivationWire, key string) int64 {
+	t.Helper()
+	if d.Aggregates == nil {
+		t.Fatalf("the derivation recomputed no aggregates: %+v", d)
+	}
+	return wireInt(t, d.Aggregates, key)
 }
