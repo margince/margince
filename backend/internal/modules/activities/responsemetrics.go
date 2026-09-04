@@ -40,7 +40,8 @@ type ResponseMetrics struct {
 	// a genuine zero-minute median.
 	MedianMinutes int
 	// Disposed is how many rows a reader put DOWN in the window — snoozed,
-	// marked not theirs, or judged not sales.
+	// marked not theirs, or judged not sales. Over the conversations the CALLER
+	// may open, like every figure beside it.
 	Disposed int
 	// DisposedNotSales is how many of those were the workspace-wide judgement.
 	// Its own figure because it is the one that costs everybody: the other two
@@ -139,14 +140,29 @@ const firstResponseSQL = `
 // dispositions rather than none. The figure ran backwards for exactly the
 // behaviour it should reward, and read as more judgement the more of it was
 // withdrawn.
+//
+// Counted under the CALLER's own visibility, like the median beside it. The
+// audit row names the activity it judged, so the count joins to that activity
+// and applies the same content clause: a judgement made on a conversation this
+// reader may not open contributes to no figure here. Without the join the two
+// halves of one response disagreed about whose workspace they described — the
+// median spoke for what the caller can see and these two for everybody — while
+// the endpoint's own prose promised caller visibility for all four.
+//
+// An INNER join, so an audit row whose activity is gone counts for nobody. A
+// deleted conversation is not a judgement anyone can still check, and admitting
+// it would be the one direction this figure must not fail in: reporting work
+// under a reader who cannot reach it.
 const dispositionsSQL = `
 	SELECT count(*) FILTER (WHERE a.after->>'disposition' = ANY($3)),
 	       count(*) FILTER (WHERE a.after->>'disposition' = $4)
 	  FROM audit_log a
+	  JOIN activity act ON act.id = a.entity_id
 	 WHERE a.entity_type = 'activity'
 	   AND a.action = 'update'
 	   AND a.occurred_at >= $1
-	   AND a.occurred_at < $2`
+	   AND a.occurred_at < $2
+	   AND %[1]s`
 
 // puttingDown is the set of verbs that PUT a row down, as against the two that
 // pick one back up.
@@ -202,11 +218,20 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}
-		// The audit read carries no content clause, and that is deliberate: an
-		// audit row records that a JUDGEMENT was made, not what the message
-		// said, and the count is over the workspace's own bookkeeping. The
-		// workspace binding is the transaction's.
-		if err := tx.QueryRow(ctx, dispositionsSQL, from, to, puttingDown(), stateNotSales).
+		// Its own argument list, because this statement's placeholders start
+		// over at $1 — the content clause below is rendered against THESE
+		// positions, and reusing the median's slice would number it past the
+		// end of what this query is given.
+		putArgs := []any{from, to, puttingDown(), stateNotSales}
+		putArg := func(v any) int { putArgs = append(putArgs, v); return len(putArgs) }
+		// The same gate the median above carries, on the activity the audit row
+		// names. A judgement made on a conversation this reader may not open
+		// counts for nobody here.
+		putContent, err := auth.ActivityContentClause(ctx, "act", putArg)
+		if err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, fmt.Sprintf(dispositionsSQL, putContent), putArgs...).
 			Scan(&out.Disposed, &out.DisposedNotSales); err != nil {
 			return fmt.Errorf("activities: reading disposition counts: %w", err)
 		}

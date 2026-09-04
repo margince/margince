@@ -415,3 +415,84 @@ func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
 			after.DisposedNotSales-before.DisposedNotSales)
 	}
 }
+
+// A judgement on a conversation this reader cannot open counts for nobody.
+//
+// The whole point of reading audit_log here is that it records judgements the
+// state table has already forgotten — but audit_log holds every workspace's
+// bookkeeping without regard to who may read the record judged, so the count
+// had no visibility clause at all. The median beside it did, which made one
+// response body answer two different questions: "how fast do the conversations
+// I can see get answered" and "how much did EVERYBODY put down".
+//
+// A limited activity captured by nobody this reader is, with no participant row
+// and no audience membership for them, is the case that tells the two apart. It
+// is invisible to `e.rep` and its judgement must be too.
+func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Someone Else''s Buyer', $2, 'seed', 'system')`, person, e.other)
+	activity := e.seedWait(t, "A held conversation", "person_id", person)
+	// Held to a named audience that does not include this reader, and captured
+	// by the other seat — so no arm of the audience test admits `e.rep`.
+	e.exec(t, `UPDATE activity SET audience = 'selected', captured_by = $2 WHERE id = $1`,
+		activity, "human:"+e.other.String())
+	e.exec(t, `INSERT INTO activity_audience_member (activity_id, subject_type, subject_id, created_by)
+		VALUES ($1, 'user', $2, 'seed')`, activity, e.other)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The other seat judges it, audited the way recordDisposition writes it.
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+		VALUES ('human', $2, 'update', 'activity', $1, '{"disposition":"not_sales"}'::jsonb)`,
+		activity, "human:"+e.other.String())
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed {
+		t.Fatalf("the disposal figure moved %d → %d over a judgement on a conversation "+
+			"this reader cannot open — the count is answering for the whole workspace "+
+			"while the median beside it answers for the caller",
+			before.Disposed, after.Disposed)
+	}
+	if after.DisposedNotSales != before.DisposedNotSales {
+		t.Fatalf("the workspace-wide figure moved %d → %d over an unreadable conversation",
+			before.DisposedNotSales, after.DisposedNotSales)
+	}
+}
+
+// And the admit case, without which the test above passes against a count that
+// refuses EVERYTHING. The same fixture, readable: the judgement lands.
+func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "An open conversation", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+		VALUES ('human', 'human:seed', 'update', 'activity', $1, '{"disposition":"not_sales"}'::jsonb)`,
+		activity)
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("a judgement on a workspace-audience conversation counted %d, want the one — "+
+			"a clause that refuses every row passes the refusal test above and reports a "+
+			"quiet fortnight for a workspace full of judgement",
+			after.Disposed-before.Disposed)
+	}
+}

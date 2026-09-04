@@ -6832,12 +6832,15 @@ export interface paths {
          *     number taken from today would swing on one slow afternoon. The window defaults to
          *     the last 14 days.
          *
-         *     Counted under the CALLER's own visibility — but only on the INBOUND side, and the
-         *     difference is worth stating rather than glossing. A message the caller may not read
-         *     contributes to no figure here. The REPLY that answered it is not gated: the waiting
-         *     lane deliberately ignores the audience arm on its own reply anti-join, because a
-         *     reply somebody else may see still answered the customer, and skipping it would
-         *     report an answered message as waiting.
+         *     Counted under the CALLER's own visibility, all four figures. A conversation this
+         *     caller may not open contributes to no median, and a judgement recorded against one
+         *     counts in neither disposal figure.
+         *
+         *     With ONE exception, on the reply side of the median, worth stating rather than
+         *     glossing. The REPLY that answered an inbound is not gated: the waiting lane
+         *     deliberately ignores the audience arm on its own reply anti-join, because a reply
+         *     somebody else may see still answered the customer, and skipping it would report an
+         *     answered message as waiting.
          *
          *     So a caller who can read an inbound but not the audience-limited reply to it learns
          *     WHEN a colleague answered, to the minute, folded into the median. That is a
@@ -28824,6 +28827,10 @@ export interface components {
              *     that lifted and a not_mine somebody withdrew leave no trace in the current
              *     state, so a figure read from there would FALL as readers tidied up — reporting
              *     less judgement the more of it happened.
+             *
+             *     Over the conversations THIS caller may open, like every figure beside it. Two
+             *     readers of the same workspace can therefore see different totals here, and each
+             *     is answering "how much of the work I can see is being put down".
              */
             disposed: number;
             /**

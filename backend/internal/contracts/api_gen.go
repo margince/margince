@@ -29264,6 +29264,10 @@ type ResponseMetrics struct {
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
 	// state, so a figure read from there would FALL as readers tidied up — reporting
 	// less judgement the more of it happened.
+	//
+	// Over the conversations THIS caller may open, like every figure beside it. Two
+	// readers of the same workspace can therefore see different totals here, and each
+	// is answering "how much of the work I can see is being put down".
 	Disposed int `json:"disposed"`
 
 	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
