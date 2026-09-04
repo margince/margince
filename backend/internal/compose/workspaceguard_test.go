@@ -162,9 +162,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		IdempotencyRetentionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&idempotencyRetentionWorkspaceWorker{}).Work(ctx, &river.Job[IdempotencyRetentionWorkspaceArgs]{})
 		},
-		EmbedDriftWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&embedDriftWorkspaceWorker{}).Work(ctx, &river.Job[EmbedDriftWorkspaceArgs]{})
-		},
 		GraphEdgeWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&graphEdgeWorkspaceWorker{}).Work(ctx, &river.Job[GraphEdgeWorkspaceArgs]{})
 		},
@@ -272,9 +269,6 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 		},
 		SignalScanWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&signalScanWorkspaceWorker{}).Work(ctx, &river.Job[SignalScanWorkspaceArgs]{})
-		},
-		FinanceSyncArgs{}.Kind(): func(ctx context.Context) error {
-			return (&financeSyncWorker{}).Work(ctx, &river.Job[FinanceSyncArgs]{})
 		},
 		ProviderRunPollArgs{}.Kind(): func(ctx context.Context) error {
 			return (&providerRunPollWorker{}).Work(ctx, &river.Job[ProviderRunPollArgs]{})

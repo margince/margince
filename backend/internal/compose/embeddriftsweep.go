@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The embed drift sweep (ADR-0069 §3a, SEARCH-AC-13): the at-least-once
@@ -38,30 +39,12 @@ func (EmbedDriftSweepArgs) Kind() string { return "embed_drift_sweep" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (EmbedDriftSweepArgs) FleetWide() {}
 
-// embedDriftSweepWorker is the dispatcher: it enumerates the fleet and
-// enqueues one sweep per workspace, and heals nothing itself.
+// embedDriftSweepWorker heals every live workspace's drift.
+//
+// One worker where there were two (ADR-0103): the dispatcher that enqueued an
+// embed_drift_workspace child per workspace is gone, and this walks them.
 type embedDriftSweepWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *embedDriftSweepWorker) Work(ctx context.Context, _ *river.Job[EmbedDriftSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(EmbedDriftWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return EmbedDriftWorkspaceArgs{Workspace: ws} }))
-}
-
-// EmbedDriftWorkspaceArgs is one workspace's drift sweep.
-type EmbedDriftWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (EmbedDriftWorkspaceArgs) Kind() string { return "embed_drift_workspace" }
-
-// WorkspaceID binds this sweep to its tenant (jobs.WorkspaceScoped).
-func (a EmbedDriftWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-type embedDriftWorkspaceWorker struct {
+	pool  *pgxpool.Pool
 	store *search.Store
 	// corpora is the knowledge module's half of the same question. It rides
 	// this sweep rather than a job of its own: the sweep already answers "has
@@ -72,12 +55,16 @@ type embedDriftWorkspaceWorker struct {
 	log      *slog.Logger
 }
 
-func (w *embedDriftWorkspaceWorker) Work(ctx context.Context, job *river.Job[EmbedDriftWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	healed, err := w.store.SweepWorkspaceEmbeddingDrift(wsCtx, ids.From[ids.WorkspaceKind](job.Args.Workspace), w.embedder)
+func (w *embedDriftSweepWorker) Work(ctx context.Context, _ *river.Job[EmbedDriftSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
+}
+
+// sweepWorkspace heals ONE workspace. It was the child job's Work, and binds
+// the workspace itself: the pass walks tenants, so the binding belongs to the
+// tenant's turn rather than to the row.
+func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	healed, err := w.store.SweepWorkspaceEmbeddingDrift(wsCtx, ids.From[ids.WorkspaceKind](workspace), w.embedder)
 	if healed > 0 {
 		w.log.InfoContext(wsCtx, "embed drift sweep healed entities", "healed", healed)
 	}
@@ -133,8 +120,8 @@ func addEmbedDriftSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 	if identity, _ := embedder.EmbedIdentity(); identity == "" {
 		return nil
 	}
-	addDeclaredWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{pool: pool})
-	addDeclaredWorker[EmbedDriftWorkspaceArgs](reg, &embedDriftWorkspaceWorker{
+	addDeclaredWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{
+		pool:  pool,
 		store: search.NewStore(InstallationDB(pool)),
 		// WithBlobstore, or the abandoned-ingest sweep marks a document failed
 		// and leaves its stored file behind: FailIngest deletes the bytes
