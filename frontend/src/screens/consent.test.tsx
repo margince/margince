@@ -85,7 +85,10 @@ const CONSENT = {
       purpose_id: "p1",
       new_state: "granted",
       source: "booking form",
-      lawful_basis: "Art. 6(1)(b)",
+      // Deliberately NOT the current state's basis. If the log row echoed the
+      // head row instead of reading its own event, a shared value would still
+      // count two and this test would pass over the bug it exists to catch.
+      lawful_basis: "Art. 6(1)(f)",
       actor_type: "human",
       actor_id: "u1",
       occurred_at: "2026-05-01T10:00:00Z",
@@ -193,9 +196,11 @@ describe("ConsentSection", () => {
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
     );
-    // Two now — the state's and the event's — so this asserts the LOG grew a
-    // basis rather than counting the one that was already on the head row.
-    expect(await screen.findAllByText(/Art\. 6\(1\)\(b\)/)).toHaveLength(2);
+    // The two bases are different on purpose, so this names which text came
+    // from where: the head row still argues from the state's basis, and the
+    // log carries the event's own.
+    expect(await screen.findByText(/Art\. 6\(1\)\(f\)/)).toBeInTheDocument();
+    expect(within(row).getByText(/Art\. 6\(1\)\(b\)/)).toBeInTheDocument();
   });
 
   // A record with no basis says nothing rather than claiming one nobody
