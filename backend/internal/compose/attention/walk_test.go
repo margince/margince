@@ -460,3 +460,66 @@ func aDayOfAlikeDecisions(n int) crmcontracts.Attention {
 	}
 	return crmcontracts.Attention{AsOf: rankInstant, NeedsYou: pairs}
 }
+
+// TestARowThatComesBackStopsCountingAsGone.
+//
+// `changed_since_snapshot` answers over the whole walk, and it is deliberately
+// NOT monotonic. A task reopened between pages, or a record whose visibility is
+// restored, is on the reader's queue again — and reporting it as dealt with
+// because it once was would be the number lying in the harder direction.
+//
+// Held here because the contract now says so out loud, and a claim about a
+// figure moving is worth exactly as much as the test under it.
+func TestARowThatComesBackStopsCountingAsGone(t *testing.T) {
+	t.Parallel()
+	walks := &walkStore{}
+	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
+
+	first := walkFrom(t, svc, aDayOfTasks(6), 2, worklistCursor{})
+	if first.NextCursor == nil {
+		t.Fatal("the first page minted no cursor")
+	}
+
+	// Two are dealt with, and the walk says so. Removed BY ID: aDayOfTasks
+	// re-mints its rows, so slicing drops whichever ids sit at the end rather
+	// than the ones this test means.
+	thinner := aDayOfTasksWithout(6, "task-0", "task-1")
+	gone := walkFrom(t, svc, thinner, 10, decodedCursor(t, *first.NextCursor))
+	if gone.Walk == nil || gone.Walk.ChangedSinceSnapshot != 2 {
+		t.Fatalf("the walk reports %v gone, want the two that were dealt with", gone.Walk)
+	}
+
+	// One is reopened. It is back on the queue, so it is no longer gone.
+	restored := aDayOfTasksWithout(6, "task-0")
+	back := walkFrom(t, svc, restored, 10, decodedCursor(t, *first.NextCursor))
+
+	if back.Walk == nil {
+		t.Fatal("the resumed page carried no walk")
+	}
+	if back.Walk.ChangedSinceSnapshot != 1 {
+		t.Errorf("after one row came back the walk reports %d gone, want 1 — a row on the "+
+			"reader's queue again is not work they have dealt with",
+			back.Walk.ChangedSinceSnapshot)
+	}
+}
+
+// aDayOfTasksWithout is the same day with named rows dealt with.
+//
+// By ID rather than by slicing, because the fixture re-mints its rows on every
+// call: a slice drops whichever ids happen to sit at the end, which is not the
+// row a test about a SPECIFIC departure means.
+func aDayOfTasksWithout(n int, dealtWith ...string) crmcontracts.Attention {
+	skip := make(map[string]bool, len(dealtWith))
+	for _, id := range dealtWith {
+		skip[id] = true
+	}
+	whole := aDayOfTasks(n)
+	out := crmcontracts.Attention{AsOf: whole.AsOf}
+	for _, at := range whole.Planned {
+		if skip[at.Id] {
+			continue
+		}
+		out.Planned = append(out.Planned, at)
+	}
+	return out
+}
