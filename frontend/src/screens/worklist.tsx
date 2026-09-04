@@ -211,7 +211,14 @@ function WorklistHeader({
 // banded sections and the unbanded tail cannot drift into two spellings of the
 // same wiring.
 type RowContext = Readonly<{
-  queue: readonly WorklistItem[];
+  // Each row's place in the WHOLE queue, by identity.
+  //
+  // Built once for the page rather than searched per row: the sections partition
+  // an accumulated list that grows with every "load more", so asking the queue
+  // for each row's index would walk it once per row and cost more the further a
+  // reader pages. It is keyed on the identity rather than the object because
+  // that is what the rest of this file compares rows by.
+  positions: ReadonlyMap<string, number>;
   owner: string;
   selectedId: string;
   onSelect: (next: string) => void;
@@ -226,7 +233,7 @@ type RowContext = Readonly<{
 // heading would print two number ones.
 function QueueRows({
   items,
-  queue,
+  positions,
   owner,
   selectedId,
   onSelect,
@@ -239,7 +246,7 @@ function QueueRows({
         <li key={rowIdentity(item)}>
           <WorklistRow
             item={item}
-            position={queue.indexOf(item) + 1}
+            position={(positions.get(rowIdentity(item)) ?? 0) + 1}
             owner={owner}
             selected={selectedId === rowIdentity(item)}
             // Only where pressing it OPENS something. WorklistRow draws a plain
@@ -317,7 +324,7 @@ function WorklistBody({
   // go on describing a version of the day that is no longer on screen.
   const selected = queue.find((item) => rowIdentity(item) === selectedId);
   const rowProps: RowContext = {
-    queue,
+    positions: new Map(queue.map((item, at) => [rowIdentity(item), at])),
     owner,
     selectedId,
     onSelect,

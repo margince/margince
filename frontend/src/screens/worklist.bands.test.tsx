@@ -171,3 +171,33 @@ describe("a server that sends no bands still draws headings", () => {
     expect(screen.queryByText("Nothing needs you today.")).toBeNull();
   });
 });
+
+describe("the rank runs across the headings", () => {
+  // The number is the page's central claim about the order, so it counts the
+  // whole queue rather than each heading's run. Splitting the flat list into
+  // one <ol> per band is exactly the change that would restart it, and a page
+  // drawing two number ones tells a reader the order means nothing.
+  it("numbers rows 1..n over the whole queue, not per band", async () => {
+    stub(
+      day({
+        bands: [
+          { band: "now", shown: 1 },
+          { band: "review", shown: 2 },
+        ],
+        queue: [
+          row({ id: "first", title: "A buyer waiting", band: "now" }),
+          row({ id: "second", title: "A duplicate to judge", band: "review" }),
+          row({ id: "third", title: "Another to judge", band: "review" }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 2, total: 3 },
+      }),
+    );
+    renderWorklist("en");
+
+    await screen.findByText("A buyer waiting");
+    const ranks = [...document.querySelectorAll(".worklist-rank")].map(
+      (node) => node.textContent,
+    );
+    expect(ranks).toEqual(["1", "2", "3"]);
+  });
+});
