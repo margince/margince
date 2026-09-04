@@ -814,11 +814,9 @@ export const en = {
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
-  "consent.askSent": "Sent to {address}.",
+  "consent.askQueued": "On its way to {address}.",
   "consent.askNotDelivered":
     "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
-  "consent.askSendFailed":
-    "The link was created for {address} but the mail did not go out. Try again — a new link replaces this one.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This organization tracks no consent purposes yet.",
@@ -8106,6 +8104,7 @@ export const en = {
   "worklist.exceptions.owner": "Who answers",
   "worklist.exceptions.basis": "Judged against",
   "worklist.exceptions.nobody": "Nobody yet",
+  "worklist.exceptions.ownerWithheld": "Not shown to you",
   "worklist.exceptions.truncated":
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.kind.response_breached": "A first reply is late",

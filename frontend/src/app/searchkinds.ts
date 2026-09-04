@@ -92,7 +92,10 @@ export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
  *     product is worth having and is not this change.
  *
  * An ACTIVITY returns null: it is a link rather than a thing links hang off,
- * and the results screen draws it as the canonical email row instead.
+ * and the results screen draws it as the canonical email row instead. Where
+ * that activity IS a message, searchEmailRoute below is its destination — a
+ * question about the hit rather than about its type, which is why it is not
+ * an arm of this one.
  */
 export function searchHitRoute(type: SearchHitType, id: string): Route | null {
   if (isEntityKind(type)) {
@@ -105,4 +108,47 @@ export function searchHitRoute(type: SearchHitType, id: string): Route | null {
     return settingsAddress("data-model");
   }
   return null;
+}
+
+/**
+ * Where an EMAIL hit goes: the results screen, with that message open.
+ *
+ * A message has no page of its own — it opens a drawer owned by the page it is
+ * on, and that ownership is deliberate: it is what makes a record page reset
+ * the drawer when the record changes. So the destination is the one page that
+ * already owns this drawer and is already about finding things.
+ *
+ * The query rides in `id` because the screen is the search results and they
+ * have to be the results for something; the message rides in `id2`, which
+ * `Route` has carried since the share and contact-tab routes needed a second
+ * slot. No routing change, and no app-level owner of "which email is open".
+ */
+export function searchEmailRoute(query: string, activityId: string): Route {
+  return { screen: "search", id: query, id2: activityId };
+}
+
+/**
+ * Where this HIT goes, as against where its TYPE lives.
+ *
+ * The difference is the whole of #3850: an `activity` has no page, so
+ * searchHitRoute answers null for the type — but an activity that carries an
+ * `email_summary` is a message, and a message has a destination. Asking about
+ * the hit rather than about the type is what lets the palette offer one.
+ *
+ * Here rather than in the palette because the palette is one of two surfaces
+ * that draw a hit, and the last time each answered this for itself the two
+ * drifted until the results screen was dropping project hits on the floor.
+ */
+export function searchHitDestination(
+  hit: Readonly<{
+    type: SearchHitType;
+    id: string;
+    email_summary?: Readonly<{ activity_id: string }> | null;
+  }>,
+  query: string,
+): Route | null {
+  if (hit.email_summary) {
+    return searchEmailRoute(query, hit.email_summary.activity_id);
+  }
+  return searchHitRoute(hit.type, hit.id);
 }

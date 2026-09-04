@@ -26,16 +26,14 @@ type consentEnv struct {
 	personID   string
 	activityID string
 	purposes   map[string]string // key -> id
-	// mail is the relay the confirm-details link rides. A double-opt-in purpose
-	// can only be granted by spending a mailed link, and the plaintext never
-	// appears in a response, so a test has to read the mail.
-	mail *capturingMailer
 }
 
 func setupConsent(t *testing.T) *consentEnv {
 	t.Helper()
-	mail := &capturingMailer{}
-	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(mail))
+	// The relay is wired because a controller delivery resolves its transport
+	// before any gate runs; the LINK is read from the vault, where minting
+	// sealed it (confirmlinkmail_integration_test.go).
+	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(discardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
 
 	var person struct {
@@ -74,7 +72,7 @@ func setupConsent(t *testing.T) *consentEnv {
 		purposes["business_correspondence"] == "" {
 		t.Fatalf("bootstrap did not seed the purpose catalog: %+v", purposeList.Data)
 	}
-	return &consentEnv{AppEnv: e, mail: mail, personID: person.ID, activityID: activity.ID, purposes: purposes}
+	return &consentEnv{AppEnv: e, personID: person.ID, activityID: activity.ID, purposes: purposes}
 }
 
 func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {
@@ -371,7 +369,7 @@ func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
-	token := c.mail.confirmLinkToken(t)
+	token := confirmLinkToken(t, c.AppEnv)
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
 		"marketing_choice":  "granted",
 		"marketing_wording": "Yes, send me occasional product news.",

@@ -36,6 +36,17 @@ type Store struct {
 	// under. Injected by compose because the setting lives in identity
 	// (installationcountry.go).
 	country InstallationCountryReader
+	// confirmSender stages the installation's own mail on the durable lane, and
+	// vault holds the one-time link so the plaintext never reaches the delivery
+	// row. Both nil on an installation that has not wired the lane, which
+	// issueLink reports as a link that was minted and not sent — never as a
+	// failure, because the token was still spent.
+	confirmSender ConfirmationSender
+	vault         ConfirmLinkVault
+	// publicBaseURL is the canonical origin a confirm link is built on. It lives
+	// on the Store rather than on Handlers because the Store is what builds the
+	// link now: issueLink seals it into the vault inside its own transaction.
+	publicBaseURL string
 }
 
 // NewStore binds the store to the pool every read and write runs through.

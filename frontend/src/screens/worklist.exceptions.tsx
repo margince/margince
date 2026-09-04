@@ -62,7 +62,16 @@ export function TeamExceptionsPanel({
               // the intervention this page routes to. A row nobody holds opens
               // the unassigned scope instead: the work is real and somebody has
               // to take it.
-              onRowClick={(row) => onOwner(row.owner.id ?? "")}
+              //
+              // Read off the OWNER'S KIND, not off the id. A `user` row whose
+              // id this caller may not resolve still has somebody carrying it,
+              // and sending the manager to the unassigned scope for it would
+              // route them to a queue the work is not in.
+              onRowClick={(row) =>
+                row.owner.kind === "user" && row.owner.id
+                  ? onOwner(row.owner.id)
+                  : onOwner("")
+              }
               columns={[
                 {
                   key: "kind",
@@ -79,11 +88,24 @@ export function TeamExceptionsPanel({
                 {
                   key: "owner",
                   header: t("worklist.exceptions.owner"),
-                  // The name where the caller may resolve it, and the honest
-                  // absence otherwise. Never the raw id: a uuid in front of a
-                  // lead is the defect the label exists to prevent.
+                  // Three answers, because there are three facts and the wire
+                  // tells them apart: a name, somebody this caller may not
+                  // name, and nobody at all.
+                  //
+                  // Falling back to "Nobody yet" on a missing LABEL conflated
+                  // the last two. An exception owned by a real person whose
+                  // name the reader cannot resolve was reported as unassigned
+                  // work — which is not a display nicety: a lead reads that as
+                  // "this is going nowhere" and takes it, when a teammate is
+                  // already carrying it.
+                  //
+                  // Never the raw id either: a uuid in front of a lead is the
+                  // defect the label exists to prevent.
                   render: (row: TeamException) =>
-                    row.owner.label ?? t("worklist.exceptions.nobody"),
+                    row.owner.kind === "unassigned"
+                      ? t("worklist.exceptions.nobody")
+                      : (row.owner.label ??
+                        t("worklist.exceptions.ownerWithheld")),
                 },
                 {
                   key: "threshold",

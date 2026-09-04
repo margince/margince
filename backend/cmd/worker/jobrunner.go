@@ -208,6 +208,13 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// capture writes them to; without it a message carrying files fails at
 		// the read rather than going out without them.
 		SendBlob: lanes.blob,
+		// The installation's own mail is transmitted by the same relay that
+		// carries a password reset, and its one-time links are unsealed from
+		// the same vault everything else uses. Either one absent leaves a
+		// controller delivery parking with a reason that names what is missing,
+		// rather than retrying a deployment fact.
+		ControllerRelay: compose.ControllerRelayFor(weeklyMail.Mailer),
+		ControllerVault: vault,
 		// The geocoder, when this deployment has one. Empty leaves it nil, the
 		// worker records that it cannot resolve, and radius queries stay
 		// unavailable — which is honest for an installation that geocodes

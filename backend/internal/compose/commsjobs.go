@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -349,9 +350,9 @@ func (p SendPacing) withDefaults() SendPacing {
 // store, the mailbox resolver over the capture registry, the consent gate, and
 // the policy chain. Every one of those edges crosses a module boundary, which
 // is why the assembly lives here and not in comms.
-func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPacing, blob blobstore.Store) *commsSendWorker {
+func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPacing, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
 	p := pacing.withDefaults()
-	return &commsSendWorker{dispatcher: comms.NewDispatcher(
+	return &commsSendWorker{dispatcher: controllerLaneOn(comms.NewDispatcher(
 		// The reconcile seam is the cross-module edge comms must not hold
 		// itself: activities owns the timeline row, comms owns the delivery,
 		// and the two meet here.
@@ -369,7 +370,21 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 		// options rather than the constant, so the two cannot be changed
 		// apart: there is exactly one place the ladder length is declared.
 		sendInsertOpts().MaxAttempts,
-	)}
+	), relay, vault)}
+}
+
+// controllerLaneOn gives the dispatcher the transport for the installation's own
+// mail, when this role was composed with one.
+//
+// A role with no relay gets the dispatcher unchanged, and a controller delivery
+// it picks up parks with a reason naming the missing relay. That is the honest
+// outcome: an unconfigured relay is a deployment fact, and retrying it forever
+// would leave a person's confirmation link expiring in a queue nobody watches.
+func controllerLaneOn(d *comms.Dispatcher, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
+	if relay == nil || vault == nil {
+		return d
+	}
+	return d.WithControllerRelay(relay, controllerPayloads{v: vault})
 }
 
 // commsFiles carries the send's attachment snapshot across the module boundary.

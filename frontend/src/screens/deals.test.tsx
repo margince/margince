@@ -2122,11 +2122,14 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     render(<DealScreen id="x" />);
 
     await openHeaderMenu();
+    // Each WAITED for — see the note on the same list in
+    // organizations.header.test.tsx: only the first was, and the rest were
+    // read in the tick it arrived in.
     const refused = [
       await screen.findByTestId("edit-record"),
-      screen.getByTestId("archive-record"),
-      screen.getByTestId("share-record"),
-      screen.getByTestId("reopen-open"),
+      await screen.findByTestId("archive-record"),
+      await screen.findByTestId("share-record"),
+      await screen.findByTestId("reopen-open"),
     ];
     for (const control of refused) {
       expect(control.hasAttribute("disabled")).toBe(true);

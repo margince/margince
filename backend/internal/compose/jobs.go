@@ -20,9 +20,9 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/geocode"
@@ -90,6 +90,13 @@ type JobRunnerConfig struct {
 	// reads rows), and a message carrying attachments then fails at the read
 	// rather than going out without them.
 	SendBlob blobstore.Store
+	// ControllerRelay transmits the installation's OWN mail — a confirm-details
+	// link, a double-opt-in link — and ControllerVault holds the one-time link
+	// each such message carries. Nil is a role that sends no controller mail:
+	// the delivery parks with a reason naming the missing relay rather than
+	// retrying an outage that no waiting will fix.
+	ControllerRelay comms.ControllerRelay
+	ControllerVault keyvault.Vault
 	// SendRegistry resolves the transmitting mailbox for a staged delivery.
 	// Nil means this role registers no send worker at all: a delivery it
 	// picked up could only fail on every attempt, and a queued send is better
@@ -438,55 +445,4 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	)
 
 	return reg, periodic
-}
-
-// addModelLaneJobs registers the kinds whose work is a model call: the site
-// deep read, the voice build, the embed reindex, and the two refreshes that
-// extract rates from a page. The deferred-build retry sweep rides with them
-// because it fans out to the voice build and to nothing else.
-//
-// Not one of them is gated on the lane it reads, and that shared posture is
-// what makes them a group. Something outside the runner enqueues every model
-// call here — an api call, a human's confirm, an admin's refresh click, the
-// retry sweep's own fan-out — so a row can already be waiting when a role with
-// no lane configured comes up, and registering anyway is what makes that row
-// fail with an actionable message instead of sitting queued behind a job
-// nothing works. The embed DRIFT sweep takes the opposite posture for the
-// opposite reason (embeddriftsweep.go): nothing but its own tick enqueues it,
-// so there is no waiting row for a worker to answer.
-func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
-	// The deep read is the one kind whose timeout the file cannot state,
-	// because the crawl wall it is built from is an operator's (deepReadTimeout).
-	addDeclaredWorkerWithTimeout[SiteDeepReadArgs](reg,
-		newSiteDeepReadWorker(pool, cfg.DeepReadBrain, cfg.DeepReadFactBrain, cfg.DeepReadTriageBrain, log, cfg.DeepReadCaps, cfg.Blobstore),
-		deepReadTimeout(cfg.DeepReadCaps))
-	addDeclaredWorker[TranscriptProposeArgs](reg, newTranscriptProposeWorker(pool, cfg.TranscriptProposeBrain, log))
-	addDeclaredWorker[GeocodeOrganizationArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
-	addDeclaredWorker[CheckOrganizationVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))
-	addDeclaredWorker[DocumentExtractArgs](reg, newDocumentExtractWorker(pool, cfg.DocumentExtractBrain, cfg.SendBlob, log))
-	addDeclaredWorker[VoiceBuildArgs](reg, newVoiceBuildWorker(pool, cfg.VoiceBrain, log))
-	// The weekly retrospective moved here when it grew a lane. It is
-	// database-only in its measuring half and stays registered whatever the
-	// role holds — only the sentence is absent without a lane — but a group
-	// documented as taking no config is the wrong place for something that
-	// reads one.
-	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain, cfg.WeeklyMail)
-	addDeclaredWorker[VoiceBuildRetryArgs](reg, &voiceBuildRetryWorker{store: ai.NewVoiceStore(InstallationDB(pool)), log: log})
-	// The reindex is a dispatcher plus a workspace worker, and neither is
-	// ticked: the api enqueues the dispatcher once per confirmed reindex
-	// (jobs_embedreindex.go).
-	addEmbedReindexJobs(reg, pool, cfg.Embedder)
-	addKnowledgeIngestJobs(reg, pool, cfg.Blobstore, cfg.Embedder, log)
-	// The mailed-card import, registered unconditionally: a .vcf is parsed and
-	// not inferred, so there is no model lane for it to be missing. Its trigger
-	// starts unconditionally too, and the two must agree — River discards a job
-	// whose kind no worker claims, so a trigger without this registration would
-	// drop every mailed card silently.
-	addDeclaredWorker[VCardIngestArgs](reg, newVCardIngestWorker(pool, cfg.Blobstore, log))
-	// Both refreshes read a source the deployment configures. An unconfigured
-	// one — a nil brain, an empty url, no pricing sources — leaves the worker
-	// registered and its producer proposing nothing, which is the honest
-	// answer to "refresh from sources" when there are none.
-	addDeclaredWorker[FxRateRefreshArgs](reg, newFxRefreshWorker(pool, cfg.FxExtractBrain, cfg.FxSourceURL, cfg.FxBootstrapCurrencies, log))
-	addDeclaredWorker[AiModelRateRefreshArgs](reg, newModelCostRefreshWorker(pool, cfg.RateExtractBrain, cfg.ModelPricingSources, cfg.BoundModelIDs, log))
 }
