@@ -63,6 +63,10 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 	// what the caller needs afterwards to hold this row without holding a newer
 	// one. It survives the rollback because it never entered it.
 	var observed int64
+	// deferred names a refusal discovered after the transaction had already
+	// written, so the hold cannot ride inside it. Set only by the branch that
+	// rolls back; empty means nothing was deferred.
+	var deferred string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		claimed, found, err := s.claimForFire(ctx, tx, id)
 		if err != nil {
@@ -103,6 +107,16 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 		}
 		sent, err := s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		if err != nil {
+			// The engine decides at STAGING, which happens after the activity
+			// row is written — so this refusal cannot be held under the same
+			// transaction the way PrepareSend's is. Rolling back is what makes
+			// the hold honest: holding here would commit a logged "sent"
+			// activity for a message nobody sent. The reason rides out on
+			// `deferred` and the hold runs in its own transaction below,
+			// bound to the version this attempt claimed under.
+			if reason, ok := holdReasonFor(err); ok {
+				deferred = reason
+			}
 			return err
 		}
 		if err := s.releaseInTx(ctx, tx, id, ids.UUID(sent.Id)); err != nil {
@@ -112,6 +126,17 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 		return nil
 	})
 	if err != nil {
+		if deferred != "" {
+			// The send was refused about the world, and the rollback undid the
+			// activity it had already written. Hold now, in a fresh
+			// transaction, under the version this attempt claimed: a rep who
+			// rescheduled since has made a newer decision and HoldScheduledSend
+			// declines on their behalf.
+			if holdErr := s.HoldScheduledSend(ctx, id, deferred, observed); holdErr != nil {
+				return FireOutcome{Observed: observed}, errors.Join(err, holdErr)
+			}
+			return FireOutcome{Held: deferred, Observed: observed}, nil
+		}
 		// The observation rides out with the error: it is the only thing the
 		// caller can bind a follow-up hold to.
 		return FireOutcome{Observed: observed}, err

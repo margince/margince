@@ -19,8 +19,9 @@ package gates
 //
 //   - it stages a row (comms.Store.Stage*Tx);
 //   - it authorizes (AuthorizeStagingTx) on the SAME transaction;
-//   - it refuses an absolute denial (refuseAbsoluteDenial) — the four refusals
-//     no rollout mode may soften;
+//   - it refuses what will not change before dispatch (refuseAtStaging) — an
+//     absolute denial, and any refusal under a category this installation
+//     enforces;
 //   - it fails closed when no authority is wired, rather than staging anyway.
 //
 // The last one is why this gate is not satisfied by a bare call. A census sees
@@ -48,7 +49,7 @@ import (
 // found the same way and a method matching none of them is not a subject.
 const (
 	callAuthorize = "AuthorizeStagingTx"
-	callRefuse    = "refuseAbsoluteDenial"
+	callRefuse    = "refuseAtStaging"
 	callEnqueue   = "EnqueueTx"
 )
 

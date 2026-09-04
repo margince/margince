@@ -123,6 +123,13 @@ func legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey strin
 	}
 	switch verdict.State {
 	case VerdictAllowed:
+		// A basis this call DERIVED is written down before the send relies on
+		// it (Art. 5(2)). The engine is the only authority now, so it is the
+		// only thing left that can make that record: grantedForRecipient used
+		// to stamp here, and nothing calls it on the send path any more.
+		if err := stampDerivedBasis(ctx, tx, personID, verdict); err != nil {
+			return commsauthz.Decision{}, err
+		}
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
 		d.Basis = basisForClass(purpose.Class)
