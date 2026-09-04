@@ -4053,7 +4053,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     openStages={openStages}
                     archivedReasonId={archivedReasonId}
                   />
-                  <PageAsideToggle />
                 </>
               }
               band={dealBand({ deal, reasonId: archivedReasonId, t })}
@@ -4098,6 +4097,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   files: t("tab.documents"),
                   history: t("tab.history"),
                 }}
+                // The switch for the deal's details column, at the end of the
+                // tab row: it chooses what the page shows BESIDE the work, so
+                // it stands with the controls that choose what the work column
+                // shows. In the head it sat among the deal's own verbs — write,
+                // edit, the overflow — and read as one more thing to do to the
+                // record rather than as a way to see more of it.
+                trailing={<PageAsideToggle />}
               />
               {tab === "overview" && (
                 <DealOverviewPane

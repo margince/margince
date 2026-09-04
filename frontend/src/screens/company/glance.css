@@ -40,34 +40,12 @@
 .co-glance-cols .panel > .panel-head .panel-title {
   font-size: var(--fs-h2);
 }
-/* The needs list heads itself the same way, at the same size: it is a glance
-   pane like the ones beside it, and an eyebrow over a display-face title on
-   the next pane read as two kinds of pane. */
-.co-glance-cols .co-360-head {
-  padding-top: var(--space-5);
-  padding-bottom: var(--space-3);
-}
-/* And no seam under it, for the reason the dimension row has none over it: the
-   panel's rule divides one section of a card from the next, and a head is not
-   a section — it names the one below it. Drawn, the rule landed on the title's
-   own baseline. */
-.co-glance-cols .co-360-head + .panel-body::before,
-.co-glance-cols .co-360-head + .panel-row::before {
-  content: none;
-}
-.co-glance-cols .co-360-head .co-360-title-text {
-  margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
-  color: var(--textPrimary);
-}
 /* One column as soon as two would squeeze a list to nothing. Measured against
-   the WORK column (the `work` container, app/shell.css), not the window: with
-   the details column open a 1440px window leaves the record less room than a
-   1200px one with it closed. */
-@container work (max-width: 60rem) {
+   the STACK these columns sit in (company360.css's `.co-overview-stack`), not
+   the window and not the `work` container: `work` is the record's whole
+   region, details column included, so it does not narrow when that column
+   opens — which is the case this fold exists for. */
+@container (max-width: 60rem) {
   .co-glance-cols {
     grid-template-columns: minmax(0, 1fr);
   }
