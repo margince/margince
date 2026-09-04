@@ -6,8 +6,9 @@ package people
 // Where each contact stands with us, and the order a rep triages them in.
 //
 // The roster on its own answers "who works there". Before reaching out the rep
-// is asking something else: who here has ever answered, who has gone quiet on
-// me, and who has nobody tried. Those are three different next moves.
+// is asking something else: who is waiting on an answer from me, whose latest
+// mail have I answered, who has gone quiet on me, and who has nobody tried.
+// Those are four different next moves.
 //
 // This rule used to live in the browser (frontend/src/screens/coverage.ts
 // reachOf), which meant it could only classify the contacts a page had already

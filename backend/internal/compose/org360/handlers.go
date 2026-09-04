@@ -199,7 +199,7 @@ func (h Handlers) ListOrganizationContacts(w http.ResponseWriter, r *http.Reques
 	if params.Status != nil {
 		if !params.Status.Valid() {
 			httperr.Write(w, r, httperr.Validation("status", "invalid_enum",
-				"status is answered, no_reply or untried"))
+				"status is waiting, answered, no_reply or untried"))
 			return
 		}
 		status := people.Engagement(*params.Status)
