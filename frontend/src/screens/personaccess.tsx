@@ -1,12 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, useViewerId } from "./common";
 
 type Person = components["schemas"]["Person"];
 
@@ -28,7 +27,13 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const mayWrite = useCanWriteRecord("person", person);
+  // OWNERSHIP, not writability. `writable` is true for a write grant and for
+  // an unbounded seat as well, and neither of those is the mailbox this
+  // contact came from — the endpoint matches on owner_id exactly and answers
+  // 404 to everybody else. Offering the button on `writable` would show it to
+  // a colleague holding a grant and then fail their click.
+  const viewerId = useViewerId();
+  const isOwner = Boolean(viewerId) && person.owner_id === viewerId;
 
   const publish = useMutation({
     mutationFn: async (id: string) => {
@@ -59,11 +64,7 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
             ? t("personAccess.privateToYou")
             : t("personAccess.organization")}
         </p>
-        {/* The verb belongs to the OWNER, and `writable` is how the server
-            already tells us who that is on a capture-private row: nobody else
-            can write one. Offering it to a reader who cannot would produce a
-            404, which is the right answer to the wrong question being asked. */}
-        {isPrivate && mayWrite && (
+        {isPrivate && isOwner && (
           <Button
             small
             disabled={publish.isPending}

@@ -76,7 +76,7 @@ afterEach(() => {
 describe("PersonAccess", () => {
   it("says a captured contact is private to the reader, which no other surface does", async () => {
     stub();
-    draw({ ...base, visibility: "owner", writable: true });
+    draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
     expect(await screen.findByText(/private to you/i)).toBeTruthy();
   });
 
@@ -91,7 +91,7 @@ describe("PersonAccess", () => {
   it("offers the owner the one verb that changes the answer", async () => {
     const sent: string[] = [];
     stub(sent);
-    draw({ ...base, visibility: "owner", writable: true });
+    draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
     await userEvent.click(
       await screen.findByRole("button", {
         name: /share with the organization/i,
@@ -102,7 +102,29 @@ describe("PersonAccess", () => {
 
   it("offers no verb to a reader who is not the owner", async () => {
     stub();
-    draw({ ...base, visibility: "owner", writable: false });
+    draw({
+      ...base,
+      visibility: "owner",
+      writable: false,
+      owner_id: "someone-else",
+    });
+    expect(await screen.findByText(/private to you/i)).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /share with the organization/i }),
+    ).toBeNull();
+  });
+
+  it("offers no verb to a colleague holding a write grant", async () => {
+    // `writable` is true for a write grant and for an unbounded seat, neither
+    // of which is the mailbox this contact came from. The endpoint matches on
+    // owner_id exactly, so a button drawn on writability would 404 the click.
+    stub();
+    draw({
+      ...base,
+      visibility: "owner",
+      writable: true,
+      owner_id: "someone-else",
+    });
     expect(await screen.findByText(/private to you/i)).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: /share with the organization/i }),
@@ -111,7 +133,7 @@ describe("PersonAccess", () => {
 
   it("offers no verb on a contact the organization can already see", async () => {
     stub();
-    draw({ ...base, visibility: "workspace", writable: true });
+    draw({ ...base, visibility: "workspace", writable: true, owner_id: "u1" });
     expect(
       await screen.findByText(/everyone in the organization/i),
     ).toBeTruthy();
