@@ -6997,6 +6997,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/handled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the product did on your behalf, so you can check it.
+         * @description The opposite surface to the queue. That one lists obligations; this reports work
+         *     already finished, and it is the only place a reader can see what was done without
+         *     being asked to do anything about it.
+         *
+         *     A product that acts autonomously and never says what it acted on is asking for
+         *     trust it has not earned. So this is not a convenience: it is the receipt a reader
+         *     checks, and the reason the acts are safe to take at all.
+         *
+         *     NEVER AN OBLIGATION. The lane behind this is deliberately absent from the
+         *     worklist's own source vocabulary, so a completed act cannot reappear as something
+         *     to do — a receipt that came back as a row would ask the reader to redo what was
+         *     already done.
+         *
+         *     Read under the caller's own visibility and bounded, with `truncated` saying when
+         *     the read stopped short. Nothing here is a claim about work the caller may not see.
+         */
+        get: operations["getHandledForYou"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/exceptions": {
         parameters: {
             query?: never;
@@ -29355,6 +29389,56 @@ export interface components {
             evidence?: string;
         };
         /**
+         * @description What the product did on this reader's behalf, reported rather than asked about.
+         *
+         *     The queue is a list of obligations; this is the opposite surface — work that is
+         *     already finished, and the only place a reader can check what was done without
+         *     being asked to do anything. A product that acts autonomously and never says what
+         *     it acted on asks for trust it has not earned.
+         *
+         *     NEVER AN OBLIGATION. A receipt carries no verb and never returns to the day: the
+         *     lane it is drawn from is deliberately absent from the worklist's own sources, so a
+         *     completed act cannot reappear as something to do.
+         *
+         *     Bounded and newest first. `truncated` says when the read stopped at its own bound,
+         *     the same admission every manager figure on this surface makes.
+         */
+        HandledForYou: {
+            /**
+             * Format: date-time
+             * @description The instant these were read at.
+             */
+            as_of: string;
+            /** @description What was done, newest first. Empty is the honest common case. */
+            receipts: components["schemas"]["Receipt"][];
+            /** @description True when more was done than was read. The list is a floor, not a total. */
+            truncated: boolean;
+        };
+        /**
+         * @description One completed act, and the record it was about.
+         *
+         *     `subject` is present only where the act named a record. Not every approval is
+         *     about one, and an empty subject is a real state rather than a missing field — a
+         *     client draws the summary alone rather than inventing something to open.
+         */
+        Receipt: {
+            /**
+             * Format: uuid
+             * @description The completed act, as its own surface spells it.
+             */
+            id: string;
+            /** @description The producer's own sub-type — for the label, never for authority. */
+            kind: string;
+            /** @description What was done, in the words the act itself recorded. */
+            summary: string;
+            /**
+             * Format: date-time
+             * @description When it happened.
+             */
+            occurred_at: string;
+            subject?: components["schemas"]["AttentionSubject"];
+        };
+        /**
          * @description What is going wrong on this lead's team, finite and caller-scoped.
          *
          *     FINITE because a page a lead cannot finish is a page they stop opening. The rows
@@ -41837,6 +41921,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getHandledForYou: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What was done, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandledForYou"];
                 };
             };
             401: components["responses"]["Unauthorized"];

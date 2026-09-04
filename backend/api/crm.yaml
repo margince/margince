@@ -10447,6 +10447,36 @@ paths:
               schema: { $ref: '#/components/schemas/TeamBoard' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /worklist/handled:
+    get:
+      tags: [Brief]
+      operationId: getHandledForYou
+      summary: What the product did on your behalf, so you can check it.
+      description: |
+        The opposite surface to the queue. That one lists obligations; this reports work
+        already finished, and it is the only place a reader can see what was done without
+        being asked to do anything about it.
+
+        A product that acts autonomously and never says what it acted on is asking for
+        trust it has not earned. So this is not a convenience: it is the receipt a reader
+        checks, and the reason the acts are safe to take at all.
+
+        NEVER AN OBLIGATION. The lane behind this is deliberately absent from the
+        worklist's own source vocabulary, so a completed act cannot reappear as something
+        to do — a receipt that came back as a row would ask the reader to redo what was
+        already done.
+
+        Read under the caller's own visibility and bounded, with `truncated` saying when
+        the read stopped short. Nothing here is a claim about work the caller may not see.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: What was done, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HandledForYou' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /worklist/exceptions:
     get:
       tags: [Brief]
@@ -39037,6 +39067,50 @@ components:
             One line of what raised it, where the producer has one. Absent rather than
             invented: a row that cannot say what it saw says nothing, and a lead reads the
             subject and the clock instead.
+
+    HandledForYou:
+      type: object
+      description: |
+        What the product did on this reader's behalf, reported rather than asked about.
+
+        The queue is a list of obligations; this is the opposite surface — work that is
+        already finished, and the only place a reader can check what was done without
+        being asked to do anything. A product that acts autonomously and never says what
+        it acted on asks for trust it has not earned.
+
+        NEVER AN OBLIGATION. A receipt carries no verb and never returns to the day: the
+        lane it is drawn from is deliberately absent from the worklist's own sources, so a
+        completed act cannot reappear as something to do.
+
+        Bounded and newest first. `truncated` says when the read stopped at its own bound,
+        the same admission every manager figure on this surface makes.
+      required: [as_of, receipts, truncated]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant these were read at.' }
+        receipts:
+          type: array
+          items: { $ref: '#/components/schemas/Receipt' }
+          description: 'What was done, newest first. Empty is the honest common case.'
+        truncated:
+          type: boolean
+          description: 'True when more was done than was read. The list is a floor, not a total.'
+
+    Receipt:
+      type: object
+      description: |
+        One completed act, and the record it was about.
+
+        `subject` is present only where the act named a record. Not every approval is
+        about one, and an empty subject is a real state rather than a missing field — a
+        client draws the summary alone rather than inventing something to open.
+      required: [id, kind, summary, occurred_at]
+      properties:
+        id: { type: string, format: uuid, description: 'The completed act, as its own surface spells it.' }
+        kind: { type: string, description: "The producer's own sub-type — for the label, never for authority." }
+        summary: { type: string, description: 'What was done, in the words the act itself recorded.' }
+        occurred_at: { type: string, format: date-time, description: 'When it happened.' }
+        subject:
+          $ref: '#/components/schemas/AttentionSubject'
 
     TeamExceptions:
       type: object

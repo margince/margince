@@ -50,6 +50,20 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetHandledForYou answers what the product did on this reader's behalf.
+//
+// No parameters and no tier: a receipt is the reader's own, and every act it
+// reports was taken for them. The service refuses a principal with no human
+// behind it, because there is nobody for the acts to have been done for.
+func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.HandledForYou(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetTeamExceptions answers what is going wrong on this lead's team.
 //
 // No parameters, for the reason GetTeamBoard has none: whose team it is comes

@@ -464,6 +464,11 @@ func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetHiddenBacklog(w, r)
 }
 
+// GetHandledForYou forwards the reader's own receipt of what was done.
+func (s Server) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.GetHandledForYou(w, r)
+}
+
 // GetTeamExceptions forwards the lead's read of what is going wrong.
 func (s Server) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetTeamExceptions(w, r)
