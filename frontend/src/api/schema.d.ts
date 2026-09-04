@@ -11216,6 +11216,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which population this caller measures by default, and which they may choose.
+         * @description The frame every analytics answer is placed in: the population this caller measures
+         *     when they ask for nothing, the populations they may ask for instead, the base
+         *     currency and zone their money and days are counted in, and what the screen may
+         *     offer them.
+         *
+         *     The POPULATION is not the same question as which records the caller may open.
+         *     Deals are workspace-readable so two reps do not call the same buyer, so a rep's row
+         *     scope narrows nothing — and a rep handed the workspace total has been answered a
+         *     question nobody asked. `default_scope` is what their own lens measures.
+         *
+         *     Every `label` here is written by the server. A client resolving a team or user id
+         *     into a name would be naming a subject it may not read, and the two would disagree
+         *     the first time a grant changed.
+         *
+         *     `allowed_scopes` is what the screen may OFFER, not what it may send unchecked:
+         *     every data route validates a requested population again. A control built from this
+         *     list simply never offers one that would be refused.
+         */
+        get: operations["getAnalyticsContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/schema": {
         parameters: {
             query?: never;
@@ -23516,6 +23552,44 @@ export interface components {
             readings: components["schemas"]["ForecastReadings"];
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
+        };
+        /** @description One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read. */
+        AnalyticsScope: {
+            /**
+             * @description `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
+             * @enum {string}
+             */
+            kind: "workspace" | "managed_teams" | "team" | "owner";
+            /**
+             * Format: uuid
+             * @description The team or person measured. Absent for workspace and managed_teams, which name no single subject.
+             */
+            id?: string;
+            /** @description What to call this population on screen. */
+            label: string;
+        };
+        /** @description What this caller may actually do, so a screen never offers a control the server will refuse. */
+        AnalyticsCapabilities: {
+            /** @description Whether the manager forecast is a destination for this caller at all. */
+            view_manager_forecast: boolean;
+            /** @description Whether this caller may publish a forecast for the population they are measuring. False hides the action rather than letting the save fail. */
+            submit_manager_forecast: boolean;
+        };
+        /** @description The frame every analytics answer for this caller is placed in. */
+        AnalyticsContext: {
+            default_scope: components["schemas"]["AnalyticsScope"];
+            /** @description What the screen may offer. Every data route validates a requested population again; this list only keeps a control from offering a refusal. */
+            allowed_scopes: components["schemas"]["AnalyticsScope"][];
+            capabilities: components["schemas"]["AnalyticsCapabilities"];
+            /**
+             * Format: date-time
+             * @description The instant this frame was resolved.
+             */
+            as_of: string;
+            /** @description The zone whose days a period is cut in. */
+            timezone: string;
+            /** @description The currency money readings are counted in. */
+            base_currency: string;
         };
         /** @description The populations and fields one caller may ask about. */
         AnalyticsSchema: {
@@ -47526,6 +47600,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAnalyticsContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's analytics frame. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsContext"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getAnalyticsSchema: {

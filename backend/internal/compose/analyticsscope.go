@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -244,6 +245,7 @@ func sharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.
 	err := tx.QueryRow(ctx, `SELECT EXISTS (
 		SELECT 1 FROM team_membership tm
 		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
+		JOIN app_user u ON u.id = tm.user_id AND `+identity.LiveMemberSQL("u")+`
 		WHERE tm.user_id = $1 AND tm.team_id = ANY($2))`, user, teams).Scan(&shares)
 	if err != nil {
 		return false, fmt.Errorf("compose: reading team membership: %w", err)
@@ -297,8 +299,10 @@ func labelScope(ctx context.Context, tx pgx.Tx, resolved *ResolvedScope) error {
 func analyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	var label string
 	err := tx.QueryRow(ctx,
-		`SELECT display_name FROM app_user WHERE id = $1 AND archived_at IS NULL`, id).Scan(&label)
+		`SELECT display_name FROM app_user WHERE id = $1 AND `+identity.LiveMemberSQL(""), id).Scan(&label)
 	if errors.Is(err, pgx.ErrNoRows) {
+		// Deactivated counts as absent, not merely archived: a departed
+		// colleague is no longer a population somebody measures.
 		return "", fmt.Errorf("no such person to measure: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
