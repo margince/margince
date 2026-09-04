@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Children, type CSSProperties, type ReactNode } from "react";
+import { ReadingsFloor } from "./readingsfloor";
 import "./statstrip.css";
 
 // The strip's style carries the slot-count custom properties alongside the
@@ -24,11 +25,16 @@ export function StatStrip({
   children,
   className,
   testId,
+  label,
   floor,
 }: Readonly<{
   children: ReactNode;
   className?: string;
   testId?: string;
+  // The row's name as a landmark, for a screen that wants the readings
+  // reachable as one region. Absent, the section is unnamed and not a
+  // landmark of its own.
+  label?: string;
   // What qualifies the WHOLE row — a source read to its limit, making every
   // figure above a floor. It belongs to the plate rather than to a slot: the
   // row is read across as one statement, and a caveat attached to one figure
@@ -57,6 +63,7 @@ export function StatStrip({
     <section
       className={["stat-strip", className ?? ""].filter(Boolean).join(" ")}
       style={vars}
+      aria-label={label}
       data-testid={testId}
     >
       {children}
@@ -68,7 +75,7 @@ export function StatStrip({
   return (
     <div className="stat-strip-wrap">
       {row}
-      <p className="t-meta stat-strip-floor">{floor}</p>
+      <ReadingsFloor>{floor}</ReadingsFloor>
     </div>
   );
 }

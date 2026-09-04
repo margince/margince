@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package draftreply_test
+package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/draftreply"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -36,7 +36,7 @@ type retryingLane struct {
 }
 
 func (l *retryingLane) CompleteValidated(
-	_ context.Context, _ model.Request, validate ai.Validator,
+	_ context.Context, _ model.Request, validate Validator,
 ) (model.Response, error) {
 	l.validated++
 	l.refused = validate(l.reply)
@@ -50,13 +50,26 @@ func (l *retryingLane) CompleteValidated(
 }
 
 const (
-	refusable = `{"subject":"Intro?","body":"Could you introduce me to them?"}`
-	sendable  = `{"subject":"Intro?","body":"Hi Sofia, could you introduce me to Philipp Königs?"}`
+	refusable = `{"subject":"Intro?","body":""}`
+	sendable  = `{"subject":"Intro?","body":"Could you introduce me to them?"}`
 )
 
+// readsIt stands for a calling site's own read of its reply. It is spelled here
+// rather than borrowed from a real site because ai may not import compose,
+// where every real one lives — and because what this file proves is the
+// DISPATCH, which is the same whichever read a site brings.
 func readsIt(text string) error {
-	_, _, err := draftreply.Parse(text, "Sofia", "Philipp Königs")
-	return err
+	var reply struct {
+		Subject string `json:"subject"`
+		Body    string `json:"body"`
+	}
+	if err := json.Unmarshal([]byte(text), &reply); err != nil {
+		return fmt.Errorf("the reply is not the shape this site takes: %w", err)
+	}
+	if reply.Body == "" {
+		return errors.New("the reply carries no body")
+	}
+	return nil
 }
 
 // A lane that can re-ask is asked through the site's OWN read, so the refusal
@@ -64,7 +77,7 @@ func readsIt(text string) error {
 func TestALaneThatCanReAskIsGivenTheSitesOwnRefusal(t *testing.T) {
 	t.Parallel()
 	lane := &retryingLane{plainLane: plainLane{reply: refusable}, second: sendable}
-	res, err := draftreply.Ask(context.Background(), lane, model.Request{}, readsIt)
+	res, err := Ask(context.Background(), lane, model.Request{}, readsIt)
 	if err != nil {
 		t.Fatalf("asking: %v", err)
 	}
@@ -88,7 +101,7 @@ func TestALaneThatCanReAskIsGivenTheSitesOwnRefusal(t *testing.T) {
 func TestALaneThatCannotReAskStillAnswers(t *testing.T) {
 	t.Parallel()
 	lane := &plainLane{reply: sendable}
-	res, err := draftreply.Ask(context.Background(), lane, model.Request{}, readsIt)
+	res, err := Ask(context.Background(), lane, model.Request{}, readsIt)
 	if err != nil {
 		t.Fatalf("asking: %v", err)
 	}
@@ -112,7 +125,7 @@ func (l failingLane) Complete(context.Context, model.Request) (model.Response, e
 func TestALaneFailureReachesTheCaller(t *testing.T) {
 	t.Parallel()
 	want := errors.New("every bound tier failed")
-	if _, err := draftreply.Ask(
+	if _, err := Ask(
 		context.Background(), failingLane{err: want}, model.Request{}, readsIt,
 	); !errors.Is(err, want) {
 		t.Fatalf("the lane's failure did not reach the caller: %v", err)

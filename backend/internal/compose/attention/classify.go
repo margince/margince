@@ -49,6 +49,13 @@ const sourceAtRisk = "deal_at_risk"
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 
+// subjectPerson is the subject type a person-shaped row names.
+//
+// A constant for the reason sourceDecay is one: the suppressor pairing the
+// decay lane against a waiting row matches on it, and a misspelt literal there
+// fails silently — it matches nothing, drops nothing, and reads green.
+const subjectPerson = "person"
+
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
@@ -322,6 +329,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// without this it is a row the filters cannot place: a named owner's
 		// queue dropped every one of them.
 		owner: waiting.OwnerID,
+		// And WHO it is about, which the subject above may have given to a deal.
+		// The decay suppressor reads this rather than the subject, so a contact
+		// whose wait is filed under a deal is still recognised as answered.
+		person: waiting.PersonID,
 	}
 }
 

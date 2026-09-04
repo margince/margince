@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
+import { routeHash } from "../app/router";
 import { Badge, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -14,9 +15,10 @@ import {
   formatDateTime,
   formatMoney,
   formatNumber,
+  formatSignedMoney,
   formatSignedNumber,
 } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   useWeeklyReview,
@@ -244,24 +246,50 @@ function readState(
 }
 
 /**
- * What the week's wins were worth, or nothing.
+ * What the week's wins were worth, and whether that beat the week before.
  *
- * NOTHING, not a zero, when the review carries no pipeline block. That block is
- * optional on the wire: a week assembled before the money columns existed, or
- * one where an FX rate was missing, has no honest figure — and "€0 won" is a
- * claim about a week nobody measured, which is the opposite of what happened.
+ * THE PACE NUMBER, and it lives here rather than on the morning for a reason
+ * the morning's own contract states: every figure in that strip describes the
+ * same set — today's queue, before filtering — which is what keeps those
+ * numbers stable as a rep works down the page. Money closed over a week is a
+ * different population, and standing it beside four same-set figures would put
+ * two measurements in one row with nothing saying they differ.
  *
- * The currency comes from the review, never from the installation's current
- * setting. Base currency is operator-mutable, so re-reading it later would
- * re-label an old week with a currency its numbers were never in. The contract
- * stores it beside the figures for exactly this reason.
+ * Here the whole panel is already about one closed week, so a week-on-week
+ * comparison is the question the surface exists to answer.
+ *
+ * BOTH WEEKS OR NEITHER for the delta. A prior week with no pipeline block is
+ * one nobody could price, not one that earned nothing — so it yields no
+ * comparison rather than a change measured against a zero that was never a
+ * figure. The value still draws; only the comparison is withheld.
+ *
+ * The currencies must MATCH. Each week is stored in the currency it was
+ * measured in, and an operator who changed the base currency mid-quarter leaves
+ * two weeks whose numbers are not comparable. Subtracting across them would
+ * print a change nobody can act on.
  */
-function wonValue(review: WeeklyReview, locale: Locale): string | undefined {
+function wonPace(
+  review: WeeklyReview,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
   const pipeline = review.pipeline;
   if (pipeline === undefined) {
     return undefined;
   }
-  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+  const value = formatMoney(pipeline.won_minor, pipeline.currency, locale);
+  const before = review.prior?.pipeline;
+  if (before === undefined || before.currency !== pipeline.currency) {
+    return value;
+  }
+  return t("home.weekly.wonVsPrior", {
+    value,
+    delta: formatSignedMoney(
+      pipeline.won_minor - before.won_minor,
+      pipeline.currency,
+      locale,
+    ),
+  });
 }
 
 function WeeklyBody({
@@ -286,8 +314,13 @@ function WeeklyBody({
   if (review === null) {
     // A rep whose first Monday has not come round yet. Saying so is the honest
     // answer; a page of zeroes would claim a week that was measured and empty.
+    // Drawn through the same arm the branch above uses for the same sentence —
+    // hand-rolled here, it was the one line on the card set as a caption while
+    // every other absence on the page read as prose.
     return (
-      <p className="home-weekly-none t-caption">{t("home.weekly.none")}</p>
+      <SurfaceState state="empty" emptyLabel={t("home.weekly.none")}>
+        {null}
+      </SurfaceState>
     );
   }
 
@@ -342,11 +375,12 @@ function WeeklyBody({
           //
           // It rides the won slot rather than taking a sixth: five is what a
           // strip can be read across as one comparison, and a tenth slot folded
-          // the row into two ranks at 1280 (#3709). The delta line gives way to
-          // it, because "what it was worth" is the fact a reader wants first
-          // and the strip has one detail line to give.
+          // the row into two ranks at 1280 (#3709). The one detail line carries
+          // the value AND its change against the week before, which is the
+          // pace reading — it belongs here rather than on the morning, whose
+          // strip is bound to one same-set population.
           detail={
-            wonValue(review, locale) ?? since(c.deals_won, prior?.deals_won)
+            wonPace(review, locale, t) ?? since(c.deals_won, prior?.deals_won)
           }
         />
         <StatCard
@@ -381,8 +415,17 @@ function WeeklyBody({
             <li key={`${deal.deal_id}-${deal.occurred_at}`}>
               {/* The LABEL, not a lookup. It was frozen when the review was
                   written, so a deal renamed or deleted since still reads as it
-                  did that week. */}
-              <span className="home-weekly-deal-name">{deal.label}</span>
+                  did that week — which is why this is a plain anchor and not
+                  `EntityRef`: resolving the name would undo the freeze. The
+                  ADDRESS is safe to build from the frozen id either way; a deal
+                  that has since gone answers 404, which is the honest outcome
+                  for a week that is over. */}
+              <a
+                className="home-weekly-deal-name link-button"
+                href={routeHash({ screen: "deals", id: deal.deal_id })}
+              >
+                {deal.label}
+              </a>
               <span className="home-weekly-deal-outcome t-caption">
                 {outcomeWord(t, deal.outcome)}
                 {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}

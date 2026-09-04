@@ -176,9 +176,7 @@ function MembersCard({
         <QueryGate query={members}>
           {(list) =>
             list.length === 0 ? (
-              <EmptyState>
-                <p className="t-small">{t("users.empty")}</p>
-              </EmptyState>
+              <EmptyState>{t("users.empty")}</EmptyState>
             ) : (
               // One SettingRow per member, so nine members read as nine lines
               // rather than nine cards. Before this a row drew the name, then a

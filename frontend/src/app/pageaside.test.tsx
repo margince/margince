@@ -6,7 +6,7 @@ import { cleanup, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { PageAside, PageAsideProvider, PageAsideRegion } from "./pageaside";
+import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
 
 const KEY = "margince.pageAside.collapsed";
 
@@ -16,47 +16,55 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function column() {
+// A record screen's shape: it claims the pane, draws its content only while
+// the pane is open, and carries the switch at the end of its tab row.
+function Record({ available = true }: Readonly<{ available?: boolean }>) {
+  const details = usePageAside(available);
+  return (
+    <>
+      <PageAsideToggle />
+      {details.open && <aside>Nine fields and the tags.</aside>}
+    </>
+  );
+}
+
+function record(available?: boolean) {
   const view = render(
     <LocaleProvider initial="en">
       <PageAsideProvider>
-        <PageAsideRegion />
-        <PageAside>
-          <p>Nine fields and the tags.</p>
-        </PageAside>
+        <Record available={available} />
       </PageAsideProvider>
     </LocaleProvider>,
   );
-  const aside = view.container.querySelector("aside.pageaside");
-  if (!aside) {
-    throw new Error("the column did not render");
-  }
-  return { aside, ...view };
+  return {
+    ...view,
+    pane: () => view.container.querySelector("aside"),
+  };
 }
 
-// The details column is where a reader goes for the attributes, not what they
+// The details pane is where a reader goes for the attributes, not what they
 // open a record to see, so it starts folded until they say otherwise — and
 // what they say is remembered.
-describe("the details column is closed until asked", () => {
+describe("the details pane is closed until asked", () => {
   it("starts folded when nothing is remembered", () => {
-    const { aside } = column();
-    expect(aside.classList.contains("collapsed")).toBe(true);
+    const { pane } = record();
+    expect(pane()).toBeNull();
   });
 
   it("starts open when the reader last left it open", () => {
     localStorage.setItem(KEY, "0");
-    const { aside } = column();
-    expect(aside.classList.contains("collapsed")).toBe(false);
+    const { pane } = record();
+    expect(pane()).not.toBeNull();
   });
 
   it("remembers a fold and an unfold", async () => {
     const user = userEvent.setup();
-    const { aside, getByRole } = column();
-    await user.click(getByRole("button", { name: /Show/ }));
-    expect(aside.classList.contains("collapsed")).toBe(false);
+    const { pane, getByRole } = record();
+    await user.click(getByRole("button", { name: "Show panel" }));
+    expect(pane()).not.toBeNull();
     expect(localStorage.getItem(KEY)).toBe("0");
-    await user.click(getByRole("button", { name: /Hide/ }));
-    expect(aside.classList.contains("collapsed")).toBe(true);
+    await user.click(getByRole("button", { name: "Hide panel" }));
+    expect(pane()).toBeNull();
     expect(localStorage.getItem(KEY)).toBe("1");
   });
 
@@ -64,7 +72,29 @@ describe("the details column is closed until asked", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("storage refused");
     });
-    const { aside } = column();
-    expect(aside.classList.contains("collapsed")).toBe(true);
+    const { pane } = record();
+    expect(pane()).toBeNull();
+  });
+});
+
+// A switch for a pane that does not exist is a control that does nothing: a
+// screen whose composer holds the pane's place offers neither.
+describe("the switch goes with the pane", () => {
+  it("is absent while the screen has no pane to offer", () => {
+    localStorage.setItem(KEY, "0");
+    const { pane, queryByRole } = record(false);
+    expect(pane()).toBeNull();
+    expect(queryByRole("button")).toBeNull();
+  });
+
+  it("starts open on a surface with no reader to remember", () => {
+    const view = render(
+      <LocaleProvider initial="en">
+        <PageAsideProvider open>
+          <Record />
+        </PageAsideProvider>
+      </LocaleProvider>,
+    );
+    expect(view.container.querySelector("aside")).not.toBeNull();
   });
 });

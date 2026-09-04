@@ -12,37 +12,54 @@ import { useEffect, useState } from "react";
 // cites this file and the two are changed together.
 export const PHONE_MAX_WIDTH = 700;
 
-const PHONE_QUERY = `(max-width: ${PHONE_MAX_WIDTH}px)`;
+// The width at which a LIST HEADER stops fitting its verbs. Below it the row of
+// actions folds into one overflow menu (design-system/listsurface.tsx). It is
+// wider than the phone breakpoint on purpose: nothing about the shell changes
+// here, only how much a card's own header row can hold, and the header ran out
+// of room a long way above the width at which the sidebar becomes a bar.
+export const NARROW_MAX_WIDTH = 1100;
 
-function phoneQuery(): MediaQueryList | undefined {
-  return globalThis.matchMedia?.(PHONE_QUERY);
+function widthQuery(maxWidth: number): MediaQueryList | undefined {
+  return globalThis.matchMedia?.(`(max-width: ${maxWidth}px)`);
 }
 
 /**
- * Whether the viewport is at phone width.
+ * Whether the viewport is at or under `maxWidth`.
  *
  * Subscribed rather than measured once: a window is resized and a phone is
  * rotated while the app is open, and chrome that read the width at mount would
  * keep the other width's arrangement for the rest of the session.
  *
  * `matchMedia` is absent in some embedded contexts, and a missing media query is
- * a DEFAULT rather than an error — the answer is then "not a phone", which is
+ * a DEFAULT rather than an error — the answer is then "not narrow", which is
  * the arrangement that works at any width.
  */
-export function usePhoneViewport(): boolean {
-  const [phone, setPhone] = useState(() => phoneQuery()?.matches ?? false);
+export function useViewportUnder(maxWidth: number): boolean {
+  const [under, setUnder] = useState(
+    () => widthQuery(maxWidth)?.matches ?? false,
+  );
   useEffect(() => {
-    const query = phoneQuery();
+    const query = widthQuery(maxWidth);
     if (!query) {
       return;
     }
     // Read again on subscribe: the first render can happen before the window
     // has settled at the size it ends up at, and the listener below only ever
     // reports a CHANGE from whatever the query matched then.
-    setPhone(query.matches);
-    const listen = () => setPhone(query.matches);
+    setUnder(query.matches);
+    const listen = () => setUnder(query.matches);
     query.addEventListener("change", listen);
     return () => query.removeEventListener("change", listen);
-  }, []);
-  return phone;
+  }, [maxWidth]);
+  return under;
+}
+
+/** Whether the viewport is at phone width, where the sidebar is a bottom bar. */
+export function usePhoneViewport(): boolean {
+  return useViewportUnder(PHONE_MAX_WIDTH);
+}
+
+/** Whether a card's header has to fold its row of verbs into one menu. */
+export function useNarrowViewport(): boolean {
+  return useViewportUnder(NARROW_MAX_WIDTH);
 }

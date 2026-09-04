@@ -31,3 +31,4 @@ e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b496
 0110dee350c9277dc41e5147dbba9c0a127c3f8a f26fe6c3b9c6e8dc75128b7bea48799033ecdab3 ratified-v1-tag-colour-is-a-closed-palette-and-a-name-is-bounded
 44085e526e3c71af58230ac3359eb9679dbd6a59 08ef392fc995b0b79872e2544d5f3d210d5923a1 ratified-a-double-opt-in-link-is-mailed-never-shown-to-the-operator
 98f26a4484760912e7cede9f57715a7be587b6c5 49728224fbaa221da787bacd7a391776d6fc85a4 ratified-worklist-move-carries-the-deal-cards-verbs
+6a7b29a268183069393c39b1931648a5894b6abe 91cc59b5c3855fed8bf8ba020d95894ed60822e4 ratified-the-five-controller-only-categories-leave-the-send-enum-the-door-always-refused-them

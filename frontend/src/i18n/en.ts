@@ -182,13 +182,11 @@ export const en = {
   "nav.tags": "Tag",
 
   "shell.railAria": "Primary navigation",
-  "shell.aside.hide": "Hide",
-  "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
-  "shell.alpha": "Alpha",
+  "shell.poweredByPrefix": "Powered by",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
@@ -278,6 +276,7 @@ export const en = {
   "deal.archived": "archived",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
+  "record.chronologyLoading": "Reading the change history…",
   // The same word the tab strip uses (`tab.timeline`): the heading over the
   // slot and the tab that opens it name one thing, and two words for it read
   // as two things.
@@ -567,11 +566,11 @@ export const en = {
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
 
+  "list.headActions": "More actions",
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
   "list.viewAll": "All",
-  "list.viewAZ": "A–Z",
   "list.viewHot": "Hot",
   "list.overlayReadOnly":
     "Sorting and filters read through HubSpot — open it there",
@@ -591,6 +590,7 @@ export const en = {
   "table.shownColumns": "Shown columns",
   "table.compact": "Compact",
   "table.sort": "Sort",
+  "table.sortNamed": "Sort: {column}",
   "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",
@@ -862,10 +862,8 @@ export const en = {
   // purpose: it stands for all of them at once.
   "co.strip.finance": "Finance",
   "co.strip.financeUnknown": "—",
-  "co.strip.basis.health": "What makes up this score",
   "co.strip.open.deals": "Open deals",
   "co.strip.open.finance": "Open finance",
-  "co.strip.open.people": "Open people",
   "co.strip.basis.reading": "How it stands",
   "co.strip.fin.notACustomer": "Not a customer yet",
   "co.strip.fin.noConnection": "Connect your accounting",
@@ -889,6 +887,19 @@ export const en = {
   "co.strip.healthBalanced": "Balanced",
   "co.strip.replyShare": "{percent}% of the exchange is theirs",
   "co.strip.healthActive": "In conversation",
+  "co.strip.lastTouch": "Last touch",
+  "co.strip.lastTouch.today": "Today",
+  "co.strip.lastTouch.ago": "{count} d",
+  "co.strip.lastTouch.theirs": "They wrote last",
+  "co.strip.lastTouch.ours": "You wrote last",
+  "co.strip.lastTouch.never": "No exchange yet",
+  "co.strip.next": "Next",
+  "co.strip.next.none": "Nothing scheduled",
+  "co.strip.open.history": "Open history",
+  "co.strip.open.tasks": "Open tasks",
+  "co.360.readThread": "Read the thread · {count}",
+  "co.360.hideThread": "Hide the thread",
+  "co.360.fullHistory": "Full history",
   "co.strip.healthQuiet": "Gone quiet",
   "co.strip.noInboundEver": "They have never written",
   "co.strip.engagement.never_contacted": "Never contacted",
@@ -1096,9 +1107,8 @@ export const en = {
   // The later of the two directions \u2014 which side wrote last moved to the
   // daily brief's own detail line, so the header states only that the
   // relationship is or is not live.
-  "co.pulse.lastExchange": "Last contact {when}, either way",
-  "co.pulse.neverTouched": "Never contacted",
   "co.pulse.owner": "Owner",
+  "co.pulse.sizeBand": "{band} employees",
   "co.pulse.strongestLead": "Way in",
   "co.pulse.strengthTail_one": "\u2014 the only contact here",
   "co.pulse.strengthTail_other": "\u2014 of {count} contacts here",
@@ -1113,6 +1123,7 @@ export const en = {
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
+  "finance.loading": "Reading the invoices…",
   "finance.syncing":
     "Syncing with your accounting source. Figures appear once the first sweep lands.",
   "finance.noConnection":
@@ -1441,6 +1452,8 @@ export const en = {
   "co.deals.noStage": "No stage",
   "co.rail.all": "All {count}",
   "co.rail.add": "Add",
+  "co.rail.allUncounted": "All",
+  "co.rail.more": "More",
   "co.rail.deals.title": "Active deals",
   "co.rail.deals.empty": "No deals on this account yet.",
   "co.rail.deals.emptyClosedOnly": "Nothing open — only closed history.",
@@ -1571,6 +1584,7 @@ export const en = {
   "email.detail.from": "From",
   "email.detail.to": "To",
   "email.detail.cc": "Cc",
+  "email.detail.when": "Sent",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the organization",
@@ -2032,6 +2046,8 @@ export const en = {
   "lead.railTitle": "Owner",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
+  "lead.callNotInOverlay":
+    "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardTerminalOnly":
     "The board shows open leads only. These leads are promoted or disqualified.",
   "person.fromLead": "From lead",
@@ -2233,6 +2249,7 @@ export const en = {
   "deals.winReasonOther": "Something else",
   "deals.winReasonDetail": "What was it?",
   "deals.confirm": "Confirm",
+  "deals.loading": "Reading the deals…",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
@@ -2256,7 +2273,6 @@ export const en = {
   "deal.committee.empty": "No stakeholder is recorded on this deal",
   "deal.committee.engaged": "Talking",
   "deal.committee.quiet": "No reply",
-  "deal.committee.unnamedSeat": "A stakeholder you cannot see",
   "deal.committee.legendEngaged": "Talking with us",
   "deal.committee.legendQuiet": "On the deal, not talking",
   "deal.committee.legendGap": "Missing cover",
@@ -2410,6 +2426,7 @@ export const en = {
   "decision.expired": "Expired",
   "decision.expiresIn": "expires in {countdown}",
   "decision.detail": "Approval detail",
+  "decision.detailLoading": "Reading this approval…",
   "decision.detailTechnical": "Technical details",
   "decision.detailAsked": "Asked",
   "decision.detailDecided": "Decided",
@@ -2436,7 +2453,7 @@ export const en = {
   "home.honestShort":
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":
-    "{shown} of {count} qualifying deals — the honest-short top slice.",
+    "Showing the {shown} highest-ranked of {count} qualifying deals.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
@@ -2470,6 +2487,16 @@ export const en = {
   "brief.sentence.many": "First: {lead} Then {rest} more.",
   "brief.sentence.manyWithCost":
     "First: {lead} — {consequence} Then {rest} more.",
+
+  // The weekly Brief's opening sentence, composed from the counts the week was
+  // frozen with. Result first, then what carried — the outcome before the debt.
+  "brief.week.won": "You closed {count} deals.",
+  "brief.week.moved": "You moved {count} deals forward.",
+  "brief.week.met": "You held {count} meetings.",
+  "brief.week.carryPromises": "{count} promises carried over.",
+  "brief.week.carryTasks": "{count} tasks carried over.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
   "brief.donext.sub": "One order, from your worklist.",
   "brief.donext.loading": "Reading what waits on you",
@@ -2508,11 +2535,13 @@ export const en = {
   "teamweekly.card.commitmentsBasis": "of what was owed",
   "teamweekly.card.won": "Won",
   "teamweekly.card.wonBasis": "{lost} lost",
+  "teamweekly.card.wonBasisValue": "{value} won · {lost} lost",
   "teamweekly.card.reps": "Members counted",
   "teamweekly.card.repsBasis": "whose week was read in full",
   "teamweekly.movement.title": "What the week did",
   "teamweekly.movement.won": "Won",
   "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.moved": "Advanced",
   "teamweekly.movement.meetings": "Meetings held",
   "teamweekly.movement.leads": "Leads routed",
   "teamweekly.coach.title": "Coach this week",
@@ -2532,6 +2561,8 @@ export const en = {
   "plan.empty": "Nothing on the plan yet.",
   "plan.none": "You have not planned this week yet.",
   "plan.start": "Plan my week",
+  "plan.readOnly":
+    "Read-only view \u2014 planning a week and settling a commitment are not yours to do here.",
   "plan.add": "Add commitment",
   "plan.saveRefused_one":
     "One commitment could not be saved. It is still ticked — try again.",
@@ -2573,6 +2604,7 @@ export const en = {
   "home.weekly.queueWorked": "Morning queue",
   "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "home.weekly.sincePrior": "{delta} vs last week",
+  "home.weekly.wonVsPrior": "{value} · {delta} vs prior week",
   "home.weekly.leadsAnswered": "Leads answered in time",
   "home.weekly.ofRouted": "{answered} of {routed}",
   "home.weekly.planCommitmentsKept": "Plan commitments kept",
@@ -2639,6 +2671,7 @@ export const en = {
   "home.readings.label": "Your morning, in five readings",
   "home.readings.truncated":
     "A source was read to its limit, so every figure above is a floor.",
+  "home.readings.openLane": "Open these",
   "home.readings.waiting": "Customer waiting",
   "home.readings.waitingBasis": "waiting on an answer",
   "home.readings.meetings": "Meetings ahead",
@@ -2663,7 +2696,7 @@ export const en = {
   "home.deck.viewDeck": "Deck",
   "home.deck.viewList": "List",
   "home.deck.keys":
-    "→ accept · ← reject · ↑ edit · ↓ later · U undo · Enter send",
+    "Arrows stage a decision: → accept · ← reject · ↑ edit · ↓ later · U undo · Enter sends the staged ones",
   "home.deck.behind_one": "1 more behind",
   "home.deck.behind_other": "{count} more behind",
   "home.deck.staged_one": "1 decision staged",
@@ -2869,7 +2902,7 @@ export const en = {
   "co.360.title": "Margince read this record",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "This account · 360",
-  "today.title": "What needs a person today",
+  "today.title": "What needs you",
   "co.spine.earlier_other": "{count} earlier conversations",
   "co.spine.earlier_one": "{count} earlier conversation",
   "today.failed":
@@ -3042,6 +3075,7 @@ export const en = {
   "log.kindNote": "Note",
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
+  "log.kindCall": "Call",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
@@ -3191,6 +3225,7 @@ export const en = {
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
   "tasks.detail": "Task",
+  "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
@@ -3296,6 +3331,9 @@ export const en = {
   "analytics.forecastBanner":
     "Each tile shows the raw total and, beneath it, the probability-weighted total — rounded per deal, so it always reconciles to Explain This Number.",
   "analytics.company": "Company",
+  "analytics.openStageDeals": "Open the deals in {stage}",
+  "analytics.openCompanyDeals": "Open this company's deals",
+  "analytics.noCompany": "No company",
   "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
 
@@ -3332,7 +3370,7 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
-  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.summary": "Which sources had more",
   "brief.coverage.bounded": "{shown} shown of at least {considered} read",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
@@ -3734,7 +3772,8 @@ export const en = {
   "restricted.until": "Held until",
   "restricted.redacted": "Redacted",
   "restricted.nothingRedacted": "Nothing removed",
-  "restricted.redactedCount": "{count} fields removed",
+  "restricted.redactedCount_one": "{count} field removed",
+  "restricted.redactedCount_other": "{count} fields removed",
   "restricted.class.commercialCorrespondence": "Commercial correspondence",
   "restricted.kind.email": "Email",
   "restricted.kind.call": "Call",
@@ -4226,7 +4265,6 @@ export const en = {
   "heldThreads.release": "Share with the team",
   "heldThreads.released": "Shared with the team",
   "heldThreads.noSubject": "the message this began with is gone",
-  "heldThreads.blankSubject": "no subject",
   "heldThreads.nothingToShare":
     "There is no message left to share — this thread\u2019s first message was erased, and the hold stays so a later reply does not arrive open.",
   "heldThreads.pending": "Waiting on a verdict",
@@ -4845,7 +4883,8 @@ export const en = {
   "ob.conv.guide.attentionStatus.empty": "still empty",
   "ob.conv.guide.attentionStatus.decision": "needs a decision",
   "ob.conv.guide.attentionStatus.check": "worth a check",
-  "ob.conv.activity.steps": "{count} steps",
+  "ob.conv.activity.steps_one": "{count} step",
+  "ob.conv.activity.steps_other": "{count} steps",
   "ob.conv.showField": "Show me",
   "ob.conv.review.editDirectly": "Edit fields directly",
   "ob.conv.review.backToDossier": "Back to the dossier",
@@ -6291,18 +6330,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
-  "settings.companyMark": "Company mark",
+  "settings.companyMark": "Company logo",
   "settings.companyMarkPresent":
-    "Shown wherever this company appears, including the top of the sidebar.",
+    "Shown here and as the main brand at the top of the sidebar.",
   "settings.companyMarkNone":
-    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
-  "settings.companyMarkAdd": "Add a mark",
+    "No logo yet, so the initials stand in. A website read can fill this in, or add one here.",
+  "settings.companyMarkAdd": "Add a logo",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkPick": "Company logo",
   "settings.companyMarkHint":
-    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
-  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
+    "Best results: SVG or a transparent PNG around 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Your logo keeps its proportions.",
+  "settings.companyMarkEmpty": "Drop your logo here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -6927,6 +6966,9 @@ export const en = {
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
+  // Names the column beside the graph, for a reader who lands in it from the
+  // landmark list rather than by scrolling to it.
+  "person.graph.sideColumn": "Introductions and moments",
   "person.graph.recordWorksWith": "Record: works with {name}",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
@@ -6985,6 +7027,7 @@ export const en = {
   "person.intro.stepPending": "Later",
   "person.intro.laneOurs": "Our team",
   "person.intro.laneTheirs": "Their company",
+  "person.intro.lanePeers": "Who they talk to",
   "person.intro.laneTarget": "Target",
   "person.intro.useThisRoute": "Use this route",
   "person.intro.mapRegion": "Who can reach this contact, and through whom",
@@ -7242,7 +7285,8 @@ export const en = {
     "Nothing has been promised or asked in the captured conversations.",
   "person.loops.ours": "You",
   "person.loops.question": "Open question",
-  "person.loops.overdue": "overdue {count} days",
+  "person.loops.overdue_one": "overdue {count} day",
+  "person.loops.overdue_other": "overdue {count} days",
   "person.loops.overdueUnderDay": "overdue by less than a day",
   "person.loops.due": "due {when}",
   "person.loops.dueToday": "today",
@@ -7294,7 +7338,8 @@ export const en = {
   "person.rail.signals": "Signals & risks",
   "person.rail.noSignals": "Nothing stands out on this relationship.",
   "person.rail.noReplyDays": "No reply for {count} days",
-  "person.rail.repliedDaysAgo": "Replied {count} days ago",
+  "person.rail.repliedDaysAgo_one": "Replied {count} day ago",
+  "person.rail.repliedDaysAgo_other": "Replied {count} days ago",
   "person.rail.singleThreaded": "Single-threaded on this deal",
   "person.rail.noMeetingBooked": "No next meeting booked",
   "person.rail.consentTitle": "Consent & channels",
@@ -7411,10 +7456,6 @@ export const en = {
   "person.meeting.preparedFor": "Prepared for {name}",
   "person.meeting.preparedForAt": "Prepared for {name} · {org}",
 
-  "co.strip.healthSummary": "Health",
-  "co.strip.healthSummary.failingOf": "{failing} of {rated} at risk",
-  "co.strip.healthSummary.because": "{dimension} — {reason}",
-  "co.strip.healthSummary.of": "{rated} of 3 rated",
   "today.source.suggestions": "the advice",
 
   // The licensed data provider (ADR-0101). Two surfaces share this
@@ -7755,6 +7796,10 @@ export const en = {
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
   "project.assignOwnerNoneSelected": "Pick a colleague first",
+  // The dialog's own confirm verb. The trigger and the title both read "Assign
+  // to a colleague"; the button says what pressing it does, and a button
+  // repeating the heading it sits under reads as chrome rather than a verb.
+  "project.assignOwnerConfirm": "Assign",
   "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
@@ -7782,6 +7827,8 @@ export const en = {
   "project.rollups.empty": "No figures for this project yet.",
   "project.rollups.openValue": "Open deal value",
   "project.rollups.wonValue": "Won deal value",
+  "project.rollups.openDeals": "Open the deals",
+  "project.rollups.openCommitmentsList": "Open what is owed",
   "project.rollups.openCommitments": "Open commitments",
   "project.rollups.lastActivity": "Last activity",
   "project.rollups.never": "nothing yet",
@@ -7800,6 +7847,7 @@ export const en = {
   "project.stakeholders.empty":
     "Nobody is seated on this project yet. A stakeholder is a person with a role here — a sponsor, a project lead, a champion.",
   "project.stakeholders.add": "Add stakeholder",
+  "project.stakeholders.addConfirm": "Add",
   "project.stakeholders.addHint":
     "One seat per person. Naming somebody already on this project moves them to the role you pick here.",
   "project.stakeholders.searchLabel": "Search people by name",
@@ -7894,9 +7942,14 @@ export const en = {
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
   "worklist.disposition.verb.snooze": "Later",
+  "worklist.disposition.snoozeFor": "For how long",
+  "worklist.disposition.snoozeDays_one": "{value} day",
+  "worklist.disposition.snoozeDays_other": "{value} days",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.done.snooze": "Back on your list tomorrow.",
+  "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
+  "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
@@ -7942,6 +7995,7 @@ export const en = {
   "worklist.readings.revenue": "Revenue at risk",
   "worklist.readings.revenue.detail": "Across the deals drifting today",
   "worklist.readings.revenue.unpriced": "No deal at risk could be priced",
+  "worklist.readings.openLane": "Open this lane",
   "worklist.readings.replies": "Buyer replies",
   "worklist.readings.replies.detail": "Customers waiting on an answer",
   "worklist.readings.prospecting": "Prospecting",
@@ -8081,8 +8135,15 @@ export const en = {
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
-  "worklist.source.failed": "{source} could not be read",
-  "worklist.source.withheld": "{source} is hidden from your account",
+  // The frame states the fact and the source follows it, rather than the
+  // source standing as the subject. `sourceName` returns a row TITLE — "A
+  // mailbox connection needs attention", "Two records look like the same one"
+  // — and fourteen of the twenty-one are already whole clauses, so used as a
+  // subject they ran two sentences together: "A mailbox connection needs
+  // attention could not be read". Naming the fact first works for every entry
+  // and needs no second vocabulary of source nouns.
+  "worklist.source.failed": "A source could not be read: {source}",
+  "worklist.source.withheld": "A source is hidden from your account: {source}",
   "worklist.untitled.generic": "Something needs you",
   "worklist.batch.likely_automated": "{count} likely automated senders",
   "worklist.batch.company_match": "{count} addresses at companies you know",
@@ -8101,6 +8162,8 @@ export const en = {
   "worklist.verb.draft_email": "Open to write",
   "worklist.verb.draft_email_now": "Draft the email",
   "worklist.deal.closes": "closes {date}",
+  "worklist.when.starts": "starts {when}",
+  "worklist.when.due": "due {when}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",
   "person.readings.title": "Where this contact stands",
@@ -8140,6 +8203,7 @@ export const en = {
   "lead.standing.rests.captured": "Captured {at}.",
   "lead.standing.rests.noResponse": "No first response recorded.",
   "lead.standing.rests.engaged": "Engagement captured {at}.",
+  "lead.readings.openStatus": "Open leads in this status",
   "lead.readings.title": "Where this lead stands",
   "lead.readings.firstResponse": "First response",
   "lead.readings.noClock": "no response target set",

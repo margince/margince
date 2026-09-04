@@ -11,6 +11,14 @@
   padding-bottom: 8px;
 }
 .board-col {
+  /* The containing block for anything absolutely positioned inside a column.
+     `.sr-only` takes itself out of flow at its static position, and an absolute
+     box is clipped by a scroller only when its containing block is INSIDE that
+     scroller — so without this the sixth stage's screen-reader count resolved
+     against an ancestor above the board, escaped the board's own horizontal
+     scroll, and dragged the shell's content scroller 807px past a 390px
+     viewport. */
+  position: relative;
   background: var(--bgCard);
   border-radius: var(--r-md);
   padding: 10px;
@@ -23,17 +31,50 @@
   outline: 2px dashed var(--accent);
   outline-offset: -2px;
 }
+/* STUCK TO THE TOP OF ITS COLUMN. A stage is the only thing that says which
+ * pile a card belongs to, and a reader scrolled halfway down a long stage had
+ * lost it, because each column scrolls on its own.
+ *
+ * It carries the column's own ground, or the cards would slide visibly behind a
+ * transparent strip. NO negative margin to bleed that ground to the column's
+ * edges: a flex item wider than its container contributes that extra width to
+ * the container's max-content size, and the board is a grid of `1fr` tracks
+ * inside a scroller — so a 20px bleed per column widened the whole board past
+ * the viewport and the page scrolled sideways at 390px. The 10px of column
+ * padding either side of the band is the price of the page not panning. */
 .board-col-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 2px 4px;
+  padding: 2px 4px 4px;
+  background: var(--bgCard);
 }
 .board-col-head .stage {
   font-size: 13px;
   font-weight: 600;
   color: var(--textPrimary);
   flex: 1;
+  /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
+     count. Without `min-width: 0` a flex item cannot shrink below its longest
+     word, so the name set the column's min-content width, the column set the
+     board's, and the board — a flex item with no floor of its own — pushed the
+     whole page sideways rather than scrolling. The NAME is what gives way. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* HOW MUCH IS IN THE STAGE, and it never truncates: it is the figure a reader
+   compares across the board, three characters wide against a name that can be
+   any length. `flex: none` is what keeps the name's ellipsis from eating it. */
+.board-col-head .board-col-count {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--textPrimary);
 }
 .board-col-head .prob {
   font-family: var(--f-mono);
@@ -67,6 +108,12 @@
 }
 
 .deal-card {
+  /* An anchor now rather than a button (composed.tsx says why), so it takes the
+     two things the platform gives a link and this card must not have: the UA's
+     own ink and an underline. `a:not([class])` in base.css does not reach a
+     classed anchor, so they are stated here. */
+  color: inherit;
+  text-decoration: none;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
@@ -406,19 +453,15 @@
   margin-bottom: var(--space-5);
 }
 
-/* The bar that chooses which part of the record is drawn under it. It scrolls
-   sideways on a narrow screen rather than wrapping: wrapped tabs read as two
-   rows of navigation, which is a different thing from one row that continues.
-   The scrollbar is hidden because the row is short, its overflow is obvious
-   from the clipped tab, and a scrollbar under it would read as a divider. */
+/* The bar that chooses which part of the record is drawn under it. The strip
+   inside scrolls sideways on a narrow screen rather than wrapping
+   (design-system/recordtabs.css); this wrapper owns only the interval under
+   it. It must NOT scroll itself: the strip breaks out past the reading column
+   by half the work column's slack, and a scroller around it turned that
+   overhang into scroll room — the Details control at the row's end taking
+   focus dragged the whole row sideways by it. */
 .record-tabs {
   margin-bottom: var(--space-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.record-tabs::-webkit-scrollbar {
-  display: none;
 }
 
 /* One vertical stack of full-width panels, which is what a record's work

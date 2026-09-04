@@ -74,7 +74,7 @@ const canonical: Record<string, string> = {
   "--r-md": "14px",
   "--r-lg": "18px",
   "--r-full": "9999px",
-  "--f-display": '"Bricolage Grotesque",system-ui,sans-serif',
+  "--f-display": '"Outfit",system-ui,sans-serif',
   "--f-body": '"Geist",system-ui,sans-serif',
   "--f-mono": '"Geist Mono",ui-monospace,monospace',
 };
@@ -397,10 +397,21 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ...light,
         ...parseBlock(tokenDecls, '[data-theme="dark"]'),
       };
+      // The three families with a Text token, plus the three STATUS families,
+      // which were absent from this list for the reason that is worth stating:
+      // the list was the families that HAD a *Text token, so the ones whose ink
+      // is the family colour itself were never measured. That is a corpus short
+      // of its subject — --success on --successBg is 4.48:1 and shipped, in two
+      // writers, until axe caught one of them on one route. Warn and danger
+      // clear AA on their own tints today and are here so a retune cannot
+      // quietly take that away.
       const pairs = [
         ["--accentText", "--accentLight"],
         ["--tealText", "--tealLight"],
         ["--aiText", "--aiLight"],
+        ["--successText", "--successBg"],
+        ["--warn", "--warnBg"],
+        ["--dangerText", "--dangerBg"],
       ] as const;
       const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
       const failures: string[] = [];

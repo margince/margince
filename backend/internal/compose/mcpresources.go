@@ -43,7 +43,38 @@ func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.Reso
 	// Capabilities is unconditional for the same reason the write vocabulary is:
 	// it is derived from the registry this transport already holds, so there is
 	// no deployment that can serve tools and fail to describe them.
-	providers := []mcp.ResourceProvider{capabilities, vocabulary, agents.RecordFieldsResource{}}
+	// The report plan vocabulary is unconditional for the third time over: it is
+	// composed from the engine's prebuilt catalog, which is a compile-time table
+	// in this package, and run_report is registered on every build — an overlay
+	// system of record refuses it at CALL time, never by withholding the tool.
+	// So there is no installation that serves run_report and lacks the
+	// vocabulary it refuses against, and a conditionally-absent document would
+	// leave the tool naming a document some build does not publish.
+	//
+	// THE DOOR BESIDE IT *IS* OVERLAY-GUARDED, and the asymmetry is deliberate.
+	// It was read as a bug in review, so the reasoning is here rather than in a
+	// PR nobody will find:
+	//
+	//   - A RESOURCE is fetched by a client that asked for it by URI and is
+	//     reading documentation. A TOOL call is a step a run spends, and
+	//     teaching a name for a verb this workspace refuses spends it for
+	//     nothing — which is the whole reason the query vocabulary's door is
+	//     guarded too.
+	//   - It discloses nothing. The document is the ENGINE's compile-time table,
+	//     identical in every installation, so serving it says nothing about this
+	//     workspace that run_report's own refusal does not say outright.
+	//
+	// margince://schema/query splits exactly this way — unguarded resource,
+	// guarded door — and it is the precedent this follows.
+	// margince://schema/record-fields is NOT a clean precedent for it, though it
+	// looks like one: the overlay provider serves no CREATE but does serve some
+	// UPDATE, so that document describes verbs a caller may partly still use.
+	// This one describes a verb that is refused outright.
+	providers := []mcp.ResourceProvider{
+		capabilities, vocabulary,
+		agents.RecordFieldsResource{},
+		agents.NewReportVocabularyResource(reportToolCatalog()),
+	}
 	// views is nil for a role that composes none — a worker, or an api whose
 	// connector gate is off. composeResources drops it, which is the same
 	// conditional wiring every other injected capability takes.

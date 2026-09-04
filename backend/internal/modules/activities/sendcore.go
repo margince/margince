@@ -204,7 +204,7 @@ func (s *Store) SendPreparedTx(ctx context.Context, tx pgx.Tx, origin SendOrigin
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := stager.StageTx(ctx, tx, p.message.delivery(ids.UUID(sent.Id), chain)); err != nil {
+	if err := stager.StageTx(ctx, tx, p.message.delivery(ids.UUID(sent.Id), chain, origin)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// in.Body, not message.body: the judgment is about the text the HUMAN

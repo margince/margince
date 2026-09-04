@@ -266,8 +266,13 @@ button.evidence-chip:hover {
   text-decoration: line-through;
 }
 
+/* --successText, not --success: this is 12px text ON the success tint, and its
+ * own family's ink over its own family's ground measures 4.48:1 there — under
+ * AA, which axe reads as serious on every timeline showing a field change. The
+ * paragraph above made exactly this call for the FROM side and this side never
+ * got the same pass. */
 .field-diff-to {
-  color: var(--success);
+  color: var(--successText);
   background: var(--successBg);
   border-radius: var(--r-sm);
   padding: 1px 6px;

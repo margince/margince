@@ -20,25 +20,22 @@ import { useSyncExternalStore } from "react";
  */
 
 /**
- * Two independent facts, not one state.
+ * The one fact the margins draw: whether work is in flight.
  *
- * They can both be true, an agent reading right now while an approval from ten
- * minutes ago still waits, and they are read by different parts of the margin,
- * so collapsing them into one enum would force a choice the screen does not have
- * to make.
+ * A STAGED DECISION IS NOT PUBLISHED HERE. It used to be, as a second boolean
+ * closing the margin into a still contour, and on any installation with an
+ * unanswered queue that drew a ring around the whole window for as long as the
+ * queue stood. The rail states it in words, with its count. This signal carries
+ * only what the margin actually paints, so there is no published fact nothing
+ * reads.
  */
 export type AgentEdgeReading = Readonly<{
   /** Work is in flight: the agent is reading or acting THIS moment. */
   reading: boolean;
-  /** Something is staged and cannot move until a person says so. */
-  waiting: boolean;
 }>;
 
 /** Nothing is happening, which is the honest answer whenever no rail is mounted. */
-export const AGENT_EDGE_STILL: AgentEdgeReading = {
-  reading: false,
-  waiting: false,
-};
+export const AGENT_EDGE_STILL: AgentEdgeReading = { reading: false };
 
 let shown: AgentEdgeReading = AGENT_EDGE_STILL;
 const listeners = new Set<() => void>();
@@ -52,10 +49,10 @@ const listeners = new Set<() => void>();
  * already on screen.
  */
 export function publishAgentEdge(next: AgentEdgeReading): void {
-  if (next.reading === shown.reading && next.waiting === shown.waiting) {
+  if (next.reading === shown.reading) {
     return;
   }
-  shown = { reading: next.reading, waiting: next.waiting };
+  shown = { reading: next.reading };
   for (const listener of listeners) {
     listener();
   }

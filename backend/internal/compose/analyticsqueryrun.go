@@ -249,7 +249,11 @@ const withheldColumn = "_withheld"
 //
 // A count that failed to parse answers ZERO, which the floor reads as below it
 // and withholds. Failing open here would serve a group whose size nothing
-// established.
+// established. v is one scanAnalyticsRows value off a caller-composed plan;
+// its Go type follows the plan's own count expression, which this function
+// exists to not have to know ahead of time.
+//
+//craft:ignore naked-any v's type follows the caller's own analytics plan, which is what this switch exists to not have to know ahead of time
 func rowCount(v any) int {
 	switch n := v.(type) {
 	case int64:

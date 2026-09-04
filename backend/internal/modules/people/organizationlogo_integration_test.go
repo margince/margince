@@ -66,7 +66,7 @@ func TestSetOrganizationLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read after: %v", err)
 	}
-	wantURL := "/v1/organizations/" + orgID.String() + "/logo"
+	wantURL := *LogoURL(orgID.UUID, &key)
 	if after.LogoUrl == nil || *after.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q", after.LogoUrl, wantURL)
 	}

@@ -200,11 +200,15 @@ func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
 	if item.Subject == nil || item.Subject.Type != "person" {
 		t.Errorf("subject = %v, want the person the silence is about", item.Subject)
 	}
-	// No verb, exactly as the risk card offers none. What to do about a lapsed
-	// relationship is a judgement about that person; a lane answering it here
-	// would be deciding rather than warning.
-	if len(item.Actions) != 0 {
-		t.Errorf("actions = %v, want none — the lane warns, it does not decide", item.Actions)
+	// A way THROUGH to the contact, and no verb that decides — exactly the pair
+	// the risk card offers. What to do about a lapsed relationship is a
+	// judgement about that person, so the lane does not answer it; but naming
+	// somebody as gone quiet and leaving the rep to go and find them by hand is
+	// a warning they cannot act on, and the one page where reaching that person
+	// is possible is the record this subject names.
+	if len(item.Actions) != 1 || item.Actions[0] != actionOpen {
+		t.Errorf("actions = %v, want just %q — a way to the contact, and no decision",
+			item.Actions, actionOpen)
 	}
 	if out.Counts.RelationshipDecay == nil || *out.Counts.RelationshipDecay != 1 {
 		t.Errorf("counts.relationship_decay = %v, want 1", out.Counts.RelationshipDecay)

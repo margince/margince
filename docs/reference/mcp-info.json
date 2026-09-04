@@ -8,18 +8,18 @@
     "enrich"
   ],
   "totals": {
-    "tools": 69,
-    "resources": 9,
-    "tool_catalog_bytes": 197053,
-    "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 50141,
+    "tools": 70,
+    "resources": 10,
+    "tool_catalog_bytes": 199450,
+    "resource_catalog_bytes": 3915,
+    "approx_wire_tokens_total": 50841,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 46391,
-      "input_schema_bytes": 40727,
-      "output_schema_bytes": 95066,
-      "description_plus_input_schema_bytes": 87118
+      "description_bytes": 47770,
+      "input_schema_bytes": 40667,
+      "output_schema_bytes": 95916,
+      "description_plus_input_schema_bytes": 88437
     }
   },
   "tools": {
@@ -3170,6 +3170,112 @@
           "type": "object"
         },
         "title": "Describe the query vocabulary"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "title": "Describe the report vocabulary"
+        },
+        "description": "Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. It is NOT a prerequisite: run_report with `report` alone answers that report's default question and needs nothing from here, so reach for this only when a plan has to name a grouping, a filter or a measure. The names are the same for every caller, because a report's vocabulary is the engine's and not a workspace's. Call run_report directly when the report's default answer is the answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted list. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope \"read\".)",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "name": "describe_report_vocabulary",
+        "outputSchema": {
+          "properties": {
+            "data": {
+              "properties": {
+                "vocabulary": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "vocabulary"
+              ],
+              "type": "object"
+            },
+            "evidence": {
+              "items": {
+                "properties": {
+                  "captured_by": {
+                    "type": "string"
+                  },
+                  "record_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "record_type": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "record_id",
+                  "record_type"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "freshness": {
+              "properties": {
+                "authoritative": {
+                  "type": "boolean"
+                },
+                "last_synced_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "authoritative"
+              ],
+              "type": "object"
+            },
+            "schema_version": {
+              "type": "string"
+            },
+            "trace_id": {
+              "type": "string"
+            },
+            "trust": {
+              "type": "string"
+            },
+            "warnings": {
+              "items": {
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "data",
+            "evidence",
+            "freshness",
+            "schema_version",
+            "trace_id",
+            "trust",
+            "warnings"
+          ],
+          "type": "object"
+        },
+        "title": "Describe the report vocabulary"
       },
       {
         "annotations": {
@@ -11086,7 +11192,7 @@
               "type": "array"
             },
             "report": {
-              "description": "The prebuilt report to run. Send `report` alone to get its defaults; the three plan arguments accept ONLY the names listed for that report. activities-by-kind — group_by: direction, kind, project, project_id; filters: direction, kind, project_id; aggregates: (none); default: count as activities grouped by kind; note: project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded. deals-by-stage — group_by: currency, partner_org_id, pipeline_id, stage_id, status, win_probability; filters: currency, organization_id, owner_id, partner_org_id, partner_sourced, pipeline_id, project_id, stalled, status; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast — group_by: currency, forecast_category, owner_id, partner_org_id, pipeline_id, stage_id, win_probability; filters: currency, forecast_category, owner_id, partner_org_id, pipeline_id, project_id, stage_id; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company — group_by: currency, organization_id, owner_id; filters: currency, owner_id, pipeline_id, project_id; aggregates: amount_minor; default: count as open_deals grouped by organization_id. project-commitments — group_by: key, name, organization_id, owner_id, phase, project_id; filters: organization_id, owner_id, phase; aggregates: open_commitments, overdue_commitments; default: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id; note: rows are ordered most overdue first. projects-by-phase — group_by: organization_id, owner_id, phase; filters: organization_id, owner_id, phase; aggregates: open_deal_value_minor, won_deal_value_minor; default: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase; note: deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes. projects-gone-quiet — group_by: key, last_activity_at, name, organization_id, owner_id, phase, project_id, quiet_since; filters: days, organization_id, owner_id, phase; aggregates: (none); default: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since; note: `days` is a whole number of days of silence, default 30; quiet_since is when the silence began. stage-age — group_by: owner_id, pipeline_id, stage_id; filters: owner_id, pipeline_id; aggregates: days_in_stage; default: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss — group_by: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, source, status; filters: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, project_id, source, status; aggregates: amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. A `pipeline_id` or `stage_id` used here comes from list_pipelines — no other tool on this surface yields one.",
+              "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company: count as open_deals grouped by organization_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
               "enum": [
                 "activities-by-kind",
                 "deals-by-stage",
@@ -11633,6 +11739,21 @@
               },
               "type": "array"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
@@ -11671,6 +11792,15 @@
               "maxItems": 25,
               "minItems": 1,
               "type": "array"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
+              "type": "string"
             },
             "scheduled_at": {
               "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -11836,6 +11966,21 @@
               },
               "type": "array"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipients must have granted",
               "type": "string"
@@ -11843,6 +11988,15 @@
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
+              "type": "string"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
               "type": "string"
             },
             "scheduled_at": {
@@ -12004,6 +12158,21 @@
               "minLength": 1,
               "type": "string"
             },
+            "communication_context": {
+              "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+              "enum": [
+                "reply_to_inbound",
+                "requested_followup",
+                "precontract_quote",
+                "active_deal_followup",
+                "customer_service",
+                "account_notice",
+                "contract_notice",
+                "invoice_or_payment",
+                "marketing"
+              ],
+              "type": "string"
+            },
             "consent_purpose": {
               "description": "Purpose key the recipient must have granted",
               "type": "string"
@@ -12011,6 +12180,15 @@
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
+              "type": "string"
+            },
+            "marketing_purpose": {
+              "description": "For marketing, the purpose key naming the topic",
+              "type": "string"
+            },
+            "operator_reason": {
+              "description": "Why this first message is being sent. Recorded; grants nothing.",
+              "maxLength": 500,
               "type": "string"
             }
           },
@@ -12938,6 +13116,13 @@
         "uri": "margince://schema/record-fields"
       },
       {
+        "description": "What each prebuilt report accepts in a run_report plan: the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a filter means when its name alone does not say. run_report names this document instead of carrying it.",
+        "mimeType": "application/json",
+        "name": "report_vocabulary",
+        "title": "Report plan vocabulary",
+        "uri": "margince://schema/reports"
+      },
+      {
         "_meta": {
           "ui": {
             "csp": {
@@ -13053,9 +13238,10 @@
     "ttlMs": 60000
   },
   "documents": {
-    "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":69,\"execute_directly\":[\"account_coverage\",\"advance_project_phase\",\"annotate_brief\",\"apply_tag\",\"archive_record\",\"at_risk_relationships\",\"book_meeting\",\"catch_me_up_on\",\"check_availability\",\"check_location_support\",\"commit_import\",\"create_record\",\"create_tag\",\"create_task\",\"data_coverage\",\"decide_approval\",\"decide_approval_bundle\",\"describe_query_vocabulary\",\"disqualify_lead\",\"draft_email\",\"draft_follow_ups_for\",\"forecast_input_checks\",\"forecast_movement\",\"forecast_readings\",\"get_record_tags\",\"get_tag\",\"intro_path_to\",\"list_approvals\",\"list_channel_providers\",\"list_colleagues\",\"list_input_checks\",\"list_pipelines\",\"list_records\",\"list_tags\",\"log_activity\",\"merge_records\",\"prep_for_meeting\",\"prepare_handoff\",\"preview_import\",\"promote_lead\",\"qualify_lead\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_import_report\",\"read_import_run\",\"read_project_360\",\"read_record\",\"remove_tag\",\"resolve_entities\",\"review_commitments\",\"run_report\",\"search_context\",\"search_records\",\"send_account_email\",\"send_email\",\"send_message\",\"update_record\",\"update_tag\",\"whats_slipping_this_week\",\"who_knows\",\"whoami\"],\"stage_for_approval\":[\"enrich\",\"merge_tags\"],\"decided_per_call\":[\"advance_deal\",\"progress_deal\",\"relink_activities\",\"relink_activity\",\"relink_thread\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
+    "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":70,\"execute_directly\":[\"account_coverage\",\"advance_project_phase\",\"annotate_brief\",\"apply_tag\",\"archive_record\",\"at_risk_relationships\",\"book_meeting\",\"catch_me_up_on\",\"check_availability\",\"check_location_support\",\"commit_import\",\"create_record\",\"create_tag\",\"create_task\",\"data_coverage\",\"decide_approval\",\"decide_approval_bundle\",\"describe_query_vocabulary\",\"describe_report_vocabulary\",\"disqualify_lead\",\"draft_email\",\"draft_follow_ups_for\",\"forecast_input_checks\",\"forecast_movement\",\"forecast_readings\",\"get_record_tags\",\"get_tag\",\"intro_path_to\",\"list_approvals\",\"list_channel_providers\",\"list_colleagues\",\"list_input_checks\",\"list_pipelines\",\"list_records\",\"list_tags\",\"log_activity\",\"merge_records\",\"prep_for_meeting\",\"prepare_handoff\",\"preview_import\",\"promote_lead\",\"qualify_lead\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_import_report\",\"read_import_run\",\"read_project_360\",\"read_record\",\"remove_tag\",\"resolve_entities\",\"review_commitments\",\"run_report\",\"search_context\",\"search_records\",\"send_account_email\",\"send_email\",\"send_message\",\"update_record\",\"update_tag\",\"whats_slipping_this_week\",\"who_knows\",\"whoami\"],\"stage_for_approval\":[\"enrich\",\"merge_tags\"],\"decided_per_call\":[\"advance_deal\",\"progress_deal\",\"relink_activities\",\"relink_activity\",\"relink_thread\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
     "margince://schema/query": "{\"version\":\"v1\",\"grammar\":{\"predicates\":\"{\\\"field\\\": \\u003cname below\\u003e, \\\"op\\\": \\u003cop the field admits\\u003e, \\\"value\\\": \\u003coperand\\u003e} — or \\\"values\\\": [...] for \\\"in\\\". Clauses are combined with AND.\",\"semantic_target\":\"\\\"similar_to\\\": \\u003cfree text\\u003e — one similarity clause, ranked by the hybrid retriever.\",\"traversal\":\"\\\"traverse\\\": {\\\"relation\\\": \\u003crelation below\\u003e, \\\"where\\\": [...]} — exactly one hop. A second hop is refused; ask it as its own query.\",\"limit\":\"\\\"limit\\\": 1..200; omit for the default page.\",\"refusal\":\"Anything outside this vocabulary is refused with a typed clarification naming what was not understood. Nothing is coerced, and no plan is narrowed to the part that was recognised.\"},\"targets\":[],\"unavailable\":[]}",
     "margince://schema/record-fields": "{\"version\":\"1\",\"notation\":\"A key with no `?` is REQUIRED by the contract; `?` marks one the body may omit. A name not listed is not a field: it is refused by name, never stored silently.\",\"create_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \\\"inbound\\\"|\\\"outbound\\\", due_at?: rfc3339, duration_seconds?: integer, kind: \\\"email\\\"|\\\"call\\\"|\\\"meeting\\\"|\\\"note\\\"|\\\"task\\\"|\\\"message\\\", links?: [{entity_id: uuid, entity_type: \\\"person\\\"|\\\"organization\\\"|\\\"deal\\\"|\\\"lead\\\"|\\\"project\\\"}], meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}\",\"deal\":\"{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_org_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}\",\"lead\":\"{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\"|\\\"promoted\\\"|\\\"disqualified\\\", title?: string}\",\"organization\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_org_id?: uuid, size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\", source?: string}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, source?: string, title?: string}\",\"project\":\"{description?: string, name: string, organization_id: uuid, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{counterparty_org_id?: uuid, counterparty_person_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \\\"employment\\\"|\\\"deal_stakeholder\\\"|\\\"project_stakeholder\\\"|\\\"partner_of\\\"|\\\"referred_by\\\"|\\\"co_sell_with\\\"|\\\"works_with\\\", organization_id?: uuid, person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` is accepted but overwritten — this surface stamps its own provenance.\",\"A deal's `pipeline_id` and `stage_id` come from list_pipelines — nothing else on this surface yields them, and neither is defaultable.\",\"A person's employer is a relationship, not a field on the person: record_type=relationship with kind=employment, person_id and organization_id. Each kind REQUIRES its own endpoint pair, and a wrong pair is refused by name — employment: person + organization; deal_stakeholder: deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: organization + counterparty_org_id. An edge is not searchable, so keep the id a relationship write returns.\",\"An activity is not searchable — search_records does not serve it — so keep the id an activity write returns; read_record answers it by that id.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"A recording of a conversation is logged with `source_system: \\\"transcript\\\"` — that value is what has it read for next steps and commitments; any other value stores the text and reads nothing.\",\"An organization's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]},\"update_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}\",\"deal\":\"{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \\\"commit\\\"|\\\"best_case\\\"|\\\"pipeline\\\"|\\\"omitted\\\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_org_id?: uuid, project_id?: uuid, status?: \\\"open\\\"|\\\"won\\\"|\\\"lost\\\", wait_until?: YYYY-MM-DD}\",\"lead\":\"{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\", title?: string}\",\"organization\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \\\"unknown\\\"|\\\"target\\\"|\\\"prospect\\\"|\\\"opportunity\\\"|\\\"customer\\\"|\\\"former_customer\\\"|\\\"disqualified\\\", linkedin_url?: string, owner_id?: uuid, parent_org_id?: uuid, relationship_types?: [\\\"customer\\\"|\\\"partner\\\"|\\\"supplier\\\"|\\\"investor\\\"|\\\"portfolio_company\\\"|\\\"competitor\\\"|\\\"other\\\"], size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\"}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, social?: object, title?: string}\",\"project\":\"{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows.\",\"A person's employer is NOT a field here: employment is a relationship, created and archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched.\",\"An activity's links are NOT patchable, here or by any tool on this surface: this write changes what an activity says, never who it is about.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"An organization's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]}}",
+    "margince://schema/reports": "{\"version\":\"1\",\"notation\":\"Each report accepts ONLY the names listed under it. `group_by` and `aggregates` take names from their own lists; `filters` is one object whose keys come from the `filters` list, which holds both equality predicates and numeric thresholds. A name outside a report's list is refused by name, with that list, rather than approximated.\",\"reports\":[{\"report\":\"activities-by-kind\",\"group_by\":[\"direction\",\"kind\",\"project\",\"project_id\"],\"filters\":[\"direction\",\"kind\",\"project_id\"],\"aggregates\":[],\"defaults\":\"count as activities grouped by kind\",\"notes\":\"project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded\"},{\"report\":\"deals-by-stage\",\"group_by\":[\"currency\",\"partner_org_id\",\"pipeline_id\",\"stage_id\",\"status\",\"win_probability\"],\"filters\":[\"currency\",\"organization_id\",\"owner_id\",\"partner_org_id\",\"partner_sourced\",\"pipeline_id\",\"project_id\",\"stalled\",\"status\"],\"aggregates\":[\"amount_minor\",\"weighted_amount_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency\"},{\"report\":\"forecast\",\"group_by\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_org_id\",\"pipeline_id\",\"stage_id\",\"win_probability\"],\"filters\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_org_id\",\"pipeline_id\",\"project_id\",\"stage_id\"],\"aggregates\":[\"amount_minor\",\"weighted_amount_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency\"},{\"report\":\"open-deals-per-company\",\"group_by\":[\"currency\",\"organization_id\",\"owner_id\"],\"filters\":[\"currency\",\"owner_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_minor\"],\"defaults\":\"count as open_deals grouped by organization_id\"},{\"report\":\"project-commitments\",\"group_by\":[\"key\",\"name\",\"organization_id\",\"owner_id\",\"phase\",\"project_id\"],\"filters\":[\"organization_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_commitments\",\"overdue_commitments\"],\"defaults\":\"sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id\",\"notes\":\"rows are ordered most overdue first\"},{\"report\":\"projects-by-phase\",\"group_by\":[\"organization_id\",\"owner_id\",\"phase\"],\"filters\":[\"organization_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_deal_value_minor\",\"won_deal_value_minor\"],\"defaults\":\"count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase\",\"notes\":\"deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes\"},{\"report\":\"projects-gone-quiet\",\"group_by\":[\"key\",\"last_activity_at\",\"name\",\"organization_id\",\"owner_id\",\"phase\",\"project_id\",\"quiet_since\"],\"filters\":[\"days\",\"organization_id\",\"owner_id\",\"phase\"],\"aggregates\":[],\"defaults\":\"count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since\",\"notes\":\"`days` is a whole number of days of silence, default 30; quiet_since is when the silence began\"},{\"report\":\"stage-age\",\"group_by\":[\"owner_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"owner_id\",\"pipeline_id\"],\"aggregates\":[\"days_in_stage\"],\"defaults\":\"count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id\"},{\"report\":\"win-loss\",\"group_by\":[\"currency\",\"organization_id\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"source\",\"status\"],\"filters\":[\"currency\",\"organization_id\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"project_id\",\"source\",\"status\"],\"aggregates\":[\"amount_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency\"}],\"notes\":[\"A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.\"]}",
     "ui://margince/account-brief.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",
     "ui://margince/commitments.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",
     "ui://margince/geo-probe.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",

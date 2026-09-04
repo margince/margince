@@ -539,7 +539,7 @@ describe("CompanyRail", () => {
     // unrelated and legitimately shows its own "Add" for its own empty read.
     const peoplePanel = screen
       .getByRole("heading", { name: "Their key people" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     expect(
       peoplePanel &&
@@ -658,7 +658,7 @@ describe("CompanyRail", () => {
     });
     const dealsPanel = screen
       .getByRole("heading", { name: "Active deals" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(dealsPanel).not.toBeNull();
     if (!dealsPanel) {
       throw new Error("the deals panel has no wrapper");
@@ -728,7 +728,7 @@ describe("CompanyRail", () => {
     });
     const dealsPanel = screen
       .getByText("Active deals")
-      .closest("section, .panel");
+      .closest("details, .panel");
     if (!(dealsPanel instanceof HTMLElement)) {
       throw new Error("the deals panel has no wrapper");
     }
@@ -786,7 +786,7 @@ describe("CompanyRail", () => {
     });
     const dealsPanel = screen
       .getByText("Active deals")
-      .closest("section, .panel");
+      .closest("details, .panel");
     if (!(dealsPanel instanceof HTMLElement)) {
       throw new Error("the deals panel has no wrapper");
     }
@@ -828,7 +828,7 @@ describe("CompanyRail", () => {
     });
     const peoplePanel = screen
       .getByRole("heading", { name: "Their key people" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(peoplePanel).not.toBeNull();
     if (!peoplePanel) {
       throw new Error("the people panel has no wrapper");
@@ -966,16 +966,15 @@ describe("CompanyRail", () => {
     expect(
       await screen.findByRole("button", { name: "New deal" }),
     ).toBeInTheDocument();
-    // Both Deals and People are empty in this fixture, so each carries its
-    // own "Add" header link — scoped to Deals's own panel rather than a bare
-    // getByRole, which would find two.
+    // The create verb is the empty pipeline's ONE verb: no second "Add"
+    // beside it offering the same tab under another name.
     const dealsPanel = screen
       .getByRole("heading", { name: "Active deals" })
-      .closest<HTMLElement>(".panel");
+      .closest<HTMLElement>("details");
     expect(dealsPanel).not.toBeNull();
     expect(
-      dealsPanel && within(dealsPanel).getByRole("button", { name: "Add" }),
-    ).toBeInTheDocument();
+      dealsPanel && within(dealsPanel).queryByRole("button", { name: "Add" }),
+    ).toBeNull();
   });
 
   it("reads a closed-only pipeline as nothing open rather than never started", () => {
@@ -994,10 +993,18 @@ describe("CompanyRail", () => {
       screen.getByText("Nothing open — only closed history."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
-    // between two of them rather than never having started.
+    // between two of them rather than never having started. The way to the
+    // Deals tab stands in its place, as the section's one verb.
     expect(
       screen.queryByRole("button", { name: "New deal" }),
     ).not.toBeInTheDocument();
+    const dealsPanel = screen
+      .getByRole("heading", { name: "Active deals" })
+      .closest<HTMLElement>("details");
+    expect(dealsPanel).not.toBeNull();
+    expect(
+      dealsPanel && within(dealsPanel).getByRole("button", { name: "Add" }),
+    ).toBeInTheDocument();
   });
 
   it("offers to add the account's first contact when it has none", async () => {
@@ -1011,6 +1018,61 @@ describe("CompanyRail", () => {
       screen.getByRole("button", { name: "Add a contact" }),
     );
     expect(spy).toHaveBeenCalledWith("people");
+    // That is the empty roster's one verb: no second "Add" under it.
+    const peoplePanel = screen
+      .getByRole("heading", { name: "Their key people" })
+      .closest<HTMLElement>("details");
+    expect(peoplePanel).not.toBeNull();
+    expect(
+      peoplePanel && within(peoplePanel).queryByRole("button", { name: "Add" }),
+    ).toBeNull();
+  });
+
+  it("drops the count once the server has cut the page, on people and deals alike", () => {
+    stub();
+    const contacts = Array.from({ length: 25 }, (_, i) => ({
+      person_id: `p-${i + 1}`,
+      full_name: `Contact ${i + 1}`,
+      deal_roles: [],
+      strength: { score: 40, bucket: "moderate", factors: {}, inbound_90d: 1 },
+    }));
+    const deals = Array.from({ length: 25 }, (_, i) => ({
+      deal_id: `d-${i + 1}`,
+      name: `Deal ${i + 1}`,
+      status: "open",
+      stage_name: "Discovery",
+      amount: { amount_minor: 1_000 * (i + 1), currency: "EUR" },
+      stalled: false,
+    }));
+    renderRail({
+      view: view({
+        people: { data: contacts, page: { has_more: true, next_cursor: "c" } },
+        deals: {
+          data: deals,
+          page: { has_more: true, next_cursor: "c" },
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
+    // Twenty-five is where the server cut, not how many there are: the
+    // summary carries no badge and the verb no figure, on both sections.
+    for (const name of ["Their key people", "Active deals"]) {
+      const panel = screen
+        .getByRole("heading", { name })
+        .closest<HTMLElement>("details");
+      expect(panel).not.toBeNull();
+      if (!panel) {
+        throw new Error(`${name} has no wrapper`);
+      }
+      expect(within(panel).queryByText("25")).not.toBeInTheDocument();
+      expect(
+        within(panel).getByRole("button", { name: "All" }),
+      ).toBeInTheDocument();
+      expect(
+        within(panel).queryByRole("button", { name: /All \d/ }),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it("offers the add-tag verb once the section has answered, on a writable record", async () => {

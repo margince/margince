@@ -55,12 +55,12 @@ func writeIntroRequest(
 
 // introFromModel writes the ask and checks what came back.
 //
-// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+// ai.Ask re-asks through the SAME parse the answer path runs, so a
 // reply this site would refuse goes back to the model with the reason.
 func introFromModel(
 	ctx context.Context, lane Completer, facts introFacts,
 ) (introDraft, error) {
-	res, err := draftreply.Ask(ctx, lane, introRequest(facts), func(text string) error {
+	res, err := ai.Ask(ctx, lane, introRequest(facts), func(text string) error {
 		_, parseErr := parseIntroDraft(text, facts)
 		return parseErr
 	})

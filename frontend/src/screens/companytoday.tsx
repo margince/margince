@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
-import { PanelBody } from "../design-system/panel";
+import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { PanelBody, PanelRow } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -14,6 +17,7 @@ import {
   useSuggestionsBody,
 } from "./company360";
 import {
+  HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
   HEALTH_STANDING_TONE,
   useAccountStanding,
@@ -24,40 +28,19 @@ import {
   MOMENT_RULE_LABEL,
   standingTone,
 } from "./persontoday";
-import { CallCard, TodayPanel, TodoRow, WithheldNotice } from "./record360";
-
-// "Today on this account" — the record's daily brief, and the only part of
-// the page that answers *what do I do now*. It replaces two earlier cards
-// ("Today on this account" and "Worth doing next") that used to say the same
-// things twice between them: this one merged reading, not two that agree.
-//
-// TWO CARDS, both the record-360 kit's. THE CALL: the account's standing with
-// whose move it is under it, and the thread it was read from. THE DAY'S WORK:
-// the advice rows and the two verbs (draft a follow-up, prepare a meeting)
-// that act on that context. The call states what IS; the work says what to DO
-// about it, and the split between them is this component's whole reason to
-// exist.
-//
-// The chrome is the kit's (`CallCard`, `TodayPanel`, `TodoRow`) so a contact
-// and a deal read the same way; what this file owns is the ACCOUNT's answers —
-// which standing, whose move, which rows.
-//
-// A reading that is BAD NEWS still says so, in colour: an account gone quiet,
-// a deal stalled, a move that has been ours for weeks. Nothing else is
-// coloured, so the colour means one thing.
-//
-// WHAT THIS DELIBERATELY DOES NOT CARRY, and the rule behind it: a second,
-// weaker rendering of a claim that already has a good one is the duplication
-// the page's own rules forbid.
-//
-//   - the open tasks THEMSELVES, which the Tasks screen lists in full with
-//     their quick actions. The footer's commitment reading answers how many
-//     are open and how soon, and never repeats a subject you would act on
-//     somewhere better;
-//   - a converted pipeline total or a KPI reading the strip already carries
-//     for the account's STANDING state — this band carries what is DATED.
+import {
+  CallCard,
+  type Grounding,
+  Proof,
+  type StandingTone,
+  TodayPanel,
+  TodoRow,
+  WithheldNotice,
+} from "./record360";
 
 type Organization360 = components["schemas"]["Organization360"];
+type HealthRating = components["schemas"]["HealthDimension"]["rating"];
+type PersonMoment = components["schemas"]["PersonMoment"];
 
 // The lead reading: whose move it is, under the call and in its own weight. It
 // is the one thing a reader must know before the moves under it mean anything.
@@ -72,18 +55,42 @@ type TodayLead = {
   tone?: "warn" | "danger";
 };
 
-export function TodayOnThisAccount({
-  orgId,
-  view,
-  loading,
-  failed,
-  onPrepareMeeting,
-  onDraftTo,
-  onOpenRecord,
-  onPerform,
-  onOpenTasks,
-  spine,
-}: Readonly<{
+/** One of the three rated dimensions under the verdict. */
+export type TodayDimension = {
+  key: "relationship" | "commercial" | "payment";
+  label: string;
+  rating?: HealthRating;
+};
+
+/**
+ * The account's reading for today, computed ONCE and drawn in two panes: the
+ * 360's call (the word, the sentence it rests on, the dimensions) and the
+ * needs list (the moment, the agent's finds, the manual moves). Two panes
+ * because the glance puts them in different cells of the page; one reading
+ * because the verdict and the queue under it come off the same hooks, and two
+ * computations of "how is this account" would agree until one learned about
+ * payment and the other did not.
+ */
+export type TodayReading =
+  | { state: "loading" }
+  | { state: "failed" }
+  | {
+      state: "ready";
+      standing: { label: string; tone: StandingTone };
+      because?: ReactNode;
+      restsOn: readonly Grounding[];
+      dimensions: readonly TodayDimension[];
+      // The health section was withheld from this reader, so an unrated
+      // dimension reads "not shown" rather than "not assessed".
+      healthWithheld: boolean;
+      rows: ReactNode[];
+      footer?: ReactNode;
+      notice?: ReactNode;
+    };
+
+// What a reading is computed from: the account's composite read and the
+// verbs the surface above can perform on what it says.
+type TodayReadingInputs = Readonly<{
   orgId: string;
   view?: Organization360;
   loading: boolean;
@@ -100,14 +107,18 @@ export function TodayOnThisAccount({
   // Performing a suggestion's own action. The composer, the deal and the
   // task form all live above this brief.
   onPerform?: (action: SuggestionAction) => void;
-  // Where the footer's commitment reading leads. Absent for a caller with no
-  // Tasks tab of its own.
-  onOpenTasks?: () => void;
-  // The account's story as a thread, under the call it was read from. The two
-  // are one statement about the account, which is why they share a card: the
-  // verdict is the sentence and the thread is the evidence for it.
-  spine?: ReactNode;
-}>) {
+}>;
+
+export function useTodayReading({
+  orgId,
+  view,
+  loading,
+  failed,
+  onPrepareMeeting,
+  onDraftTo,
+  onOpenRecord,
+  onPerform,
+}: TodayReadingInputs): TodayReading {
   const t = useT();
   const { locale } = useLocale();
   // Called before the loading/failed branches below, like every other hook
@@ -119,68 +130,200 @@ export function TodayOnThisAccount({
     onOpenRecord,
     onPerform,
   });
-
-  // Neither the pending read nor the failed one draws the call card. That
-  // card exists to state a verdict, and a card holding a spinner where the
-  // verdict goes is the reading claiming to have reached one. The day's work
-  // still says which of its states it is in, under its own name.
   if (loading) {
-    return <TodayPanel state="loading" onOpenTasks={onOpenTasks} />;
+    return { state: "loading" };
   }
   if (failed || !view) {
-    return <TodayPanel state="failed" onOpenTasks={onOpenTasks} />;
+    return { state: "failed" };
   }
-
   const lead = whoseMove({ view, t, locale });
-  const manualMoves = manualMoveRows({ view, t, onPrepareMeeting, onDraftTo });
   const commitment = nextCommitmentLine(view, locale, t);
-  // The same verdict the readings row's health card states, off the one hook
-  // that owns it — two computations of "how is this account" would agree until
-  // one of them learned about payment and the other did not.
   // Nothing rated is itself a standing, and it says so: an account too new to
   // score reads "not assessed" rather than dropping the call and leaving the
   // sentence under it with nothing to belong to. The words are the readings
   // row's own for the same state, so the two cannot disagree.
+  // A withheld health section is a fact about the READER and says so;
+  // nothing rated is a fact about how much has been judged. The two must not
+  // share a word, or a reader goes asking for a grant that would show them
+  // nothing.
+  const healthWithheld = omitted(view, "health");
   const standing = verdict.overall
     ? {
         label: t(HEALTH_RATING_LABEL[verdict.overall]),
         tone: HEALTH_STANDING_TONE[verdict.overall],
       }
-    : { label: t("co.strip.notAssessed"), tone: "unknown" as const };
+    : {
+        label: t(healthWithheld ? "record.notShown" : "co.strip.notAssessed"),
+        tone: "unknown" as const,
+      };
+  const rated: ReadonlyArray<
+    [TodayDimension["key"], HealthRating | undefined]
+  > = [
+    ["relationship", view.health?.relationship?.rating],
+    ["commercial", view.health?.commercial?.rating],
+    ["payment", verdict.payment?.rating],
+  ];
+  const dimensions: TodayDimension[] = rated.map(([key, rating]) => ({
+    key,
+    rating,
+    label: t(HEALTH_DIMENSION_LABEL[key]),
+  }));
+  // WHAT WE OWE leads the list. A promise past its date outranks a reading of
+  // the account: one is a thing to do today and the other is context for it.
+  const rows: ReactNode[] = [
+    ...(view.moment
+      ? [
+          <MomentRow
+            key="moment"
+            moment={view.moment}
+            onOpenRecord={onOpenRecord}
+          />,
+        ]
+      : []),
+    suggestions.rows,
+    ...manualMoveRows({ view, t, onPrepareMeeting, onDraftTo }),
+  ];
+  return {
+    state: "ready",
+    standing,
+    because: lead ? leadSentence(lead) : undefined,
+    restsOn: verdict.restsOn,
+    dimensions,
+    healthWithheld,
+    rows,
+    footer: briefFooter(commitment, suggestions.footer),
+    notice:
+      (view.sections_omitted?.length ?? 0) > 0 ? (
+        <TodayWithheld view={view} />
+      ) : undefined,
+  };
+}
 
+/**
+ * The 360's call: the head that says a machine read this record, the standing
+ * word with the sentence it rests on, the three rated dimensions, and under
+ * them whatever the call was read from — the spine, the folded thread.
+ *
+ * While the read is in flight the card holds its shape and no verdict: a head
+ * holding a spinner where the call goes is the reading claiming to have
+ * reached one.
+ */
+export function Company360Call({
+  reading,
+  name,
+  footer,
+  children,
+}: Readonly<{
+  reading: TodayReading;
+  name?: string;
+  footer?: ReactNode;
+  children?: ReactNode;
+}>) {
+  const t = useT();
+  if (reading.state === "loading") {
+    return (
+      <CallCard name={name}>
+        <PanelBody>
+          <Skeleton width="100%" height={64} />
+        </PanelBody>
+      </CallCard>
+    );
+  }
+  if (reading.state === "failed") {
+    return (
+      <CallCard name={name}>
+        <PanelBody>
+          <EmptyState>{t("co.section.unavailable")}</EmptyState>
+        </PanelBody>
+      </CallCard>
+    );
+  }
+  return (
+    <CallCard
+      name={name}
+      standing={reading.standing}
+      because={reading.because}
+      restsOn={reading.restsOn}
+      footer={footer}
+    >
+      <PanelBody className="co-360-dims">
+        {reading.dimensions.map((dimension) => (
+          <span
+            key={dimension.key}
+            className={
+              dimension.rating
+                ? `co-dim co-dim-${HEALTH_STANDING_TONE[dimension.rating]}`
+                : "co-dim"
+            }
+          >
+            {dimension.label} ·{" "}
+            {dimension.rating
+              ? t(HEALTH_RATING_LABEL[dimension.rating])
+              : t(
+                  reading.healthWithheld
+                    ? "record.notShown"
+                    : "co.strip.notAssessed",
+                )}
+          </span>
+        ))}
+      </PanelBody>
+      {children}
+    </CallCard>
+  );
+}
+
+/**
+ * What needs a person: one list, the moment as its lead row, then the agent's
+ * finds, then the manual moves. The foot carries what the list as a whole is
+ * counting down to and what the advice could not show.
+ */
+export function NeedsList({
+  reading,
+  onOpenTasks,
+}: Readonly<{
+  reading: TodayReading;
+  // Where the footer's commitment reading leads. Absent for a caller with no
+  // Tasks tab of its own.
+  onOpenTasks?: () => void;
+}>) {
+  if (reading.state !== "ready") {
+    return <TodayPanel state={reading.state} onOpenTasks={onOpenTasks} />;
+  }
+  return (
+    <TodayPanel
+      onOpenTasks={onOpenTasks}
+      footer={reading.footer}
+      notice={reading.notice}
+    >
+      {reading.rows}
+    </TodayPanel>
+  );
+}
+
+/**
+ * The call and the needs list as one column, for a surface with no glance
+ * grid of its own: the two panes in the order the page draws them.
+ */
+export function TodayOnThisAccount({
+  onOpenTasks,
+  spine,
+  ...inputs
+}: TodayReadingInputs &
+  Readonly<{
+    onOpenTasks?: () => void;
+    // The account's story as a thread, under the call it was read from.
+    spine?: ReactNode;
+  }>) {
+  const reading = useTodayReading(inputs);
   return (
     <>
-      {/* WHAT WE OWE, first. A promise past its date outranks a reading of the
-          account: one is a thing to do today and the other is context for it.
-          The contact page opens the same way, and on the same card, because a
-          promise is a promise whichever record you came in through. */}
-      {view.moment && (
-        <AccountMoment
-          moment={view.moment}
-          name={view.organization?.display_name}
-          onOpenRecord={onOpenRecord}
-        />
-      )}
-      <CallCard
-        name={view.organization?.display_name}
-        standing={standing}
-        because={lead ? leadSentence(lead) : undefined}
-        restsOn={verdict.restsOn}
+      <Company360Call
+        reading={reading}
+        name={inputs.view?.organization?.display_name}
       >
         {spine}
-      </CallCard>
-      <TodayPanel
-        onOpenTasks={onOpenTasks}
-        footer={briefFooter(commitment, suggestions.footer)}
-        notice={
-          (view.sections_omitted?.length ?? 0) > 0 ? (
-            <TodayWithheld view={view} />
-          ) : undefined
-        }
-      >
-        {suggestions.rows}
-        {manualMoves}
-      </TodayPanel>
+      </Company360Call>
+      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
     </>
   );
 }
@@ -211,12 +354,6 @@ function briefFooter(
   );
 }
 
-// The verdict head's one line: whose move it is, and how long it has been that
-// way.
-//
-// Two spans rather than one joined string, because they are two facts: a state
-// with no duration is a status, and a rep cannot act on a status. Joined, the
-// duration also stops being separately readable.
 function leadSentence(lead: TodayLead): ReactNode {
   return (
     <>
@@ -240,20 +377,12 @@ function manualMoveRows({
   const recipient = [...(view.people?.data ?? [])].sort(byStrengthThenId)[0];
   const meeting = view.next_meeting;
   const rows: ReactNode[] = [];
-  // "Draft follow-up to <name>" names the strongest reachable contact,
-  // because a row that says who it will write to is a decision the reader can
-  // check before pressing it. It opens the composer grounded on the ACCOUNT
-  // rather than on a message, which is why it passes the recipient.
   if (recipient && onDraftTo) {
     rows.push(
       <TodoRow
         key="move:draft"
         who={recipient.full_name}
         title={t("today.draft.to", { name: firstName(recipient.full_name) })}
-        // Who the row would actually write to, under the ask. The title names
-        // a first name because that is how the ask reads; a row a reader is
-        // deciding whether to press has to say WHICH person that is, and two
-        // Phans on one account is the ordinary case rather than the odd one.
         meta={recipient.full_name}
         verb={{
           label: t("today.draft.act"),
@@ -264,9 +393,6 @@ function manualMoveRows({
     );
   }
   if (meeting && onPrepareMeeting) {
-    // Each attendee links to their own record: a rep preparing for a meeting
-    // reads the guest list to decide who to look up, and a name they have to
-    // retype into search is the one step this row exists to save.
     const who =
       meeting.participants.length > 0
         ? meeting.participants.map((participant, at) => (
@@ -301,36 +427,17 @@ function firstName(fullName: string): string {
   return fullName.split(" ")[0] || fullName;
 }
 
-// omitted answers "was this withheld from me", which the page must never
-// render as "there is none".
 function omitted(view: Organization360, section: string): boolean {
   return (view.sections_omitted ?? []).some((name) => name === section);
 }
 
-// The sections this brief is assembled from. Naming them lets the footer say
-// which ones the reader is missing, rather than silently composing a shorter
-// brief and letting them believe it is complete. Each of the context band's
-// several sections is withheld INDEPENDENTLY — one missing grant must not
-// blank the rest of the band, and this list is what lets the footer say
-// exactly which one it was.
-//
-// One entry per section a tile actually reads, and no others: a footer that
-// reports a withheld section nothing here uses teaches the reader to ignore
-// it, and one that omits a section a tile DOES use lets that tile vanish in
-// silence.
 const TODAY_SOURCES: ReadonlyArray<{ section: string; label: MessageKey }> = [
   { section: "next_steps", label: "today.source.nextSteps" },
   { section: "next_meeting", label: "today.source.nextMeeting" },
   { section: "people", label: "today.source.people" },
   { section: "deals", label: "today.source.deals" },
-  // Whose move it is and the risk tile both read `state_strip` (whoseMove
-  // and openRisk, below) — that is the section name the server actually
-  // omits when a caller has no grant on it.
   { section: "state_strip", label: "today.source.standing" },
   { section: "activities", label: "today.source.activities" },
-  // The moves themselves: a withheld advice section reads as "nothing to
-  // add" from `useSuggestionsBody`, which is the right call for the rows —
-  // but the footer still has to say the reader is missing them.
   { section: "suggestions", label: "today.source.suggestions" },
 ];
 
@@ -342,10 +449,6 @@ function TodayWithheld({ view }: Readonly<{ view: Organization360 }>) {
   return <WithheldNotice sections={hidden.map((source) => t(source.label))} />;
 }
 
-// Whose move it is, and how long it has been. Lifted from the state strip's
-// own engagement tile rather than re-derived: the strip no longer draws it
-// (it is a DATED reading, not the account's standing state), and the brief
-// reads the same `state_strip.engagement` field the strip used to.
 function whoseMove({
   view,
   t,
@@ -366,15 +469,6 @@ function whoseMove({
   };
 }
 
-// How long the account has been silent, counted from the last thing WE sent
-// and measured against the same `as_of` the rest of the page is read at — so
-// the number does not drift while a tab is left open, and does not disagree
-// with the dates beside it.
-//
-// Only when they owe us. Counting days since our own last message says
-// nothing when the reply already came, and "no answer in 19 days" against a
-// thread that ended with their answer is the kind of line that costs a reader
-// trust in the whole panel.
 function silenceNote(
   view: Organization360,
   locale: Locale,
@@ -388,8 +482,6 @@ function silenceNote(
   const days = Math.floor(
     (Date.parse(view.as_of) - Date.parse(sent)) / MS_PER_DAY,
   );
-  // Same day, or a clock that disagrees with itself: "no answer in 0 days"
-  // reads as a fault, and there is nothing yet to report.
   return days > 0
     ? t("today.silence.days", { count: formatNumber(days, locale) })
     : undefined;
@@ -397,8 +489,6 @@ function silenceNote(
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// Strongest first, with the id as the tiebreak so two contacts on the same
-// score do not swap places between renders of the same data.
 function byStrengthThenId(
   a: Organization360Contact,
   b: Organization360Contact,
@@ -411,66 +501,64 @@ type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
 
-// What this account owes, as its own card above the reading.
-//
-// The SAME card the contact page opens on, from the same server rule: a
-// promise past its date, or the next one coming due, read from both places a
-// promise gets written down — a task somebody filed, and a commitment an
-// extractor read out of a conversation. Two screens answering "what do we owe
-// them?" differently is what this closes.
-//
-// Its own card rather than a row inside the reading below, for the reason the
-// reading and the moves are already two panels: a thing to do today and the
-// context for it are different to a reader who is scanning, and sharing a box
-// makes them read as one continuous section. The card is the kit's `CallCard`,
-// the same one the contact page draws the moment on, so the two pages cannot
-// drift apart in shape.
-function AccountMoment({
+/**
+ * The moment as the lead row of the needs list: the rule it fired on as the
+ * eyebrow, the headline in the display face, why now, the evidence one
+ * disclosure away, and the one filled verb on the page.
+ *
+ * The button appears only where the server said the action can be taken AND
+ * named somewhere to go. A card whose verb lands nowhere is worse than a card
+ * with no verb: the reader clicks, nothing happens, and they stop trusting
+ * the ones that work.
+ */
+function MomentRow({
   moment,
-  name,
   onOpenRecord,
 }: Readonly<{
-  moment: components["schemas"]["PersonMoment"];
-  name?: string;
+  moment: PersonMoment;
   onOpenRecord?: (entityType: string, entityId: string) => void;
 }>) {
   const t = useT();
   const destination = moment.recommended_action.destination;
-  // The button appears only where the server said the action can be taken AND
-  // named somewhere to go. A card whose verb lands nowhere is worse than a
-  // card with no verb: the reader clicks, nothing happens, and they stop
-  // trusting the ones that work.
   const target =
     moment.recommended_action.state === "available" &&
     destination?.entity_type != null &&
     destination.entity_id != null
       ? { type: destination.entity_type, id: destination.entity_id }
       : undefined;
+  const tone = standingTone(moment.rule);
   return (
-    <CallCard
-      name={name}
-      standing={{
-        label: t(MOMENT_RULE_LABEL[moment.rule]),
-        tone: standingTone(moment.rule),
-      }}
-      because={moment.headline}
-      restsOn={moment.evidence.map((item) => ({
-        key: `${item.type}-${item.id ?? item.label}`,
-        quote: item.label,
-        from: t(MOMENT_EVIDENCE_LABEL[item.type]),
-      }))}
-      footer={
-        target && onOpenRecord ? (
-          <Button
-            variant="ghost"
-            onClick={() => onOpenRecord(target.type, target.id)}
-          >
-            {moment.recommended_action.label}
-          </Button>
-        ) : undefined
-      }
-    >
-      <PanelBody>{moment.why_now}</PanelBody>
-    </CallCard>
+    <PanelRow className="co-move co-move-lead">
+      <span className="co-move-body">
+        <span className="co-move-by">
+          <span className={`co-dim co-dim-${tone}`}>
+            {t(MOMENT_RULE_LABEL[moment.rule])}
+          </span>
+        </span>
+        <span className="co-move-ask co-move-headline">{moment.headline}</span>
+        <span className="co-move-reason">{moment.why_now}</span>
+        <Proof
+          label={t("record.restsOn")}
+          items={moment.evidence.map((item) => ({
+            key: `${item.type}-${item.id ?? item.label}`,
+            quote: item.label,
+            from: t(MOMENT_EVIDENCE_LABEL[item.type]),
+          }))}
+          count
+        />
+        {target && onOpenRecord && (
+          <span className="co-move-do">
+            <span className="co-move-actions">
+              <Button
+                small
+                onClick={() => onOpenRecord(target.type, target.id)}
+              >
+                {moment.recommended_action.label}
+              </Button>
+            </span>
+          </span>
+        )}
+      </span>
+    </PanelRow>
   );
 }

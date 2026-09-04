@@ -51,6 +51,15 @@ type SendMessageInput struct {
 	// rewrite what the timeline says this message carried (ADR-0086/A131 §4).
 	AttachmentIDs  []ids.UUID
 	ConsentPurpose string
+	// Context, MarketingPurpose, OperatorReason and Evidence are the mail
+	// path's four context fields, carried here for the reason every engine
+	// change lands twice: the channel reply is a second implementation of
+	// sending, not a variant of the mail one, so a field that reached only
+	// SendEmailInput would leave this door answering the old question.
+	Context          commsauthz.Category
+	MarketingPurpose string
+	OperatorReason   string
+	Evidence         commsauthz.Evidence
 }
 
 // ChannelDeliveryStager records an outbound CHANNEL message for transmission —
@@ -275,7 +284,7 @@ func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in Sen
 
 	message := outboundChannelMessage{
 		in: in, provider: provider, conversation: conversation,
-		links: inheritedLinks(anchor), files: files,
+		links: inheritedLinks(anchor), files: files, anchorID: anchorID,
 	}
 	var sent crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
@@ -402,6 +411,11 @@ type outboundChannelMessage struct {
 	conversation channelConversation
 	links        []ActivityLinkInput
 	files        []OutboundFile
+	// anchorID is the captured conversation this reply answers. The delivery
+	// deliberately anchors on nothing (see delivery below), but the ENGINE
+	// needs it: a reply to a message the subject sent is a reply, and the
+	// anchor is what says so without the caller having to.
+	anchorID ids.ActivityID
 }
 
 // activity is the timeline row the reply commits — the row that makes the sent
@@ -444,6 +458,17 @@ func (m outboundChannelMessage) activity() LogActivityInput {
 // that belongs to the capture provider, and which this module would be guessing
 // at. A wrong anchor is refused by the provider outright, so guessing costs the
 // rep their message to buy some visual nesting.
+// evidence is what the caller offered, with the answered conversation filled in
+// when they named no activity themselves — the channel twin of the mail path's
+// own derivation.
+func (m outboundChannelMessage) evidence() commsauthz.Evidence {
+	e := m.in.Evidence
+	if e.ActivityID == (ids.UUID{}) {
+		e.ActivityID = m.anchorID.UUID
+	}
+	return e
+}
+
 func (m outboundChannelMessage) delivery(activityID ids.ActivityID) ChannelDeliveryRequest {
 	return ChannelDeliveryRequest{
 		ActivityID:     activityID,
@@ -456,7 +481,13 @@ func (m outboundChannelMessage) delivery(activityID ids.ActivityID) ChannelDeliv
 		// named and cannot substitute.
 		Authorization: commsauthz.Request{
 			Recipients:       []connector.Recipient{{Channel: &m.conversation.recipient}},
+			Context:          m.in.Context,
 			LegacyPurposeKey: m.in.ConsentPurpose,
+			MarketingPurpose: m.in.MarketingPurpose,
+			OperatorReason:   m.in.OperatorReason,
+			Evidence:         m.evidence(),
+			AnchorActivityID: m.anchorID.UUID,
+			Links:            linkedRecordIDs(m.links),
 			Body:             m.in.Body,
 		},
 	}

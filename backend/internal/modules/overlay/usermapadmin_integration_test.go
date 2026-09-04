@@ -203,13 +203,14 @@ func TestListUserMapIncludesUnmappedAndBlockedUsers(t *testing.T) {
 // A passport identity has no incumbent counterpart, and an archived seat no
 // longer logs in — offering either a mapping affordance invites an admin to
 // grant mirror visibility to something that should not have it.
-func TestListUserMapExcludesAgentAndArchivedUsers(t *testing.T) {
+func TestListUserMapExcludesAgentArchivedAndDeactivatedUsers(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
 	_, humanRaw := testWorkspaceCtxAsUser(t, ws, "human@acme.test")
 	human := ids.From[ids.UserKind](humanRaw)
 	agent := seedAgentUser(t, ws, "agent@acme.test")
 	archived := seedArchivedUser(t, ws, "gone@acme.test")
+	deactivated := seedDeactivatedUser(t, "suspended@acme.test")
 
 	entries, _, err := store.ListUserMap(ctx, "hubspot", "", 50)
 	if err != nil {
@@ -227,6 +228,14 @@ func TestListUserMapExcludesAgentAndArchivedUsers(t *testing.T) {
 	}
 	if present[archived] {
 		t.Fatal("an archived user must not be offered a mapping")
+	}
+	// Deactivation moves `status` and leaves archived_at NULL, so the
+	// archived-only predicate this surface used to carry read a suspended seat
+	// as a live colleague and offered it a mapping — while the comment above
+	// the query justified the archived exclusion as "a seat that no longer logs
+	// in" (#2592).
+	if present[deactivated] {
+		t.Fatal("a deactivated user can no longer log in and must not be offered a mapping")
 	}
 }
 
@@ -255,17 +264,24 @@ func TestUserMapWritesRefuseAUserThatDoesNotExist(t *testing.T) {
 // ListUserMap hides agent and archived seats; the verb that GRANTS mirror
 // visibility has to agree, or the exclusion is cosmetic and an admin can map
 // exactly the identities the list refuses to offer.
-func TestSetManualUserMapRefusesAgentAndArchivedUsers(t *testing.T) {
+func TestSetManualUserMapRefusesAgentArchivedAndDeactivatedUsers(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
 	agent := seedAgentUser(t, ws, "agent@acme.test")
 	archived := seedArchivedUser(t, ws, "gone@acme.test")
+	deactivated := seedDeactivatedUser(t, "suspended@acme.test")
 
 	if err := store.SetManualUserMap(ctx, agent, "hubspot", "owner-1"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an agent seat has no incumbent counterpart and must answer ErrNotFound, got: %v", err)
 	}
 	if err := store.SetManualUserMap(ctx, archived, "hubspot", "owner-1"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an archived seat must answer ErrNotFound, got: %v", err)
+	}
+	// The GRANT half of #2592, and the one that matters most: the surface no
+	// longer offers a deactivated seat, so a grant naming one now reaches this
+	// check rather than the admin's own stale tab being the only guard.
+	if err := store.SetManualUserMap(ctx, deactivated, "hubspot", "owner-1"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a deactivated seat must answer ErrNotFound, got: %v", err)
 	}
 
 	var mapped int

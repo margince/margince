@@ -29,7 +29,6 @@ package agents
 // derived, stale the first time a workspace declared a custom field.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 
@@ -107,11 +106,8 @@ func (t describeQueryVocabulary) Handle(ctx context.Context, in json.RawMessage)
 	// decodeArgs would answer "the payload is empty; send a JSON object
 	// carrying this operation's fields" — advice for a tool that has fields,
 	// and a refusal of the one call this tool is designed for.
-	if len(bytes.TrimSpace(in)) > 0 {
-		var args struct{}
-		if err := decodeArgs(in, &args); err != nil {
-			return nil, err
-		}
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
 	}
 	body, err := t.read.VocabularyDocument(ctx)
 	if err != nil {

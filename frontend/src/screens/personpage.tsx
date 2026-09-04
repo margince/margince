@@ -14,7 +14,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { PageAside, PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
@@ -26,6 +26,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
+import { primaryEmail } from "../format/primaryemail";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -267,6 +268,7 @@ export function PersonPageV2({
   const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
   const recordZone = useRecordZone();
+  const details = usePageAside();
   const view = useQuery({
     queryKey: ["person360", id],
     queryFn: async () => {
@@ -373,6 +375,29 @@ export function PersonPageV2({
   return (
     <div className="wrap">
       <RecordView
+        // The contact's context, in the details pane beside the work: what is
+        // true of the PERSON does not belong to whichever part of them is open,
+        // so it does not move when a tab changes. The same pane, fold and
+        // memory of it as every other record page.
+        aside={
+          details.open ? (
+            <>
+              <PersonRail
+                view={view.data}
+                guard={guard.data}
+                firstName={firstName}
+                onExplain={() => navigate({ screen: "contacts", id })}
+                onOpenEmail={setOpenEmail}
+              />
+              <PersonEmailPanel
+                personId={id}
+                recordAddress={primaryEmail(person.emails)}
+                overlay={overlay}
+                archived={Boolean(person.archived_at)}
+              />
+            </>
+          ) : undefined
+        }
         name={person.full_name}
         avatarSrc={null}
         subtitle={<PersonSubtitle view={view.data} />}
@@ -391,7 +416,6 @@ export function PersonPageV2({
               onLogActivity={() => setDrawer("activity_log")}
               onAddTask={() => setDrawer("activity_task")}
             />
-            <PageAsideToggle />
           </>
         }
         actionsInline
@@ -401,6 +425,10 @@ export function PersonPageV2({
             options={PERSON_TABS}
             value={tab}
             onChange={(next) => navigate(personTabRoute(id, next))}
+            // The switch for the details pane, at the end of the tab row: it
+            // chooses what the page shows beside the work, so it stands with
+            // the controls that choose what the work column shows.
+            trailing={<PageAsideToggle />}
             labels={{
               overview: t(TAB_LABEL_KEYS.overview),
               timeline: t(TAB_LABEL_KEYS.timeline),
@@ -423,26 +451,6 @@ export function PersonPageV2({
           />
         }
       >
-        {/* The contact's context goes to the PAGE's own column, beside the
-            work rather than inside the record's grid — so it runs the full
-            height past the header and the tab strip, and does not move when a
-            tab changes. What is true of the PERSON does not belong to
-            whichever part of them is open. Same column, same fold and same
-            memory of it as every other record page. */}
-        <PageAside>
-          <PersonRail
-            view={view.data}
-            guard={guard.data}
-            firstName={firstName}
-            onExplain={() => navigate({ screen: "contacts", id })}
-            onOpenEmail={setOpenEmail}
-          />
-          <PersonEmailPanel
-            personId={id}
-            overlay={overlay}
-            archived={Boolean(person.archived_at)}
-          />
-        </PageAside>
         {tab === "overview" && (
           <div className="record-stack">
             {/* The readings lead the overview, under the strip that chose it —
@@ -469,7 +477,7 @@ export function PersonPageV2({
                 onOpenTasks={() => navigate({ screen: "worklist" })}
               />
               <RecordReadingPair>
-                <PersonMemory view={view.data} />
+                <PersonMemory view={view.data} onOpenEmail={setOpenEmail} />
                 <PersonCommitmentsCard view={view.data} firstName={firstName} />
               </RecordReadingPair>
             </RecordReading>
@@ -526,6 +534,7 @@ export function PersonPageV2({
         />
         <PersonMailDrawer
           personId={id}
+          recordAddress={primaryEmail(person.emails)}
           open={drawer === "mail"}
           onClose={() => setDrawer(null)}
         />
@@ -801,9 +810,15 @@ function writeRefusal(
 // page offers no writes.
 function PersonEmailPanel({
   personId,
+  recordAddress,
   overlay,
   archived,
-}: Readonly<{ personId: string; overlay: boolean; archived: boolean }>) {
+}: Readonly<{
+  personId: string;
+  recordAddress?: string;
+  overlay: boolean;
+  archived: boolean;
+}>) {
   if (overlay || archived) {
     return null;
   }
@@ -812,6 +827,7 @@ function PersonEmailPanel({
       entityType="person"
       entityId={personId}
       personId={personId}
+      recordAddress={recordAddress}
       detectWaitingReply
     />
   );
@@ -826,9 +842,18 @@ function PersonEmailPanel({
 // another.
 function PersonMailDrawer({
   personId,
+  recordAddress,
   open,
   onClose,
-}: Readonly<{ personId: string; open: boolean; onClose: () => void }>) {
+}: Readonly<{
+  personId: string;
+  // Which of the contact's addresses a FIRST message goes to. A person carries
+  // a list, so this is the shared decision rather than a field — see
+  // format/primaryemail.ts, mirrored by the drafter.
+  recordAddress?: string;
+  open: boolean;
+  onClose: () => void;
+}>) {
   if (!open) {
     return null;
   }
@@ -838,6 +863,7 @@ function PersonMailDrawer({
       entityType="person"
       entityId={personId}
       personId={personId}
+      recordAddress={recordAddress}
       open
       onClose={onClose}
     />
@@ -862,7 +888,7 @@ function PersonActivityDrawer({
     <LogActivityAction
       entityType="person"
       entityId={personId}
-      initialKind={asTask ? "task" : undefined}
+      askedKind={asTask ? "task" : undefined}
       triggerLabel={asTask ? "log.addTask" : undefined}
       openOnMount
       onClose={onClose}

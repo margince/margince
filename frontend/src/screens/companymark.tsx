@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Avatar, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -101,13 +102,6 @@ export function CompanyMark({
 
   return (
     <div className="company-mark">
-      <Avatar
-        identity={profile.organization_id}
-        name={profile.display_name}
-        src={profile.logo_url}
-        shape="organization"
-        size="lg"
-      />
       <div className="company-mark-body">
         <b>{t("settings.companyMark")}</b>
         <p className="t-caption">
@@ -115,6 +109,38 @@ export function CompanyMark({
             ? t("settings.companyMarkPresent")
             : t("settings.companyMarkNone")}
         </p>
+        {!picking && (
+          <p className="t-caption">{t("settings.companyMarkHint")}</p>
+        )}
+        <div
+          className={
+            profile.logo_url
+              ? "company-logo-preview"
+              : "company-logo-preview company-logo-preview-empty"
+          }
+        >
+          {profile.logo_url ? (
+            <CompanyLogo
+              name={profile.display_name}
+              src={profile.logo_url}
+              fallback={
+                <Avatar
+                  identity={profile.organization_id}
+                  name={profile.display_name}
+                  shape="organization"
+                  size="xl"
+                />
+              }
+            />
+          ) : (
+            <Avatar
+              identity={profile.organization_id}
+              name={profile.display_name}
+              shape="organization"
+              size="xl"
+            />
+          )}
+        </div>
         {canEdit && (
           <div className="company-mark-actions">
             <Button

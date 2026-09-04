@@ -22,11 +22,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -35,6 +32,11 @@ import (
 // answer", and two different ceilings would be two different stories about the
 // same kind of giving up.
 const ThreadVerdictMaxAttempts = PendingMaxAttempts
+
+// ReasonThreadUnreadable retires a question whose message nothing can read —
+// erased while the question stood, or placed under a statutory hold since. It
+// is not an exhaustion: such a row can have spent no attempts at all.
+const ReasonThreadUnreadable = "the message the question was about is no longer readable"
 
 // threadVerdictLease is how long a claimed thread stays off other workers'
 // scans, matching the sender ledger's for the same reason.
@@ -117,7 +119,21 @@ func (s *ThreadVerdictStore) EnsureTx(
 	return nil
 }
 
-// ClaimDue takes up to limit threads whose next attempt has come round.
+// ClaimDue takes up to limit threads whose next attempt has come round, and
+// only for a mailbox that asked to be classified.
+//
+// The posture is re-read HERE, not trusted from whatever opened the question,
+// because a question outlives the moment it was raised. A seat whose thread was
+// cleared last week can switch their mailbox to `always held` today; the ledger
+// row is re-opened by the next unseen sender either way, and a `cleared` answer
+// to that re-opened question maps straight to a workspace audience. The claim is
+// the one chokepoint every question passes through, whoever opened it, so the
+// promise the posture makes — held to the people on it, whatever any classifier
+// concludes — is kept here rather than at each of the places a row is written.
+//
+// A row belonging to a mailbox that is no longer classified is left pending
+// rather than retired: the seat may switch back, and the question is still the
+// right one to ask if they do.
 //
 // The attempt is charged AT CLAIM, not at answer, which is what makes a worker
 // that dies mid-call cost one attempt rather than nothing: the bound is a
@@ -139,6 +155,13 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			      AND attempts < $3
+			      AND EXISTS (SELECT 1 FROM activity a
+			                   WHERE a.id = first_activity_id
+			                     AND a.restricted_at IS NULL)
+			      AND EXISTS (SELECT 1 FROM capture_connection c
+			                   WHERE c.user_id = capture_thread_verdict.user_id
+			                     AND c.archived_at IS NULL
+			                     AND c.mail_posture = 'classified')
 			    ORDER BY next_attempt_at
 			    LIMIT $1
 			    FOR UPDATE SKIP LOCKED)
@@ -188,13 +211,24 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 //
 // Guarded by the claim, so a worker that outran its lease cannot overwrite the
 // answer its successor wrote.
+// seen_addresses ACCUMULATES rather than replacing.
+//
+// A thread re-opened for a sender the last answer did not read is classified
+// again, and a replace would drop the senders already cleared — so the next
+// message from one of them reads as unseen, re-opens the thread, and buys
+// another model call to reach the answer already on the row. The column means
+// "addresses some verdict on this thread has read", which is the question the
+// admission rule asks. The arrival-path re-open still empties it first, so its
+// behaviour is unchanged: a union over nothing is a replace.
 func (s *ThreadVerdictStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, t PendingThread, status, kind string, confidence float64, seen []string, reason string,
 ) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = $2, kind = NULLIF($3, ''), confidence = $4,
-		       seen_addresses = $5, disposition_reason = NULLIF($6, ''),
+		       seen_addresses = (SELECT coalesce(array_agg(DISTINCT x), '{}')
+		                           FROM unnest(seen_addresses || $5::text[]) AS x),
+		       disposition_reason = NULLIF($6, ''),
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE id = $1 AND status = 'pending' AND claimed_by = $7`,
@@ -237,6 +271,19 @@ func (s *ThreadVerdictStore) Defer(
 // moving them to `unsure` — which HOLDS, because a thread nothing could judge
 // is exactly the one not to publish on a guess.
 //
+// It also ends the threads that CANNOT be judged: a row whose first_activity_id
+// names nothing readable. The column is nullable and the foreign key is
+// ON DELETE SET NULL, so erasing the message a question was raised about leaves
+// the question standing with nothing to ask about; a message later put under a
+// statutory hold reads the same way, because the claim's own subject and body
+// lookups exclude a restricted row. Both used to be claimed anyway and judged
+// on an empty prompt. Retiring them costs the model call and holds the mail,
+// which is the safe direction for a thread nothing can read.
+//
+// The two arms record two reasons. A row retired for an unreadable message can
+// have spent no attempts at all, and writing the caller's exhaustion reason on
+// it would put a false explanation in the ledger: nobody ran out of anything.
+//
 // A terminal state, reached by spending the attempts rather than by a second
 // spelling of "give up".
 func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string) (int64, error) {
@@ -244,12 +291,26 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE capture_thread_verdict
-			   SET status = 'unsure', disposition_reason = NULLIF($1, ''),
+			   SET status = 'unsure',
+			       disposition_reason = CASE
+			         WHEN attempts >= $2 THEN NULLIF($1, '')
+			         ELSE $3
+			       END,
 			       resolved_at = now(), next_attempt_at = NULL,
 			       claimed_until = NULL, claimed_by = NULL, updated_at = now()
-			 WHERE status = 'pending' AND attempts >= $2
-			   AND (claimed_until IS NULL OR claimed_until <= now())`,
-			reason, ThreadVerdictMaxAttempts)
+			 WHERE status = 'pending'
+			   AND (claimed_until IS NULL OR claimed_until <= now())
+			   -- A row a capture is filling in RIGHT NOW is not this pass's to
+			   -- end: the arriving message supplies the pointer in its own
+			   -- transaction, and retiring on a read taken before that commits
+			   -- would answer a question the mailbox had just re-asked. The
+			   -- grace is on updated_at, which every write to this row touches.
+			   AND updated_at < now() - interval '1 minute'
+			   AND (attempts >= $2 OR NOT EXISTS (
+			         SELECT 1 FROM activity a
+			          WHERE a.id = capture_thread_verdict.first_activity_id
+			            AND a.restricted_at IS NULL))`,
+			reason, ThreadVerdictMaxAttempts, ReasonThreadUnreadable)
 		if err != nil {
 			return err
 		}
@@ -269,13 +330,15 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 // It takes the caller's transaction, which is the one ResolveAs just wrote the
 // ledger row on: both land together or neither does.
 //
-// The MESSAGE the model actually read, not every message on the thread. The
-// claim hands the classifier the thread's first message only, so opening the
-// whole thread would clear correspondence nobody looked at: a routine opening
-// message can be followed by a termination agreement before the pass runs, or
-// while the model call is in flight, and an answer about the first message says
-// nothing about those. A later message inherits through inheritedVerdictTx
-// instead, which admits an opening verdict only for a sender the verdict saw.
+// The MESSAGE the model actually read. The thread's other messages are stamped
+// by RecordOutcomeOnThreadTx beside it, under the admission rule inheritance
+// already applies — a sender the verdict actually read.
+//
+// That rule is what makes the wider stamp safe. A routine opening message can
+// be followed by a termination agreement before the pass runs, or while the
+// model call is in flight, and an answer about the first message says nothing
+// about that one: it comes from a lawyer the verdict never saw, so it is not
+// stamped, and the thread re-opens pointing at it instead.
 //
 // Scoped to the seat whose verdict it is. A thread reaching two mailboxes is
 // two people's correspondence, each may conclude differently, and the
@@ -331,11 +394,36 @@ func openConfidentialityQuestionTx(
 		// confidentiality classifier was ever asked about.
 		return nil
 	}
+	// The posture decides whether this mailbox has a question at all, and it is
+	// read here rather than taken from the birth decision.
+	//
+	// A message that INHERITED a verdict returns from the birth ladder before
+	// the posture is ever consulted, so birth.posture is empty for exactly the
+	// message a re-open is waiting for. Testing that empty field would open a
+	// question for an `always held` mailbox, whose mail stays with the people
+	// on it whatever a classifier concludes — and a `cleared` answer publishes
+	// to the workspace, which is the one thing that posture promises will not
+	// happen.
+	posture := birth.posture
+	if posture == "" {
+		read, err := mailboxPostureTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		posture = read
+	}
 	// Checked on the posture rather than the derived audience, because `held`
 	// and `classified` collapse to the same audience and only the posture can
 	// tell them apart.
-	if birth.posture != PostureClassified {
+	if posture != PostureClassified {
 		return nil
+	}
+	// A message that inherited a PENDING verdict is the one the re-open is
+	// waiting for. The re-open cleared first_activity_id so the classifier is
+	// not shown the text a previous answer was about; this message is what the
+	// question is now about, and only this path has it in hand.
+	if birth.verdictStatus == VerdictPending {
+		return (&ThreadVerdictStore{}).EnsureTx(ctx, tx, rec.ThreadKey, owner, id.UUID, time.Now())
 	}
 	if audience, _ := birth.bornAudience(); audience != audienceParticipants {
 		return nil
@@ -344,104 +432,4 @@ func openConfidentialityQuestionTx(
 	// touches no pool, which is what lets the capture path and the engine share
 	// one spelling of what opening a question means.
 	return (&ThreadVerdictStore{}).EnsureTx(ctx, tx, rec.ThreadKey, owner, id.UUID, time.Now())
-}
-
-// DecideAsOwner records what the mailbox owner themselves concluded about a
-// thread, overruling whatever a classifier said.
-//
-// A human decision is not a verdict with a different author: it is the end of
-// the question. The row resolves, its attempts stop mattering, and no later
-// pass re-asks — a classifier that could overturn an owner would make the
-// owner's click advisory, which is not what a person clicking "keep this
-// private" is told they are doing.
-//
-// Own thread only. The ledger is per seat, so the row this writes is the
-// caller's own contribution and no other seat's is touched: a thread reaching
-// two mailboxes ends at the strictest of what the two of them ask for, and one
-// owner sharing cannot publish what the other holds.
-func (s *ThreadVerdictStore) DecideAsOwner(
-	ctx context.Context, tx pgx.Tx, threadKey string, share bool,
-) error {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID == ids.Nil {
-		return apperrors.ErrPermissionDenied
-	}
-	status := VerdictHeldByOwner
-	if share {
-		status = VerdictSharedByOwner
-	}
-	// Upserted, because a thread the owner decides about may have no ledger row
-	// at all: a message born open under a `shared` mailbox never opened a
-	// question, and its owner may still want it held.
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO capture_thread_verdict
-		  (thread_key, user_id, status, disposition_reason, resolved_at, next_attempt_at)
-		VALUES ($1, $2, $3, $4, now(), NULL)
-		ON CONFLICT (thread_key, user_id) DO UPDATE
-		   SET status = EXCLUDED.status,
-		       disposition_reason = EXCLUDED.disposition_reason,
-		       resolved_at = now(),
-		       next_attempt_at = NULL,
-		       claimed_by = NULL, claimed_until = NULL,
-		       updated_at = now()`,
-		threadKey, actor.UserID, status, ownerDecisionReason); err != nil {
-		return fmt.Errorf("capture: recording the owner's decision about a thread: %w", err)
-	}
-	// The seat's own import rows for the thread, which is what the audience
-	// derivation reads. Without this the ledger would carry a decision nothing
-	// acts on.
-	// restricted_at excluded: a message under a statutory hold or an open
-	// erasure is not one an owner's click may move. The hold is an obligation
-	// the installation owes somebody else, and it outranks both directions of
-	// this decision — sharing a held message would publish it, and re-holding
-	// one changes nothing a hold has not already done.
-	if _, err := tx.Exec(ctx, `
-		UPDATE capture_import i
-		   SET verdict_status = $3
-		  FROM activity a
-		 WHERE a.id = i.activity_id
-		   AND a.thread_key = $1
-		   AND a.restricted_at IS NULL
-		   AND a.archived_at IS NULL
-		   AND i.user_id = $2`, threadKey, actor.UserID, status); err != nil {
-		return fmt.Errorf("capture: applying the owner's decision to their import rows: %w", err)
-	}
-	return nil
-}
-
-// ownerDecisionReason marks a ledger row a person settled, so a reader can tell
-// it from one a classifier reached.
-const ownerDecisionReason = "owner_decision"
-
-// ThreadActivityIDsTx lists the messages of one thread this seat imported.
-//
-// Scoped to the caller's own imports rather than to the thread key alone: a
-// thread key is the sender-controlled References root in a workspace-wide
-// namespace, so a walk over it would reach messages this seat never received.
-func ThreadActivityIDsTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) ([]ids.UUID, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT a.id FROM activity a
-		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
-		 WHERE a.thread_key = $1 AND a.archived_at IS NULL
-		   AND a.restricted_at IS NULL
-		 ORDER BY a.id`, threadKey, user)
-	if err != nil {
-		return nil, fmt.Errorf("capture: listing a thread's messages: %w", err)
-	}
-	defer rows.Close()
-	var out []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("capture: listing a thread's messages: %w", err)
-		}
-		out = append(out, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("capture: listing a thread's messages: %w", err)
-	}
-	return out, nil
 }

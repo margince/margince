@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -58,6 +59,23 @@ const FILTERS: readonly WorklistFilter[] = [
   "decisions",
   "system",
 ];
+
+/** The dial's name in the address. One spelling, read and written. */
+export const WORKLIST_FILTER_PARAM = "filter";
+
+/**
+ * The lane the address asks for, or the default.
+ *
+ * An unknown value reads as `all` rather than as an error: the vocabulary grows
+ * on the server, and a pasted link naming a lane this build has not learnt
+ * should show the day rather than an empty screen or a crash.
+ */
+export function worklistFilterFrom(
+  params: ReadonlyMap<string, string>,
+): WorklistFilter {
+  const asked = params.get(WORKLIST_FILTER_PARAM);
+  return FILTERS.find((value) => value === asked) ?? "all";
+}
 
 // Which narrowing actually CONTAINS this group's members.
 //
@@ -163,7 +181,7 @@ function WorklistHeader({
       {/* What the day is WORTH, above the controls that narrow it. The figures
           describe the whole day rather than the page or the filter, so they sit
           above both rather than beside the pills they would be confused with. */}
-      <WorklistReadings day={day} />
+      <WorklistReadings day={day} onLane={onFilter} />
       {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
       {scopes.length > 1 && owner === "" && (
@@ -201,7 +219,7 @@ function WorklistHeader({
       {/* What the page is NOT showing. Drawn only when there is a difference to
           report: on a day the queue carries whole, "12 of 12" is noise. */}
       {completeness !== null && (
-        <p className="t-meta worklist-completeness">{completeness}</p>
+        <p className="t-caption worklist-completeness">{completeness}</p>
       )}
     </div>
   );
@@ -454,7 +472,30 @@ export function WorklistScreen({
   const [scope, setScope] = useState<WorklistScope>(
     opensOn === UNASSIGNED ? UNASSIGNED : "mine",
   );
-  const [filter, setFilter] = useState<WorklistFilter>("all");
+  // The one dial of the four that lives in the ADDRESS, and the reason is a
+  // figure on another screen: Home's readings each count one of these lanes,
+  // and a reading that names a set is the way into it — which it cannot be
+  // unless the lane is nameable. `?filter=` is the query half, which
+  // `routeIdentity` ignores by design, so this does not disturb the
+  // `#/worklist/<owner>` remount that applies `opensOn`. It also makes a
+  // narrowed queue a link somebody can paste, which is what the address is for.
+  //
+  // Scope, owner and the selected row stay state. Moving all four is still its
+  // own change; this moves the one that another surface has to be able to say.
+  const [params, setParams] = useUrlParams();
+  const filter = worklistFilterFrom(params);
+  const setFilter = (next: WorklistFilter) => {
+    const query = new Map(params);
+    // "all" is the default, so it is spelled by the parameter's ABSENCE — an
+    // address carrying `?filter=all` describes the same view as one carrying
+    // nothing and would be a second spelling of it.
+    if (next === "all") {
+      query.delete(WORKLIST_FILTER_PARAM);
+    } else {
+      query.set(WORKLIST_FILTER_PARAM, next);
+    }
+    setParams(query);
+  };
   // Whose queue, when it is not the reader's own. Empty means their own day,
   // which is what every seat sees and the only thing most seats may ask for.
   const [owner, setOwner] = useState(

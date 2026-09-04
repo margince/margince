@@ -28,7 +28,7 @@ import { problemMessageOf, throwProblem, useSorMode } from "./common";
 // RFC 7807 detail verbatim.
 
 type ActivityDraft = {
-  kind: "note" | "task" | "meeting";
+  kind: "note" | "task" | "meeting" | "call";
   subject: string;
   body: string;
   // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
@@ -57,6 +57,11 @@ const EMPTY_DRAFT: ActivityDraft = {
 // any future line citation at a timestamp instead of what was said.
 const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 
+// The kinds this form starts on when a caller already knows which one the
+// reader asked for. `meeting` is absent on purpose: a meeting arrives through
+// the calendar rather than as an address somebody follows.
+type OpeningKind = "note" | "task" | "call";
+
 // "Today", in the zone the picked day will be READ back in. The composer's date
 // field starts here — the day that WOULD apply is shown where the writer can
 // change it instead of being assumed at submit behind an empty box.
@@ -72,6 +77,16 @@ const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 // day after.
 function todayDay(kind: ActivityDraft["kind"], recordZone: string): string {
   return calendarDay(new Date(), kind === "task" ? viewerZone() : recordZone);
+}
+
+// Whether a Select's answer is a kind this form writes.
+function isKind(value: string): value is ActivityDraft["kind"] {
+  return (
+    value === "note" ||
+    value === "task" ||
+    value === "call" ||
+    value === "meeting"
+  );
 }
 
 function freshDraft(
@@ -152,21 +167,37 @@ export function LogActivityForm({
   entityType,
   entityId,
   onLogged,
-  initialKind,
+  askedKind,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
   onLogged?: () => void;
-  // The kind the form starts on, when the caller already knows which one the
-  // reader asked for. Absent means note, the ordinary case.
-  initialKind?: "note" | "task";
+  // The kind the reader asked for, when the caller knows which one. Absent
+  // means note, the ordinary case. It is the kind ASKED rather than the kind
+  // the form starts on: it may change while this form stands.
+  askedKind?: OpeningKind;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
-    freshDraft(recordZone, initialKind),
+    freshDraft(recordZone, askedKind),
   );
+  // An initializer runs once, and the ask can arrive later: a reader already
+  // reading this record presses a second link that names a kind, the address
+  // changes under a form that never unmounted, and the initializer's kind is
+  // what they keep looking at. So the ask is FOLLOWED, not merely seeded.
+  //
+  // Only the kind moves, exactly as far as the reader's own Select moves it,
+  // so a subject half-typed against the old kind survives — and it moves
+  // during render rather than in an effect, so the stale kind is never painted.
+  const [lastAsked, setLastAsked] = useState(askedKind);
+  if (askedKind !== lastAsked) {
+    setLastAsked(askedKind);
+    if (askedKind !== undefined) {
+      setDraft((current) => ({ ...current, kind: askedKind }));
+    }
+  }
   const [fileError, setFileError] = useState<string | null>(null);
 
   const log = useMutation({
@@ -225,13 +256,16 @@ export function LogActivityForm({
               options={[
                 { value: "note", label: t("log.kindNote") },
                 { value: "task", label: t("log.kindTask") },
+                { value: "call", label: t("log.kindCall") },
                 { value: "meeting", label: t("log.kindMeeting") },
               ]}
               value={draft.kind}
+              // The clamp is the narrowing, not a validation: the Select can
+              // only hand back one of the values above, and anything else is
+              // the ordinary kind rather than a refusal.
               onChange={(value) =>
                 setField({
-                  kind:
-                    value === "task" || value === "meeting" ? value : "note",
+                  kind: isKind(value) ? value : "note",
                 })
               }
             />
@@ -355,10 +389,15 @@ export function LogActivity({
   entityType,
   entityId,
   onLogged,
+  askedKind,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
   onLogged?: () => void;
+  // The kind the card opens on, for a reader who arrived at an address that
+  // named one. The card is standing rather than opened, so bringing it into
+  // view is the rest of what "arrive ready" means.
+  askedKind?: OpeningKind;
 }>) {
   const t = useT();
   // Logging an activity writes to a mirrored record; in overlay every write
@@ -374,6 +413,7 @@ export function LogActivity({
       <LogActivityForm
         entityType={entityType}
         entityId={entityId}
+        askedKind={askedKind}
         onLogged={onLogged}
       />
     </Card>
@@ -387,7 +427,7 @@ export function LogActivity({
 export function LogActivityAction({
   entityType,
   entityId,
-  initialKind,
+  askedKind,
   openOnMount,
   triggerLabel,
   disabled,
@@ -399,7 +439,7 @@ export function LogActivityAction({
   // The kind the form starts on. A suggestion that says "no task says what
   // happens next" opens straight onto a task rather than making the reader
   // pick the kind the advice already named.
-  initialKind?: "note" | "task";
+  askedKind?: OpeningKind;
   // Rendered already open, with no trigger button — for a caller that IS the
   // trigger (a suggestion's action), rather than a toolbar offering the verb.
   openOnMount?: boolean;
@@ -453,7 +493,7 @@ export function LogActivityAction({
         <LogActivityForm
           entityType={entityType}
           entityId={entityId}
-          initialKind={initialKind}
+          askedKind={askedKind}
           onLogged={close}
         />
       </Modal>

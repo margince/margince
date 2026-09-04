@@ -366,6 +366,39 @@ func (v nativeOnlyVocabularyReader) VocabularyDocument(ctx context.Context) (jso
 	return v.inner.VocabularyDocument(ctx)
 }
 
+// nativeOnlyReportVocabularyReader guards describe_report_vocabulary, for the
+// reason nativeOnlyVocabularyReader gives about the query grammar, and it lands
+// the same way: the report runner above is refused in an overlay workspace, so a
+// report vocabulary served there names a plan nothing can run. A caller would
+// read the filter and grouping names, write a correct plan, and be told the verb
+// is unsupported — having spent a turn learning a language this workspace does
+// not speak.
+//
+// The vocabulary itself is a compile-time table and true of every installation,
+// which is exactly the argument that made the query grammar look answerable
+// anywhere. It is not the vocabulary's truth that decides this; it is whether
+// the verb it describes can be called.
+//
+// The paraphrase above is load-bearing: the wiring census matches a pinned tool
+// name anywhere in a guard's doc, so spelling the report verb here would make
+// two guards claim one tool. nativeOnlyVocabularyReader says "the plan executor
+// above" for the same reason.
+type nativeOnlyReportVocabularyReader struct {
+	mode  overlayModeChecker
+	inner agents.ReportVocabularyReader
+}
+
+func (v nativeOnlyReportVocabularyReader) ReportVocabularyDocument(ctx context.Context) (json.RawMessage, error) {
+	overlay, err := v.mode.isOverlayUncached(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if overlay {
+		return nil, apperrors.ErrUnsupportedBySoR
+	}
+	return v.inner.ReportVocabularyDocument(ctx)
+}
+
 // nativeOnlyBriefReader guards read_brief. The brief ranks the rep's own open
 // deals out of the native tables, and an overlay workspace keeps its deals in
 // the incumbent — so the run would be assembled from rows this workspace does

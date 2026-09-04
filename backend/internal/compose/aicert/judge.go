@@ -113,17 +113,27 @@ func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Sc
 	return score, judgeServedModel, graded.Degraded, nil
 }
 
-// judgeVerdict drives the call and its one retry, returning the score and the
-// served identity of the attempt the score actually came from — which is the
-// retry's whenever one ran, since that is the reply that was parsed.
+// judgeVerdict drives the graded call, returning the score and the served
+// identity of the attempt the score actually came from — the last one the
+// policy walked, since that is the reply that was parsed.
 func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Scenario, ask, candidateOutput string, log *slog.Logger) (int, string, error) {
 	// ask is the turn the candidate was given (candidateAsk), and it reaches the
 	// grader as UNTRUSTED data behind the boundary JudgeRequest mints: it is if
 	// anything more hostile than the fixture it was built from, because it
 	// carries that fixture already wrapped in the candidate site's own markers.
-	resp, _, callErr := judge.Complete(ctx, ai.TaskCertJudge,
-		compose.JudgeRequest(sc.Expect.Rubric, ask, candidateOutput))
-	if callErr != nil {
+	// The retry is the §5.2 policy rather than a second bare call: a judge that
+	// wrapped its JSON in a stray token is TOLD so and can fix it, where the
+	// hand-rolled re-ask this replaces showed the second attempt exactly what
+	// the first one had already failed on. Each attempt is BUILT again inside
+	// CompleteStructured, never re-sent, so JudgeRequest keeps minting the
+	// call's data boundary per attempt.
+	resp, _, callErr := judge.CompleteStructured(ctx, ai.TaskCertJudge,
+		compose.JudgeRequest(sc.Expect.Rubric, ask, candidateOutput),
+		func(text string) error {
+			_, err := compose.ParseJudgeVerdict(text)
+			return err
+		})
+	if callErr != nil && !errors.Is(callErr, ai.ErrOutputRejected) {
 		return 0, "", fmt.Errorf("judge call: %w", callErr)
 	}
 	term, ok := rec.lastTerminal()
@@ -133,29 +143,16 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc 
 	judgeServedModel := term.ServedModel
 
 	verdict, parseErr := compose.ParseJudgeVerdict(resp.Text)
-	if parseErr == nil {
-		return verdict.Score, judgeServedModel, nil
-	}
-	log.WarnContext(ctx, "aicert: judge output failed to parse, retrying once",
-		"scenario", sc.Name, "err", parseErr)
-
-	// The retry is BUILT again, never re-sent: JudgeRequest mints the call's data
-	// boundary, and the attempt that just failed was shown the first one.
-	resp2, _, callErr2 := judge.Complete(ctx, ai.TaskCertJudge,
-		compose.JudgeRequest(sc.Expect.Rubric, ask, candidateOutput))
-	if callErr2 != nil {
-		return 0, "", fmt.Errorf("judge retry call: %w", callErr2)
-	}
-	if term2, ok2 := rec.lastTerminal(); ok2 {
-		judgeServedModel = term2.ServedModel
-	}
-	verdict2, parseErr2 := compose.ParseJudgeVerdict(resp2.Text)
-	if parseErr2 != nil {
-		log.ErrorContext(ctx, "aicert: judge output failed to parse twice — scoring this run 0",
-			"scenario", sc.Name, "err", parseErr2)
+	if parseErr != nil {
+		// Unchanged on purpose: a verdict the policy could not recover still
+		// scores 0 rather than recording the run `invalid`. That is its own
+		// question about what a certification reports, and answering it here
+		// would move a number every stored record is compared against.
+		log.ErrorContext(ctx, "aicert: judge output failed to parse after the validated retry — scoring this run 0",
+			"scenario", sc.Name, "err", parseErr)
 		return 0, judgeServedModel, nil
 	}
-	return verdict2.Score, judgeServedModel, nil
+	return verdict.Score, judgeServedModel, nil
 }
 
 // selfJudged reports whether the judge and the candidate were served by

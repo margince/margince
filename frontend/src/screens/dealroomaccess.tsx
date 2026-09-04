@@ -20,6 +20,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import "./dealroomaccess.css";
+import { SurfaceState } from "../design-system/surfacestate";
 
 // Who may enter the room, and the verbs that change it: invite, issue a new
 // link, change what a person may do, revoke. Every link a rep is handed here
@@ -107,7 +108,9 @@ export function DealRoomAccess({
       <QueryStates query={participants} pendingLines={2}>
         {rows.length === 0 ? (
           <PanelBody>
-            <p className="t-small">{t("access.empty")}</p>
+            <SurfaceState state="empty" emptyLabel={t("access.empty")}>
+              {null}
+            </SurfaceState>
           </PanelBody>
         ) : (
           rows.map((p) => (

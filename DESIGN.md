@@ -194,7 +194,7 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
 
 | Role | Family | Where |
 |---|---|---|
-| Display | **Bricolage Grotesque** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
+| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
 | Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
 | Figures | **Geist Mono** 500, tabular | A reading's figure at 22px (`-0.03em`), and every amount, count, date and identifier in a row or a cell. |
 
@@ -210,7 +210,7 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   gutter is 32px; panes sit 24px apart; a pane has 20px above and below its
   content and 26px at its sides; a zone title has 12px under it.
 - **Rows breathe.** A list row is 13px above and below its content (about
-  48px tall with two lines); a table row 44px; a sidebar row 34px; a control
+  48px tall with two lines); a table row 44px; a sidebar row 38px; a control
   32px (28px in a row); the attribute rows in the details panel 32px. The
   test for "gedrungen": if two rows could be mistaken for one, the row is too
   short.
@@ -288,7 +288,7 @@ scrolls inside itself.
   the command field in the middle (`⌘K`), the reader's monogram on the right.
   It is the application's one bar and every screen has it. Nothing that
   belongs to a record sits in it: the Details toggle is in the page.
-- **Record head**: a 40px mark, the name in the display face with its badges
+- **Record head**: a 56px mark, the name in the display face with its badges
   on the same line, one line of facts under it, the verbs on the right. **The
   verbs are the record type's base actions and never the task of the day**:
   a company shows Write email · Log activity · Add task · more on every

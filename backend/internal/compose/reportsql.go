@@ -143,7 +143,13 @@ func buildReportWhere(ctx context.Context, spec reportSpec, req reportRequest, a
 		}
 		expr, ok := spec.filters[key]
 		if !ok {
-			return nil, &FieldNotAllowedError{Field: key, Slot: slotFilters, Allowed: allowedReportNames(spec.filters)}
+			// catalogFilterNames, the same helper the tool catalog renders from:
+			// `filters` is ONE object holding two families, and a refusal built
+			// from the equality filters alone omits the thresholds the loop above
+			// just accepted. A caller who misspells a threshold would read a list
+			// without that family in it and conclude the report cannot answer
+			// their question.
+			return nil, &FieldNotAllowedError{Field: key, Slot: slotFilters, Allowed: catalogFilterNames(spec)}
 		}
 		// A null filter means "not set", the SAME meaning the drill-through
 		// gives an empty group key (derivationWhere). Binding it as `= NULL`

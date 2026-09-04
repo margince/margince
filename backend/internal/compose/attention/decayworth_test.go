@@ -42,15 +42,6 @@ func band(b crmcontracts.AttentionRelationshipFactsStrength) *crmcontracts.Atten
 
 func openDeal(has bool) *bool { return &has }
 
-func hasReason(row crmcontracts.WorklistItem, kind crmcontracts.WorklistReasonKind) bool {
-	for _, because := range row.Because {
-		if because.Kind == kind {
-			return true
-		}
-	}
-	return false
-}
-
 // The rank, across the whole band vocabulary plus the deal. This is the table
 // that decides which silences a rep sees above the routine tidying, so it is
 // written as one rather than as four tests that could each drift.

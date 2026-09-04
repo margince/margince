@@ -6,6 +6,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Card } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
+import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
@@ -123,7 +124,11 @@ function TechnicalSections({
 }>): ReactNode {
   const t = useT();
   if (facts.length === 0) {
-    return <p className="t-caption">{t("co.tech.empty")}</p>;
+    return (
+      <SurfaceState state="empty" emptyLabel={t("co.tech.empty")}>
+        {null}
+      </SurfaceState>
+    );
   }
   return (
     <>

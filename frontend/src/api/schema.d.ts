@@ -1493,10 +1493,11 @@ export interface paths {
         };
         /**
          * Stream an organization's logo image.
-         * @description The bytes behind `Organization.logo_url` (A55): the company mark resolved from its
-         *     own website during enrichment, normalized once at store time to a square PNG. The
-         *     response is always `image/png` — whatever the source format was, what is served is
-         *     the server's own re-encode, so no third-party markup is ever served from this origin.
+         * @description The bytes behind `Organization.logo_url` (A55): the company logo resolved from its
+         *     own website during enrichment or uploaded by a person, normalized once at store time
+         *     to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
+         *     The response is always `image/png` — whatever the source format was, what is served
+         *     is the server's own re-encode, so no third-party markup is ever served from this origin.
          *     404 when the organization has no resolved logo, is invisible to the caller, or does
          *     not exist — a client renders the deterministic monogram for all three alike. 501 when
          *     the deployment has no object store configured.
@@ -4587,6 +4588,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/draft-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft an email to this lead, grounded in their record.
+         * @description The lead-side mirror of `POST /people/{id}/draft-email`, and the same writer behind
+         *     both: the record IS the recipient, so the request carries nothing but optional
+         *     steering. A lead is the shape that endpoint's description already names — one
+         *     recipient, on the record itself — which is why this adds a fold and not a drafter.
+         *
+         *     **It changes no record.** No field on the lead, no activity, no voice-learning signal,
+         *     and nothing is sent. Sending stays `POST /emails`, with its own consent gate, approval
+         *     token and idempotency key. The two writes that do happen are about the CALL rather
+         *     than the lead: the workspace's AI usage meter and the model-call audit row.
+         *
+         *     **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
+         *     are, the company they wrote from, where the lead sits on its ladder, and the recent
+         *     correspondence filed against it. A lead has no deal, no project and no claims — those
+         *     belong to a contact that exists, and a lead is by definition the record before one
+         *     does — so the draft says less than a contact's would rather than inventing the
+         *     difference. Every input but the intent is untrusted text and is fenced.
+         *
+         *     A lead with no email address on record is `422`: a draft addressed to nobody is not a
+         *     message, and the composer can say so before spending a model call.
+         *
+         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
+         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
+         *     it.
+         *
+         *     Human-only: drafting spends the workspace's model budget on prose for a person to send
+         *     under their own name.
+         */
+        post: operations["draftLeadEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/{id}/manual-signals": {
         parameters: {
             query?: never;
@@ -5662,10 +5711,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Replace the installation's own company mark with an uploaded image.
-         * @description Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
-         *     normalized to, so what is served from `logo_url` is always this origin's own bytes
-         *     and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+         * Replace the installation's own company logo with an uploaded image.
+         * @description Multipart upload. The image is re-encoded to an aspect-preserving PNG, so a wide
+         *     wordmark remains wide and what is served from `logo_url` is always this origin's own
+         *     bytes, never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
          *     anything that will not decode is refused as 415.
          *
          *     The upload is a HUMAN write and takes precedence: while it stands, a website read
@@ -5674,7 +5723,7 @@ export interface paths {
          */
         post: operations["uploadCompanyLogo"];
         /**
-         * Take the installation's own company mark off the record.
+         * Take the installation's own company logo off the record.
          * @description The record goes back to its deterministic monogram and the stored object is
          *     collected. It also gives the field back: a person's mark is what holds a website
          *     read off, so a company with no mark can be given one by the next read.
@@ -6701,11 +6750,15 @@ export interface paths {
          *     who to talk to, then opens that person's own day with `GET /worklist?owner=`,
          *     which is the drill-down this board exists to route to.
          *
-         *     Every count is read under the CALLER's visibility, never the teammate's. A number
-         *     summing rows the reader may not open would publish a colleague's volume to
-         *     somebody with no access to any of it, so what this reports is "how much of their
-         *     load you can see" — the only honest answer available without giving one person a
-         *     licence to read another's records.
+         *     Every count is read under the CALLER's visibility, which in this product is nearly
+         *     everything: work is shared across the workspace, so a teammate's deals, companies
+         *     and tasks all count. What does NOT count is correspondence narrowed to an audience
+         *     the reader is not on, and mail captured into a colleague's mailbox that nobody has
+         *     promoted — the one boundary the access model keeps.
+         *
+         *     So a figure here is the teammate's real load minus any private mail the reader is
+         *     not party to. It is not a partial view of their work, and a reader may open every
+         *     record behind a count they can see.
          *
          *     Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
          *     rather than shown a board of one. The teammates listed are the live human seats
@@ -11114,6 +11167,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The answer a report sentence points at.
+         * @description A report block carries the id of a run and the coordinates of a cell inside it, not
+         *     a number. This is where that pointer is dereferenced.
+         *
+         *     THE STORED ROWS ARE NOT SERVED. They were narrowed and floored for whoever asked,
+         *     and a second reader's grants narrow a different population — so what comes back is
+         *     the stored QUESTION, re-asked under the caller's own authority through the same gate
+         *     a direct query goes through. Two readers dereferencing one cell can legitimately see
+         *     different numbers, and one of them can legitimately see a refusal.
+         *
+         *     That is what makes a citation stable without making it a permission. The saved run
+         *     fixes WHAT WAS ASKED; it grants nothing about who may see the answer.
+         *
+         *     `asked_by` names whose answer the run originally was, and `stored_floor` the group
+         *     floor that judged it — both so two answers to one citation can be compared rather
+         *     than silently differing.
+         */
+        get: operations["getReportRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/runs/{run_id}/cells/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records behind one cell of a saved run.
+         * @description The evidence a report block's drawer opens. A block cites a run and a cell; this
+         *     turns that citation into the records the number was computed from.
+         *
+         *     THE QUESTION COMES FROM THE SAVED RUN, not from the request. That is the whole
+         *     difference between this and `/analytics/explain`, which carries the question whole
+         *     because a caller-supplied handle they could edit would let an explanation describe a
+         *     DIFFERENT query than the number came from. A saved run is immutable, so its id names
+         *     one question and cannot be edited into another.
+         *
+         *     The records are read under the CALLER's authority and re-judged against the current
+         *     floor, exactly as the run's own answer is. A cell the floor withholds explains to
+         *     `withheld` with no rows: handing those records over one at a time is the same
+         *     disclosure at a slower pace.
+         *
+         *     The cell is named by its group key values, in the saved question's own `group_by`
+         *     order. A wrong-length group is refused rather than matched positionally against what
+         *     happens to line up.
+         */
+        post: operations["explainReportRunCell"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a report document's figures for this reader.
+         * @description A report document carries STRUCTURE and WORDS. It never carries a figure: every
+         *     number names a saved run and a cell inside it, and this is where those handles turn
+         *     into numbers.
+         *
+         *     THE DOCUMENT IS REFUSED IF IT CARRIES A NUMBER OF ITS OWN — and it is refused even
+         *     when a valid handle sits beside the literal. That case is the dangerous one rather
+         *     than the harmless one: the literal is what would render, the two can disagree, and
+         *     no reader could tell the page is showing a figure the database never computed.
+         *
+         *     Each cited run is resolved the way reading a run directly resolves: the saved
+         *     QUESTION is re-asked under this caller's own authority and re-judged against the
+         *     current privacy floor. So the same document shows different figures to readers who
+         *     may see different populations, and a cell the floor withholds renders as withheld
+         *     rather than as a number.
+         *
+         *     The blocks come back in the order they were composed, each carrying the resolved
+         *     values for its cells. Nothing is dropped: a document that cannot be rendered whole
+         *     is refused, because a report missing a block it was composed with says something
+         *     different from the report that was composed.
+         */
+        post: operations["renderAnalyticsReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/explain": {
         parameters: {
             query?: never;
@@ -13296,6 +13457,13 @@ export interface components {
              *     The label spells both calendar years a non-January year spans — `FY2026/27` — so
              *     a reader can tell which twelve months a bucket covers without knowing the
              *     convention. A January year is not a span and keeps the plain `2026`.
+             *
+             *     One thing it does NOT carry, and a client storing report filters should know it:
+             *     a SAVED report view holds the bucket's text, so a view saved under one fiscal
+             *     start names a different span after the start moves — or no span at all, since a
+             *     calendar year maps onto parts of two fiscal years. The report still runs and
+             *     still looks right. Whether such a view is re-pointed, invalidated or merely
+             *     warned about is undecided: margince/margince#2569.
              */
             fiscal_year_start_month: number;
             /**
@@ -13354,6 +13522,11 @@ export interface components {
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
              *     once and re-means no stored row.
+             *
+             *     It does not re-point a SAVED report view, which holds the bucket's TEXT and so
+             *     names a different span afterwards. Sending this field is enough to leave those
+             *     views filtering on a span nobody asked for; nothing here reports how many.
+             *     margince/margince#2569.
              */
             fiscal_year_start_month?: number;
             /**
@@ -14027,15 +14200,19 @@ export interface components {
              */
             readonly activity_id?: string | null;
             /**
-             * @description The message this thread began with is still readable by you. False where it was erased
-             *     while the verdict stood — which the ledger deliberately survives, because losing the
-             *     verdict would re-open a thread a classifier already held — and false where its content
-             *     is withheld from you.
+             * @description The message this thread began with still EXISTS. False only where it was erased while
+             *     the verdict stood — which the ledger deliberately survives, because losing the verdict
+             *     would re-open a thread a classifier already held.
              *
-             *     Separate from `subject` because absence has two causes that read differently: no
-             *     message to name, versus a message somebody sent with a blank subject line. It also
-             *     decides whether releasing is offered at all: the release works on your own messages on
-             *     the thread, so with none left there is nothing to share.
+             *     Existence, not readability: it stays true for a message whose content is withheld from
+             *     you, and that is the point. Read through the content gate it reported a withheld
+             *     message as erased, which told a holder their evidence had been destroyed while it was
+             *     sitting in the thread they are holding.
+             *
+             *     So `subject` absent with this true is a message you may not read, or one sent with a
+             *     blank subject line; this false is no message at all. It also decides whether releasing
+             *     is offered: the release works on your own messages on the thread, so with none left
+             *     there is nothing to share.
              */
             has_message: boolean;
             /**
@@ -16300,11 +16477,12 @@ export interface components {
              */
             classification?: null | "prospect" | "customer" | "agency" | "reseller" | "tech_vendor" | "platform" | "partner" | "competitor" | "other";
             /**
-             * @description Where to fetch the company's resolved logo image (A55) — the `getOrganizationLogo`
-             *     path for this record, cookie-authenticated and same-origin. The key is ABSENT
-             *     entirely (not null) when no logo resolved, which is the common case and never an
-             *     error: a client renders the deterministic monogram then, so it never shows a
-             *     broken image or an empty slot.
+             * @description Where to fetch the company's logo image (A55) — the `getOrganizationLogo`
+             *     path for this record, cookie-authenticated and same-origin. A revision query changes
+             *     with the stored image so a replacement cannot remain hidden behind an older cached
+             *     response. The key is ABSENT entirely (not null) when no logo is stored, which is the
+             *     common case and never an error: a client renders the deterministic monogram then,
+             *     so it never shows a broken image or an empty slot.
              *     The stored object key is deliberately not exposed; it names a bucket path, and a
              *     client's business is the endpoint that streams the bytes.
              */
@@ -21010,6 +21188,48 @@ export interface components {
             label: string;
             evidence_ref?: components["schemas"]["OrganizationBriefEvidence"];
         };
+        /**
+         * @description Records the caller can name in support of a send, each by id. Evidence is
+         *     CHECKED, never trusted: the engine reads the named record and asks whether it
+         *     actually supports the category claimed — a deal id that is closed, an invoice
+         *     belonging to another organization, or a record the caller cannot see supports
+         *     nothing. Naming a record therefore never widens what a caller may do.
+         *
+         *     Every field is optional. A caller that can name nothing says nothing, and the
+         *     engine resolves the send from its origin instead.
+         */
+        CommunicationEvidence: {
+            /**
+             * Format: uuid
+             * @description The inbound message this send answers.
+             */
+            activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live opportunity this send moves along.
+             */
+            deal_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The invoice or payment event this send is about.
+             */
+            invoice_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The live contract whose notice this send carries.
+             */
+            contract_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The recorded consent this send relies on.
+             */
+            consent_event_id?: string | null;
+            /**
+             * Format: uuid
+             * @description A recorded communication basis this send relies on.
+             */
+            basis_id?: string | null;
+        };
         SendEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
@@ -21062,6 +21282,42 @@ export interface components {
              *     outcome is inferred without a valid reference.
              */
             draft_ref?: string | null;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories are absent from this list on purpose — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation`. They serve the recipient, which is why a hard
+             *     suppression does not stop them, and they are reserved for the installation's
+             *     own controller mail behind a registered template. A caller that could claim
+             *     one could dress marketing as a security warning and reach somebody who has
+             *     objected, so naming one here is refused (422 `invalid`).
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
              *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
@@ -21249,6 +21505,42 @@ export interface components {
              */
             draft_ref?: string | null;
             /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories are absent from this list on purpose — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation`. They serve the recipient, which is why a hard
+             *     suppression does not stop them, and they are reserved for the installation's
+             *     own controller mail behind a registered template. A caller that could claim
+             *     one could dress marketing as a security warning and reach somebody who has
+             *     objected, so naming one here is refused (422 `invalid`).
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
              *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
              *     `person_consent` for THIS purpose.
@@ -21302,6 +21594,42 @@ export interface components {
              *     (422 `empty_message_body`) rather than staged for a delivery that could only park.
              */
             body: string;
+            /**
+             * @description What kind of communication this is. The caller CLAIMS a category; the engine
+             *     resolves the one the evidence actually supports and records both, so a claim
+             *     that the evidence does not carry is visible rather than silently honoured.
+             *
+             *     Omit it and the engine resolves the category from the send's origin — a reply
+             *     to an inbound message is a reply whether or not anybody said so. Omitting is
+             *     therefore honest and is the ordinary case for a reply; naming one matters when
+             *     there is no anchor to derive from.
+             *
+             *     Five categories are absent from this list on purpose — `security_notice`,
+             *     `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+             *     `record_confirmation`. They serve the recipient, which is why a hard
+             *     suppression does not stop them, and they are reserved for the installation's
+             *     own controller mail behind a registered template. A caller that could claim
+             *     one could dress marketing as a security warning and reach somebody who has
+             *     objected, so naming one here is refused (422 `invalid`).
+             * @enum {string|null}
+             */
+            communication_context?: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing" | null;
+            /**
+             * @description For a marketing send, the consent purpose key naming the topic it is for.
+             *     Marketing consent is purpose-specific: a grant for one topic authorizes that
+             *     topic and no other.
+             */
+            marketing_purpose?: string | null;
+            /**
+             * @description What a human typed when a first message was genuinely ambiguous. It is
+             *     RECORDED on the decision and grants nothing — a sentence a sender wrote about
+             *     their own send is not evidence about the recipient. It exists so a later
+             *     reader can see what the sender believed, not so the engine can be talked into
+             *     an allow.
+             */
+            operator_reason?: string | null;
+            /** @description Records the caller names in support of this send. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * @description The consent purpose this send falls under (e.g. `transactional`). The send is
              *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
@@ -23028,6 +23356,11 @@ export interface components {
             filters?: components["schemas"]["AnalyticsFilter"][];
             /** @description How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record. */
             limit?: number;
+            /**
+             * @description Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
+             *     A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
+             */
+            save?: boolean;
         };
         AnalyticsMeasure: {
             /**
@@ -23050,7 +23383,7 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own. */
+            /** @description One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -23060,6 +23393,87 @@ export interface components {
             total_safe: boolean;
             /** @description The vocabulary this was asked in. */
             schema_version: string;
+            /**
+             * Format: uuid
+             * @description Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
+             */
+            run_id?: string;
+        };
+        /** @description A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor. */
+        ReportRun: {
+            /** Format: uuid */
+            id: string;
+            /** @description The question as it was saved, unchanged. */
+            query: components["schemas"]["AnalyticsQuery"];
+            /** @description The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them. */
+            answer: components["schemas"]["AnalyticsAnswer"];
+            /**
+             * Format: uuid
+             * @description Whose answer the run originally was. A reader comparing their own numbers to a cited figure needs to know the citation was somebody else's view.
+             */
+            asked_by: string;
+            /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
+            stored_floor: number;
+        };
+        /** @description A report as composed: structure and words, with every figure named by a handle. */
+        ReportDocument: {
+            blocks: components["schemas"]["ReportBlock"][];
+        };
+        /** @description One element of a report. What fields are legal is decided by `kind`. */
+        ReportBlock: {
+            /**
+             * @description The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+             * @enum {string}
+             */
+            kind: "title" | "subtitle" | "scope" | "generated_at" | "summary" | "methodology" | "follow_ups" | "stat_strip" | "bar" | "waterfall" | "ranked_list" | "record_table" | "callout" | "evidence_drawer";
+            /** @description The composer's own words. Prose, never a figure. */
+            text?: string;
+            /** @description The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown. */
+            cells?: components["schemas"]["ReportCell"][];
+            /**
+             * @description Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+             * @enum {string}
+             */
+            severity?: "note" | "warning" | "partial" | "unknown" | "unsupported";
+            /**
+             * Format: double
+             * @description ALWAYS REFUSED, and the field exists so the refusal can name what it found. A composer that puts a number here is asking the renderer to draw a figure the database never computed. Carrying one beside a valid handle is refused too, and that case is worse: the literal is what renders, the two can disagree, and nothing downstream can tell.
+             */
+            value?: number;
+        };
+        /** @description One figure, named by the run it lives in and the cell within it. */
+        ReportCell: {
+            /**
+             * Format: uuid
+             * @description The saved run. Resolved under the reading caller's own authority.
+             */
+            run_id: string;
+            /** @description The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell. */
+            group?: unknown[];
+            /** @description Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick. */
+            column: string;
+        };
+        /** @description The composed document with every figure resolved for this reader. */
+        RenderedReport: {
+            blocks: components["schemas"]["RenderedBlock"][];
+        };
+        RenderedBlock: {
+            kind: string;
+            text?: string;
+            severity?: string;
+            /** @description One entry per cell the block named, in the same order. */
+            values: components["schemas"]["RenderedValue"][];
+        };
+        RenderedValue: {
+            /** @description The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back. */
+            value?: unknown;
+            /** @description The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less. */
+            withheld: boolean;
+        };
+        /** @description One cell of a saved run, named by its group keys. */
+        ReportRunCell: {
+            /** @description The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none. */
+            group?: unknown[];
         };
         /** @description One cell of an answer, named by the question and its group keys. */
         AnalyticsExplainRequest: {
@@ -24111,7 +24525,9 @@ export interface components {
             /**
              * @description Where to fetch the installation's own company logo — the same `getOrganizationLogo`
              *     path `Organization.logo_url` carries for that record, cookie-authenticated and
-             *     same-origin. The mark is whichever one the company is wearing: the one a website
+             *     same-origin. A revision query changes whenever the stored image changes so a browser
+             *     never holds a replacement behind an older cached URL. The logo is whichever one the
+             *     company is wearing: the one a website
              *     read resolved from its own site, or the one a person uploaded through
              *     `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
              *     is never an error: a client draws the deterministic monogram then.
@@ -27086,6 +27502,17 @@ export interface components {
             reps_counted: number;
             deals_won: number;
             deals_lost: number;
+            /**
+             * @description Deals that changed stage in the week without closing — what the team ADVANCED.
+             *
+             *     A count and never an amount. Advancing is a stage fact: a deal moving from
+             *     Proposal to Negotiation did not change price, so a "value advanced" figure would
+             *     count the deal's whole worth a second time beside the pipeline it already sits in.
+             *
+             *     Snapshots written before this figure existed carry zero. A count of zero is a
+             *     count, unlike a money sum of zero over deals nobody could price.
+             */
+            deals_moved: number;
             leads_routed: number;
             leads_answered_in_target: number;
             leads_breached: number;
@@ -28735,11 +29162,11 @@ export interface components {
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
          *     `amount_minor` converted to the installation's base currency — the only figure by
-         *     which two deals in different currencies may be compared. It does not yet weight by
-         *     `win_probability`: the pipeline this row comes from does not read a deal's stage
-         *     today, so the two fields are independent facts rather than one computed from the
-         *     other, and a reader must not multiply them together expecting the product to equal
-         *     a risk-adjusted figure the API does not compute.
+         *     which two deals in different currencies may be compared. It is not weighted by
+         *     `win_probability`: the pipeline this row comes from does not read a deal's stage,
+         *     so the two fields are independent facts rather than one computed from the other,
+         *     and a reader must not multiply them together expecting the product to equal a
+         *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
             /** Format: uuid */
@@ -36802,6 +37229,40 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    draftLeadEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
+                    intent?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The draft, and what it was written from. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountEmailDraft"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listLeadManualSignals: {
@@ -46665,6 +47126,15 @@ export interface operations {
                     "application/json": components["schemas"]["IssuedForecastShare"];
                 };
             };
+            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
@@ -46691,6 +47161,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     openForecastShare: {
@@ -46789,8 +47260,119 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsAnswer"];
                 };
             };
+            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The question re-asked, as this caller may read it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainReportRunCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRunCell"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this caller may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The cell names a different number of group keys than the saved question grouped by. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    renderAnalyticsReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportDocument"];
+            };
+        };
+        responses: {
+            /** @description The document with every figure resolved for this caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderedReport"];
+                };
+            };
+            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout. The message names the block by index. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -46814,6 +47396,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             401: components["responses"]["Unauthorized"];

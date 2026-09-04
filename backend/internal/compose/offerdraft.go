@@ -34,7 +34,7 @@ package compose
 // the same thing everywhere in the codebase.
 //
 // The model call: same optional-CompleteValidated capability probe as
-// enrichextract's validatedBrain — a router-backed brain gets the §5.2
+// ai.Ask — a router-backed brain gets the §5.2
 // structured-output retry loop; the FakeClient (which implements only
 // Complete) falls back to a single unvalidated call, exactly like the
 // extraction engines already do.
@@ -308,15 +308,7 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product) ([]offerLineCandidate, error) {
 	req := offerDraftRequest(dealContext, catalog, identity.BaseLanguageForPrompt(ctx, d.pool))
 
-	var (
-		resp model.Response
-		err  error
-	)
-	if structured, ok := d.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, offerDraftShapeValid)
-	} else {
-		resp, err = d.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, d.brain, req, offerDraftShapeValid)
 	if err != nil {
 		return nil, err
 	}

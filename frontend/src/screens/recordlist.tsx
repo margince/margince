@@ -114,8 +114,9 @@ export function lastActivityColumn<Row extends OwnedRecord>(
 
 /**
  * The views every record list opens with: everything newest-first, and —
- * for a signed-in reader — theirs. A screen appends its own (A–Z on its
- * name column, lifecycle cuts, score cuts).
+ * for a signed-in reader — theirs. A screen appends its own (lifecycle cuts,
+ * score cuts). Every tab here NARROWS: an order alone is the sort menu's job,
+ * and a tab that only sorted duplicated an entry already in it.
  */
 export function standardViews(
   viewerId: string | undefined,

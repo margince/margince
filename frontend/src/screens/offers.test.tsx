@@ -6,6 +6,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -24,6 +25,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
   globalThis.location.hash = "";
 });
+
+// The confirm button inside the open dialog.
+//
+// Scoped rather than found on the page, because each of these dialogs names the
+// verb its trigger named — the whole point of the labels — so an unscoped query
+// for "Send" matches the trigger still mounted behind the overlay as well.
+function confirmInDialog(verb: string): HTMLElement {
+  return within(screen.getByRole("dialog")).getByRole("button", { name: verb });
+}
 
 function render(ui: ReactNode) {
   const client = new QueryClient({
@@ -667,7 +677,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     await screen.findByText("ANG-2026-0007");
 
     await userEvent.click(screen.getByTestId("send-offer"));
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await userEvent.click(confirmInDialog("Send"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].url).toContain("/offers/o-1/send");
@@ -698,7 +708,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     await screen.findByText("ANG-2026-0007");
 
     await userEvent.click(screen.getByTestId("send-offer"));
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await userEvent.click(confirmInDialog("Send"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(
@@ -719,7 +729,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
 
     await userEvent.click(screen.getByTestId("accept-offer"));
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await userEvent.click(confirmInDialog("Accept"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].url).toContain("/offers/o-1/accept");
@@ -747,7 +757,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
 
     await userEvent.click(screen.getByTestId("reject-offer"));
     await userEvent.type(screen.getByTestId("reject-reason"), "budget cut");
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await userEvent.click(confirmInDialog("Reject"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].url).toContain("/offers/o-1/reject");

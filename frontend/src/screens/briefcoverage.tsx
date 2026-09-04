@@ -43,6 +43,13 @@ export function BriefCoverage({ day }: Readonly<{ day: Worklist }>) {
           {sourceUnavailableText(source, t)}
         </p>
       ))}
+      {/* The summary names what is behind it rather than restating the
+          caveat. Home already carries that sentence, on the readings strip's
+          own floor slot where it qualifies the figures it is about — and this
+          panel renders directly above that strip, so a summary reading "some
+          sources have more than this page shows" put the same fact on screen
+          twice, two lines apart, in two wordings. The per-source counts below
+          are what this disclosure is for and the only place they appear. */}
       {bounded.length > 0 && (
         <Disclosure summary={t("brief.coverage.summary")}>
           <FactList

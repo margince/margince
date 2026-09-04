@@ -151,7 +151,10 @@ func floorSection(floor []Section, kind crmcontracts.MeetingBriefSectionKind) (S
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
-	resp, err := lane.Complete(ctx, BriefRequest(in, lang))
+	resp, err := ai.Ask(ctx, lane, BriefRequest(in, lang), func(text string) error {
+		_, err := ParseBriefSections(text, in)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -11,13 +11,18 @@ import {
   digest,
   lapsed,
   NOT_FOUND,
+  narratedWeek,
   pipelineRows,
   quietRun,
   ranked,
+  readingsDay,
   report,
   singles,
+  WEEK_START,
+  type WeeklyReview,
+  type Worklist,
 } from "./home.fixtures";
-import type { MorningBrief, MorningDigest, WeeklyReview } from "./home.queries";
+import type { MorningBrief, MorningDigest } from "./home.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -66,6 +71,13 @@ type Frame = {
   weekly?: WeeklyReview | null;
   /** What the pipeline report answers. A refusal is a state of its own. */
   pipeline?: () => Response;
+  /** The morning as the worklist answers it. Stated rather than left to the
+   *  stub's fallback, because the fallback is a LIST page — `{data, page}` —
+   *  and `/worklist` answers a `Worklist`, whose `queue` the walk reads to
+   *  decide whether to ask for a second page. A fallback of the wrong envelope
+   *  therefore did not render an empty Home, it crashed every frame in this
+   *  file on `queue.length` of undefined. */
+  day?: Worklist;
   /** Extra routes a frame's own play() needs. */
   extra?: RouteMap;
 };
@@ -83,6 +95,7 @@ function home({
   digest: overnight = digest,
   weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
+  day = readingsDay(),
   extra = {},
 }: Frame) {
   return () => {
@@ -127,6 +140,9 @@ function home({
           id: "01a00000-0000-7000-8000-000000000002",
           name: "Depot rollout",
         }),
+      // The screen reads this before it draws anything: the team toggle, the
+      // coverage line and the readings strip are all cuts of this one answer.
+      "GET /worklist": () => jsonResponse(day),
       "POST /reports/deals-by-stage": () => pipeline(),
       ...extra,
     });
@@ -255,69 +271,6 @@ export const ConnectorUnhealthy: Story = {
 // this page fans out to five independent reads: the pipeline says the figure
 // could not be loaded — a refusal, not an absence — and the deck, the queue, the
 // digest and the quiet list are untouched beside it.
-const WEEK_START = "2026-06-29";
-
-/** A week with its sentence — the ordinary Monday. */
-const narratedWeek: WeeklyReview = {
-  id: "01a04000-0000-7000-8000-00000000000a",
-  local_week_start: WEEK_START,
-  generated_at: "2026-07-06T06:00:00Z",
-  as_of: "2026-07-06T06:00:00Z",
-  narrative: "Weber signed on Thursday; two promises slipped into this week.",
-  narrated_at: "2026-07-06T06:01:00Z",
-  counts: {
-    tasks_due: 6,
-    tasks_done: 4,
-    tasks_carried_over: 2,
-    deals_moved: 3,
-    deals_won: 1,
-    deals_lost: 1,
-    proposals_accepted: 8,
-    proposals_rejected: 2,
-    brief_items_acted: 7,
-    brief_items_dismissed: 4,
-    leads_routed: 9,
-    leads_answered_in_target: 7,
-    leads_breached: 2,
-    meetings_held: 5,
-    meetings_with_next_step: 3,
-    commitments_due: 4,
-    commitments_kept: 3,
-  },
-  // The week before, so the strip can show what CHANGED. A story without it
-  // renders the no-prior case, which is a real state but not the ordinary one.
-  prior: {
-    local_week_start: "2026-06-22",
-    counts: {
-      tasks_due: 5,
-      tasks_done: 5,
-      tasks_carried_over: 1,
-      deals_moved: 4,
-      deals_won: 0,
-      deals_lost: 2,
-      proposals_accepted: 6,
-      proposals_rejected: 3,
-      brief_items_acted: 5,
-      brief_items_dismissed: 6,
-      leads_routed: 8,
-      leads_answered_in_target: 4,
-      leads_breached: 4,
-      meetings_held: 5,
-      meetings_with_next_step: 1,
-      commitments_due: 4,
-      commitments_kept: 3,
-    },
-  },
-  deals: [
-    {
-      deal_id: "01a04000-0000-7000-8000-00000000000b",
-      label: "Weber Rahmenvertrag",
-      outcome: "won",
-      occurred_at: "2026-07-02T14:00:00Z",
-    },
-  ],
-};
-
 /** The honest degrade: the week was measured and nobody narrated it. The
  *  numbers are all there, and the panel says the sentence is missing rather
  *  than letting the reader conclude there was nothing to say. */

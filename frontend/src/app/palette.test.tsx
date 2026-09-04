@@ -175,6 +175,70 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("");
   });
 
+  // The palette is a dialog and had none of a dialog's keyboard behaviour: it
+  // drew its own box, so it grew its own answer, and the answer was Escape on
+  // the search input alone plus no Tab trap. Both are `useDialogFocus`'s now,
+  // and both are asserted here rather than left to the browser to find again.
+
+  it("Esc closes from a result row, not only from the search box", async () => {
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    const user = userEvent.setup();
+    // Where the arrow keys put a reader — and where Escape used to do nothing,
+    // because the handler belonged to the input this focus has left.
+    const row = screen.getByRole("button", { name: /Pipeline/ });
+    row.focus();
+    expect(document.activeElement).toBe(row);
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("keeps Tab inside the dialog in both directions", async () => {
+    const outside = document.createElement("a");
+    outside.href = "#/somewhere-behind";
+    outside.textContent = "a link on the page behind";
+    document.body.append(outside);
+    try {
+      render(<CommandPalette open onClose={() => {}} commands={commands} />);
+      const user = userEvent.setup();
+      const dialog = screen.getByRole("dialog");
+      screen.getByRole("textbox").focus();
+
+      // Backwards off the first stop was the reported failure: one Shift+Tab
+      // and focus was on the page behind.
+      await user.tab({ shift: true });
+      expect(dialog.contains(document.activeElement)).toBe(true);
+
+      // And forwards off the last, which is the same wrap in the other
+      // direction. Tab enough times to pass every row the palette drew.
+      for (let step = 0; step < commands.length + 3; step += 1) {
+        await user.tab();
+        expect(dialog.contains(document.activeElement)).toBe(true);
+      }
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it("hands focus back to whatever opened it", async () => {
+    const opener = document.createElement("button");
+    opener.textContent = "open the palette";
+    document.body.append(opener);
+    try {
+      opener.focus();
+      const view = render(
+        <CommandPalette open onClose={() => {}} commands={commands} />,
+      );
+      expect(document.activeElement).not.toBe(opener);
+      view.rerender(
+        <CommandPalette open={false} onClose={() => {}} commands={commands} />,
+      );
+      await waitFor(() => expect(document.activeElement).toBe(opener));
+    } finally {
+      opener.remove();
+    }
+  });
+
   it("surfaces live record hits from /search plus a see-all row (RS-1)", async () => {
     vi.stubGlobal(
       "fetch",

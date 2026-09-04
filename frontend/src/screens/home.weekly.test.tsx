@@ -111,6 +111,127 @@ describe("HomeScreen — the weekly retrospective", () => {
     expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
   });
 
+  // THE PACE READING. What the wins were worth, and whether that beat the week
+  // before — the question a rep opens a closed week to ask.
+  it("says whether the week's money beat the week before", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: {
+            created_minor: 4500000,
+            won_minor: 1250000,
+            lost_minor: 0,
+            currency: "EUR",
+          },
+          prior: {
+            local_week_start: "2026-06-22",
+            counts: review.counts,
+            pipeline: {
+              created_minor: 3000000,
+              won_minor: 1000000,
+              lost_minor: 0,
+              currency: "EUR",
+            },
+          },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // +2.500,00 € on 12.500 against 10.000, and the SIGN is always drawn: a
+    // bare figure beside last week's leaves the direction to be guessed.
+    expect(
+      await screen.findByText(/\+2\.500,00\s*€|\+€2,500\.00/),
+    ).toBeTruthy();
+  });
+
+  // A week that matched the one before says so, rather than reading as growth.
+  it("marks a level week level rather than dressing it as a gain", async () => {
+    const money = {
+      created_minor: 4500000,
+      won_minor: 1250000,
+      lost_minor: 0,
+      currency: "EUR",
+    };
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: money,
+          prior: {
+            local_week_start: "2026-06-22",
+            counts: review.counts,
+            pipeline: money,
+          },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText(/±0,00\s*€|±€0\.00/)).toBeTruthy();
+  });
+
+  // A PRIOR WEEK NOBODY COULD PRICE yields no comparison — not a change
+  // measured against a zero that was never a figure. The value still draws.
+  it("compares nothing against a prior week that carries no money", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: {
+            created_minor: 4500000,
+            won_minor: 1250000,
+            lost_minor: 0,
+            currency: "EUR",
+          },
+          prior: { local_week_start: "2026-06-22", counts: review.counts },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+    expect(screen.queryByText(/vs prior|zur Vorwoche/)).toBeNull();
+  });
+
+  // TWO CURRENCIES ARE NOT COMPARABLE. Each week is stored in the currency it
+  // was measured in, so an operator who changed the base currency mid-quarter
+  // leaves two weeks whose subtraction would print a change nobody can act on.
+  it("refuses to subtract across a change of currency", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: {
+            created_minor: 4500000,
+            won_minor: 1250000,
+            lost_minor: 0,
+            currency: "EUR",
+          },
+          prior: {
+            local_week_start: "2026-06-22",
+            counts: review.counts,
+            pipeline: {
+              created_minor: 3000000,
+              won_minor: 1000000,
+              lost_minor: 0,
+              currency: "USD",
+            },
+          },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+    expect(screen.queryByText(/vs prior|zur Vorwoche/)).toBeNull();
+  });
+
   // And a week with no pipeline block draws no money at all.
   //
   // The block is optional on the wire — a week assembled before the money

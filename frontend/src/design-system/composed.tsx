@@ -184,11 +184,32 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
 
 export function DealCard({
   deal,
+  href,
   onOpen,
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
-  onOpen?: (deal: BoardDeal) => void;
+  /**
+   * The deal's own address.
+   *
+   * An anchor and not a button, which is what this was: a card that opens a
+   * record is a link, and drawn as a button it could not be opened in a new
+   * tab, middle-clicked, or copied — while every other record row in the
+   * product could. The board is the one surface where a rep wants three deals
+   * open side by side, so it was the worst place to lose that.
+   *
+   * The address arrives as a prop because this tier holds no routes: it is the
+   * same reason `OffsiteLink` takes an href and `ProjectLinks` takes an
+   * adapter.
+   */
+  href: string;
+  /**
+   * What a press does BESIDE following the link, and the reason the event
+   * comes with it: the board's card is draggable, and the click that ends a
+   * drag must not also navigate. A caller that needs to refuse the press calls
+   * `preventDefault` on the event it is handed.
+   */
+  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
   dragHandlers?: {
     draggable: true;
     onDragStart: (event: React.DragEvent) => void;
@@ -207,11 +228,11 @@ export function DealCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <button
-      type="button"
+    <a
+      href={href}
       className={classes}
       data-deal={deal.id}
-      onClick={() => onOpen?.(deal)}
+      onClick={(event) => onOpen?.(deal, event)}
       {...dragHandlers}
     >
       <span className="deal-name">{deal.name}</span>
@@ -229,7 +250,7 @@ export function DealCard({
         )}
         {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
       </span>
-    </button>
+    </a>
   );
 }
 
@@ -259,7 +280,14 @@ type PlainBoardProps<Record extends BoardRecord> = BoardHandlers<Record> & {
 type DealBoardProps = BoardHandlers<BoardDeal> & {
   variant?: "deal";
   columns: BoardMoneyColumn[];
-  onOpen?: (deal: BoardDeal) => void;
+  /**
+   * Each card's own address. Required, because every card on this board opens a
+   * deal and a card that opens a record is a link — see `DealCard`'s `href`.
+   * A function rather than a field on the deal: the ADDRESS is the screen's
+   * vocabulary and this tier holds no routes.
+   */
+  cardHref: (deal: BoardDeal) => string;
+  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
 };
 
 type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
@@ -290,8 +318,25 @@ function BoardLayout<Record extends BoardRecord>({
             aria-label={column.label}
             {...columnDropHandlers?.(column)}
           >
+            {/* THE STAGE AND HOW MUCH IS IN IT, on one line and stuck to the
+                top of the column. A board is scrolled, and a reader halfway
+                down a long stage had nothing on screen saying which stage they
+                were in — the head is the only thing that says it, so it holds
+                its place. The count moved up here with it: it is the figure a
+                reader compares ACROSS the board, and under the money totals it
+                was the third figure on a two-line sub. */}
             <div className="board-col-head">
               <span className="stage">{column.label}</span>
+              {/* TWO SPANS, not one composed string. The name is data of
+                  unbounded length and truncates; the count is three characters
+                  and must not. Written as "{label}: {count}" into the truncating
+                  span, a long stage name ellipsised the figure away — which is
+                  the one thing this head was rearranged to keep on screen.
+                  Hidden from a screen reader, which is told "12 deals" below
+                  with the unit this bare figure leaves out. */}
+              <span className="board-col-count" aria-hidden="true">
+                {formatNumber(column.count ?? column.deals.length, locale)}
+              </span>
               {money && (
                 <span className="prob">
                   {formatNumber(money.probabilityPct, locale)}%
@@ -313,7 +358,10 @@ function BoardLayout<Record extends BoardRecord>({
                     )}
                   </span>
                 )}
-                <span>
+                {/* The count is in the head; what a screen reader needs here
+                    is the UNIT the head's bare figure leaves out, so the column
+                    announces "12 deals" rather than "Qualified: 12". */}
+                <span className="sr-only">
                   {countLabel
                     ? countLabel(column.count ?? column.deals.length)
                     : t("board.count", {
@@ -380,6 +428,7 @@ export function PipelineBoard<Record extends BoardRecord>(
       renderCard={(deal, column) => (
         <DealCard
           deal={deal}
+          href={props.cardHref(deal)}
           onOpen={props.onOpen}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />
@@ -626,7 +675,7 @@ function RecordHead({
       <Avatar
         name={name}
         src={avatarSrc}
-        size={wide ? "lg" : "md"}
+        size={wide ? "xl" : "md"}
         shape={markShape}
       />
       <div className="record-id">
@@ -782,12 +831,13 @@ export function RecordView({
   // note, since the mirror cannot serve entity-scoped activity reads. Keeps the
   // section honest instead of rendering an empty list that reads as "no activity".
   timelineNotice?: ReactNode;
-  // The bar that chooses which part of the record is below it. It leads the
-  // WORK COLUMN rather than the band, because what it chooses is what appears
-  // beneath it: in the band it would sit over the rail as well and claim to
-  // govern a column it does not. The slot exists so the interval under it and
-  // the one-row-that-scrolls behaviour are the record page's, spelled once —
-  // two pages had already written the same wrapper under two names.
+  // The bar that chooses which part of the record is below it. It runs the
+  // full width over the columns, because the details pane opens under it
+  // (DESIGN.md §6): the switch at the row's end governs the column beside the
+  // work, and a strip confined to the work column would end where the pane it
+  // opens begins. The slot exists so the interval under it and the
+  // one-row-that-scrolls behaviour are the record page's, spelled once — two
+  // pages had already written the same wrapper under two names.
   tabs?: ReactNode;
   zone: string;
   children?: ReactNode;
@@ -830,6 +880,7 @@ export function RecordView({
           the work column, where it would sit beside the rail as though it were
           one more thing to read rather than the frame around all of them. */}
       {band && <div className="record-band">{band}</div>}
+      {tabs && <div className="record-tabs">{tabs}</div>}
       <PageZones
         shape={shape}
         className={zonesClassName(shape)}
@@ -844,7 +895,6 @@ export function RecordView({
         mainClassName="arrive-stack"
         main={
           <>
-            {tabs && <div className="record-tabs">{tabs}</div>}
             {children}
             {timeline && (
               <section aria-label={t("record.timeline")}>
@@ -1231,14 +1281,36 @@ function TimelineGroupRow({
             <MoveFlag entry={newest} />
           </span>
         )}
-        <span className="tl-title">{newest.title}</span>
-        {/* The newest message's own words, while the thread is closed: what
-            the conversation is ABOUT, without opening it. Expanded, the
-            members carry their bodies themselves and a preview above them
-            would say the newest one twice. Never for a withheld entry — a
-            summary row must not show a reader words the row itself refuses. */}
-        {!open && newest.body && !newest.withheld && (
-          <TimelineText text={newest.body} email={newest.kind === "email"} />
+        {/* What the conversation is, while it is closed.
+
+            A thread of emails stands for its newest message, and that message
+            is drawn by the SAME component a lone one is — subject, who, the
+            preview the server composed, the access badge. Writing the summary
+            by hand here was the defect: a company timeline of grouped
+            conversations showed old-style rows beside canonical ones on the
+            same page, because a group never reached EmailEntry.
+            Expanded, the members draw themselves below and a summary above
+            them would say the newest one twice. */}
+        {open ? (
+          <span className="tl-title">{newest.title}</span>
+        ) : newest.kind === "email" && newest.emailSummary ? (
+          <EmailEntry
+            summary={newest.emailSummary}
+            timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
+            onOpen={newest.onOpenEmail}
+          />
+        ) : (
+          <>
+            <span className="tl-title">{newest.title}</span>
+            {/* Never for a withheld entry — a summary row must not show a
+                reader words the row itself refuses. */}
+            {newest.body && !newest.withheld && (
+              <TimelineText
+                text={newest.body}
+                email={newest.kind === "email"}
+              />
+            )}
+          </>
         )}
         <span className="tl-meta">
           <span className="tl-group-count">

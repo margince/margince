@@ -20,11 +20,11 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // systemDomainTriageActor is the requested-by sentinel a triage read carries.
@@ -322,13 +322,7 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 		}, nil
 	}
 	req := triageRequest(seed, identity.BaseLanguageForPrompt(ctx, w.pool))
-	var resp model.Response
-	var err error
-	if structured, ok := w.triageBrain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, triageShapeValid)
-	} else {
-		resp, err = w.triageBrain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, w.triageBrain, req, triageShapeValid)
 	if err != nil {
 		return siteTriageVerdict{}, err
 	}

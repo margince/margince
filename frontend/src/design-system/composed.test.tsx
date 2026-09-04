@@ -39,10 +39,10 @@ describe("DealCard + PipelineBoard", () => {
   // carried an edge stripe said one thing twice, and the half of it that a
   // reader who cannot see colour gets is the badge.
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
-    render(<DealCard deal={deal} />);
+    render(<DealCard deal={deal} href="#/deals/d1" />);
     expect(screen.getByText("€48,000.00")).toBeTruthy();
     expect(screen.getByText("stalled")).toBeTruthy();
-    expect(screen.getByRole("button").className).not.toContain("stalled");
+    expect(screen.getByRole("link").className).not.toContain("stalled");
   });
 
   // A company has three readings on a card and only one of them is blank. The
@@ -50,7 +50,7 @@ describe("DealCard + PipelineBoard", () => {
   // other surface draws over a withheld value, and a deal that names no company
   // draws nothing — the one case where an empty slot states the truth.
   it("names a company it was given, with the monogram beside it", () => {
-    render(<DealCard deal={deal} />);
+    render(<DealCard deal={deal} href="#/deals/d1" />);
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(screen.getByText("BA")).toBeTruthy();
     expect(screen.queryByLabelText(MASK)).toBeNull();
@@ -58,7 +58,10 @@ describe("DealCard + PipelineBoard", () => {
 
   it("draws the mask over a withheld company, never words for it", () => {
     const { container } = render(
-      <DealCard deal={{ ...deal, org: "", orgWithheld: true }} />,
+      <DealCard
+        deal={{ ...deal, org: "", orgWithheld: true }}
+        href="#/deals/d1"
+      />,
     );
     expect(screen.getByLabelText(MASK)).toBeTruthy();
     // No name and no mark beside it: a monogram cut from the word for
@@ -68,7 +71,9 @@ describe("DealCard + PipelineBoard", () => {
   });
 
   it("draws no company slot at all for a deal that names none", () => {
-    const { container } = render(<DealCard deal={{ ...deal, org: "" }} />);
+    const { container } = render(
+      <DealCard deal={{ ...deal, org: "" }} href="#/deals/d1" />,
+    );
     expect(screen.queryByLabelText(MASK)).toBeNull();
     expect(container.querySelector(".deal-org")).toBeNull();
   });
@@ -76,9 +81,13 @@ describe("DealCard + PipelineBoard", () => {
   it("a staged deal renders visibly distinct from a real one", () => {
     const { container } = render(
       <>
-        <DealCard deal={{ ...deal, id: "real", stalled: false }} />
+        <DealCard
+          deal={{ ...deal, id: "real", stalled: false }}
+          href="#/deals/real"
+        />
         <DealCard
           deal={{ ...deal, id: "staged", stalled: false, staged: true }}
+          href="#/deals/staged"
         />
       </>,
     );
@@ -97,7 +106,9 @@ describe("DealCard + PipelineBoard", () => {
       currency: "EUR",
       deals: [deal],
     };
-    render(<PipelineBoard columns={[column]} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(screen.getByText("40%")).toBeTruthy();
     expect(screen.getByText("1 deals")).toBeTruthy();
     expect(screen.getByText("€60,500.00")).toBeTruthy();
@@ -118,7 +129,9 @@ describe("DealCard + PipelineBoard", () => {
       deals: [deal],
       count: 137,
     };
-    render(<PipelineBoard columns={[column]} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(screen.getByText("137 deals")).toBeTruthy();
     expect(screen.queryByText("1 deals")).toBeNull();
   });
@@ -140,7 +153,9 @@ describe("DealCard + PipelineBoard", () => {
       count: 29,
       sumHidden: true,
     };
-    render(<PipelineBoard columns={[column]} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(
       screen.getByText("several currencies — no single total"),
     ).toBeTruthy();
@@ -154,13 +169,13 @@ describe("DealCard + PipelineBoard", () => {
   // amount the server never sent, and a currency sign the card chose cannot be
   // told apart from one the deal actually carries.
   it("a deal with an amount but no currency states no figure, never a currency the card chose", () => {
-    render(<DealCard deal={{ ...deal, currency: null }} />);
+    render(<DealCard deal={{ ...deal, currency: null }} href="#/deals/d1" />);
     expect(screen.getByText(MONEY_ABSENT)).toBeTruthy();
     expect(screen.queryByText(/48,000/)).toBeNull();
   });
 
   it("a deal with a currency but no amount states no figure, never a zero", () => {
-    render(<DealCard deal={{ ...deal, valueMinor: null }} />);
+    render(<DealCard deal={{ ...deal, valueMinor: null }} href="#/deals/d1" />);
     expect(screen.getByText(MONEY_ABSENT)).toBeTruthy();
     expect(screen.queryByText("€0.00")).toBeNull();
   });
@@ -179,7 +194,9 @@ describe("DealCard + PipelineBoard", () => {
       deals: [deal],
       count: 4,
     };
-    render(<PipelineBoard columns={[column]} />);
+    render(
+      <PipelineBoard columns={[column]} cardHref={(d) => `#/deals/${d.id}`} />,
+    );
     expect(screen.getByText("4 deals")).toBeTruthy();
     expect(screen.getByText(`weighted ${MONEY_ABSENT}`)).toBeTruthy();
     expect(

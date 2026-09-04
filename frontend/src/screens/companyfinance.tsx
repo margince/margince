@@ -122,7 +122,11 @@ export function CompanyFinanceCard({
     return (
       <Panel title={title}>
         <PanelBody>
-          <SurfaceState state="loading" emptyLabel={t("finance.none")}>
+          <SurfaceState
+            state="loading"
+            emptyLabel={t("finance.none")}
+            loadingLabel={t("finance.loading")}
+          >
             {null}
           </SurfaceState>
         </PanelBody>
@@ -574,7 +578,7 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
 function ConnectFinance() {
   const t = useT();
   return (
-    <div className="co-card-actions">
+    <div className="card-actions">
       <Button small>{t("finance.connect")}</Button>
     </div>
   );

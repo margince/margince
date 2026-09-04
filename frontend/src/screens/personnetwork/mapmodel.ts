@@ -26,6 +26,7 @@ type GraphNode = components["schemas"]["PersonGraphNode"];
 export type MapCopy = Readonly<{
   ourTeam: string;
   theirCompany: string;
+  peers: string;
   target: string;
   useThisRoute: string;
   withheldDirect: string;
@@ -57,9 +58,15 @@ export function bandOf(bucket: string | undefined): MapBand | undefined {
 /**
  * mapModelFromPersonGraph turns one graph payload into the map's model.
  *
- * Three lanes, matching the question a reader is asking: our colleagues on the
- * left, the contact's own company in the middle, and the contact themselves on
- * the right.
+ * Four lanes, matching the question a reader is asking: our colleagues on the
+ * left, the contact themselves in the middle, and on the right the two kinds
+ * of person around them — the others at their company, and the ones they are
+ * observed corresponding with elsewhere.
+ *
+ * The peer lane is not decoration. A peer node is the ONLY node the server
+ * flags `suggest_edge` on, and recording an observed acquaintance is offered
+ * from the selected node's detail — so a picture that places no peer is a
+ * picture from which `works_with` cannot be written at all.
  */
 export function mapModelFromPersonGraph(
   graph: Graph,
@@ -69,6 +76,10 @@ export function mapModelFromPersonGraph(
   const anchor = nodes.find((n) => n.group === "anchor");
   const colleagues = nodes.filter((n) => n.group === "direct");
   const account = nodes.filter((n) => n.group === "account");
+  // A peer already drawn by the account arm keeps the node it has — the server
+  // dedupes by id and moves the suggestion onto it, so one human is one node
+  // and this filter can never place a second.
+  const peers = nodes.filter((n) => n.group === "peer");
 
   // Only a colleague can carry an introduction, so only a colleague's node
   // offers the action. A contact at the target's company is context a reader
@@ -76,6 +87,7 @@ export function mapModelFromPersonGraph(
   const mapNodes: MapNode[] = [
     ...colleagues.map((n) => colleagueNode(n, copy)),
     ...account.map((n) => contactNode(n, "person")),
+    ...peers.map((n) => contactNode(n, "person")),
     ...(anchor ? [contactNode(anchor, "person")] : []),
   ];
 
@@ -105,6 +117,16 @@ export function mapModelFromPersonGraph(
       column: "right",
       label: copy.theirCompany,
       nodeIds: account.map((n) => n.id),
+    },
+    // Under their company rather than beside it: both lanes hold people around
+    // the contact, and the right column stacks its lanes with their own heads.
+    // A lane with nobody in it draws nothing at all, so a contact observed with
+    // no one outside their company costs the picture no empty heading.
+    {
+      id: "peers",
+      column: "right",
+      label: copy.peers,
+      nodeIds: peers.map((n) => n.id),
     },
   ];
 

@@ -121,7 +121,14 @@ export type DecisionDeckLabels = Readonly<{
   viewDeck: string;
   viewList: string;
   /** The keyboard legend. Drawn, not hidden: a shortcut nobody is told about is
-   *  a shortcut for whoever wrote it. */
+   *  a shortcut for whoever wrote it.
+   *
+   *  It must say that the arrows STAGE. This deck is stage-then-commit — an
+   *  arrow moves a verdict into the tray and nothing leaves until `commit`
+   *  runs — so a legend reading "→ accept" beside "Enter send" invites the
+   *  reading where the arrow already sent it and Enter is a separate act. A
+   *  reader who believes that presses four arrows, walks away, and has sent
+   *  nothing. */
   keys: string;
   /** How many cards are still behind the live one. */
   behind: (count: number) => string;
@@ -634,7 +641,11 @@ export function DecisionDeck({
       >
         {cleared && tally ? (
           <EmptyState title={labels.clearedTitle}>
-            <p className="t-body">{labels.cleared(tally.count)}</p>
+            {/* `.empty-body` is already the measured 14px paragraph, so the
+                sentence carries no size of its own. The timestamp below it
+                does, because it is a quieter SECOND line rather than the
+                sentence itself. */}
+            <p>{labels.cleared(tally.count)}</p>
             <p className="t-small ddeck-cleared-time">
               {labels.clearedTime(tally.at)}
             </p>

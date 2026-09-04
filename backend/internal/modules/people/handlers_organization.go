@@ -4,7 +4,10 @@
 package people
 
 import (
+	"bytes"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -114,7 +117,7 @@ func (h Handlers) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id
 		httperr.NotImplemented(w, r, "GetOrganizationLogo")
 		return
 	}
-	rc, obj, err := h.blob.Get(r.Context(), key)
+	rc, _, err := h.blob.Get(r.Context(), key)
 	if err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
 			// The row points at bytes the store does not have. To the client
@@ -122,6 +125,20 @@ func (h Handlers) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id
 			writeStoreErr(w, r, apperrors.ErrNotFound)
 			return
 		}
+		httperr.Write(w, r, err)
+		return
+	}
+	source, readErr := io.ReadAll(rc)
+	closeErr := rc.Close()
+	if closeErr != nil {
+		slog.WarnContext(r.Context(), "closing organization logo reader", "err", closeErr)
+	}
+	if readErr != nil {
+		httperr.Write(w, r, readErr)
+		return
+	}
+	logo, err := imagenorm.TrimTransparentPNG(source)
+	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -134,13 +151,13 @@ func (h Handlers) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id
 	// the document that renders can reach nothing.
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	// A logo changes only when a site read resolves a new one, while a company
-	// list asks for one per row — so a short private cache saves most of the
-	// requests without holding a stale mark for long.
+	// The URL carries a revision token derived from the stored object key, so a
+	// replacement takes a fresh cache entry. A company list asks for one image
+	// per row, and this short private cache saves the repeated reads of each.
 	w.Header().Set("Cache-Control", "private, max-age=300")
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: obj.Size},
-		Body:     rc,
+		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: int64(len(logo))},
+		Body:     io.NopCloser(bytes.NewReader(logo)),
 	}, "organization logo "+id.String())
 }
 

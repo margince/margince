@@ -214,13 +214,7 @@ func (x evidenceExtractor) extractPageFacts(ctx context.Context, page crawlPage)
 	}
 	req := pageFactsRequest(menu, idx)
 	brain := x.factCompleter()
-	var resp model.Response
-	var err error
-	if structured, ok := brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, pageFactsShapeValid)
-	} else {
-		resp, err = brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, brain, req, pageFactsShapeValid)
 	if err != nil {
 		return pageFactsResult{}, err
 	}

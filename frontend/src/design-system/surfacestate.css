@@ -8,23 +8,32 @@
  * reads as a gap. It came over from the record page unchanged so promoting
  * this component changed nothing on screen. */
 
-/* The two absent states read differently on purpose: "there is none" is
-   ordinary meta text, "you may not see this" is set apart so a reader never
-   mistakes a permission boundary for an empty account. */
+/* A SENTENCE A CARD SHOWS INSTEAD OF CONTENT IS CARD BODY TEXT.
+   It stands where the rows would have stood, so it is read as part of the card
+   rather than as a footnote under it — and it is the one size every state here
+   draws at, because a card whose "there is none" was set smaller than its
+   "you may not see this" told a reader the two were different KINDS of
+   statement when the only difference is the cause.
+
+   The two absent states still read differently, and the difference is colour
+   and voice rather than size: "there is none" is ordinary secondary prose,
+   "you may not see this" is set apart in the italic voice below so a reader
+   never mistakes a permission boundary for an empty account. */
 .surfacestate-empty {
   margin-top: 6px;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
+  font-size: var(--fs-body);
+  color: var(--textSecondary);
 }
 /* What would be here, under the line saying there is none. Not italic: it is a
    fact about the RECORD — what puts a row here — where the italic voice below
    is the surface talking about itself.
 
-   --textMeta, the AA small-text role. It is set small already, and small plus
-   muted is a sentence a reader has to lean in for. */
+   --textMeta, the AA small-text role. It is set below the sentence it hangs
+   from, and small plus muted is a sentence a reader has to lean in for, so it
+   takes the step down from body rather than two. */
 .surfacestate-empty-detail {
   margin-top: var(--space-1);
-  font-size: var(--fs-meta);
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--textMeta);
   text-wrap: pretty;
@@ -40,7 +49,7 @@
    tells them apart is the words, which is where that belongs. */
 .surfacestate-withheld {
   margin-top: 6px;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body);
   color: var(--textMeta);
   font-style: italic;
 }

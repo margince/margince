@@ -224,3 +224,115 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 		t.Fatal("a second JSON value after the plan was ignored")
 	}
 }
+
+// EVERY key in run_report's enum is described by its default answer.
+//
+// This is the invariant the certification lane bought at a price. The first pass
+// deferred each report's default into the published document along with the
+// three name lists, leaving an enum of nine bare keys — and on the goal "how
+// much open pipeline do we have in each stage" every run reached for the
+// vocabulary door instead of the report, because `deals-by-stage` answers that
+// goal with no plan at all and a bare key does not say so. 2/3 to 0/3.
+//
+// So the default is the only per-report content left in the description, and a
+// report that shipped without one would silently reopen exactly that failure:
+// describeReportDefaults returns "" for a spec with neither default aggregates
+// nor default grouping, which is a shape runAdHocPlan already builds. Nothing
+// else on this surface tells a caller which report answers their question.
+//
+// Derived from the engine's own catalog, so a report added tomorrow inherits the
+// obligation rather than escaping it.
+func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
+	catalog := reportToolCatalog()
+	if len(catalog) == 0 {
+		t.Fatal("the prebuilt catalog is empty, so this test proved nothing")
+	}
+	// Read out of the SERVED spec, not from a rendering helper: these are the
+	// bytes a client actually receives, and reading them needs no exported
+	// surface built for one test.
+	described := servedReportArgumentDescription(t)
+	for _, entry := range catalog {
+		if entry.Defaults == "" {
+			t.Errorf("%s answers nothing by default, so run_report's description reduces it to a bare "+
+				"enum key — which is what sent every certification run to the vocabulary door instead "+
+				"of the report. Give the spec a defaultAggs or a defaultBy.", entry.Report)
+			continue
+		}
+		if !strings.Contains(described, entry.Report) {
+			t.Errorf("%s is in the enum and not in the description", entry.Report)
+		}
+		if !strings.Contains(described, entry.Defaults) {
+			t.Errorf("%s: the description does not say what it answers by default: %q",
+				entry.Report, entry.Defaults)
+		}
+	}
+}
+
+// servedReportArgumentDescription is what a client is told about `report`, read
+// off the real served surface.
+func servedReportArgumentDescription(t *testing.T) string {
+	t.Helper()
+	for _, spec := range servedSurface(t).Specs() {
+		if spec.Name != "run_report" {
+			continue
+		}
+		var parsed struct {
+			Properties map[string]struct {
+				Description string `json:"description"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(spec.InputSchema, &parsed); err != nil {
+			t.Fatalf("run_report's served input schema is not a JSON object: %v", err)
+		}
+		return parsed.Properties["report"].Description
+	}
+	t.Fatal("run_report is not on the served surface, so this measures nothing")
+	return ""
+}
+
+// A misspelled THRESHOLD key is refused with a list that contains the threshold
+// names. `filters` is one object holding two families — the equality filters and
+// the thresholds — and the catalog advertises them as one list
+// (catalogFilterNames). A refusal built from the equality filters alone omits the
+// family the caller was reaching for, so they read the list, do not find what
+// they meant, and conclude the report cannot answer their question.
+//
+// Derived from every spec that declares a threshold rather than naming one, so a
+// report that grows a threshold family is held by this the day it lands.
+func TestAFilterRefusalNamesTheThresholdsToo(t *testing.T) {
+	thresholded := 0
+	for report, spec := range prebuiltReports {
+		if len(spec.thresholds) == 0 {
+			continue
+		}
+		thresholded++
+		req := reportRequest{Filters: map[string]any{"no_such_filter": "x"}}
+		_, err := buildReportWhere(t.Context(), spec, req, func(any) int { return 1 })
+		var refusal *FieldNotAllowedError
+		if !errors.As(err, &refusal) {
+			t.Fatalf("%s: err = %v, want a FieldNotAllowedError", report, err)
+		}
+		_, message := refusal.MessageFault()
+		for name := range spec.thresholds {
+			if !strings.Contains(message, name) {
+				t.Errorf("%s: the refusal omits the threshold key %q a caller may send in `filters`: %s",
+					report, name, message)
+			}
+		}
+		for name := range spec.filters {
+			if !strings.Contains(message, name) {
+				t.Errorf("%s: the refusal omits the equality filter %q: %s", report, name, message)
+			}
+		}
+		// The refusal and the catalog are one vocabulary or they are two, and two
+		// is what this test exists to prevent.
+		if got, want := refusal.Allowed, catalogFilterNames(spec); !slices.Equal(got, want) {
+			t.Errorf("%s: the refusal lists %v, the catalog advertises %v", report, got, want)
+		}
+	}
+	// Under-recognition is the one way this must not fail: a prebuilt catalog with
+	// no thresholds left would make every assertion above vacuous.
+	if thresholded == 0 {
+		t.Fatal("no prebuilt report declares a threshold, so this test proved nothing")
+	}
+}

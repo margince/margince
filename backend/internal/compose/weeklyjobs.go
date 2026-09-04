@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -303,7 +304,10 @@ func (w *weeklyGenerateWorkspaceWorker) narrate(ctx context.Context, review week
 	// them loses the review itself, not just the remark.
 	bounded, cancel := context.WithTimeout(ctx, narrateBudget)
 	defer cancel()
-	reply, err := w.narrator.Complete(bounded, narrative.Request(in, lang))
+	reply, err := ai.Ask(bounded, w.narrator, narrative.Request(in, lang), func(text string) error {
+		_, err := narrative.Parse(text)
+		return err
+	})
 	if err != nil {
 		w.log.WarnContext(ctx, "the weekly review has no sentence: the model call did not land",
 			"week", review.LocalWeekStart.Format(time.DateOnly), "cause", err)

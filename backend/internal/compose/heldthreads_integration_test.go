@@ -183,6 +183,15 @@ func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 			"the id is read from the ledger rather than the gated join",
 			*got[0].ActivityID)
 	}
+	// Refusing the content is right; reporting the message GONE is not. The
+	// screen draws a row with no activity as "no message at all", which tells a
+	// holder their evidence was destroyed while it sits in the thread. That is
+	// the confusion HasActivity exists to prevent, arriving from the other
+	// side: not evidence destroyed read as unnamed, but evidence withheld read
+	// as destroyed.
+	if !got[0].HasActivity {
+		t.Error("a message that exists and is merely withheld reports itself erased")
+	}
 }
 
 // The id a client opens is present for a message the reader may read, and the

@@ -1,10 +1,12 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
+import { calendarDay } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
   formatMoney,
   formatNumber,
+  formatTimeOfDay,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
@@ -348,6 +350,84 @@ export function dealFactsText(
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+// The MOMENT a dated row is racing: when a meeting starts, when a task is due.
+//
+// `due_at` reached the client on both and nothing read it. A meeting said
+// "starting shortly" — the same three words whether it began in four minutes or
+// in fifty — so the one row a rep has to open BEFORE a wall-clock time was the
+// row that would not say the time. A task said "Overdue" and left the reader to
+// go and find out by how long.
+//
+// The two are one function because they are one question to the reader: what
+// clock am I against. What differs is only which side of now the answer is on.
+//
+// Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
+// their desk on the morning it matters, and "today" is the frame they are
+// already in. Anything else shows the date, because a bare "09:00" on a row two
+// days out is a time the reader will act on this morning.
+export function whenText(
+  item: WorklistItem,
+  t: T,
+  locale: Locale,
+  zone: string,
+  now: Date,
+): string | null {
+  if (!item.due_at) {
+    return null;
+  }
+  const key = whenKeyFor(item);
+  if (key === null) {
+    return null;
+  }
+  return t(key, { when: momentText(item.due_at, locale, zone, now) });
+}
+
+// Which sentence the moment goes in — and null for a row whose `due_at` is not
+// a clock the reader is racing.
+//
+// An approval's `due_at` is when the proposal LAPSES, which is a fact about the
+// staged work rather than a deadline the rep owes; the contract says so where
+// the field is declared. Drawing it as "due" would turn "this offer goes stale"
+// into "you are late", which is the row telling the reader something untrue
+// about their own day.
+function whenKeyFor(
+  item: WorklistItem,
+): "worklist.when.starts" | "worklist.when.due" | null {
+  if (item.source === "meeting") {
+    return "worklist.when.starts";
+  }
+  if (item.source === "task") {
+    return "worklist.when.due";
+  }
+  return null;
+}
+
+// The moment itself: the time alone when it falls today, the date and time
+// otherwise.
+function momentText(
+  dueAt: string,
+  locale: Locale,
+  zone: string,
+  now: Date,
+): string {
+  return sameDayInZone(dueAt, now, zone)
+    ? formatTimeOfDay(dueAt, locale, zone)
+    : formatDateTime(dueAt, locale, zone);
+}
+
+// Whether an instant falls on the reader's own calendar day.
+//
+// Through `calendarDay`, which already answers "which day is this, there" — a
+// second formatter spelled here would be a second answer to that question, and
+// the two would drift the first time either changed.
+//
+// Compared in the VIEWER's zone rather than the runner's, because the whole row
+// is drawn in that zone: a meeting at 23:30 in Berlin, read on a machine set to
+// UTC, is still tonight's meeting to the person reading it.
+function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
+  return calendarDay(new Date(utcIso), zone) === calendarDay(now, zone);
+}
+
 // Where the row's suggested step leads.
 //
 // The RECORD the thread belongs to, not the message: an activity is a timeline
@@ -500,6 +580,13 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
 // The source name goes through the same known-source check the titles use, so
 // a source this build has never heard of is described generically rather than
 // printed as its own identifier.
+//
+// What `sourceName` returns is a row TITLE, and most of them are whole clauses
+// — so the frame names the fact first and lets the title follow a colon. Read
+// as a subject instead, fourteen of the twenty-one ran two sentences together.
+// The alternative is a second vocabulary spelling each source as a noun, in
+// every language, kept beside the titles; the colon costs nothing and cannot
+// drift.
 export function sourceUnavailableText(
   missing: NonNullable<Worklist["sources_unavailable"]>[number],
   t: T,
@@ -522,7 +609,13 @@ export function sourceName(source: string, t: T): string {
 }
 
 // The sources this build can name without its own sentence.
-const KNOWN_SOURCES = {
+//
+// Exported so a gate over these sentences derives its corpus from here rather
+// than keeping a second copy of the list: a hand-maintained census goes short
+// of its subject the moment a source is added, and going short is the one way
+// this kind of check must not break — it reads a smaller product, reports PASS,
+// and leaves no failing assertion to notice.
+export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   task: true,

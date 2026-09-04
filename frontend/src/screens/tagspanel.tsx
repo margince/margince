@@ -34,9 +34,14 @@ export function TagsPanel({
   entityType,
   entityID,
   canEdit,
+  bare = false,
 }: Readonly<{
   entityType: TaggableType;
   entityID: string;
+  /** Drawn as the body of a section something else names, rather than as a
+   * panel of its own: the details column's one pane carries the tags as one
+   * of its named slices. */
+  bare?: boolean;
   /** Whether this reader may change the record. Applying a tag writes to the
    * RECORD, so a reader who may only look at it sees the words and no verbs. */
   canEdit: boolean;
@@ -58,7 +63,7 @@ export function TagsPanel({
   }
   if (read.isPending) {
     return (
-      <TagsFrame title={t("tags.panelTitle")}>
+      <TagsFrame title={t("tags.panelTitle")} bare={bare}>
         <p className="tagspanel-note">{t("tags.loading")}</p>
       </TagsFrame>
     );
@@ -69,7 +74,7 @@ export function TagsPanel({
   // fact about the record that nobody established.
   if (read.data.withheld) {
     return (
-      <TagsFrame title={t("tags.panelTitle")}>
+      <TagsFrame title={t("tags.panelTitle")} bare={bare}>
         <p className="tagspanel-note">{t("tags.withheld")}</p>
       </TagsFrame>
     );
@@ -87,6 +92,7 @@ export function TagsPanel({
     <TagsFrame
       title={t("tags.panelTitle")}
       sub={tags.length > 0 ? t("tags.panelSub") : undefined}
+      bare={bare}
     >
       {tags.length === 0 ? (
         <div className="tagspanel-empty">
@@ -147,12 +153,17 @@ export function TagsPanel({
 function TagsFrame({
   title,
   sub,
+  bare,
   children,
 }: Readonly<{
   title: string;
   sub?: string;
+  bare: boolean;
   children: ReactNode;
 }>) {
+  if (bare) {
+    return <PanelBody>{children}</PanelBody>;
+  }
   return (
     <Panel title={title} sub={sub}>
       <PanelBody>{children}</PanelBody>

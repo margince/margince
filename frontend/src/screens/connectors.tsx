@@ -1026,11 +1026,7 @@ function MailRoster({
           testId="connector-roster-empty"
           layout="stack"
           label={t("connectors.rosterLabel")}
-          control={
-            <EmptyState>
-              <p className="t-small">{t("connectors.empty")}</p>
-            </EmptyState>
-          }
+          control={<EmptyState>{t("connectors.empty")}</EmptyState>}
         />
       </SettingList>
     );

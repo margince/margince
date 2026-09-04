@@ -182,7 +182,12 @@ function BulkBar<Row>({
     return null;
   }
   return (
-    <div className="lt-bulkbar" role="region" aria-live="polite">
+    /* aria-live and no role="region": the announcement is what this element is
+       for, and aria-live delivers it on any element. The landmark did not — a
+       region must be named to be worth anything, this one never was, and an
+       anonymous landmark in the list costs a reader a stop that tells them
+       nothing. */
+    <div className="lt-bulkbar" aria-live="polite">
       {selection.bar}
     </div>
   );
@@ -403,6 +408,8 @@ function sortState(
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the alternate body owns one guarded paging branch while the table keeps the shared query controls
 export function ListTable<Row>({
+  title,
+  bodyCount,
   rows,
   columns,
   rowKey,
@@ -464,6 +471,17 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body carries its own count and continuation control. */
   bodyOwnsPaging?: boolean;
+  /**
+   * The count sentence for a body that owns its own paging.
+   *
+   * The SLOT is the same either way — a reader looks for "how much is here" in
+   * one place, beside the page's name — and only who can compute it changes: a
+   * paged grid's range is the table's arithmetic, a board's total is the
+   * board's. Without this the board's count was a line of its own under the
+   * toolbar, which read as a caption about the dials above it. Ignored unless
+   * `bodyOwnsPaging`, since otherwise the table's own range is the truth.
+   */
+  bodyCount?: ReactNode;
   onRowClick?: (row: Row) => void;
   /**
    * Where this row lives, as a URL. Turns the identity cell into a link, so a
@@ -471,6 +489,12 @@ export function ListTable<Row>({
    * alone can do neither.
    */
   rowHref?: (row: Row) => string;
+  /**
+   * The page's own name, when this table IS the page. Handed straight to
+   * `ListSurface`, which documents what it costs: a screen that passes it
+   * heads itself and belongs in `SELF_HEADED_SCREENS`.
+   */
+  title?: ReactNode;
   /** Plural noun for the count and the empty state — "contacts", "leads". */
   unit: string;
   /**
@@ -968,22 +992,24 @@ export function ListTable<Row>({
 
   return (
     <ListSurface
+      title={title}
       views={views}
       activeView={activeView}
       onViewChange={applyView}
       count={
-        !pending &&
-        !bodyOwnsPaging && (
-          <CountLine
-            unit={unit}
-            first={from + 1}
-            last={from + pageRows.length}
-            total={rows.length}
-            more={hasMore}
-            narrowed={narrowed}
-            sortedBy={sorted?.header}
-          />
-        )
+        bodyOwnsPaging
+          ? bodyCount
+          : !pending && (
+              <CountLine
+                unit={unit}
+                first={from + 1}
+                last={from + pageRows.length}
+                total={rows.length}
+                more={hasMore}
+                narrowed={narrowed}
+                sortedBy={sorted?.header}
+              />
+            )
       }
       action={action}
       caption={caption}

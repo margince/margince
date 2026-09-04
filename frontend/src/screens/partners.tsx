@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { usePageName } from "../app/pagemeta";
 import {
   Button,
   Card,
@@ -555,6 +556,7 @@ async function fetchPartnersPage(
 
 export function PartnersScreen() {
   const t = useT();
+  const pageName = usePageName("partners");
   const state = useListQuery<Partner>({
     key: "partners",
     fetchPage: fetchPartnersPage,
@@ -563,6 +565,7 @@ export function PartnersScreen() {
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={state}
         unit="unit.partners"
         searchable={false}

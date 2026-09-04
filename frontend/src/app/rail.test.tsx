@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { displayVersion } from "./release";
 import { navigate, type Route } from "./router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
@@ -296,25 +297,20 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
-  // TEMPORARY, with the marker it covers: delete this case in the change that
-  // takes the product out of alpha.
-  //
-  // What it holds is the half that is easy to break — the marker has to survive
-  // the collapse. At 64px the rail drops every label it has, so a release marker
-  // that rode the wordmark would be gone exactly where the product is hardest to
-  // identify. It hangs off the head instead, which is present in both states.
-  it("keeps the release marker in the head at both rail widths", () => {
+  // The half that is easy to break: the version has to survive the collapse. At
+  // 56px the rail drops every label it has, so a build marker that rode the
+  // wordmark would be gone exactly where the product is hardest to identify —
+  // and this is the one line here a reader may need to read back to us.
+  it("names the build at both rail widths", () => {
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(
-      expanded.container.querySelectorAll(".railhead .alphamark"),
-    ).toHaveLength(1);
+    expect(expanded.container.querySelectorAll(".railversion")).toHaveLength(1);
     cleanup();
 
     const collapsed = render(
       <WorkspaceRail route={{ screen: "home" }} collapsed />,
     );
-    const marker = collapsed.container.querySelector(".railhead .alphamark");
-    expect(marker?.textContent).toBe("Alpha");
+    const marker = collapsed.container.querySelector(".railversion");
+    expect(marker?.textContent).toBe(displayVersion());
   });
 
   // The bar is five cells and only three of them are destinations. The agent is
@@ -576,7 +572,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // live installation is in this case — the cases above are the pre-onboarding
   // one — so the heading is the company they work for and the product is the
   // line beneath it.
-  it("heads the rail with the company and puts the product under it", () => {
+  it("heads the rail with the full company logo and puts the product under it", () => {
     const client = newClient();
     client.setQueryData(["company"], {
       organization_id: "11111111-1111-4111-8111-111111111111",
@@ -587,8 +583,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
     const home = screen.getByRole("link", {
       name: "Demo GmbH home, powered by Margince",
     });
-    expect(within(home).getByText("Demo GmbH")).toBeTruthy();
-    expect(within(home).getByText("Powered by Margince")).toBeTruthy();
+    const logo = within(home).getByRole("img", { name: "Demo GmbH" });
+    const image = logo.querySelector("img");
+    if (!image) throw new Error("the company logo image was not rendered");
+    fireEvent.load(image);
+    expect(logo.classList.contains("company-logo")).toBe(true);
+    expect(within(home).getByText("Powered by")).toBeTruthy();
+    expect(within(home).getByText("Margince")).toBeTruthy();
     expect(home.getAttribute("href")).toBe("#/home");
   });
 
@@ -607,7 +608,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelector(".ws-chip img")).toBeNull();
+    expect(container.querySelector(".company-logo img")).toBeNull();
 
     act(() => {
       client.setQueryData(["company"], {
@@ -616,9 +617,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       });
     });
     await waitFor(() =>
-      expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
-        "/v1/organizations/44444444-4444-4444-8444-444444444444/logo",
-      ),
+      expect(
+        container.querySelector(".company-logo img")?.getAttribute("src"),
+      ).toBe("/v1/organizations/44444444-4444-4444-8444-444444444444/logo"),
     );
   });
 
@@ -636,9 +637,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
-      "/v1/organizations/22222222-2222-4222-8222-222222222222/logo",
-    );
+    expect(
+      container.querySelector(".company-logo img")?.getAttribute("src"),
+    ).toBe("/v1/organizations/22222222-2222-4222-8222-222222222222/logo");
   });
 
   // A company whose site declared no icon has a face rather than a gap: the

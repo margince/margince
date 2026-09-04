@@ -15,6 +15,7 @@ package people
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -45,5 +46,25 @@ func TestSetOrganizationLogoRefusesAHalfResolvedWrite(t *testing.T) {
 	if _, _, err := store.SetOrganizationLogo(ctx, orgID, "k", ""); err == nil ||
 		errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a logo with no source URL must be refused by the shape guard — its provenance would be blank, got %v", err)
+	}
+}
+
+func TestLogoURLChangesWithTheStoredRevisionWithoutExposingItsKey(t *testing.T) {
+	orgID := ids.New[ids.OrganizationKind]()
+	firstKey := "workspaces/private/organization_logo/first-revision"
+	secondKey := "workspaces/private/organization_logo/second-revision"
+	first := LogoURL(orgID.UUID, &firstKey)
+	second := LogoURL(orgID.UUID, &secondKey)
+	if first == nil || second == nil {
+		t.Fatal("stored logo keys produced no display URL")
+	}
+	if *first == *second {
+		t.Fatalf("two stored revisions share %q, so a browser can keep the old logo cached", *first)
+	}
+	if !strings.HasPrefix(*first, "/v1/organizations/"+orgID.String()+"/logo?v=") {
+		t.Fatalf("logo URL = %q, want the record endpoint with a revision query", *first)
+	}
+	if strings.Contains(*first, firstKey) {
+		t.Fatalf("the storage key leaked into the display URL %q", *first)
 	}
 }

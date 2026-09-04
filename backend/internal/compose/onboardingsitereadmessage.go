@@ -125,12 +125,7 @@ func (e *deepReadEngine) answerCompanySiteRead(ctx context.Context, message stri
 		return companyReadModelReply{}, err
 	}
 	gate := newCompanyReadGate(message, history, evidence)
-	var response model.Response
-	if structured, ok := e.brain.(validatedBrain); ok {
-		response, err = structured.CompleteValidated(ctx, req, gate.validate)
-	} else {
-		response, err = e.brain.Complete(ctx, req)
-	}
+	response, err := ai.Ask(ctx, e.brain, req, gate.validate)
 	if err != nil {
 		return companyReadModelReply{}, err
 	}

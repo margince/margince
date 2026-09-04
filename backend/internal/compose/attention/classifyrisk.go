@@ -39,8 +39,11 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	row := base(item, level, "deals_at_risk", consequence)
 	// The contract's own per-row figure, sent rather than left for a client to
 	// re-derive from `because`/`above_next` — set only once conversion actually
-	// ran and priced this item, so a raw amount (no FX seam bound) or an
-	// unpriced deal never claims to be a base-currency figure it is not.
+	// ran and priced this item (money.converted() below is the raw-amount
+	// guard). expectedRevenue already answers known=false for a deal with no
+	// amount, an unpriced converted item, or a converted figure with no base
+	// currency named, so this is the one place that answer is spent rather
+	// than a second copy of any of its three reasons.
 	if row.Deal != nil && money.converted() && known {
 		row.Deal.ExpectedMinorBase = &expected
 	}
@@ -120,6 +123,12 @@ func expectedRevenue(item crmcontracts.AttentionItem, money dayMoney) (int64, bo
 	}
 	if !money.converted() {
 		return *item.Deal.AmountMinor, true
+	}
+	// The same guard dayMoney.value already holds for the reason field: a
+	// converted figure with no base currency named is not a smaller answer,
+	// it is no answer, and must not drive a material verdict either.
+	if money.base == "" {
+		return 0, false
 	}
 	converted, priced := money.byItem[item.Id]
 	return converted, priced

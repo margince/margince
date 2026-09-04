@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { Avatar, Button, Modal } from "../design-system/atoms";
+import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { useCompany } from "../screens/onboarding";
@@ -39,7 +40,7 @@ import {
   useNavLevel,
   useNavWalk,
 } from "./navlevel";
-import { PageAsideProvider, PageAsideRegion } from "./pageaside";
+import { PageAsideProvider } from "./pageaside";
 import {
   PAGE_SUB_KEYS,
   resolveTitle,
@@ -47,6 +48,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
+import { displayVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -125,6 +127,27 @@ function BrandBlock() {
       </a>
     );
   }
+  if (installation.logo_url) {
+    return (
+      <a
+        className="ws ws-logo"
+        href="#/home"
+        aria-label={t("shell.companyLogoAria", {
+          company: installation.display_name,
+        })}
+      >
+        <CompanyLogo
+          name={installation.display_name}
+          src={installation.logo_url}
+          fallback={<b>{installation.display_name}</b>}
+        />
+        <span className="ws-org ws-logo-powered">
+          <span>{t("shell.poweredByPrefix")}</span>
+          <span className="ws-logo-product">{t("shell.logoAria")}</span>
+        </span>
+      </a>
+    );
+  }
   return (
     <a
       className="ws"
@@ -143,7 +166,6 @@ function BrandBlock() {
         <Avatar
           identity={installation.organization_id}
           name={installation.display_name}
-          src={installation.logo_url}
           shape="organization"
         />
       </span>
@@ -355,14 +377,6 @@ export function WorkspaceRail({
       >
         <div className="railhead">
           <BrandBlock />
-          {/* TEMPORARY, and the whole element goes when the product leaves
-              alpha: this span, its rule in shell.css, the `shell.alpha` key and
-              the case in rail.test.tsx, together. A ribbon across the head's
-              top-left corner, absolutely positioned so it takes no space and
-              moves nothing — the head is the same box with it and without it —
-              and anchored to the corner rather than to the wordmark, which is
-              what keeps it on screen at 64px where every label is gone. */}
-          <span className="alphamark">{t("shell.alpha")}</span>
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the SAME depth are the same level with
@@ -425,6 +439,17 @@ export function WorkspaceRail({
             <AgentRail route={route} />
           </div>
         )}
+        {/* WHAT BUILD THIS IS, under everything else. It is the alpha marker
+            now: a corner ribbon across the brand said the product is
+            unfinished and nothing else, where a version says that AND which
+            build a reader is looking at — which is the thing worth having in
+            front of somebody the first time they see the product.
+            It stays at 64px, where every label in the panel is gone: the
+            sentence is four characters wide and it is the one line here that a
+            reader may need to read back to us. It goes on a drilled-in level
+            too, because it is a fact about the BUILD rather than about the
+            level, and at phone width there is no column to have a foot. */}
+        {!phone && <p className="railversion">{displayVersion()}</p>}
       </nav>
     </>
   );
@@ -839,9 +864,9 @@ export function Shell({
   };
 
   return (
-    // The provider spans the whole chrome, because the column and the screen
-    // that fills it are on opposite sides of the tree: the region is a sibling
-    // of <main>, the content comes from a screen inside it.
+    // The provider spans the whole chrome, because the details pane's memory
+    // — open or folded — outlives the screen that draws it: the switch and
+    // the pane are the record's, the preference is the reader's.
     <PageAsideProvider>
       <div className={collapsed ? "app" : "app railexpanded"}>
         <SkipToContent target={scroller} />
@@ -889,11 +914,6 @@ export function Shell({
             {children}
           </div>
         </main>
-        {/* The page's context column — a column of the WINDOW, beside the work
-          rather than inside it, so it runs the full height past the page's own
-          header and does not move when a tab changes. A screen that fills none
-          leaves nothing here. */}
-        <PageAsideRegion />
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
           person is working in, and a contour that stopped at the sidebar would

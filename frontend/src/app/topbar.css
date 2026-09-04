@@ -70,7 +70,13 @@
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--textMeta);
-  cursor: pointer;
+  /* The cursor says which way the panel will move, the way a pane divider does:
+     expanded this control narrows the sidebar, collapsed it widens it. `pointer`
+     said only "pressable", which every control in the bar already is. */
+  cursor: w-resize;
+}
+.topbar-toggle[aria-expanded="false"] {
+  cursor: e-resize;
 }
 .topbar-toggle:hover {
   background: var(--bgHover);

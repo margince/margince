@@ -140,6 +140,24 @@ seed_everything
 COOKIES="$WORK/cookies"
 MCP_CONFIG="$WORK/mcp.json"
 
+# MCP_SERVER is the name this lane registers its throwaway server under, and the
+# name is load-bearing.
+#
+# The CLI keeps a per-project list of MCP servers an operator has turned off, and
+# it is keyed on the server's NAME. A plain product name is what a developer
+# calls their own hand-wired server, so a lane using one inherits whatever
+# enable/disable state that developer left behind: the server comes up disabled,
+# the assistant is handed zero tools, and the checker reports every scenario as
+# "the answer was not drawn from Margince" — the product blamed for one line of
+# somebody's local configuration.
+#
+# Neither obvious escape works. --strict-mcp-config ignores other
+# CONFIGURATIONS, not the disable list; and the server cannot be re-enabled from
+# the interactive MCP dialog, because it is injected at runtime and so is never
+# a CONFIGURED server — only its disable entry persists. So the lane takes a
+# name nobody would hand-wire, and the guard in run_once catches the next cause.
+MCP_SERVER=margince_e2e_llm
+
 # mint_passport signs in and writes the MCP config.
 #
 # It is a FUNCTION and not a one-time step because dev-fresh drops and
@@ -165,9 +183,10 @@ except Exception: print("")')"
   [ -n "$PASSPORT" ] || { echo "could not mint a passport" >&2; exit 1; }
 
   python3 -c 'import json,sys
-cfg = {"mcpServers": {"margince": {"type": "http", "url": sys.argv[1] + "/mcp",
+cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
        "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
-open(sys.argv[3], "w").write(json.dumps(cfg))' "$APP_BASE" "$PASSPORT" "$MCP_CONFIG"
+open(sys.argv[3], "w").write(json.dumps(cfg))' \
+    "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
 
   # A config the CLI cannot connect with produces an assistant with no tools,
   # which reads downstream as a model that chose not to call anything. Fail
@@ -205,7 +224,7 @@ run_once() {
   claude -p "$(cat "$prompt_file")" \
     --model "$E2E_LLM_MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
-    --allowedTools "mcp__margince__*" --tools "" \
+    --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
     --permission-mode dontAsk \
     --output-format stream-json --verbose \
     --max-turns 20 \
@@ -216,6 +235,42 @@ run_once() {
   if [ ! -s "$out" ]; then
     echo "  the CLI produced no transcript:" >&2
     head -5 "$out.err" >&2
+    return 1
+  fi
+
+  # THE SERVER HAS TO BE CONNECTED, and the passport probe above does not
+  # establish it. That probe talks to the stack directly; this asks the CLI what
+  # it actually attached, which is a different question with its own answers.
+  #
+  # MCP_SERVER's comment above covers the `disabled` cause and how the name now
+  # prevents it. This guard is not about that cause: the next reason a server
+  # fails to attach will be a different one, and what makes any of them
+  # expensive is not the cause but that the lane reports it as the product
+  # failing.
+  local status
+  status="$(python3 -c '
+import json, sys
+want = sys.argv[2]
+for line in open(sys.argv[1]):
+    try: event = json.loads(line)
+    except ValueError: continue
+    if event.get("type") == "system" and event.get("mcp_servers") is not None:
+        for server in event["mcp_servers"]:
+            if server.get("name") == want:
+                print(server.get("status", "absent"))
+                break
+        else:
+            print("absent")
+        break
+else:
+    print("no-system-line")
+' "$out" "$MCP_SERVER")"
+  if [ "$status" != "connected" ]; then
+    echo "  the $MCP_SERVER MCP server is '$status', not connected — the assistant was offered" >&2
+    echo "  no Margince tools at all, so every scenario would fail for a reason that is not the" >&2
+    echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
+    echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
+    echo "  not override; anything else points at the stack or the passport." >&2
     return 1
   fi
 }

@@ -184,12 +184,19 @@ func TestARoleWithNoViewProviderComposesTheRestAndServesIt(t *testing.T) {
 	for _, r := range composed.Resources(context.Background()) {
 		published[r.URI] = true
 	}
-	// Two documents are NOT conditional. The write vocabulary is composed from
+	// Three documents are NOT conditional. The write vocabulary is composed from
 	// the contract alone, so no deployment can lack it and a role that dropped
 	// it would leave both write tools pointing at nothing; capabilities is
 	// derived from the registry the transport already holds, so no role can
-	// serve tools and fail to describe them.
-	want := []string{"margince://schema/query", agents.RecordFieldsURI, agents.CapabilitiesURI}
+	// serve tools and fail to describe them; and the report vocabulary comes
+	// from the engine's compile-time catalog, which run_report is registered
+	// against on every build.
+	want := []string{
+		"margince://schema/query",
+		agents.RecordFieldsURI,
+		agents.CapabilitiesURI,
+		agents.ReportVocabularyURI,
+	}
 	if len(published) != len(want) {
 		t.Fatalf("the composed surface published %v, want exactly %v", published, want)
 	}
@@ -217,5 +224,15 @@ func TestARoleWithNoViewProviderComposesTheRestAndServesIt(t *testing.T) {
 	}
 	if !json.Valid([]byte(capabilities.Text)) {
 		t.Errorf("capabilities served %q, which no client can parse", capabilities.Text)
+	}
+	// And the report vocabulary, which run_report's own description names — a
+	// tool pointing at a catalogue entry no read can follow is the dead end the
+	// pointer gates exist to prevent.
+	reports, err := composed.ReadResource(context.Background(), agents.ReportVocabularyURI)
+	if err != nil {
+		t.Fatalf("the report vocabulary is advertised but cannot be read: %v", err)
+	}
+	if !json.Valid([]byte(reports.Text)) {
+		t.Errorf("the report vocabulary served %q, which no client can parse", reports.Text)
 	}
 }

@@ -56,7 +56,8 @@ func resolveActingMirrorUserID(ctx context.Context, tx pgx.Tx) (ids.UUID, error)
 		return ids.UUID{}, errors.New("overlay: no principal bound to context")
 	}
 	var mapped ids.UUID
-	err := tx.QueryRow(ctx,
+	err := tx.QueryRow(
+		ctx,
 		`SELECT app_user_id FROM mirror_user_map WHERE app_user_id = $1 LIMIT 1`,
 		actor.UserID,
 	).Scan(&mapped)

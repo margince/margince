@@ -21,6 +21,9 @@ type HeldThread = components["schemas"]["HeldThread"];
 const MIXED: HeldThread[] = [
   // Pending leads, which is the ordering the endpoint guarantees and the whole
   // reason this page is worth opening during an outage.
+  // Each readable row carries its activity_id beside its subject. The two come
+  // through the same content clause on the server, so a fixture with one and
+  // not the other draws the withheld reading over a subject it was given.
   {
     thread_key: "t-1",
     status: "pending",
@@ -28,6 +31,7 @@ const MIXED: HeldThread[] = [
     attempts: 4,
     has_message: true,
     subject: "Angebot Q4 — Rückfragen",
+    activity_id: "01a05500-0000-7000-8000-0000000000a1",
     occurred_at: "2026-08-30T09:12:00Z",
   },
   {
@@ -38,6 +42,7 @@ const MIXED: HeldThread[] = [
     has_message: true,
     kind: "legal",
     subject: "Entwurf Aufhebungsvertrag",
+    activity_id: "01a05500-0000-7000-8000-0000000000a2",
     occurred_at: "2026-08-29T15:40:00Z",
   },
   {
@@ -47,7 +52,21 @@ const MIXED: HeldThread[] = [
     attempts: 2,
     has_message: true,
     subject: "Re: Termin",
+    activity_id: "01a05500-0000-7000-8000-0000000000a3",
     occurred_at: "2026-08-28T11:02:00Z",
+  },
+  // A message held by this seat that this seat may not READ: somebody else's
+  // personnel mail, on a thread they are holding. It exists — so it is not the
+  // erased row below — and neither its subject nor its id crossed the content
+  // clause, so it names itself and offers nothing.
+  {
+    thread_key: "t-5",
+    status: "held",
+    pending: false,
+    attempts: 1,
+    has_message: true,
+    kind: "personnel",
+    occurred_at: "2026-08-28T08:15:00Z",
   },
   // The verdict outlives its evidence: an erasure inside the window nulls the
   // activity and the hold stands. The row says the message is gone rather than
