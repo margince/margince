@@ -3204,6 +3204,7 @@ export function ChannelReplyAction({
   entityType,
   entityId,
   personId,
+  contentWithheld,
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
@@ -3211,6 +3212,10 @@ export function ChannelReplyAction({
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  // The row's content is not this reader's to see. The verb still works —
+  // writing to the contact is not reading their mail — but it is not a REPLY,
+  // and calling it one claims access to the message being answered.
+  contentWithheld?: boolean;
 }>) {
   const t = useT();
   const [reply, setReply] = useState(false);
@@ -3225,7 +3230,7 @@ export function ChannelReplyAction({
   return (
     <>
       <Button small onClick={() => setReply(true)}>
-        {t("compose.reply")}
+        {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
       </Button>
       {reply && (
         <ComposeModal

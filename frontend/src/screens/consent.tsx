@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import {
   Badge,
   Button,
@@ -186,11 +186,13 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
 // surface verbatim (a DOI-required purpose 422s here rather than silently
 // no-opping) so the human sees exactly why the toggle didn't take.
 function ConsentRow({
+  mayWrite,
   personId,
   entry,
   purpose,
   events,
 }: Readonly<{
+  mayWrite: boolean;
   personId: string;
   entry: PersonConsentState;
   purpose: ConsentPurpose | undefined;
@@ -245,7 +247,7 @@ function ConsentRow({
             is what disappears — the server refuses it, because only the subject
             can confirm a purpose that requires the round trip, so offering the
             button would promise something every click fails to do. */}
-        {(granted || !requiresDoi) && (
+        {mayWrite && (granted || !requiresDoi) && (
           <Button
             small
             disabled={setState.isPending}
@@ -265,7 +267,15 @@ function ConsentRow({
   );
 }
 
-export function ConsentSection({ personId }: Readonly<{ personId: string }>) {
+export function ConsentSection({
+  personId,
+  person,
+}: Readonly<{ personId: string; person?: { readonly writable?: boolean } }>) {
+  // Every verb in this section writes to the PERSON, so they share one
+  // decision: the role's grant and this row's own `writable`. Absent fails
+  // closed, which is what a section rendered before its record has loaded
+  // should do — an editor drawn on a maybe is a control the save refuses.
+  const mayWrite = useCanWriteRecord("person", person);
   const t = useT();
   const consentQuery = usePersonConsent(personId);
   const purposesQuery = useConsentPurposes();
@@ -303,6 +313,7 @@ export function ConsentSection({ personId }: Readonly<{ personId: string }>) {
         <div>
           {consent.state.map((entry) => (
             <ConsentRow
+              mayWrite={mayWrite}
               key={entry.purpose_id}
               personId={personId}
               entry={entry}
@@ -335,7 +346,11 @@ export function ConsentSection({ personId }: Readonly<{ personId: string }>) {
           asked for, and React would otherwise reuse this component across a
           navigation between two cached contacts and leave the previous
           contact's address sitting under the new record. */}
-      <ConfirmDetailsAction key={personId} personId={personId} />
+      <ConfirmDetailsAction
+        key={personId}
+        personId={personId}
+        mayWrite={mayWrite}
+      />
     </Card>
   );
 }
@@ -364,11 +379,13 @@ function sentenceFor(
  * its own: the answer came from the subject's mailbox. So this surface offers
  * the act and reports where it went, and cannot aim it anywhere.
  */
-function ConfirmDetailsAction({ personId }: Readonly<{ personId: string }>) {
+function ConfirmDetailsAction({
+  personId,
+  mayWrite,
+}: Readonly<{ personId: string; mayWrite: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const mayAsk = useCanWrite("person", "update");
   const ask = useMutation({
     // Keyed on the person, so a result belongs to the record it was asked
     // about. React reuses this component across a navigation between two
@@ -388,7 +405,7 @@ function ConfirmDetailsAction({ personId }: Readonly<{ personId: string }>) {
     },
   });
 
-  if (!mayAsk) {
+  if (!mayWrite) {
     return null;
   }
   return (

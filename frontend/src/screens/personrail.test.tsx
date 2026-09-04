@@ -54,6 +54,10 @@ const person: components["schemas"]["Person"] = {
   captured_by: "human:u-1",
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
+  // The server's own per-row answer, which the rail's edit affordances ask
+  // for. Absent it, this fixture describes a contact this reader may not
+  // write, and every editor correctly disappears.
+  writable: true,
 };
 
 function inboundEmail(): Activity {

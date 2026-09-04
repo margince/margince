@@ -327,7 +327,7 @@ export const vi = {
   "share.downgradeConfirm": "Giảm xuống {to}",
   "share.seatCeiling":
     "Chỗ ngồi này chỉ đọc nên không thể nhận quyền ghi trên một bản ghi. Hãy nâng cấp chỗ ngồi trước, hoặc chỉ cấp quyền đọc.",
-  "share.whoHasAccess": "Ai có quyền truy cập",
+  "share.whoHasAccess": "Chia sẻ cụ thể",
   "share.grantedBy": "cấp bởi",
   "share.revoke": "Thu hồi",
   "share.revokeConfirm":
@@ -3026,7 +3026,15 @@ export const vi = {
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
+  "personAccess.title": "Ai xem được liên hệ này",
+  "personAccess.privateToYou":
+    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
+  "personAccess.organization":
+    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "personAccess.share": "Chia sẻ với tổ chức",
+  "personAccess.published": "Tổ chức đã xem được liên hệ này.",
   "compose.reply": "Trả lời",
+  "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
   "compose.draftWithAi": "Soạn bằng AI",
   "compose.drafting": "Đang soạn…",

@@ -80,6 +80,7 @@ export function TimelineActions({
         entityType={entityType}
         entityId={entityId}
         personId={personId}
+        contentWithheld={activity.content_state === "withheld"}
       />
       {extra?.(activity)}
       <Button small onClick={() => setRelink(true)}>

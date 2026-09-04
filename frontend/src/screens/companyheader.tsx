@@ -3,7 +3,7 @@ import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
+import { useCanWrite, useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
@@ -322,10 +322,10 @@ export function CompanyLifecycleControl({
   org,
 }: Readonly<{ org: Organization }>) {
   const t = useT();
-  // useCanWrite, not useCan: these controls issue a PATCH, and the licensing
-  // middleware refuses a mutation from a read seat before RBAC is consulted.
+  // useCanWriteRecord, not useCanWrite: the grant and the seat say this ROLE
+  // may change accounts, and the row says whether this one is theirs to change.
   // Gating on the grant alone offers an active control whose save is rejected.
-  const canUpdate = useCanWrite("organization", "update");
+  const canUpdate = useCanWriteRecord("organization", org);
   const readOnlyReason = useCompanyReadOnlyReason(org);
   const patch = useCompanyFieldPatch(org);
   return (
@@ -388,10 +388,17 @@ export function CompanyOwnerControl({
   hideLabel,
 }: Readonly<{ org: Organization; hideLabel?: boolean }>) {
   const t = useT();
-  // useCanWrite, not useCan: these controls issue a PATCH, and the licensing
-  // middleware refuses a mutation from a read seat before RBAC is consulted.
-  // Gating on the grant alone offers an active control whose save is rejected.
-  const canUpdate = useCanWrite("organization", "update");
+  // Two different questions, deliberately.
+  //
+  // Changing the owner of an OWNED account is a write to that row, so it takes
+  // the row's own answer. Claiming an UNOWNED one cannot: `writable` is false
+  // precisely because nobody owns it yet, and gating the claim on it would
+  // close the only door out of that state. The claim is its own authority and
+  // the server holds it — this is the grant plus the seat, which is what the
+  // claim endpoint itself requires.
+  const canClaim = useCanWrite("organization", "update");
+  const canUpdate =
+    useCanWriteRecord("organization", org) || (!org.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(org);
   const patch = useCompanyFieldPatch(org);
   const claim = useClaimRecord("organization", org.id, org.version);

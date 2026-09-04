@@ -320,7 +320,7 @@ export const de = {
   "share.downgradeConfirm": "Auf {to} reduzieren",
   "share.seatCeiling":
     "Dieser Sitzplatz ist nur lesend und kann daher keinen Schreibzugriff auf einen Datensatz erhalten. Erhöhen Sie zuerst die Sitzplatzstufe, oder gewähren Sie Lesezugriff.",
-  "share.whoHasAccess": "Wer hat Zugriff",
+  "share.whoHasAccess": "Ausdrücklich geteilt",
   "share.grantedBy": "gewährt von",
   "share.revoke": "Widerrufen",
   "share.revokeConfirm":
@@ -3058,7 +3058,14 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
+  "personAccess.title": "Wer diesen Kontakt sieht",
+  "personAccess.privateToYou":
+    "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
+  "personAccess.organization": "Alle im Unternehmen sehen diesen Kontakt.",
+  "personAccess.share": "Mit dem Unternehmen teilen",
+  "personAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
   "compose.reply": "Antworten",
+  "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.draftWithAi": "Mit KI entwerfen",
   "compose.drafting": "Wird entworfen…",

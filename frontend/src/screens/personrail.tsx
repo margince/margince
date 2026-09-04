@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan, useCanWriteRecord } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
@@ -51,6 +51,7 @@ import { problemMessageOf, throwProblem, useSorMode } from "./common";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
+import { PersonAccess } from "./personaccess";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import { consentWord } from "./personreadings";
 import { personTabRoute } from "./persontab";
@@ -158,9 +159,12 @@ export function PersonRail({
       <WhoKnows view={view} firstName={firstName} />
       <SignalsAndRisks view={view} />
       <ConsentAndChannels view={view} guard={guard} />
-      {/* Beside consent, because it is the same subject from the seat's own
-          side: consent says what this contact allows us to send, the hold
-          says what the seat is willing for colleagues to read. */}
+      {/* Three neighbours answering three halves of one question, in the
+          order a reader asks them: who can see this RECORD, what this contact
+          allows us to send, and what the seat is willing for colleagues to
+          read of their own mail with them. They were easy to confuse while
+          only two of them were on the page. */}
+      <PersonAccess person={view.person} />
       <PersonHoldSection view={view} />
       <PersonTagsSection view={view} />
       <RecentActivity view={view} onOpenEmail={onOpenEmail} />
@@ -472,7 +476,10 @@ function PhoneRow({ person }: Readonly<{ person: Person }>) {
 function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const person = view.person;
-  const canUpdate = useCan("person", "update");
+  // useCanWriteRecord, not useCan: the object grant says this ROLE may edit
+  // contacts, and the row says whether this one is theirs to edit. Offering an
+  // editor on a colleague's record produces a form the save refuses.
+  const canUpdate = useCanWriteRecord("person", person);
   const readOnlyReason = usePersonReadOnlyReason(person);
   const patch = usePersonFieldPatch(person);
   const row: DetailsRowProps = {
@@ -650,10 +657,10 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const person = view.person;
   const readOnlyReason = usePersonReadOnlyReason(person);
-  // The same grant and the same read-only reasons DetailsGrid gates its own
+  // The same decision and the same read-only reasons DetailsGrid gates its own
   // edit affordances on — a reader who cannot edit the person's own fields
   // cannot edit which company they work at either.
-  const canEdit = useCan("person", "update") && !readOnlyReason;
+  const canEdit = useCanWriteRecord("person", person) && !readOnlyReason;
   const actions = useEmploymentActions(person.id);
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Employment | null>(null);

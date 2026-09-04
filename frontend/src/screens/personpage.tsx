@@ -65,6 +65,7 @@ import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
 import { RecordReading, RecordReadingPair } from "./record360";
 import { EmailVerb, RecordEmailAside } from "./recordemail";
+import { ShareAction } from "./share";
 import "./person360.css";
 import { buyingRoleLabel } from "./companypeople/summary";
 
@@ -502,7 +503,7 @@ export function PersonPageV2({
             {/* What this person has agreed to, and the one way to ask them
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
-            <ConsentSection personId={id} />
+            <ConsentSection personId={id} person={view.data.person} />
             {/* The fields Margince read off a signature or a card, and the
                 one place a reader can confirm or correct them. */}
             <EnrichedFields personId={id} view={view.data} />
@@ -1038,6 +1039,10 @@ function PersonActions({
         >
           {t("record.fullHistory")}
         </Button>
+        {/* Companies, deals, leads and projects all carry this. A contact did
+            not, so the one record type most likely to be private to one seat
+            was the one with no way to hand it to a colleague. */}
+        <ShareAction recordType="person" recordId={personId} />
       </OverflowMenu>
     </>
   );
