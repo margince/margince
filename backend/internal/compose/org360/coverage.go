@@ -75,6 +75,8 @@ func summarise(all []people.ContactStrength) crmcontracts.OrganizationCoverageSu
 	out := crmcontracts.OrganizationCoverageSummary{ContactsTotal: len(all)}
 	for _, c := range all {
 		switch people.EngagementOf(c.Strength) {
+		case people.EngagementWaiting:
+			out.Waiting++
 		case people.EngagementAnswered:
 			out.Answered++
 		case people.EngagementNoReply:

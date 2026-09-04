@@ -1640,6 +1640,7 @@ export const en = {
   "co.people.band.noWayInWhy":
     "Everyone here was written to and nobody replied",
   "co.people.band.showAnswered": "Show who answered",
+  "co.people.band.showWaiting": "Show who is waiting",
   "co.people.band.committee": "Buying team",
   "co.people.band.missing": "No {role}",
   "co.people.band.committeeComplete": "Champion and economic buyer named",
@@ -1679,6 +1680,7 @@ export const en = {
   "co.people.map.account": "Account",
   "co.people.map.missing": "{role} missing",
   "co.people.map.awaiting": "awaiting reply",
+  "co.people.map.owed": "reply owed",
   "co.people.map.replied": "they replied",
   "co.people.map.never": "never written to",
   "co.people.map.onDeal": "on the deal",
@@ -1716,6 +1718,7 @@ export const en = {
   "co.people.board.confirm": "Confirm",
   "co.people.board.confirming": "Confirming",
   "co.people.board.change": "Change role",
+  "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",

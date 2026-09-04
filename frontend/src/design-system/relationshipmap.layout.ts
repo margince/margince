@@ -17,7 +17,7 @@ export type MapNodeKind = "user" | "person" | "organization" | "deal" | "gap";
  */
 export type MapBand = "strong" | "developing" | "cold";
 
-export type MapEngagement = "answered" | "no_reply" | "untried";
+export type MapEngagement = "waiting" | "answered" | "no_reply" | "untried";
 
 export type MapNode = Readonly<{
   id: string;

@@ -18,11 +18,15 @@ package people
 
 import "sort"
 
-// Engagement is one contact's state, in the three values a rep acts on.
+// Engagement is one contact's state, in the four values a rep acts on.
 type Engagement string
 
 const (
-	// EngagementAnswered — they have written back inside the window. The way in.
+	// EngagementWaiting — their latest message has no reply from us. They are
+	// waiting on us, and answering is the obvious next move.
+	EngagementWaiting Engagement = "waiting"
+	// EngagementAnswered — we replied to their latest message. The conversation
+	// is current from our side; the ball is with them.
 	EngagementAnswered Engagement = "answered"
 	// EngagementNoReply — we have written and had nothing back. Following up
 	// again is a decision, not a default.
@@ -32,18 +36,27 @@ const (
 	EngagementUntried Engagement = "untried"
 )
 
-// EngagementOf reads the state off the §4 direction counts, which are already
-// folded over the same 90-day window the score uses.
+// EngagementOf reads the state off the §4 fold: the direction counts say
+// whether each side has written inside the 90-day window, and the two last-touch
+// dates say who wrote LAST — which is what separates answered from waiting.
 //
-// Inbound wins over outbound rather than being combined with it: a contact who
-// replied last month and was chased again last week has both, and what decides
-// the next move is that they answered. The window is the fold's, so a reply
-// older than it reads as untried — deliberately, because a year-old reply is
-// not a way in.
+// Answered requires an outbound AFTER their latest inbound, not merely both
+// directions having traffic: a contact whose only mail arrived unprompted has
+// inbound and no reply from us, and reporting that as answered dresses the
+// account's most urgent row up as a success. The window is the fold's, so a
+// conversation older than it reads as untried — deliberately, because a
+// year-old exchange is not a way in.
+//
+// The account-level state strip answers the sibling question ("whose move is
+// the ACCOUNT") with its own age thresholds; this is per contact and has none,
+// because a mail from yesterday is already theirs to be answered.
 func EngagementOf(rs RelationshipStrength) Engagement {
 	switch {
 	case rs.Inbound90d > 0:
-		return EngagementAnswered
+		if rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound) {
+			return EngagementAnswered
+		}
+		return EngagementWaiting
 	case rs.Outbound90d > 0:
 		return EngagementNoReply
 	default:
@@ -53,15 +66,17 @@ func EngagementOf(rs RelationshipStrength) Engagement {
 
 // engagementOrder puts the people worth acting on first.
 //
-// Whoever answered leads, because they are the way in. Untried comes SECOND: on
-// an account where everyone has gone quiet, the person nobody has written to is
-// the only move left that is not a fourth follow-up. No-reply comes last — not
-// because those contacts are worthless, but because acting on one is the move
-// that needs a reason.
+// Whoever is waiting on us leads, because answering them is the one move that
+// is already owed. Answered comes next: that conversation is alive and worth
+// keeping so. Untried comes THIRD: on an account where everyone has gone
+// quiet, the person nobody has written to is the only move left that is not a
+// fourth follow-up. No-reply comes last — not because those contacts are
+// worthless, but because acting on one is the move that needs a reason.
 var engagementOrder = map[Engagement]int{
-	EngagementAnswered: 0,
-	EngagementUntried:  1,
-	EngagementNoReply:  2,
+	EngagementWaiting:  0,
+	EngagementAnswered: 1,
+	EngagementUntried:  2,
+	EngagementNoReply:  3,
 }
 
 // RankContacts sorts a contact set into triage order in place: engagement

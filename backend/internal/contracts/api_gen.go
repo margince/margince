@@ -3666,6 +3666,7 @@ const (
 	ContactEngagementAnswered ContactEngagement = "answered"
 	ContactEngagementNoReply  ContactEngagement = "no_reply"
 	ContactEngagementUntried  ContactEngagement = "untried"
+	ContactEngagementWaiting  ContactEngagement = "waiting"
 )
 
 // Valid indicates whether the value is a known member of the ContactEngagement enum.
@@ -3676,6 +3677,8 @@ func (e ContactEngagement) Valid() bool {
 	case ContactEngagementNoReply:
 		return true
 	case ContactEngagementUntried:
+		return true
+	case ContactEngagementWaiting:
 		return true
 	default:
 		return false
@@ -19327,14 +19330,21 @@ type ConsumerMailDomainListResponse struct {
 }
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
-// score uses.
+// score uses. What decides between the two conversational states is who wrote
+// LAST, not whether both directions have traffic.
 //
-// `answered` — they have written back inside the window. The way in.
+// `waiting` — their latest message has no reply from us. They are waiting on us,
+// and answering is the obvious next move.
+// `answered` — we replied to their latest message. The conversation is current
+// from our side; the ball is with them.
 // `no_reply` — we have written and had nothing back. Writing again is a decision.
 // `untried` — nobody has written to them at all. Free to approach.
 //
-// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-// ignored" look identical in a roster and call for opposite next actions.
+// Waiting is deliberately not folded into answered: one inbound mail nobody has
+// replied to is not a success, and showing it as one hides the account's most
+// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+// "asked and ignored" look identical in a roster and call for opposite next
+// actions.
 type ContactEngagement string
 
 // ContextEntityRef defines model for ContextEntityRef.
@@ -25575,14 +25585,21 @@ type OrganizationBriefSentenceNature string
 // OrganizationContact defines model for OrganizationContact.
 type OrganizationContact struct {
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement ContactEngagement `json:"engagement"`
 	FullName   string            `json:"full_name"`
 
@@ -25661,14 +25678,21 @@ type OrganizationCoverageDeal struct {
 // ranking the contact list opens on.
 type OrganizationCoverageRoute struct {
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement    ContactEngagement  `json:"engagement"`
 	FullName      string             `json:"full_name"`
 	LastInboundAt *time.Time         `json:"last_inbound_at,omitempty"`
@@ -25694,14 +25718,21 @@ type OrganizationCoverageSeat struct {
 	AiSuggested *bool `json:"ai_suggested,omitempty"`
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement *ContactEngagement `json:"engagement,omitempty"`
 	FullName   string             `json:"full_name"`
 	PersonId   openapi_types.UUID `json:"person_id"`
@@ -25743,7 +25774,7 @@ type OrganizationCoverageSeat struct {
 
 // OrganizationCoverageSummary defines model for OrganizationCoverageSummary.
 type OrganizationCoverageSummary struct {
-	// Answered Contacts who have written back inside the 90-day window.
+	// Answered Contacts whose latest message we replied to inside the 90-day window.
 	Answered int `json:"answered"`
 
 	// ContactsTotal Every contact the caller may see at this account, not a page of them.
@@ -25754,6 +25785,9 @@ type OrganizationCoverageSummary struct {
 
 	// Untried Contacts nobody has written to at all.
 	Untried int `json:"untried"`
+
+	// Waiting Contacts whose latest message we have not replied to.
+	Waiting int `json:"waiting"`
 }
 
 // OrganizationDomain defines model for OrganizationDomain.
