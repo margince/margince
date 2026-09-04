@@ -111,9 +111,7 @@ describe("ImapConnectPanel", () => {
       screen.getByRole("button", { name: /test and connect/i }),
     );
     await screen.findByText(/mailbox connected/i);
-    await userEvent.click(
-      screen.getByRole("button", { name: /enter your crm/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /^continue$/i }));
     expect(onComplete).toHaveBeenCalledWith(false);
   });
 
@@ -383,9 +381,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     expect(statusReads).toEqual([]);
     // The backread owns the exit while it runs; a second "enter" button beside
     // it would finish the step without the read's own leave copy.
-    expect(
-      screen.queryByRole("button", { name: /enter your crm/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^continue$/i })).toBeNull();
   });
 
   it("asks for the window when the mailbox has no read yet", async () => {
@@ -416,9 +412,27 @@ describe("OAuthReturnPanel handing off to the backread", () => {
 
     await screen.findByText("We couldn't confirm the connection.");
     expect(
-      screen.getByRole("button", { name: /enter your crm/i }),
+      screen.getByRole("button", { name: /^continue$/i }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/How far back should I read/)).toBeNull();
+  });
+
+  // A roster that never answered is not evidence of anything. `live` is
+  // `undefined` for a failed query exactly as it is for an empty one, so
+  // without this gate a transient 500 records the step as deliberately
+  // skipped — a choice the reader did not make, on the strength of a request
+  // that came back with nothing to say. The stage's own exit stays available;
+  // it just belongs to the reader.
+  it("withholds the Enter CRM escape when the roster query failed", async () => {
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ title: "boom" }, 500),
+    });
+    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+
+    await screen.findByText("We couldn't confirm the connection.");
+    expect(
+      screen.queryByRole("button", { name: /^continue$/i }),
+    ).not.toBeInTheDocument();
   });
 
   // Without this gate the escape reads on `live === undefined`, which is also
@@ -440,53 +454,12 @@ describe("OAuthReturnPanel handing off to the backread", () => {
 
     await screen.findByText("Confirming the connection…");
     expect(
-      screen.queryByRole("button", { name: /enter your crm/i }),
+      screen.queryByRole("button", { name: /^continue$/i }),
     ).not.toBeInTheDocument();
 
     deferred.resolve?.(jsonResponse({ data: [] }));
     expect(
-      await screen.findByRole("button", { name: /enter your crm/i }),
+      await screen.findByRole("button", { name: /^continue$/i }),
     ).toBeInTheDocument();
-  });
-
-  // The confirmation callback is how the act above knows whether the honest
-  // skip/retry exit still has to stay open — it must never fire `true` before
-  // a live mailbox for THIS returning provider is actually found.
-  it("tells the caller only once a live mailbox is confirmed, never while unresolved", async () => {
-    installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
-    const onConfirmedChange = vi.fn();
-    render(
-      <OAuthReturnPanel
-        outcome="ok"
-        onComplete={vi.fn()}
-        onConfirmedChange={onConfirmedChange}
-      />,
-    );
-
-    await screen.findByText("We couldn't confirm the connection.");
-    expect(onConfirmedChange).toHaveBeenCalledWith(false);
-    expect(onConfirmedChange).not.toHaveBeenCalledWith(true);
-  });
-
-  it("tells the caller true once the roster confirms a live mailbox", async () => {
-    installFetchStub({
-      "GET /connectors": rosterWith({ state: "none" }),
-      "POST /connectors/gmail/backfill/preview": () =>
-        jsonResponse({
-          window: "6m",
-          estimated_messages: 10,
-          computed_at: "2026-07-31T09:00:00Z",
-        }),
-    });
-    const onConfirmedChange = vi.fn();
-    render(
-      <OAuthReturnPanel
-        outcome="ok"
-        onComplete={vi.fn()}
-        onConfirmedChange={onConfirmedChange}
-      />,
-    );
-
-    await waitFor(() => expect(onConfirmedChange).toHaveBeenCalledWith(true));
   });
 });

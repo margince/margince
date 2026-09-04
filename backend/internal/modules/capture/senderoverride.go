@@ -102,6 +102,12 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	}
 	var out SenderOverride
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The same key every reader of this decision takes, so a seat recording
+		// one cannot land between a reader's look and the act it drives.
+		if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
+			senderOverrideIdentity(actor.UserID, folded)); err != nil {
+			return err
+		}
 		// The kind the machine had reached, read BEFORE the write so the page
 		// can say what was overruled. A person who sees only their own answer
 		// cannot tell a correction from a preference they set months ago.
@@ -206,10 +212,30 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 // THE VERDICT ENGINE CONSULTS THIS FIRST and never writes over it. A machine
 // that could overturn a person would make every correction temporary, and the
 // owner would have no way to tell a fresh mistake from one they already fixed.
+// senderOverrideEntity and senderOverrideIdentity spell the serialization key
+// ONCE. Two writers of one lock key that disagree by a character take two
+// different locks and serialize nothing, while looking exactly like code that
+// does — which is the failure this key exists to prevent, in its own mechanism.
+const senderOverrideEntity = "capture_sender_override"
+
+func senderOverrideIdentity(user ids.UUID, foldedAddress string) string {
+	return user.String() + ":" + foldedAddress
+}
+
 func OverrideForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string) (string, error) {
 	folded := normalizeEmail(address)
 	if user == ids.Nil || folded == "" {
 		return "", nil
+	}
+	// Locked, not merely read. A caller that acts on this answer — the verdict
+	// engine does, and its effects reach the whole workspace — needs the
+	// decision to hold until it commits. Under READ COMMITTED a Set() in its
+	// own transaction commits between this read and that write, and the answer
+	// acted on was already stale. Reentrant, so Set may take it and then write
+	// through here without deadlocking.
+	if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
+		senderOverrideIdentity(user, folded)); err != nil {
+		return "", err
 	}
 	var decision string
 	err := tx.QueryRow(ctx, `

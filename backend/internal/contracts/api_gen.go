@@ -2344,6 +2344,51 @@ func (e CaptureOwnerIdentitySource) Valid() bool {
 	}
 }
 
+// Defines values for CaptureProviderAvailabilityProvider.
+const (
+	CaptureProviderAvailabilityProviderGmail CaptureProviderAvailabilityProvider = "gmail"
+	CaptureProviderAvailabilityProviderGraph CaptureProviderAvailabilityProvider = "graph"
+	CaptureProviderAvailabilityProviderImap  CaptureProviderAvailabilityProvider = "imap"
+)
+
+// Valid indicates whether the value is a known member of the CaptureProviderAvailabilityProvider enum.
+func (e CaptureProviderAvailabilityProvider) Valid() bool {
+	switch e {
+	case CaptureProviderAvailabilityProviderGmail:
+		return true
+	case CaptureProviderAvailabilityProviderGraph:
+		return true
+	case CaptureProviderAvailabilityProviderImap:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureProviderAvailabilityReason.
+const (
+	CaptureProviderAvailabilityReasonAppMissing  CaptureProviderAvailabilityReason = "app_missing"
+	CaptureProviderAvailabilityReasonAppUnusable CaptureProviderAvailabilityReason = "app_unusable"
+	CaptureProviderAvailabilityReasonReady       CaptureProviderAvailabilityReason = "ready"
+	CaptureProviderAvailabilityReasonUnsupported CaptureProviderAvailabilityReason = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the CaptureProviderAvailabilityReason enum.
+func (e CaptureProviderAvailabilityReason) Valid() bool {
+	switch e {
+	case CaptureProviderAvailabilityReasonAppMissing:
+		return true
+	case CaptureProviderAvailabilityReasonAppUnusable:
+		return true
+	case CaptureProviderAvailabilityReasonReady:
+		return true
+	case CaptureProviderAvailabilityReasonUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureSenderDecisionDecision.
 const (
 	CaptureSenderDecisionDecisionBusiness CaptureSenderDecisionDecision = "business"
@@ -7266,8 +7311,10 @@ const (
 	OnboardingStateStepComplete OnboardingStateStep = "complete"
 	OnboardingStateStepConfirm  OnboardingStateStep = "confirm"
 	OnboardingStateStepConnect  OnboardingStateStep = "connect"
+	OnboardingStateStepInvite   OnboardingStateStep = "invite"
 	OnboardingStateStepRead     OnboardingStateStep = "read"
 	OnboardingStateStepResults  OnboardingStateStep = "results"
+	OnboardingStateStepTeam     OnboardingStateStep = "team"
 	OnboardingStateStepVoice    OnboardingStateStep = "voice"
 )
 
@@ -7280,9 +7327,13 @@ func (e OnboardingStateStep) Valid() bool {
 		return true
 	case OnboardingStateStepConnect:
 		return true
+	case OnboardingStateStepInvite:
+		return true
 	case OnboardingStateStepRead:
 		return true
 	case OnboardingStateStepResults:
+		return true
+	case OnboardingStateStepTeam:
 		return true
 	case OnboardingStateStepVoice:
 		return true
@@ -9480,16 +9531,16 @@ func (e PersonResearchClaimConfidence) Valid() bool {
 
 // Defines values for PersonResearchRunState.
 const (
-	NotConnected PersonResearchRunState = "not_connected"
-	Ready        PersonResearchRunState = "ready"
+	PersonResearchRunStateNotConnected PersonResearchRunState = "not_connected"
+	PersonResearchRunStateReady        PersonResearchRunState = "ready"
 )
 
 // Valid indicates whether the value is a known member of the PersonResearchRunState enum.
 func (e PersonResearchRunState) Valid() bool {
 	switch e {
-	case NotConnected:
+	case PersonResearchRunStateNotConnected:
 		return true
-	case Ready:
+	case PersonResearchRunStateReady:
 		return true
 	default:
 		return false
@@ -9906,8 +9957,10 @@ const (
 	PutOnboardingStateRequestStepComplete PutOnboardingStateRequestStep = "complete"
 	PutOnboardingStateRequestStepConfirm  PutOnboardingStateRequestStep = "confirm"
 	PutOnboardingStateRequestStepConnect  PutOnboardingStateRequestStep = "connect"
+	PutOnboardingStateRequestStepInvite   PutOnboardingStateRequestStep = "invite"
 	PutOnboardingStateRequestStepRead     PutOnboardingStateRequestStep = "read"
 	PutOnboardingStateRequestStepResults  PutOnboardingStateRequestStep = "results"
+	PutOnboardingStateRequestStepTeam     PutOnboardingStateRequestStep = "team"
 	PutOnboardingStateRequestStepVoice    PutOnboardingStateRequestStep = "voice"
 )
 
@@ -9920,9 +9973,13 @@ func (e PutOnboardingStateRequestStep) Valid() bool {
 		return true
 	case PutOnboardingStateRequestStepConnect:
 		return true
+	case PutOnboardingStateRequestStepInvite:
+		return true
 	case PutOnboardingStateRequestStepRead:
 		return true
 	case PutOnboardingStateRequestStepResults:
+		return true
+	case PutOnboardingStateRequestStepTeam:
 		return true
 	case PutOnboardingStateRequestStepVoice:
 		return true
@@ -13875,25 +13932,25 @@ func (e WrittenBy) Valid() bool {
 
 // Defines values for CaptureProvider.
 const (
-	Gcal     CaptureProvider = "gcal"
-	Gmail    CaptureProvider = "gmail"
-	Graph    CaptureProvider = "graph"
-	Graphcal CaptureProvider = "graphcal"
-	Imap     CaptureProvider = "imap"
+	CaptureProviderGcal     CaptureProvider = "gcal"
+	CaptureProviderGmail    CaptureProvider = "gmail"
+	CaptureProviderGraph    CaptureProvider = "graph"
+	CaptureProviderGraphcal CaptureProvider = "graphcal"
+	CaptureProviderImap     CaptureProvider = "imap"
 )
 
 // Valid indicates whether the value is a known member of the CaptureProvider enum.
 func (e CaptureProvider) Valid() bool {
 	switch e {
-	case Gcal:
+	case CaptureProviderGcal:
 		return true
-	case Gmail:
+	case CaptureProviderGmail:
 		return true
-	case Graph:
+	case CaptureProviderGraph:
 		return true
-	case Graphcal:
+	case CaptureProviderGraphcal:
 		return true
-	case Imap:
+	case CaptureProviderImap:
 		return true
 	default:
 		return false
@@ -15195,19 +15252,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	All  ListPeopleParamsTagMode = "all"
-	Any  ListPeopleParamsTagMode = "any"
-	None ListPeopleParamsTagMode = "none"
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case All:
+	case ListPeopleParamsTagModeAll:
 		return true
-	case Any:
+	case ListPeopleParamsTagModeAny:
 		return true
-	case None:
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
@@ -16687,6 +16744,22 @@ type AnalyticsQuery struct {
 	// Save Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
 	// A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
 	Save *bool `json:"save,omitempty"`
+
+	// ScopeId The team or seat to measure, for `scope_kind` `team` or `owner`.
+	ScopeId *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+	// minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+	// or names nothing and is given it). No enum here on purpose: the resolver is the
+	// authority on what this seat may measure, and a second list would be a second answer to
+	// that, refusing on shape what it should refuse on authority.
+	//
+	// Which population to measure, resolved against the caller's own lens. Omitted asks for
+	// their default — a rep's own records, a manager's teams — never the whole installation.
+	//
+	// A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+	// never quietly means something other than what was asked.
+	ScopeKind *string `json:"scope_kind,omitempty"`
 }
 
 // AnalyticsSchema The populations and fields one caller may ask about.
@@ -17854,6 +17927,9 @@ type AuditLogEntryActorType string
 
 // AuthCapabilities defines model for AuthCapabilities.
 type AuthCapabilities struct {
+	// FirstRun Whether this installation has yet to finish its setup, so an unconfigured one can be greeted rather than only asked for credentials. Deliberately readable without a session, which is the narrowest form of a fact `/installation/setup` reports in full to a human session: it says that setup is unfinished and nothing else. It names no account, no step, no configured value, and says nothing about any credential.
+	FirstRun bool `json:"first_run"`
+
 	// OidcProviders Operational OIDC providers (empty until the OIDC flow ships).
 	OidcProviders []struct {
 		// Key Stable provider key, e.g. `google`.
@@ -18003,16 +18079,30 @@ type AutonomySettings struct {
 	Data []KindAutonomy `json:"data"`
 }
 
-// AvailableModel One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+// AvailableModel One model a vendor says it serves.
+// Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors disagree about what they publish, and a caller that assumed a field was there would read a silence as a value. Absent is absent, never a default.
+// The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed against. `/ai-model-rates` is that record: it is effective-dated and this installation has agreed to it, where these are a number the vendor printed today and nobody has confirmed. A screen may put the two side by side, and must say which is which. A model this installation cannot price is still bindable and reports UNPRICED.
 type AvailableModel struct {
+	// ContextLength Absent where the vendor publishes none.
+	ContextLength *int `json:"context_length,omitempty"`
+
 	// DisplayName The vendor's own human label, absent where it publishes none.
 	DisplayName *string `json:"display_name,omitempty"`
 
 	// Id The string a binding names, exactly as the vendor spells it.
 	Id string `json:"id"`
 
+	// InputPerMtok The vendor's asking price per million input tokens, in the same USD decimal strings as `AiModelRate` so a screen can show a vendor's price beside a recorded one without converting between them. Absent where the vendor publishes no price.
+	InputPerMtok *string `json:"input_per_mtok,omitempty"`
+
 	// Lane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
 	Lane *AvailableModelLane `json:"lane,omitempty"`
+
+	// OutputPerMtok The same, per million output tokens.
+	OutputPerMtok *string `json:"output_per_mtok,omitempty"`
+
+	// RankScore This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked.
+	RankScore *string `json:"rank_score,omitempty"`
 }
 
 // AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
@@ -18025,6 +18115,9 @@ type AvailableModelList struct {
 
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
+
+	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
+	RankedBy *string `json:"ranked_by,omitempty"`
 
 	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
@@ -18302,6 +18395,21 @@ type CaptureActivityResponse struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// CaptureClassifierHealth The sender queue as a whole, across every mailbox.
+type CaptureClassifierHealth struct {
+	// Exhausted Out of attempts, so nothing will ask again without a human.
+	Exhausted               int  `json:"exhausted"`
+	OldestPendingAgeSeconds *int `json:"oldest_pending_age_seconds,omitempty"`
+
+	// Pending Asked and not yet answered.
+	Pending int `json:"pending"`
+
+	// Unsure Answered "cannot tell" and waiting for a human. An installation with no model
+	// configured retires every row here, so a large number beside a small `pending`
+	// says the machine is not running rather than that the mail is hard.
+	Unsure int `json:"unsure"`
+}
+
 // CaptureConnection A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
 // credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
 // server-side by `credential_ref`.
@@ -18392,6 +18500,10 @@ type CaptureConnectionStatus string
 type CaptureConnectionListResponse struct {
 	Data []CaptureConnection `json:"data"`
 
+	// Providers Whether a connect started right now would proceed, per provider a person can choose
+	// between, so the connect screen can say so before the click rather than after a 501.
+	Providers *[]CaptureProviderAvailability `json:"providers,omitempty"`
+
 	// PublicOrigin The address this installation puts in outgoing links, and whether it answered when last asked.
 	// Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
 	// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
@@ -18457,6 +18569,45 @@ type CaptureExclusionListResponse struct {
 // CaptureExclusionScope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 type CaptureExclusionScope string
 
+// CaptureHealth What capture's judgement queues are holding, for an administrator asking whether
+// anything is stuck.
+//
+// COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+// those describe the correspondence, which is what the capture-privacy boundary
+// exists to protect, and an operational page is not an exemption from it. A mailbox
+// is named because an administrator cannot act on "somewhere in the installation";
+// what is waiting inside it is not named at all.
+type CaptureHealth struct {
+	// Classifier The sender queue as a whole, across every mailbox.
+	Classifier  CaptureClassifierHealth `json:"classifier"`
+	GeneratedAt time.Time               `json:"generated_at"`
+
+	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
+	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
+}
+
+// CaptureMailboxHealth defines model for CaptureMailboxHealth.
+type CaptureMailboxHealth struct {
+	// ContactsAwaitingDecision Captured contacts that are still owner-private because nothing has answered the
+	// sender question about them. These are invisible to everyone but their owner —
+	// not even an administrator — so a count is the only thing this page can say, and
+	// a growing one is the signal that nobody is answering.
+	ContactsAwaitingDecision int `json:"contacts_awaiting_decision"`
+
+	// DisplayName The owner's name; absent if the caller may not read it.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// OldestContactAgeSeconds How long the oldest of them has been waiting. Null when none are.
+	OldestContactAgeSeconds *int `json:"oldest_contact_age_seconds,omitempty"`
+	OldestThreadAgeSeconds  *int `json:"oldest_thread_age_seconds,omitempty"`
+
+	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
+	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
+
+	// UserId The mailbox owner.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // CaptureOwnerIdentity defines model for CaptureOwnerIdentity.
 type CaptureOwnerIdentity struct {
 	CreatedAt time.Time            `json:"created_at"`
@@ -18481,6 +18632,30 @@ type CaptureOwnerIdentityListResponse struct {
 // provider attests; nothing writes it yet, because reading a provider's send-as list needs a
 // scope the connection grant does not request.
 type CaptureOwnerIdentitySource string
+
+// CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
+// endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+// choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+// created by a mail grant rather than picked, so they are absent.
+type CaptureProviderAvailability struct {
+	// Provider The mail provider a person picks between.
+	Provider CaptureProviderAvailabilityProvider `json:"provider"`
+
+	// Reason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+	// app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+	// is a different fix from registering one. `unsupported`: this deployment does not serve the
+	// provider at all.
+	Reason CaptureProviderAvailabilityReason `json:"reason"`
+}
+
+// CaptureProviderAvailabilityProvider The mail provider a person picks between.
+type CaptureProviderAvailabilityProvider string
+
+// CaptureProviderAvailabilityReason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+// app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+// is a different fix from registering one. `unsupported`: this deployment does not serve the
+// provider at all.
+type CaptureProviderAvailabilityReason string
 
 // CapturePurgeOutcome What a purge destroyed, or what a preview says it would. The four counts are disjoint and
 // together they are every message the rule matched, so a reader can tell "nothing matched"
@@ -19246,18 +19421,25 @@ type CompanySiteRead struct {
 	Id           openapi_types.UUID          `json:"id"`
 
 	// LegalEntities Every legal entity the site's legal notice states, with the identity details printed alongside it. A group publishes several; the read does not guess which one the installation belongs to, so it offers them and the human chooses. Empty when the site names none.
-	LegalEntities  *[]CompanySiteReadLegalEntity `json:"legal_entities,omitempty"`
-	NextAttemptAt  *time.Time                    `json:"next_attempt_at"`
-	OrganizationId *openapi_types.UUID           `json:"organization_id,omitempty"`
-	Pages          []CompanySiteReadPage         `json:"pages"`
-	PagesRead      *int                          `json:"pages_read,omitempty"`
-	People         []CompanySiteReadPerson       `json:"people"`
-	Phase          *CompanySiteReadPhase         `json:"phase,omitempty"`
-	ProfileFields  []ColdStartField              `json:"profile_fields"`
-	ProposalHash   string                        `json:"proposal_hash"`
-	RootUrl        string                        `json:"root_url"`
-	Status         CompanySiteReadStatus         `json:"status"`
-	StatusCode     *CompanySiteReadStatusCode    `json:"status_code"`
+	LegalEntities *[]CompanySiteReadLegalEntity `json:"legal_entities,omitempty"`
+
+	// LogoUrl Where to fetch the mark the read resolved from the company's own site — the
+	// `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+	// same-origin. ABSENT when the read resolved none, which a client answers with the
+	// deterministic monogram. A confirmation moves the same mark onto the record, where
+	// `CompanyProfile.logo_url` carries it from then on.
+	LogoUrl        *string                    `json:"logo_url,omitempty"`
+	NextAttemptAt  *time.Time                 `json:"next_attempt_at"`
+	OrganizationId *openapi_types.UUID        `json:"organization_id,omitempty"`
+	Pages          []CompanySiteReadPage      `json:"pages"`
+	PagesRead      *int                       `json:"pages_read,omitempty"`
+	People         []CompanySiteReadPerson    `json:"people"`
+	Phase          *CompanySiteReadPhase      `json:"phase,omitempty"`
+	ProfileFields  []ColdStartField           `json:"profile_fields"`
+	ProposalHash   string                     `json:"proposal_hash"`
+	RootUrl        string                     `json:"root_url"`
+	Status         CompanySiteReadStatus      `json:"status"`
+	StatusCode     *CompanySiteReadStatusCode `json:"status_code"`
 
 	// StatusDetail Safe guidance only; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string `json:"status_detail"`
@@ -29148,15 +29330,17 @@ type PutOnboardingStateRequest struct {
 	SelectedFactKeys []string                             `json:"selected_fact_keys"`
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
-	Step             PutOnboardingStateRequestStep        `json:"step"`
-	VoiceSkipped     bool                                 `json:"voice_skipped"`
-	WebsiteUrl       *string                              `json:"website_url,omitempty"`
+
+	// Step Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+	Step         PutOnboardingStateRequestStep `json:"step"`
+	VoiceSkipped bool                          `json:"voice_skipped"`
+	WebsiteUrl   *string                       `json:"website_url,omitempty"`
 }
 
 // PutOnboardingStateRequestSourceMode defines model for PutOnboardingStateRequest.SourceMode.
 type PutOnboardingStateRequestSourceMode string
 
-// PutOnboardingStateRequestStep defines model for PutOnboardingStateRequest.Step.
+// PutOnboardingStateRequestStep Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -29682,7 +29866,23 @@ type ReportCell struct {
 type ReportDerivation struct {
 	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell.
 	Aggregates *map[string]interface{} `json:"aggregates,omitempty"`
-	Columns    []string                `json:"columns"`
+
+	// AsOf The instant these figures were computed at — the moment any currency conversion read the
+	// rate sheet, not the moment this response was assembled (`generated_at`).
+	//
+	// When the handle pinned an instant this is the one the explained number was computed at, so
+	// the detail reconciles to its headline. When it did not, this is a fresh reading and
+	// `as_of_pinned` is false.
+	AsOf *time.Time `json:"as_of,omitempty"`
+
+	// AsOfPinned Whether the handle carried the instant the explained number was computed at.
+	//
+	// False means the link predates that key, so these figures were recomputed at a NEW moment
+	// and a rate sheet effective in between will make them disagree with the number they explain.
+	// A reader opening a drill-through is checking a figure they already doubt, so a detail set
+	// that quietly reconciles to something else is worse than none.
+	AsOfPinned *bool    `json:"as_of_pinned,omitempty"`
+	Columns    []string `json:"columns"`
 
 	// Definition Plain-language reading of the exact filter + group + aggregate that produced the number.
 	Definition string `json:"definition"`
@@ -34220,6 +34420,10 @@ type ListAiModelRatesParams struct {
 type ListAvailableModelsParams struct {
 	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
 	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
+
+	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
+	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
+	Top *int `form:"top,omitempty" json:"top,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -34465,6 +34669,10 @@ type GetAvailabilityParams struct {
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
+	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
+	// build emails these addresses or adds them to a calendar event, and the
+	// created activity does not carry them either. Supply them for the caller's
+	// own record of intent, and tell the attendee yourself.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -47052,6 +47260,9 @@ type ServerInterface interface {
 	// One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 	// (GET /activities/{id}/transcript-proposals/{readId})
 	GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
+	// What capture's judgement queues are holding, and in whose mailbox.
+	// (GET /admin/capture-health)
+	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -47409,6 +47620,9 @@ type ServerInterface interface {
 	// Confirm a selected onboarding draft into the anchor company atomically.
 	// (POST /company/site-reads/{readId}/confirm)
 	ConfirmCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID, params ConfirmCompanySiteReadParams)
+	// Stream the mark a website read resolved, before anything adopts it.
+	// (GET /company/site-reads/{readId}/logo)
+	GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID)
 	// Ask Margince about a website read and receive reviewable company-field suggestions.
 	// (POST /company/site-reads/{readId}/messages)
 	MessageCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID)
@@ -48882,6 +49096,12 @@ func (_ Unimplemented) GetTranscriptRead(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What capture's judgement queues are holding, and in whose mailbox.
+// (GET /admin/capture-health)
+func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the background system is holding, and whose work failed.
 // (GET /admin/job-health)
 func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
@@ -49593,6 +49813,12 @@ func (_ Unimplemented) GetCompanySiteRead(w http.ResponseWriter, r *http.Request
 // Confirm a selected onboarding draft into the anchor company atomically.
 // (POST /company/site-reads/{readId}/confirm)
 func (_ Unimplemented) ConfirmCompanySiteRead(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID, params ConfirmCompanySiteReadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream the mark a website read resolved, before anything adopts it.
+// (GET /company/site-reads/{readId}/logo)
+func (_ Unimplemented) GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53544,6 +53770,26 @@ func (siw *ServerInterfaceWrapper) GetTranscriptRead(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetCaptureHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCaptureHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetJobHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 
@@ -53729,6 +53975,19 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "top" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "top", r.URL.Query(), &params.Top, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "top"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "top", Err: err})
 		}
 		return
 	}
@@ -57375,6 +57634,38 @@ func (siw *ServerInterfaceWrapper) ConfirmCompanySiteRead(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmCompanySiteRead(w, r, readId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompanySiteReadLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "readId" -------------
+	var readId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "readId", chi.URLParam(r, "readId"), &readId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "readId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanySiteReadLogo(w, r, readId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77532,6 +77823,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activities/{id}/transcript-proposals/{readId}", wrapper.GetTranscriptRead)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -77887,6 +78181,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads/{readId}/confirm", wrapper.ConfirmCompanySiteRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/company/site-reads/{readId}/logo", wrapper.GetCompanySiteReadLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads/{readId}/messages", wrapper.MessageCompanySiteRead)

@@ -605,6 +605,39 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /admin/capture-health:
+    get:
+      tags: [Identity]
+      operationId: getCaptureHealth
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: What capture's judgement queues are holding, and in whose mailbox.
+      description: >
+        Admin-only. Reports how much is waiting on a sender decision or a thread verdict,
+        by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a
+        subject, a body, or the reason a thread was held: those describe the correspondence,
+        and an operational page is not an exemption from the capture-privacy boundary.
+
+
+        The contacts it counts are owner-private and invisible to an administrator by
+        design (the importing user only, not even Admin) — which is exactly why a count is
+        worth serving: nobody could otherwise tell that a backlog exists. Human session
+        only (x-agent-access: human-only).
+      responses:
+        '200':
+          description: The workspace's capture-queue health.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller is an agent/passport principal (this endpoint is human-only)
+            or a human without the admin role. Not an object/action RBAC grant denial.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------ /passports --------------------------------
   /passports:
     get:
@@ -5955,7 +5988,11 @@ paths:
       operationId: bookMeeting
       summary: Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
       description: |
-        Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+        Records the meeting on the timeline. **No invite is sent — this build has no outbound
+        calendar or mail transport behind a booking**, so whoever books it has to tell the
+        attendee themselves. The calendar integrations are capture-only (inbound import).
+
+        It RUNS DIRECTLY (ADR-0055), on the
         passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
         the same check the app applies. An installation that wants bookings confirmed sets a
         tier floor on `book_meeting`. On success a
@@ -5977,7 +6014,14 @@ paths:
                 start: { type: string, format: date-time }
                 end:   { type: string, format: date-time }
                 subject: { type: string }
-                attendee_emails: { type: array, items: { type: string, format: email } }
+                attendee_emails:
+                  type: array
+                  items: { type: string, format: email }
+                  description: |
+                    Who the meeting is with. **Accepted and not delivered to**: nothing in this
+                    build emails these addresses or adds them to a calendar event, and the
+                    created activity does not carry them either. Supply them for the caller's
+                    own record of intent, and tell the attendee yourself.
                 links:
                   type: array
                   maxItems: 25
@@ -9131,6 +9175,40 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /company/site-reads/{readId}/logo:
+    parameters:
+      - name: readId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Organizations, AI]
+      operationId: getCompanySiteReadLogo
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Stream the mark a website read resolved, before anything adopts it.
+      description: |
+        The bytes behind `CompanySiteRead.logo_url`: the company mark the read resolved from
+        its own site, parked on the dossier until a confirmation binds it to the record.
+        Served here so the review can show the company it is about while the record does not
+        exist yet. Normalized like every stored mark, so the response is always `image/png`
+        and never third-party markup. 404 when the read resolved no mark or does not exist;
+        501 when the deployment has no object store configured.
+      responses:
+        '200':
+          description: The normalized logo bytes.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /company/site-reads/{readId}/messages:
     parameters:
       - name: readId
@@ -11365,6 +11443,19 @@ paths:
           vendor at two — a broker on one lane and a self-hosted gateway on another, which the
           routing validator permits. Omitted, or naming a lane bound to some other vendor, the host
           falls back to any binding on this vendor and then to the adapter's own default.
+      - name: top
+        in: query
+        required: false
+        schema: { type: integer, minimum: 1, maximum: 100 }
+        description: >-
+          Return only the best N under the vendor's own published measure, and name that measure in
+          `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing
+          form binds an id its reader already knows, while a first run puts a shortlist in front of
+          somebody who has never seen these names, and four hundred rows is not a shortlist.
+
+          Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that
+          publishes no such measure cannot honour this: it answers with the full list and no
+          `ranked_by`, rather than inventing an order and calling it a ranking.
     get:
       tags: [AI]
       operationId: listAvailableModels
@@ -21017,6 +21108,13 @@ components:
         models:
           type: array
           items: { $ref: '#/components/schemas/AvailableModel' }
+        ranked_by:
+          type: string
+          description: >-
+            The measure the order came from, in words a screen can print, and absent when the list
+            is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw
+            list arrives in no useful order at all: a first-time admin choosing among four hundred
+            ids needs to be told what made ten of them the ten.
         unavailable:
           type: string
           enum: [no_key, profile_forbids, not_published, unreachable, no_endpoint]
@@ -21033,8 +21131,17 @@ components:
       additionalProperties: false
       required: [id]
       description: >-
-        One model a vendor says it serves. Three fields and no fourth: the vendors disagree about
-        everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+        One model a vendor says it serves.
+
+        Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors
+        disagree about what they publish, and a caller that assumed a field was there would read a
+        silence as a value. Absent is absent, never a default.
+
+        The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed
+        against. `/ai-model-rates` is that record: it is effective-dated and this installation has
+        agreed to it, where these are a number the vendor printed today and nobody has confirmed.
+        A screen may put the two side by side, and must say which is which. A model this
+        installation cannot price is still bindable and reports UNPRICED.
       properties:
         id:
           type: string
@@ -21048,6 +21155,27 @@ components:
           description: >-
             What the vendor says the model is FOR, absent where it does not say. Absent means
             UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+        context_length:
+          type: integer
+          description: Absent where the vendor publishes none.
+        input_per_mtok:
+          type: string
+          pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$'
+          description: >-
+            The vendor's asking price per million input tokens, in the same USD decimal strings as
+            `AiModelRate` so a screen can show a vendor's price beside a recorded one without
+            converting between them. Absent where the vendor publishes no price.
+        output_per_mtok:
+          type: string
+          pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$'
+          description: The same, per million output tokens.
+        rank_score:
+          type: string
+          description: >-
+            This model's score under the list's `ranked_by`, so a screen can show WHY a model is in
+            a shortened list rather than asking a reader to trust the order. A decimal string for
+            the same reason the prices are: it is displayed, never arithmetic. Absent where the
+            vendor publishes no such measure, which is also when the list cannot be ranked.
     AiProviderKeyStatus:
       type: object
       additionalProperties: false
@@ -21905,6 +22033,30 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/CaptureConnection' } }
         public_origin: { $ref: '#/components/schemas/PublicOriginStatus' }
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureProviderAvailability' }
+          description: |
+            Whether a connect started right now would proceed, per provider a person can choose
+            between, so the connect screen can say so before the click rather than after a 501.
+    CaptureProviderAvailability:
+      type: object
+      description: |
+        Whether a connect started right now would proceed, decided by the same predicate the connect
+        endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+        choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+        created by a mail grant rather than picked, so they are absent.
+      required: [provider, reason]
+      properties:
+        provider: { type: string, enum: [gmail, graph, imap], description: The mail provider a person picks between. }
+        reason:
+          type: string
+          enum: [ready, app_missing, app_unusable, unsupported]
+          description: |
+            `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+            app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+            is a different fix from registering one. `unsupported`: this deployment does not serve the
+            provider at all.
     PublicOriginStatus:
       type: object
       description: |
@@ -32016,10 +32168,18 @@ components:
 
     AuthCapabilities:
       type: object
-      required: [password, password_reset, oidc_providers]
+      required: [password, password_reset, oidc_providers, first_run]
       properties:
         password: { type: boolean, description: Email + password login is enabled. }
         password_reset: { type: boolean, description: The A74 reset flow can complete end to end (outbound email configured + healthy). }
+        first_run:
+          type: boolean
+          description: >
+            Whether this installation has yet to finish its setup, so an unconfigured one can be
+            greeted rather than only asked for credentials. Deliberately readable without a session,
+            which is the narrowest form of a fact `/installation/setup` reports in full to a human
+            session: it says that setup is unfinished and nothing else. It names no account, no step,
+            no configured value, and says nothing about any credential.
         oidc_providers:
           type: array
           description: Operational OIDC providers (empty until the OIDC flow ships).
@@ -32678,6 +32838,24 @@ components:
       required: [entity, measures]
       properties:
         entity: { type: string, description: "The population, by name." }
+        scope_kind:
+          type: string
+          description: |
+            `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+            minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+            or names nothing and is given it). No enum here on purpose: the resolver is the
+            authority on what this seat may measure, and a second list would be a second answer to
+            that, refusing on shape what it should refuse on authority.
+
+            Which population to measure, resolved against the caller's own lens. Omitted asks for
+            their default — a rep's own records, a manager's teams — never the whole installation.
+
+            A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+            never quietly means something other than what was asked.
+        scope_id:
+          type: string
+          format: uuid
+          description: The team or seat to measure, for `scope_kind` `team` or `owner`.
         group_by:
           type: array
           items: { type: string }
@@ -33332,6 +33510,68 @@ components:
           items: { $ref: '#/components/schemas/ComposedExtension' }
 
     # ---- Admin (background-job health) ----
+    CaptureHealth:
+      type: object
+      additionalProperties: false
+      description: |
+        What capture's judgement queues are holding, for an administrator asking whether
+        anything is stuck.
+
+        COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+        those describe the correspondence, which is what the capture-privacy boundary
+        exists to protect, and an operational page is not an exemption from it. A mailbox
+        is named because an administrator cannot act on "somewhere in the installation";
+        what is waiting inside it is not named at all.
+      required: [generated_at, mailboxes, classifier]
+      properties:
+        generated_at: { type: string, format: date-time }
+        mailboxes:
+          type: array
+          description: One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
+          items: { $ref: '#/components/schemas/CaptureMailboxHealth' }
+        classifier:
+          $ref: '#/components/schemas/CaptureClassifierHealth'
+
+    CaptureMailboxHealth:
+      type: object
+      additionalProperties: false
+      required: [user_id, contacts_awaiting_decision, threads_awaiting_verdict]
+      properties:
+        user_id: { type: string, format: uuid, description: The mailbox owner. }
+        display_name: { type: string, description: "The owner's name; absent if the caller may not read it." }
+        contacts_awaiting_decision:
+          type: integer
+          description: |
+            Captured contacts that are still owner-private because nothing has answered the
+            sender question about them. These are invisible to everyone but their owner —
+            not even an administrator — so a count is the only thing this page can say, and
+            a growing one is the signal that nobody is answering.
+        oldest_contact_age_seconds:
+          type: [integer, 'null']
+          description: How long the oldest of them has been waiting. Null when none are.
+        threads_awaiting_verdict:
+          type: integer
+          description: Threads whose confidentiality question is still open, so their messages stay held.
+        oldest_thread_age_seconds: { type: [integer, 'null'] }
+
+    CaptureClassifierHealth:
+      type: object
+      additionalProperties: false
+      description: The sender queue as a whole, across every mailbox.
+      required: [pending, unsure, exhausted]
+      properties:
+        pending: { type: integer, description: Asked and not yet answered. }
+        unsure:
+          type: integer
+          description: |
+            Answered "cannot tell" and waiting for a human. An installation with no model
+            configured retires every row here, so a large number beside a small `pending`
+            says the machine is not running rather than that the mail is hard.
+        exhausted:
+          type: integer
+          description: Out of attempts, so nothing will ask again without a human.
+        oldest_pending_age_seconds: { type: [integer, 'null'] }
+
     JobHealth:
       type: object
       additionalProperties: false
@@ -33909,6 +34149,25 @@ components:
         total_rows: { type: integer, description: Source rows matched (rows is capped at the report row limit). }
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.' }
         generated_at: { type: string, format: date-time }
+        as_of:
+          type: string
+          format: date-time
+          description: |
+            The instant these figures were computed at — the moment any currency conversion read the
+            rate sheet, not the moment this response was assembled (`generated_at`).
+
+            When the handle pinned an instant this is the one the explained number was computed at, so
+            the detail reconciles to its headline. When it did not, this is a fresh reading and
+            `as_of_pinned` is false.
+        as_of_pinned:
+          type: boolean
+          description: |
+            Whether the handle carried the instant the explained number was computed at.
+
+            False means the link predates that key, so these figures were recomputed at a NEW moment
+            and a rate sheet effective in between will make them disagree with the number they explain.
+            A reader opening a drill-through is checking a figure they already doubt, so a detail set
+            that quietly reconciles to something else is worse than none.
 
     # ---- Search ----
     SearchResult:
@@ -34392,7 +34651,16 @@ components:
       required: [expected_version, step, source_mode, company_draft, selected_fact_keys, voice_skipped, connect_skipped]
       properties:
         expected_version: { type: integer, minimum: 0, description: Zero creates; otherwise the version last read. }
-        step: { type: string, enum: [read, confirm, voice, results, connect, complete] }
+        step:
+          type: string
+          enum: [read, confirm, invite, team, voice, results, connect, complete]
+          description: >
+            Where the creator's setup stands. `invite` is the question asked once the company is
+            confirmed — whether the person setting the installation up will also work in it, which
+            is what decides whether the optional `voice` and `connect` steps are offered at all.
+            `team` is where a creator who will not work in it invites the first person who will.
+            `results` is kept for rows written before that question existed; a client treats it as
+            the connect step being next.
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }
@@ -34410,7 +34678,7 @@ components:
       required: [path, step, source_mode, company_draft, selected_fact_keys, voice_skipped, connect_skipped, version, created_at, updated_at]
       properties:
         path: { type: string, enum: [creator, member], readOnly: true }
-        step: { type: string, enum: [read, confirm, voice, results, connect, complete] }
+        step: { type: string, enum: [read, confirm, invite, team, voice, results, connect, complete] }
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }
@@ -35037,6 +35305,15 @@ components:
           description: 'Why the crawl ended early; null when it exhausted discovery. Same column and vocabulary as SiteReadReport — one deep-read engine serves onboarding and every organization.'
         phase: { type: [string, 'null'], enum: [crawling, extracting] }
         pages_read: { type: integer, minimum: 0 }
+        logo_url:
+          type: string
+          readOnly: true
+          description: |
+            Where to fetch the mark the read resolved from the company's own site — the
+            `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+            same-origin. ABSENT when the read resolved none, which a client answers with the
+            deterministic monogram. A confirmation moves the same mark onto the record, where
+            `CompanyProfile.logo_url` carries it from then on.
         pages:
           type: array
           items: { $ref: '#/components/schemas/CompanySiteReadPage' }

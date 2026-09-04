@@ -33,6 +33,13 @@ const (
 	OnboardingStepRead = "read"
 	// OnboardingStepConfirm reviews the company draft.
 	OnboardingStepConfirm = "confirm"
+	// OnboardingStepInvite asks whether the person setting the installation up
+	// will work in it, which decides whether the voice and connect steps are
+	// offered at all.
+	OnboardingStepInvite = "invite"
+	// OnboardingStepTeam is where a creator who will not work in the
+	// installation invites the first person who will.
+	OnboardingStepTeam = "team"
 	// OnboardingStepVoice captures optional writing examples.
 	OnboardingStepVoice = "voice"
 	// OnboardingStepResults reveals confirmed understanding.
@@ -64,8 +71,21 @@ const (
 )
 
 var onboardingSteps = map[string]struct{}{
-	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepVoice: {},
-	OnboardingStepResults: {}, OnboardingStepConnect: {}, OnboardingStepComplete: {},
+	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepInvite: {},
+	OnboardingStepTeam: {}, OnboardingStepVoice: {}, OnboardingStepResults: {},
+	OnboardingStepConnect: {}, OnboardingStepComplete: {},
+}
+
+// creatorSteps are the steps that exist only on the creator's route: the
+// company a member's installation already has, and the two questions only the
+// person setting it up can answer. A member's route begins at Voice, so
+// persisting any of these against a member is a state nothing can reach.
+//
+// A set rather than a condition, because every step added before Voice belongs
+// here and a chain of `||` is where the last one was forgotten.
+var creatorSteps = map[string]struct{}{
+	OnboardingStepRead: {}, OnboardingStepConfirm: {},
+	OnboardingStepInvite: {}, OnboardingStepTeam: {},
 }
 
 // OnboardingCompanyDraft is intentionally partial. Confirmed values are owned
@@ -285,8 +305,10 @@ func validOnboardingURL(raw string) bool {
 }
 
 func validateOnboardingAdvance(path, step string, companyComplete bool) error {
-	if path == OnboardingPathMember && (step == OnboardingStepRead || step == OnboardingStepConfirm) {
-		return invalidOnboarding("step", "members begin at Voice")
+	if path == OnboardingPathMember {
+		if _, creatorOnly := creatorSteps[step]; creatorOnly {
+			return invalidOnboarding("step", "members begin at Voice")
+		}
 	}
 	if path == OnboardingPathCreator && !companyComplete &&
 		step != OnboardingStepRead && step != OnboardingStepConfirm {

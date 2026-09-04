@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OnboardingScreen } from "../onboarding";
 
@@ -297,6 +298,16 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/connectors") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
+      // The preferences act asks what this seat may decide on its own; a seat
+      // nothing is routed to has no switches, and the act says nothing.
+      if (path.endsWith("/autonomy") && request.method === "GET") {
+        return jsonResponse({ data: [] });
+      }
+      // No grants: the reporting basis is an admin's to change, and these
+      // fixtures never claim to be one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture({ allow: {} }));
+      }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),
   );
@@ -340,7 +351,7 @@ describe("restore into the conversational shell", () => {
     expect(screen.queryByText(/Welcome back/)).toBeNull();
   });
 
-  it("a returning creator at step voice resumes the voice act with a company recap, not replayed narration", async () => {
+  it("a returning creator at step voice resumes the voice act, not an invite step", async () => {
     stubApi({
       state: stateRow({ step: "voice" }),
       company: savedProfile,
@@ -349,23 +360,14 @@ describe("restore into the conversational shell", () => {
 
     // The saved company must NOT demote the creator to the member path (the
     // old proxy skipped the voice act for exactly this session), and the
-    // restore lands directly on the collect scene, not an invite step.
+    // restore lands directly on the collect scene. The recap that used to
+    // say so in the transcript ("Welcome back...", "Your company profile
+    // for Gradion is confirmed.") is gone along with the transcript itself
+    // — this heading is what proves the restore landed correctly now.
     expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
-    expect(
-      screen.getByText(/Welcome back\. Here is where we stand\./),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/Your company profile for Gradion is confirmed\./),
-    ).toBeTruthy();
-    // Recap is a derived summary; the live confirmation outcome and the read
-    // narration are never replayed.
-    expect(
-      screen.queryByText(/Everything I stored carries its source/),
-    ).toBeNull();
-    expect(screen.queryByText(/Finished reading/)).toBeNull();
   });
 
-  it("a corpus already on the server resumes collecting with honest words", async () => {
+  it("a corpus already on the server resumes collecting", async () => {
     stubApi({
       state: stateRow({ step: "voice" }),
       company: savedProfile,
@@ -374,50 +376,13 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
+    // The recap that used to name the honest word count in the transcript
+    // ("Your corpus already holds 1,240...") is gone along with the
+    // transcript; the collect scene's own meter is where that count lives
+    // now, and it reads the server's real total rather than starting at 0.
     expect(
-      await screen.findByText(
-        /Your corpus already holds 1,240 of your own words\./,
-      ),
+      await screen.findByText("1,240 words", { exact: false }),
     ).toBeTruthy();
-    // vo.collecting lands directly on the collect scene and its rail prompt.
-    expect(await screen.findByText(/Send me things you wrote\./)).toBeTruthy();
-  });
-
-  it("carries a live source added mid-voice-act into the results recap, not the restore probe's stale total", async () => {
-    stubApi({
-      state: stateRow({ step: "voice" }),
-      company: savedProfile,
-      voiceProfiles: [{ id: "018f3a1b-0000-7000-8000-0000000000f1" }],
-      corpusWords: 0,
-      pasteWords: 400,
-    });
-    render(<OnboardingScreen />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Paste text instead" }),
-    );
-    await userEvent.type(
-      screen.getByLabelText("Paste the text you wrote here"),
-      "A paragraph I actually wrote in my own words.",
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Yes, add it to my corpus." }),
-    );
-    // The ingest landed: the collect scene's own meter already reads the
-    // grown total, entirely from useVoiceCorpus's local state.
-    expect(await screen.findByText(/400 of/)).toBeTruthy();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Skip voice for now." }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Continue" }),
-    );
-
-    // The results recap reads the restore probe's query again, refreshed by
-    // leaving the voice act — not the 0-word snapshot it was mounted with.
-    expect(await screen.findByText("400")).toBeTruthy();
-    expect(screen.getByText("words in your voice")).toBeTruthy();
   });
 
   it("the member path comes from the state row and skips voice and results entirely", async () => {
@@ -427,9 +392,7 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(
-      await screen.findByText(/Last step: what may I capture/),
-    ).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Google/ })).toBeTruthy();
     // Microsoft is a live OAuth path now — the chip opens the same connect
     // panel Google does, no "Soon" placeholder. It starts disabled until the
@@ -441,39 +404,141 @@ describe("restore into the conversational shell", () => {
     expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(0);
   });
 
-  it("honors a recorded voice skip in the results act", async () => {
+  it("reopens the invite for a creator whose company is confirmed", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "invite" }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Will you be working in Margince yourself?",
+      }),
+    ).toBeTruthy();
+    // Both answers are on the page, and reopening the question records
+    // nothing: the row already says "invite".
+    expect(
+      screen.getByRole("radio", { name: /Yes, I'll work in Margince/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: /No, I'm only setting it up/ }),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
+  });
+
+  it("accepting the invite opens the voice act and checkpoints step voice", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "invite" }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.step).toBe("voice");
+    expect(body.voice_skipped).toBe(false);
+  });
+
+  // Declining opens the team act and records both personal steps as skipped
+  // on the way in, so a reload lands on the invite form and never reopens the
+  // question.
+  it("declining the invite opens the team act with voice and connect recorded as skipped", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "invite" }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("radio", { name: /No, I'm only setting it up/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByText("Invite the first user.")).toBeTruthy();
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.step).toBe("team");
+    expect(body.voice_skipped).toBe(true);
+    expect(body.connect_skipped).toBe(true);
+  });
+
+  // Leaving the team act hands on to the preferences act, and THAT is the
+  // finish: the row goes to "complete" before the handoff, so a reload after
+  // the write lands on the app rather than back in the journey.
+  it("skipping the team act reaches the preferences act, whose Done completes setup before the handoff", async () => {
+    const calls = stubApi({
+      state: stateRow({
+        step: "team",
+        voice_skipped: true,
+        connect_skipped: true,
+      }),
+      company: savedProfile,
+    });
+    render(<OnboardingScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Skip for now" }),
+    );
+
+    expect(
+      await screen.findByText("Last, a few preferences."),
+    ).toBeInTheDocument();
+    expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
+
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
+    });
+    const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
+      .clone()
+      .json()) as Record<string, unknown>;
+    expect(body.step).toBe("complete");
+    // The handoff scene has the surface.
+    await waitFor(() =>
+      expect(screen.queryByText("Last, a few preferences.")).toBeNull(),
+    );
+  });
+
+  // A row written before the invite existed, parked at the recap that used to
+  // follow the voice act: it lands on connect, where the recap led.
+  it("lands a legacy results row on the merged connect screen", async () => {
     stubApi({
       state: stateRow({ step: "results", voice_skipped: true }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
-    expect(
-      await screen.findByText(
-        /No voice profile yet\. Drafts use a neutral starter voice/,
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText(/You skipped the voice profile\./)).toBeTruthy();
-    // The action that leaves the recap sits in the artifact surface's own
-    // pinned foot, never as a chip beside the transcript it recaps.
-    const understood = screen.getByRole("button", { name: "Understood" });
-    expect(understood.closest(".ob-triage-continue")).toBeTruthy();
-    expect(understood.closest(".mw-thread")).toBeNull();
+    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
   });
 
-  // Continuing out of the recap lands directly on the merged connect screen —
-  // mail and LinkedIn together, no separate network-ask act to pass through —
-  // and checkpoints step "connect" immediately: arriving here already shows
+  // Leaving the voice act lands directly on the merged connect screen — mail
+  // and LinkedIn together, no separate network-ask act to pass through — and
+  // checkpoints step "connect" immediately: arriving here already shows
   // everything, so there is nothing a reload could strand behind it.
-  it("continuing out of the results act lands on the merged connect screen and checkpoints it on arrival", async () => {
+  it("continuing out of the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "results" }),
+      state: stateRow({ step: "voice", voice_skipped: true }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Understood" }),
+      await screen.findByRole("button", { name: "Continue" }),
     );
 
     expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
@@ -492,13 +557,13 @@ describe("restore into the conversational shell", () => {
 
   it("skipping LinkedIn on the merged screen records no further checkpoint — the arrival already did", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "results" }),
+      state: stateRow({ step: "voice", voice_skipped: true }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Understood" }),
+      await screen.findByRole("button", { name: "Continue" }),
     );
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
@@ -510,9 +575,7 @@ describe("restore into the conversational shell", () => {
     );
 
     expect(
-      await screen.findByText(
-        "Skipped LinkedIn. You can connect it any time in Settings.",
-      ),
+      await screen.findByText("Skipped: add it later in Settings"),
     ).toBeTruthy();
     // LinkedIn's own resolution never writes wizard state; only mail does.
     expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
@@ -529,24 +592,21 @@ describe("restore into the conversational shell", () => {
 });
 
 describe("reload adoption of a persisted read", () => {
-  it("a reload after the terminal lands in the review with the confirm card, without replaying narration", async () => {
+  it("a reload after the terminal lands straight in the review, without replaying narration", async () => {
     stubApi({
       state: stateRow({ step: "confirm", site_read_id: READ_ID }),
       reads: [readRow("partial", 40)],
     });
     render(<OnboardingScreen />);
 
-    expect(
-      await screen.findByText(/I finished reading gradion\.com/),
-    ).toBeTruthy();
     // The terminal outcome and the review arrive through the normal
-    // conclude path; the per-field narration is recap, never a replay. This
-    // fixture's read lost no pages, so the terminal itself stays silent —
-    // the review card below is the only thing that says "ready."
+    // conclude path; the per-field narration ("Welcome back, I finished
+    // reading...", "Learned...") is recap, and the transcript it used to
+    // narrate into no longer renders at all — the deck's own heading is
+    // what proves the reload landed on the review.
     expect(
-      await screen.findByRole("button", { name: /Continue/ }),
+      await screen.findByRole("button", { name: "Confirm the profile" }),
     ).toBeTruthy();
-    expect(screen.queryByText(/Learned/)).toBeNull();
   });
 
   it("a reload after the terminal still asks the proposal's open question first", async () => {
@@ -597,7 +657,7 @@ describe("reload adoption of a persisted read", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(
-      await screen.findByRole("button", { name: /Continue/ }),
+      await screen.findByRole("button", { name: "Confirm the profile" }),
     ).toBeTruthy();
   });
 
@@ -612,13 +672,14 @@ describe("reload adoption of a persisted read", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(
-      await screen.findByText(/I am still reading gradion\.com/),
-    ).toBeTruthy();
+    // "Welcome back. I am still reading..." was the recap's own narration
+    // of the resume; the transcript it used to appear in is gone, and the
+    // review actually landing (through three straight snapshots) is the
+    // surviving proof the poll picked back up rather than starting cold.
     expect(
       await screen.findByRole(
         "button",
-        { name: /Continue/ },
+        { name: "Confirm the profile" },
         {
           timeout: 8000,
         },
@@ -644,7 +705,7 @@ describe("reload adoption of a persisted read", () => {
 });
 
 describe("finishing the connect act", () => {
-  it("persists completion BEFORE navigating; a failed write is narrated and retryable", async () => {
+  it("records how the step was left BEFORE moving on, and completion before navigating; a failed write is narrated and retryable", async () => {
     // The handoff plays a build scene before it navigates. This case is about
     // the ordering — completion recorded first, navigation only after — so it
     // takes the reduced-motion path, where the scene resolves on its first
@@ -667,26 +728,41 @@ describe("finishing the connect act", () => {
     const calls = stubApi(options);
     render(<OnboardingScreen />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Skip connecting for now/ }),
-    );
+    const without = await screen.findByRole("button", {
+      name: /Continue without a mailbox/,
+    });
+    await waitFor(() => expect(without).not.toBeDisabled());
+    await userEvent.click(without);
 
-    // The write failed: the failure is said out loud, nothing navigated.
+    // The write failed: the failure is said out loud, nothing moved on.
     expect(
       await screen.findByText(/I could not record the finish\. Try again\./),
     ).toBeTruthy();
     expect(window.location.hash).toBe("");
 
-    // The retry succeeds: completion lands, THEN the shell navigates.
+    // The retry succeeds: how the step was left lands, THEN the preferences
+    // act takes the surface.
     options.putStatus = undefined;
     await userEvent.click(
-      screen.getByRole("button", { name: /Skip connecting for now/ }),
+      screen.getByRole("button", { name: /Continue without a mailbox/ }),
     );
+    expect(
+      await screen.findByText("Last, a few preferences."),
+    ).toBeInTheDocument();
+    const left = requestsTo(calls, "/onboarding/state", "PUT");
+    const leftBody = (await left[left.length - 1].clone().json()) as Record<
+      string,
+      unknown
+    >;
+    expect(leftBody.step).toBe("connect");
+    expect(leftBody.connect_skipped).toBe(true);
+
+    // Done writes completion, THEN the shell navigates.
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => {
       expect(window.location.hash).toBe("#/home");
     });
     const writes = requestsTo(calls, "/onboarding/state", "PUT");
-    expect(writes.length).toBeGreaterThan(0);
     const body = (await writes[writes.length - 1].clone().json()) as Record<
       string,
       unknown

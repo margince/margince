@@ -7,6 +7,7 @@ import type { MessageKey } from "../../i18n/en";
 import type { BuildStage } from "./conversation-machine";
 import { bandLabelKeys } from "./narration";
 import type { CorpusManifestEntry } from "./use-voice-corpus";
+import { WayOnward } from "./way-onward";
 
 // The right panel of the voice act: the corpus manifest, the honest meter,
 // and the build stage tracker. Every number rendered here is a server
@@ -109,25 +110,25 @@ export function VoiceActArtifact({
       )}
       {building && <BuildTracker stage={stage} />}
       {continueBar && (
-        <div className="ob-triage-continue">
-          <p className="ob-triage-continue-status" role="status">
-            {t(continueStatusKeys[continueBar.reason])}
-          </p>
-          <div className="ob-voice-continue-acts">
-            {continueBar.reason === "failed" && continueBar.onRetry && (
-              <Button
-                small
-                disabled={continueBar.retryPending}
-                onClick={continueBar.onRetry}
-              >
-                {t("ob.conv.voice.retryBuild")}
-              </Button>
-            )}
-            <Button small variant="primary" onClick={continueBar.onContinue}>
-              {t("ob.conv.results.continue")}
+        <WayOnward
+          label={t("ob.conv.results.continue")}
+          stillNeeded={(why) => why.join(" ")}
+          note={
+            <p className="ob-stage-hint" role="status">
+              {t(continueStatusKeys[continueBar.reason])}
+            </p>
+          }
+          onGo={continueBar.onContinue}
+        >
+          {continueBar.reason === "failed" && continueBar.onRetry && (
+            <Button
+              pending={continueBar.retryPending}
+              onClick={continueBar.onRetry}
+            >
+              {t("ob.conv.voice.retryBuild")}
             </Button>
-          </div>
-        </div>
+          )}
+        </WayOnward>
       )}
     </div>
   );

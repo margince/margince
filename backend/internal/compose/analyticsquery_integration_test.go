@@ -419,3 +419,158 @@ func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
 			answer.Rows, len(explanation.Rows))
 	}
 }
+
+// ownLensRepCtx is a rep who may READ deals and may measure only their own.
+//
+// The two are separate, and that separation is the whole defect: deals are
+// workspace-readable by design, so record authorization admits every row and a
+// population that consulted only row scope answered a rep with the whole
+// installation's numbers.
+func (e *forecastEnv) ownLensRepCtx(user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:rep", UserID: user,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"deal": {Read: true}, "forecast": {Read: true},
+				"installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeOwn,
+		},
+	})
+}
+
+// A rep asking a typed question is asking about THEIR work.
+//
+// Seven of their own and seven of a colleague on another team's, both above the floor, so
+// neither count is withheld and the number that comes back says which
+// population was measured rather than which rows survived a floor.
+func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 7; i++ {
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+	}
+
+	answer, err := e.askAnalytics(e.ownLensRepCtx(e.Rep1), t, analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if err != nil {
+		t.Fatalf("a rep's own question was refused: %v", err)
+	}
+	if len(answer.Rows) != 1 {
+		t.Fatalf("an ungrouped query answered %d rows: %+v", len(answer.Rows), answer.Rows)
+	}
+	if got := answer.Rows[0]["deals"]; got != float64(7) && got != int64(7) {
+		t.Errorf("the rep's count is %v, want their own 7 of the 14 seeded — a count of 14 "+
+			"is the whole installation answered to somebody who may measure their own work", got)
+	}
+}
+
+// Asking for the workspace is REFUSED, not quietly narrowed.
+//
+// Narrowing would answer a different question than the one asked, with nothing
+// on the answer saying so — and a caller who could assert a wider population
+// and be silently given a smaller one has no way to tell the two apart from a
+// genuinely small one.
+func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 7; i++ {
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+	}
+
+	_, err := e.askAnalytics(e.ownLensRepCtx(e.Rep1), t, analyticsquery.Query{
+		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindWorkspace,
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("asking for the whole workspace answered %v, want a refusal — a caller "+
+			"given a narrower answer than they asked for cannot tell it from a small one", err)
+	}
+}
+
+// wideLensCtx is a REAL seat that may measure the whole workspace.
+//
+// A real one because saving a run records who asked, and report_run carries a
+// foreign key to app_user — the synthetic id reportReaderCtx mints is fine for
+// asking a question and cannot be stored beside one.
+func (e *forecastEnv) wideLensCtx(user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:lead", UserID: user,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"deal": {Read: true}, "forecast": {Read: true},
+				"installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// A saved run answers under whoever OPENS it.
+//
+// The stored question carries the scope that was asked for, never the one that
+// was resolved. Storing the resolution would make a saved link a way to read
+// somebody else's numbers: a manager saves a run and the link hands their
+// answer to every rep who opens it. It is the same rule the floor already
+// follows here — the stored one is reported for comparison and never used to
+// judge the answer being served.
+func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 7; i++ {
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+	}
+	q := analyticsquery.Query{
+		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindWorkspace,
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	}
+
+	// Saved by a seat that MAY measure the workspace, and the answer says 14.
+	wide := e.wideLensCtx(e.Rep3)
+	answer, err := e.askAnalytics(wide, t, q)
+	if err != nil {
+		t.Fatalf("the wider seat's question was refused: %v", err)
+	}
+	if got := answer.Rows[0]["deals"]; got != float64(14) && got != int64(14) {
+		t.Fatalf("the wide answer is %v, want 14 — the rest of this case compares "+
+			"against it and says nothing if it was not the whole installation", got)
+	}
+	var runID ids.UUID
+	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(wide,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var saveErr error
+			runID, saveErr = SaveReportRun(ctx, tx, q, answer, analyticsquery.DefaultFloor)
+			return saveErr
+		}); err != nil {
+		t.Fatalf("saving the run: %v", err)
+	}
+
+	// Opened by a rep who may measure only their own. The stored question asks
+	// for the workspace, and that is now a scope THIS reader may not have — so
+	// the refusal is the same one they would meet asking directly.
+	// The read's own refusal is what this asserts, so it is captured rather
+	// than returned: returning it would roll the transaction back and report
+	// the same error through a second path, and a transaction failure would
+	// then be indistinguishable from the refusal being looked for.
+	var readErr error
+	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(e.ownLensRepCtx(e.Rep1),
+		func(ctx context.Context, tx pgx.Tx) error {
+			_, readErr = ReadReportRun(ctx, tx, runID, analyticsquery.DefaultFloor)
+			return nil
+		}); err != nil {
+		t.Fatalf("opening the saved run: %v", err)
+	}
+	if !errors.Is(readErr, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep opening a workspace-scoped run answered %v, want the refusal "+
+			"they would get asking it themselves — a saved link that answers wider "+
+			"than its reader is a way to read somebody else's numbers", readErr)
+	}
+}

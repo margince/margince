@@ -179,3 +179,20 @@ func ForecastPeriodAt(
 	}
 	return period, baseCurrency, nil
 }
+
+// ForecastWritableScope answers the population a caller may ASSERT about, in
+// the forecast module's own vocabulary.
+//
+// The read path narrows to what a caller may measure; a write has nothing to
+// narrow — it records a standing number ABOUT a population — so it needs the
+// authority answer on its own. Same resolver either way, so a seat cannot
+// write a call about a population they could not read.
+func ForecastWritableScope(
+	ctx context.Context, tx pgx.Tx, requested forecasting.Scope,
+) (forecasting.Scope, error) {
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(requested))
+	if err != nil {
+		return forecasting.Scope{}, err
+	}
+	return forecastScopeFromResolved(resolved), nil
+}

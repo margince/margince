@@ -64,7 +64,11 @@ func ExplainAnalyticsCell(
 	}
 
 	schema := AnalyticsSchemaFor(ctx)
-	plan, err := analyticsquery.CompileExplain(in, schema, analyticsScope(ctx, spec))
+	// The SAME population the count was taken over — the Explain carries the
+	// whole query, scope included. A drill-through narrowed differently from
+	// its own headline opens records the number never counted.
+	plan, err := analyticsquery.CompileExplain(
+		in, schema, analyticsScope(ctx, tx, spec, requestedFromQuery(in.Query)))
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}

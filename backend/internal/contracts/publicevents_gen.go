@@ -297,6 +297,48 @@ func (e PublicEventIntroRequestDecidedDecision) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventLeadDisqualifyReasonChangedChange.
+const (
+	PublicEventLeadDisqualifyReasonChangedChangeCreated PublicEventLeadDisqualifyReasonChangedChange = "created"
+	PublicEventLeadDisqualifyReasonChangedChangeDeleted PublicEventLeadDisqualifyReasonChangedChange = "deleted"
+	PublicEventLeadDisqualifyReasonChangedChangeUpdated PublicEventLeadDisqualifyReasonChangedChange = "updated"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventLeadDisqualifyReasonChangedChange enum.
+func (e PublicEventLeadDisqualifyReasonChangedChange) Valid() bool {
+	switch e {
+	case PublicEventLeadDisqualifyReasonChangedChangeCreated:
+		return true
+	case PublicEventLeadDisqualifyReasonChangedChangeDeleted:
+		return true
+	case PublicEventLeadDisqualifyReasonChangedChangeUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventLeadSourceChangedChange.
+const (
+	PublicEventLeadSourceChangedChangeCreated PublicEventLeadSourceChangedChange = "created"
+	PublicEventLeadSourceChangedChangeDeleted PublicEventLeadSourceChangedChange = "deleted"
+	PublicEventLeadSourceChangedChangeUpdated PublicEventLeadSourceChangedChange = "updated"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventLeadSourceChangedChange enum.
+func (e PublicEventLeadSourceChangedChange) Valid() bool {
+	switch e {
+	case PublicEventLeadSourceChangedChangeCreated:
+		return true
+	case PublicEventLeadSourceChangedChangeDeleted:
+		return true
+	case PublicEventLeadSourceChangedChangeUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventRelationshipNudgeDecidedAction.
 const (
 	PublicEventRelationshipNudgeDecidedActionDismissed PublicEventRelationshipNudgeDecidedAction = "dismissed"
@@ -424,9 +466,11 @@ const (
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
 	LeadDisqualified                      SubscribableEventType = "lead.disqualified"
+	LeadDisqualifyReasonChanged           SubscribableEventType = "lead_disqualify_reason.changed"
 	LeadMerged                            SubscribableEventType = "lead.merged"
 	LeadPromoted                          SubscribableEventType = "lead.promoted"
 	LeadSlaBreached                       SubscribableEventType = "lead.sla_breached"
+	LeadSourceChanged                     SubscribableEventType = "lead_source.changed"
 	LeadUpdated                           SubscribableEventType = "lead.updated"
 	LinkedinAccountChanged                SubscribableEventType = "linkedin_account.changed"
 	LinkedinMatchDecided                  SubscribableEventType = "linkedin_match.decided"
@@ -603,11 +647,15 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case LeadDisqualified:
 		return true
+	case LeadDisqualifyReasonChanged:
+		return true
 	case LeadMerged:
 		return true
 	case LeadPromoted:
 		return true
 	case LeadSlaBreached:
+		return true
+	case LeadSourceChanged:
 		return true
 	case LeadUpdated:
 		return true
@@ -1464,6 +1512,19 @@ type PublicEventLeadDemoted struct {
 // PublicEventLeadDisqualified Payload for lead.disqualified — a lead was disqualified. Carries no data.
 type PublicEventLeadDisqualified struct{}
 
+// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed — a disqualification reason was added, edited or removed (people/leaddisqualifyreason.go). It rides the lead stream for the reason its source sibling does: a subscriber reporting on why leads were disqualified re-reads the catalog on this.
+// It carries `label` where the source carries `key`, because a reason has no key — the label IS its identity, and after `deleted` it is the only thing naming what went away.
+type PublicEventLeadDisqualifyReasonChanged struct {
+	Change PublicEventLeadDisqualifyReasonChangedChange `json:"change"`
+
+	// Label The reason's label, which is its only identifier.
+	Label    string             `json:"label"`
+	ReasonId openapi_types.UUID `json:"reason_id"`
+}
+
+// PublicEventLeadDisqualifyReasonChangedChange defines model for PublicEventLeadDisqualifyReasonChanged.Change.
+type PublicEventLeadDisqualifyReasonChangedChange string
+
 // PublicEventLeadMerged Payload for lead.merged — two leads the review queue judged one prospect (ADR-0118/A169 §2) collapsed into the survivor. The merged-away lead is archived and carries merged_into_id; its activities and consent now sit on the survivor. Its own verb, because neither lead.updated nor a disqualification says two prospects became one.
 type PublicEventLeadMerged struct {
 	// MergedFromId The lead that was folded in and archived.
@@ -1504,6 +1565,19 @@ type PublicEventLeadSlaBreached struct {
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
+
+// PublicEventLeadSourceChanged Payload for lead_source.changed — a lead source was added, edited or removed (people/leadsource.go). It rides the lead stream because the source is a value every lead carries, so a subscriber that renders or groups by source re-reads the catalog on this.
+// `key` and not `label`: the key is what leads carry and what a subscriber keys its own cache by, and it is the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists, so publishing it here would invite a subscriber to trust a copy that can go stale.
+type PublicEventLeadSourceChanged struct {
+	Change PublicEventLeadSourceChangedChange `json:"change"`
+
+	// Key The stable key leads carry, which never changes for a given source.
+	Key      string             `json:"key"`
+	SourceId openapi_types.UUID `json:"source_id"`
+}
+
+// PublicEventLeadSourceChangedChange defines model for PublicEventLeadSourceChanged.Change.
+type PublicEventLeadSourceChangedChange string
 
 // PublicEventLeadUpdated Payload for lead.updated — an OPEN envelope: emit sites carry divergent shapes (a flat column patch that includes runtime cf_* custom-field columns, and behavioral-recompute/routing deltas), so the honest shape is a change-set map rather than a fixed field list.
 type PublicEventLeadUpdated struct {
@@ -2456,7 +2530,7 @@ func (PublicEventForecastShareRevoked) EntityType() string { return "user" }
 
 func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.snapshot_created" }
 
-func (PublicEventForecastSnapshotCreated) EntityType() string { return "user" }
+func (PublicEventForecastSnapshotCreated) EntityType() string { return "forecast_snapshot" }
 
 func (PublicEventIncumbentConnected) EventType() string { return "incumbent.connected" }
 
@@ -2498,6 +2572,12 @@ func (PublicEventLeadDisqualified) EventType() string { return "lead.disqualifie
 
 func (PublicEventLeadDisqualified) EntityType() string { return "lead" }
 
+func (PublicEventLeadDisqualifyReasonChanged) EventType() string {
+	return "lead_disqualify_reason.changed"
+}
+
+func (PublicEventLeadDisqualifyReasonChanged) EntityType() string { return "lead_disqualify_reason" }
+
 func (PublicEventLeadMerged) EventType() string { return "lead.merged" }
 
 func (PublicEventLeadMerged) EntityType() string { return "lead" }
@@ -2509,6 +2589,10 @@ func (PublicEventLeadPromoted) EntityType() string { return "lead" }
 func (PublicEventLeadSlaBreached) EventType() string { return "lead.sla_breached" }
 
 func (PublicEventLeadSlaBreached) EntityType() string { return "lead" }
+
+func (PublicEventLeadSourceChanged) EventType() string { return "lead_source.changed" }
+
+func (PublicEventLeadSourceChanged) EntityType() string { return "lead_source" }
 
 func (PublicEventLeadUpdated) EventType() string { return "lead.updated" }
 
@@ -2812,6 +2896,8 @@ var PublicEventVersions = map[string]int{
 	"lead.promoted":                             1,
 	"lead.sla_breached":                         1,
 	"lead.updated":                              1,
+	"lead_disqualify_reason.changed":            1,
+	"lead_source.changed":                       1,
 	"linkedin_account.changed":                  1,
 	"linkedin_match.decided":                    1,
 	"linkedin_network.imported":                 1,

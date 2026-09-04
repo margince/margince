@@ -95,13 +95,22 @@ function SessionBookingScreen() {
   });
 
   const book = useMutation({
-    mutationFn: async (slot: { start: string; end: string }) => {
+    // The attendee travels WITH the slot rather than being read off state
+    // inside. What was sent and what the field holds when the answer arrives
+    // are two different things: clear the box while the request is in flight
+    // and the confirmation spoke about the wrong booking — either promising a
+    // reminder for nobody, or staying silent about an attendee who was sent.
+    mutationFn: async (slot: {
+      start: string;
+      end: string;
+      attendee: string;
+    }) => {
       const { data, error } = await api.POST("/bookings", {
         body: {
           start: slot.start,
           end: slot.end,
           subject: t("book.subject"),
-          attendee_emails: attendee.trim() ? [attendee.trim()] : [],
+          attendee_emails: slot.attendee ? [slot.attendee] : [],
           links: [],
         },
       });
@@ -157,6 +166,17 @@ function SessionBookingScreen() {
             {book.data.occurred_at &&
               formatDateTime(book.data.occurred_at, locale, viewerZone())}
           </p>
+          {/* Only when an address was actually typed. This build sends no
+              invite — there is no outbound calendar or mail transport behind
+              the booking at all — and somebody who named an attendee will
+              otherwise assume the product told them. Saying nothing is how a
+              client never hears about a meeting and nobody finds out until
+              they do not turn up. */}
+          {book.variables?.attendee !== "" && (
+            <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
+              {t("book.tellThemYourself")}
+            </p>
+          )}
         </Card>
       ) : (
         <QueryGate
@@ -170,7 +190,9 @@ function SessionBookingScreen() {
                   key={slot.start}
                   small
                   disabled={book.isPending}
-                  onClick={() => book.mutate(slot)}
+                  onClick={() =>
+                    book.mutate({ ...slot, attendee: attendee.trim() })
+                  }
                 >
                   {formatDateTime(slot.start, locale, viewerZone())}
                 </Button>

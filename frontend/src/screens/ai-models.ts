@@ -33,6 +33,9 @@ type ModelRate = components["schemas"]["AiModelRate"];
 /** One vendor's answer about what it serves, as the wire carries it. */
 export type AvailableModels = components["schemas"]["AvailableModelList"];
 
+/** One model in that answer — priced and ranked only where the vendor states it. */
+export type VendorModel = AvailableModels["models"][number];
+
 /** The lane a field binds: what a tier picker asks for, what the embed row does. */
 export type ModelLane = ModelRate["lane"];
 
@@ -57,6 +60,101 @@ export function useAiModelCatalogue() {
       return data.data;
     },
   });
+}
+
+/**
+ * The vendor's live catalogue as a caller holds it. `rankedBy` travels with the
+ * models because a screen that prints a top ten has to be able to say what
+ * "top" measured, and `unavailable` because an empty list on its own cannot
+ * tell a vendor that is down from a vendor that serves nothing.
+ */
+export type VendorCatalogue = Readonly<{
+  models: readonly VendorModel[];
+  rankedBy: string;
+  unavailable: boolean;
+}>;
+
+/**
+ * The shared read behind BOTH "what does this vendor serve" hooks:
+ * `/ai/available-models/{provider}` answers a routing form's full pick list
+ * and a first-run shortlist alike, `top` being the only thing that tells them
+ * apart. One queryFn, so the two never drift into two answers for one vendor.
+ *
+ * IT NEVER THROWS. First run and the routing form must not be blocked by
+ * another company's uptime, so a failed transport is the same Unavailable
+ * state the server already answers a vendor it could not reach with.
+ */
+function availableModelsQueryOptions(
+  provider: string,
+  tier: string,
+  top?: number,
+) {
+  return {
+    queryKey: ["ai-available-models", provider, tier, top ?? null],
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    queryFn: async (): Promise<AvailableModels> => {
+      try {
+        const { data, error } = await api.GET(
+          "/ai/available-models/{provider}",
+          { params: { path: { provider }, query: { tier, top } } },
+        );
+        // A 200 is not by itself an answer: an intermediary can return one with
+        // a body this cannot read, and a list that is missing rather than empty
+        // would reach `select`/the render as undefined and take the screen
+        // down. An unreadable body is the same thing as an unreachable vendor.
+        if (error || !data || !Array.isArray(data.models)) {
+          return { provider, models: [], unavailable: "unreachable" };
+        }
+        return data;
+      } catch {
+        return { provider, models: [], unavailable: "unreachable" };
+      }
+    },
+  } as const;
+}
+
+/**
+ * What the vendor is serving TODAY, which the price sheet cannot know.
+ *
+ * The sheet is what this installation can put a number on, and it is right that
+ * the sheet governs cost. It is not a catalogue of what exists: a model the
+ * vendor shipped last week is absent from it, and an admin binding one has no
+ * way to find out what the options even are. This read answers only that
+ * question, for the ONE vendor whose catalogue is public and unauthenticated,
+ * and it is asked only once that vendor has been chosen.
+ *
+ * `top: 10` is the only thing that makes this a different request from
+ * `useAvailableModels`'s: a first run wants ten names to try, not four hundred.
+ */
+export function useVendorCatalogue(provider: "openrouter" | undefined) {
+  return useQuery({
+    ...availableModelsQueryOptions(provider ?? "", "", 10),
+    // Nothing is asked until a vendor with a public catalogue is chosen. The
+    // admin is about to hand that vendor their key and their text, so reading
+    // its catalogue is not an escalation, but reading it before they have
+    // chosen would be this installation talking to a vendor it may never use.
+    enabled: provider !== undefined,
+    select: (data): VendorCatalogue => ({
+      models: data.models,
+      rankedBy: data.ranked_by ?? "",
+      unavailable: data.unavailable !== undefined,
+    }),
+  });
+}
+
+/**
+ * The vendor's own price for one model, or undefined if it does not serve it.
+ *
+ * Callers use this only where the SHEET has nothing to say: a recorded price
+ * always outranks a proposed one, because the recorded number is the one this
+ * installation has agreed to bill against.
+ */
+export function vendorModel(
+  catalogue: VendorCatalogue | undefined,
+  modelId: string,
+): VendorModel | undefined {
+  return catalogue?.models.find((m) => m.id === modelId);
 }
 
 /**
@@ -119,6 +217,53 @@ export function suggestionsFor(
 }
 
 /**
+ * The vendor's ranked models, for a field the sheet cannot fill on its own.
+ *
+ * IN THE VENDOR'S ORDER, not alphabetical, which is the one place this differs
+ * from `suggestionsFor` and the whole reason the list is worth fetching: the
+ * order IS the ranking, and sorting it by id would throw away the only thing
+ * that makes ten rows more useful than four hundred.
+ *
+ * A model the sheet already prices is dropped here rather than listed twice.
+ * The sheet's own row is the better offer: it carries a date and a price this
+ * installation has agreed to, where the vendor's is a number nobody has
+ * confirmed yet.
+ */
+export function vendorSuggestions(
+  vendor: VendorCatalogue | undefined,
+  priced: ModelCatalogue,
+  provider: string,
+  locale: Locale,
+): readonly ComboBoxSuggestion[] {
+  const onSheet = new Set(
+    (priced ?? [])
+      .filter((r) => r.provider === provider)
+      .map((r) => r.model_id),
+  );
+  return (vendor?.models ?? [])
+    .filter((m) => !onSheet.has(m.id))
+    .map((m) => ({ value: m.id, hint: vendorHint(m, locale) }));
+}
+
+function vendorHint(model: VendorModel, locale: Locale): string | undefined {
+  const { input_per_mtok: input, output_per_mtok: output } = model;
+  // Absent is absent, not a decoration to invent — the same guard as the
+  // sheet's hint, widened for a price that may not be there at all: a hint is
+  // decoration, and a model priced on only one side (or neither) offers the
+  // field without one rather than printing NaN or half a number.
+  if (
+    input === undefined ||
+    output === undefined ||
+    unreadablePrice(input) ||
+    unreadablePrice(output)
+  ) {
+    return undefined;
+  }
+  const shown = formatUsdPerMTok(input, locale);
+  return `${shown} → ${formatUsdPerMTok(output, locale)}`;
+}
+
+/**
  * What the VENDOR says it serves, for the field that binds a lane to it.
  *
  * The sheet below answers what this installation can PRICE, which is a
@@ -140,34 +285,13 @@ export function useAvailableModels(
   tier: string,
   enabled: boolean,
 ) {
+  // The lane is part of the key, not just the request: two lanes on one vendor
+  // may be reached at two hosts, so their answers are two different lists and
+  // must not share a cache entry. No `top`: a routing form binds an id its
+  // reader already knows, so it wants the vendor's whole list, not a shortlist.
   return useQuery({
+    ...availableModelsQueryOptions(provider, tier),
     enabled: enabled && provider !== "",
-    // The lane is part of the key, not just the request: two lanes on one vendor
-    // may be reached at two hosts, so their answers are two different lists and
-    // must not share a cache entry.
-    queryKey: ["ai-available-models", provider, tier],
-    // A vendor's catalog does not change while somebody fills in a form, and
-    // the call costs a round-trip on the operator's own credential.
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-    queryFn: async (): Promise<AvailableModels> => {
-      // Caught, not just checked. `api.GET` REJECTS when the transport fails —
-      // offline, a dropped connection, a proxy closing the socket — and that
-      // path never reaches the `error` field below, so without this the hook
-      // rejects and the field loses the stated reason it was built to keep.
-      try {
-        const { data, error } = await api.GET(
-          "/ai/available-models/{provider}",
-          { params: { path: { provider }, query: { tier } } },
-        );
-        if (error || !data) {
-          return { provider, models: [], unavailable: "unreachable" };
-        }
-        return data;
-      } catch {
-        return { provider, models: [], unavailable: "unreachable" };
-      }
-    },
   });
 }
 

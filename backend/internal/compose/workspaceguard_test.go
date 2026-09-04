@@ -150,6 +150,9 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		CloseDateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&closeDateWorkspaceWorker{}).Work(ctx, &river.Job[CloseDateWorkspaceArgs]{})
 		},
+		ForecastSnapshotWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&forecastSnapshotWorkspaceWorker{}).Work(ctx, &river.Job[ForecastSnapshotWorkspaceArgs]{})
+		},
 		FollowUpWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&followUpWorkspaceWorker{}).Work(ctx, &river.Job[FollowUpWorkspaceArgs]{})
 		},

@@ -9,7 +9,6 @@ package compose
 // recovery) is platform/httpserver; what lives here is the wiring.
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -27,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
@@ -85,6 +83,12 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	// Wired unconditionally, not inside WithKeyvault: a role composed with no
+	// vault still serves /installation/setup (every step reads "not
+	// configured"), and the anonymous capabilities probe must report the same
+	// first_run for it rather than only for a role that wired one. Reuses
+	// identitySvc — see its own comment below for why the process holds one.
+	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
 
 	api := contractAPI(srv, pool, identitySvc)
 	// ONE identity.Service for the whole process: contractAPI's admission
@@ -125,20 +129,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
 		jobHealthHandlers: jobHealthHandlers{pool: pool},
-		// DSR fulfillment executes privacy's erase path — injected here so
-		// consent never imports its sibling.
-		consentHandlers: consent.NewHandlers(InstallationDB(pool)).
-			WithEraser(privacy.NewEraser(InstallationDB(pool))).
-			WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
-			WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
-				return identity.InstallationNameForPublicPage(ctx, pool)
-			})).
-			// The guard endpoint previews the same verdict the send path
-			// takes, so it resolves the same jurisdiction windows. Without
-			// this it would answer on the core defaults while a pack shortened
-			// the real ones, and tell a rep a send is allowed that the engine
-			// then refuses.
-			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)),
+		captureHealthHandlers: captureHealthHandlers{
+			pool: pool, now: func() time.Time { return time.Now().UTC() },
+		},
+		consentHandlers:     newConsentHandlers(pool),
 		collectionsHandlers: newCollectionsHandlers(pool),
 		// The warm room ranks its contact edges by the §4 relationship
 		// strength owned by people; injected through the adapter below so
@@ -200,7 +194,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		),
 		forecastHandlers: forecasting.NewHandlers(
 			forecasting.NewStore(InstallationDB(pool)),
-			ForecastDeals, ForecastPeriodAt,
+			ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
 			func() time.Time { return time.Now().UTC() },
 		),
 		// The floor comes from the constant rather than a setting for now:

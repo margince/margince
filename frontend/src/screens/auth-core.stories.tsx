@@ -7,12 +7,18 @@ import "./auth.css";
 import { StoryProviders } from "./story-utils";
 
 /**
- * The identity region on its own (ADR-0076 Decision 2), so its three server-read
- * postures can be reviewed without a form beside them.
+ * The identity region on its own, so its motion can be reviewed without a form
+ * beside it.
  *
- * The decorator gives it the surface's grid rather than the old `.auth-page`
- * centring box: the region is a grid child now, and reviewing it outside that
- * context would show a layout the product never renders.
+ * It has ONE axis left: the sign-in phase, which the Core beside the copy
+ * answers. The region used to carry the installation's AI posture as well —
+ * configured, unconfigured, a probe that never answered — and those states went
+ * with the runtime line itself, along with the disclosure kicker, the send
+ * promise and the handover.
+ *
+ * The decorator gives it the surface's grid rather than a centring box: the
+ * region is a grid child, and reviewing it outside that context would show a
+ * layout the product never renders.
  */
 const meta = {
   title: "Signed out/Identity region",
@@ -32,51 +38,12 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Configured: Story = {
-  args: {
-    phase: "idle",
-    profile: {
-      name: "Margince",
-      kind: "ai",
-      state: "configured",
-      inference_mode: "hybrid",
-      providers: ["anthropic", "ollama"],
-    },
-  },
-};
+/** Waiting on a person: nothing is running, and the Core does not pretend to
+ *  be listening for them. */
+export const Idle: Story = { args: { phase: "idle" } };
 
-export const Working: Story = {
-  args: {
-    ...Configured.args,
-    phase: "signing-in",
-  },
-};
+/** The credential is in flight. */
+export const SigningIn: Story = { args: { phase: "signing-in" } };
 
-/**
- * The AI is not configured on this installation, and the region says so rather
- * than hiding it. "The CRM still works" is the second half of the line.
- */
-export const AiUnconfigured: Story = {
-  args: {
-    phase: "idle",
-    profile: {
-      name: "Margince",
-      kind: "ai",
-      state: "unconfigured",
-      inference_mode: "none",
-      providers: [],
-    },
-  },
-};
-
-/**
- * No profile: the probe has not answered, or it failed. The runtime line is
- * ABSENT rather than guessed — Decision 2c forbids a fact the frontend invented.
- */
-export const RuntimePostureUnknown: Story = {
-  args: { phase: "idle" },
-};
-
-export const Unavailable: Story = {
-  args: { phase: "unavailable" },
-};
+/** The installation cannot answer at all. */
+export const Unavailable: Story = { args: { phase: "unavailable" } };

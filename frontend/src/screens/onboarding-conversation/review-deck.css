@@ -1,0 +1,230 @@
+/* The confirm stop as a deck. One card at a time, on the board, with the ones
+   still to come showing as edges behind it. */
+.rdeck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* The asking on the left, the record it lands in on the right. `minmax(0, …)`
+   on both, because a long unbroken value in the article is otherwise allowed to
+   set the column's floor and push the deck off the board. */
+.rdeck-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+/* One column below the point where the article stops being a companion to the
+   deck and starts being a wall beside it. */
+@media (width < 60rem) {
+  .rdeck-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The stack is what makes "how many are left" a thing you can see rather than
+   only a number you read. The peeks are behind the live card and carry nothing,
+   so they cost a reader no attention. */
+.rdeck-stack {
+  position: relative;
+}
+.rdeck-peek {
+  position: absolute;
+  inset-inline: var(--space-4);
+  bottom: calc(var(--space-3) * -1);
+  height: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.rdeck-peek-far {
+  inset-inline: var(--space-6);
+  bottom: calc(var(--space-5) * -1);
+}
+
+/* The live card sits above its own stack. A left rail in the agent's colour,
+   because everything on this card was proposed by the read rather than by a
+   person: see the provenance rule in the design system README. */
+.rdeck-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* Three regions, each its own band, so the card reads as an instrument
+     rather than a stack of paragraphs: what this is, what it asks, what you
+     do about it. `overflow` is what keeps the bands inside the corners. */
+  overflow: hidden;
+  border: 1.5px dashed var(--aiMed);
+  border-inline-start: 3px solid var(--ai);
+  border-radius: var(--r-md);
+  /* The sheet is the paper the question is written on, so it is the lightest
+     ground the theme has rather than the card grey. The only tint on it is the
+     band, which is tinted because of what it says and not to separate it. */
+  background: var(--bgElevated);
+}
+/* A card the flow will not continue without is marked as such on its own edge,
+   not only in the tray's count: the reason a Continue refuses should be visible
+   on the thing that is refusing it. */
+.rdeck-card[data-required="true"] {
+  border-inline-start-color: var(--danger);
+}
+
+/* What this card is, on the agent's own ground: everything the band states
+   was decided by the read rather than by a person. */
+.rdeck-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: var(--aiLight);
+}
+
+.rdeck-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.rdeck-tag {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgCard);
+  color: var(--aiText);
+}
+.rdeck-tag[data-required="true"] {
+  background: var(--dangerBg);
+  color: var(--danger);
+}
+
+/* "1 of 4" is a counted position in the deck, not an identifier a reader
+   compares character by character, so it reads in the deck's own prose
+   family rather than mono. */
+.rdeck-count {
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+.rdeck-question {
+  color: var(--textPrimary);
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-tight);
+}
+
+/* What the field is for, quieter than the evidence below it: the evidence is
+   a claim the site made and earns the reader's attention first, this is
+   background a reader only needs once they wonder what to type. */
+.rdeck-hint {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-normal);
+}
+
+.rdeck-evidence {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+.rdeck-card input,
+.rdeck-card textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+  color: var(--textPrimary);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+}
+.rdeck-card input::placeholder,
+.rdeck-card textarea::placeholder {
+  color: var(--textMeta);
+}
+.rdeck-card textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+/* What this answer will store, in the words it will be stored in. Mono and
+   verbatim: a paraphrase here would defeat the point of showing it at all. */
+.rdeck-writes {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--fs-meta);
+}
+.rdeck-writes-lead {
+  color: var(--textMeta);
+}
+.rdeck-writes code {
+  overflow-wrap: anywhere;
+  color: var(--textPrimary);
+  font-family: var(--f-mono);
+}
+
+.rdeck-source {
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgElevated);
+  color: var(--textMeta);
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+}
+
+/* The way onward is a foot, not a button loose under the prose: it is the one
+   thing on the card that acts, and it says so by standing on its own ground. */
+.rdeck-acts {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-5);
+  /* The rule alone separates the foot. It stands on the same sheet as the
+     question, because a second ground under one control reads as a second
+     card. */
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The tray: what is left, what went in without anybody, and the way onward. */
+.rdeck-tray {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+}
+.rdeck-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  /* The count on the left, the way onward on the right, nothing between: the
+     door to the whole record moved onto the record itself. */
+  margin: 0 auto 0 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-sm);
+}
+/* The quiet half of the sentence: the reader did not have to do this, and
+   saying so is what makes the short list of cards credible rather than
+   suspicious. */
+.rdeck-settled {
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+.rdeck-clear {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-lead);
+}

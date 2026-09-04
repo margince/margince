@@ -115,6 +115,10 @@ func (stubs) GetTranscriptRead(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "GetTranscriptRead")
 }
 
+func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetCaptureHealth")
+}
+
 func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
@@ -589,6 +593,10 @@ func (stubs) GetCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, re
 
 func (stubs) ConfirmCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, readId openapi_types.UUID, params crmcontracts.ConfirmCompanySiteReadParams) {
 	httperr.NotImplemented(w, r, "ConfirmCompanySiteRead")
+}
+
+func (stubs) GetCompanySiteReadLogo(w nethttp.ResponseWriter, r *nethttp.Request, readId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetCompanySiteReadLogo")
 }
 
 func (stubs) MessageCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, readId openapi_types.UUID) {

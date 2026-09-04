@@ -341,6 +341,7 @@ func attachCompanySiteReadOptionals(out *crmcontracts.CompanySiteRead, read peop
 		reason := crmcontracts.CompanySiteReadStoppedReason(*read.StoppedReason)
 		out.StoppedReason = &reason
 	}
+	out.LogoUrl = siteReadLogoURL(read)
 }
 
 func contractRunSummary(summary ai.RunSummary) crmcontracts.AiRunSummary {

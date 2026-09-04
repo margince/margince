@@ -24,7 +24,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type KindAutonomy = components["schemas"]["KindAutonomy"];
 
-function useAutonomy() {
+export function useAutonomy() {
   return useQuery({
     queryKey: ["autonomy"],
     queryFn: async () => {
@@ -172,9 +172,7 @@ function kindHelp(kind: string, t: Translator): string {
 
 export function AutonomySettingsCard() {
   const t = useT();
-  const { locale } = useLocale();
   const query = useAutonomy();
-  const update = useUpdateAutonomy();
 
   return (
     <Panel title={t("autonomy.title")}>
@@ -189,46 +187,59 @@ export function AutonomySettingsCard() {
           query={query}
           empty={(settings) => settings.data.length === 0}
         >
-          {(settings) => (
-            <>
-              {noneDecidedYet(settings.data) && (
-                <Callout tone="info">{t("autonomy.noneDecidedYet")}</Callout>
-              )}
-              <SettingList>
-                {settings.data.map((row) => (
-                  <SettingRow
-                    key={row.kind}
-                    label={kindLabel(row.kind, t)}
-                    description={[
-                      kindHelp(row.kind, t),
-                      decidedSoFar(row, t, locale),
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    control={
-                      <Switch
-                        testId={`autonomy-toggle-${row.kind}`}
-                        label={kindLabel(row.kind, t)}
-                        labelHidden
-                        checked={row.mode === "auto"}
-                        disabled={update.isPending}
-                        onChange={(next) =>
-                          update.mutate({ kind: row.kind, auto: next })
-                        }
-                      />
-                    }
-                  />
-                ))}
-              </SettingList>
-            </>
-          )}
+          {(settings) => <AutonomyChoices rows={settings.data} />}
         </QueryGate>
-        {update.isError && (
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(update.error, t)}
-          </Callout>
-        )}
       </PanelBody>
     </Panel>
+  );
+}
+
+/**
+ * The switches themselves, one per kind, each writing the moment it moves.
+ * Shared by the settings card and the onboarding's preferences act, so the
+ * two cannot disagree about what a row says or when it writes. `rows` is the
+ * loaded, non-empty set: the caller decides what an empty one means on its
+ * own surface (the card says so, the onboarding says nothing).
+ */
+export function AutonomyChoices({
+  rows,
+}: Readonly<{ rows: readonly KindAutonomy[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const update = useUpdateAutonomy();
+  return (
+    <>
+      {noneDecidedYet(rows) && (
+        <Callout tone="info">{t("autonomy.noneDecidedYet")}</Callout>
+      )}
+      <SettingList>
+        {rows.map((row) => (
+          <SettingRow
+            key={row.kind}
+            label={kindLabel(row.kind, t)}
+            description={[kindHelp(row.kind, t), decidedSoFar(row, t, locale)]
+              .filter(Boolean)
+              .join(" ")}
+            control={
+              <Switch
+                testId={`autonomy-toggle-${row.kind}`}
+                label={kindLabel(row.kind, t)}
+                labelHidden
+                checked={row.mode === "auto"}
+                disabled={update.isPending}
+                onChange={(next) =>
+                  update.mutate({ kind: row.kind, auto: next })
+                }
+              />
+            }
+          />
+        ))}
+      </SettingList>
+      {update.isError && (
+        <Callout tone="danger" live="alert">
+          {problemMessageOf(update.error, t)}
+        </Callout>
+      )}
+    </>
   );
 }

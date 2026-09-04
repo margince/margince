@@ -1,0 +1,28 @@
+/*
+ * The mailbox form, on both of its surfaces: the Settings dialog and the
+ * first-run platform step.
+ *
+ * Three rows of two rather than six of one. The pairs are the ones a person
+ * already thinks of together — the server and its port, the address and its
+ * app-password, the two sync knobs — and a stack of six full-width fields under
+ * the capture notice ran the first-run step off the bottom of a laptop screen.
+ * Everything that is not a field spans the row.
+ */
+.imap-mailbox-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-4);
+}
+.imap-mailbox-form > .imap-mailbox-span {
+  grid-column: 1 / -1;
+}
+.imap-mailbox-form > .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+@media (max-width: 640px) {
+  .imap-mailbox-form {
+    grid-template-columns: 1fr;
+  }
+}

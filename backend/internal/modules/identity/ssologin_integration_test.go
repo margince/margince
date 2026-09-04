@@ -279,13 +279,12 @@ func TestOIDCSignInFullRoundTrip(t *testing.T) {
 	svc, _, userID, email := seedSSOEnv(t, "sso-full-round-trip")
 
 	h := Handlers{svc: svc}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {
-			Key: "google", ClientID: "cid",
-			AuthURL: "https://accounts.google.com/o/oauth2/v2/auth",
-		}},
-		map[string]OIDCVerifier{"google": fixedVerifier{email: email, sub: "sub-carol", emailVerified: true}},
-		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused-by-fixedVerifier"}},
-		fixedStateSigner{provider: "google", nonce: "n1", codeVerifier: "v1"},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth"}, Verifier: fixedVerifier{email: email, sub: "sub-carol", emailVerified: true}, Exchanger: fixedExchanger{idToken: "unused-by-fixedVerifier"},
+		})},
+		// The state carries the client the flow started on, as a real /start
+		// signs it: the callback refuses a code issued to a different client.
+		fixedStateSigner{provider: "google", clientID: "cid", nonce: "n1", codeVerifier: "v1"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 
@@ -327,13 +326,12 @@ func TestOIDCSignInFullRoundTripRefusesUnknownEmail(t *testing.T) {
 	svc, _, _, _ := seedSSOEnv(t, "sso-round-trip-unknown-email")
 
 	h := Handlers{svc: svc}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {
-			Key: "google", ClientID: "cid",
-			AuthURL: "https://accounts.google.com/o/oauth2/v2/auth",
-		}},
-		map[string]OIDCVerifier{"google": fixedVerifier{email: "nobody@example.com", sub: "sub-nobody", emailVerified: true}},
-		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused-by-fixedVerifier"}},
-		fixedStateSigner{provider: "google", nonce: "n1", codeVerifier: "v1"},
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config: OIDCProviderConfig{Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth"}, Verifier: fixedVerifier{email: "nobody@example.com", sub: "sub-nobody", emailVerified: true}, Exchanger: fixedExchanger{idToken: "unused-by-fixedVerifier"},
+		})},
+		// The state carries the client the flow started on, as a real /start
+		// signs it: the callback refuses a code issued to a different client.
+		fixedStateSigner{provider: "google", clientID: "cid", nonce: "n1", codeVerifier: "v1"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 

@@ -17,6 +17,7 @@ import {
 } from "../../../vitest.budget";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import type { ConversationState } from "./conversation-machine";
 import {
   conversationReducer,
@@ -484,25 +485,22 @@ describe("the conversational voice act", () => {
     render(<VoiceHarness initial={collectingState()} />);
 
     await uploadFile("one.md", "First document.");
-    expect(
-      await screen.findByText(/Own words so far: 500\. I need at least 800/),
-    ).toBeTruthy();
-    const build = screen.getByRole("button", {
-      name: /Build my voice profile/,
-    }) as HTMLButtonElement;
-    expect(build.disabled).toBe(true);
+    expect(await screen.findByText("500 of 800 words")).toBeTruthy();
+    // Below the floor the button still presses: the press names the floor
+    // on the rail and starts nothing.
+    await userEvent.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
+      "800",
+    );
 
     await uploadFile("two.md", "Second document.");
+    // At the floor the reason is gone with the block it named.
     await waitFor(() => {
-      expect(
-        (
-          screen.getByRole("button", {
-            name: /Build my voice profile/,
-          }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(false);
+      expect(document.querySelector(".ob-stage-note")).toBeNull();
     });
-    expect(screen.queryByText(/I need at least 800/)).toBeNull();
+    expect(screen.queryByText("500 of 800 words")).toBeNull();
   });
 
   it(
@@ -531,12 +529,13 @@ describe("the conversational voice act", () => {
         }),
       ).toBeTruthy();
       expect(
-        await screen.findByText(/Your voice profile is ready\./, undefined, {
-          timeout: 4000,
-        }),
-      ).toBeTruthy();
-      expect(
-        await screen.findByText(/Here is your voice, in your own words\./),
+        await screen.findByText(
+          /Here is your voice, in your own words\./,
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
       ).toBeTruthy();
       expect(
         await screen.findByText(/needs your review before it goes live/),
@@ -567,9 +566,13 @@ describe("the conversational voice act", () => {
       );
 
       expect(
-        await screen.findByText(/The build did not finish/, undefined, {
-          timeout: 4000,
-        }),
+        await screen.findByText(
+          en["ob.conv.voice.continueFailedStatus"],
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
       ).toBeTruthy();
 
       await userEvent.click(
@@ -577,9 +580,13 @@ describe("the conversational voice act", () => {
       );
 
       expect(
-        await screen.findByText(/Your voice profile is ready\./, undefined, {
-          timeout: 4000,
-        }),
+        await screen.findByText(
+          /Here is your voice, in your own words\./,
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
       ).toBeTruthy();
       expect(requestsTo(calls, "/builds", "POST").length).toBe(2);
     },
@@ -639,12 +646,12 @@ describe("the conversational voice act", () => {
       await screen.findByRole("button", { name: /Build my voice profile/ }),
     );
 
-    // The act never sits silent in vo.building: one honest correlated turn,
-    // the failed outcome, and the retry chip back on offer.
+    // The act never sits silent in vo.building: a poll that keeps erroring
+    // still lands on the one failed outcome the surface knows how to show,
+    // with the retry chip back on offer.
     expect(
-      await screen.findByText(/I lost the connection during the build/),
+      await screen.findByText(en["ob.conv.voice.continueFailedStatus"]),
     ).toBeTruthy();
-    expect(await screen.findByText(/The build did not finish/)).toBeTruthy();
     expect(
       screen.getByRole("button", { name: /Try the build again/ }),
     ).toBeTruthy();
@@ -723,7 +730,11 @@ describe("the conversational voice act", () => {
 // The rule this act follows: the work happens on the surface, the rail only
 // narrates. These pin the three places that rule used to break.
 describe("the voice act's surface/rail split", () => {
-  it("keeps the speaker decision and its radio options off the rail", async () => {
+  // There is no rail to keep these off any more — OnboardingStage is one
+  // room, not a board beside a conversation thread — so what these cases
+  // pin now is only the positive half: the decision, and every action that
+  // used to have a rail copy to disagree with, lives on the one surface.
+  it("keeps the speaker decision on the board, radio options and all", async () => {
     stubApi({
       preview: conversationalPreview,
       ingests: [{ stats: transcriptStats, summary: summaryOf(1240) }],
@@ -733,17 +744,10 @@ describe("the voice act's surface/rail split", () => {
     await uploadFile("call.vtt", "WEBVTT transcript content");
     await screen.findByText(/Which one is you\? Only your own words count/);
 
-    const rail = document.querySelector(".ob-conv-thread");
-    expect(rail).not.toBeNull();
-    expect(within(rail as HTMLElement).queryAllByRole("radio").length).toBe(0);
-    // The file's own upload turn and per-source reaction never land in the
-    // rail either — a fact already live on the surface stays there.
-    expect(
-      within(rail as HTMLElement).queryByText(/Added call.vtt/),
-    ).toBeNull();
+    expect(screen.getAllByRole("radio").length).toBeGreaterThan(0);
   });
 
-  it("renders a skipped voice act's Continue action on the surface, never the rail", () => {
+  it("renders a skipped voice act's Continue action on the surface's own pinned bar", () => {
     stubApi({});
     render(
       <VoiceHarness
@@ -755,9 +759,7 @@ describe("the voice act's surface/rail split", () => {
       />,
     );
 
-    const rail = document.querySelector(".ob-conv-thread") as HTMLElement;
-    expect(within(rail).queryByRole("button", { name: "Continue" })).toBeNull();
-    const bar = document.querySelector(".ob-triage-continue");
+    const bar = document.querySelector(".ob-stage-acts");
     expect(bar).not.toBeNull();
     expect(
       within(bar as HTMLElement).getByRole("button", { name: "Continue" }),
@@ -782,18 +784,14 @@ describe("the voice act's surface/rail split", () => {
     );
 
     // Every section is its own bordered card, and the confirm action sits
-    // in the surface's own pinned bar beside them, not the rail.
+    // on the stage's own rail beside them.
     const identity = await screen.findByText(/Direct, concrete/);
     expect(identity.closest(".ob-voice-result-card")).not.toBeNull();
-    const rail = document.querySelector(".ob-conv-thread") as HTMLElement;
-    expect(
-      within(rail).queryByRole("button", { name: "That is my voice" }),
-    ).toBeNull();
-    const bar = document.querySelector(".ob-triage-continue");
+    const bar = document.querySelector(".ob-stage-acts");
     expect(bar).not.toBeNull();
     expect(
       within(bar as HTMLElement).getByRole("button", {
-        name: "That is my voice",
+        name: "That is me",
       }),
     ).toBeTruthy();
   });

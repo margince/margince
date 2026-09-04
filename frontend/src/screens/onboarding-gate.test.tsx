@@ -41,7 +41,14 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  // A motion preference set by one case must not outlive it: the shared setup
+  // deliberately leaves the animated path on, and a leaked stub would quietly
+  // turn it off for everything after.
+  restoreMotion?.();
+  restoreMotion = null;
 });
+
+let restoreMotion: (() => void) | null = null;
 
 const render = (ui: ReactNode) =>
   rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
@@ -406,8 +413,48 @@ describe("ReadTheatre phase line", () => {
   });
 });
 
-describe("ReadTheatre page strip", () => {
-  it("shows one named tile per page, with the reason and its honest fallback", () => {
+/**
+ * The figure beside one tally label: the `dd` next to the `dt` naming it.
+ *
+ * Asserted through the label rather than by searching for the number, because
+ * the number alone is not unique on this screen and a match on the wrong "2"
+ * is a test that passes for the wrong reason.
+ */
+function tally(label: HTMLElement): string {
+  return label.parentElement?.querySelector("dd")?.textContent ?? "";
+}
+
+/**
+ * Ask for reduced motion, which the shared setup leaves off by default.
+ *
+ * The tally counts UP, over a second of real time, and these cases are about
+ * the number rather than the climb. Reduced motion renders the end state at
+ * once, which is both the honest thing for the component to do and the only
+ * way to assert this without a test whose cost is wall-clock and whose margin
+ * shrinks under load.
+ */
+function preferNoMotion() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query.includes("prefers-reduced-motion"),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia;
+  restoreMotion = () => {
+    window.matchMedia = original;
+  };
+}
+
+describe("ReadTheatre page list", () => {
+  // The crawl picture cannot be read aloud, so the same walk is stated in
+  // words beside it. This is the half a screen reader gets, and it has to
+  // name every page, not only the one that just landed.
+  it("names every page in words, with the reason and its honest fallback", () => {
     render(
       <ReadTheatre
         read={siteRead()}
@@ -420,23 +467,21 @@ describe("ReadTheatre page strip", () => {
     const strip = screen.getByRole("list", { name: "Pages read so far" });
     expect(strip.querySelectorAll("li")).toHaveLength(4);
 
+    expect(screen.getByText("https://gradion.com: read")).toBeInTheDocument();
     expect(
-      screen.getByRole("img", { name: "https://gradion.com — read" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", {
-        name: "https://gradion.com/careers — skipped: not company context",
-      }),
+      screen.getByText(
+        "https://gradion.com/careers: skipped, not company context",
+      ),
     ).toBeInTheDocument();
     // reason: null must not read as an empty reason.
     expect(
-      screen.getByRole("img", {
-        name: "https://gradion.com/legal — could not be read: no reason recorded",
-      }),
+      screen.getByText(
+        "https://gradion.com/legal: could not be read, no reason recorded",
+      ),
     ).toBeInTheDocument();
   });
 
-  it("keeps every count open — no fraction, no percentage, no denominator", () => {
+  it("keeps every count open — no fraction, no percentage, no denominator", async () => {
     render(
       <ReadTheatre
         read={siteRead()}
@@ -446,10 +491,12 @@ describe("ReadTheatre page strip", () => {
       />,
     );
 
-    expect(screen.getByText("2 pages read")).toBeInTheDocument();
     expect(screen.getByText("1 skipped")).toBeInTheDocument();
-    expect(screen.getByText("1 facts so far")).toBeInTheDocument();
     expect(screen.getByText("still reading")).toBeInTheDocument();
+    // The two figures the read is earning, each under its own label and each
+    // open: a denominator anywhere here would be a total nobody can check.
+    expect(screen.getByText("pages read")).toBeInTheDocument();
+    expect(screen.getByText("facts found")).toBeInTheDocument();
 
     const surface = screen.getByRole("heading", { level: 1 }).parentElement;
     expect(surface).not.toBeNull();
@@ -459,6 +506,7 @@ describe("ReadTheatre page strip", () => {
   });
 
   it("counts the fetched tiles when the server sends no tally of its own", () => {
+    preferNoMotion();
     render(
       <ReadTheatre
         read={siteRead({ pages_read: undefined })}
@@ -468,7 +516,7 @@ describe("ReadTheatre page strip", () => {
       />,
     );
 
-    expect(screen.getByText("2 pages read")).toBeInTheDocument();
+    expect(tally(screen.getByText("pages read"))).toBe("2");
   });
 
   it("drops the still-reading marker once the read has settled", () => {
@@ -487,6 +535,7 @@ describe("ReadTheatre page strip", () => {
 
 describe("ReadTheatre page ticker", () => {
   it("shows only the most recently crawled page, next to the honest total", () => {
+    preferNoMotion();
     render(
       <ReadTheatre
         read={siteRead()}
@@ -502,10 +551,11 @@ describe("ReadTheatre page ticker", () => {
     expect(screen.getByText("/about")).toBeInTheDocument();
     expect(screen.queryByText("/legal")).toBeNull();
     expect(screen.queryByText("/careers")).toBeNull();
-    expect(screen.getByText("2 pages read")).toBeInTheDocument();
+    expect(tally(screen.getByText("pages read"))).toBe("2");
   });
 
   it("swaps to the newest page as it arrives, without ever showing two", () => {
+    preferNoMotion();
     const { rerender } = render(
       <ReadTheatre
         read={siteRead()}
@@ -539,7 +589,7 @@ describe("ReadTheatre page ticker", () => {
 
     expect(screen.getByText("/team")).toBeInTheDocument();
     expect(screen.queryByText("/about")).toBeNull();
-    expect(screen.getByText("3 pages read")).toBeInTheDocument();
+    expect(tally(screen.getByText("pages read"))).toBe("3");
   });
 
   it("does not let an earlier skip outlive a fetch that arrives after it", () => {
@@ -690,13 +740,20 @@ describe("ReadTheatre page ticker", () => {
       />,
     );
 
-    // The path is the one place the url appears; the status beside it names
-    // what happened without repeating it.
-    expect(screen.getByText("/legal")).toBeInTheDocument();
+    // The path is the one place the url appears IN THE TICKER; the status
+    // beside it names what happened without repeating it. Scoped to the
+    // ticker, because the screen-reader list beside the crawl picture names
+    // every page by its full url on purpose, and that is a different job.
+    const ticker = screen.getByRole("list", {
+      name: "The pages I am walking, newest first",
+    });
+    expect(within(ticker).getByText("/legal")).toBeInTheDocument();
     expect(
-      screen.getByText("could not be read: no reason recorded"),
+      within(ticker).getByText("could not be read: no reason recorded"),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/https:\/\/gradion\.com\/legal/)).toBeNull();
+    expect(
+      within(ticker).queryByText(/https:\/\/gradion\.com\/legal/),
+    ).toBeNull();
   });
 });
 

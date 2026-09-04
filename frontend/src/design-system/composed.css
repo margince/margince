@@ -1,12 +1,16 @@
 /* Composed surfaces (B-EP09.3b) — consume the trust primitives; staged vs
  * real vs human-typed carries through unchanged (§5c). */
 
+/* FLEX, not grid tracks. Every column used to be an implicit
+ * `minmax(220px, 1fr)` track, and a track is sized by the board rather than by
+ * the item in it — so a collapsed column still reserved its 220px and the fold
+ * bought nothing. Flex lets one column opt out of the shared basis while the
+ * rest keep it: `1 1 220px` is the same "at least 220, share what is left"
+ * the track gave them. */
 .board {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
+  display: flex;
   gap: 12px;
-  align-items: start;
+  align-items: flex-start;
   overflow-x: auto;
   padding-bottom: 8px;
 }
@@ -19,6 +23,8 @@
      scroll, and dragged the shell's content scroller 807px past a 390px
      viewport. */
   position: relative;
+  flex: 1 1 220px;
+  min-width: 220px;
   background: var(--bgCard);
   border-radius: var(--r-md);
   padding: 10px;
@@ -30,6 +36,26 @@
 .board-col.droptarget {
   outline: 2px dashed var(--accent);
   outline-offset: -2px;
+}
+/* A DESTINATION, not a queue. A collapsed column draws its head and nothing
+ * else, so it takes only the width its name and count need — the board's other
+ * columns get the room back, which is the whole reason to fold one.
+ *
+ * It keeps its min-height: a target a reader has to hit with a dragged card
+ * must stay a target, and a strip the height of one line is one a drop misses.
+ * grid-column sizing is overridden per column rather than on `.board`, so a
+ * board can hold both shapes at once — which is exactly the lead board, three
+ * open stages beside two folded terminal ones. */
+.board-col-collapsed {
+  /* Out of the shared basis: it takes the width its name and count need and
+     gives the rest back to the columns a reader is working out of. */
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 120px;
+}
+.board-col-collapsed .board-col-head {
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
 }
 /* STUCK TO THE TOP OF ITS COLUMN. A stage is the only thing that says which
  * pile a card belongs to, and a reader scrolled halfway down a long stage had

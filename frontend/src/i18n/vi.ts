@@ -165,7 +165,7 @@ export const vi = {
   "autonomy.confirm": "xác nhận trước",
 
   "nav.home": "Bản tóm tắt",
-  "nav.contacts": "Contact",
+  "nav.contacts": "Người",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
   "nav.deals": "Pipeline",
@@ -268,6 +268,8 @@ export const vi = {
   "common.close": "Đóng",
 
   "explain.open": "Giải thích con số này",
+  "explain.mayHaveMoved":
+    "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng có thể không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
   "explain.rate": "tỷ giá {rate} ngày {date}",
 
@@ -569,7 +571,7 @@ export const vi = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "{first}–{last} trong {count} {unit} đã tải",
-  "unit.contacts": "liên hệ",
+  "unit.contacts": "người",
   "unit.companies": "công ty",
   "unit.deals": "thương vụ",
   "unit.leads": "khách hàng tiềm năng",
@@ -765,6 +767,7 @@ export const vi = {
   "consent.noPurposes": "Tổ chức này chưa theo dõi mục đích chấp thuận nào.",
   "consent.defaultDeny":
     "Việc gửi ra mặc định bị từ chối theo từng mục đích: một lượt gửi bị chặn trừ khi có sự chấp thuận đang hiệu lực và có bằng chứng cho đúng mục đích đó. Chấp thuận cho một mục đích không bao giờ cho phép một mục đích khác.",
+  "consent.basis": "Căn cứ: {basis}",
   "consent.proofLog": "Nhật ký bằng chứng",
   "consent.proofEmpty":
     "Chưa ghi nhận quyết định chấp thuận nào cho mục đích này. Nhật ký trống là trung thực, không phải thiếu sót.",
@@ -780,7 +783,7 @@ export const vi = {
   "org.name": "Công ty",
   "org.description": "Họ làm gì",
   "org.website": "Trang web",
-  "org.contactCount": "Liên hệ",
+  "org.contactCount": "Người",
   "org.openDealCount": "Deal đang mở",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -2052,8 +2055,12 @@ export const vi = {
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.callNotInOverlay":
     "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
+  "lead.boardCountsUnavailable":
+    "Không đọc được số lượng ở cột Đã chuyển đổi và Đã loại.",
+  "lead.boardTerminalRowsUnavailable":
+    "Không đọc được các khách hàng tiềm năng này. Số lượng ở trên vẫn đúng.",
   "lead.boardTerminalOnly":
-    "Bảng chỉ hiện khách hàng tiềm năng đang mở. Những mục này đã chuyển hoặc bị loại.",
+    "Không còn mục nào đang mở — chúng được tính ở cột Đã chuyển đổi và Đã loại.",
   "person.fromLead": "Từ khách hàng tiềm năng",
   "lead.promotedTitle": "Đã chuyển thành liên hệ",
   "lead.promotedMerged":
@@ -3553,7 +3560,7 @@ export const vi = {
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.organization": "Công ty",
-  "import.object.person": "Liên hệ",
+  "import.object.person": "Người",
   "import.objectHint.lead":
     "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là liên hệ.",
   "import.objectHint.organization":
@@ -3995,9 +4002,6 @@ export const vi = {
   "ob.factsSelected": "Đã chọn {selected} / {total}",
   "ob.factsSub":
     "Hãy bỏ chọn những gì không nên trở thành thông tin công ty — chọn được tối đa 100 dữ kiện.",
-  "ob.nowUnderstands": "Giờ tôi đã hiểu",
-  "ob.contextReady":
-    "Tôi dùng được ngữ cảnh này cho bản nháp, tìm kiếm, Agent và Voice DNA, luôn kèm nguồn.",
 
   // No step number: the rail decides how many stops a reader gets, so the
   // count belongs to ob.conv.scene.step, which reads it off the rail. A total
@@ -4110,40 +4114,76 @@ export const vi = {
   "ob.field.industry": "Ngành",
   "ob.field.history": "Lịch sử công ty",
 
-  "ob.s3.title": "Hãy xem bạn đã dựng được gì —",
-  "ob.s3.titleEm": "mà chưa kết nối gì cả.",
-  "ob.s3.sub":
-    "Tổ chức của bạn đã biết công việc và giọng văn. Kết nối hộp thư, nó sẽ tự đầy lên.",
-  "ob.s3.subNoVoice":
-    "Tổ chức của bạn đã biết công việc kinh doanh. Kết nối hộp thư, nó sẽ tự đầy lên.",
-  "ob.s3.cardProfile": "Hồ sơ kinh doanh",
-  "ob.s3.cardProfileBody":
-    "Đã xác nhận và lưu vào trang công ty. Trường đọc từ website vẫn giữ nguồn.",
-  "ob.s3.cardProfileSkippedBody":
-    "Đã đọc từ website nhưng chưa lưu: bạn bỏ qua bước xác nhận. Quay lại xác nhận nhé.",
-  "ob.s3.cardVoice": "Giọng văn của bạn",
-  "ob.s3.cardVoiceBody":
-    "Dựng từ kho văn bản bạn vừa đưa. Ngay từ đầu, bản nháp đã nghe ra giọng bạn.",
-  "ob.s3.cardVoiceSkippedBody":
-    "Bạn đã bỏ qua bước này, nên bản nháp dùng giọng trung tính. Dựng giọng trong Cài đặt.",
-  "ob.s3.cardPipeline": "Pipeline bán hàng",
-  "ob.s3.cardPipelineBody":
-    "Mẫu B2B chuẩn 7 giai đoạn, chỉnh theo ngành của bạn. Trống cho đến khi bạn kết nối.",
-  "ob.s3.cardDraft": "Một bản nháp mẫu, viết bằng giọng của bạn",
-  "ob.s3.cardDraftExample": "Một bản nháp mẫu",
-  "ob.s3.cardDraftBody": "Xem ngay bên dưới.",
-  "ob.s3.originLabel": "Pipeline này từ đâu ra",
-  "ob.s3.originBody":
-    "Mẫu giai đoạn B2B chuẩn, chỉnh theo ngành từ lần đọc. Trống cho đến khi bạn kết nối. Bạn duyệt cái nào thành deal.",
-  "ob.s3.stillNothing":
-    "Vẫn chưa kết nối gì. Bạn quyết định khi nào điều đó thay đổi.",
+  "ob.fieldHint.display_name":
+    "Tên mà khách hàng thực sự gọi bạn, không phải tên pháp lý, vì đây là tên hiển thị khắp Margince.",
+  "ob.fieldHint.offer_summary":
+    "Một hai câu rõ ràng về thứ bạn bán, để Margince có thể giải thích việc kinh doanh mà không cần hỏi lại.",
+  "ob.fieldHint.icp":
+    "Ai hưởng lợi nhiều nhất, theo quy mô, ngành hay hoàn cảnh, để việc tiếp cận nhắm đúng thay vì chung chung.",
+  "ob.fieldHint.buying_center":
+    "Các vai trò đánh giá hoặc phê duyệt, để người bán biết cần mời thêm ai vào cuộc trò chuyện.",
+  "ob.fieldHint.value_proposition":
+    "Kết quả khách hàng nhận được, không phải tính năng sản phẩm, đủ rõ để đứng riêng trong một lời chào hàng.",
+  "ob.fieldHint.usp":
+    "Sự khác biệt duy nhất thực sự làm thay đổi quyết định, không phải điểm mạnh mà đối thủ nào cũng nhận là của mình.",
+  "ob.fieldHint.customer_pains":
+    "Vấn đề theo đúng lời khách hàng, cách họ nói trước khi tìm đến bạn.",
+  "ob.fieldHint.desired_outcomes":
+    "Điều khách hàng muốn đạt được, theo góc độ kinh doanh chứ không phải góc độ sản phẩm.",
+  "ob.fieldHint.buying_intents":
+    "Dấu hiệu thường cho thấy một khách hàng sắp mua, ví dụ một đợt tuyển dụng hay một hạn chót.",
+  "ob.fieldHint.common_objections":
+    "Mối lo thường làm chậm hoặc chặn một thương vụ nhất, để người bán chuẩn bị trước.",
+  "ob.fieldHint.sales_motion":
+    "Chặng đường từ lần trao đổi đầu tiên đến lúc ký hợp đồng, kể cả bước dùng thử hay đấu thầu.",
+  "ob.fieldHint.legal_name":
+    "Tên như trên giấy đăng ký, gồm cả loại hình pháp lý, vì đây là tên in trên hóa đơn.",
+  "ob.fieldHint.registered_address":
+    "Địa chỉ trong thông báo pháp lý, không phải địa chỉ nhận thư hay showroom.",
+  "ob.fieldHint.register_vat":
+    "Cả hai mã số đúng như được cấp, vì chúng xuất hiện cùng nhau trên hóa đơn và hợp đồng.",
+  "ob.fieldHint.legal_form":
+    "Loại hình như trên giấy đăng ký, quyết định cách công ty được ghi tên trong hợp đồng.",
+  "ob.fieldHint.register_court":
+    "Tòa án nêu trong thông báo pháp lý, nơi giữ hồ sơ đăng ký công ty.",
+  "ob.fieldHint.register_number":
+    "Chỉ riêng số đăng ký, không kèm mã số thuế, vì mã số thuế đã có ô riêng phía trên.",
+  "ob.fieldHint.industry":
+    "Cách mô tả mà chính khách hàng của bạn sẽ nhận ra ngay, không phải mã phân loại nội bộ.",
+  "ob.fieldHint.history":
+    "Chỉ điền khi nó thay đổi cách công ty được nhìn nhận, ví dụ năm thành lập hay một bước ngoặt lớn.",
+
+  "ob.fieldEg.display_name": "Rồng Việt Technologies",
+  "ob.fieldEg.offer_summary":
+    "Phần mềm quản lý kho trên nền tảng đám mây cho nhà bán lẻ vừa.",
+  "ob.fieldEg.icp": "Chuỗi bán lẻ có từ 20 đến 200 cửa hàng.",
+  "ob.fieldEg.buying_center":
+    "Trưởng phòng Vận hành, với sự phê duyệt của phòng Tài chính.",
+  "ob.fieldEg.value_proposition":
+    "Giảm một nửa tình trạng hết hàng trong một quý.",
+  "ob.fieldEg.usp": "Nhà cung cấp duy nhất hỗ trợ tận nơi trong ngày.",
+  "ob.fieldEg.customer_pains": "Chúng tôi hết hàng lúc nào không hay.",
+  "ob.fieldEg.desired_outcomes": "Không bao giờ lỡ hạn đặt hàng lại nữa.",
+  "ob.fieldEg.buying_intents":
+    "Sắp khai trương một kho hàng mới trong 90 ngày.",
+  "ob.fieldEg.common_objections": "Lo ngại việc chuyển đổi khỏi hệ thống cũ.",
+  "ob.fieldEg.sales_motion":
+    "Demo, dùng thử hai tuần, rồi ký hợp đồng theo năm.",
+  "ob.fieldEg.legal_name": "Northwind Robotics GmbH",
+  "ob.fieldEg.registered_address": "Musterstraße 12, 10115 Berlin",
+  "ob.fieldEg.register_vat": "DE123456789",
+  "ob.fieldEg.legal_form": "GmbH",
+  "ob.fieldEg.register_court": "Amtsgericht Charlottenburg",
+  "ob.fieldEg.register_number": "HRB 12345 B",
+  "ob.fieldEg.industry": "Logistics thương mại điện tử",
+  "ob.fieldEg.history": "Thành lập năm 2015, tách ra từ một startup logistics.",
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Hộp thư bất kỳ (IMAP)",
+  "ob.s4.provImap": "Hộp thư khác (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Cho phép truy cập Microsoft của tôi",
   "ob.s4.microsoftHint":
-    "Chỉ đọc email. Bạn ngắt kết nối lúc nào cũng được trong Cài đặt.",
+    "Đọc thư của bạn và có thể gửi từ đó. Bạn cấp cả hai trên màn hình của Microsoft và ngắt kết nối lúc nào cũng được.",
   "ob.s4.microsoftUnverified":
     "Bạn có thể thấy thông báo “ứng dụng chưa xác minh” — đó chính là bản tự vận hành này, không phải bên thứ ba.",
   "ob.s4.microsoftFailed": "Kết nối Microsoft chưa hoàn tất.",
@@ -4471,6 +4511,8 @@ export const vi = {
   "connectors.imapSecretHint":
     "Hãy dùng mật khẩu riêng cho ứng dụng. Chúng tôi niêm phong mật khẩu vào kho khoá và đọc thư của bạn theo lịch cho đến khi bạn ngắt kết nối — ngắt kết nối là xoá luôn.",
   "connectors.imapSubmitCta": "Kết nối",
+  "connectors.imapNeeded": "Cần có để kết nối",
+  "connectors.imapStillNeeded": "Còn thiếu: {fields}",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Hãy kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable": "Không liên lạc được với máy chủ thư.",
@@ -4594,15 +4636,11 @@ export const vi = {
   "ob.s4.capturedTitle": "Đã kết nối hộp thư",
   "ob.s4.capturedBody":
     "CRM đang tự dựng. Email mới hiện ở đây khi lượt quét đầu chạy, thường trong vài phút.",
-  "ob.s4.enterCrm": "Vào CRM của bạn",
+  "ob.s4.enterCrm": "Tiếp tục",
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
   "ob.conv.threadLabel": "Cuộc trò chuyện onboarding",
-  "ob.conv.welcome":
-    "Chào bạn, tôi là Margince. Tôi dựng CRM từ những gì đã có, và luôn kèm nguồn.",
-  "ob.conv.welcomeMember":
-    "Chào bạn, tôi là Margince. Đội của bạn đã được thiết lập sẵn. Hai bước ngắn nữa là bạn vào được.",
   "ob.conv.read.started": "Đang đọc {host}. Tìm được gì tôi sẽ báo bạn.",
   "ob.conv.read.pages": "Số trang đã đọc: {pages}.",
   "ob.conv.read.learnedField": "Đã biết {field}: {value}",
@@ -4624,8 +4662,6 @@ export const vi = {
   "ob.conv.voice.speakerQuestion":
     "Bản ghi này có nhiều người nói. Người nào là bạn? Chỉ lời của chính bạn mới được tính.",
   "ob.conv.voice.speakerOptionDetail": "số từ: {words} · lượt nói: {turns}",
-  "ob.conv.voice.guideSpeaker":
-    "Bên phải đang chờ bạn chọn người nói — hãy chọn người nào là bạn.",
   "ob.conv.voice.speakerFoot": "Lựa chọn này chỉ áp dụng cho tệp này.",
   "ob.conv.voice.speakerContinue": "Dùng người nói này",
   "ob.conv.voice.continueSkippedStatus":
@@ -4634,8 +4670,6 @@ export const vi = {
     "Tư liệu của bạn vẫn an toàn — thử lại ngay, hoặc đi tiếp rồi quay lại sau.",
   "ob.conv.voice.continueDeferredStatus":
     "Ở đây không cần làm gì — cứ đi tiếp, phần còn lại sẽ tự xong.",
-  "ob.conv.voice.collectAsk":
-    "Gửi tôi những gì bạn viết. Bản ghi cuộc gọi là tốt nhất, tài liệu thường cũng được.",
   "ob.conv.voice.composer": "Dán đoạn văn bản bạn viết vào đây",
   "ob.conv.voice.dropHint":
     "Bạn cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này.",
@@ -4659,10 +4693,6 @@ export const vi = {
   "ob.conv.voice.pasteAdd": "Có, thêm vào kho văn bản của tôi.",
   "ob.conv.voice.pasteDiscard": "Không, bỏ đi.",
   "ob.conv.voice.pasteSource": "Văn bản đã dán",
-  "ob.conv.voice.buildFloor":
-    "Số từ của chính bạn đến giờ: {words}. Tôi cần ít nhất {min} từ mới dựng được.",
-  "ob.conv.voice.buildNudge":
-    "Tôi đã đủ để dựng. Từ 4.000 từ trở lên, giọng văn của bạn sẽ sắc nét hơn hẳn.",
   "ob.conv.voice.buildChip": "Dựng hồ sơ giọng văn của tôi",
   "ob.conv.voice.retryBuild": "Dựng lại lần nữa",
   "ob.conv.voice.buildPollFailed":
@@ -4697,10 +4727,6 @@ export const vi = {
     "Lần dựng đang xếp hàng chờ hạn mức. Việc dựng sẽ tự chạy.",
   "ob.conv.build.failed":
     "Lần dựng chưa xong. Văn bản của bạn vẫn được giữ và bạn thử lại lúc nào cũng được.",
-  "ob.conv.recap":
-    "Đây là những gì CRM của bạn biết lúc này, mỗi mục đều kèm nguồn.",
-  "ob.conv.consent":
-    "Bước cuối: tôi được thu thập gì, và cho mục đích nào? Mặc định không bật gì cả.",
   "ob.conv.done": "Thiết lập xong. CRM của bạn đã sẵn sàng.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4760,14 +4786,12 @@ export const vi = {
     "Không tìm thấy người nào trên website của bạn.",
   "ob.conv.triage.factsLabel": "Dữ kiện",
   "ob.conv.triage.factsCount": "tìm được {count}",
-  "ob.rail.spend": "Token cho thiết lập này",
   "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Bước {n} / {m} · {label}",
   "ob.conv.scene.detour": "Rẽ ngang một chút",
   "ob.conv.scene.decisionSub":
     "Website của bạn nêu nhiều pháp nhân. Pháp nhân bạn chọn sẽ in trên mọi hoá đơn.",
   "ob.conv.scene.continue": "Tiếp tục",
-  "ob.conv.scene.candidates": "{count} phương án",
   "ob.conv.connect.sceneTitle": "Kết nối các tài khoản của bạn.",
   "ob.conv.connect.sceneSub":
     "Tôi dựng contact, công ty và lịch sử từ những gì đã có trong hộp thư.",
@@ -4779,23 +4803,27 @@ export const vi = {
     "Không bắt buộc nhưng đáng làm. Biến những người bạn quen thành tài khoản và theo dõi để bắt tín hiệu.",
   "ob.conv.connect.required": "bắt buộc",
   "ob.conv.connect.recommended": "nên có",
-  "ob.conv.connect.gmailBrings": "Email, danh bạ và lịch từ Google",
-  "ob.conv.connect.microsoftBrings": "Email, danh bạ và lịch qua Graph API",
+  "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
+  "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
   "ob.conv.connect.imapBrings":
-    "Máy chủ thư bất kỳ khác, dùng mật khẩu ứng dụng",
+    "Email từ máy chủ bất kỳ, bằng địa chỉ email và mật khẩu ứng dụng",
   "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, chỉ đọc",
   "ob.conv.connect.scopeGoogle": "OAuth, phạm vi đọc và gửi",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Nhà cung cấp khác bất kỳ, mật khẩu ứng dụng",
+  "ob.conv.connect.scopeImap": "Địa chỉ email và mật khẩu",
   "ob.conv.connect.connectCta": "kết nối →",
   "ob.conv.connect.connectedCta": "đã kết nối",
   "ob.conv.connect.blockedCard":
     "Bạn đã chọn một hộp thư rồi. Hãy ngắt kết nối trong Cài đặt nếu muốn đổi.",
   "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
-  "ob.conv.connect.railPromise":
-    "Chúng tôi đọc thư của bạn, và có thể gửi từ đó khi bạn cho phép.",
   "ob.conv.connect.dialogHeadlineAccess": "Cần quyền truy cập {name}",
   "ob.conv.connect.dialogHeadlineImap": "Kết nối máy chủ thư của bạn",
+  "ob.conv.connect.appMissingCard":
+    "Tổ chức của bạn chưa đăng ký ứng dụng {name}.",
+  "ob.conv.connect.appUnusableCard":
+    "Ứng dụng {name} của tổ chức bạn hiện không mở được. Cần một quản trị viên, không phải một ứng dụng mới.",
+  "ob.conv.connect.unsupportedCard": "Bản cài đặt này không hỗ trợ {name}.",
+  "ob.conv.connect.appSetupLink": "Thiết lập trong Cài đặt",
   "ob.conv.connect.dialogIntro":
     "{brings}. Tôi đọc một lần để dựng contact và lịch sử của bạn, rồi giữ đồng bộ về sau.",
   "ob.conv.connect.dialogClose": "Đóng",
@@ -4830,8 +4858,14 @@ export const vi = {
   "ob.conv.voice.resultSub":
     "Hãy đọc mẫu trước. Thấy đúng thì xác nhận. Thấy lệch thì thêm nguồn và tôi dựng lại.",
   "ob.conv.voice.resultSubNoSample":
-    "Kho văn bản còn nhỏ nên chưa có bản nháp mẫu. Đây là điều lần dựng học được. Hãy thêm nguồn.",
-  "ob.conv.voice.resultContinue": "Đúng giọng của tôi",
+    "L\u1ea7n d\u1ef1ng n\u00e0y kh\u00f4ng tr\u1ea3 v\u1ec1 b\u1ea3n nh\u00e1p m\u1eabu n\u00e0o. \u0110\u00e2y l\u00e0 nh\u1eefng g\u00ec n\u00f3 h\u1ecdc \u0111\u01b0\u1ee3c \u2014 h\u00e3y th\u00eam b\u00e0i vi\u1ebft c\u1ee7a b\u1ea1n r\u1ed3i t\u00f4i s\u1ebd th\u1eed l\u1ea1i.",
+  "ob.conv.voice.resultContinue": "Đúng là tôi",
+  "ob.conv.voice.revise": "Chưa đúng tôi — thêm bài viết",
+  "ob.conv.voice.distilling": "Đang chắt lọc",
+  "ob.conv.voice.hears": "nghe thấy",
+  "ob.conv.voice.hearsWords": "{words} từ của chính bạn từ {sources} nguồn",
+  "ob.conv.voice.hearsBand": "kho ngữ liệu ở mức {band} cho đến giờ",
+  "ob.conv.voice.hearsRegister": "{words} từ ở văn phong {register}",
   "ob.conv.voice.sampleEyebrow": "Chỉ là mẫu, chưa gửi",
   "ob.conv.voice.sampleAnother": "Tình huống khác",
   "ob.conv.voice.sampleSubjectLabel": "Tiêu đề",
@@ -4847,26 +4881,6 @@ export const vi = {
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
-  "ob.conv.guide.decision":
-    "Tôi cần bạn quyết định một việc: {question} Nội dung nằm bên phải, kèm bằng chứng cho từng phương án.",
-  "ob.conv.guide.reviewBlocked_one":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Còn {count} trường chặn việc xác nhận.",
-  "ob.conv.guide.reviewBlocked_other":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Còn {count} trường chặn việc xác nhận.",
-  "ob.conv.guide.reviewAdvisory_one":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Không có gì chặn bạn; có {count} chỗ nên xem lại.",
-  "ob.conv.guide.reviewAdvisory_other":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Không có gì chặn bạn; có {count} chỗ nên xem lại.",
-  "ob.conv.guide.reviewClean":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Trông ổn cả, bạn xem lại tuỳ ý rồi xác nhận khi sẵn sàng.",
-  "ob.conv.guide.attentionHeading": "Những mục này cần bạn xử lý",
-  "ob.conv.guide.attentionGroup.blocking": "Cần có trước khi tiếp tục",
-  "ob.conv.guide.attentionGroup.decisions": "Cần một quyết định",
-  "ob.conv.guide.attentionGroup.advisory": "Nên xem lại",
-  "ob.conv.guide.attentionStatus.blocks": "cần có để tiếp tục",
-  "ob.conv.guide.attentionStatus.empty": "vẫn trống",
-  "ob.conv.guide.attentionStatus.decision": "cần một quyết định",
-  "ob.conv.guide.attentionStatus.check": "nên xem lại",
   "ob.conv.activity.steps_one": "{count} bước",
   "ob.conv.activity.steps_other": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
@@ -4887,17 +4901,6 @@ export const vi = {
   "ob.conv.artifact.empty":
     "Chưa đọc được gì. Hãy đưa tôi một website và khung này sẽ đầy lên bằng các phát hiện có dẫn nguồn.",
   "ob.conv.results.continue": "Tiếp tục",
-  "ob.conv.results.artifactTitle": "Tóm tắt thiết lập",
-  "ob.conv.results.artifactBody":
-    "Những gì CRM của bạn khởi đầu. Ở đây không có gì nói quá so với thực tế đã xảy ra.",
-  "ob.conv.results.company":
-    "Đã xác nhận hồ sơ công ty cho {name}. Mọi thứ được lưu đều kèm nguồn.",
-  "ob.conv.results.companyUnsaved":
-    "Thông tin công ty của bạn chưa được lưu. Bạn có thể hoàn tất sau trong Cài đặt.",
-  "ob.conv.results.voiceBuilt":
-    "Hồ sơ giọng văn của bạn đã dựng xong. Bản nháp sẽ nghe ra giọng bạn.",
-  "ob.conv.results.voiceSkipped":
-    "Chưa có hồ sơ giọng văn. Bản nháp dùng giọng khởi đầu trung tính, và bạn có thể dựng giọng của mình sau trong Cài đặt.",
   "ob.conv.recap.back": "Chào bạn quay lại. Đây là tình hình hiện tại.",
   "ob.conv.recap.company": "Hồ sơ công ty {name} của bạn đã được xác nhận.",
   "ob.conv.recap.companyUnsaved":
@@ -4916,9 +4919,10 @@ export const vi = {
     "Chào bạn quay lại. Lượt đọc {host} trước đó chưa xong. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
   "ob.conv.recap.readDeferred":
     "Chào bạn quay lại. Lượt đọc {host} của tôi đang tạm dừng. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
-  "ob.conv.connect.pick":
-    "Hãy chọn một nhà cung cấp để xem chính xác việc kết nối làm gì, hoặc bỏ qua và kết nối sau trong Cài đặt.",
-  "ob.conv.connect.skip": "Tạm bỏ qua việc kết nối",
+  "ob.conv.connect.skip": "Tiếp tục mà không có hộp thư",
+  "ob.conv.connect.continue": "Tiếp tục",
+  "ob.conv.connect.mailboxNeeded":
+    "Vẫn cần một hộp thư: thư là thứ được đọc và soạn nháp. Kết nối một hộp thư ở trên, hoặc tạm tiếp tục mà không có.",
   "ob.conv.linkedin.cardBody":
     "Biến mạng lưới quan hệ của bạn thành tài khoản và contact, và báo khi một người quen đổi việc.",
   "ob.conv.linkedin.limitsToggle": "Margince thấy được gì và không thấy gì",
@@ -4953,8 +4957,44 @@ export const vi = {
   "ob.rail.read": "Đọc",
   "ob.rail.confirm": "Xác nhận",
   "ob.rail.voice": "Giọng văn",
-  "ob.rail.ready": "Sẵn sàng",
   "ob.rail.connect": "Kết nối",
+  "ob.rail.prefs": "Tùy chọn",
+
+  "ob.conv.invite.title": "Bạn có tự mình làm việc trong Margince không?",
+  "ob.conv.invite.body":
+    "Công ty đã được thiết lập. Hai bước còn lại là về bạn, và chỉ có ý nghĩa nếu bạn cũng dùng Margince.",
+  "ob.conv.invite.yes": "Có, tôi sẽ làm việc trong Margince",
+  "ob.conv.invite.yesBody":
+    "Huấn luyện giọng văn và kết nối hộp thư, lịch: hai bước ngắn, đều về bạn.",
+  "ob.conv.invite.no": "Không, tôi chỉ thiết lập thôi",
+  "ob.conv.invite.noBody":
+    "Thay vào đó, mời người đầu tiên sẽ làm việc ở đây, và bạn xong việc.",
+  "ob.conv.invite.foot":
+    "Dù chọn gì, giọng văn và tài khoản đều có thể thiết lập sau trong Cài đặt.",
+  "ob.conv.invite.continue": "Tiếp tục",
+  "ob.conv.invite.accepted": "Có, tôi sẽ tự làm việc trong đó.",
+  "ob.conv.invite.declined": "Không, tôi chỉ thiết lập thôi.",
+
+  "ob.conv.team.title": "Mời người dùng đầu tiên.",
+  "ob.conv.team.body":
+    "Phải có ai đó là người đầu tiên làm việc trong Margince. Thêm họ ngay, hoặc sau này trong Cài đặt → Nhân sự.",
+  "ob.conv.team.invitedLabel": "Đã mời",
+  "ob.conv.team.invitedLine": "{name} đã được mời.",
+  "ob.conv.team.skip": "Bỏ qua lúc này",
+  "ob.conv.team.finish": "Hoàn tất thiết lập",
+  "ob.conv.team.done":
+    "Thiết lập đã hoàn tất. Người bạn thêm vào có thể tự huấn luyện giọng văn và kết nối tài khoản trong Cài đặt.",
+  "ob.conv.prefs.title": "Cuối cùng, vài tùy chọn.",
+  "ob.conv.prefs.body":
+    "Mọi thứ ở đây được điền sẵn từ những gì đã ghi nhận, và có thể đổi sau trong Cài đặt. Nhấn Xong nếu tất cả đều đúng.",
+  "ob.conv.prefs.reportingTitle": "Cách các con số được báo cáo",
+  "ob.conv.prefs.timezoneNeeded": "Cần một múi giờ báo cáo.",
+  "ob.conv.prefs.autonomyTitle": "Những gì nó có thể tự thay đổi",
+  "ob.conv.prefs.autonomyBody":
+    "Mỗi loại thay đổi bên dưới sẽ được đề xuất cho bạn trước. Bật một loại và nó sẽ áp dụng mà không hỏi; tắt lại bất cứ lúc nào.",
+  "ob.conv.prefs.done": "Xong",
+  "ob.conv.prefs.persistFailed":
+    "Tôi không thể ghi nhận rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
@@ -5002,13 +5042,12 @@ export const vi = {
   "ob.scan.phaseDeferred": "Đang tạm dừng",
   "ob.scan.pagesRead": "đã đọc {pages} trang",
   "ob.scan.pagesSkipped": "bỏ qua {count}",
-  "ob.scan.factsSoFar": "{count} dữ kiện đến giờ",
   "ob.scan.stillReading": "vẫn đang đọc",
   "ob.scan.pageStripLabel": "Các trang đã đọc đến giờ",
   "ob.scan.logLabel": "Các trang tôi đang đi qua, mới nhất trước",
-  "ob.scan.pageFetched": "{url} — đã đọc",
-  "ob.scan.pageSkipped": "{url} — đã bỏ qua: {reason}",
-  "ob.scan.pageFailed": "{url} — không đọc được: {reason}",
+  "ob.scan.pageFetched": "{url}: đã đọc",
+  "ob.scan.pageSkipped": "{url}: đã bỏ qua, {reason}",
+  "ob.scan.pageFailed": "{url}: không đọc được, {reason}",
   "ob.scan.pageNoReason": "không ghi nhận lý do",
   "ob.scan.pageStatusFetched": "đã đọc",
   "ob.scan.pageStatusSkipped": "đã bỏ qua: {reason}",
@@ -5059,28 +5098,8 @@ export const vi = {
   // Two leads for one moment. The first is only true when the install really was
   // empty minutes ago; a setup picked up across days is the supported path, and
   // the payoff above all else may not overstate.
-  "ob.payoff.lead": "Vài phút trước đây còn là một bản cài đặt trống.",
-  "ob.payoff.leadResumed": "Khởi đầu đây là một bản cài đặt trống.",
-  "ob.payoff.factsRead": "dữ kiện đã đọc",
-  "ob.payoff.factsConfirmed": "dữ kiện bạn đã xác nhận",
-  "ob.payoff.peopleFound": "người tìm được",
-  "ob.payoff.profileFields": "trường hồ sơ",
-  "ob.payoff.voiceWords": "từ trong giọng văn của bạn",
-  "ob.payoff.pagesRead": "trang đã đọc",
-  "ob.payoff.voiceNotTrained": "chưa huấn luyện giọng văn",
-  "ob.payoff.body":
-    "Mọi thứ trong đó bạn đều sửa được, và mỗi giá trị vẫn trỏ về trang xuất xứ.",
-  "ob.payoff.defaults":
-    "Tôi chờ bạn xác nhận và không ghi đè trường bạn nhập. Đổi cả hai trong Cài đặt → Bậc tự chủ.",
-  "ob.payoff.seats":
-    "Việc còn lại là các đồng nghiệp của bạn. Mỗi suất người dùng đều tính phí, nên bạn tạo họ trong Cài đặt → Người dùng.",
-  "ob.payoff.understood": "Đã rõ",
-  "ob.payoff.projects":
-    "Khi một thương vụ trở thành công việc, hãy mở một dự án cho nó: dự án bắt đầu ngay trong thương vụ và tiếp tục sau khi chốt thắng, để việc triển khai có dòng thời gian riêng.",
-  "ob.payoff.projectsLink": "Xem dự án",
 
   // --- the handoff into the app -----------------------------------------
-  "ob.enter.cta": "Vào Margince",
   "ob.enter.assembling": "Đang dựng tổ chức của bạn",
 
   // --- the mailbox backread ---------------------------------------------
@@ -5126,7 +5145,7 @@ export const vi = {
     "Tôi không dừng được lượt đọc: {detail} Hãy thử lại — trong lúc đó lượt đọc vẫn chạy.",
   "ob.backread.detailUnavailable": "Đã có lỗi ngoài dự kiến.",
   "ob.backread.cancel": "Dừng đọc",
-  "ob.backread.explore": "Trong lúc chờ, khám phá Margince",
+  "ob.backread.explore": "Tiếp tục trong khi đang đọc",
   "ob.backread.skip": "Chưa đọc lịch sử lúc này",
 
   "auth.title": "Margince",
@@ -5142,29 +5161,10 @@ export const vi = {
   // link.
   "auth.loginSub":
     "Tài khoản do quản trị viên của bạn cấp. Không có đăng ký tự do.",
-  "auth.coreDisclosure": "Margince · hệ thống AI",
   "auth.coreGreeting": "Xin chào, tôi là Margince.",
   "auth.corePurpose": "Tôi ở đây để lo phần việc xung quanh công việc của bạn.",
-  "auth.coreWork":
-    "Tôi sẽ giữ CRM của bạn luôn cập nhật, phát hiện điều cần chú ý và chuẩn bị bước tiếp theo — để bạn tập trung vào khách hàng.",
-  "auth.corePromise":
-    "Và tôi chỉ hành động trong quyền bạn đã cấp — không bao giờ nhiều hơn những gì chính bạn làm được.",
-  "auth.coreHandover": "Trước tiên, hãy để tôi xác minh đúng là bạn…",
-  "auth.coreConfigured": "Đã cấu hình",
-  "auth.coreUnconfigured": "AI chưa được cấu hình",
-  "auth.coreStillWorks": "CRM vẫn hoạt động.",
   "auth.coreDevelopment": "AI chế độ phát triển",
-  "auth.coreModeCloud": "định tuyến qua cloud",
-  "auth.coreModeLocal": "định tuyến cục bộ",
-  "auth.coreModeHybrid": "định tuyến kết hợp",
-  "auth.coreModeNone": "không định tuyến mô hình",
   "auth.coreModeDevelopment": "đường phát triển ngoại tuyến",
-  "auth.coreProviderAnthropic": "Anthropic",
-  "auth.coreProviderGemini": "Gemini",
-  "auth.coreProviderOllama": "Ollama",
-  "auth.coreProviderOpenAI": "OpenAI",
-  "auth.coreProviderCompatible": "nhà cung cấp tương thích",
-  "auth.coreProviderVllm": "vLLM",
   // The shortest label that still names the field (VOICE-RULE-1), pinned by the
   // login spec §7.1/§7.2 (Amendment 4) and reconciling
   // single-organization-auth-concept.md §12, which already drew "Email".
@@ -5338,7 +5338,9 @@ export const vi = {
   "book.attendee": "Email người tham dự",
   "book.welcomeBack": "Đã nhận ra: {name}",
   "book.subject": "Cuộc họp qua Margince",
-  "book.confirmed": "Đã đặt lịch. Thư mời đang trên đường tới.",
+  "book.confirmed": "Đã đặt lịch.",
+  "book.tellThemYourself":
+    "Margince không gửi thư mời — bạn hãy tự báo giờ hẹn cho người tham dự.",
   "book.failed": "Việc đặt lịch không thành — không có gì được lên lịch.",
   "book.publicSub": "chọn một khung giờ — không cần tài khoản",
   "book.name": "Tên của bạn",
@@ -6213,7 +6215,7 @@ export const vi = {
   "users.createTeam": "Tạo nhóm",
   "users.access.title": "Người dùng này thấy gì",
   "users.access.identity":
-    "Đọc mọi liên hệ, công ty, lead và deal của tổ chức.",
+    "Đọc mọi công ty, lead, deal và người trong tổ chức.",
   "users.access.writesAll": "Sửa mọi bản ghi.",
   "users.access.writesTeam": "Sửa bản ghi của mình và của các nhóm {teams}.",
   "users.access.writesTeamNone":
@@ -6223,7 +6225,7 @@ export const vi = {
   "users.access.read": "đọc",
   "users.access.write": "ghi",
   "users.access.delete": "xóa",
-  "users.access.object.person": "Liên hệ",
+  "users.access.object.person": "Người",
   "users.access.object.organization": "Công ty",
   "users.access.object.lead": "Lead",
   "users.access.object.deal": "Deal",
@@ -6560,19 +6562,19 @@ export const vi = {
   "oauthApp.clientSecret": "Client secret",
   "oauthApp.tenant": "Directory (tenant) ID",
   "oauthApp.tenantHint":
-    "Tùy chọn. Gắn ứng dụng với một thư mục Entra duy nhất, chỉ thành viên của nó mới có thể uỷ quyền. Để trống để cho phép mọi tổ chức.",
+    "Tùy chọn. Gắn ứng dụng với một thư mục Entra duy nhất: chỉ thành viên của nó mới kết nối được hộp thư, và đăng nhập Microsoft chạy trên thư mục đó. Để trống để mọi tổ chức đều kết nối được; khi đó đăng nhập chờ server nêu tên các thư mục của bạn.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
-    "Margince không tự suy luận mà hoạt động qua tài khoản nhà cung cấp của bạn. Bạn có thể đổi mọi thứ ở đây sau, trong Cài đặt → AI.",
+    "Margince không có AI riêng. Nó suy nghĩ qua tài khoản nhà cung cấp của bạn, và bạn có thể đổi mọi thứ ở đây sau, trong Cài đặt → AI.",
   "firstRun.ai.provider": "Nhà cung cấp",
   "firstRun.ai.key": "Khóa API",
   "firstRun.ai.keyHint":
-    "Gửi một lần và niêm phong trong két khóa. Nếu môi trường đã đặt {envVar}, máy chủ đọc từ đó.",
+    "Niêm phong trong két khóa, không hiện lại lần nào nữa.",
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
-    "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
+    "Chỉ là điểm khởi đầu. Bất kỳ mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
   "aiSettings.sub": "Văn bản của bản cài đặt này đi đâu, và tốn bao nhiêu.",
   "aiSettings.tabs": "Phần nào của cài đặt AI đang mở",
@@ -7582,7 +7584,7 @@ export const vi = {
   "filters.subtitle":
     "T\u1ea1o b\u1ed9 l\u1ecdc, xem n\u00f3 ch\u1ecdn nh\u1eefng g\u00ec, r\u1ed3i l\u01b0u th\u00e0nh ch\u1ee7 \u0111\u1ec1.",
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
-  "filters.tab.contacts": "Li\u00ean h\u1ec7",
+  "filters.tab.contacts": "Ng\u01b0\u1eddi",
   "filters.tab.companies": "C\u00f4ng ty",
   "filters.tab.deals": "Th\u01b0\u01a1ng v\u1ee5",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
@@ -7810,6 +7812,7 @@ export const vi = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Hôm nay",
+  "worklist.review": "Cần xem xét",
   "worklist.more": "Xem thêm",
   "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
@@ -7817,6 +7820,8 @@ export const vi = {
   "worklist.summary.noMiddle":
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
+  "worklist.review.partial":
+    "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
   "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
   "worklist.clearOfWhatWasRead":
@@ -8078,6 +8083,10 @@ export const vi = {
   "worklist.verb.acknowledge": "Đã hiểu",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn thành nhiệm vụ này.",
+  "worklist.verb.pin": "Ghim",
+  "worklist.verb.unpin": "Bỏ ghim",
+  "worklist.verb.pinFailed": "Không thể ghim hàng này.",
+  "worklist.verb.unpinFailed": "Không thể bỏ ghim hàng này.",
   "worklist.verb.completed": "Đã xong nhiệm vụ.",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại nhiệm vụ này.",
@@ -8102,6 +8111,155 @@ export const vi = {
   "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",
+
+  "ob.conv.scene.settleEyebrow": "Có một điểm chỉ bạn mới quyết được",
+  "ob.conv.review.boardSub":
+    "Mỗi dòng đều nêu nguồn. Chưa ghi gì cho đến khi bạn xác nhận.",
+  "ob.conv.manual.boardTitle": "Tự điền vào.",
+  "ob.conv.scene.writes": "Ghi vào",
+  "ob.core.idle": "core · đang nghỉ",
+  "ob.core.ingest": "core · đang thu nhận",
+  "ob.core.working": "core · đang xử lý",
+  "ob.core.warning": "core · có việc cần xem",
+  "ob.core.error": "core · đã dừng",
+  "ob.scan.tallyPages": "trang đã đọc",
+  "ob.scan.tallyFacts": "dữ kiện tìm được",
+  "ob.scan.tallyUncertain": "điều nó sẽ không đoán",
+  "ob.scan.tickerFact": "{field}: {value}",
+  "ob.digest.where": "Những gì Margince biết về bạn",
+  "ob.digest.written": "Đã ghi {n} / {m} dòng",
+  "ob.digest.companyLine": "Hồ sơ công ty, viết từ {n} trang của {host}",
+  "ob.digest.citedCaption": "dòng, mỗi dòng có nguồn",
+  "ob.digest.openCaption": "còn để trống",
+  "ob.digest.section.identity": "Danh tính",
+  "ob.digest.section.offer": "Họ bán gì",
+  "ob.digest.section.customer": "Họ bán cho ai",
+  "ob.digest.section.sales": "Cách họ viết",
+  "ob.digest.facts": "Bằng chứng",
+  "ob.digest.people": "Con người",
+  "ob.digest.sources": "Nguồn tham khảo",
+  "ob.digest.blank": "chưa ghi",
+  "ob.digest.notWritten": "chưa được ghi",
+  "ob.digest.settle": "Điền ngay",
+  "ob.digest.deciding": "bạn đang quyết điều này",
+  "ob.digest.yours": "của bạn",
+  "ob.digest.editLine": "Sửa {label}",
+  "ob.digest.saveChanges": "Lưu thay đổi",
+  "ob.digest.changed": "{count} dòng đã đổi, chưa lưu",
+  "ob.digest.pickFacts": "Chọn các sự thật cần giữ",
+  "ob.digest.referenceNote":
+    "Một lần đọc lại sau này có thể đề xuất thay đổi cho hồ sơ này. Nó sẽ không bao giờ ghi đè lên dòng mà một người đã từng sửa.",
+  "ob.digest.sidebarLabel": "Thông tin về công ty",
+  "ob.digest.sidebar.legalName": "Tên pháp lý",
+  "ob.digest.sidebar.founded": "Thành lập",
+  "ob.digest.sidebar.headquarters": "Trụ sở chính",
+  "ob.digest.sidebar.offices": "Văn phòng",
+  "ob.digest.sidebar.employees": "Nhân sự",
+  "ob.digest.sidebar.certifications": "Chứng nhận",
+  "ob.digest.pageKind.home": "Trang chủ",
+  "ob.digest.pageKind.impressum": "Thông tin pháp lý",
+  "ob.digest.pageKind.about": "Trang giới thiệu",
+  "ob.digest.pageKind.team": "Trang đội ngũ",
+  "ob.digest.pageKind.services": "Trang dịch vụ",
+  "ob.digest.pageKind.products": "Trang sản phẩm",
+  "ob.digest.pageKind.contact": "Trang liên hệ",
+  "ob.digest.pageKind.other": "Trang",
+  "ob.deck.counter": "{n} / {m}",
+  "ob.deck.left": "Còn {n} / {m}",
+  "ob.deck.settled": "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
+  "ob.deck.needed": "Cần để đi tiếp",
+  "ob.deck.optional": "Đáng xem qua",
+  "ob.deck.next": "Tiếp tục",
+  "ob.deck.leaveOut": "Bỏ qua",
+  "ob.deck.readWhole": "Đọc toàn bộ hồ sơ",
+  "ob.deck.backToOpen": "Quay lại các mục còn mở",
+  "ob.deck.backToRecord": "Quay lại hồ sơ",
+  "ob.deck.confirm": "Xác nhận hồ sơ",
+  "ob.deck.stillNeeded": "Còn thiếu: {fields}",
+  "ob.deck.openLeft":
+    "Câu hỏi chưa trả lời: {count}. Hồ sơ được lưu mà không có chúng.",
+  "ob.conv.invite.pickOne": "Chọn một trong hai để tiếp tục.",
+  "ob.conv.voice.speakerPick": "Chọn một người nói để tiếp tục.",
+  "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
+  "ob.deck.eyebrow": "Mọi thứ còn lại đã vào kèm nguồn",
+  "ob.deck.title": "Nó không đoán những điều này.",
+  "ob.stage.flow": "Thiết lập",
+  "ob.stop.read": "Đọc website",
+  "firstRun.ai.rankedHint":
+    "Kèm theo mười mô hình điểm cao nhất OpenRouter đang phục vụ, xếp theo {rankedBy}, với giá của chính nhà cung cấp.",
+  "firstRun.ai.rankedUnavailable":
+    "Hiện chưa đọc được danh sách mô hình trực tiếp của OpenRouter, nên đây là những gì bảng giá của bạn có.",
+  "firstRun.ignite.title": "Nó đã có nhịp đập.",
+  "firstRun.ignite.sub":
+    "Khoá đã được niêm phong và mô hình đã trả lời. Điều đó thay đổi những gì:",
+  "firstRun.ignite.sealed": "đã niêm phong trong vault · {vendor}",
+  "firstRun.ignite.reaching": "đang gọi mô hình lần đầu…",
+  "firstRun.ignite.canNow": "giờ có thể",
+  "firstRun.ignite.cannot": "không thể",
+  "firstRun.ignite.read": "đọc website của bạn và nói nó tìm được gì",
+  "firstRun.ignite.draft": "viết theo giọng bạn đã dạy nó",
+  "firstRun.ignite.act":
+    "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
+  "firstRun.ignite.carryOn": "Tiếp tục",
+  "firstRun.step.model": "Mô hình",
+  "firstRun.step.platform": "Nền tảng của bạn",
+  "firstRun.google.eyebrow":
+    "Nó suy nghĩ được. Nhưng chưa liên lạc được với ai",
+  "firstRun.platform.title": "Tổ chức của bạn đang chạy trên nền tảng nào?",
+  "firstRun.platform.sub":
+    "Một câu trả lời quyết định cách thư đến Margince và cách mọi người đăng nhập. Có thể đổi sau ở Cài đặt.",
+  "firstRun.platform.legend": "Nền tảng của tổ chức này",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Thư, lịch và đăng nhập qua một app Google của chính bạn.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Thư, lịch và đăng nhập qua một app Entra của chính bạn.",
+  "firstRun.platform.imap": "IMAP",
+  "firstRun.platform.imapWhat":
+    "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
+  "firstRun.platform.redirectTitle": "Đăng ký các redirect URI này trong app",
+  "firstRun.platform.redirectHint":
+    "Sao chép từng cái vào app trước khi lưu ở đây. Đăng nhập là thứ đưa nút đăng nhập lên trang đăng nhập cho mọi người bạn mời; Hộp thư và Lịch là thứ cho phép mọi người kết nối của họ. Thiếu một cái thì lỗi xảy ra ở màn hình đồng ý của nhà cung cấp, không phải ở đây.",
+  "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
+  "firstRun.google.helpStep1":
+    "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
+  "firstRun.google.helpStep2":
+    "Bật Gmail API và đưa cả hai scope gmail.readonly và gmail.send lên màn hình đồng ý. Chúng đi cùng một lần đồng ý là có chủ ý: Google không thêm scope vào refresh token đã cấp, nên xin quyền gửi sau này đồng nghĩa với việc kết nối hộp thư hai lần.",
+  "firstRun.google.helpStep3":
+    "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là cái cần cho thư; Lịch và Đăng nhập làm đúng như tên gọi.",
+  "firstRun.google.helpStep4":
+    "Chép client ID và client secret mà Google hiển thị vào hai ô bên dưới. Secret chỉ được gửi một lần và niêm phong trong key vault; sau đó không đọc lại được ở bất kỳ đâu.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpDocs":
+    "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
+  "firstRun.platform.imapNote":
+    "Không có gì thiết lập cho cả bản cài đặt. Kết nối hộp thư của chính bạn ngay bây giờ hoặc để sau; mọi hộp thư khác được kết nối ở Cài đặt → Tích hợp, với mật khẩu ứng dụng riêng.",
+  "firstRun.platform.skip": "Để sau",
+  "firstRun.needed": "Cần có để tiếp tục",
+  "firstRun.stillNeeded": "Còn thiếu: {fields}",
+  "firstRun.platform.foot":
+    "Câu trả lời ở đây có thể đổi sau ở Cài đặt → Quản trị.",
+  "firstRun.microsoft.note":
+    "Đăng ký một app trong Microsoft Entra với các redirect URI bên trên, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn: hộp thư của thư mục đó kết nối qua app, và người của thư mục đó đăng nhập bằng app.",
+  "firstRun.microsoft.helpSignIn":
+    "Thư mục là thứ đưa Microsoft lên trang đăng nhập, nên nó được hỏi ngay ở đây thay vì phó mặc. Nếu muốn đăng ký ứng dụng mà không có thư mục — mọi tổ chức đều kết nối được hộp thư, và không ai đăng nhập bằng Microsoft — hãy dùng Cài đặt.",
+  "firstRun.microsoft.tenantHint":
+    "Thư mục Entra chứa người của bạn. Hộp thư kết nối qua nó, và đăng nhập Microsoft chạy trên nó.",
+  "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
+  "aiRates.chatLane": "Dùng để suy luận",
+  "aiRates.embedLane": "Dùng để ghi nhớ",
+  "aiRates.perMTokInOut": "trên mỗi triệu token, vào → ra",
+  "aiRates.perMTok": "trên mỗi triệu token",
+  "aiRates.unpriced": "Chưa có giá",
+  "aiRates.unpricedDetail":
+    "Mô hình vẫn phục vụ được. Các lệnh gọi sẽ báo là chưa có giá, nên không xuất hiện trong mức dùng và chi phí cho tới khi ai đó thêm đơn giá ở Cài đặt → AI.",
+  "aiRates.priced": "Giá áp dụng từ {date}",
+  "aiRates.proposed": "Giá của OpenRouter",
+  "aiRates.proposedDetail":
+    "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
+  "firstRun.ai.foot":
+    "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "person.readings.title": "Vị thế của liên hệ này",
   "person.readings.move": "Lượt của ai",
   "person.readings.yourMove": "Bạn",

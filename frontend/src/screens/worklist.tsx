@@ -24,6 +24,11 @@ import {
   pillCount,
   sourceUnavailableText,
 } from "./worklist.copy";
+import {
+  reviewShortfall,
+  reviewWork,
+  sellerWork,
+} from "./worklist.destinations";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -363,10 +368,36 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  const selected = rowInHand(queue, selectedId);
+  // The pane belongs to the DAY, so only a row in the day can fill it. A review
+  // row selected here would draw its context beside the Today panel while the
+  // highlighted row sat in the panel below — the two halves of one answer, a
+  // screen apart, with nothing joining them.
+  const selected = rowInHand(sellerWork(queue), selectedId);
+  // The day cut into the two jobs it holds. `destination` says which, and the
+  // server decides it — the counts above the queue are computed from the same
+  // field, so a split derived here from `source` or `category` would drift
+  // from the figures it is drawn beside.
+  const today = sellerWork(queue);
+  const review = reviewWork(queue);
+  // How much review work the day holds that this panel has not loaded.
+  const reviewMissing = reviewShortfall(
+    review.length,
+    day.summary.buckets?.review,
+  );
 
   const rowProps: RowContext = {
-    positions: new Map(queue.map((item, at) => [rowIdentity(item), at])),
+    // Numbered WITHIN the panel each row is drawn in, not across the day.
+    //
+    // Ranking over the whole queue is arithmetically honest and reads as a
+    // fault: the split puts 1, 4, 7 in one panel and 2, 3, 5 in the other on
+    // one screen, and a reader meeting a list that starts at 4 and skips 5 has
+    // no way to know they are seeing a correct number rather than a broken one.
+    // A rank says WHERE IN THIS LIST, which is the only question the number is
+    // asked, and the day's own order is what put the rows in these lists.
+    positions: new Map([
+      ...sellerWork(queue).map((item, at) => [rowIdentity(item), at] as const),
+      ...reviewWork(queue).map((item, at) => [rowIdentity(item), at] as const),
+    ]),
     owner,
     // The RESOLVED selection, not the raw state. The pane falls back to the
     // first row when the reader has chosen nothing, and a highlight reading
@@ -492,7 +523,7 @@ function WorklistBody({
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-              {bandSections(day, queue).map((section) =>
+              {bandSections(day, today).map((section) =>
                 section.items.length === 0 ? (
                   canReportEmptyBands(hasMore) && (
                     <div key={section.band} className="worklist-queue-band">
@@ -517,8 +548,8 @@ function WorklistBody({
               )}
               {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
-              {unbandedRows(queue).length > 0 && (
-                <QueueRows items={unbandedRows(queue)} {...rowProps} />
+              {unbandedRows(today).length > 0 && (
+                <QueueRows items={unbandedRows(today)} {...rowProps} />
               )}
               {/* The way to the rest of the backlog.
                   Acceptance asks that the queue's counts be reachable, and
@@ -544,7 +575,56 @@ function WorklistBody({
           }
         />
       )}
+      {/* What is NOT the seller's to execute, below their day rather than
+          inside it.
+          A duplicate pair, a stopped mailbox and an approval somebody owes are
+          three different jobs, and none of them is the next call to make. Drawn
+          in the queue they competed with it: a rep scanning for their next
+          customer stepped over the product's own housekeeping to find one.
+          Below, and never hidden — this work is somebody's, and a screen that
+          swallowed it would be the reason it went undone. */}
+      <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
     </>
+  );
+}
+
+// The work that is not the day's, drawn below it and never hidden.
+//
+// Its own component because WorklistBody had grown past what one function
+// should hold: the split, the bands, the pane and the paging all read there,
+// and a panel that also decides what to admit about itself is a sixth job.
+function ReviewPanel({
+  items,
+  shortfall,
+  rows,
+}: Readonly<{
+  items: readonly WorklistItem[];
+  shortfall: { loaded: number; total: number } | null;
+  rows: RowContext;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (items.length === 0) {
+    return null;
+  }
+  return (
+    <Panel title={t("worklist.review")}>
+      <QueueRows items={items} {...rows} />
+      {/* What this panel is NOT showing. It has no cursor of its own — review
+          rows arrive as a side effect of paging the day — so a reader with an
+          approval past the page cut sees a panel that looks complete and
+          nothing that says otherwise. The day's own total is the denominator,
+          never drawn bare: it counts every candidate the read weighed, so
+          alone it would claim rows this panel does not hold. */}
+      {shortfall && (
+        <p className="t-caption worklist-completeness">
+          {t("worklist.review.partial", {
+            loaded: formatNumber(shortfall.loaded, locale),
+            total: formatNumber(shortfall.total, locale),
+          })}
+        </p>
+      )}
+    </Panel>
   );
 }
 

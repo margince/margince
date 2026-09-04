@@ -290,6 +290,13 @@ var catalog = map[string]struct {
 	"lead.merged":       {leadStreamEntity, 1},
 	"lead.sla_breached": {leadStreamEntity, 1},
 	"lead.disqualified": {leadStreamEntity, 1},
+	// The two lead vocabularies, on the lead stream because their entries are
+	// values every lead carries: a subscriber that groups by source or reports
+	// on why leads were disqualified has to re-read the catalog when one
+	// changes. events.md §5.3b — config changes are first-class facts, the
+	// same reason pipeline.created is published.
+	"lead_source.changed":            {leadStreamEntity, 1},
+	"lead_disqualify_reason.changed": {leadStreamEntity, 1},
 
 	"activity.captured": {activityStreamEntity, 1},
 	"activity.updated":  {activityStreamEntity, 1},
