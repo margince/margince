@@ -92,6 +92,14 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := compose.AssertInstallationRelease(ctx, pool, logger, buildinfo.ReleaseVersion); err != nil {
 		return err
 	}
+	// A DB-backed subcommand, dispatched HERE rather than beside the DB-less
+	// ones: it reads the installation's own decision history, so it must run
+	// against a schema and a contract this binary agrees with — the two
+	// assertions above are what establish that.
+	if len(args) > 0 && args[0] == "authz-disagreement" {
+		return runAuthzDisagreement(ctx, pool, args[1:], stdout)
+	}
+
 	// And again on a tick, because the boot check answers once.
 	ctx, stopForReleaseSkew, releaseSkewErr := watchReleaseSkew(ctx, pool, logger)
 	defer stopForReleaseSkew()

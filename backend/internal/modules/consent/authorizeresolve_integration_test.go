@@ -124,6 +124,10 @@ func setupResolve(t *testing.T) *resolveEnv {
 				"person":   {Read: true},
 				"finance":  {Read: true},
 				"contract": {Read: true},
+				// The installation's own settings, which is what the
+				// disagreement report is gated on: it discloses nothing about
+				// any subject, only how two rules have compared.
+				"installation_settings": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
