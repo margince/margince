@@ -302,6 +302,12 @@ func (s *Service) worklistFrom(
 		// The decision read stops at its own scan bound, so a group that filled
 		// it reports a floor rather than a total.
 		rows = foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
+		// Again, for the rows the fold MINTED. A group's id is synthetic and
+		// did not exist during the first pass, so a pin on one matched nothing
+		// — while the contract promises a folded group is pinnable like any
+		// other row. Both passes are needed and neither replaces the other: the
+		// first is what lets a pinned member escape being folded at all.
+		rows = applyPins(rows, s.pinned)
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the

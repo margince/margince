@@ -180,6 +180,84 @@ func TestPinningTheSameRowAgainSucceeds(t *testing.T) {
 	}
 }
 
+// Pinning twice audits ONCE.
+//
+// The insert is ON CONFLICT DO NOTHING, so the second call changes nothing —
+// but it went on writing an audit row anyway, which reads to somebody counting
+// how often a rep overrides the order as a rep who double-clicked being twice
+// as opinionated. The unpin path always made this test; the pin path did not.
+func TestPinningTwiceRecordsOneJudgement(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	row := WorklistRowRef{Source: "task", RowID: ids.NewV7().String()}
+
+	for range 2 {
+		if err := pinStore(e).PinWorklistRow(ctx, row); err != nil {
+			t.Fatalf("pinning: %v", err)
+		}
+	}
+
+	if got := pinAudits(t, e, row); got != 1 {
+		t.Fatalf("two identical pins wrote %d audit rows, want the one decision", got)
+	}
+}
+
+// pinAudits counts the trail entries naming one pinned row.
+//
+// Matched on the IMAGE rather than the entity id, because a folded group's id
+// is synthetic and reaches the audit row as the nil uuid — so the subject alone
+// cannot tell two groups apart, which is why the image carries the row id.
+func pinAudits(t *testing.T, e *sendEnv, row WorklistRowRef) int {
+	t.Helper()
+	var n int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'worklist_pin'
+		   AND after->>'row_id' = $1 AND after->>'source' = $2`,
+		row.RowID, row.Source).Scan(&n); err != nil {
+		t.Fatalf("counting pin audits: %v", err)
+	}
+	return n
+}
+
+// The trail names WHICH row was pinned, which the subject cannot always carry.
+func TestThePinTrailNamesTheRowAndTheReader(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	// A synthetic id, the shape a folded group carries: not a uuid, so the
+	// audit subject is the nil id and the image is the only thing that can say
+	// which group this was.
+	row := WorklistRowRef{Source: "batch", RowID: "uncertain_contact"}
+	if err := pinStore(e).PinWorklistRow(ctx, row); err != nil {
+		t.Fatalf("pinning: %v", err)
+	}
+
+	if got := pinAudits(t, e, row); got != 1 {
+		t.Fatalf("the trail holds %d entries naming this group, want the one", got)
+	}
+}
+
+// A source the queue does not produce is refused rather than stored.
+//
+// The table takes any string otherwise: junk that matches no row, sits there
+// because only its author can remove it, and is read on every assembly of that
+// reader's page.
+func TestASourceTheQueueDoesNotProduceIsRefused(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+
+	if err := pinStore(e).PinWorklistRow(ctx,
+		WorklistRowRef{Source: "not_a_lane", RowID: ids.NewV7().String()}); err == nil {
+		t.Error("a pin naming a lane this queue does not produce was accepted")
+	}
+	// And a real lane IS accepted, without which the refusal above would pass
+	// against a check that refused everything.
+	if err := pinStore(e).PinWorklistRow(ctx,
+		WorklistRowRef{Source: "batch", RowID: "uncertain_contact"}); err != nil {
+		t.Fatalf("a folded group's own source was refused: %v", err)
+	}
+}
+
 // And unpinning a row nobody pinned is the same success: the reader's goal
 // state already holds.
 func TestUnpinningARowNobodyPinnedSucceeds(t *testing.T) {

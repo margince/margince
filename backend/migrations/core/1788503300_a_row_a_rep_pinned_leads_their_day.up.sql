@@ -37,9 +37,9 @@ CREATE TABLE worklist_pin (
   CONSTRAINT worklist_pin_identified CHECK (row_id <> '' AND source <> '')
 );
 
--- The read this exists for: "which rows has THIS reader pinned", asked once per
--- Worklist assembly over the reader's own rows.
-CREATE INDEX worklist_pin_by_reader ON worklist_pin (reader_id);
+-- No separate index on reader_id: the primary key's B-tree already begins with
+-- it, and the only read this table serves is "which rows has THIS reader
+-- pinned". A second index would cost every write and buy no lookup.
 
 COMMENT ON TABLE worklist_pin IS
     'A worklist row one reader pinned to the top of their own day. Keyed on the row identity the client uses: source and id together.';

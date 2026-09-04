@@ -5501,7 +5501,6 @@ public.worklist_pin.source text NOT NULL gen=- def=-
 public.worklist_pin.worklist_pin_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
 public.worklist_pin.worklist_pin_pkey PRIMARY KEY (reader_id, source, row_id)
 public.worklist_pin.worklist_pin_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.worklist_pin_by_reader CREATE INDEX worklist_pin_by_reader ON public.worklist_pin USING btree (reader_id)
 public.worklist_pin_pkey CREATE UNIQUE INDEX worklist_pin_pkey ON public.worklist_pin USING btree (reader_id, source, row_id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace.archived_at timestamp with time zone gen=- def=-
