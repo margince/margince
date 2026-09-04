@@ -101,6 +101,7 @@ components:
         - weekly_plan.updated
         - weekly_plan.help_requested
         - activity.disposition_recorded
+        - relationship_nudge.decided
         - notice.read
         - intro_request.created
         - intro_request.decided
@@ -1737,7 +1738,7 @@ components:
       description: >-
         activity.updated's BOUNDED delta: UpdateActivity's known mutable
         fields (subject, body, occurred_at, due_at, remind_at,
-        assignee_id, is_done) each carried only when this update touched
+        assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
         audience — a fixed, KNOWN key
         set (unlike person/organization/deal/lead.updated's genuinely
@@ -1771,6 +1772,22 @@ components:
         is_done:
           type: boolean
           description: The activity's new completion state (absent when this update did not touch it).
+        meeting_status:
+          type: string
+          enum: [booked, held, no_show, canceled]
+          # Named explicitly: `held` generates a constant `Held`, which already
+          # exists for another schema's state — and a collision there silently
+          # renames THAT enum's constants and breaks modules with no connection
+          # to this one.
+          x-enum-varnames:
+            - MeetingWasBooked
+            - MeetingWasHeld
+            - MeetingWasNoShow
+            - MeetingWasCanceled
+          description: >-
+            How the meeting went, once somebody recorded it (absent when this
+            update did not touch it). Meeting rows only; the update refuses the
+            field on any other kind.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         audience:
@@ -1853,7 +1870,7 @@ components:
     PublicEventForecastAssuranceCreated:
       type: object
       x-event-type: forecast.assurance_created
-      x-entity-type: user
+      x-entity-type: assurance_run
       x-version: 1
       description: >-
         Payload for forecast.assurance_created — a nightly input check finished, and
@@ -2141,6 +2158,47 @@ components:
             `not_sales` and of the two reader states — a decision withdrawn is
             itself a decision, and a consumer counting dispositions has to see
             it happen rather than infer it from a row going quiet.
+      additionalProperties: false
+
+    PublicEventRelationshipNudgeDecided:
+      type: object
+      x-event-type: relationship_nudge.decided
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for relationship_nudge.decided — a rep set a lapsed contact
+        aside so their own Worklist stops raising them, or put them back
+        (people's nudge dismissal). The entity is the CONTACT, which is what
+        the judgement is about.
+
+        WHOSE morning it was is not on the wire, and the omission is the same
+        one activity.disposition_recorded makes: a dismissal binds ONE reader,
+        and a consumer reading this as a workspace-wide fact would report one
+        rep's private decision as the contact's own state. The reader stays on
+        the row, for a caller entitled to it.
+      required:
+        - person_id
+        - action
+      properties:
+        person_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum: [dismissed, restored]
+          description: >-
+            What was decided. `restored` is the undo, carried rather than left
+            to be inferred from a row going quiet: a decision withdrawn is
+            itself a decision, and a consumer counting how often reps put
+            relationships down has to see it happen.
+        dismissed_until:
+          type: string
+          format: date-time
+          description: >-
+            When the contact comes back to the lane. Present on `dismissed` and
+            absent on `restored`, which carries no moment because a restore
+            takes effect now. It is never absent on a dismissal: a dismissal
+            with no end is the shape this feature refuses to have.
       additionalProperties: false
 
     PublicEventIntroRequestCreated:

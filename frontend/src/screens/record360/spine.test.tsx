@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../../api/schema";
@@ -49,6 +50,7 @@ function view(overrides: Record<string, unknown> = {}): View {
 function draw(
   v: View,
   nameOf?: (entityType: string, entityId: string) => string | undefined,
+  onOpenEmail?: (activityId: string) => void,
 ) {
   render(
     <LocaleProvider initial="en">
@@ -56,6 +58,7 @@ function draw(
         source={v}
         commercial={v?.state_strip?.commercial}
         nameOf={nameOf}
+        onOpenEmail={onOpenEmail}
       />
     </LocaleProvider>,
   );
@@ -79,6 +82,10 @@ function activities(
     // reading is gated on kind, only that it is absent on that one row.
     host_user_id?: string;
     direction?: "inbound" | "outbound";
+    // What the server sends for a `kind=email` row and for no other kind. A
+    // mail fixture without it models a shape the API does not return, so a
+    // stop judged against it proves nothing about a real message.
+    emailStatus?: "team" | "participants" | "selected" | "withheld";
   }[],
 ) {
   return {
@@ -92,6 +99,17 @@ function activities(
       links: row.links ?? [],
       host_user_id: row.host_user_id ?? null,
       direction: row.direction ?? null,
+      email_summary: row.emailStatus
+        ? {
+            activity_id: row.id,
+            occurred_at: row.at,
+            version: 1,
+            subject: row.subject,
+            display_status: row.emailStatus,
+            move: "none",
+            attachment_count: 0,
+          }
+        : null,
       source: "manual",
       captured_by: "human:test",
       created_at: row.at,
@@ -1017,5 +1035,117 @@ describe("who held a meeting", () => {
     expect(screen.getByText("Email to Dana Otieno")).toBeTruthy();
     expect(screen.queryByText(/met Dana Otieno/)).toBeNull();
     expect(screen.queryByText(/Lena Fischer/)).toBeNull();
+  });
+});
+
+// A stop names a conversation. When that conversation is mail the reader may
+// read, naming it and opening it are the same act — the thread is where a
+// reader asks "what was that about", and the answer is the message.
+describe("a conversation the reader can open", () => {
+  // Two conversations, so the older one is a stop that leads with its subject
+  // rather than with "You last spoke".
+  const twoMails = (over: Record<string, unknown> = {}) =>
+    view({
+      last_outbound_at: SPOKE,
+      activities: activities([
+        {
+          id: "a-new",
+          kind: "email",
+          subject: "About capacity",
+          at: SPOKE,
+          emailStatus: "team",
+        },
+        {
+          id: "a-old",
+          kind: "email",
+          subject: "About scope",
+          at: "2026-08-10T09:00:00Z",
+          emailStatus: "team",
+        },
+      ]),
+      ...over,
+    });
+
+  it("opens the newest message of the conversation it names", async () => {
+    const opened: string[] = [];
+    draw(twoMails(), undefined, (activityId) => opened.push(activityId));
+
+    await userEvent.click(screen.getByRole("button", { name: /About scope/ }));
+
+    // The conversation's newest message, which is the one it is dated and
+    // titled by. A stop that opened some other message of the thread would
+    // show the reader something other than what they pressed.
+    expect(opened).toEqual(["a-old"]);
+  });
+
+  it("names a call without offering to open it", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "a-mail",
+            kind: "email",
+            subject: "About capacity",
+            at: SPOKE,
+            emailStatus: "team",
+          },
+          {
+            id: "a-call",
+            kind: "call",
+            subject: "Quick check-in",
+            at: "2026-08-10T09:00:00Z",
+          },
+        ]),
+      }),
+      undefined,
+      () => {},
+    );
+
+    // There is no message behind a call to open, and drawing an envelope
+    // beside one would claim a transport nobody checked.
+    expect(screen.getByText("Quick check-in")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Quick check-in/ })).toBeNull();
+  });
+
+  it("names a withheld conversation without offering to open it", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "a-mail",
+            kind: "email",
+            subject: "About capacity",
+            at: SPOKE,
+            emailStatus: "team",
+          },
+          {
+            id: "a-private",
+            kind: "email",
+            subject: "About the offer",
+            at: "2026-08-10T09:00:00Z",
+            emailStatus: "withheld",
+          },
+        ]),
+      }),
+      undefined,
+      () => {},
+    );
+
+    // A control that opened a placeholder teaches a reader that citations do
+    // not work, which costs more than the press it saves.
+    expect(
+      screen.queryByRole("button", { name: /About the offer/ }),
+    ).toBeNull();
+  });
+
+  it("draws plain subjects when the host offers no drawer", () => {
+    draw(twoMails());
+
+    // The other direction: a host with nowhere to send a reader gets text, not
+    // a control that leads nowhere.
+    expect(screen.getByText("About scope")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /About scope/ })).toBeNull();
   });
 });

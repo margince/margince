@@ -41,8 +41,14 @@ func revertOne(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) {
 }
 
 // revertColumn clears person.title while it still says what was written.
+//
+// Retractable rather than live, and that is the whole shape of this file: taking
+// bought data back off a contact is a RETRACTION, so an archived subject is the
+// one it must most be able to reach. RevertProviderFills holds the row with
+// IncludeArchived for exactly that reason, and a live probe here would refuse
+// the privacy control on every contact somebody has since retired.
 func revertColumn(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) {
-	if err := auth.EnsureWritable(ctx, tx, entityPerson, f.subject); err != nil {
+	if err := auth.EnsureRetractable(ctx, tx, entityPerson, f.subject); err != nil {
 		return false, err
 	}
 	if f.field != fieldTitle || f.value == nil {

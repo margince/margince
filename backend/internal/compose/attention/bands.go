@@ -63,12 +63,21 @@ var bandOrder = []string{bandNow, bandBuildPipeline, bandKeepMomentum, bandRevie
 // the claim that it needs answering today, which is exactly what being the
 // ninth of its kind means.
 func bandOfRow(row ranked) string {
-	if row.crowded {
-		return bandKeepMomentum
-	}
 	item := row.item
 	// A pinned row is whatever the reader said it was, and they put it at the
 	// top: it leads the page, so it heads the first band.
+	//
+	// BEFORE the crowding test, because the pin step sorts before the crowding
+	// step. Asked the other way round a pinned row that had also been crowded
+	// would sort first and be headed `keep_momentum` — the page drawing that
+	// heading above its own Now band, and the reader's one override putting a
+	// row where they asked while telling them it was somewhere else.
+	if item.Level == levelPinned {
+		return bandNow
+	}
+	if row.crowded {
+		return bandKeepMomentum
+	}
 	if item.Level <= levelWaiting {
 		return bandNow
 	}

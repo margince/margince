@@ -255,3 +255,74 @@ func TestANewPrimaryLandsBesideARetainedWorkAddress(t *testing.T) {
 		t.Fatalf("primary = %q, want the file's address", primary)
 	}
 }
+
+// Sending an empty set removes every address, which is a real answer.
+//
+// A contact who no longer has a working address is a fact worth recording, and
+// it is the shape a bounce correction reaches when the last address is the dead
+// one. Nil and empty are therefore DIFFERENT: nil leaves the addresses alone,
+// and the mapping is careful to keep the two apart because the store reads that
+// difference — `replacePersonEmails` returns early on nil.
+//
+// The removal rides `email <> ALL($2)` with an empty keep list, which is TRUE
+// for every stored row. Asserted rather than reasoned about, because an
+// implementation that treated empty as "nothing to do" would look identical
+// from the call site and quietly leave the dead address in place.
+func TestAnEmptyAddressSetRemovesEveryAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Ada Lovelace",
+		Emails: []PersonEmailInput{
+			{Email: "ada@work.example", EmailType: "work", IsPrimary: true},
+			{Email: "ada@home.example", EmailType: "personal"},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+	if len(liveEmailRows(person)) != 2 {
+		t.Fatalf("the fixture starts with %d addresses, want 2", len(liveEmailRows(person)))
+	}
+
+	updated, err := e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)),
+		UpdatePersonInput{Emails: []PersonEmailInput{}, Source: "test"})
+	if err != nil {
+		t.Fatalf("clearing the addresses: %v", err)
+	}
+
+	if rows := liveEmailRows(updated); len(rows) != 0 {
+		t.Fatalf("the person still holds %d addresses after being cleared: %+v",
+			len(rows), rows)
+	}
+}
+
+// And an absent set leaves them alone, without which the case above could be a
+// mapping that sends an empty slice for everything.
+func TestAnAbsentAddressSetLeavesThemAlone(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Ada Lovelace",
+		Emails:   []PersonEmailInput{{Email: "ada@work.example", EmailType: "work", IsPrimary: true}},
+		Source:   "test",
+	})
+	if err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+
+	title := "CTO"
+	updated, err := e.store.UpdatePerson(ctx, ids.From[ids.PersonKind](ids.UUID(person.Id)),
+		UpdatePersonInput{Title: &title, Source: "test"})
+	if err != nil {
+		t.Fatalf("patching the title: %v", err)
+	}
+
+	if rows := liveEmailRows(updated); len(rows) != 1 {
+		t.Fatalf("a patch that said nothing about addresses left %d of them: %+v",
+			len(rows), rows)
+	}
+}

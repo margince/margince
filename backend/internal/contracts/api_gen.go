@@ -574,6 +574,7 @@ const (
 	AiActivityKindNlSearch                      AiActivityKind = "nl_search"
 	AiActivityKindOfferDraft                    AiActivityKind = "offer_draft"
 	AiActivityKindOvernightAtRiskSweep          AiActivityKind = "overnight_at_risk_sweep"
+	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
@@ -621,6 +622,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindOfferDraft:
 		return true
 	case AiActivityKindOvernightAtRiskSweep:
+		return true
+	case AiActivityKindOwedVerdict:
 		return true
 	case AiActivityKindProposeRoles:
 		return true
@@ -892,6 +895,30 @@ func (e AnalyticsMeasureFn) Valid() bool {
 	case AnalyticsMin:
 		return true
 	case AnalyticsSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsScopeKind.
+const (
+	AnalyticsScopeKindManagedTeams AnalyticsScopeKind = "managed_teams"
+	AnalyticsScopeKindOwner        AnalyticsScopeKind = "owner"
+	AnalyticsScopeKindTeam         AnalyticsScopeKind = "team"
+	AnalyticsScopeKindWorkspace    AnalyticsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsScopeKind enum.
+func (e AnalyticsScopeKind) Valid() bool {
+	switch e {
+	case AnalyticsScopeKindManagedTeams:
+		return true
+	case AnalyticsScopeKindOwner:
+		return true
+	case AnalyticsScopeKindTeam:
+		return true
+	case AnalyticsScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -4264,27 +4291,6 @@ func (e CreateOrganizationRequestSizeBand) Valid() bool {
 	}
 }
 
-// Defines values for CreatePersonRequestEmailsEmailType.
-const (
-	CreatePersonRequestEmailsEmailTypeOther    CreatePersonRequestEmailsEmailType = "other"
-	CreatePersonRequestEmailsEmailTypePersonal CreatePersonRequestEmailsEmailType = "personal"
-	CreatePersonRequestEmailsEmailTypeWork     CreatePersonRequestEmailsEmailType = "work"
-)
-
-// Valid indicates whether the value is a known member of the CreatePersonRequestEmailsEmailType enum.
-func (e CreatePersonRequestEmailsEmailType) Valid() bool {
-	switch e {
-	case CreatePersonRequestEmailsEmailTypeOther:
-		return true
-	case CreatePersonRequestEmailsEmailTypePersonal:
-		return true
-	case CreatePersonRequestEmailsEmailTypeWork:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreatePersonRequestPhonesPhoneType.
 const (
 	CreatePersonRequestPhonesPhoneTypeHome   CreatePersonRequestPhonesPhoneType = "home"
@@ -5799,14 +5805,17 @@ func (e ForecastMovementBucketName) Valid() bool {
 
 // Defines values for ForecastReadingsScopeKind.
 const (
-	ForecastReadingsScopeKindOwner     ForecastReadingsScopeKind = "owner"
-	ForecastReadingsScopeKindTeam      ForecastReadingsScopeKind = "team"
-	ForecastReadingsScopeKindWorkspace ForecastReadingsScopeKind = "workspace"
+	ForecastReadingsScopeKindManagedTeams ForecastReadingsScopeKind = "managed_teams"
+	ForecastReadingsScopeKindOwner        ForecastReadingsScopeKind = "owner"
+	ForecastReadingsScopeKindTeam         ForecastReadingsScopeKind = "team"
+	ForecastReadingsScopeKindWorkspace    ForecastReadingsScopeKind = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the ForecastReadingsScopeKind enum.
 func (e ForecastReadingsScopeKind) Valid() bool {
 	switch e {
+	case ForecastReadingsScopeKindManagedTeams:
+		return true
 	case ForecastReadingsScopeKindOwner:
 		return true
 	case ForecastReadingsScopeKindTeam:
@@ -7423,6 +7432,24 @@ func (e OrganizationSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for OrganizationVisibility.
+const (
+	OrganizationVisibilityOwner     OrganizationVisibility = "owner"
+	OrganizationVisibilityWorkspace OrganizationVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationVisibility enum.
+func (e OrganizationVisibility) Valid() bool {
+	switch e {
+	case OrganizationVisibilityOwner:
+		return true
+	case OrganizationVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Organization360SectionsOmitted.
 const (
 	Organization360SectionsOmittedActivities       Organization360SectionsOmitted = "activities"
@@ -7842,19 +7869,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
-	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
-	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
+	Assessment     OrganizationBriefSentenceNature = "assessment"
+	Fact           OrganizationBriefSentenceNature = "fact"
+	Recommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case OrganizationBriefSentenceNatureAssessment:
+	case Assessment:
 		return true
-	case OrganizationBriefSentenceNatureFact:
+	case Fact:
 		return true
-	case OrganizationBriefSentenceNatureRecommendation:
+	case Recommendation:
 		return true
 	default:
 		return false
@@ -8575,6 +8602,24 @@ func (e PartnerRelationshipStage) Valid() bool {
 	}
 }
 
+// Defines values for PersonVisibility.
+const (
+	PersonVisibilityOwner     PersonVisibility = "owner"
+	PersonVisibilityWorkspace PersonVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the PersonVisibility enum.
+func (e PersonVisibility) Valid() bool {
+	switch e {
+	case PersonVisibilityOwner:
+		return true
+	case PersonVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Person360SectionsOmitted.
 const (
 	Person360SectionsOmittedActivities          Person360SectionsOmitted = "activities"
@@ -8743,6 +8788,27 @@ func (e PersonEmailEmailType) Valid() bool {
 	case PersonEmailEmailTypePersonal:
 		return true
 	case PersonEmailEmailTypeWork:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PersonEmailInputEmailType.
+const (
+	PersonEmailInputEmailTypeOther    PersonEmailInputEmailType = "other"
+	PersonEmailInputEmailTypePersonal PersonEmailInputEmailType = "personal"
+	PersonEmailInputEmailTypeWork     PersonEmailInputEmailType = "work"
+)
+
+// Valid indicates whether the value is a known member of the PersonEmailInputEmailType enum.
+func (e PersonEmailInputEmailType) Valid() bool {
+	switch e {
+	case PersonEmailInputEmailTypeOther:
+		return true
+	case PersonEmailInputEmailTypePersonal:
+		return true
+	case PersonEmailInputEmailTypeWork:
 		return true
 	default:
 		return false
@@ -11689,6 +11755,30 @@ func (e UndoabilityReason) Valid() bool {
 	}
 }
 
+// Defines values for UpdateActivityRequestMeetingStatus.
+const (
+	UpdateActivityRequestMeetingStatusBooked   UpdateActivityRequestMeetingStatus = "booked"
+	UpdateActivityRequestMeetingStatusCanceled UpdateActivityRequestMeetingStatus = "canceled"
+	UpdateActivityRequestMeetingStatusHeld     UpdateActivityRequestMeetingStatus = "held"
+	UpdateActivityRequestMeetingStatusNoShow   UpdateActivityRequestMeetingStatus = "no_show"
+)
+
+// Valid indicates whether the value is a known member of the UpdateActivityRequestMeetingStatus enum.
+func (e UpdateActivityRequestMeetingStatus) Valid() bool {
+	switch e {
+	case UpdateActivityRequestMeetingStatusBooked:
+		return true
+	case UpdateActivityRequestMeetingStatusCanceled:
+		return true
+	case UpdateActivityRequestMeetingStatusHeld:
+		return true
+	case UpdateActivityRequestMeetingStatusNoShow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateAttachmentMetadataRequestCategory.
 const (
 	UpdateAttachmentMetadataRequestCategoryContract          UpdateAttachmentMetadataRequestCategory = "contract"
@@ -13534,6 +13624,7 @@ func (e WorklistReachSource) Valid() bool {
 // Defines values for WorklistReasonKind.
 const (
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
+	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
@@ -13563,6 +13654,8 @@ const (
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
 	case WorklistReasonKindApprovedAndFailed:
+		return true
+	case WorklistReasonKindAsksNothing:
 		return true
 	case WorklistReasonKindBelowMaterial:
 		return true
@@ -14230,6 +14323,30 @@ func (e ListDealsParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListDealsParamsForecastCategory.
+const (
+	ListDealsParamsForecastCategoryBestCase ListDealsParamsForecastCategory = "best_case"
+	ListDealsParamsForecastCategoryCommit   ListDealsParamsForecastCategory = "commit"
+	ListDealsParamsForecastCategoryOmitted  ListDealsParamsForecastCategory = "omitted"
+	ListDealsParamsForecastCategoryPipeline ListDealsParamsForecastCategory = "pipeline"
+)
+
+// Valid indicates whether the value is a known member of the ListDealsParamsForecastCategory enum.
+func (e ListDealsParamsForecastCategory) Valid() bool {
+	switch e {
+	case ListDealsParamsForecastCategoryBestCase:
+		return true
+	case ListDealsParamsForecastCategoryCommit:
+		return true
+	case ListDealsParamsForecastCategoryOmitted:
+		return true
+	case ListDealsParamsForecastCategoryPipeline:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListDealsParamsPartnerAttribution.
 const (
 	Influenced ListDealsParamsPartnerAttribution = "influenced"
@@ -14637,31 +14754,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	Customer       ListOrganizationsParamsLifecycle = "customer"
-	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	Prospect       ListOrganizationsParamsLifecycle = "prospect"
-	Target         ListOrganizationsParamsLifecycle = "target"
-	Unknown        ListOrganizationsParamsLifecycle = "unknown"
+	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
+	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
+	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
+	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case Customer:
+	case ListOrganizationsParamsLifecycleCustomer:
 		return true
-	case Disqualified:
+	case ListOrganizationsParamsLifecycleDisqualified:
 		return true
-	case FormerCustomer:
+	case ListOrganizationsParamsLifecycleFormerCustomer:
 		return true
-	case Opportunity:
+	case ListOrganizationsParamsLifecycleOpportunity:
 		return true
-	case Prospect:
+	case ListOrganizationsParamsLifecycleProspect:
 		return true
-	case Target:
+	case ListOrganizationsParamsLifecycleTarget:
 		return true
-	case Unknown:
+	case ListOrganizationsParamsLifecycleUnknown:
 		return true
 	default:
 		return false
@@ -14955,19 +15072,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
-	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
-	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
+	All  ListPeopleParamsTagMode = "all"
+	Any  ListPeopleParamsTagMode = "any"
+	None ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case ListPeopleParamsTagModeAll:
+	case All:
 		return true
-	case ListPeopleParamsTagModeAny:
+	case Any:
 		return true
-	case ListPeopleParamsTagModeNone:
+	case None:
 		return true
 	default:
 		return false
@@ -15156,25 +15273,25 @@ func (e ListRelationshipsParamsKind) Valid() bool {
 
 // Defines values for ListScheduledSendsParamsStatus.
 const (
-	ListScheduledSendsParamsStatusCancelled ListScheduledSendsParamsStatus = "cancelled"
-	ListScheduledSendsParamsStatusHeld      ListScheduledSendsParamsStatus = "held"
-	ListScheduledSendsParamsStatusReleased  ListScheduledSendsParamsStatus = "released"
-	ListScheduledSendsParamsStatusScheduled ListScheduledSendsParamsStatus = "scheduled"
-	ListScheduledSendsParamsStatusSent      ListScheduledSendsParamsStatus = "sent"
+	Cancelled ListScheduledSendsParamsStatus = "cancelled"
+	Held      ListScheduledSendsParamsStatus = "held"
+	Released  ListScheduledSendsParamsStatus = "released"
+	Scheduled ListScheduledSendsParamsStatus = "scheduled"
+	Sent      ListScheduledSendsParamsStatus = "sent"
 )
 
 // Valid indicates whether the value is a known member of the ListScheduledSendsParamsStatus enum.
 func (e ListScheduledSendsParamsStatus) Valid() bool {
 	switch e {
-	case ListScheduledSendsParamsStatusCancelled:
+	case Cancelled:
 		return true
-	case ListScheduledSendsParamsStatusHeld:
+	case Held:
 		return true
-	case ListScheduledSendsParamsStatusReleased:
+	case Released:
 		return true
-	case ListScheduledSendsParamsStatusScheduled:
+	case Scheduled:
 		return true
-	case ListScheduledSendsParamsStatusSent:
+	case Sent:
 		return true
 	default:
 		return false
@@ -15324,19 +15441,19 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
-	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
-	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
-	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	Dropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	Open    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
 )
 
 // Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
 func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
 	switch e {
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+	case Done:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+	case Dropped:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
+	case Open:
 		return true
 	default:
 		return false
@@ -15584,6 +15701,9 @@ type AccountEmailDraft struct {
 	Scope   *ProjectScope          `json:"scope,omitempty"`
 	Subject string                 `json:"subject"`
 	To      *[]openapi_types.Email `json:"to,omitempty"`
+
+	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
 
 	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
@@ -16328,6 +16448,36 @@ type AnalyticsAnswer struct {
 	Withheld bool `json:"withheld"`
 }
 
+// AnalyticsCapabilities What this caller may actually do, so a screen never offers a control the server will refuse.
+type AnalyticsCapabilities struct {
+	// SubmitManagerForecast Whether this caller may publish a forecast for the population they are measuring. False hides the action rather than letting the save fail.
+	SubmitManagerForecast bool `json:"submit_manager_forecast"`
+
+	// ViewManagerForecast Whether the manager forecast is a destination for this caller at all.
+	ViewManagerForecast bool `json:"view_manager_forecast"`
+}
+
+// AnalyticsContext The frame every analytics answer for this caller is placed in.
+type AnalyticsContext struct {
+	// AllowedScopes What the screen may offer. Every data route validates a requested population again; this list only keeps a control from offering a refusal.
+	AllowedScopes []AnalyticsScope `json:"allowed_scopes"`
+
+	// AsOf The instant this frame was resolved.
+	AsOf time.Time `json:"as_of"`
+
+	// BaseCurrency The currency money readings are counted in.
+	BaseCurrency string `json:"base_currency"`
+
+	// Capabilities What this caller may actually do, so a screen never offers a control the server will refuse.
+	Capabilities AnalyticsCapabilities `json:"capabilities"`
+
+	// DefaultScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	DefaultScope AnalyticsScope `json:"default_scope"`
+
+	// Timezone The zone whose days a period is cut in.
+	Timezone string `json:"timezone"`
+}
+
 // AnalyticsEntity defines model for AnalyticsEntity.
 type AnalyticsEntity struct {
 	// GroupBy The fields this population can be grouped by.
@@ -16417,6 +16567,21 @@ type AnalyticsSchema struct {
 	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
 	Version string `json:"version"`
 }
+
+// AnalyticsScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+type AnalyticsScope struct {
+	// Id The team or person measured. Absent for workspace and managed_teams, which name no single subject.
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
+	Kind AnalyticsScopeKind `json:"kind"`
+
+	// Label What to call this population on screen.
+	Label string `json:"label"`
+}
+
+// AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
+type AnalyticsScopeKind string
 
 // AnnotateBriefItem One finding about one queued deal.
 type AnnotateBriefItem struct {
@@ -20221,13 +20386,8 @@ type CreatePersonEnrichmentRunRequest struct {
 // CreatePersonRequest defines model for CreatePersonRequest.
 type CreatePersonRequest struct {
 	// Address Structured postal address.
-	Address *Address `json:"address,omitempty"`
-	Emails  *[]struct {
-		Email     openapi_types.Email                 `json:"email"`
-		EmailType *CreatePersonRequestEmailsEmailType `json:"email_type,omitempty"`
-		IsPrimary *bool                               `json:"is_primary,omitempty"`
-		Position  *int                                `json:"position,omitempty"`
-	} `json:"emails,omitempty"`
+	Address   *Address            `json:"address,omitempty"`
+	Emails    *[]PersonEmailInput `json:"emails,omitempty"`
 	FirstName *string             `json:"first_name,omitempty"`
 	FullName  string              `json:"full_name"`
 	LastName  *string             `json:"last_name,omitempty"`
@@ -20243,9 +20403,6 @@ type CreatePersonRequest struct {
 	Title                *string                 `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{}  `json:"-"`
 }
-
-// CreatePersonRequestEmailsEmailType defines model for CreatePersonRequest.Emails.EmailType.
-type CreatePersonRequestEmailsEmailType string
 
 // CreatePersonRequestPhonesPhoneType defines model for CreatePersonRequest.Phones.PhoneType.
 type CreatePersonRequestPhonesPhoneType string
@@ -21358,6 +21515,20 @@ type DismissPersonMomentRequest struct {
 	EvidenceFingerprint string `json:"evidence_fingerprint"`
 }
 
+// DismissRelationshipNudgeRequest defines model for DismissRelationshipNudgeRequest.
+type DismissRelationshipNudgeRequest struct {
+	// Days How long the contact stays off the lane, counted from now. A COUNT rather than
+	// a moment, because the server owns "now" — a client computing an instant from a
+	// clock that is minutes out writes a dismissal that expires early or late for a
+	// reason nobody can see.
+	//
+	// Capped at 90 days, and there is no value meaning forever. A quarter is the
+	// longest a rep can honestly say "not this one" about a relationship without
+	// that being a decision to drop the person, which is a different act with its
+	// own record.
+	Days int `json:"days"`
+}
+
 // DisqualifyLeadRequest Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.
 type DisqualifyLeadRequest struct {
 	Note *string `json:"note,omitempty"`
@@ -21453,6 +21624,9 @@ type EmailDraft struct {
 	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
 	Subject             string                 `json:"subject"`
 	To                  *[]openapi_types.Email `json:"to,omitempty"`
+
+	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
 
 	// VoiceProfileVersion The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
@@ -22081,9 +22255,11 @@ type ForecastReadings struct {
 	PeriodStart openapi_types.Date `json:"period_start"`
 
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
-	PricedCount int                       `json:"priced_count"`
-	ScopeId     *openapi_types.UUID       `json:"scope_id,omitempty"`
-	ScopeKind   ForecastReadingsScopeKind `json:"scope_kind"`
+	PricedCount int                 `json:"priced_count"`
+	ScopeId     *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
+	ScopeKind ForecastReadingsScopeKind `json:"scope_kind"`
 
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
@@ -22098,7 +22274,7 @@ type ForecastReadings struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastReadingsScopeKind defines model for ForecastReadings.ScopeKind.
+// ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
@@ -25056,6 +25232,9 @@ type Organization struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
+	Visibility *OrganizationVisibility `json:"visibility,omitempty"`
+
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
 	WebsiteUrl *string `json:"website_url,omitempty"`
 
@@ -25075,6 +25254,9 @@ type OrganizationRelationshipTypes string
 
 // OrganizationSizeBand defines model for Organization.SizeBand.
 type OrganizationSizeBand string
+
+// OrganizationVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
+type OrganizationVisibility string
 
 // Organization360 The company record page in one payload. Every section except `organization` is
 // optional: absent means the caller lacks its grant, and `sections_omitted` names it.
@@ -27038,10 +27220,16 @@ type Person struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+	Visibility *PersonVisibility `json:"visibility,omitempty"`
+
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// PersonVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+type PersonVisibility string
 
 // Person360 The person record page in one payload (PO-EXT-3). Every section except `person` is
 // optional: absent means the caller lacks its grant, and `sections_omitted` names it.
@@ -27341,6 +27529,18 @@ type PersonEmail struct {
 
 // PersonEmailEmailType defines model for PersonEmail.EmailType.
 type PersonEmailEmailType string
+
+// PersonEmailInput One address on a person, as a writer supplies it. One schema for create and update,
+// so the two cannot describe an address differently.
+type PersonEmailInput struct {
+	Email     openapi_types.Email        `json:"email"`
+	EmailType *PersonEmailInputEmailType `json:"email_type,omitempty"`
+	IsPrimary *bool                      `json:"is_primary,omitempty"`
+	Position  *int                       `json:"position,omitempty"`
+}
+
+// PersonEmailInputEmailType defines model for PersonEmailInput.EmailType.
+type PersonEmailInputEmailType string
 
 // PersonGraph The local graph around one contact — nodes, the edges between them, and the route worth taking.
 type PersonGraph struct {
@@ -29352,7 +29552,9 @@ type ReportResult struct {
 	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
 	AsOf time.Time `json:"as_of"`
 
-	// BaseCurrency The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve.
+	// BaseCurrency The installation's configured base currency, as an ISO-4217 code.
+	// WHICH COLUMNS IT DENOMINATES DEPENDS ON THE REPORT. A native money measure (`amount_minor`, `weighted_amount_minor`) carries each record's OWN currency, so a report offering one groups by `currency` and this code labels the frame rather than those columns. A BASE measure (`amount_base_minor`, `weighted_base_minor`) is already converted per record before summing, and this code is its denomination.
+	// `pipeline-current` is the first report of the second kind: it offers base measures only, precisely so a plan cannot ask it for a sum of minor units across currencies.
 	BaseCurrency string   `json:"base_currency"`
 	Columns      []string `json:"columns"`
 
@@ -31099,13 +31301,45 @@ type UpdateActivityRequest struct {
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
-	IsDone     *bool      `json:"is_done,omitempty"`
-	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+	IsDone *bool `json:"is_done,omitempty"`
+
+	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+	// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
+	// gives, held against the kind the row already carries rather than one the
+	// patch names, because a patch cannot change a kind.
+	//
+	// Contracted on create since the field existed, and absent here, so the one
+	// moment a human actually knows the answer — the meeting is over — was the one
+	// moment the API could not be told.
+	//
+	// An omitted field is unchanged, like every other field on this patch. Sending
+	// an explicit `null` is also unchanged rather than a clear: this request maps
+	// onto the same coalescing update `due_at` and `remind_at` take, which cannot
+	// tell an absent field from a null one. Recording the wrong outcome is fixed by
+	// sending the right one.
+	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
+	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
 	// RemindAt Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Subject  *string    `json:"subject,omitempty"`
 }
+
+// UpdateActivityRequestMeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
+// gives, held against the kind the row already carries rather than one the
+// patch names, because a patch cannot change a kind.
+//
+// Contracted on create since the field existed, and absent here, so the one
+// moment a human actually knows the answer — the meeting is over — was the one
+// moment the API could not be told.
+//
+// An omitted field is unchanged, like every other field on this patch. Sending
+// an explicit `null` is also unchanged rather than a clear: this request maps
+// onto the same coalescing update `due_at` and `remind_at` take, which cannot
+// tell an absent field from a null one. Recording the wrong outcome is fixed by
+// sending the right one.
+type UpdateActivityRequestMeetingStatus string
 
 // UpdateAttachmentMetadataRequest A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
 // null to clear, because clearing either is an edit a human makes deliberately.
@@ -31465,7 +31699,20 @@ type UpdateOrganizationRequestSizeBand string
 // UpdatePersonRequest Partial update. Omitted fields are unchanged.
 type UpdatePersonRequest struct {
 	// Address Structured postal address.
-	Address              *Address                `json:"address,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// Emails REPLACES the person's addresses with exactly this list, which is what a
+	// correction needs: a bounced address is fixed by sending the set that should
+	// stand, and an append-only field could never remove the one that is dead.
+	//
+	// Omitting the field leaves the addresses untouched, like every other field
+	// here. Sending an empty array removes them all, which is a real answer — a
+	// contact who no longer has a working address is a fact worth recording.
+	//
+	// `Person360.dead_addresses` already names which address bounced; until now the
+	// contract's own remedy for that was to visit the person page, because the write
+	// existed on create and nowhere else.
+	Emails               *[]PersonEmailInput     `json:"emails,omitempty"`
 	FirstName            *string                 `json:"first_name,omitempty"`
 	FullName             *string                 `json:"full_name,omitempty"`
 	LastName             *string                 `json:"last_name,omitempty"`
@@ -32898,6 +33145,20 @@ type WorklistMove struct {
 // client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
 
+// WorklistPinRequest defines model for WorklistPinRequest.
+type WorklistPinRequest struct {
+	// RowId The row's own id within that lane. A string rather than a uuid: most rows
+	// carry a record id, but a folded group carries a synthetic key its lane mints,
+	// and a uuid-only field would leave those rows unpinnable for a reason no reader
+	// could see.
+	RowId string `json:"row_id"`
+
+	// Source The lane the row came from. Paired with `row_id` because that pair is what
+	// identifies a row: the lanes mint ids independently, so an id alone can name a
+	// row in a lane the caller was not looking at.
+	Source string `json:"source"`
+}
+
 // WorklistReach What one source contributed, in numbers that say what they counted.
 //
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
@@ -32971,13 +33232,14 @@ type WorklistReadings struct {
 	// the sum rather than counted as nothing, so a partly priced day reports what it
 	// could price and says so through `revenue_currency`.
 	//
-	// It is a FLOOR on what is drifting, never a total, and two things put work
-	// outside it. A deal nobody could price is one. The other is that only the
-	// at-risk lane goes through the currency conversion, so a deal reaching the page
-	// from the overnight brief draws an amount on its own card and adds nothing
-	// here. Both are why `more_available` matters: read this figure as "at least
-	// this much", and read the `deals_at_risk` entry in `counts` for how many deals
-	// stand behind it.
+	// It is a FLOOR on what is drifting, never a total: a deal nobody could price
+	// is left out, whichever lane surfaced it. A deal reaching the page from both
+	// the overnight brief and the at-risk lane at once is counted only ONCE — it
+	// is one deal's value, not one value per card it happens to appear on. This is
+	// why `more_available` matters: read this figure as "at least this much". The
+	// `deals_at_risk` entry in `counts` is a CARD count, not a deal count — the same
+	// deal reaching the page from both lanes is two cards there, so it can exceed
+	// the number of distinct deals this figure priced.
 	RevenueAtRiskMinor *int64 `json:"revenue_at_risk_minor"`
 
 	// RevenueCurrency The currency `revenue_at_risk_minor` is stated in — the installation's base
@@ -34384,6 +34646,14 @@ type ListDealsParams struct {
 	OrganizationId *openapi_types.UUID    `form:"organization_id,omitempty" json:"organization_id,omitempty"`
 	Status         *ListDealsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// ForecastCategory One of the forecast's named buckets. The same `deal.forecast_category` the forecast
+	// reads, so a tile's figure and the list behind it are one answer rather than two
+	// derivations that can disagree.
+	//
+	// A deal carrying no category is in no bucket and is returned by none of the four —
+	// the buckets partition the CATEGORISED pipeline, not the pipeline.
+	ForecastCategory *ListDealsParamsForecastCategory `form:"forecast_category,omitempty" json:"forecast_category,omitempty"`
+
 	// Stalled Deterministic stalled flag (no activity past the threshold).
 	Stalled *bool `form:"stalled,omitempty" json:"stalled,omitempty"`
 
@@ -34415,6 +34685,9 @@ type ListDealsParams struct {
 
 // ListDealsParamsStatus defines parameters for ListDeals.
 type ListDealsParamsStatus string
+
+// ListDealsParamsForecastCategory defines parameters for ListDeals.
+type ListDealsParamsForecastCategory string
 
 // ListDealsParamsPartnerAttribution defines parameters for ListDeals.
 type ListDealsParamsPartnerAttribution string
@@ -37765,6 +38038,15 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// UnpinWorklistRowParams defines parameters for UnpinWorklistRow.
+type UnpinWorklistRowParams struct {
+	// Source The lane the row came from, paired with `row_id` to name it.
+	Source string `form:"source" json:"source"`
+
+	// RowId The row's own id within that lane.
+	RowId string `form:"row_id" json:"row_id"`
+}
+
 // GetResponseMetricsParams defines parameters for GetResponseMetrics.
 type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
@@ -38265,6 +38547,9 @@ type MergePersonJSONRequestBody MergePersonJSONBody
 // DismissPersonMomentJSONRequestBody defines body for DismissPersonMoment for application/json ContentType.
 type DismissPersonMomentJSONRequestBody = DismissPersonMomentRequest
 
+// DismissRelationshipNudgeJSONRequestBody defines body for DismissRelationshipNudge for application/json ContentType.
+type DismissRelationshipNudgeJSONRequestBody = DismissRelationshipNudgeRequest
+
 // SavePersonResearchJSONRequestBody defines body for SavePersonResearch for application/json ContentType.
 type SavePersonResearchJSONRequestBody = SavePersonResearchRequest
 
@@ -38459,6 +38744,9 @@ type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBod
 
 // SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
 type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
+
+// PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
+type PinWorklistRowJSONRequestBody = WorklistPinRequest
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -43079,6 +43367,14 @@ func (a *Organization) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if raw, found := object["website_url"]; found {
 		err = json.Unmarshal(raw, &a.WebsiteUrl)
 		if err != nil {
@@ -43316,6 +43612,13 @@ func (a Organization) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -43559,6 +43862,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -43739,6 +44050,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -45582,6 +45900,14 @@ func (a *UpdatePersonRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["emails"]; found {
+		err = json.Unmarshal(raw, &a.Emails)
+		if err != nil {
+			return fmt.Errorf("error reading 'emails': %w", err)
+		}
+		delete(object, "emails")
+	}
+
 	if raw, found := object["first_name"]; found {
 		err = json.Unmarshal(raw, &a.FirstName)
 		if err != nil {
@@ -45653,6 +45979,13 @@ func (a UpdatePersonRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.Emails != nil {
+		object["emails"], err = json.Marshal(a.Emails)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'emails': %w", err)
 		}
 	}
 
@@ -46295,6 +46628,9 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
+	// Which population this caller measures by default, and which they may choose.
+	// (GET /analytics/context)
+	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
@@ -47414,6 +47750,12 @@ type ServerInterface interface {
 	// Who on our team knows this contact, and how well.
 	// (GET /people/{id}/network)
 	GetPersonNetwork(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Put a set-aside contact back on the lane — the undo behind the dismiss verb.
+	// (DELETE /people/{id}/nudge-dismissal)
+	RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
+	// Set a lapsed contact aside, so the Worklist stops raising them for a while.
+	// (PUT /people/{id}/nudge-dismissal)
+	DismissRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
 	// The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
 	// (GET /people/{id}/profile-fields)
 	GetPersonProfileFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -47903,6 +48245,12 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// Let the ranking have the row back — the undo behind the pin.
+	// (DELETE /worklist/pins)
+	UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams)
+	// Put a row at the top of your own day, above what the ranking chose.
+	// (PUT /worklist/pins)
+	PinWorklistRow(w http.ResponseWriter, r *http.Request)
 	// How fast the workspace answers, and how much of the queue it puts down.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
@@ -48152,6 +48500,12 @@ func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) 
 // AI usage + budget — the spend is never invisible.
 // (GET /ai/usage)
 func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which population this caller measures by default, and which they may choose.
+// (GET /analytics/context)
+func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -50393,6 +50747,18 @@ func (_ Unimplemented) GetPersonNetwork(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put a set-aside contact back on the lane — the undo behind the dismiss verb.
+// (DELETE /people/{id}/nudge-dismissal)
+func (_ Unimplemented) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set a lapsed contact aside, so the Worklist stops raising them for a while.
+// (PUT /people/{id}/nudge-dismissal)
+func (_ Unimplemented) DismissRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
 // (GET /people/{id}/profile-fields)
 func (_ Unimplemented) GetPersonProfileFields(w http.ResponseWriter, r *http.Request, id Id) {
@@ -51368,6 +51734,18 @@ func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, param
 // What the queue is not showing, and which rule is holding it back.
 // (GET /worklist/hidden)
 func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Let the ranking have the row back — the undo behind the pin.
+// (DELETE /worklist/pins)
+func (_ Unimplemented) UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a row at the top of your own day, above what the ranking chose.
+// (PUT /worklist/pins)
+func (_ Unimplemented) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53178,6 +53556,28 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiUsage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAnalyticsContext operation middleware
+func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnalyticsContext(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -59082,6 +59482,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "forecast_category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "forecast_category", r.URL.Query(), &params.ForecastCategory, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "forecast_category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "forecast_category", Err: err})
 		}
 		return
 	}
@@ -68667,6 +69080,70 @@ func (siw *ServerInterfaceWrapper) GetPersonNetwork(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRelationshipNudge operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRelationshipNudge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissRelationshipNudge operation middleware
+func (siw *ServerInterfaceWrapper) DismissRelationshipNudge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissRelationshipNudge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPersonProfileFields operation middleware
 func (siw *ServerInterfaceWrapper) GetPersonProfileFields(w http.ResponseWriter, r *http.Request) {
 
@@ -76157,6 +76634,78 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// UnpinWorklistRow operation middleware
+func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UnpinWorklistRowParams
+
+	// ------------- Required query parameter "source" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "source", r.URL.Query(), &params.Source, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "row_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "row_id", r.URL.Query(), &params.RowId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "row_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "row_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpinWorklistRow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PinWorklistRow operation middleware
+func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PinWorklistRow(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetResponseMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
 
@@ -76452,6 +77001,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/context", wrapper.GetAnalyticsContext)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
@@ -77573,6 +78125,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/people/{id}/network", wrapper.GetPersonNetwork)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/people/{id}/nudge-dismissal", wrapper.RestoreRelationshipNudge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/people/{id}/nudge-dismissal", wrapper.DismissRelationshipNudge)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/profile-fields", wrapper.GetPersonProfileFields)
 	})
 	r.Group(func(r chi.Router) {
@@ -78060,6 +78618,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/worklist/pins", wrapper.UnpinWorklistRow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/worklist/pins", wrapper.PinWorklistRow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)

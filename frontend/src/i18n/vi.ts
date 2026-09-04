@@ -110,6 +110,8 @@ export const vi = {
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
+  "history.field.emails": "Địa chỉ email",
+  "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_org_key": "Công ty khớp",
   "history.field.company_name": "Tên công ty",
   "history.field.currency": "Tiền tệ",
@@ -327,7 +329,7 @@ export const vi = {
   "share.downgradeConfirm": "Giảm xuống {to}",
   "share.seatCeiling":
     "Chỗ ngồi này chỉ đọc nên không thể nhận quyền ghi trên một bản ghi. Hãy nâng cấp chỗ ngồi trước, hoặc chỉ cấp quyền đọc.",
-  "share.whoHasAccess": "Ai có quyền truy cập",
+  "share.whoHasAccess": "Chia sẻ cụ thể",
   "share.grantedBy": "cấp bởi",
   "share.revoke": "Thu hồi",
   "share.revokeConfirm":
@@ -1139,6 +1141,29 @@ export const vi = {
     "K\u1ef3 h\u1ea1n kh\u00f4ng th\u1ec3 k\u1ebft th\u00fac tr\u01b0\u1edbc khi b\u1eaft \u0111\u1ea7u.",
   "contracts.add": "Th\u00eam h\u1ee3p \u0111\u1ed3ng",
   "contracts.rowMenu": "Thao t\u00e1c h\u1ee3p \u0111\u1ed3ng",
+  "contracts.renew.title": "Gia h\u1ea1n th\u1ecfa thu\u1eadn n\u00e0y",
+  "contracts.renew.hint":
+    "T\u1ea1o m\u1ed9t th\u1ecfa thu\u1eadn m\u1edbi v\u00e0 \u0111\u00e1nh d\u1ea5u th\u1ecfa thu\u1eadn n\u00e0y l\u00e0 \u0111\u00e3 thay th\u1ebf. \u0110i\u1ec1u kho\u1ea3n ri\u00eang \u2014 kh\u00f4ng g\u00ec \u0111\u01b0\u1ee3c gi\u1eef l\u1ea1i ngo\u00e0i b\u00ean \u0111\u1ed1i t\u00e1c.",
+  "contracts.renew.submit": "Gia h\u1ea1n",
+  "contracts.statusChange.title": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
+  "contracts.statusChange.label": "Tr\u1ea1ng th\u00e1i m\u1edbi",
+  "contracts.statusChange.submit": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
+  "contracts.statusChange.errSame":
+    "\u0110\u00e3 \u1edf tr\u1ea1ng th\u00e1i n\u00e0y r\u1ed3i.",
+  "contracts.cancel.title": "Ghi nh\u1eadn vi\u1ec7c h\u1ee7y",
+  "contracts.cancel.hint":
+    "Kh\u00e1ch h\u00e0ng v\u1eabn c\u00f2n hi\u1ec7u l\u1ef1c h\u1ee3p \u0111\u1ed3ng cho \u0111\u1ebfn ng\u00e0y c\u00f3 hi\u1ec7u l\u1ef1c \u2014 \u0111\u00e2y ch\u1ec9 ghi nh\u1eadn th\u00f4ng b\u00e1o h\u1ee7y, kh\u00f4ng \u0111\u1ed5i tr\u1ea1ng th\u00e1i.",
+  "contracts.cancel.noticeOn": "Ng\u00e0y th\u00f4ng b\u00e1o",
+  "contracts.cancel.effectiveOn": "Ng\u00e0y c\u00f3 hi\u1ec7u l\u1ef1c",
+  "contracts.cancel.effectiveOnHint":
+    "Kh\u00f4ng sau ng\u00e0y k\u1ebft th\u00fac h\u1ee3p \u0111\u1ed3ng, v\u00e0 kh\u00f4ng tr\u01b0\u1edbc ng\u00e0y th\u00f4ng b\u00e1o.",
+  "contracts.cancel.submit": "Ghi nh\u1eadn vi\u1ec7c h\u1ee7y",
+  "contracts.cancel.menuLabel": "H\u1ee7y h\u1ee3p \u0111\u1ed3ng",
+  "contracts.cancel.errIncomplete": "C\u1ea7n c\u1ea3 hai ng\u00e0y.",
+  "contracts.cancel.errOrder":
+    "Vi\u1ec7c h\u1ee7y kh\u00f4ng th\u1ec3 c\u00f3 hi\u1ec7u l\u1ef1c tr\u01b0\u1edbc ng\u00e0y th\u00f4ng b\u00e1o.",
+  "contracts.cancel.errTermEnd":
+    "Vi\u1ec7c h\u1ee7y kh\u00f4ng th\u1ec3 c\u00f3 hi\u1ec7u l\u1ef1c sau khi h\u1ee3p \u0111\u1ed3ng \u0111\u00e3 k\u1ebft th\u00fac.",
   "contracts.value.perYear": "m\u1ed7i n\u0103m",
   "contracts.value.total": "cho to\u00e0n b\u1ed9 th\u1eddi h\u1ea1n",
   "contracts.files": "T\u1ec7p",
@@ -1500,6 +1525,10 @@ export const vi = {
   "compose.reason.noRecord": "Giữ lại, chưa có hồ sơ",
   "compose.reason.pendingVerdict": "Giữ lại đến khi phân loại",
   "compose.reason.manual": "Được giữ riêng tư",
+  "compose.reason.verdict": "Được giữ do một phân loại",
+  "compose.reason.counterparty": "Được giữ, thư với bên này",
+  "compose.reason.explicitlyConfidential": "Được đánh dấu bảo mật",
+  "compose.reason.noCounterparty": "Được giữ, không có hồ sơ để lưu",
   "compose.audience": "Hiển thị",
   "compose.audienceTitle": "Ai được đọc tin nhắn này?",
   "compose.audienceLegend": "Hiển thị của riêng tin nhắn này",
@@ -1512,6 +1541,13 @@ export const vi = {
   "email.access.participants": "Người tham gia",
   "email.access.selected": "Được chọn",
   "email.access.withheld": "Bị giữ lại",
+  "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
+  "email.access.sentence.participants":
+    "Chỉ những người có trong thư này mới đọc được.",
+  "email.access.sentence.selected":
+    "Chỉ những người được nêu bên dưới mới đọc được thư này.",
+  "email.access.sentence.withheld": "Thư này không được chia sẻ với bạn.",
+  "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ",
   "email.detail.loading": "Đang mở thư",
@@ -2272,6 +2308,8 @@ export const vi = {
   "deals.filterOwnerMe": "Deal của tôi",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
+  "deals.filterForecast": "Dự báo",
+  "deals.filterForecastAll": "Mọi hạng mục dự báo",
   "deals.filterPartnerSourced": "Do đối tác mang về",
   "deals.filterStageAll": "Mọi giai đoạn",
   "deals.filterOrgAll": "Mọi công ty",
@@ -3019,7 +3057,15 @@ export const vi = {
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
+  "personAccess.title": "Ai xem được liên hệ này",
+  "personAccess.privateToYou":
+    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
+  "personAccess.organization":
+    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "personAccess.share": "Chia sẻ với tổ chức",
+  "personAccess.published": "Tổ chức đã xem được liên hệ này.",
   "compose.reply": "Trả lời",
+  "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
   "compose.draftWithAi": "Soạn bằng AI",
   "compose.drafting": "Đang soạn…",
@@ -3030,6 +3076,8 @@ export const vi = {
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI tạo. Hãy đọc và sửa trước khi gửi.",
   "compose.voiceVersion": "Dựng từ kho văn bản của bạn · v{n}",
+  "compose.voiceDegraded":
+    "Không tải được hồ sơ giọng văn của bạn, nên bản nháp này không viết theo giọng của bạn. Hãy soạn lại bản nháp hoặc chỉnh sửa trước khi gửi.",
   "compose.provisional": "Giọng tạm thời",
   "compose.provisionalHint":
     "Voice DNA của bạn vẫn đang được dựng. Giọng đó đã định hình bản nháp này y như một bản đã hoàn thiện — không giữ lại gì cả.",
@@ -3149,14 +3197,14 @@ export const vi = {
   "tasks.isDone": "Đã hoàn thành",
   "tasks.logged": "Đã ghi nhận",
 
-  "analytics.sub": "deal theo giai đoạn — chưa trọng số cạnh có trọng số",
+  "analytics.sub": "chỉ deal đang mở, mỗi deal quy đổi riêng sang {currency} — chưa trọng số cạnh có trọng số",
   "analytics.currency": "Tiền tệ",
   "analytics.count": "Deal",
   "analytics.unweighted": "Chưa trọng số",
   "analytics.weighted": "Có trọng số",
   "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
-  "analytics.reportDeals": "Deal theo giai đoạn",
+  "analytics.reportDeals": "Pipeline đang mở theo giai đoạn",
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
@@ -3184,7 +3232,7 @@ export const vi = {
   "analytics.share.copyFailed":
     "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
   "analytics.share.done": "Xong",
-  "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
+  "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước cuộc gọi?",
   "review.ready": "Sẵn sàng",
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
@@ -3193,6 +3241,8 @@ export const vi = {
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
+  "review.notCheckedYet":
+    "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
   "review.closePast": "Ngày chốt đã qua",
@@ -3241,6 +3291,8 @@ export const vi = {
   "forecast.supportingNote": "Ghi chú kèm theo",
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu cam kết",
+  "analytics.scopeLabel": "Những bản ghi nào nằm trong các số liệu này",
+  "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.receipt": "Đã kiểm tra dữ liệu và bằng chứng",
   "forecast.eligible": "Deal được tính",
   "forecast.priced": "Có số tiền",
@@ -6156,7 +6208,7 @@ export const vi = {
   "users.deactivateConfirmBody":
     "Người đó sẽ bị đăng xuất ở mọi nơi và mọi passport Agent của họ bị thu hồi ngay. Bạn có thể kích hoạt lại sau, nhưng họ sẽ phải đăng nhập lại.",
   "users.deactivateAgentConfirmBody":
-    "Đây là danh tính Agent của tổ chức. Vô hiệu hoá nó sẽ dừng mọi tác vụ chạy mà không có người đứng sau, kể cả tiện ích mở rộng, cho đến khi bạn kích hoạt lại. Không ai mất quyền truy cập — nó không đăng nhập ở đâu cả.",
+    "Đây là danh tính Agent của tổ chức. Nó không đăng nhập ở đâu cả và không ai mất quyền truy cập. Các tác vụ định kỳ của tiện ích mở rộng vẫn chạy: mỗi tác vụ hành động với tư cách chính nó, và thu thập dữ liệu theo quyền của thành viên có kết nối tạo ra bản ghi đó.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Hành động theo passport, không theo vai trò",
   "users.roleLabel": "Vai trò cho người dùng mới",
@@ -7737,6 +7789,12 @@ export const vi = {
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
+  "worklist.pair.refused":
+    "Bạn không thể xử lý cặp này. Bạn phải sửa được cả hai bản ghi, nên quản trị viên hoặc trưởng nhóm kinh doanh sẽ xử lý.",
+  "worklist.pair.alreadySettled":
+    "Không xử lý được cặp này theo cách bạn chọn — có thể người khác đã quyết định trước, hoặc bản ghi đã thay đổi. Hãy tải lại danh sách.",
+  "worklist.pair.stewardOnly":
+    "Chỉ người sửa được cả hai bản ghi mới xử lý được — quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Chưa chuẩn bị",
   "worklist.pane.title": "Về bản ghi này",
   "worklist.pane.openRow": "Xem mục {position}, {title}, về ai",
@@ -7906,6 +7964,7 @@ export const vi = {
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
   "worklist.because.no_reply_history": "chưa từng trao đổi",
+  "worklist.because.asks_nothing": "không yêu cầu gì ở ta",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",
@@ -7951,6 +8010,30 @@ export const vi = {
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
   "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
+  "worklist.sync.class.contacts": "liên hệ",
+  "worklist.sync.class.companies": "công ty",
+  "worklist.sync.class.deals": "giao dịch",
+  "worklist.sync.class.leads": "khách hàng tiềm năng",
+  "worklist.sync.class.calls": "cuộc gọi",
+  "worklist.sync.class.meetings": "cuộc họp",
+  "worklist.sync.class.emails": "email",
+  "worklist.sync.class.notes": "ghi chú",
+  "worklist.sync.class.tasks": "công việc",
+  "worklist.sync.error.rate_limited":
+    "hệ thống kia đang giới hạn số lần chúng ta được hỏi",
+  "worklist.sync.error.unreachable": "không kết nối được tới hệ thống kia",
+  "worklist.sync.error.auth": "kết nối cần đăng nhập lại",
+  "worklist.sync.error.history_gone": "hệ thống kia không còn giữ lịch sử đó",
+  "worklist.sync.error.internal": "có lỗi ở phía chúng ta",
+  "worklist.sync.band.warn":
+    "Gần chạm hạn mức đọc, một số truy vấn sẽ lấy từ bản sao.",
+  "worklist.sync.band.shed":
+    "Vượt hạn mức đọc: truy vấn lấy từ bản sao thay vì trực tiếp.",
+  "worklist.sync.failing": "Không đồng bộ được – {reason}.",
+  "worklist.sync.objects_stale": "Chưa cập nhật ở đây: {classes}.",
+  "worklist.sync.backfill_incomplete": "Đang nhập tiếp: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Sửa ở đây và bị hệ thống kia ghi đè: {classes}.",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
   "worklist.untitled.bounce": "Một email không đến nơi",

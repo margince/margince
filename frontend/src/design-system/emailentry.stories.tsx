@@ -259,3 +259,60 @@ export const RecordDrawer: StoryObj = {
     );
   },
 };
+
+/**
+ * The drawer for a message something HELD, which is the state the access
+ * markers exist for.
+ *
+ * Two badges beside the subject: what the limit is, and what decided it. The
+ * pair is the picture worth having, because a header carrying only "Participants"
+ * tells a reader they cannot widen the message and not why — and a reader who
+ * cannot see the verdict cannot tell a correct one from a wrong one.
+ *
+ * `can_change` is true here, so the sentence and the control under the body are
+ * drawn too: this is the whole arrangement, header and footer, in one shot.
+ */
+export const RecordDrawerHeld: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
+        () =>
+          jsonResponse({
+            id: BASE.activity_id,
+            lifecycle: "delivered",
+            occurred_at: BASE.occurred_at,
+            summary: { ...BASE, display_status: "participants" },
+            body: "Können wir Dienstag kurz sprechen?\n\nViele Grüße\nAna",
+            from: [
+              { address: "ana@brandt.example", display_name: "Ana Sommer" },
+            ],
+            to: [],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            access: {
+              content_state: "available",
+              display_status: "participants",
+              audience: "participants",
+              explanation: "explicitly_confidential",
+              can_change: true,
+              change_mode: "thread_contribution",
+            },
+            can_reply: true,
+            can_relink: false,
+            version: 3,
+          }),
+    });
+    return (
+      <StoryProviders>
+        <OpenEmailDrawer
+          activityId={BASE.activity_id}
+          zone={viewerZone()}
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+};

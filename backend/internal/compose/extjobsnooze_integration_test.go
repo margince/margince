@@ -31,7 +31,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -124,7 +123,7 @@ func TestAPostponedTickSuppressesTheNextDispatch(t *testing.T) {
 	// hand-built one. What is under test is the policy the fan-out actually
 	// enqueues under, and a test that supplied its own opts would pass whatever
 	// the dispatcher does.
-	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS, Principal: ids.NewV7()}
+	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
 	if err := runner.Enqueue(context.Background(), child, workspaceSweepOpts(decl.ChildKind())); err != nil {
 		t.Fatalf("re-enqueueing the workspace's child while the first is postponed: %v", err)
 	}

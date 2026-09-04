@@ -104,6 +104,8 @@ export const en = {
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
+  "history.field.emails": "Email addresses",
+  "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_org_key": "Matched company",
   "history.field.company_name": "Company name",
   "history.field.currency": "Currency",
@@ -343,7 +345,7 @@ export const en = {
   "share.downgradeConfirm": "Reduce to {to}",
   "share.seatCeiling":
     "This seat is read-only, so it cannot hold write access to a record. Raise the seat first, or grant read.",
-  "share.whoHasAccess": "Who has access",
+  "share.whoHasAccess": "Explicit shares",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
   "share.revokeConfirm":
@@ -1199,6 +1201,28 @@ export const en = {
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add a contract",
   "contracts.rowMenu": "Contract actions",
+  "contracts.renew.title": "Renew this agreement",
+  "contracts.renew.hint":
+    "Creates a new agreement and marks this one superseded. Its own terms — nothing carries over but the counterparty.",
+  "contracts.renew.submit": "Renew",
+  "contracts.statusChange.title": "Change status",
+  "contracts.statusChange.label": "New status",
+  "contracts.statusChange.submit": "Change status",
+  "contracts.statusChange.errSame": "Already at this status.",
+  "contracts.cancel.title": "Record cancellation",
+  "contracts.cancel.hint":
+    "The customer stays under contract until the effective date — this records notice, not a state change.",
+  "contracts.cancel.noticeOn": "Notice given",
+  "contracts.cancel.effectiveOn": "Takes effect",
+  "contracts.cancel.effectiveOnHint":
+    "Not after the term ends, and not before the notice date.",
+  "contracts.cancel.submit": "Record cancellation",
+  "contracts.cancel.menuLabel": "Cancel agreement",
+  "contracts.cancel.errIncomplete": "Both dates are needed.",
+  "contracts.cancel.errOrder":
+    "Cancellation cannot take effect before notice was given.",
+  "contracts.cancel.errTermEnd":
+    "Cancellation cannot take effect after the term already ends.",
   "contracts.value.perYear": "per year",
   "contracts.value.total": "for the whole term",
   "contracts.files": "Files",
@@ -1557,6 +1581,10 @@ export const en = {
   "compose.reason.noRecord": "Held, no record",
   "compose.reason.pendingVerdict": "Held until classified",
   "compose.reason.manual": "Kept private",
+  "compose.reason.verdict": "Held by a classification",
+  "compose.reason.counterparty": "Held, mail with this party",
+  "compose.reason.explicitlyConfidential": "Marked confidential",
+  "compose.reason.noCounterparty": "Held, nobody to file it under",
   "compose.audience": "Visibility",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Visibility of this one message",
@@ -1572,6 +1600,13 @@ export const en = {
   "email.access.participants": "Participants",
   "email.access.selected": "Selected",
   "email.access.withheld": "Withheld",
+  "email.access.sentence.team": "Everyone in the organization can read this.",
+  "email.access.sentence.participants":
+    "Only the people on this message can read it.",
+  "email.access.sentence.selected":
+    "Only the people named below can read this.",
+  "email.access.sentence.withheld": "This message is not shared with you.",
+  "email.access.unnamedMember": "Someone no longer here",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Waiting for them",
   "email.detail.loading": "Opening the message",
@@ -2331,6 +2366,8 @@ export const en = {
   "deals.filterOwnerMe": "My deals",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
+  "deals.filterForecast": "Forecast",
+  "deals.filterForecastAll": "Any forecast category",
   "deals.filterPartnerSourced": "Partner-sourced",
   "deals.filterStageAll": "All stages",
   "deals.filterOrgAll": "All companies",
@@ -3094,7 +3131,15 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
+  "personAccess.title": "Who can see this contact",
+  "personAccess.privateToYou":
+    "Private to you. Your mailbox created this contact, and nobody else in the organization can see it — not your team, and not an admin.",
+  "personAccess.organization":
+    "Everyone in the organization can see this contact.",
+  "personAccess.share": "Share with the organization",
+  "personAccess.published": "The organization can see this contact now.",
   "compose.reply": "Reply",
+  "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.draftWithAi": "Draft with AI",
   "compose.drafting": "Drafting…",
@@ -3105,6 +3150,8 @@ export const en = {
   "compose.aiDisclosureFallback":
     "This draft was produced by AI. Read it and edit it before you send.",
   "compose.voiceVersion": "Built from your corpus · v{n}",
+  "compose.voiceDegraded":
+    "Your voice profile couldn't be loaded, so this draft is not written in your voice. Draft again, or edit before sending.",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",
@@ -3232,14 +3279,14 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "analytics.sub": "deals by stage — unweighted next to weighted",
+  "analytics.sub": "open deals only, each converted into {currency} — unweighted next to weighted",
   "analytics.currency": "Currency",
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "analytics.reportDeals": "Deals by stage",
+  "analytics.reportDeals": "Open pipeline by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
@@ -3267,7 +3314,7 @@ export const en = {
   "analytics.share.copyFailed":
     "The link could not be copied. Select it above and copy it by hand.",
   "analytics.share.done": "Done",
-  "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "What should be checked before the call?",
   "review.ready": "Ready",
   "review.readyWithExceptions": "Ready, with notes",
@@ -3276,6 +3323,8 @@ export const en = {
   "review.allSourcesRead": "Every source was read.",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",
+  "review.notCheckedYet":
+    "Nothing has been checked yet — no nightly run has completed for this installation. The readings above stand on the records as they are.",
   "review.nothingToCheck": "Nothing to check.",
   "review.answer": "Answer",
   "review.closePast": "Close date has passed",
@@ -3324,6 +3373,8 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save call",
+  "analytics.scopeLabel": "Which records these numbers cover",
+  "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -6295,7 +6346,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the organization's agent identity. Deactivating it stops every job that runs with nobody behind it, extensions included, until you reactivate it. No person loses access — it signs in nowhere.",
+    "This is the organization's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
@@ -7922,6 +7973,12 @@ export const en = {
   "worklist.pair.notDuplicate": "Not the same",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
+  "worklist.pair.refused":
+    "You cannot settle this pair. Both records have to be yours to change, so an admin or a sales lead can settle it.",
+  "worklist.pair.alreadySettled":
+    "This pair could not be settled the way you asked — somebody may have decided it first, or the records changed under you. Reload the list to see where it stands.",
+  "worklist.pair.stewardOnly":
+    "Only somebody who can change both records can settle this — an admin or a sales lead.",
   "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "About this record",
   "worklist.pane.openRow": "Show what {position}, {title}, is about",
@@ -8090,6 +8147,7 @@ export const en = {
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
   "worklist.because.no_reply_history": "no reply history",
+  "worklist.because.asks_nothing": "asks nothing of us",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",
@@ -8137,6 +8195,31 @@ export const en = {
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.sync_health": "The CRM sync needs attention",
+  "worklist.sync.class.contacts": "contacts",
+  "worklist.sync.class.companies": "companies",
+  "worklist.sync.class.deals": "deals",
+  "worklist.sync.class.leads": "prospects",
+  "worklist.sync.class.calls": "calls",
+  "worklist.sync.class.meetings": "meetings",
+  "worklist.sync.class.emails": "emails",
+  "worklist.sync.class.notes": "notes",
+  "worklist.sync.class.tasks": "tasks",
+  "worklist.sync.error.rate_limited":
+    "the other system is limiting how often we may ask",
+  "worklist.sync.error.unreachable": "the other system cannot be reached",
+  "worklist.sync.error.auth": "the connection needs signing in again",
+  "worklist.sync.error.history_gone":
+    "the other system no longer holds that history",
+  "worklist.sync.error.internal": "something on our side went wrong",
+  "worklist.sync.band.warn":
+    "Close to the read budget, so some reads may be served from the copy.",
+  "worklist.sync.band.shed":
+    "Over the read budget: reads are being served from the copy rather than live.",
+  "worklist.sync.failing": "Not syncing — {reason}.",
+  "worklist.sync.objects_stale": "Out of date here: {classes}.",
+  "worklist.sync.backfill_incomplete": "Still importing: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Changed here and overwritten by the other system: {classes}.",
   "worklist.untitled.capture_health": "A mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs a look",
   "worklist.untitled.bounce": "An email did not arrive",

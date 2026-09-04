@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "951f9851b633a7ea201a8c1374cda5ad3b917bc9fcf8e33606f2373b1c3a2a81"
+const jobContractHash = "866f761a923c8a1e38bcf0899d0aac3d280fa739a277c726711914ff8269d37d"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -32,6 +32,8 @@ type declaredJobArgs interface {
 		AiModelRateRefreshArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
+		AssuranceSweepArgs |
+		AssuranceWorkspaceArgs |
 		BriefGenerateArgs |
 		BriefGenerateWorkspaceArgs |
 		CaptureAutoEnrichSweepArgs |
@@ -53,6 +55,7 @@ type declaredJobArgs interface {
 		CheckOrganizationVatArgs |
 		CloseDateSweepArgs |
 		CloseDateWorkspaceArgs |
+		AuthzDisagreementArgs |
 		ScheduledSendArgs |
 		ScheduledSendRecoveryArgs |
 		SendEmailArgs |
@@ -87,6 +90,8 @@ type declaredJobArgs interface {
 		OverlayReconcileArgs |
 		OverlayReconcileWorkspaceArgs |
 		OverlayRefetchArgs |
+		OwedVerdictArgs |
+		OwedVerdictWorkspaceArgs |
 		ParticipantBackfillArgs |
 		ParticipantBackfillWorkspaceArgs |
 		PrivacyRetentionArgs |
@@ -144,6 +149,7 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // The declared dispatchers: each enumerates the fleet and enqueues, and does
 // no tenant work of its own.
 var (
+	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
 	_ jobs.FleetWide = CaptureClassifyArgs{}
@@ -165,6 +171,7 @@ var (
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
+	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
@@ -179,6 +186,7 @@ var (
 // in its own args.
 var (
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
+	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = BriefGenerateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureAutoEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
@@ -209,6 +217,7 @@ var (
 	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
+	_ jobs.WorkspaceScoped = OwedVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ProviderLookupArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunPollArgs{}

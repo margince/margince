@@ -30,6 +30,30 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsMeetingStatus.
+const (
+	MeetingWasBooked   PublicEventActivityChangedFieldsMeetingStatus = "booked"
+	MeetingWasCanceled PublicEventActivityChangedFieldsMeetingStatus = "canceled"
+	MeetingWasHeld     PublicEventActivityChangedFieldsMeetingStatus = "held"
+	MeetingWasNoShow   PublicEventActivityChangedFieldsMeetingStatus = "no_show"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsMeetingStatus enum.
+func (e PublicEventActivityChangedFieldsMeetingStatus) Valid() bool {
+	switch e {
+	case MeetingWasBooked:
+		return true
+	case MeetingWasCanceled:
+		return true
+	case MeetingWasHeld:
+		return true
+	case MeetingWasNoShow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityDispositionRecordedDisposition.
 const (
 	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
@@ -273,6 +297,24 @@ func (e PublicEventIntroRequestDecidedDecision) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventRelationshipNudgeDecidedAction.
+const (
+	PublicEventRelationshipNudgeDecidedActionDismissed PublicEventRelationshipNudgeDecidedAction = "dismissed"
+	PublicEventRelationshipNudgeDecidedActionRestored  PublicEventRelationshipNudgeDecidedAction = "restored"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventRelationshipNudgeDecidedAction enum.
+func (e PublicEventRelationshipNudgeDecidedAction) Valid() bool {
+	switch e {
+	case PublicEventRelationshipNudgeDecidedActionDismissed:
+		return true
+	case PublicEventRelationshipNudgeDecidedActionRestored:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventRetentionRestrictedAction.
 const (
 	Pin      PublicEventRetentionRestrictedAction = "pin"
@@ -296,28 +338,28 @@ func (e PublicEventRetentionRestrictedAction) Valid() bool {
 
 // Defines values for PublicEventTeamChangedChange.
 const (
-	Archived      PublicEventTeamChangedChange = "archived"
-	Created       PublicEventTeamChangedChange = "created"
-	MemberAdded   PublicEventTeamChangedChange = "member_added"
-	MemberRemoved PublicEventTeamChangedChange = "member_removed"
-	Renamed       PublicEventTeamChangedChange = "renamed"
-	Restored      PublicEventTeamChangedChange = "restored"
+	PublicEventTeamChangedChangeArchived      PublicEventTeamChangedChange = "archived"
+	PublicEventTeamChangedChangeCreated       PublicEventTeamChangedChange = "created"
+	PublicEventTeamChangedChangeMemberAdded   PublicEventTeamChangedChange = "member_added"
+	PublicEventTeamChangedChangeMemberRemoved PublicEventTeamChangedChange = "member_removed"
+	PublicEventTeamChangedChangeRenamed       PublicEventTeamChangedChange = "renamed"
+	PublicEventTeamChangedChangeRestored      PublicEventTeamChangedChange = "restored"
 )
 
 // Valid indicates whether the value is a known member of the PublicEventTeamChangedChange enum.
 func (e PublicEventTeamChangedChange) Valid() bool {
 	switch e {
-	case Archived:
+	case PublicEventTeamChangedChangeArchived:
 		return true
-	case Created:
+	case PublicEventTeamChangedChangeCreated:
 		return true
-	case MemberAdded:
+	case PublicEventTeamChangedChangeMemberAdded:
 		return true
-	case MemberRemoved:
+	case PublicEventTeamChangedChangeMemberRemoved:
 		return true
-	case Renamed:
+	case PublicEventTeamChangedChangeRenamed:
 		return true
-	case Restored:
+	case PublicEventTeamChangedChangeRestored:
 		return true
 	default:
 		return false
@@ -418,6 +460,7 @@ const (
 	ProjectCreated                        SubscribableEventType = "project.created"
 	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
 	ProjectUpdated                        SubscribableEventType = "project.updated"
+	RelationshipNudgeDecided              SubscribableEventType = "relationship_nudge.decided"
 	RetentionApplied                      SubscribableEventType = "retention.applied"
 	RetentionRestricted                   SubscribableEventType = "retention.restricted"
 	RoleChanged                           SubscribableEventType = "role.changed"
@@ -632,6 +675,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case ProjectUpdated:
 		return true
+	case RelationshipNudgeDecided:
+		return true
 	case RetentionApplied:
 		return true
 	case RetentionRestricted:
@@ -720,7 +765,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -737,6 +782,9 @@ type PublicEventActivityChangedFields struct {
 	// IsDone The activity's new completion state (absent when this update did not touch it).
 	IsDone *bool `json:"is_done,omitempty"`
 
+	// MeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
+	MeetingStatus *PublicEventActivityChangedFieldsMeetingStatus `json:"meeting_status,omitempty"`
+
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
@@ -752,6 +800,9 @@ type PublicEventActivityChangedFields struct {
 
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
+
+// PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
+type PublicEventActivityChangedFieldsMeetingStatus string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded — somebody decided what to do about a waiting message and the Worklist stopped showing it (activities/disposition.go). WHO it stopped showing it to is not on the wire, and the omission is deliberate: `not_sales` settles what the message is and holds for everybody, while `snoozed` and `not_mine` belong to the one reader who set them. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
@@ -775,7 +826,7 @@ type PublicEventActivityRelinkedRef struct {
 
 // PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the person/organization/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
@@ -1811,6 +1862,20 @@ type PublicEventProjectUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
+// PublicEventRelationshipNudgeDecided Payload for relationship_nudge.decided — a rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (people's nudge dismissal). The entity is the CONTACT, which is what the judgement is about.
+// WHOSE morning it was is not on the wire, and the omission is the same one activity.disposition_recorded makes: a dismissal binds ONE reader, and a consumer reading this as a workspace-wide fact would report one rep's private decision as the contact's own state. The reader stays on the row, for a caller entitled to it.
+type PublicEventRelationshipNudgeDecided struct {
+	// Action What was decided. `restored` is the undo, carried rather than left to be inferred from a row going quiet: a decision withdrawn is itself a decision, and a consumer counting how often reps put relationships down has to see it happen.
+	Action PublicEventRelationshipNudgeDecidedAction `json:"action"`
+
+	// DismissedUntil When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have.
+	DismissedUntil *time.Time         `json:"dismissed_until,omitempty"`
+	PersonId       openapi_types.UUID `json:"person_id"`
+}
+
+// PublicEventRelationshipNudgeDecidedAction What was decided. `restored` is the undo, carried rather than left to be inferred from a row going quiet: a decision withdrawn is itself a decision, and a consumer counting how often reps put relationships down has to see it happen.
+type PublicEventRelationshipNudgeDecidedAction string
+
 // PublicEventRetentionApplied Payload for retention.applied — a retention/erasure action ran against one record. Four emit sites, four different runtime subjects: the embed-call sweep (ai_call), the voice-learning-signal content sweep (voice_learning_signal), a workspace's configured retention policy's object type (activity | deal | lead | person | ai_call_payload), and Art. 17 erasure (person) — none fixed enough for this schema to name, so this is dynamic-entity (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. policy/reason are a union across the sites — both telemetry sweeps set neither, the policy-driven sweep sets policy only, Art. 17 erasure sets reason only.
 type PublicEventRetentionApplied struct {
 	// Action The action that ran (archive | anonymize | erase).
@@ -2366,7 +2431,7 @@ func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
 func (PublicEventForecastAssuranceCreated) EventType() string { return "forecast.assurance_created" }
 
-func (PublicEventForecastAssuranceCreated) EntityType() string { return "user" }
+func (PublicEventForecastAssuranceCreated) EntityType() string { return "assurance_run" }
 
 func (PublicEventForecastCreated) EventType() string { return "forecast.created" }
 
@@ -2572,6 +2637,10 @@ func (PublicEventProjectUpdated) EventType() string { return "project.updated" }
 
 func (PublicEventProjectUpdated) EntityType() string { return "project" }
 
+func (PublicEventRelationshipNudgeDecided) EventType() string { return "relationship_nudge.decided" }
+
+func (PublicEventRelationshipNudgeDecided) EntityType() string { return "person" }
+
 func (PublicEventRetentionApplied) EventType() string { return "retention.applied" }
 
 func (PublicEventRetentionApplied) EntityType() string { return "dynamic" }
@@ -2770,6 +2839,7 @@ var PublicEventVersions = map[string]int{
 	"project.created":                           1,
 	"project.phase_changed":                     1,
 	"project.updated":                           1,
+	"relationship_nudge.decided":                1,
 	"retention.applied":                         1,
 	"retention.restricted":                      1,
 	"role.changed":                              1,

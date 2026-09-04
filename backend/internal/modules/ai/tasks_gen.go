@@ -34,6 +34,8 @@ const (
 	// TaskNlSearch is Declared, not built (ADR-0074).
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
+	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. A verdict may only DEMOTE a row within the queue — never delete, archive or hide one (ADR-0063 §3.2, the floor the capture label sits under). The reason is sharper here than there: this is one model call's opinion about a customer's mail, so being wrong has to cost a rep a scroll rather than a customer. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
+	TaskOwedVerdict Task = "owed_verdict"
 	// TaskProposeRoles is Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the person who WROTE that message must be the person the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title.
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
@@ -83,7 +85,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "b389ced457e8cca7b8d4cabbfd7432ecdbaf2d73c826a82e399f13b60e7e55f1"
+const TaskContractHash = "a5f3f393c1b28e6b894064ace4a82361dc6f1ef241894ea4e80ec3f2ab1d447d"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -105,6 +107,7 @@ func AllTasks() []Task {
 		TaskGrowthFit,
 		TaskNlSearch,
 		TaskOfferDraft,
+		TaskOwedVerdict,
 		TaskProposeRoles,
 		TaskRateExtract,
 		TaskSignalExtract,
@@ -137,6 +140,7 @@ var taskLadders = map[Task][]Tier{
 	TaskGrowthFit:                     {TierCheapCloud, TierPremium},
 	TaskNlSearch:                      {TierCheapCloud, TierPremium},
 	TaskOfferDraft:                    {TierCheapCloud, TierPremium},
+	TaskOwedVerdict:                   {TierLocalSmall, TierCheapCloud},
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
 	TaskSignalExtract:                 {TierCheapCloud, TierPremium},
@@ -178,6 +182,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskGrowthFit:                     ExecutionModeInteractive,
 	TaskNlSearch:                      ExecutionModeInteractive,
 	TaskOfferDraft:                    ExecutionModeInteractive,
+	TaskOwedVerdict:                   ExecutionModeBackground,
 	TaskProposeRoles:                  ExecutionModeInteractive,
 	TaskRateExtract:                   ExecutionModeBackground,
 	TaskSignalExtract:                 ExecutionModeBackground,
@@ -226,6 +231,7 @@ var taskStatus = map[Task]string{
 	TaskGrowthFit:                     "shipped",
 	TaskNlSearch:                      "planned",
 	TaskOfferDraft:                    "shipped",
+	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
 	TaskSignalExtract:                 "shipped",
@@ -309,6 +315,9 @@ var taskSites = map[Task][]Site{
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
 	},
+	TaskOwedVerdict: {
+		{Name: "owed", Kind: "one_shot"},
+	},
 	TaskProposeRoles: {
 		{Name: "committee", Kind: "one_shot"},
 	},
@@ -382,6 +391,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureConfidentialityVerdict: true,
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
+	TaskOwedVerdict:                   true,
 	TaskSignalExtract:                 true,
 }
 
@@ -415,6 +425,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
 	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
+	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},

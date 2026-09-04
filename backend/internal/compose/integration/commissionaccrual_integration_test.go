@@ -272,3 +272,39 @@ func TestAWinForAPartnerWithNoTierAccruesNothingAndDoesNotFail(t *testing.T) {
 		t.Errorf("ledger holds %d rows for a partner with no tier, want none", len(page.Data))
 	}
 }
+
+// The ledger's own lifecycle, end to end. It had no coverage at all, and the
+// write it runs named a column commission_entry does not have — so approve and
+// pay failed on every entry, and only the reopen sweep (which locks and applies
+// under its own filter) ever worked.
+func TestAnAccrualIsApprovedThenPaid(t *testing.T) {
+	e := Setup(t)
+	fx := seedAccrualFixture(t, e, "tier2_20")
+	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
+
+	winAndDeliver(t, e, fx)
+	page, err := fx.ledger.List(admin, commissions.ListInput{DealID: &fx.deal})
+	if err != nil || len(page.Data) != 1 {
+		t.Fatalf("ledger after the win: %v %+v", err, page.Data)
+	}
+	entry := ids.From[ids.CommissionEntryKind](ids.UUID(page.Data[0].Id))
+
+	approved, err := fx.ledger.Decide(admin, entry, commissions.DecideInput{Decision: commissions.DecisionApprove})
+	if err != nil {
+		t.Fatalf("approving the accrual: %v", err)
+	}
+	if string(approved.Status) != commissions.StatusApproved {
+		t.Fatalf("status after approve = %q, want approved", approved.Status)
+	}
+	paid, err := fx.ledger.Decide(admin, entry, commissions.DecideInput{Decision: commissions.DecisionPay})
+	if err != nil {
+		t.Fatalf("paying the approved accrual: %v", err)
+	}
+	if string(paid.Status) != commissions.StatusPaid {
+		t.Errorf("status after pay = %q, want paid", paid.Status)
+	}
+	// Paying an entry twice is refused by the lifecycle, not by the row gate.
+	if _, err := fx.ledger.Decide(admin, entry, commissions.DecideInput{Decision: commissions.DecisionPay}); err == nil {
+		t.Error("paying an already-paid entry succeeded")
+	}
+}

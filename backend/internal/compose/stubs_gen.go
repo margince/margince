@@ -183,6 +183,10 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
+func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAnalyticsContext")
+}
+
 func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
@@ -1675,6 +1679,14 @@ func (stubs) GetPersonNetwork(w nethttp.ResponseWriter, r *nethttp.Request, id o
 	httperr.NotImplemented(w, r, "GetPersonNetwork")
 }
 
+func (stubs) RestoreRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreRelationshipNudge")
+}
+
+func (stubs) DismissRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DismissRelationshipNudge")
+}
+
 func (stubs) GetPersonProfileFields(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetPersonProfileFields")
 }
@@ -2325,6 +2337,14 @@ func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 
 func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
+}
+
+func (stubs) UnpinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.UnpinWorklistRowParams) {
+	httperr.NotImplemented(w, r, "UnpinWorklistRow")
+}
+
+func (stubs) PinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PinWorklistRow")
 }
 
 func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetResponseMetricsParams) {

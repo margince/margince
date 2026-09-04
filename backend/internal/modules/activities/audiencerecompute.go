@@ -26,55 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AudienceReason names why a derived audience is what it is. Closed
-// vocabulary, and the column it lands in is withheld from a reader who may not
-// read the content: "held because personnel" describes the content.
-const (
-	// ReasonPosture: a mailbox asked for it. A verdict on the thread can clear
-	// it, which is the whole point of a mailbox posture — it holds the message
-	// until something judges it.
-	ReasonPosture = "posture"
-	// ReasonWorkspaceFloor: the WORKSPACE turned mail sharing off. It is not a
-	// mailbox posture and no verdict clears it: an admin decided colleagues do
-	// not read captured mail, and a classifier concluding a thread is ordinary
-	// says nothing about that decision. Only the admin turning sharing back on
-	// opens these rows, and only for mail captured afterwards.
-	ReasonWorkspaceFloor = "workspace_floor"
-	// ReasonPendingVerdict: nothing has judged the message yet, and unjudged
-	// is held.
-	ReasonPendingVerdict = "pending_verdict"
-	// ReasonManual: a human said so. It is also a LOCK — the derivation refuses
-	// to move a row carrying it — so nothing but a human's own decision may
-	// write it.
-	ReasonManual = "manual"
-	// ReasonVerdict: a classifier judged the thread and held it, without saying
-	// which kind. The classifier's own kinds replace this word when it lands.
-	ReasonVerdict = "verdict"
-	// ReasonCounterparty: the importing seat holds mail with one of the parties,
-	// whatever this particular message is about. Their decision, and no verdict
-	// clears it — a classifier concluding a thread is ordinary says nothing
-	// about whether this seat wants their lawyer's mail in a shared CRM.
-	ReasonCounterparty = "counterparty"
-	// ReasonConfidentialMarker: the sender said so in the subject line. The one
-	// confidentiality signal that needs no model, and it outranks a later
-	// verdict for the same reason a counterparty hold does — a person marked
-	// this message, and a classifier disagreeing does not unmark it.
-	ReasonConfidentialMarker = "explicitly_confidential"
-	// ReasonNoRecord: the message is filed under no record because something
-	// JUDGED its sender — a suppression rule, a settled verdict, a thread the
-	// owner's own. Written by the capture ladder rather than derived here, and
-	// carried through every recompute: a link arriving later says nothing about
-	// a judgement that was never about the filing.
-	ReasonNoRecord = "no_record"
-	// ReasonNoCounterparty: the message named nobody a record could be created
-	// FOR. The calendar case — attendance is a list, so the mapper leaves the
-	// counterparty unset and the ladder concludes it named nobody. No judgement
-	// was made about anyone, so this hold means only "nothing has filed it
-	// yet", and it stops being true the moment something does. That is the one
-	// row-carried hold a link lifts, and noRecordHoldStands is where it does.
-	ReasonNoCounterparty = "no_counterparty"
-)
-
 // audienceRank orders the audiences from most open to most closed. The
 // recompute takes the maximum, which is what "strictest contributor wins"
 // means in one line.
@@ -481,6 +432,59 @@ func ClearCounterpartyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.A
 		 WHERE id = ANY($1) AND audience_reason = $2`,
 		activityIDs, ReasonCounterparty); err != nil {
 		return fmt.Errorf("activities: clearing the counterparty hold from re-opened rows: %w", err)
+	}
+	return nil
+}
+
+// ClearConfidentialityVerdictHoldTx removes the one row-carried hold an owner
+// is entitled to lift: a CLASSIFIER's confidentiality answer.
+//
+// Its sibling above clears a counterparty hold; this exists for the same reason
+// and answers a different question. A row-carried hold outranks an opening
+// contribution, which is right for the holds a recipient may not lift and wrong
+// for the one they may. The owner pressed Share, the ledger recorded
+// `shared_by_owner`, the derivation ran, read the row's reason and left the
+// message held — the share worked and the hold ignored it.
+//
+// The predicate is the subtle part. `explicitly_confidential` on a row means
+// two things that cannot be told apart by the word:
+//
+//   - the SENDER marked their own subject line. Not a recipient's to lift.
+//   - a CLASSIFIER concluded the text asks for confidence. A judgement, and the
+//     owner may disagree with it.
+//
+// So the CALLER decides which rows qualify and this writes them. capture owns
+// the thread ledger and can see that a row's hold came from a classifier — a
+// verdict recorded a `kind`, a sink marking never does — while this module owns
+// `activity` and is the only one entitled to write the column. Reading the
+// ledger here would be a module reaching into a sibling's table, which the
+// ownership gate refuses and which would put the same rule in two places.
+//
+// Newer rows do not need any of this: capture's rowReasonForKind now sends a
+// classifier's answer to the row as the generic `verdict`, which is not
+// row-carried at all. The rows judged before that landed still carry the word,
+// and they are the ones a rep cannot share today.
+//
+// Every other reason is left where it is: `counterparty` is this seat's standing
+// decision about a PERSON rather than this message, `workspace_floor` is an
+// admin's decision one seat cannot overrule, and `no_record` / `no_counterparty`
+// are the capture ladder's filing facts rather than judgements about
+// confidentiality. The value predicate stays in the UPDATE even though the
+// caller has already chosen the ids, for the reason its sibling states: the
+// column has more than one writer, and each has to say which values are its own
+// to clear.
+func ClearConfidentialityVerdictHoldTx(
+	ctx context.Context, tx pgx.Tx, activityIDs []ids.ActivityID,
+) error {
+	if len(activityIDs) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity
+		   SET audience_reason = NULL
+		 WHERE id = ANY($1) AND audience_reason = $2`,
+		activityIDs, ReasonConfidentialMarker); err != nil {
+		return fmt.Errorf("activities: clearing a confidentiality verdict the owner has shared past: %w", err)
 	}
 	return nil
 }

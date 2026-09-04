@@ -12,6 +12,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ForecastView } from "./analytics.forecast";
 
+// The population these tests read under. Workspace because that is what a
+// manager sees, and because a nameable scope is what the editor requires.
+const WORKSPACE_SELECTION = {
+  scope: { kind: "workspace" as const, label: "Whole workspace" },
+};
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -61,6 +67,10 @@ function readings(over: Record<string, unknown> = {}) {
 type StubOpts = {
   readings?: Record<string, unknown>;
   onCall?: (body: Record<string, unknown>) => void;
+  // assuranceStatus lets a test ask for the answer a FRESH installation gets,
+  // where no nightly run has completed. Every other test here stubs a finished
+  // run, which is why that case went unrendered until somebody opened the page.
+  assuranceStatus?: number;
 };
 
 function forecastStub(opts: StubOpts = {}) {
@@ -79,6 +89,14 @@ function forecastStub(opts: StubOpts = {}) {
       return jsonResponse({ data: [] });
     }
     if (url.includes("/forecast/assurance")) {
+      if (opts.assuranceStatus === 404) {
+        // What the contract says a fresh installation gets: "no run has
+        // completed yet".
+        return jsonResponse(
+          { type: "about:blank", title: "Not Found", status: 404 },
+          404,
+        );
+      }
       // The run the review panel reads. Its own endpoint, so a test about the
       // call editor does not depend on what the check happened to find.
       return jsonResponse({
@@ -116,7 +134,7 @@ describe("ForecastView", () => {
         }),
       }),
     );
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const answer = await screen.findByText(/current call is/i);
     expect(answer.textContent).toContain("2,000.00");
     expect(answer.textContent).toContain("1,200.00");
@@ -126,7 +144,7 @@ describe("ForecastView", () => {
   // zero. It must not render as "the current call is €0".
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     expect(await screen.findByText(/Nobody has called/i)).toBeTruthy();
   });
 
@@ -137,13 +155,13 @@ describe("ForecastView", () => {
       "fetch",
       forecastStub({ readings: readings({ priced_count: 9 }) }),
     );
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     expect(await screen.findByText(/9 of 12 deals/i)).toBeTruthy();
   });
 
   it("says nothing about pricing when every deal carries an amount", async () => {
     vi.stubGlobal("fetch", forecastStub());
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     await screen.findByText(/Nobody has called/i);
     expect(screen.queryByText(/of 12 deals/i)).toBeNull();
   });
@@ -154,7 +172,7 @@ describe("ForecastView", () => {
   it("posts the amount and the note the author typed", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
     await user.click(
@@ -176,7 +194,7 @@ describe("ForecastView", () => {
   it("sends no note at all when the author wrote none", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
     await user.click(
@@ -194,9 +212,28 @@ describe("ForecastView", () => {
       "fetch",
       forecastStub({ readings: readings({ fx_missing_count: 2 }) }),
     );
-    render(<ForecastView />);
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     expect(await screen.findByText("Eligible deals")).toBeTruthy();
     expect(screen.getByText("Exchange rate missing")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
+  });
+
+  // A fresh installation has been checked by nobody, and the panel must say so.
+  //
+  // 404 is this endpoint's ANSWER — the contract spells it "no run has
+  // completed yet" — so rendering it through the error gate told a reader the
+  // screen was broken when nothing had looked yet. Those are opposite
+  // instructions about whether to trust the readings above, which is why the
+  // wrong one is worth a test rather than a glance.
+  it("says nothing has been checked when no run has completed", async () => {
+    vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    expect(
+      await screen.findByText(/Nothing has been checked yet/),
+    ).toBeTruthy();
+    // And NOT the broken-view state, which is what shipped.
+    expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
+    expect(screen.queryByText(/not found/)).toBeNull();
   });
 });

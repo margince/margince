@@ -1,0 +1,64 @@
+/* Who reads this message, in two places for two moments.
+ *
+ * The MARKERS sit in the header beside the subject, because a limit is a fact
+ * about a message like its date and a reader wants it before they read. They
+ * are badges and nothing else: a sentence up there pushes the message itself
+ * below the fold.
+ *
+ * The SENTENCE, the names and the control stay under the body, which is where
+ * a reader goes once they have read the thing and want to act on it. The rule
+ * above them separates a fact about the message from the message. */
+
+.emailaccess {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The header's own row of badges, which wraps rather than pushing the close
+   button off the edge on a narrow drawer. */
+.emailaccess__markers {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.emailaccess__sentence {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+.emailaccess__members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each named seat as its own chip. A comma-joined sentence would read as one
+   long name at a glance, and the set is the thing a reader is checking. */
+.emailaccess__member {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  line-height: 1.7;
+}
+
+.emailaccess__change {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.emailaccess__error {
+  margin: 0;
+  color: var(--dangerText);
+}

@@ -193,6 +193,7 @@ var tableOwners = map[string]string{
 	"activity_retention_evidence": "internal/modules/activities",
 	"activity_sales_state":        "internal/modules/activities",
 	"activity_reader_state":       "internal/modules/activities",
+	"worklist_pin":                "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -340,14 +341,15 @@ var tableOwners = map[string]string{
 	// means and how it renders, while integrations owns the run that bought
 	// it. That split is what lets a person page show a bought email beside a
 	// canonical one and say which is which.
-	"provider_applied_field":    "internal/modules/people",
-	"person_provider_claim":     "internal/modules/people",
-	"finance_external_customer": "internal/modules/finance",
-	"finance_customer_link":     "internal/modules/finance",
-	"finance_invoice":           "internal/modules/finance",
-	"finance_payment":           "internal/modules/finance",
-	"signal":                    "internal/modules/signals",
-	"signal_resolution":         "internal/modules/signals",
+	"provider_applied_field":       "internal/modules/people",
+	"person_provider_claim":        "internal/modules/people",
+	"relationship_nudge_dismissal": "internal/modules/people",
+	"finance_external_customer":    "internal/modules/finance",
+	"finance_customer_link":        "internal/modules/finance",
+	"finance_invoice":              "internal/modules/finance",
+	"finance_payment":              "internal/modules/finance",
+	"signal":                       "internal/modules/signals",
+	"signal_resolution":            "internal/modules/signals",
 	// collections
 	"list":        "internal/modules/collections",
 	"list_member": "internal/modules/collections",

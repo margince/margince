@@ -33,6 +33,21 @@ function render(ui: ReactNode) {
   );
 }
 
+// A full seat holding person.update — the default these tests run under.
+const SEAT_MAY_WRITE = {
+  user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
+  authorization: {
+    seat_type: "full",
+    objects: { person: { read: true, update: true } },
+  },
+};
+
+// The row the section is asked about. `writable` is what the server answers per
+// caller per row, and the section fails closed without it — a fixture that
+// omits it describes a contact this reader may not edit, which is a different
+// test than the one each of these means to be.
+const writablePerson = { writable: true };
+
 const PURPOSES = {
   data: [
     {
@@ -107,6 +122,11 @@ function stubRoutes(
       sent.push({ key, url: url.pathname + url.search, body });
       const override = overrides[key];
       if (override) return override();
+      // A full seat holding person.update, which every one of these tests
+      // assumed before the grant was asked for: they are about what the
+      // section SENDS, and a reader who may not write it sends nothing. The
+      // permission axis has its own tests below.
+      if (key === "GET /me") return jsonResponse(SEAT_MAY_WRITE);
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /people/person-1/consent") return jsonResponse(CONSENT);
       return jsonResponse({});
@@ -137,14 +157,14 @@ afterEach(() => {
 describe("ConsentSection", () => {
   it("renders unknown distinctly from withdrawn — no record is not a withdrawal", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     expect(await screen.findByText(/no record/i)).toBeInTheDocument();
   });
 
   // G-4: the events[] the Person 360 currently drops. Art. 7 demonstrability.
   it("shows the append-only proof log for a purpose", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -157,7 +177,7 @@ describe("ConsentSection", () => {
   // human who is not necessarily whoever is looking at this proof.
   it("names the actual human actor rather than claiming the viewer typed it", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -185,7 +205,7 @@ describe("ConsentSection", () => {
           ],
         }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -198,7 +218,7 @@ describe("ConsentSection", () => {
   // log must still be reachable and say so honestly, not hide the toggle.
   it("shows the honest empty state for a purpose with no consent record", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     const row = await findConsentRow("Marketing");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -213,7 +233,7 @@ describe("ConsentSection", () => {
   // operator can type is a confirmation an operator can forge.
   it("offers no token field on a purpose that requires double opt-in", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     await screen.findByText("Marketing");
     expect(screen.queryByLabelText(/confirmation token/i)).toBeNull();
     expect(
@@ -226,7 +246,7 @@ describe("ConsentSection", () => {
   // subject's right and never needs a round trip.
   it("offers no Grant on a double-opt-in row nobody here can grant", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     await screen.findByText("Marketing");
     // The fixture holds a granted non-DOI purpose and an unknown DOI one. The
     // granted row keeps Withdraw; the DOI row offers nothing, so no Grant
@@ -239,7 +259,7 @@ describe("ConsentSection", () => {
 
   it("says who confirms a double-opt-in purpose, on that row only", async () => {
     stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     await screen.findByText("Marketing");
     // One row requires DOI in the fixture; the note belongs to it alone.
     expect(
@@ -259,7 +279,7 @@ describe("ConsentSection", () => {
           state: "withdrawn",
         }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     await screen.findByText("Marketing");
     await userEvent.click(
       screen.getAllByRole("button", { name: /^withdraw$/i })[0],
@@ -282,7 +302,7 @@ describe("ConsentSection", () => {
           state: "withdrawn",
         }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     await userEvent.click(
       await screen.findByRole("button", { name: /^withdraw$/i }),
     );
@@ -329,7 +349,7 @@ describe("ConsentSection", () => {
           state: "granted",
         }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     // Both p1 (withdrawn) and p2 (unknown) show a Grant button here; [0] is
     // p1's — rows render in the order GET /people/{id}/consent lists them.
     await screen.findByText("Deal messages");
@@ -385,7 +405,7 @@ describe("ConsentSection", () => {
           state: "withdrawn",
         }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     const row = await findConsentRow("Deal messages");
     await userEvent.click(
       within(row).getByRole("button", { name: /proof log/i }),
@@ -409,7 +429,7 @@ describe("ConsentSection", () => {
   // issuance endpoint, so there is no capability for an operator to read.
   it("never asks the server to issue a double-opt-in token", async () => {
     const sent = stubRoutes();
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     await screen.findByText("Marketing");
     await userEvent.click(
       screen.getAllByRole("button", { name: /^withdraw$/i })[0],
@@ -432,7 +452,7 @@ describe("ConsentSection", () => {
       "GET /people/person-1/consent": () =>
         jsonResponse({ state: [], events: [] }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     expect(await screen.findByText(/no consent purposes/i)).toBeInTheDocument();
   });
 
@@ -441,7 +461,7 @@ describe("ConsentSection", () => {
       "GET /people/person-1/consent": () =>
         jsonResponse({ title: "boom", status: 500 }, 500),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     expect(
       await screen.findByRole("button", { name: /retry/i }),
     ).toBeInTheDocument();
@@ -456,7 +476,7 @@ describe("ConsentSection", () => {
     stubRoutes({
       "GET /consent-purposes": () => jsonResponse({ title: "boom" }, 500),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
     expect(
       await screen.findByText(/couldn't load the consent purpose catalogue/i),
     ).toBeInTheDocument();
@@ -499,7 +519,7 @@ describe("asking a contact to confirm their details", () => {
       },
       sent,
     );
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -531,7 +551,7 @@ describe("asking a contact to confirm their details", () => {
           201,
         ),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -553,7 +573,7 @@ describe("asking a contact to confirm their details", () => {
           201,
         ),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -578,7 +598,7 @@ describe("asking a contact to confirm their details", () => {
           422,
         ),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
@@ -599,7 +619,7 @@ describe("asking a contact to confirm their details", () => {
           },
         }),
     });
-    render(<ConsentSection personId="person-1" />);
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
 
     // Waited for rather than asserted immediately: the capability arrives
     // asynchronously, so an absence checked too early passes for the wrong
