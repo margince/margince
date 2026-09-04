@@ -23,6 +23,20 @@
 --
 -- Bounded: adding a generated column rewrites the table under ACCESS EXCLUSIVE,
 -- and both tables are written whenever somebody edits the catalog.
+--
+-- What the ceiling below does and does not buy: it bounds how long this waits to
+-- ACQUIRE the lock, so a migration behind a long-running catalog write fails
+-- fast instead of queueing behind it and blocking every writer that arrives
+-- after. It does not bound the rewrite or the index build once the lock is
+-- held. Neither is made online here, and that is a deliberate accounting rather
+-- than an oversight: `product` and `offer_template` are catalog tables sized by
+-- what a team authors by hand, so both passes are milliseconds on real data,
+-- and a dual-written column with a batched backfill would be a second spelling
+-- of the shape all seven other searchable tables use. CONCURRENTLY is not the
+-- missing piece either — a migration runs in one transaction, which forbids it.
+-- A table whose row count ever makes this a real outage needs the runner to
+-- learn about non-transactional steps; it does not need this one migration to
+-- invent them.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE product
