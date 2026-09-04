@@ -156,7 +156,7 @@ const restated: Record<string, number> = {
   "src/design-system/listtable.css": 2,
   "src/design-system/margince-workbench.css": 3,
   "src/mcp-apps/view.css": 1,
-  "src/screens/auth.css": 2,
+  "src/screens/auth.css": 1,
   "src/screens/backfill.css": 1,
   "src/screens/company360.css": 1,
   "src/screens/onboarding-backread.css": 1,

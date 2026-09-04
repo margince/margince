@@ -5069,28 +5069,10 @@ export const vi = {
   // link.
   "auth.loginSub":
     "Tài khoản do quản trị viên của bạn cấp. Không có đăng ký tự do.",
-  "auth.coreDisclosure": "Margince · hệ thống AI",
   "auth.coreGreeting": "Xin chào, tôi là Margince.",
   "auth.corePurpose": "Tôi ở đây để lo phần việc xung quanh công việc của bạn.",
-  "auth.corePromise":
-    "Và đừng lo: tôi sẽ không bao giờ gửi email hay tin nhắn mà chưa hỏi bạn trước.",
-  "auth.coreHandover": "Trước tiên, hãy để tôi xác minh đúng là bạn…",
-  "auth.coreHandoverFirstRun": "Đăng nhập để chúng ta bắt đầu.",
-  "auth.coreConfigured": "Đã cấu hình",
-  "auth.coreUnconfigured": "AI chưa được cấu hình",
-  "auth.coreStillWorks": "CRM vẫn hoạt động.",
   "auth.coreDevelopment": "AI chế độ phát triển",
-  "auth.coreModeCloud": "định tuyến qua cloud",
-  "auth.coreModeLocal": "định tuyến cục bộ",
-  "auth.coreModeHybrid": "định tuyến kết hợp",
-  "auth.coreModeNone": "không định tuyến mô hình",
   "auth.coreModeDevelopment": "đường phát triển ngoại tuyến",
-  "auth.coreProviderAnthropic": "Anthropic",
-  "auth.coreProviderGemini": "Gemini",
-  "auth.coreProviderOllama": "Ollama",
-  "auth.coreProviderOpenAI": "OpenAI",
-  "auth.coreProviderCompatible": "nhà cung cấp tương thích",
-  "auth.coreProviderVllm": "vLLM",
   // The shortest label that still names the field (VOICE-RULE-1), pinned by the
   // login spec §7.1/§7.2 (Amendment 4) and reconciling
   // single-organization-auth-concept.md §12, which already drew "Email".

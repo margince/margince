@@ -1,6 +1,4 @@
-import { Check, ShieldCheck } from "lucide-react";
-import { type ReactNode, useId } from "react";
-import type { components } from "../api/schema";
+import type { ReactNode } from "react";
 import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "../design-system/ambient-waves";
 import {
@@ -9,7 +7,6 @@ import {
 } from "../design-system/margince-core";
 import { useDocumentIntro, useTypeStream } from "../design-system/motion";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 
 /**
  * The unauthenticated surface: two regions (ADR-0076 Decision 1).
@@ -26,7 +23,6 @@ import type { MessageKey } from "../i18n/en";
  * password reset, connection problem, installation unavailable — so a reviewer
  * sees the same screen shape whatever went wrong.
  */
-export type AssistantProfile = components["schemas"]["AssistantProfile"];
 export type AuthPhase =
   | "idle"
   | "signing-in"
@@ -59,24 +55,6 @@ function coreState(phase: AuthPhase): MarginceCoreState {
   // them — the agent reads captured activity, it holds no conversation.
   return "idle";
 }
-
-const providerKeys: Record<AssistantProfile["providers"][number], MessageKey> =
-  {
-    anthropic: "auth.coreProviderAnthropic",
-    gemini: "auth.coreProviderGemini",
-    ollama: "auth.coreProviderOllama",
-    openai: "auth.coreProviderOpenAI",
-    openai_compatible: "auth.coreProviderCompatible",
-    vllm: "auth.coreProviderVllm",
-  };
-
-const modeKeys: Record<AssistantProfile["inference_mode"], MessageKey> = {
-  cloud: "auth.coreModeCloud",
-  local: "auth.coreModeLocal",
-  hybrid: "auth.coreModeHybrid",
-  none: "auth.coreModeNone",
-  development: "auth.coreModeDevelopment",
-};
 
 /**
  * The motion budget, in one place (ADR-0076 Decision 5): the statement reaches
@@ -112,22 +90,10 @@ export function typeSpeedFor(text: string): number {
 
 export function AuthExperience({
   children,
-  profile,
   phase,
-  firstRun = false,
 }: Readonly<{
   children: ReactNode;
-  profile?: AssistantProfile;
   phase: AuthPhase;
-  /**
-   * The installation's very first sign-in, which changes ONE sentence: the
-   * handover. NOT `AuthPhase`: a first-run reader who mistypes their password
-   * still needs `phase="error"` while this stays true, so the two axes vary
-   * independently. Callers assert it positively (`view.kind === "login" &&
-   * firstRun`); it defaults to false, which is what every other view and
-   * every later sign-in render.
-   */
-  firstRun?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -156,7 +122,7 @@ export function AuthExperience({
         <div className="auth-task-in">{children}</div>
         <LegalFooter />
       </div>
-      <IdentityRegion profile={profile} phase={phase} firstRun={firstRun} />
+      <IdentityRegion phase={phase} />
     </div>
   );
 }
@@ -234,72 +200,33 @@ function LegalFooter() {
  * STILL NO CONTROLS. That is what keeps the region from competing with the form,
  * and it is structural rather than a matter of taste.
  */
-export function IdentityRegion({
-  profile,
-  phase,
-  firstRun = false,
-}: Readonly<{
-  profile?: AssistantProfile;
-  phase: AuthPhase;
-  firstRun?: boolean;
-}>) {
+export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
   const t = useT();
-  const identityId = useId();
   return (
     /*
-     * The column is a plain wrapper and the ASIDE is the region: the Core sits
-     * outside the landmark, which costs nothing semantically — it is decoration
-     * (WDS-CORE-4, `aria-hidden`), and every state it shows is also stated in
-     * words inside the region.
+     * A plain wrapper, and no landmark. The region held a named set of claims
+     * — the disclosure kicker that named it, the promise, the handover, the
+     * installation's runtime posture — and an <aside> was worth a screen
+     * reader's rotor while it did. What is left is a greeting and one line
+     * about what the product is for: an introduction beside the form, not a
+     * region anybody needs to jump to, and an unnamed landmark is worse than
+     * none. The Core stays decoration (WDS-CORE-4, `aria-hidden`).
      */
     <div className="auth-identity-col">
       <MarginceCoreScene state={coreState(phase)} />
 
-      <aside className="auth-identity" aria-labelledby={identityId}>
+      <div className="auth-identity">
         <div className="auth-identity-copy">
-          <p className="auth-kicker" id={identityId}>
-            {t("auth.coreDisclosure")}
-          </p>
-
           {/* The greeting is what gets typed, and it is the only row that does:
               a system saying its own name as it arrives is what the motion is
-              ABOUT. Everything under it fades up complete, so a reader who looks
-              down mid-reveal finds finished sentences rather than four
+              ABOUT. The line under it fades up complete, so a reader who looks
+              down mid-reveal finds a finished sentence rather than two
               paragraphs assembling themselves. */}
           <TypedStatement text={t("auth.coreGreeting")} />
 
           <p className="auth-purpose">{t("auth.corePurpose")}</p>
-
-          {/* The badge marks the promise as the one absolute on this screen, and
-              it is the treatment the region's older list of limits carried,
-              because this sentence is that same register. A paragraph rather
-              than a one-item list: a <ul> of one tells a screen reader there is
-              a list to walk when there is a sentence to read. */}
-          <p className="auth-promise">
-            <span className="auth-promise-icon" aria-hidden>
-              <ShieldCheck />
-            </span>
-            {t("auth.corePromise")}
-          </p>
-
-          {/* The one sentence first run says differently, and the reason is
-              what the words claim: "make sure it's really you" is a system
-              recognising somebody it has met, and on an installation being
-              opened for the first time it has met nobody. The first-run line
-              points at the same form without claiming that. */}
-          <p className="auth-handover">
-            {t(firstRun ? "auth.coreHandoverFirstRun" : "auth.coreHandover")}
-          </p>
         </div>
-
-        {/* Absent rather than guessed: a runtime line the frontend invented is
-            the one thing Decision 2c forbids, so an in-flight or failed probe
-            renders nothing. The row reserves its height in CSS so the column
-            does not jump when it arrives. */}
-        <div className="auth-identity-foot">
-          {profile && <RuntimePosture profile={profile} />}
-        </div>
-      </aside>
+      </div>
     </div>
   );
 }
@@ -354,40 +281,5 @@ function TypedStatement({ text }: Readonly<{ text: string }>) {
         {done ? null : <span className="auth-caret" />}
       </span>
     </p>
-  );
-}
-
-function RuntimePosture({ profile }: Readonly<{ profile: AssistantProfile }>) {
-  const t = useT();
-  if (profile.state === "unconfigured") {
-    return (
-      <div className="auth-runtime">
-        <span className="auth-runtime-state">{t("auth.coreUnconfigured")}</span>
-        <span>{t("auth.coreStillWorks")}</span>
-      </div>
-    );
-  }
-  if (profile.state === "development") {
-    return (
-      <div className="auth-runtime">
-        <span className="auth-runtime-state">{t("auth.coreDevelopment")}</span>
-        <span>{t(modeKeys[profile.inference_mode])}</span>
-      </div>
-    );
-  }
-  const providers = profile.providers
-    .map((provider) => t(providerKeys[provider]))
-    .join(" + ");
-  return (
-    <div className="auth-runtime">
-      <span className="auth-runtime-state">
-        <Check aria-hidden /> {t("auth.coreConfigured")}
-      </span>
-      <span>
-        {[providers, t(modeKeys[profile.inference_mode])]
-          .filter(Boolean)
-          .join(" · ")}
-      </span>
-    </div>
   );
 }

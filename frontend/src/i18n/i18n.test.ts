@@ -123,11 +123,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "person.page.linkedin",
-  "auth.coreProviderAnthropic",
-  "auth.coreProviderGemini",
-  "auth.coreProviderOllama",
-  "auth.coreProviderOpenAI",
-  "auth.coreProviderVllm",
   "overlay.userMap.principal.hubspot",
   "overlay.regionEu1",
   "overlay.budgetSources",

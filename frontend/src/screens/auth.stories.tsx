@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { Locale } from "../i18n";
 import { AuthScreen, AvailabilityScreen, ProviderButtons } from "./auth";
-import { type AssistantProfile, AuthExperience } from "./auth-core";
+import { AuthExperience } from "./auth-core";
 import {
   installFetchStub,
   jsonResponse,
@@ -55,17 +55,7 @@ export default meta;
 
 type Story = StoryObj;
 
-const configured: AssistantProfile = {
-  name: "Margince",
-  kind: "ai",
-  state: "configured",
-  inference_mode: "hybrid",
-  providers: ["anthropic", "ollama"],
-};
-
 function AuthStory({
-  profile,
-  profileStatus = 200,
   notice,
   // Empty is what the running installation serves — the OIDC flow has not
   // shipped (§19) — so it stays the default here too. A STORY seeds providers to
@@ -75,29 +65,17 @@ function AuthStory({
   // at the render boundary and leaves the wire alone.
   oidcProviders = [],
   locale = "en",
-  // False by default, matching a configured installation: first run is the
-  // exception a story has to ask for.
-  firstRun = false,
 }: Readonly<{
-  profile: AssistantProfile;
-  profileStatus?: number;
   notice?: "session-expired" | "signed-out";
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
   locale?: Locale;
-  firstRun?: boolean;
 }>) {
   installFetchStub({
-    "GET /assistant/profile": () =>
-      jsonResponse(
-        profileStatus === 200 ? profile : { title: "Unavailable" },
-        profileStatus,
-      ),
     "GET /auth/capabilities": () =>
       jsonResponse({
         password: true,
         password_reset: true,
         oidc_providers: oidcProviders,
-        first_run: firstRun,
       }),
   });
   return (
@@ -107,17 +85,8 @@ function AuthStory({
   );
 }
 
-export const ConfiguredHybrid: Story = {
-  render: () => <AuthStory profile={configured} />,
-};
-
-/**
- * The installation's very first sign-in, `first_run` true: the same surface,
- * with a handover line that does not claim to recognise somebody this
- * installation has never met.
- */
-export const FirstRun: Story = {
-  render: () => <AuthStory profile={configured} firstRun />,
+export const SignIn: Story = {
+  render: () => <AuthStory />,
 };
 
 /**
@@ -135,7 +104,6 @@ export const FirstRun: Story = {
 export const WithProviders: Story = {
   render: () => (
     <AuthStory
-      profile={configured}
       oidcProviders={[
         { key: "google", label: "Continue with Google" },
         { key: "microsoft", label: "Continue with Microsoft" },
@@ -169,7 +137,7 @@ export const ProviderNotYetAvailable: Story = {
           can set — so the honest way to review this state is to hand the marker
           to the component that renders it. Same component, same stylesheet, real
           task measure. */}
-      <AuthExperience profile={configured} phase="idle">
+      <AuthExperience phase="idle">
         <div className="auth-card">
           <ProviderButtons
             providers={[
@@ -197,46 +165,13 @@ export const ProviderNotYetAvailable: Story = {
 export const UnknownProvider: Story = {
   render: () => (
     <AuthStory
-      profile={configured}
       oidcProviders={[{ key: "corp-sso", label: "Anmeldung über Werk-IT" }]}
     />
   ),
 };
 
-export const Unconfigured: Story = {
-  render: () => (
-    <AuthStory
-      profile={{
-        name: "Margince",
-        kind: "ai",
-        state: "unconfigured",
-        inference_mode: "none",
-        providers: [],
-      }}
-    />
-  ),
-};
-
-export const Development: Story = {
-  render: () => (
-    <AuthStory
-      profile={{
-        name: "Margince",
-        kind: "ai",
-        state: "development",
-        inference_mode: "development",
-        providers: [],
-      }}
-    />
-  ),
-};
-
-export const ProfileUnavailable: Story = {
-  render: () => <AuthStory profile={configured} profileStatus={500} />,
-};
-
 export const SessionExpired: Story = {
-  render: () => <AuthStory profile={configured} notice="session-expired" />,
+  render: () => <AuthStory notice="session-expired" />,
 };
 
 /**
@@ -261,7 +196,7 @@ export const InstallationUnavailable: Story = {
 };
 
 export const SignedOut: Story = {
-  render: () => <AuthStory profile={configured} notice="signed-out" />,
+  render: () => <AuthStory notice="signed-out" />,
 };
 
 // The two stories below pick their width with Storybook's viewport tool, and one
@@ -278,7 +213,7 @@ export const SignedOut: Story = {
  */
 export const Tablet: Story = {
   globals: { viewport: { value: "stacked" } },
-  render: () => <AuthStory profile={configured} />,
+  render: () => <AuthStory />,
 };
 
 /**
@@ -289,7 +224,7 @@ export const Tablet: Story = {
  */
 export const Phone: Story = {
   globals: { viewport: { value: "taskOnly" } },
-  render: () => <AuthStory profile={configured} />,
+  render: () => <AuthStory />,
 };
 
 /**
@@ -308,7 +243,7 @@ export const Phone: Story = {
  */
 export const DarkTheme: Story = {
   globals: { theme: "dark" },
-  render: () => <AuthStory profile={configured} />,
+  render: () => <AuthStory />,
 };
 
 /**
@@ -333,7 +268,6 @@ export const DarkTheme: Story = {
 export const GermanCopy: Story = {
   render: () => (
     <AuthStory
-      profile={configured}
       locale="de"
       oidcProviders={[
         { key: "google", label: "Weiter mit Google" },
@@ -356,7 +290,6 @@ type ResetFailure = 401 | 422 | 429 | "transport";
 function ResetStory({ failure }: Readonly<{ failure?: ResetFailure }>) {
   globalThis.location.hash = RESET_LINK;
   const routes: RouteMap = {
-    "GET /assistant/profile": () => jsonResponse(configured),
     "GET /auth/capabilities": () =>
       jsonResponse({
         password: true,

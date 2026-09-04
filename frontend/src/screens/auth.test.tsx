@@ -61,13 +61,6 @@ function stubApi(
     oidc_providers?: ReadonlyArray<{ key: string; label: string }>;
   },
   respond: (request: Request) => Response | Promise<Response>,
-  profile: Response = ok(200, {
-    name: "Margince",
-    kind: "ai",
-    state: "unconfigured",
-    inference_mode: "none",
-    providers: [],
-  }),
 ) {
   const calls: Request[] = [];
   vi.stubGlobal(
@@ -79,9 +72,6 @@ function stubApi(
           JSON.stringify({ oidc_providers: [], ...capabilities }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
-      }
-      if (new URL(request.url).pathname.endsWith("/assistant/profile")) {
-        return profile;
       }
       calls.push(request);
       return respond(request);
@@ -122,21 +112,10 @@ async function stubLocationAssign(
 }
 
 describe("AuthScreen login", () => {
-  it("introduces Margince as AI and renders the configured routing posture without claiming health", async () => {
-    stubApi(
-      { password: true, password_reset: false },
-      () => ok(200),
-      ok(200, {
-        name: "Margince",
-        kind: "ai",
-        state: "configured",
-        inference_mode: "hybrid",
-        providers: ["anthropic", "ollama"],
-      }),
-    );
+  it("introduces Margince in two sentences and claims nothing else", async () => {
+    stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    expect(screen.getByText("Margince · AI system")).toBeTruthy();
     // The greeting is TYPED (ADR-0076 Decision 5), so the visible layer holds a
     // partial string for the first second and there are three nodes carrying it.
     // Assert on the `.sr-only` one: it is what a screen reader is handed, it is
@@ -145,38 +124,18 @@ describe("AuthScreen login", () => {
     expect(
       screen.getByText("Hi, I’m Margince.", { selector: ".sr-only" }),
     ).toBeTruthy();
-    // The rest of the region's paragraph, in the order it is said. All three,
-    // because the copy is one voice speaking and a region that lost the promise
-    // or the handover would still pass an assertion on the first line alone.
     expect(
       screen.getByText("I’m here to take care of the work around your work."),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "And don’t worry: I’ll never send an email or message without asking you first.",
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("First, let me make sure it’s really you…"),
-    ).toBeTruthy();
-    expect(await screen.findByText("Configured")).toBeTruthy();
-    expect(
-      screen.getByText("Anthropic + Ollama · hybrid routing"),
-    ).toBeTruthy();
-    expect(screen.queryByText(/online|running|healthy/i)).toBeNull();
-  });
-
-  it("keeps login available when the optional assistant profile fails", async () => {
-    stubApi(
-      { password: true, password_reset: false },
-      () => ok(200),
-      ok(500, { title: "unavailable" }),
-    );
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    expect(await screen.findByLabelText("Email")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
-    expect(screen.queryByText("Configured")).toBeNull();
+    // What the region no longer says, asserted because each was removed on
+    // purpose and a silent return would be a change nobody asked for: the
+    // disclosure kicker that named the region, the send promise, the handover,
+    // and the installation's own AI posture — which this screen showed to
+    // anybody who could load it.
+    expect(screen.queryByText("Margince · AI system")).toBeNull();
+    expect(screen.queryByText(/never send an email or message/)).toBeNull();
+    expect(screen.queryByText(/really you/)).toBeNull();
+    expect(screen.queryByText(/Configured|routing/)).toBeNull();
   });
 
   // Derived from LOCALES rather than listed: a hardcoded pair passes while the

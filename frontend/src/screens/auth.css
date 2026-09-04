@@ -539,8 +539,7 @@
 }
 /* A slightly wider measure goes with the display-size greeting, so a longer
    translation still gets room to wrap before it does. */
-.auth-identity-copy,
-.auth-identity-foot {
+.auth-identity-copy {
   position: relative;
   z-index: 1;
   width: 100%;
@@ -548,49 +547,20 @@
 }
 /* The staggered reveal (motion budget, ADR-0076 Decision 5).
    Each row is COMPLETE TEXT fading up, not text being assembled: only the
-   greeting is typed, and everything else must already be readable. 110 ms
-   between rows, so the eye gets an order to read in rather than six things
-   arriving at once — at 80 ms the stagger was there in the code and invisible on
-   the screen, which is the worst of both, and at the 130 ms two rows fewer could
-   carry, six rows outlast the sentence they belong to. The last row lands at
-   550 + 700 = 1250 ms, inside the same budget the typed greeting spends. */
-.auth-kicker,
+   greeting is typed, and the line under it must already be readable. 110 ms
+   between them, so the eye gets an order to read in rather than both arriving
+   at once — at 80 ms the stagger was there in the code and invisible on the
+   screen, which is the worst of both. The last row lands at 110 + 700 = 810 ms,
+   inside the same budget the typed greeting spends. */
 .auth-statement,
-.auth-purpose,
-.auth-promise,
-.auth-handover,
-.auth-identity-foot {
+.auth-purpose {
   animation: auth-rise 0.7s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
-.auth-kicker {
+.auth-statement {
   animation-delay: 0ms;
 }
-.auth-statement {
-  animation-delay: 110ms;
-}
 .auth-purpose {
-  animation-delay: 220ms;
-}
-.auth-promise {
-  animation-delay: 330ms;
-}
-.auth-handover {
-  animation-delay: 440ms;
-}
-.auth-identity-foot {
-  animation-delay: 550ms;
-}
-/* (a) identity: the system's presence and name. Mono, small, unmissable — and
-   words only. The status dot that used to lead this line said nothing the line
-   does not: the sphere above it is the presence, and a second green mark beside
-   the same sentence read as a state indicator for something. */
-.auth-kicker {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--accentText);
+  animation-delay: 110ms;
 }
 /* (b) the greeting, in the first person: the system saying its own name. Not a
    heading — the h1 belongs to the task (§6.4), and this is a paragraph however
@@ -660,99 +630,6 @@
   color: var(--textPrimary);
   text-wrap: pretty;
 }
-/* (c) a server-read fact. Reserves its height so the column does not jump when
-   the probe resolves — and stays empty rather than guessing when it fails. */
-.auth-runtime {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  /* On the column's centre line like everything else here — a flex row does not
-     inherit `text-align`, so this is the same instruction spelled for a row. */
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 31px;
-  font-family: var(--f-mono);
-  font-size: 11px;
-  color: var(--textMeta);
-}
-/* --borderControl, and for the same reason a field's outline reads a visible
-   token: this chip's
-   fill is one step off the pane it sits on (--bgCard over --bgElevated measures
-   1.20:1 light / 1.10:1 dark), so the border is the only thing that makes it a
-   chip at all. --borderSubtle cannot carry that — it measures 1.24:1 against the
-   pane and 1.03:1 against this fill, invisible in all three postures the line
-   can report.
-   A boundary nobody can see is not one; 1.4.11 asks 3:1, and this token measures
-   3.33:1 light / 3.32:1 dark here. */
-.auth-runtime-state {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--borderControl);
-  border-radius: var(--r-full);
-  background: var(--bgCard);
-  color: var(--textContent);
-}
-.auth-runtime-state svg {
-  width: 12px;
-  height: 12px;
-  color: var(--online);
-}
-/* The promise, and the margin is the boundary between two REGISTERS rather than
-   decoration: everything above is the system describing itself, and this is the
-   one thing it guarantees. Sitting it tight under the line above made it read as
-   that paragraph's last clause.
-
-   The badge goes ABOVE the sentence rather than beside it. Beside it, the row
-   centres badge-plus-text as one unit, which puts the TEXT off the column's
-   centre line by half a badge, and every other line on this screen is on that
-   line. Stacked, both are on it. A short measure keeps the sentence to two
-   lines, which is what stops centred text becoming a ragged stack. */
-.auth-promise {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-6);
-  max-width: 34ch;
-  margin-inline: auto;
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  color: var(--textContent);
-  text-align: center;
-  text-wrap: pretty;
-}
-/* The handover, and the last thing the region says. Quieter than the promise
-   above it on purpose: it is not a claim about the system, it is the sentence
-   that gives the screen back to the reader and points at the form. */
-.auth-handover {
-  margin-top: var(--space-4);
-  font-size: var(--fs-lead);
-  line-height: 1.5;
-  /* Quieter than the sentences above, but still body-weight text: it is the one
-     line on this half of the screen that asks the reader to do something, and
-     meta grey put it below the runtime line it sits above. */
-  color: var(--textContent);
-}
-/* Centred over its sentence by the column (`.auth-promise` aligns its items
-   centre), so it carries no offset of its own. */
-.auth-promise-icon {
-  --promiseIcon: 22px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: var(--promiseIcon);
-  height: var(--promiseIcon);
-  border-radius: var(--r-sm);
-  color: var(--accentText);
-  background: var(--accentSurface);
-}
-.auth-promise-icon svg {
-  width: 12px;
-  height: 12px;
-}
-
 /* ===== the wordmark ===================================================== */
 /* The ONE thing that is placed against the page rather than inside the column:
    the wordmark, in the top-left corner at every width. Out of flow, so the
@@ -802,16 +679,7 @@
  * same thing for a different reason — cannot lose a specificity argument to it.
  */
 .auth-surface[data-auth-intro="done"]
-:is(
-  .auth-task-in,
-  .auth-identity-col .core,
-  .auth-kicker,
-  .auth-statement,
-  .auth-purpose,
-  .auth-promise,
-  .auth-handover,
-  .auth-identity-foot
-) {
+:is(.auth-task-in, .auth-identity-col .core, .auth-statement, .auth-purpose) {
   animation: none;
 }
 
@@ -820,12 +688,8 @@
      arriving at all. */
   .auth-task-in,
   .auth-identity-col .core,
-  .auth-kicker,
   .auth-statement,
-  .auth-purpose,
-  .auth-promise,
-  .auth-handover,
-  .auth-identity-foot {
+  .auth-purpose {
     animation: none;
   }
   /* The caret is a cursor, not a state. With the text complete on the first
@@ -837,9 +701,7 @@
 }
 
 @media (forced-colors: active) {
-  .auth-identity,
-  .auth-runtime-state,
-  .auth-promise-icon {
+  .auth-identity {
     forced-color-adjust: auto;
   }
 }

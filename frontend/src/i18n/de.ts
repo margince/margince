@@ -5123,32 +5123,14 @@ export const de = {
   // statt des Nominalstils ("Eine Selbstregistrierung gibt es nicht").
   "auth.loginSub":
     "Konten legt eine Admin-Person an. Selbst registrieren kannst du dich nicht.",
-  "auth.coreDisclosure": "Margince · KI-System",
   "auth.coreGreeting": "Hallo, ich bin Margince.",
   "auth.corePurpose": "Ich kümmere mich um die Arbeit rund um deine Arbeit.",
-  "auth.corePromise":
-    "Und keine Sorge: Ich sende nie eine E-Mail oder Nachricht, ohne dich vorher zu fragen.",
-  "auth.coreHandover": "Zuerst stelle ich sicher, dass du es wirklich bist …",
-  "auth.coreHandoverFirstRun": "Melde dich an, dann legen wir los.",
-  "auth.coreConfigured": "Konfiguriert",
-  "auth.coreUnconfigured": "KI nicht konfiguriert",
   // "auch ohne", nicht "weiterhin": "weiterhin" ist zeitlich und liest sich neben
   // dem Hinweis "KI nicht konfiguriert" wie "noch, aber nicht mehr lange".
-  "auth.coreStillWorks": "Das CRM funktioniert auch ohne.",
   "auth.coreDevelopment": "Entwicklungs-KI",
-  "auth.coreModeCloud": "Cloud-Routing",
-  "auth.coreModeLocal": "lokales Routing",
-  "auth.coreModeHybrid": "hybrides Routing",
-  "auth.coreModeNone": "kein Modell-Routing",
   // Die Nachbarwerte sind alle Betriebsarten; "Modus" ist dafür das deutsche
   // Wort, "Pfad" die Übersetzung von "path".
   "auth.coreModeDevelopment": "Offline-Entwicklungsmodus",
-  "auth.coreProviderAnthropic": "Anthropic",
-  "auth.coreProviderGemini": "Gemini",
-  "auth.coreProviderOllama": "Ollama",
-  "auth.coreProviderOpenAI": "OpenAI",
-  "auth.coreProviderCompatible": "kompatibler Anbieter",
-  "auth.coreProviderVllm": "vLLM",
   "auth.email": "E-Mail",
   // Der lokale Teil einer Adresse ist nie ein Pronomen — "du@" ist "you@"
   // Zeichen für Zeichen. "beispiel.de" ist im Deutschen, was "example.com" im

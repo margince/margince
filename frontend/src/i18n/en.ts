@@ -5185,7 +5185,6 @@ export const en = {
   // link.
   "auth.loginSub":
     "Accounts come from your administrator. There is no self-signup.",
-  "auth.coreDisclosure": "Margince · AI system",
   // Five lines, one voice, and the ORDER is load-bearing: greeting, what the
   // system is for, what it does, the one promise, then the handover to the form.
   // They read as a paragraph somebody is saying, so reordering them breaks a
@@ -5202,28 +5201,11 @@ export const en = {
   // rely on: nothing leaves the installation until a person says so. It keeps
   // the icon badge the four older limits carried, because it is the same
   // register — an absolute the system enforces, not a feature.
-  "auth.corePromise":
-    "And don’t worry: I’ll never send an email or message without asking you first.",
-  "auth.coreHandover": "First, let me make sure it’s really you…",
   // The first-run reader is the one person this installation has never met, so
   // the returning line's "make sure it's really you" claims a recognition that
   // has not happened. This one points at the same form and claims nothing.
-  "auth.coreHandoverFirstRun": "Sign in and we’ll get started.",
-  "auth.coreConfigured": "Configured",
-  "auth.coreUnconfigured": "AI not configured",
-  "auth.coreStillWorks": "The CRM still works.",
   "auth.coreDevelopment": "Development AI",
-  "auth.coreModeCloud": "cloud routing",
-  "auth.coreModeLocal": "local routing",
-  "auth.coreModeHybrid": "hybrid routing",
-  "auth.coreModeNone": "no model routing",
   "auth.coreModeDevelopment": "offline development path",
-  "auth.coreProviderAnthropic": "Anthropic",
-  "auth.coreProviderGemini": "Gemini",
-  "auth.coreProviderOllama": "Ollama",
-  "auth.coreProviderOpenAI": "OpenAI",
-  "auth.coreProviderCompatible": "compatible provider",
-  "auth.coreProviderVllm": "vLLM",
   // The shortest label that still names the field (VOICE-RULE-1), pinned by the
   // login spec §7.1/§7.2 (Amendment 4) and reconciling
   // single-organization-auth-concept.md §12, which already drew "Email".

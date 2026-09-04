@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -212,29 +212,6 @@ export function AuthScreen({
   const resetAvailable = previewedPasswordReset(
     capabilities.data?.password_reset === true,
   );
-  // True only while THIS installation has not finished its blocking setup —
-  // never inferred from anything the browser can see on its own. Absent,
-  // false, or a probe that never resolves all fall through to the ordinary
-  // presentation below: the welcome is the assertion, never the default a
-  // missing field decays into.
-  const firstRun = capabilities.data?.first_run === true;
-
-  // This query is presentation-only and deliberately independent of auth:
-  // profile latency or failure hides the live runtime line but can never
-  // disable or delay the credential form.
-  const assistantProfile = useQuery({
-    queryKey: ["assistant-profile"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/assistant/profile");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-  });
-
   const setLoginView = () => {
     setAuthPhase("idle");
     setView({ kind: "login" });
@@ -252,13 +229,7 @@ export function AuthScreen({
     servedOidcProviders.length === 0 && uiPreviewOidcEnabled();
 
   return (
-    <AuthExperience
-      profile={assistantProfile.data}
-      phase={view.kind === "login" ? authPhase : "quiet"}
-      // Only the login view of a first-run installation says its handover
-      // differently; every other view and every later sign-in do not.
-      firstRun={view.kind === "login" && firstRun}
-    >
+    <AuthExperience phase={view.kind === "login" ? authPhase : "quiet"}>
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (
         <>
