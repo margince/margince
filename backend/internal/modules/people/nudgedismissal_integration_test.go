@@ -14,6 +14,7 @@ package people
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -34,17 +35,45 @@ func aContact(t *testing.T, e *dedupeEnv) ids.PersonID {
 	return ids.From[ids.PersonKind](ids.UUID(person.Id))
 }
 
-// dismissedNow asks the read side, in its own transaction, the way the decay
-// seam does.
+// dismissedNow asks the exclusion the way the decay lane does: through the
+// predicate the projection embeds, run over the person table.
+//
+// Asserted through NotDismissedClause rather than through a read written for
+// the test, because that clause IS the read side — a helper that queried the
+// table directly would agree with itself while the lane used something else.
 func dismissedNow(
-	ctx context.Context, t *testing.T, e *dedupeEnv, people []ids.PersonID, at time.Time,
+	ctx context.Context, t *testing.T, e *dedupeEnv, contacts []ids.PersonID, at time.Time,
 ) map[ids.UUID]bool {
 	t.Helper()
-	var out map[ids.UUID]bool
+	out := map[ids.UUID]bool{}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		got, err := e.store.DismissedNudges(ctx, tx, people, at)
-		out = got
-		return err
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		// The clause names `e.person_id`, so the subject is aliased `e` here
+		// too — the projection's own alias for an edge row.
+		keep, err := NotDismissedClause(ctx, "e", at, arg)
+		if err != nil {
+			return err
+		}
+		ids_ := make([]ids.UUID, 0, len(contacts))
+		for _, c := range contacts {
+			ids_ = append(ids_, c.UUID)
+		}
+		rows, err := tx.Query(ctx, fmt.Sprintf(
+			`SELECT e.person_id FROM (SELECT unnest($%d::uuid[]) AS person_id) e
+			  WHERE NOT (%s)`, arg(ids_), keep), args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.UUID
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			out[id] = true
+		}
+		return rows.Err()
 	}); err != nil {
 		t.Fatalf("reading dismissals: %v", err)
 	}

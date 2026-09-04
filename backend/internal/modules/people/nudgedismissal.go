@@ -179,47 +179,26 @@ func humanReader(ctx context.Context) (ids.UUID, error) {
 	return actor.UserID, nil
 }
 
-// DismissedNudges is which of these contacts THIS reader has set aside, at the
-// given instant.
+// NotDismissedClause renders the predicate that keeps a contact ON the lane.
 //
-// Expiry is applied in the QUERY rather than by a sweep: a dismissal that has
-// run out is simply not returned, so there is no job whose lateness would keep
-// a contact hidden past the moment the rep chose.
-func (s *Store) DismissedNudges(
-	ctx context.Context, tx pgx.Tx, people []ids.PersonID, at time.Time,
-) (map[ids.UUID]bool, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	out := map[ids.UUID]bool{}
-	if len(people) == 0 {
-		return out, nil
-	}
+// Supplied to the candidate projection so it applies BEFORE that read's cap:
+// the projection takes the oldest silences up to a bound, and a contact
+// filtered after the cut has already spent a slot — so a rep who set several
+// aside would lose real lapses off the bottom of their lane with nothing to say
+// so. The waiting queue applies its own set-aside rule before its cap for the
+// same reason, and says so in as many words.
+//
+// The alias names the edge row in the caller's statement. A reader with no
+// human behind it is refused rather than given a permissive clause: this
+// answers "which of MY contacts", and there is no my.
+func NotDismissedClause(ctx context.Context, alias string, at time.Time, arg func(any) int) (string, error) {
 	reader, err := humanReader(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	ids_ := make([]ids.UUID, 0, len(people))
-	for _, p := range people {
-		ids_ = append(ids_, p.UUID)
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT person_id FROM relationship_nudge_dismissal
-		 WHERE reader_id = $1 AND person_id = ANY($2) AND dismissed_until > $3`,
-		reader, ids_, at)
-	if err != nil {
-		return nil, fmt.Errorf("people: reading nudge dismissals: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("people: reading nudge dismissals: %w", err)
-		}
-		out[id] = true
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("people: reading nudge dismissals: %w", err)
-	}
-	return out, nil
+	return fmt.Sprintf(`NOT EXISTS (
+		SELECT 1 FROM relationship_nudge_dismissal d
+		 WHERE d.person_id = %s.person_id
+		   AND d.reader_id = $%d
+		   AND d.dismissed_until > $%d)`, alias, arg(reader), arg(at)), nil
 }
