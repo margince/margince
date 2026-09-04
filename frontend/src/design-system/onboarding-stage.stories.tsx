@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./atoms";
-import { OnboardingStage } from "./onboarding-stage";
+import { OnboardingStage, StageNeeds } from "./onboarding-stage";
 
 // The room, in the three states that are decisions rather than content: unlit
 // because no model is bound yet, lit because one is, and top-anchored because
@@ -79,5 +79,23 @@ export const WithoutAnEyebrow: Story = {
     title: "Where does your company live on the web?",
     sub: "One address is enough. Everything after this starts from what is on it.",
     children: <Button variant="primary">Read the site</Button>,
+  },
+};
+
+// The way onward pressed early. The button never greys; what is missing is
+// said beside it, in the same words the fields carry.
+export const PressedEarly: Story = {
+  args: {
+    lit: false,
+    coreStateLabel: "core · at rest",
+    progress: { steps: ["The model", "Your platform"], at: 0 },
+    eyebrow: "First run · 1 of 2",
+    title: "Choose a model provider",
+    children: (
+      <>
+        <StageNeeds attempted missing={["API key", "Model"]} />
+        <Button variant="primary">Continue</Button>
+      </>
+    ),
   },
 };

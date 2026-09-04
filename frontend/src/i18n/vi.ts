@@ -4544,7 +4544,7 @@ export const vi = {
   "ob.s4.capturedTitle": "Đã kết nối hộp thư",
   "ob.s4.capturedBody":
     "CRM đang tự dựng. Email mới hiện ở đây khi lượt quét đầu chạy, thường trong vài phút.",
-  "ob.s4.enterCrm": "Vào CRM của bạn",
+  "ob.s4.enterCrm": "Tiếp tục",
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
@@ -4767,7 +4767,13 @@ export const vi = {
     "Hãy đọc mẫu trước. Thấy đúng thì xác nhận. Thấy lệch thì thêm nguồn và tôi dựng lại.",
   "ob.conv.voice.resultSubNoSample":
     "Kho văn bản còn nhỏ nên chưa có bản nháp mẫu. Đây là điều lần dựng học được. Hãy thêm nguồn.",
-  "ob.conv.voice.resultContinue": "Đúng giọng của tôi",
+  "ob.conv.voice.resultContinue": "Đúng là tôi",
+  "ob.conv.voice.revise": "Chưa đúng tôi — thêm bài viết",
+  "ob.conv.voice.distilling": "Đang chắt lọc",
+  "ob.conv.voice.hears": "nghe thấy",
+  "ob.conv.voice.hearsWords": "{words} từ của chính bạn từ {sources} nguồn",
+  "ob.conv.voice.hearsBand": "kho ngữ liệu ở mức {band} cho đến giờ",
+  "ob.conv.voice.hearsRegister": "{words} từ ở văn phong {register}",
   "ob.conv.voice.sampleEyebrow": "Chỉ là mẫu, chưa gửi",
   "ob.conv.voice.sampleAnother": "Tình huống khác",
   "ob.conv.voice.sampleSubjectLabel": "Tiêu đề",
@@ -4821,7 +4827,14 @@ export const vi = {
     "Chào bạn quay lại. Lượt đọc {host} trước đó chưa xong. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
   "ob.conv.recap.readDeferred":
     "Chào bạn quay lại. Lượt đọc {host} của tôi đang tạm dừng. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
-  "ob.conv.connect.skip": "Tạm bỏ qua việc kết nối",
+  "ob.conv.connect.skip": "Tiếp tục mà không có hộp thư",
+  "ob.conv.connect.continue": "Tiếp tục",
+  "ob.conv.connect.mailboxNeeded":
+    "Vẫn cần một hộp thư: thư là thứ được đọc và soạn nháp. Kết nối một hộp thư ở trên, hoặc tạm tiếp tục mà không có.",
+  "ob.conv.connect.setupCta": "thiết lập →",
+  "ob.conv.connect.dialogHeadlineApp": "Đăng ký ứng dụng {name} của bạn",
+  "ob.conv.connect.appDialogIntro":
+    "Hộp thư kết nối qua một ứng dụng OAuth do tổ chức của bạn sở hữu. Tạo một ứng dụng trong bảng điều khiển {name}, đăng ký các redirect URI bên dưới cho nó, rồi dán client id và secret vào đây.",
   "ob.conv.linkedin.cardBody":
     "Biến mạng lưới quan hệ của bạn thành tài khoản và contact, và báo khi một người quen đổi việc.",
   "ob.conv.linkedin.limitsToggle": "Margince thấy được gì và không thấy gì",
@@ -4857,6 +4870,7 @@ export const vi = {
   "ob.rail.confirm": "Xác nhận",
   "ob.rail.voice": "Giọng văn",
   "ob.rail.connect": "Kết nối",
+  "ob.rail.prefs": "Tùy chọn",
 
   "ob.conv.invite.title": "Bạn có tự mình làm việc trong Margince không?",
   "ob.conv.invite.body":
@@ -4882,8 +4896,17 @@ export const vi = {
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
     "Thiết lập đã hoàn tất. Người bạn thêm vào có thể tự huấn luyện giọng văn và kết nối tài khoản trong Cài đặt.",
-  "ob.conv.team.persistFailed":
-    "Tôi không ghi nhận được rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
+  "ob.conv.prefs.title": "Cuối cùng, vài tùy chọn.",
+  "ob.conv.prefs.body":
+    "Mọi thứ ở đây được điền sẵn từ những gì đã ghi nhận, và có thể đổi sau trong Cài đặt. Nhấn Xong nếu tất cả đều đúng.",
+  "ob.conv.prefs.reportingTitle": "Cách các con số được báo cáo",
+  "ob.conv.prefs.timezoneNeeded": "Cần một múi giờ báo cáo.",
+  "ob.conv.prefs.autonomyTitle": "Những gì nó có thể tự thay đổi",
+  "ob.conv.prefs.autonomyBody":
+    "Mỗi loại thay đổi bên dưới sẽ được đề xuất cho bạn trước. Bật một loại và nó sẽ áp dụng mà không hỏi; tắt lại bất cứ lúc nào.",
+  "ob.conv.prefs.done": "Xong",
+  "ob.conv.prefs.persistFailed":
+    "Tôi không thể ghi nhận rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
@@ -4989,7 +5012,6 @@ export const vi = {
   // the payoff above all else may not overstate.
 
   // --- the handoff into the app -----------------------------------------
-  "ob.enter.cta": "Vào Margince",
   "ob.enter.assembling": "Đang dựng tổ chức của bạn",
 
   // --- the mailbox backread ---------------------------------------------
@@ -5035,7 +5057,7 @@ export const vi = {
     "Tôi không dừng được lượt đọc: {detail} Hãy thử lại — trong lúc đó lượt đọc vẫn chạy.",
   "ob.backread.detailUnavailable": "Đã có lỗi ngoài dự kiến.",
   "ob.backread.cancel": "Dừng đọc",
-  "ob.backread.explore": "Trong lúc chờ, khám phá Margince",
+  "ob.backread.explore": "Tiếp tục trong khi đang đọc",
   "ob.backread.skip": "Chưa đọc lịch sử lúc này",
 
   "auth.title": "Margince",

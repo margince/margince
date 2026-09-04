@@ -4,6 +4,7 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { createPortal } from "react-dom";
 import { ThemeToggle } from "../app/theme-toggle";
+import { useT } from "../i18n";
 import { AmbientWaves } from "./ambient-waves";
 import { Eyebrow } from "./eyebrow";
 import { Logomark } from "./logomark";
@@ -392,4 +393,26 @@ export function StageActions({ children }: Readonly<{ children: ReactNode }>) {
     return <div className="ob-stage-acts">{children}</div>;
   }
   return createPortal(children, slot);
+}
+
+/**
+ * What still stands between the reader and the next step, beside the button
+ * they pressed. Nothing until the way onward has been pressed with something
+ * missing: a form that lists its own gaps before anyone has typed is a form
+ * scolding a reader for arriving. `missing` names the fields by the label the
+ * reader knows them by, so the note and the field errors agree.
+ */
+export function StageNeeds({
+  attempted,
+  missing,
+}: Readonly<{ attempted: boolean; missing: readonly string[] }>) {
+  const t = useT();
+  if (!attempted || missing.length === 0) {
+    return null;
+  }
+  return (
+    <p className="ob-stage-note" role="alert">
+      {t("firstRun.stillNeeded", { fields: missing.join(", ") })}
+    </p>
+  );
 }

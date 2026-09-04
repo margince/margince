@@ -27,10 +27,7 @@ const asking: ConversationState = {
 
 const NEW_USER = "018f3a1b-0000-7000-8000-0000000000e7";
 
-function renderTeam(
-  persist: (input: unknown) => Promise<boolean>,
-  options: { passwordLink?: boolean } = {},
-) {
+function renderTeam(options: { passwordLink?: boolean } = {}) {
   installFetchStub({
     // An admin, on an installation that may or may not be able to mail: the
     // server says which through `admin_password_link`.
@@ -57,7 +54,7 @@ function renderTeam(
       }
     >
       <LocaleProvider initial="en">
-        <TeamAct state={asking} dispatch={dispatch} persist={persist} />
+        <TeamAct state={asking} dispatch={dispatch} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -71,7 +68,7 @@ afterEach(() => {
 
 describe("TeamAct", () => {
   it("shows the settings invite form under its own title, and a skip while nobody is invited", async () => {
-    renderTeam(vi.fn(async () => true));
+    renderTeam();
     expect(
       await screen.findByText("Invite the first user."),
     ).toBeInTheDocument();
@@ -86,9 +83,8 @@ describe("TeamAct", () => {
     ).toBeInTheDocument();
   });
 
-  it("skipping records completion before ending the journey", async () => {
-    const persist = vi.fn(async () => true);
-    const dispatch = renderTeam(persist);
+  it("skipping ends the act and hands on, leaving the finish to the preferences act", async () => {
+    const dispatch = renderTeam();
     const user = userEvent.setup();
 
     await user.click(
@@ -98,33 +94,10 @@ describe("TeamAct", () => {
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({ type: "TEAM_DONE" }),
     );
-    expect(persist).toHaveBeenCalledWith(
-      expect.objectContaining({ step: "complete" }),
-    );
-    expect(persist.mock.invocationCallOrder[0]).toBeLessThan(
-      dispatch.mock.invocationCallOrder[0],
-    );
-  });
-
-  it("a finish that could not be recorded stays on the form and says so", async () => {
-    const dispatch = renderTeam(vi.fn(async () => false));
-    const user = userEvent.setup();
-
-    await user.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
-    );
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      /couldn't record that setup is complete/,
-    );
-    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("an invite lists the person, turns the skip into a finish, and mints their link where no mail can carry it", async () => {
-    renderTeam(
-      vi.fn(async () => true),
-      { passwordLink: true },
-    );
+    renderTeam({ passwordLink: true });
     const user = userEvent.setup();
 
     await user.type(

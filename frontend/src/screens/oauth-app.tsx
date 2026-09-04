@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { OffsiteLink } from "../design-system/offsitelink";
+import { StageNeeds } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -104,10 +107,13 @@ export function useSetOAuthApp(provider: Vendor) {
       }
     },
     onSuccess: async () => {
-      // Both: the card's own view, and the setup report, which names this
-      // step as outstanding whether or not it blocks anything.
+      // All three: the card's own view, the setup report (which names this
+      // step as outstanding whether or not it blocks anything), and the
+      // connector roster, whose per-provider availability is decided by
+      // whether this app exists.
       await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
       await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
+      await queryClient.invalidateQueries({ queryKey: ["connectors"] });
     },
   });
 }
@@ -423,5 +429,209 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
         </QueryGate>
       </PanelBody>
     </Panel>
+  );
+}
+
+/** Google's own console, where the app is created and the two values are read. */
+const GOOGLE_CREDENTIALS_CONSOLE =
+  "https://console.cloud.google.com/apis/credentials";
+
+/**
+ * The redirect URIs the app must carry, in the open and each with its copy
+ * button: the one thing on this form that is done in the vendor's console and
+ * not here, and the one a first run most often skips. The Sign-in row is what
+ * puts the button on the login page, so the hint says so before the list.
+ */
+function AppRedirectUris({
+  vendor,
+  uris,
+}: Readonly<{
+  vendor: Vendor;
+  uris: readonly { purpose: string; url: string }[] | undefined;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Callout tone="info" title={t("firstRun.platform.redirectTitle")}>
+        <p>{t("firstRun.platform.redirectHint")}</p>
+      </Callout>
+      <RedirectUris uris={uris} sub={t(vendorCopy[vendor].redirectSub)} />
+    </>
+  );
+}
+
+/**
+ * Where the client id and secret come from, folded away.
+ *
+ * A fold rather than four paragraphs above the fields: an operator who has done
+ * this before wants the two boxes, and one who has not needs every step. Open
+ * by default would push the actual form below the fold for everybody.
+ */
+function GoogleAppHelp() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("firstRun.google.helpToggle")}>
+      <ol className="ob-fr-help">
+        <li>{t("firstRun.google.helpStep1")}</li>
+        <li>{t("firstRun.google.helpStep2")}</li>
+        <li>{t("firstRun.google.helpStep3")}</li>
+        <li>{t("firstRun.google.helpStep4")}</li>
+      </ol>
+      <p className="ob-fr-help-note">
+        <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
+          {t("firstRun.google.helpConsole")}
+        </OffsiteLink>
+      </p>
+      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+    </Disclosure>
+  );
+}
+
+/** What the caller's own action row needs from the form. */
+export type OAuthAppFormActions = Readonly<{
+  /** The still-needed note, silent until `submit` was pressed early. */
+  needs: ReactNode;
+  /** Stores the app, or names what is missing if pressed too soon. */
+  submit: () => void;
+  pending: boolean;
+}>;
+
+/**
+ * The vendor's app as a form the reader fills in where they stand: the
+ * redirect URIs to register, the help fold, the two values every OAuth client
+ * has, and Microsoft's optional directory pin.
+ *
+ * ONE form for the first-run platform step and for the connect card that
+ * finds its app missing. The two ask for the same three things, and a second
+ * copy would be a second answer to how long the secret lives in memory. The
+ * actions are the caller's — a stage rail on the first run, a dialog's own
+ * row on the connect step — so the form hands back what they render.
+ */
+export function OAuthAppForm({
+  vendor,
+  onBusy,
+  onStored,
+  actions,
+}: Readonly<{
+  vendor: Vendor;
+  /** Told while the store request is in flight, so the caller can hold its
+   * own dismissals until the write has landed one way or the other. */
+  onBusy?: (busy: boolean) => void;
+  /** The app is stored. The caller decides what that means for its screen. */
+  onStored?: () => void;
+  actions: (form: OAuthAppFormActions) => ReactNode;
+}>) {
+  const t = useT();
+  const app = useOAuthApp(vendor);
+  const save = useSetOAuthApp(vendor);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [tenant, setTenant] = useState("");
+  const missing = [
+    [clientId.trim() === "", t("oauthApp.clientId")],
+    [clientSecret.trim() === "", t("oauthApp.clientSecret")],
+  ]
+    .filter((need): need is [true, string] => need[0] === true)
+    .map(([, label]) => label);
+  const [attempted, setAttempted] = useState(false);
+  const needed = (absent: boolean) =>
+    attempted && absent ? t("firstRun.needed") : undefined;
+  useEffect(() => {
+    onBusy?.(save.isPending);
+    return () => onBusy?.(false);
+  }, [save.isPending, onBusy]);
+  const submit = () => {
+    if (missing.length > 0) {
+      setAttempted(true);
+      return;
+    }
+    save.reset();
+    save.mutate(
+      {
+        clientId: clientId.trim(),
+        clientSecret: clientSecret.trim(),
+        tenant: tenant.trim(),
+      },
+      {
+        onSuccess: () => {
+          // Cleared on the way out rather than left in state: the field is
+          // the only copy this app holds, and it has done its job.
+          setClientSecret("");
+          save.reset();
+          onStored?.();
+        },
+      },
+    );
+  };
+  return (
+    <>
+      <AppRedirectUris vendor={vendor} uris={app.data?.redirect_uris} />
+      {vendor === "google" ? (
+        <GoogleAppHelp />
+      ) : (
+        <>
+          <p className="ob-fr-help-note">{t("firstRun.microsoft.note")}</p>
+          {/* The pin below is also the directory sign-in runs on, which the
+              Google form has no equivalent of: said here, because an admin
+              who leaves it empty gets working mailboxes and no sign-in, and
+              nothing else on this screen would say why. */}
+          <p className="ob-fr-help-note">
+            {t("firstRun.microsoft.helpSignIn")}
+          </p>
+        </>
+      )}
+      {save.error && (
+        <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
+      )}
+      <Field
+        label={t("oauthApp.clientId")}
+        error={needed(clientId.trim() === "")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            value={clientId}
+            disabled={save.isPending}
+            autoComplete="off"
+            placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
+            onChange={(e) => setClientId(e.target.value)}
+          />
+        )}
+      </Field>
+      <Field
+        label={t("oauthApp.clientSecret")}
+        error={needed(clientSecret.trim() === "")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            type="password"
+            autoComplete="off"
+            value={clientSecret}
+            disabled={save.isPending}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        )}
+      </Field>
+      {vendor === "microsoft" && (
+        <Field label={t("oauthApp.tenant")} hint={t("oauthApp.tenantHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={tenant}
+              autoComplete="off"
+              disabled={save.isPending}
+              placeholder={t("oauthApp.tenantPlaceholder")}
+              onChange={(e) => setTenant(e.target.value)}
+            />
+          )}
+        </Field>
+      )}
+      {actions({
+        needs: <StageNeeds attempted={attempted} missing={missing} />,
+        submit,
+        pending: save.isPending,
+      })}
+    </>
   );
 }

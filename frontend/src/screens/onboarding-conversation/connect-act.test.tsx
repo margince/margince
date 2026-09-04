@@ -381,7 +381,7 @@ it("finishes the step once, leaving a running backread to the server", async () 
   const { dispatch, persist } = renderConnectAct("ok");
 
   await userEvent.click(
-    await screen.findByRole("button", { name: "Explore Margince meanwhile" }),
+    await screen.findByRole("button", { name: "Continue while it reads" }),
   );
 
   await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
@@ -418,39 +418,54 @@ it("finishes the step once when the history read is declined", async () => {
   expect(starts).toEqual([]);
 });
 
-// "Skip connecting" is offered while connecting is still the open question.
-it("offers to skip connecting before any consent round trip", () => {
+// The way past a missing mailbox is offered while connecting is still the
+// open question — worded for what it is, since LinkedIn may be connected.
+it("offers to continue without a mailbox before any consent round trip", () => {
   stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
   renderConnectAct();
   expect(
-    screen.getByRole("button", { name: "Skip connecting for now" }),
+    screen.getByRole("button", { name: "Continue without a mailbox" }),
   ).toBeTruthy();
+});
+
+// Continue always presses. Without a mailbox it names the gap beside itself
+// and goes nowhere: the step is not left by accident, and the reader is told
+// what the honest exit beside it is for.
+it("names the missing mailbox when Continue is pressed without one", async () => {
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  const { dispatch, persist } = renderConnectAct();
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    /A mailbox is still needed/,
+  );
+  expect(dispatch).not.toHaveBeenCalled();
+  expect(persist).not.toHaveBeenCalled();
 });
 
 // After a successful consent it is no longer true, and recording the step as
 // skipped would persist a fact contradicted by the roster.
-it("stops offering to skip connecting once consent has returned", async () => {
+it("stops offering the mailbox-less exit once consent has returned", async () => {
   stubWithSession({
     "GET /connectors": rosterWith({ state: "done" }),
   });
   renderConnectAct("ok");
   await screen.findByText("Live and capturing");
   expect(
-    screen.queryByRole("button", { name: "Skip connecting for now" }),
+    screen.queryByRole("button", { name: "Continue without a mailbox" }),
   ).toBeNull();
 });
 
 // A returning "ok" whose provider the roster never confirms is NOT a
-// completed connection — the panel's own "Enter Margince" fallback would
-// otherwise be the only way out of a mailbox that is not actually connected.
-// The honest exit (skip, recorded truthfully) has to stay reachable until a
-// live mailbox is confirmed.
-it("keeps the skip exit open when consent returned but no mailbox could be confirmed", async () => {
+// completed connection — the panel's own "Continue" fallback would otherwise
+// be the only way out of a mailbox that is not actually connected. The honest
+// exit (recorded truthfully as no mailbox) has to stay reachable until a live
+// mailbox is confirmed.
+it("keeps the mailbox-less exit open when consent returned but no mailbox could be confirmed", async () => {
   stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
   renderConnectAct("ok");
   await screen.findByText("We couldn't confirm the connection.");
   expect(
-    screen.getByRole("button", { name: "Skip connecting for now" }),
+    screen.getByRole("button", { name: "Continue without a mailbox" }),
   ).toBeInTheDocument();
 });
 
@@ -580,16 +595,73 @@ describe("the LinkedIn card", () => {
   });
 });
 
-// The finish gate is read and acted on in the same place: the work surface
-// the reader has been looking at, not a chip surfaced beside the transcript.
-describe("the cn.done finish action", () => {
+// The way on is read and acted on in the same place: the work surface the
+// reader has been looking at, not a chip surfaced beside the transcript.
+describe("the way onward", () => {
   it("renders on the stage's rail — never as a thread chip", () => {
     stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
-    renderConnectAct(undefined, "pending", "cn.done");
-    const enter = screen.getByRole("button", { name: "Enter Margince" });
-    expect(enter.closest(".ob-stage-acts")).toBeTruthy();
-    expect(enter.closest(".mw-thread")).toBeNull();
+    renderConnectAct();
+    const onward = screen.getByRole("button", { name: "Continue" });
+    expect(onward.closest(".ob-stage-acts")).toBeTruthy();
+    expect(onward.closest(".mw-thread")).toBeNull();
   });
+
+  // With a mailbox live the step is left as connected: the skip flag is
+  // false, and the act hands on to the preferences act rather than entering.
+  it("records the step as connected and hands on when a mailbox is live", async () => {
+    stubWithSession({ "GET /connectors": rosterWith({ state: "none" }) });
+    const { dispatch, persist } = renderConnectAct();
+    const onward = screen.getByRole("button", { name: "Continue" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Continue without a mailbox" }),
+      ).toBeNull(),
+    );
+    await userEvent.click(onward);
+    await waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
+    );
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({ step: "connect", connectSkipped: false }),
+    );
+  });
+});
+
+// The missing app is registered where it is found missing: a reader who may
+// register apps gets the form in the card's own dialog, not a link to leave by.
+it("lets a reader who may register apps set the missing app up from the card", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ capture_settings: ["update"] }),
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [],
+        providers: [
+          { provider: "gmail", reason: "ready" },
+          { provider: "graph", reason: "app_missing" },
+          { provider: "imap", reason: "ready" },
+        ],
+      }),
+    "GET /installation/oauth-apps/microsoft": () =>
+      jsonResponse({
+        provider: "microsoft",
+        configured: false,
+        client_id: "",
+        source: "none",
+        redirect_uris: [],
+      }),
+  });
+  renderConnectAct();
+  const card = await screen.findByRole("button", { name: /Microsoft/ });
+  await waitFor(() => expect(card).not.toBeDisabled(), { timeout: 3000 });
+  await userEvent.click(card);
+  const dialog = await screen.findByRole("dialog");
+  expect(
+    within(dialog).getByText("Register your Microsoft app"),
+  ).toBeInTheDocument();
+  expect(within(dialog).getByLabelText(/Client ID/)).toBeInTheDocument();
+  expect(
+    within(dialog).getByRole("button", { name: "Store app" }),
+  ).toBeInTheDocument();
 });
 
 // The four step-level consent guarantees used to be a two-column table
@@ -914,14 +986,21 @@ it("grants nothing when the reader skips connecting a mailbox", async () => {
       return jsonResponse({});
     },
   });
-  renderConnectAct();
+  const { dispatch } = renderConnectAct();
 
-  await userEvent.click(screen.getByRole("button", { name: /skip/i }));
+  const without = screen.getByRole("button", {
+    name: "Continue without a mailbox",
+  });
+  await waitFor(() => expect(without).not.toBeDisabled());
+  await userEvent.click(without);
   // The agent reads their mail to build the brief, so authority over a mailbox
   // that was never connected is authority over nothing — recorded as though
-  // the rep had agreed to something real. The box stays ticked; the skip is
-  // what decides.
-  await waitFor(() => expect(grants).toEqual([]));
+  // the rep had agreed to something real. The box stays ticked; going on
+  // without a mailbox is what decides.
+  await waitFor(() =>
+    expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
+  );
+  expect(grants).toEqual([]);
 });
 
 it("keeps an opt-out across the OAuth round trip", async () => {
@@ -950,18 +1029,21 @@ it("keeps an opt-out across the OAuth round trip", async () => {
 it("records a decline, rather than leaving it unanswered", async () => {
   const answers: unknown[] = [];
   stubWithSession({
-    "GET /connectors": () => jsonResponse({ data: [] }),
+    "GET /connectors": rosterWith({ state: "none" }),
     "PUT /me/agent-grants/morning_brief": (body: unknown) => {
       answers.push(body);
       return jsonResponse({});
     },
   });
-  renderConnectAct("ok", "skipped", "cn.done", "gmail");
+  renderConnectAct(undefined, "skipped");
 
   await userEvent.click(screen.getByTestId("overnight-grant-choice"));
-  await userEvent.click(
-    screen.getByRole("button", { name: /enter margince/i }),
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "Continue without a mailbox" }),
+    ).toBeNull(),
   );
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
   // Declined and never-asked are different states, and the product asks once:
   // leaving an opt-out unanswered is what makes it ask again every night.

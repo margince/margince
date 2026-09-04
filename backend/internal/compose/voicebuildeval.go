@@ -39,7 +39,11 @@ const (
 	voiceEvalSignatureFloor = 0.4
 )
 
-const voiceEvalDraftSystem = `Write a short email reply in the author's voice, as described by the supplied voice profile.
+// Two to three short paragraphs, not a one-liner: the drafts double as the
+// sample the owner reads on the onboarding result screen, and a voice has no
+// room to show in two sentences — every draft reads the same at that length.
+const voiceEvalDraftSystem = `Write an email reply in the author's voice, as described by the supplied voice profile.
+Length: two or three short paragraphs, roughly 80 to 140 words — enough for the voice to show, never padding.
 The profile controls expression, never facts; invent no names, numbers, or commitments.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.`
 
@@ -173,7 +177,7 @@ const draftVocabularyRule = "Vocabulary: use the words this author uses, includi
 // keeps — plain text, no fence markers, because it is read by a human on the
 // profile screen; evalTaskFor renders the same task for the model.
 func evalPromptFor(sample ai.VoiceSample) string {
-	return fmt.Sprintf("Reply briefly (register: %s) to this message from a colleague:\n%s",
+	return fmt.Sprintf("Reply (register: %s) to this message from a colleague:\n%s",
 		sample.Register, evalSampleOpening(sample))
 }
 
@@ -181,7 +185,7 @@ func evalPromptFor(sample ai.VoiceSample) string {
 // the call's boundary — the excerpt is the author's own mail, which routinely
 // quotes what a counterparty wrote to them.
 func evalTaskFor(sample ai.VoiceSample, fence promptfence.Fence) string {
-	return fmt.Sprintf("Reply briefly (register: %s) to this message from a colleague:\n%s",
+	return fmt.Sprintf("Reply (register: %s) to this message from a colleague:\n%s",
 		sample.Register, fence.Wrap(evalSampleOpening(sample)))
 }
 

@@ -4641,7 +4641,7 @@ export const en = {
   "ob.s4.capturedTitle": "Mailbox connected",
   "ob.s4.capturedBody":
     "Your CRM is building itself. New mail lands here as the first sweep runs, usually in minutes.",
-  "ob.s4.enterCrm": "Enter your CRM",
+  "ob.s4.enterCrm": "Continue",
   "ob.s4.connectFailed": "Couldn't connect that mailbox",
   "ob.s4.notNow": "Not now",
 
@@ -4880,7 +4880,14 @@ export const en = {
     "Read the sample first. If it lands, confirm. If it is off, add more sources and I rebuild.",
   "ob.conv.voice.resultSubNoSample":
     "Your corpus is too small for a sample draft. Here is what the build learned. Add more sources.",
-  "ob.conv.voice.resultContinue": "That is my voice",
+  "ob.conv.voice.resultContinue": "That is me",
+  "ob.conv.voice.revise": "Not quite me — add more writing",
+  "ob.conv.voice.distilling": "Distilling",
+  "ob.conv.voice.hears": "hears",
+  "ob.conv.voice.hearsWords":
+    "{words} of your own words across {sources} sources",
+  "ob.conv.voice.hearsBand": "a {band} corpus so far",
+  "ob.conv.voice.hearsRegister": "{words} words of {register} writing",
   "ob.conv.voice.sampleEyebrow": "Sample, not sent",
   "ob.conv.voice.sampleAnother": "Another scenario",
   "ob.conv.voice.sampleSubjectLabel": "Subject",
@@ -4934,7 +4941,14 @@ export const en = {
     "Welcome back. My earlier read of {host} did not finish. Give me a website again, or tell me directly.",
   "ob.conv.recap.readDeferred":
     "Welcome back. My read of {host} is paused for now. Give me a website again, or tell me directly.",
-  "ob.conv.connect.skip": "Skip connecting for now",
+  "ob.conv.connect.skip": "Continue without a mailbox",
+  "ob.conv.connect.continue": "Continue",
+  "ob.conv.connect.mailboxNeeded":
+    "A mailbox is still needed: mail is what gets read and drafted. Connect one above, or continue without one for now.",
+  "ob.conv.connect.setupCta": "set up →",
+  "ob.conv.connect.dialogHeadlineApp": "Register your {name} app",
+  "ob.conv.connect.appDialogIntro":
+    "Mailboxes connect through an OAuth app your organization owns. Create one in the {name} console, register the redirect URIs below on it, and paste its client id and secret here.",
   "ob.conv.linkedin.cardBody":
     "Turns your network into accounts and contacts, and flags it when a connection changes jobs.",
   "ob.conv.linkedin.limitsToggle": "What Margince can and cannot see",
@@ -4971,6 +4985,7 @@ export const en = {
   "ob.rail.confirm": "Confirm",
   "ob.rail.voice": "Voice",
   "ob.rail.connect": "Connect",
+  "ob.rail.prefs": "Preferences",
 
   // The invite: asked once the company is confirmed, before the two steps
   // that are only about the person answering. An administrator who sets the
@@ -5001,7 +5016,16 @@ export const en = {
   "ob.conv.team.finish": "Finish setup",
   "ob.conv.team.done":
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
-  "ob.conv.team.persistFailed":
+  "ob.conv.prefs.title": "Last, a few preferences.",
+  "ob.conv.prefs.body":
+    "Everything here is prefilled from what is already recorded, and can be changed later in Settings. Press Done if it all reads right.",
+  "ob.conv.prefs.reportingTitle": "How the numbers are reported",
+  "ob.conv.prefs.timezoneNeeded": "A reporting timezone is needed.",
+  "ob.conv.prefs.autonomyTitle": "What it may change on its own",
+  "ob.conv.prefs.autonomyBody":
+    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
+  "ob.conv.prefs.done": "Done",
+  "ob.conv.prefs.persistFailed":
     "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
 
   // --- the gate: the first screen after sign-in -------------------------
@@ -5103,7 +5127,6 @@ export const en = {
     "You can save up to {max} facts. Clear one to make room for another.",
 
   // --- the handoff into the app -----------------------------------------
-  "ob.enter.cta": "Enter Margince",
   "ob.enter.assembling": "Assembling your organization",
 
   // --- the mailbox backread ---------------------------------------------
@@ -5150,7 +5173,7 @@ export const en = {
     "I could not stop the read: {detail} Try again — it keeps running meanwhile.",
   "ob.backread.detailUnavailable": "Something unexpected went wrong.",
   "ob.backread.cancel": "Stop reading",
-  "ob.backread.explore": "Explore Margince meanwhile",
+  "ob.backread.explore": "Continue while it reads",
   "ob.backread.skip": "Do not read history now",
 
   "auth.title": "Margince",

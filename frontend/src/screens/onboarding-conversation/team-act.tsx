@@ -3,11 +3,8 @@
 
 import type { Dispatch } from "react";
 import { useState } from "react";
-import { navigate } from "../../app/router";
 import { useT } from "../../i18n";
 import { useMe } from "../common";
-import { EMPTY_DRAFT } from "../onboarding";
-import { BuildScene } from "../onboarding-build-scene";
 import { type InvitedMember, InviteUserForm } from "../users-invite-form";
 import { PasswordLinkModal, usePasswordLink } from "../users-password-link";
 import type {
@@ -15,7 +12,6 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
-import type { WizardPersistInput } from "./use-wizard-state";
 import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
@@ -26,51 +22,24 @@ import { ConversationWorkbench } from "./workbench";
 // only way the invited person ever gets in, so it is minted the moment the
 // invite lands, the way the roster does it.
 //
-// Leaving is a finish, with or without an invite: step "complete" is written
-// before the handoff plays, the same order the connect act keeps, because a
-// navigation that outruns the write leaves the next reload back in the
-// journey.
+// Leaving, with or without an invite, moves on to the preferences act, which
+// is where the journey is closed: the personal steps were already recorded as
+// skipped on the way in (the invite checkpoint), so nothing here is a write.
 
 type TeamActProps = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  persist: (input: WizardPersistInput) => Promise<boolean>;
 }>;
 
-export function TeamAct({ state, dispatch, persist }: TeamActProps) {
+export function TeamAct({ state, dispatch }: TeamActProps) {
   const t = useT();
   const me = useMe();
   const [invited, setInvited] = useState<readonly InvitedMember[]>([]);
   const [linkFor, setLinkFor] = useState<InvitedMember | null>(null);
   const passwordLink = usePasswordLink();
-  const [finishing, setFinishing] = useState(false);
-  const [finishFailed, setFinishFailed] = useState(false);
-  const [entering, setEntering] = useState(false);
   // The server answers whether THIS caller can mint set-password links: admin,
   // on an installation with no email channel and a configured base URL.
   const canIssueLink = me.data?.admin_password_link ?? false;
-
-  const finish = async () => {
-    setFinishing(true);
-    setFinishFailed(false);
-    // The personal steps were recorded as skipped on the way in (the invite
-    // checkpoint); this write only closes the journey.
-    const persisted = await persist({
-      step: "complete",
-      values: EMPTY_DRAFT.values,
-    });
-    setFinishing(false);
-    if (!persisted) {
-      setFinishFailed(true);
-      return;
-    }
-    dispatch({ type: "TEAM_DONE" });
-    setEntering(true);
-  };
-
-  if (entering || state.phase === "tm.done") {
-    return <BuildScene onDone={() => navigate({ screen: "home" })} />;
-  }
 
   return (
     <ConversationWorkbench
@@ -105,11 +74,6 @@ export function TeamAct({ state, dispatch, persist }: TeamActProps) {
             ))}
           </ul>
         )}
-        <div className="ob-scene-foot">
-          <p className="ob-conv-notice" role="alert">
-            {finishFailed ? t("ob.conv.team.persistFailed") : null}
-          </p>
-        </div>
         {/* One way out, named for what it is: a skip while nobody has been
             invited, a finish once somebody has. */}
         <WayOnward
@@ -117,9 +81,8 @@ export function TeamAct({ state, dispatch, persist }: TeamActProps) {
             invited.length > 0 ? "ob.conv.team.finish" : "ob.conv.team.skip",
           )}
           variant={invited.length > 0 ? "primary" : "ghost"}
-          pending={finishing}
           stillNeeded={(why) => why.join(" ")}
-          onGo={() => void finish()}
+          onGo={() => dispatch({ type: "TEAM_DONE" })}
         />
       </div>
       {linkFor && (

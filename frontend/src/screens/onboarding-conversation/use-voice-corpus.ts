@@ -18,6 +18,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
+import { excerptLines } from "./voice-excerpts";
 
 // The voice corpus of the conversational shell as one hook: intake (files
 // and pasted text), the preview probe that decides what a source honestly
@@ -40,6 +41,10 @@ export type CorpusManifestEntry = Readonly<{
   inputWords: number;
   /** Kept-of-total is shown only where filtering actually discarded turns. */
   transcript: boolean;
+  /** Sentences of the reader's own prose, for the distilling panel to read
+   * back. Empty for a transcript: its text carries other speakers' turns, and
+   * which words are the reader's is decided on the server, not here. */
+  lines: readonly string[];
 }>;
 
 type SpeakerAsk = Readonly<{
@@ -238,6 +243,7 @@ export function useVoiceCorpus({
           keptWords: outcome.stats.kept_words,
           inputWords: outcome.stats.input_words,
           transcript: outcome.transcript,
+          lines: outcome.transcript ? [] : excerptLines(outcome.content),
         },
         outcome.stats,
         outcome.summary,

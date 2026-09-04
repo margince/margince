@@ -342,7 +342,7 @@ function applyEvent(
         },
       ]);
     case "TEAM_DONE":
-      return withEntries(state, { act: "done", phase: "tm.done" }, [
+      return withEntries(state, { act: "prefs", phase: "pf.ask" }, [
         {
           kind: "outcome",
           id: "team:done",
@@ -423,6 +423,17 @@ function applyEvent(
       );
     case "VOICE_DONE":
       return withEntries(state, { act: "connect", phase: "cn.consent" });
+    case "VOICE_REVISE":
+      // The corpus is kept; only the verdict on the build is withdrawn, so
+      // the next build starts from everything already in hand plus what the
+      // reader adds now.
+      return withEntries(state, { phase: "vo.collecting" }, [
+        {
+          kind: "user",
+          id: "voice:revise",
+          i18nKey: "ob.conv.voice.revise",
+        },
+      ]);
     // Neither resolution moves the act: both sections of the connect screen
     // stay on the same phase, and only mail's own consent gates CONNECT_DONE.
     case "LINKEDIN_CONNECTED":
@@ -444,10 +455,12 @@ function applyEvent(
         },
       ]);
     case "CONNECT_DONE":
-      return withEntries(state, { act: "done", phase: "cn.done" }, [
+      return withEntries(state, { act: "prefs", phase: "pf.ask" });
+    case "PREFS_DONE":
+      return withEntries(state, { act: "done", phase: "pf.done" }, [
         {
           kind: "outcome",
-          id: "connect:done",
+          id: "prefs:done",
           i18nKey: "ob.conv.done",
           tone: "success",
         },

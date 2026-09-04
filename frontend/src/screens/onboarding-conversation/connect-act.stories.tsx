@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { GrantSpec } from "../../app/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -55,11 +56,25 @@ function act(
   route: { outcome?: string; returningProvider?: string } = {},
   locale?: "de",
   providers: ProviderAvailability[] = ALL_READY,
+  grants: GrantSpec = { channel_connection: ["read", "create"] },
 ) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ channel_connection: ["read", "create"] }),
+      "GET /me": meRoute(grants),
       "GET /connectors": () => jsonResponse({ data: [], providers }),
+      "GET /installation/oauth-apps/microsoft": () =>
+        jsonResponse({
+          provider: "microsoft",
+          configured: false,
+          client_id: "",
+          source: "none",
+          redirect_uris: [
+            {
+              purpose: "mailbox_connect",
+              url: "https://crm.example/v1/connectors/graph/callback",
+            },
+          ],
+        }),
     });
     return (
       <StoryProviders locale={locale}>
@@ -136,11 +151,6 @@ export const StaleReturn: Story = {
   }),
 };
 
-/** Connected, and the act is done. */
-export const Done: Story = {
-  render: act(state("cn.done", { linkedinStatus: "connected" })),
-};
-
 /**
  * No Microsoft app registered for this organization. The card cannot be opened
  * because the connect behind it would be refused, so it says what is missing
@@ -154,6 +164,25 @@ export const MicrosoftAppMissing: Story = {
     { provider: "graph", reason: "app_missing" },
     { provider: "imap", reason: "ready" },
   ]),
+};
+
+/**
+ * The same missing app, seen by a reader who may register it: the card is a
+ * button again, and pressing it asks for the app in the card's own dialog
+ * rather than sending them to Settings and back.
+ */
+export const MicrosoftAppMissingAdmin: Story = {
+  render: act(
+    state("cn.consent"),
+    {},
+    undefined,
+    [
+      { provider: "gmail", reason: "ready" },
+      { provider: "graph", reason: "app_missing" },
+      { provider: "imap", reason: "ready" },
+    ],
+    { channel_connection: ["read", "create"], capture_settings: ["update"] },
+  ),
 };
 
 /**

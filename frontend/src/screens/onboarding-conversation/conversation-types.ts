@@ -17,6 +17,10 @@ export type ConversationAct =
   | "team"
   | "voice"
   | "connect"
+  // The last word before the app: the installation's reporting basis and
+  // what the agent may change on its own, prefilled from what is already
+  // recorded. Every path ends here — the team act's and the connect act's.
+  | "prefs"
   | "done";
 
 export type ConversationPhase =
@@ -37,15 +41,15 @@ export type ConversationPhase =
   | "vo.skipped"
   | "in.ask"
   | "tm.ask"
-  // The team act's terminal: setup is complete without the personal steps.
-  // A terminal like cn.done, reached without ever entering connect.
-  | "tm.done"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
   // the required gate (it is what CONNECT_DONE waits on), LinkedIn is the
   // recommended addition beside it (linkedinStatus tracks its own
   // resolution independently and never gates the act's finish).
   | "cn.consent"
-  | "cn.done";
+  // The preferences act: asked once, then the one terminal every path shares.
+  // The team act reaches it without ever entering connect.
+  | "pf.ask"
+  | "pf.done";
 
 // Exactly one label source — a blank button is unrepresentable.
 type LabelSource =
@@ -237,4 +241,10 @@ export type ConversationEvent =
   | { type: "BUILD_TERMINAL"; buildId: string; status: BuildTerminalStatus }
   // Leaving the voice act, built or skipped, lands straight on connect.
   | { type: "VOICE_DONE" }
-  | { type: "CONNECT_DONE" };
+  // A succeeded build the reader does not recognise as their own: back to
+  // collecting, so more of their writing can go in before the next build.
+  | { type: "VOICE_REVISE" }
+  // Leaving the connect act and leaving the team act both land on the
+  // preferences act; PREFS_DONE is the one terminal move.
+  | { type: "CONNECT_DONE" }
+  | { type: "PREFS_DONE" };

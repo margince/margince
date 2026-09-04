@@ -18,6 +18,7 @@ import {
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
+type CorpusManifestEntry = import("./use-voice-corpus").CorpusManifestEntry;
 
 // A minimal but contract-complete VoiceProfileVersion; profileJSON carries
 // only what the result board actually reads, `sample_drafts` swapped per
@@ -119,11 +120,12 @@ function collectScene(overrides: {
   summary?: CorpusSummary | null;
   canBuild?: boolean;
   onBuild?: () => void;
+  manifest?: CorpusManifestEntry[];
 }) {
   return withLocale(
     <VoiceCollectScene
       summary={overrides.summary ?? null}
-      manifest={[]}
+      manifest={overrides.manifest ?? []}
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
@@ -201,6 +203,43 @@ describe("VoiceCollectScene", () => {
     await userEvent.click(screen.getByRole("button", { name: "Browse files" }));
 
     expect(click).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the collect scene's distilling panel", () => {
+  it("reads the reader's own lines back beside the intake, with the server's readings between them", () => {
+    collectScene({
+      summary: summaryOf(1200),
+      manifest: [
+        {
+          ref: "u1",
+          label: "notes.md",
+          keptWords: 1200,
+          inputWords: 1200,
+          transcript: false,
+          lines: [
+            "We should move the kickoff to Thursday so the data team can join.",
+            "I have attached the revised offer with the two changes we discussed.",
+          ],
+        },
+      ],
+    });
+    const panel = document.querySelector(".ob-distill");
+    expect(panel).not.toBeNull();
+    // Decorative: the same numbers stand in the meter as real text.
+    expect(panel?.getAttribute("aria-hidden")).toBe("true");
+    expect(panel?.textContent).toContain("Distilling");
+    expect(panel?.textContent).toContain(
+      "We should move the kickoff to Thursday",
+    );
+    // A server fact, never a client inference: the corpus total and band.
+    expect(panel?.textContent).toContain("1,200 of your own words");
+    expect(panel?.querySelectorAll("mark").length).toBeGreaterThan(0);
+  });
+
+  it("shows nothing until there is material to read back", () => {
+    collectScene({});
+    expect(document.querySelector(".ob-distill")).toBeNull();
   });
 });
 
@@ -383,6 +422,7 @@ describe("VoiceResultScene", () => {
         loading={false}
         version={version}
         onContinue={() => undefined}
+        onRevise={() => undefined}
       />,
     );
 
@@ -407,6 +447,7 @@ describe("VoiceResultScene", () => {
         loading={false}
         version={version}
         onContinue={() => undefined}
+        onRevise={() => undefined}
       />,
     );
 
@@ -419,5 +460,32 @@ describe("VoiceResultScene", () => {
     expect(
       document.querySelector(".ob-voice-board-single"),
     ).toBeInTheDocument();
+  });
+
+  it("offers the two answers: that is me, or not quite me and back to collecting", async () => {
+    const version = resultVersion({
+      inference: { signature_moves: [] },
+      sample_drafts: [
+        { subject: "Re: kickoff", body: "The plan holds.", voice_score: 0.9 },
+      ],
+      guidance: {},
+    });
+    const onContinue = vi.fn();
+    const onRevise = vi.fn();
+    withLocale(
+      <VoiceResultScene
+        loading={false}
+        version={version}
+        onContinue={onContinue}
+        onRevise={onRevise}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Not quite me — add more writing" }),
+    );
+    expect(onRevise).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: "That is me" }));
+    expect(onContinue).toHaveBeenCalledTimes(1);
   });
 });

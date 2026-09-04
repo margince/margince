@@ -1,11 +1,9 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
-import { navigate } from "../../app/router";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import { EMPTY_DRAFT } from "../onboarding";
-import { BuildScene } from "../onboarding-build-scene";
 import {
   clearOAuthAttempt,
   ImapConnectPanel,
@@ -34,10 +32,10 @@ import { ConversationWorkbench } from "./workbench";
 
 // The connect act: per-purpose consent as a conversation turn, provider
 // cards that open their OWN dialog on the artifact surface (never an inline
-// panel growing under the card, never a chip in the rail), and the finish
-// gate. Finishing is a server fact before it is a UI fact: the completion
-// checkpoint (step complete, connect skipped or not) must land before any
-// navigation; a failed write is said out loud and retryable.
+// panel growing under the card, never a chip in the rail), and the way on.
+// Leaving is a server fact before it is a UI fact: how the step was left
+// (a mailbox connected, or none) must land before the act moves on; a
+// failed write is said out loud and retryable.
 //
 // The four step-level consent guarantees, and each provider's own
 // disclosure, live entirely on `ConnectScene` and inside its dialogs now —
@@ -110,12 +108,6 @@ export function ConnectAct({
   // The overnight answer could not be recorded. The step still completes — see
   // finish() — so this is a notice, not a blocker.
   const [overnightFailed, setOvernightFailed] = useState(false);
-  const [entering, setEntering] = useState(false);
-  // Whether a returning OAuth trip has an actually-confirmed live mailbox,
-  // told to us by `OAuthReturnPanel` itself (see `showSkip` below): false
-  // for every unconfirmed state, including one this panel's own "enter"
-  // fallback would otherwise let a reader click past.
-  const [mailConfirmed, setMailConfirmed] = useState(false);
   // Whether the open dialog's own credential POST (OAuth's authorize call,
   // IMAP's connect) is still in flight, told to us by the panel itself. A
   // success landing after the reader already backed out via the dialog's X,
@@ -193,11 +185,6 @@ export function ConnectAct({
     }
   };
 
-  const recordOvernightThenEnter = async () => {
-    await recordOvernightAnswer();
-    setEntering(true);
-  };
-
   const finish = async (skipped: boolean) => {
     setFinishing(true);
     setFinishFailed(false);
@@ -223,10 +210,12 @@ export function ConnectAct({
       await recordOvernightAnswer();
     }
     // Voice flags are NOT sent: the merge keeps whatever the voice act (or an
-    // earlier session) recorded, so finishing can never overwrite a built
-    // voice as skipped.
+    // earlier session) recorded, so leaving here can never overwrite a built
+    // voice as skipped. The step stays "connect": the preferences act that
+    // follows is the one that writes completion, so a reload before it lands
+    // comes back here, to a screen that already shows what is connected.
     const persisted = await persist({
-      step: "complete",
+      step: "connect",
       values: EMPTY_DRAFT.values,
       connectSkipped: skipped,
     });
@@ -236,15 +225,7 @@ export function ConnectAct({
       return;
     }
     dispatch({ type: "CONNECT_DONE" });
-    // Completion is recorded, so the handoff can take its beat: the build scene
-    // navigates when it is done. It resolves immediately under reduced motion,
-    // so nobody is held behind an animation they asked not to see.
-    setEntering(true);
   };
-
-  if (entering) {
-    return <BuildScene onDone={() => navigate({ screen: "home" })} />;
-  }
 
   // Where the journey stands, in the rail's own counting.
   const stops = railStops(state.memberPath);
@@ -271,35 +252,17 @@ export function ConnectAct({
           // attempt (see `attemptedProvider`): its content is the settled
           // result, not a fresh ask, so the dialog's own chrome must say so.
           dialogShowsResult={provider !== null && provider === resultFor}
-          onSkip={() => void finish(true)}
+          onFinish={(skipped) => void finish(skipped)}
+          finishing={finishing}
           wantsOvernight={wantsOvernight}
           onWantsOvernightChange={chooseOvernight}
           overnightFailed={overnightFailed}
-          skipDisabled={finishing}
-          // Once a mailbox is actually CONFIRMED live, "skip connecting" is
-          // no longer a true option and recording the step as skipped would
-          // persist a fact that is not so. Short of that confirmation —
-          // still verifying, denied, unresolved, or verified absent — the
-          // honest exit stays open: `OAuthReturnPanel`'s own "enter" button
-          // in those states is a fallback the reader can also reach, but it
-          // must never be the ONLY way out of an unconfirmed return.
-          showSkip={outcome !== "ok" || !mailConfirmed}
           linkedinStatus={state.linkedinStatus}
           onLinkedinConnect={connectLinkedin}
           onLinkedinSkip={() => dispatch({ type: "LINKEDIN_SKIPPED" })}
           linkedinPending={linkedin.isPending}
           linkedinError={
             linkedin.isError ? problemMessageOf(linkedin.error, t) : null
-          }
-          // Entering from cn.done is a completion too, and the overnight answer
-          // has to be recorded on THIS path as well: the step is already
-          // persisted by the time the reader gets here (the connect panel's
-          // own onComplete ran finish), so the answer is all that is left, and
-          // routing it through finish again would re-persist the step.
-          onEnter={
-            state.phase === "cn.done"
-              ? () => void recordOvernightThenEnter()
-              : undefined
           }
           // The ask, still open: rendered INSIDE the dialog ConnectScene
           // wraps around `provider`. A real OAuth "allow" leaves the page
@@ -347,7 +310,6 @@ export function ConnectAct({
                 outcome={outcome}
                 provider={returningProvider}
                 onComplete={finish}
-                onConfirmedChange={setMailConfirmed}
               />
             ) : null
           }

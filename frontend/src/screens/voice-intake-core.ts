@@ -247,6 +247,9 @@ export type IntakeOutcome =
       summary: CorpusSummary;
       /** Kept-of-total is worth showing only where filtering discarded turns. */
       transcript: boolean;
+      /** The text as sent, so a surface can quote the reader's own lines back
+       * without a second read of the file. */
+      content: string;
     }>
   | Readonly<{
       kind: "speaker-needed";
@@ -356,6 +359,7 @@ async function ingest(
     stats: data.ingest_stats,
     summary: data.summary,
     transcript,
+    content: body.content,
   };
 }
 

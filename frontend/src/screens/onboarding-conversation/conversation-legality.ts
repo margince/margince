@@ -19,6 +19,7 @@ const creatorOnlyEvents = new Set<ConversationEvent["type"]>([
   "BUILD_STAGE",
   "BUILD_TERMINAL",
   "VOICE_DONE",
+  "VOICE_REVISE",
   "INVITE_ACCEPTED",
   "INVITE_DECLINED",
   "TEAM_DONE",
@@ -66,12 +67,16 @@ const legalPhases: Record<
   BUILD_STAGE: new Set(["vo.building", "vo.result"]),
   BUILD_TERMINAL: new Set(["vo.building", "vo.result"]),
   VOICE_DONE: new Set(["vo.result", "vo.skipped"]),
+  // Only a build that succeeded can be sent back for more material; the
+  // guard below holds that. A failed one retries, a deferred one resumes.
+  VOICE_REVISE: new Set(["vo.result"]),
   // Both live on the connect screen alongside mail; eventGuards restricts
   // them further to linkedinStatus "pending", so a stray dispatch cannot
   // re-run the authorization or overwrite an already-recorded skip.
   LINKEDIN_CONNECTED: new Set(["cn.consent"]),
   LINKEDIN_SKIPPED: new Set(["cn.consent"]),
   CONNECT_DONE: new Set(["cn.consent"]),
+  PREFS_DONE: new Set(["pf.ask"]),
 };
 
 export function isLegal(
@@ -178,6 +183,8 @@ function eventGuards(
       // From vo.result only a FAILED build may be retried; a succeeded or
       // deferred build is not restartable by the user from here.
       return state.phase !== "vo.result" || state.lastBuildStatus === "failed";
+    case "VOICE_REVISE":
+      return state.lastBuildStatus === "succeeded";
     case "BUILD_STAGE":
       if (event.buildId !== state.activeBuildId) return false;
       // From vo.result only a deferred build resumes; while building, a poll

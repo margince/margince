@@ -13,6 +13,7 @@ import { ACCEPTED_CORPUS_ATTR, VOICE_MIN_WORDS } from "../voice-intake-core";
 import type { BuildStage, ConversationQuestion } from "./conversation-machine";
 import { buildCore } from "./presence";
 import type { CorpusManifestEntry } from "./use-voice-corpus";
+import { VoiceDistillPanel } from "./voice-distill";
 import { WayOnward } from "./way-onward";
 
 // The voice act's work surface, as scenes: collect the writing, decide who
@@ -83,16 +84,27 @@ function useCrawlingProgress(ceiling: number): number {
   return reduced ? ceiling : displayed;
 }
 
-/** The scene frame: the body, plus a slot beside the (now hoisted) headline. */
+/** The scene frame: the body, plus a slot beside the (now hoisted) headline.
+ * `wide` opens the frame to the board's full measure for a scene that keeps
+ * a second column (the collect scene's distilling panel); the others read
+ * best at prose width. */
 export function VoiceScene({
   aside,
+  wide = false,
   children,
 }: Readonly<{
   aside?: ReactNode;
+  wide?: boolean;
   children: ReactNode;
 }>) {
   return (
-    <div className="ob-scene ob-voice-scene">
+    <div
+      className={
+        wide
+          ? "ob-scene ob-voice-scene ob-voice-scene-wide"
+          : "ob-scene ob-voice-scene"
+      }
+    >
       {aside !== undefined && <div className="ob-decision-head">{aside}</div>}
       {children}
     </div>
@@ -192,6 +204,8 @@ function VoiceCorpusFloorMeter({
  * the meter counts what was actually kept, not what was handed over. Intake
  * is entirely the scene's: a file (browse or the window-wide drop) and a
  * pasted text both land here, so no other surface offers to add a source.
+ * Beside it, once anything is in, the distilling panel reads the material
+ * back — the reader sees their own words taken in as they add them.
  */
 export function VoiceCollectScene({
   summary,
@@ -226,103 +240,110 @@ export function VoiceCollectScene({
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   return (
-    <VoiceScene>
+    <VoiceScene wide>
       <VoiceHeroBand />
-      <div className="ob-voice-drop">
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          hidden
-          accept={ACCEPTED_CORPUS_ATTR}
-          onChange={onFiles}
-        />
-        <p className="ob-voice-drop-title">{t("ob.conv.voice.dropTitle")}</p>
-        <p className="ob-voice-drop-sub">{t("ob.conv.voice.dropSub")}</p>
-        <div className="ob-voice-drop-acts">
-          <Button small onClick={() => fileRef.current?.click()}>
-            {t("ob.conv.voice.browse")}
-          </Button>
-          <Button small variant="ghost" onClick={() => setPasteOpen(true)}>
-            {t("ob.conv.voice.pasteInstead")}
-          </Button>
-        </div>
-        {!pasteOpen && (
-          <p className="ob-voice-drop-sub">{t("ob.conv.voice.dropHint")}</p>
-        )}
-        {pasteOpen && (
-          <div className="ob-voice-paste">
-            <textarea
-              className="ob-voice-paste-area"
-              rows={5}
-              value={pasteText}
-              placeholder={t("ob.conv.voice.composer")}
-              aria-label={t("ob.conv.voice.composer")}
-              onChange={(event) => setPasteText(event.target.value)}
+      <div className="ob-voice-collect">
+        <div className="ob-voice-collect-main">
+          <div className="ob-voice-drop">
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              hidden
+              accept={ACCEPTED_CORPUS_ATTR}
+              onChange={onFiles}
             />
+            <p className="ob-voice-drop-title">
+              {t("ob.conv.voice.dropTitle")}
+            </p>
+            <p className="ob-voice-drop-sub">{t("ob.conv.voice.dropSub")}</p>
             <div className="ob-voice-drop-acts">
-              <Button
-                small
-                variant="primary"
-                disabled={pasteText.trim() === ""}
-                onClick={() => {
-                  onAddPaste(pasteText.trim());
-                  setPasteText("");
-                  setPasteOpen(false);
-                }}
-              >
-                {t("ob.conv.voice.pasteAdd")}
+              <Button small onClick={() => fileRef.current?.click()}>
+                {t("ob.conv.voice.browse")}
               </Button>
-              <Button
-                small
-                variant="ghost"
-                onClick={() => {
-                  setPasteText("");
-                  setPasteOpen(false);
-                }}
-              >
-                {t("ob.conv.voice.pasteDiscard")}
+              <Button small variant="ghost" onClick={() => setPasteOpen(true)}>
+                {t("ob.conv.voice.pasteInstead")}
               </Button>
             </div>
+            {!pasteOpen && (
+              <p className="ob-voice-drop-sub">{t("ob.conv.voice.dropHint")}</p>
+            )}
+            {pasteOpen && (
+              <div className="ob-voice-paste">
+                <textarea
+                  className="ob-voice-paste-area"
+                  rows={5}
+                  value={pasteText}
+                  placeholder={t("ob.conv.voice.composer")}
+                  aria-label={t("ob.conv.voice.composer")}
+                  onChange={(event) => setPasteText(event.target.value)}
+                />
+                <div className="ob-voice-drop-acts">
+                  <Button
+                    small
+                    variant="primary"
+                    disabled={pasteText.trim() === ""}
+                    onClick={() => {
+                      onAddPaste(pasteText.trim());
+                      setPasteText("");
+                      setPasteOpen(false);
+                    }}
+                  >
+                    {t("ob.conv.voice.pasteAdd")}
+                  </Button>
+                  <Button
+                    small
+                    variant="ghost"
+                    onClick={() => {
+                      setPasteText("");
+                      setPasteOpen(false);
+                    }}
+                  >
+                    {t("ob.conv.voice.pasteDiscard")}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+
+          <VoiceCorpusFloorMeter words={words} ready={floorCleared} />
+
+          {manifest.length > 0 && (
+            <section className="ob-voice-sources">
+              <p className="ob-voice-sources-head">
+                <span>{t("ob.conv.voice.sourcesTitle")}</span>
+              </p>
+              <ul>
+                {manifest.map((entry) => (
+                  <li key={entry.ref}>
+                    <span className="ob-voice-source-body">
+                      <b>{entry.label}</b>
+                      <small>
+                        {entry.transcript
+                          ? t("ob.conv.voice.manifestKept", {
+                              kept: formatNumber(entry.keptWords, locale),
+                              total: formatNumber(entry.inputWords, locale),
+                            })
+                          : t("ob.conv.voice.manifestWords", {
+                              words: formatNumber(entry.keptWords, locale),
+                            })}
+                      </small>
+                    </span>
+                    <Check className="ob-voice-source-check" aria-hidden />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {startError !== null && (
+            <p className="mw-send-error" role="alert">
+              {startError}
+            </p>
+          )}
+        </div>
+        <VoiceDistillPanel manifest={manifest} summary={summary} />
       </div>
-
-      <VoiceCorpusFloorMeter words={words} ready={floorCleared} />
-
-      {manifest.length > 0 && (
-        <section className="ob-voice-sources">
-          <p className="ob-voice-sources-head">
-            <span>{t("ob.conv.voice.sourcesTitle")}</span>
-          </p>
-          <ul>
-            {manifest.map((entry) => (
-              <li key={entry.ref}>
-                <span className="ob-voice-source-body">
-                  <b>{entry.label}</b>
-                  <small>
-                    {entry.transcript
-                      ? t("ob.conv.voice.manifestKept", {
-                          kept: formatNumber(entry.keptWords, locale),
-                          total: formatNumber(entry.inputWords, locale),
-                        })
-                      : t("ob.conv.voice.manifestWords", {
-                          words: formatNumber(entry.keptWords, locale),
-                        })}
-                  </small>
-                </span>
-                <Check className="ob-voice-source-check" aria-hidden />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {startError !== null && (
-        <p className="mw-send-error" role="alert">
-          {startError}
-        </p>
-      )}
 
       <div className="ob-scene-foot">
         <p>
@@ -502,19 +523,24 @@ export function VoiceBuildScene({
 /**
  * The result scene: what a succeeded build learned, as the two-column board
  * the reference lays out — the sample it would send on the left, the reading
- * behind it on the right. Continue stays in the pinned `.ob-triage-continue`
- * bar every other scene's primary action already sits in, worded for what it
- * confirms here rather than the generic label; the reference's own action
- * row under the sample would otherwise say the same thing twice.
+ * behind it on the right. The two answers sit on the pinned rail every other
+ * scene's primary action already sits in: "that is me" confirms, and the way
+ * to disagree is to add more writing and build again — the one correction
+ * the product can actually act on, rather than a tone word it could only
+ * pretend to apply.
  */
 export function VoiceResultScene({
   loading,
   version,
   onContinue,
+  onRevise,
 }: Readonly<{
   loading: boolean;
   version: VoiceProfileVersion | null;
   onContinue: () => void;
+  /** Back to collecting, corpus kept, for a build that does not sound like
+   * the reader. */
+  onRevise: () => void;
 }>) {
   const t = useT();
   const candidate = version !== null && version.status === "candidate";
@@ -543,7 +569,11 @@ export function VoiceResultScene({
           ) : undefined
         }
         onGo={onContinue}
-      />
+      >
+        <Button variant="ghost" onClick={onRevise}>
+          {t("ob.conv.voice.revise")}
+        </Button>
+      </WayOnward>
     </VoiceScene>
   );
 }

@@ -170,6 +170,15 @@ function boardHeading(
       ),
     };
   }
+  // A build that did not finish, or is waiting on budget, is the room's own
+  // headline: left under "teach me how you write" the reader takes the dossier
+  // below for the result and never learns nothing was built.
+  if (state.phase === "vo.result" && state.lastBuildStatus === "failed") {
+    return { eyebrow, title: t("ob.conv.build.failed") };
+  }
+  if (state.phase === "vo.result" && state.lastBuildStatus === "deferred") {
+    return { eyebrow, title: t("ob.conv.build.deferred") };
+  }
   return {
     eyebrow,
     title: t("ob.conv.voice.sceneTitle"),
@@ -280,6 +289,7 @@ function VoiceSurface({
         loading={build.builtVersion.isPending}
         version={build.builtVersion.data ?? null}
         onContinue={() => dispatch({ type: "VOICE_DONE" })}
+        onRevise={() => dispatch({ type: "VOICE_REVISE" })}
       />
     );
   }

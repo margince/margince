@@ -19,6 +19,7 @@ import {
   initialConversationState,
 } from "./conversation-machine";
 import { InviteAct } from "./invite-act";
+import { PrefsAct } from "./prefs-act";
 import { restorePlan, type VoiceRestoreProbe } from "./restore";
 import { TeamAct } from "./team-act";
 import type { WizardPersistInput } from "./use-wizard-state";
@@ -116,8 +117,9 @@ function actCheckpoint(
   // company confirmation on the member path) shows both mail and LinkedIn at
   // once, so there is nothing left behind a reload could strand — the
   // checkpoint fires on arrival, unlike voice which fires on departure.
-  // Finishing is not here either: the team act and the connect act each
-  // write step "complete" themselves before they move.
+  // Finishing is not here either: the connect act records how it left (a
+  // mailbox connected or skipped) before it moves, and the preferences act
+  // writes step "complete" itself before the handoff.
   if (
     (prev === "vo.result" ||
       prev === "vo.skipped" ||
@@ -386,15 +388,13 @@ function CurrentAct({
     case "invite":
       return <InviteAct state={state} dispatch={dispatch} />;
     case "team":
-      return <TeamAct state={state} dispatch={dispatch} persist={persist} />;
-    case "connect":
+      return <TeamAct state={state} dispatch={dispatch} />;
+    // Every journey ends on the same last word, and the act that asked it
+    // plays the handoff.
+    case "prefs":
     case "done":
-      // A journey can end two ways, and the act that ended it plays the
-      // handoff: the team act after a declined invite, the connect act for
-      // everything else.
-      if (state.phase === "tm.done") {
-        return <TeamAct state={state} dispatch={dispatch} persist={persist} />;
-      }
+      return <PrefsAct state={state} dispatch={dispatch} persist={persist} />;
+    case "connect":
       return (
         <ConnectAct
           state={state}

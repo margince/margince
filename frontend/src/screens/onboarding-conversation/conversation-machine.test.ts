@@ -142,8 +142,12 @@ describe("conversationReducer happy path", () => {
       linkedinStatus: "connected",
     });
 
+    // Leaving connect is not the end: every path closes on the preferences
+    // act, and only its own move is the terminal.
     state = run([{ type: "CONNECT_DONE" }], state);
-    expect(state).toMatchObject({ act: "done", phase: "cn.done" });
+    expect(state).toMatchObject({ act: "prefs", phase: "pf.ask" });
+    state = run([{ type: "PREFS_DONE" }], state);
+    expect(state).toMatchObject({ act: "done", phase: "pf.done" });
   });
 
   it("records a failed read as a failure outcome and allows the manual path out", () => {
@@ -185,12 +189,40 @@ describe("conversationReducer happy path", () => {
     expect(conversationReducer(state, { type: "CONNECT_DONE" })).toBe(state);
 
     state = run([{ type: "TEAM_DONE" }], state);
-    expect(state).toMatchObject({ act: "done", phase: "tm.done" });
+    expect(state).toMatchObject({ act: "prefs", phase: "pf.ask" });
     expect(state.thread.at(-1)).toMatchObject({
       kind: "outcome",
       i18nKey: "ob.conv.team.done",
       tone: "success",
     });
+  });
+
+  it("sends a succeeded build back to collecting on revise, corpus kept, and refuses it for any other outcome", () => {
+    const built = run([
+      { type: "START", memberPath: false },
+      { type: "READ_STARTED", readId: "r1" },
+      { type: "READ_TERMINAL", readId: "r1", status: "ready" },
+      { type: "REVIEW_READY" },
+      { type: "COMPANY_CONFIRMED" },
+      { type: "INVITE_ACCEPTED" },
+      { type: "BUILD_STARTED", buildId: "b1" },
+      { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
+    ]);
+    const revised = conversationReducer(built, { type: "VOICE_REVISE" });
+    expect(revised).toMatchObject({ act: "voice", phase: "vo.collecting" });
+    expect(revised.thread.at(-1)).toMatchObject({
+      kind: "user",
+      i18nKey: "ob.conv.voice.revise",
+    });
+    // A failed build retries and a deferred one resumes; neither is revised.
+    const failed = run(
+      [
+        { type: "BUILD_STARTED", buildId: "b2" },
+        { type: "BUILD_TERMINAL", buildId: "b2", status: "failed" },
+      ],
+      revised,
+    );
+    expect(conversationReducer(failed, { type: "VOICE_REVISE" })).toBe(failed);
   });
 
   it("lets the voice act be skipped and still reach connect", () => {
@@ -365,8 +397,10 @@ describe("member path", () => {
     }
     const atInbox = conversationReducer(state, { type: "LINKEDIN_SKIPPED" });
     expect(atInbox).toMatchObject({ act: "connect", phase: "cn.consent" });
-    const done = conversationReducer(atInbox, { type: "CONNECT_DONE" });
-    expect(done).toMatchObject({ act: "done", phase: "cn.done" });
+    const prefs = conversationReducer(atInbox, { type: "CONNECT_DONE" });
+    expect(prefs).toMatchObject({ act: "prefs", phase: "pf.ask" });
+    const done = conversationReducer(prefs, { type: "PREFS_DONE" });
+    expect(done).toMatchObject({ act: "done", phase: "pf.done" });
   });
 });
 

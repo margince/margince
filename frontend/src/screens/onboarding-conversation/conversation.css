@@ -798,6 +798,149 @@
   max-width: 58rem;
 }
 
+/* The collect scene keeps a second column, so it takes the board's measure. */
+.ob-voice-scene-wide {
+  max-width: 74rem;
+}
+
+/* The intake on the left, the distilling panel beside it: the reader adds
+   writing and watches it taken in, in the same glance. One column once the
+   pane cannot hold two without breaking the panel's lines mid-phrase. */
+.ob-voice-collect {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.ob-voice-collect-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@container ob-scene (max-width: 44rem) {
+  .ob-voice-collect {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- the distilling panel ---- */
+
+.ob-distill {
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 16rem;
+  padding: var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background: var(--bgElevated);
+  overflow: hidden;
+}
+
+/* The eyebrow's own type comes from `Eyebrow`; this only seats the pulse
+   beside it and lends it the agent's colour, because what the panel reads out
+   is the agent taking material in. */
+.ob-distill-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--aiText);
+}
+
+.ob-distill-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--ai);
+  animation: ob-distill-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ob-distill-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ob-distill-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Newest fully lit at the bottom, each older line a step fainter: the eye
+   reads the panel as a stream without any of it moving. */
+.ob-distill-item {
+  transition: opacity 0.6s ease;
+}
+
+.ob-distill-item[data-age="1"] {
+  opacity: 0.78;
+}
+
+.ob-distill-item[data-age="2"] {
+  opacity: 0.58;
+}
+
+.ob-distill-item[data-age="3"] {
+  opacity: 0.4;
+}
+
+.ob-distill-item[data-age="4"] {
+  opacity: 0.26;
+}
+
+.ob-distill-evidence {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  font-style: italic;
+  line-height: var(--lh-relaxed);
+}
+
+/* The eye's anchors in a line, not findings: the accent pair rather than the
+   agent's indigo, because nothing has been decided about these words. */
+.ob-distill-evidence mark {
+  padding-inline: var(--space-1);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--accentText);
+  font-style: normal;
+}
+
+.ob-distill-hears {
+  margin: 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+/* What the agent has heard so far — its reading, so its colour. */
+.ob-distill-hears b {
+  color: var(--aiText);
+  font-weight: var(--fw-semibold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-distill-pulse {
+    animation: none;
+  }
+
+  .ob-distill-item {
+    transition: none;
+  }
+}
+
 .ob-voice-scene h2,
 .ob-voice-building h2 {
   margin: 0;
@@ -1545,6 +1688,14 @@
   opacity: 0.55;
 }
 
+/* The same missing app, seen by the reader who can supply it: dashed for the
+   same honest reason, but a button again, because pressing it opens the form
+   that fixes it rather than a page that explains it. */
+.ob-connect-card[data-state="setup"] {
+  border-style: dashed;
+  background: var(--bgPage);
+}
+
 /* The way out of the state, in the CTA's slot and its voice: the reader who
    can fix this is one link away from where it is fixed. */
 .ob-connect-card-setup {
@@ -1622,13 +1773,6 @@
   font-family: var(--f-body);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
-}
-
-/* Sits at the foot of the scene now, after both sections — the same
-   section-to-section gap the headings above it use, not the tight one it
-   used to need wedged between the mailbox grid and the network heading. */
-.ob-connect-skip-row {
-  margin: var(--space-5) 0 0;
 }
 
 /* ---- the connect dialog: one provider's ask, its own surface ---- */
@@ -3263,4 +3407,34 @@
 .ob-conv-field input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
+}
+
+/* ---- the preferences act: the last word before the app ---- */
+
+.ob-prefs-scene {
+  max-width: 48rem;
+  gap: var(--space-5);
+}
+
+.ob-prefs-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background: var(--bgElevated);
+}
+
+.ob-prefs-section h3 {
+  margin: 0;
+  color: var(--textPrimary);
+  font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
+}
+
+.ob-prefs-lead {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
 }

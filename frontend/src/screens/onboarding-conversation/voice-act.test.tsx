@@ -791,7 +791,7 @@ describe("the voice act's surface/rail split", () => {
     expect(bar).not.toBeNull();
     expect(
       within(bar as HTMLElement).getByRole("button", {
-        name: "That is my voice",
+        name: "That is me",
       }),
     ).toBeTruthy();
   });

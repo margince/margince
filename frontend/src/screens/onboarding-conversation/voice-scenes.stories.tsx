@@ -54,6 +54,12 @@ const MANIFEST: readonly CorpusManifestEntry[] = [
     keptWords: 2840,
     inputWords: 2840,
     transcript: false,
+    lines: [
+      "Let us move the kickoff to Thursday so the data team can actually join.",
+      "I have attached the revised offer with the two changes we discussed on the call.",
+      "Short answer: yes, but only if the migration finishes before the quarter closes.",
+      "Happy to walk your finance team through the pricing whenever suits them.",
+    ],
   },
   {
     ref: "src-2",
@@ -61,6 +67,7 @@ const MANIFEST: readonly CorpusManifestEntry[] = [
     keptWords: 1380,
     inputWords: 4210,
     transcript: true,
+    lines: [],
   },
 ];
 
@@ -380,6 +387,7 @@ function result(
         loading={loading}
         version={built}
         onContinue={() => {}}
+        onRevise={() => {}}
       />
     </StoryProviders>
   );

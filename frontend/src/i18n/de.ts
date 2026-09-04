@@ -4592,7 +4592,7 @@ export const de = {
   "ob.s4.capturedTitle": "Postfach verbunden",
   "ob.s4.capturedBody":
     "Dein CRM baut sich selbst. Neue Post landet hier, sobald der erste Durchlauf läuft, meist in Minuten.",
-  "ob.s4.enterCrm": "Ins CRM",
+  "ob.s4.enterCrm": "Weiter",
   "ob.s4.connectFailed": "Dieses Postfach ließ sich nicht verbinden",
   "ob.s4.notNow": "Nicht jetzt",
 
@@ -4821,6 +4821,12 @@ export const de = {
   "ob.conv.voice.resultSubNoSample":
     "Dein Korpus reicht noch nicht für ein Beispiel. Das hat der Aufbau gelernt. Füg Quellen hinzu.",
   "ob.conv.voice.resultContinue": "Das bin ich",
+  "ob.conv.voice.revise": "Nicht ganz ich — mehr Text hinzufügen",
+  "ob.conv.voice.distilling": "Destilliert",
+  "ob.conv.voice.hears": "hört",
+  "ob.conv.voice.hearsWords": "{words} eigene Wörter aus {sources} Quellen",
+  "ob.conv.voice.hearsBand": "bisher ein Korpus der Stufe {band}",
+  "ob.conv.voice.hearsRegister": "{words} Wörter im Register {register}",
   "ob.conv.voice.sampleEyebrow": "Beispiel, nicht gesendet",
   "ob.conv.voice.sampleAnother": "Anderes Szenario",
   "ob.conv.voice.sampleSubjectLabel": "Betreff",
@@ -4903,7 +4909,14 @@ export const de = {
     "LinkedIn autorisiert. Deine Kontakte werden synchronisiert, sobald die App freigegeben ist.",
   "ob.conv.linkedin.skipped":
     "LinkedIn \u00fcbersprungen. Du kannst es jederzeit in den Einstellungen verbinden.",
-  "ob.conv.connect.skip": "Verbinden vorerst überspringen",
+  "ob.conv.connect.skip": "Ohne Postfach weiter",
+  "ob.conv.connect.continue": "Weiter",
+  "ob.conv.connect.mailboxNeeded":
+    "Ein Postfach fehlt noch: Mail ist, was gelesen und entworfen wird. Verbinde oben eines, oder gehe vorerst ohne weiter.",
+  "ob.conv.connect.setupCta": "einrichten →",
+  "ob.conv.connect.dialogHeadlineApp": "{name}-App registrieren",
+  "ob.conv.connect.appDialogIntro":
+    "Postfächer verbinden sich über eine OAuth-App, die deiner Organisation gehört. Lege eine in der {name}-Konsole an, trage dort die Redirect-URIs unten ein und füge hier Client-ID und Secret ein.",
 
   // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
   // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
@@ -4911,6 +4924,7 @@ export const de = {
   "ob.rail.confirm": "Bestätigen",
   "ob.rail.voice": "Stimme",
   "ob.rail.connect": "Verbinden",
+  "ob.rail.prefs": "Einstellungen",
 
   "ob.conv.invite.title": "Wirst du selbst in Margince arbeiten?",
   "ob.conv.invite.body":
@@ -4936,8 +4950,17 @@ export const de = {
   "ob.conv.team.finish": "Einrichtung abschließen",
   "ob.conv.team.done":
     "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
-  "ob.conv.team.persistFailed":
-    "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuch es noch einmal oder schließe später in den Einstellungen ab.",
+  "ob.conv.prefs.title": "Zum Schluss ein paar Einstellungen.",
+  "ob.conv.prefs.body":
+    "Alles hier ist aus dem vorbelegt, was schon hinterlegt ist, und lässt sich später in den Einstellungen ändern. Drücke Fertig, wenn alles stimmt.",
+  "ob.conv.prefs.reportingTitle": "Wie die Zahlen berichtet werden",
+  "ob.conv.prefs.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
+  "ob.conv.prefs.autonomyTitle": "Was es eigenständig ändern darf",
+  "ob.conv.prefs.autonomyBody":
+    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
+  "ob.conv.prefs.done": "Fertig",
+  "ob.conv.prefs.persistFailed":
+    "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuche es noch einmal oder schließe sie später in den Einstellungen ab.",
 
   // --- das Tor: der erste Screen nach der Anmeldung ----------------------
   // Eine Frage und sonst nichts. Niemand soll das ganze Werkzeug auf dem
@@ -5043,7 +5066,6 @@ export const de = {
   // zeigen, die wie ein Ergebnis aussieht.
 
   // --- die Übergabe in die App ------------------------------------------
-  "ob.enter.cta": "Margince öffnen",
   "ob.enter.assembling": "Deine Organisation wird zusammengestellt",
 
   // --- das Zurücklesen des Postfachs -------------------------------------
@@ -5092,7 +5114,7 @@ export const de = {
     "Ich konnte das Lesen nicht stoppen: {detail} Versuch es erneut — es läuft in der Zwischenzeit weiter.",
   "ob.backread.detailUnavailable": "Etwas ist unerwartet schiefgelaufen.",
   "ob.backread.cancel": "Lesen stoppen",
-  "ob.backread.explore": "In der Zeit Margince erkunden",
+  "ob.backread.explore": "Weiter, während gelesen wird",
   "ob.backread.skip": "Verlauf jetzt nicht lesen",
 
   "auth.title": "Margince",

@@ -4,11 +4,13 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useCanWrite } from "../../app/capability";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../common";
+import { OAuthAppForm, type Vendor } from "../oauth-app";
 import { OvernightGrantChoice } from "../overnight-grant";
 import { ConnectDialog } from "./connect-dialog";
 import { WayOnward } from "./way-onward";
@@ -124,7 +126,9 @@ type ConnectBlocker = Exclude<ProviderAvailability["reason"], "ready">;
 
 // What a blocked card says, and whether Settings is where it gets fixed. A
 // deployment that does not serve a provider at all is nobody's setting, so it
-// offers no link that would lead to an empty form.
+// offers no link that would lead to an empty form. A missing app is the one
+// blocker a reader who may register apps fixes from the card itself
+// (`mailCardState`); the Settings link is for everyone else.
 const BLOCKER_COPY: Readonly<
   Record<ConnectBlocker, { body: MessageKey; settings: boolean }>
 > = {
@@ -175,18 +179,16 @@ export function ConnectScene({
   dialogShowsResult,
   dialogPanel,
   returnPanel,
-  onSkip,
-  skipDisabled,
+  onFinish,
+  finishing,
   wantsOvernight,
   onWantsOvernightChange,
   overnightFailed,
-  showSkip,
   linkedinStatus,
   onLinkedinConnect,
   onLinkedinSkip,
   linkedinPending,
   linkedinError,
-  onEnter,
 }: Readonly<{
   /** The provider whose dialog is open; null while none is chosen. */
   provider: MailProvider | null;
@@ -210,8 +212,14 @@ export function ConnectScene({
    * finding, just not one this tab can vouch for having just requested.
    */
   returnPanel: ReactNode;
-  onSkip: () => void;
-  skipDisabled: boolean;
+  /**
+   * Leaves the step, saying how: `skipped` is true only when no mailbox is
+   * connected and the reader chose to go on without one. The scene decides
+   * which of the two it is asking for, because the roster it reads is the
+   * one fact that tells them apart.
+   */
+  onFinish: (skipped: boolean) => void;
+  finishing: boolean;
   /** The rep's preselected answer to the overnight question. Owned by the act,
    * because that is where it rides along with the connect the step performs —
    * this scene only asks it. */
@@ -220,28 +228,29 @@ export function ConnectScene({
   /** The answer could not be recorded. The step completed anyway, so this says
    * so rather than blocking — the question is askable again in Settings. */
   overnightFailed: boolean;
-  /** Once consent has returned, skipping is no longer a true option. */
-  showSkip: boolean;
   linkedinStatus: LinkedinStatus;
   onLinkedinConnect: (profileUrl: string) => void;
   onLinkedinSkip: () => void;
   linkedinPending: boolean;
   linkedinError: string | null;
-  /**
-   * Present once the act itself has reached `cn.done` — mail is connected
-   * (or its skip recorded) and there is nothing left to gate on. Absent
-   * otherwise, so the pinned bar below has nothing to render while the
-   * scene's real work (picking a provider, resolving LinkedIn) is still
-   * open.
-   */
-  onEnter?: () => void;
 }>) {
   const t = useT();
   const mailRoster = useConnectedMailProviders();
   const anyMailConnected = MAIL_PROVIDERS.some((key) =>
     mailRoster.providers.has(ROSTER_PROVIDER[key]),
   );
-  const openCopy = provider ? PROVIDER_COPY[provider] : null;
+  // Whether this reader may register the organization's OAuth app. The same
+  // grant the Settings card checks, so a card that offers the form here can
+  // never offer one the server would refuse.
+  const canRegisterApp = useCanWrite("capture_settings", "update");
+  // The open provider's app is missing and this reader can supply it: the
+  // dialog asks for the app first. Once stored the roster re-reads, the
+  // blocker clears, and the same dialog becomes the provider's connect ask.
+  const openVendor = vendorOf(provider);
+  const openAppSetup =
+    openVendor !== null &&
+    canRegisterApp &&
+    mailRoster.blockers.get(ROSTER_PROVIDER[openVendor]) === "app_missing";
 
   return (
     <div className="ob-scene ob-connect">
@@ -266,7 +275,12 @@ export function ConnectScene({
 
       <div className="ob-connect-grid">
         {MAIL_PROVIDERS.map((key) => {
-          const card = mailCardState(key, mailRoster, anyMailConnected);
+          const card = mailCardState(
+            key,
+            mailRoster,
+            anyMailConnected,
+            canRegisterApp,
+          );
           return (
             <ConnectorCard
               key={key}
@@ -281,7 +295,10 @@ export function ConnectScene({
               // must not be clickable: opening it could connect a second
               // mailbox the still-loading (or failed) fetch just hasn't
               // reported yet.
-              disabled={card.state !== "idle" || !mailRoster.verified}
+              disabled={
+                !(card.state === "idle" || card.state === "setup") ||
+                !mailRoster.verified
+              }
               onOpen={() => onPick(key)}
             />
           );
@@ -324,67 +341,188 @@ export function ConnectScene({
         error={linkedinError}
       />
 
-      {/* The escape from the whole step, offered only once both sections
-          (mailbox, then network) have been seen — never partway down with a
-          section still unread below it. Its own row above the continue bar
-          rather than a quiet chip inside that bar: the two live in the same
-          flex row there, which would read as a paired choice with skip and
-          "Enter Margince" as equal alternatives. Kept one row up, in the
-          small ghost button voice (bordered outline, no fill, no shadow)
-          against the primary CTA below, skip stays the one a reader has to
-          notice on purpose, not the one competing for their eye. */}
-      {showSkip && (
-        <p className="ob-connect-skip-row">
-          <Button
-            small
-            variant="ghost"
-            disabled={skipDisabled}
-            onClick={onSkip}
-          >
-            {t("ob.conv.connect.skip")}
-          </Button>
-        </p>
-      )}
-
       {provider && (
-        <ConnectDialog
-          open
+        <ProviderDialog
+          provider={provider}
+          appSetup={openAppSetup}
+          showsResult={dialogShowsResult}
+          returnPanel={returnPanel}
+          dialogPanel={dialogPanel}
           onClose={onDialogClose}
-          providerMarkKey={PROVIDER_MARKS[provider]}
-          // The result dialog names the provider plainly — `returnPanel`
-          // (OAuthReturnPanel) carries its own heading for what happened,
-          // so a second "access needed" headline above it would be both
-          // redundant and wrong: nothing is being asked for any more.
-          headline={
-            dialogShowsResult
-              ? openCopy
-                ? t(openCopy.name)
-                : ""
-              : openCopy
-                ? openCopy.dialogHeadline(t)
-                : ""
-          }
-          intro={
-            !dialogShowsResult && openCopy
-              ? t("ob.conv.connect.dialogIntro", { brings: t(openCopy.brings) })
-              : undefined
-          }
-        >
-          {dialogShowsResult ? returnPanel : dialogPanel}
-        </ConnectDialog>
-      )}
-
-      {/* The finish gate, pinned to the surface's own foot rather than a chip
-          in the thread below: the reader is done choosing on THIS panel, so
-          the action that leaves it belongs here too. Nothing left to gate on
-          once mail is connected, so the bar carries the action alone. */}
-      {onEnter && (
-        <WayOnward
-          label={t("ob.enter.cta")}
-          stillNeeded={(why) => why.join(" ")}
-          onGo={onEnter}
         />
       )}
+
+      <ConnectWayOnward
+        mailConnected={anyMailConnected}
+        rosterVerified={mailRoster.verified}
+        finishing={finishing}
+        onFinish={onFinish}
+      />
+    </div>
+  );
+}
+
+// The vendor whose OAuth app a mail card stands on; IMAP has none.
+function vendorOf(provider: MailProvider | null): Vendor | null {
+  return provider === "google" || provider === "microsoft" ? provider : null;
+}
+
+/**
+ * The open provider's dialog: the app form when the app is what is missing
+ * and this reader can supply it, otherwise the ask — or, once a proven trip
+ * has returned, its result. The result dialog names the provider plainly:
+ * `returnPanel` (OAuthReturnPanel) carries its own heading for what
+ * happened, so a second "access needed" headline above it would be both
+ * redundant and wrong, nothing being asked for any more.
+ */
+function ProviderDialog({
+  provider,
+  appSetup,
+  showsResult,
+  returnPanel,
+  dialogPanel,
+  onClose,
+}: Readonly<{
+  provider: MailProvider;
+  appSetup: boolean;
+  showsResult: boolean;
+  returnPanel: ReactNode;
+  dialogPanel: ReactNode;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const copy = PROVIDER_COPY[provider];
+  // A store in flight holds the dialog open the same way a connect in flight
+  // does: a success landing after the reader backed out would register an app
+  // against a "not now" the dialog already promised.
+  const [appSaving, setAppSaving] = useState(false);
+  const vendor = vendorOf(provider);
+  if (appSetup && vendor !== null) {
+    return (
+      <ConnectDialog
+        open
+        wide
+        onClose={() => {
+          if (!appSaving) {
+            onClose();
+          }
+        }}
+        providerMarkKey={PROVIDER_MARKS[provider]}
+        headline={t("ob.conv.connect.dialogHeadlineApp", {
+          name: t(copy.name),
+        })}
+        intro={t("ob.conv.connect.appDialogIntro", { name: t(copy.name) })}
+      >
+        <AppSetupPanel
+          vendor={vendor}
+          onDismiss={onClose}
+          onBusy={setAppSaving}
+        />
+      </ConnectDialog>
+    );
+  }
+  return (
+    <ConnectDialog
+      open
+      onClose={onClose}
+      providerMarkKey={PROVIDER_MARKS[provider]}
+      headline={showsResult ? t(copy.name) : copy.dialogHeadline(t)}
+      intro={
+        showsResult
+          ? undefined
+          : t("ob.conv.connect.dialogIntro", { brings: t(copy.brings) })
+      }
+    >
+      {showsResult ? returnPanel : dialogPanel}
+    </ConnectDialog>
+  );
+}
+
+/**
+ * The way on, pinned to the surface's own foot rather than a chip in the
+ * thread below: the reader is done choosing on THIS panel, so the action that
+ * leaves it belongs here too. It always presses; without a mailbox it names
+ * the gap, and the honest way past it stands beside it — worded for what it
+ * is, because LinkedIn may well be connected by now and "skip connecting"
+ * would then be false.
+ */
+function ConnectWayOnward({
+  mailConnected,
+  rosterVerified,
+  finishing,
+  onFinish,
+}: Readonly<{
+  mailConnected: boolean;
+  rosterVerified: boolean;
+  finishing: boolean;
+  onFinish: (skipped: boolean) => void;
+}>) {
+  const t = useT();
+  return (
+    <WayOnward
+      label={t("ob.conv.connect.continue")}
+      pending={finishing}
+      blockers={mailConnected ? [] : [t("ob.conv.connect.mailboxNeeded")]}
+      stillNeeded={(why) => why.join(" ")}
+      onGo={() => onFinish(false)}
+    >
+      {!mailConnected && (
+        <Button
+          variant="ghost"
+          // Held until the roster is read: recording "no mailbox" against a
+          // roster that has not answered yet could persist a fact that is
+          // not so.
+          disabled={finishing || !rosterVerified}
+          onClick={() => onFinish(true)}
+        >
+          {t("ob.conv.connect.skip")}
+        </Button>
+      )}
+    </WayOnward>
+  );
+}
+
+/**
+ * The missing app, registered from the card that found it missing rather than
+ * from a Settings page the reader would have to come back from. The form is
+ * the first run's own (`OAuthAppForm`); only the action row is this dialog's.
+ * Nothing here closes the dialog on success on purpose: the stored app clears
+ * the roster's blocker, and the open dialog turns into the connect ask.
+ */
+function AppSetupPanel({
+  vendor,
+  onDismiss,
+  onBusy,
+}: Readonly<{
+  vendor: Vendor;
+  onDismiss: () => void;
+  onBusy: (busy: boolean) => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="form-stack">
+      <OAuthAppForm
+        vendor={vendor}
+        onBusy={onBusy}
+        actions={({ needs, submit, pending }) => (
+          <>
+            {needs}
+            <div className="ob-connect-dialog-actions">
+              <Button variant="primary" pending={pending} onClick={submit}>
+                {t("oauthApp.store")}
+              </Button>
+              <button
+                type="button"
+                className="ob-connect-dialog-notnow"
+                disabled={pending}
+                onClick={onDismiss}
+              >
+                {t("ob.s4.notNow")}
+              </button>
+            </div>
+          </>
+        )}
+      />
     </div>
   );
 }
@@ -461,11 +599,15 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
  * card moot, and only then does a provider this installation cannot run get to
  * explain itself. Telling somebody to register a second vendor's OAuth app
  * when they have already connected their mail would be true and useless.
+ *
+ * A missing app is a fourth answer for the reader who can supply it: the card
+ * stays a button, and opening it asks for the app where they stand.
  */
 function mailCardState(
   key: MailProvider,
   roster: ConnectedMailRoster,
   anyMailConnected: boolean,
+  canRegisterApp: boolean,
 ): { state: CardState; brings: MessageKey; settingsLink: boolean } {
   if (roster.providers.has(ROSTER_PROVIDER[key])) {
     return {
@@ -482,6 +624,13 @@ function mailCardState(
     };
   }
   const blocker = roster.blockers.get(ROSTER_PROVIDER[key]);
+  if (blocker === "app_missing" && canRegisterApp && key !== "imap") {
+    return {
+      state: "setup",
+      brings: BLOCKER_COPY[blocker].body,
+      settingsLink: false,
+    };
+  }
   if (blocker) {
     return {
       state: "unavailable",
@@ -496,7 +645,7 @@ function mailCardState(
   };
 }
 
-type CardState = "idle" | "connected" | "blocked" | "unavailable";
+type CardState = "idle" | "connected" | "blocked" | "unavailable" | "setup";
 
 /**
  * One provider tile: a mark, the name, one line of what it gives, and a
@@ -514,7 +663,9 @@ type CardState = "idle" | "connected" | "blocked" | "unavailable";
  *
  * An "unavailable" tile is not a button at all. Nothing here can be operated
  * until somebody registers the organization's app, and the one thing a reader
- * can do about it is a link, which HTML does not allow inside a button.
+ * can do about it is a link, which HTML does not allow inside a button. A
+ * "setup" tile is that same missing app seen by a reader who can register it:
+ * a button again, whose dialog asks for the app before it asks for consent.
  */
 function ConnectorCard({
   markKey,
@@ -568,7 +719,9 @@ function ConnectorCard({
               <span className="ob-connect-card-cta">
                 {state === "connected"
                   ? t("ob.conv.connect.connectedCta")
-                  : t("ob.conv.connect.connectCta")}
+                  : state === "setup"
+                    ? t("ob.conv.connect.setupCta")
+                    : t("ob.conv.connect.connectCta")}
               </span>
             )}
       </span>

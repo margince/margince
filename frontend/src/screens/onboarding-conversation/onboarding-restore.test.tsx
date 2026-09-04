@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OnboardingScreen } from "../onboarding";
 
@@ -297,6 +298,16 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/connectors") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
+      // The preferences act asks what this seat may decide on its own; a seat
+      // nothing is routed to has no switches, and the act says nothing.
+      if (path.endsWith("/autonomy") && request.method === "GET") {
+        return jsonResponse({ data: [] });
+      }
+      // No grants: the reporting basis is an admin's to change, and these
+      // fixtures never claim to be one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture({ allow: {} }));
+      }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),
   );
@@ -465,10 +476,10 @@ describe("restore into the conversational shell", () => {
     expect(body.connect_skipped).toBe(true);
   });
 
-  // Leaving the team act is a FINISH: the row goes to "complete" before the
-  // handoff, so a reload after the write lands on the app rather than back in
-  // the journey.
-  it("skipping the team act completes setup before the handoff", async () => {
+  // Leaving the team act hands on to the preferences act, and THAT is the
+  // finish: the row goes to "complete" before the handoff, so a reload after
+  // the write lands on the app rather than back in the journey.
+  it("skipping the team act reaches the preferences act, whose Done completes setup before the handoff", async () => {
     const calls = stubApi({
       state: stateRow({
         step: "team",
@@ -483,6 +494,13 @@ describe("restore into the conversational shell", () => {
       await screen.findByRole("button", { name: "Skip for now" }),
     );
 
+    expect(
+      await screen.findByText("Last, a few preferences."),
+    ).toBeInTheDocument();
+    expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
+
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
@@ -492,7 +510,7 @@ describe("restore into the conversational shell", () => {
     expect(body.step).toBe("complete");
     // The handoff scene has the surface.
     await waitFor(() =>
-      expect(screen.queryByText("Invite the first user.")).toBeNull(),
+      expect(screen.queryByText("Last, a few preferences.")).toBeNull(),
     );
   });
 
@@ -687,7 +705,7 @@ describe("reload adoption of a persisted read", () => {
 });
 
 describe("finishing the connect act", () => {
-  it("persists completion BEFORE navigating; a failed write is narrated and retryable", async () => {
+  it("records how the step was left BEFORE moving on, and completion before navigating; a failed write is narrated and retryable", async () => {
     // The handoff plays a build scene before it navigates. This case is about
     // the ordering — completion recorded first, navigation only after — so it
     // takes the reduced-motion path, where the scene resolves on its first
@@ -710,26 +728,41 @@ describe("finishing the connect act", () => {
     const calls = stubApi(options);
     render(<OnboardingScreen />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Skip connecting for now/ }),
-    );
+    const without = await screen.findByRole("button", {
+      name: /Continue without a mailbox/,
+    });
+    await waitFor(() => expect(without).not.toBeDisabled());
+    await userEvent.click(without);
 
-    // The write failed: the failure is said out loud, nothing navigated.
+    // The write failed: the failure is said out loud, nothing moved on.
     expect(
       await screen.findByText(/I could not record the finish\. Try again\./),
     ).toBeTruthy();
     expect(window.location.hash).toBe("");
 
-    // The retry succeeds: completion lands, THEN the shell navigates.
+    // The retry succeeds: how the step was left lands, THEN the preferences
+    // act takes the surface.
     options.putStatus = undefined;
     await userEvent.click(
-      screen.getByRole("button", { name: /Skip connecting for now/ }),
+      screen.getByRole("button", { name: /Continue without a mailbox/ }),
     );
+    expect(
+      await screen.findByText("Last, a few preferences."),
+    ).toBeInTheDocument();
+    const left = requestsTo(calls, "/onboarding/state", "PUT");
+    const leftBody = (await left[left.length - 1].clone().json()) as Record<
+      string,
+      unknown
+    >;
+    expect(leftBody.step).toBe("connect");
+    expect(leftBody.connect_skipped).toBe(true);
+
+    // Done writes completion, THEN the shell navigates.
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => {
       expect(window.location.hash).toBe("#/home");
     });
     const writes = requestsTo(calls, "/onboarding/state", "PUT");
-    expect(writes.length).toBeGreaterThan(0);
     const body = (await writes[writes.length - 1].clone().json()) as Record<
       string,
       unknown
