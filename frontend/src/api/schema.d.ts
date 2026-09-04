@@ -516,7 +516,11 @@ export interface paths {
          * Merge this person into a target (non-lossy).
          * @description Merge A→B relinks A's emails/phones/relationships/activity links to B with zero
          *     orphaned FKs, archives A with `merged_into_id = B` (features/01 §1.3). One audit
-         *     transaction; reversible within audit.
+         *     transaction.
+         *
+         *     **Not reversible.** The audit trail records what happened; it does not undo it, and no
+         *     endpoint does — a merged dedupe pair answers `not_undoable`. B also keeps whatever it
+         *     took from A. Treat this as destructive and confirm before calling it.
          */
         post: operations["mergePerson"];
         delete?: never;
@@ -1486,8 +1490,12 @@ export interface paths {
          * Merge this organization into a target (non-lossy).
          * @description Merge A→B relinks A's domains, people-employment, deals, relationships and activity links to
          *     B with zero orphaned FKs, archives A with `merged_into_id = B`. Mirrors person merge
-         *     (features/01 §1.3). One audit transaction (action `merge`); reversible within audit. This is
+         *     (features/01 §1.3). One audit transaction (action `merge`). This is
          *     the org half of the `merge_records` MCP verb.
+         *
+         *     **Not reversible**, exactly as the person half is not: the audit trail records the merge,
+         *     nothing undoes it, a merged dedupe pair answers `not_undoable`, and B keeps what it took
+         *     from A. Treat this as destructive and confirm before calling it.
          */
         post: operations["mergeOrganization"];
         delete?: never;

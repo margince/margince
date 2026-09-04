@@ -3232,7 +3232,7 @@ export const vi = {
   "analytics.share.copyFailed":
     "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
   "analytics.share.done": "Xong",
-  "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
+  "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước cuộc gọi?",
   "review.ready": "Sẵn sàng",
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
@@ -7794,6 +7794,12 @@ export const vi = {
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
+  "worklist.pair.refused":
+    "Bạn không thể xử lý cặp này. Bạn phải sửa được cả hai bản ghi, nên quản trị viên hoặc trưởng nhóm kinh doanh sẽ xử lý.",
+  "worklist.pair.alreadySettled":
+    "Không xử lý được cặp này theo cách bạn chọn — có thể người khác đã quyết định trước, hoặc bản ghi đã thay đổi. Hãy tải lại danh sách.",
+  "worklist.pair.stewardOnly":
+    "Chỉ người sửa được cả hai bản ghi mới xử lý được — quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Chưa chuẩn bị",
   "worklist.pane.title": "Về bản ghi này",
   "worklist.pane.openRow": "Xem mục {position}, {title}, về ai",

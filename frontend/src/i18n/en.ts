@@ -3314,7 +3314,7 @@ export const en = {
   "analytics.share.copyFailed":
     "The link could not be copied. Select it above and copy it by hand.",
   "analytics.share.done": "Done",
-  "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "What should be checked before the call?",
   "review.ready": "Ready",
   "review.readyWithExceptions": "Ready, with notes",
@@ -7968,6 +7968,12 @@ export const en = {
   "worklist.pair.notDuplicate": "Not the same",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
+  "worklist.pair.refused":
+    "You cannot settle this pair. Both records have to be yours to change, so an admin or a sales lead can settle it.",
+  "worklist.pair.alreadySettled":
+    "This pair could not be settled the way you asked — somebody may have decided it first, or the records changed under you. Reload the list to see where it stands.",
+  "worklist.pair.stewardOnly":
+    "Only somebody who can change both records can settle this — an admin or a sales lead.",
   "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "About this record",
   "worklist.pane.openRow": "Show what {position}, {title}, is about",

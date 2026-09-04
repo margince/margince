@@ -715,13 +715,22 @@ jobs:
   # scope — which is why we run the scan in CI rather than let the app analyze
   # blind. The scan step is guarded on the SONAR_TOKEN secret: with no token it
   # is a clean no-op (green). Once the secret is present (it is, added
-  # 2026-07-06) the scan runs and posts the required "SonarCloud Code Analysis"
-  # check. Disable Automatic Analysis in SonarCloud → project → Administration →
+  # 2026-07-06) the scan runs and posts the "SonarCloud Code Analysis" check.
+  # Disable Automatic Analysis in SonarCloud → project → Administration →
   # Analysis Method so the two do not compete (the CI scan is the source of
-  # truth). This job is deliberately NOT gated by the `changes` path filter: the
-  # "SonarCloud Code Analysis" context is a required check, so it must post on
-  # every ready PR — a path-skipped job never reports and would block doc-only
-  # PRs forever. It does NOT re-run the suites: it downloads the coverage
+  # truth).
+  #
+  # This job is deliberately NOT gated by the `changes` path filter, and the
+  # reason is NOT that the context is required — it is not required anywhere
+  # (see the aggregate's own list below, and `ci` is the only required context
+  # on main). The reason is that an analysis is only worth reading if it covers
+  # every change: a path-skipped scan leaves main's stored verdict describing a
+  # tree that has moved on, and a stored analysis does not go missing when it
+  # stops being refreshed — it FREEZES, and every dashboard goes on reporting it
+  # as current. The coverage measurement is the same argument: new code is the
+  # diff, so a diff nothing scanned is new code nothing measured.
+  #
+  # It does NOT re-run the suites: it downloads the coverage
   # artifacts the integration fan-in (Go) and frontend (lcov) jobs already produced and
   # runs only the scanner, so there is no second Postgres/Redis/MinIO stack and
   # no duplicated test run.
@@ -731,8 +740,9 @@ jobs:
     # Runs LAST, after the jobs whose coverage it consumes. The condition admits
     # success OR skipped (not failure) for each, because the gates are
     # area-scoped: a frontend-only PR legitimately skips deterministic-gates +
-    # integration (and a backend-only PR skips frontend) yet SonarCloud must
-    # still post its required "SonarCloud Code Analysis" check. A skipped
+    # integration (and a backend-only PR skips frontend) yet the scan must
+    # still post, for the reason the job comment gives — an analysis that
+    # skipped a change is a frozen verdict, not an absent one. A skipped
     # upstream just means that area produced no coverage artifact — and on a
     # PR the scan proceeds without it, because new code there is the diff and
     # a diff that skipped an area has no lines in it for that area to cover.
@@ -1009,11 +1019,26 @@ jobs:
   #   integration-shards,
   #   integration-unit-coverage  — absorbed by the `integration` fan-in, which
   #                                already asserts on their results.
-  #   sonarcloud                 — not a required check (merge speed during heavy
-  #                                development). Listing it here would make it
+  #   sonarcloud                 — advisory, for merge speed during heavy
+  #                                development. Listing it here would make it
   #                                blocking by the back door.
   #   vuln, live-boot, uat       — advisory today, and deliberately still
   #                                advisory here. See below.
+  #
+  # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
+  # cannot answer it twice with different answers: `ci` — this job — is the ONE
+  # required context, from the `main-required-status-checks` ruleset. There is no
+  # classic branch protection at all. `main-required-ai-reviewers` names
+  # CodeRabbit and is DISABLED. Nothing else is required, SonarCloud included,
+  # and three comments in this file used to say otherwise (margince/margince#2544).
+  #
+  # A false reason is load-bearing in two directions, which is why the wrong
+  # version was worth correcting rather than deleting: somebody tidying this
+  # workflow could check the claim, find it untrue, and gate the sonar job by
+  # path — removing behaviour that is still wanted, for a reason the comment
+  # invited. And a reader learning what the merge gate covers was told Sonar was
+  # part of it. It is not: #2543's keyserver hang cancelled that job and the pull
+  # request stayed mergeable, because this aggregate alone decides.
   #
   # This list is EXACTLY the nine contexts the ruleset required before the
   # aggregate replaced them, and that equality is the point: this change moves

@@ -299,6 +299,7 @@ You don't have to remember these — a fitness test fails your PR if you break o
 | Every audited mutation also emits an outbox event (in the same function) | `writeshape_test.go` |
 | `audit_log` / `event_outbox` are written only through `storekit` | `tableownership_test.go` |
 | A by-id UPDATE of a versioned row carries a concurrency guard | `updateguard_test.go` |
+| A by-id write of a row that can be archived refuses one, or says it reaches one on purpose | `writeliveness_test.go` |
 | The `audit_log` `action`/`actor_type` CHECK sets equal their Go enums | `enumsync_test.go` |
 | A comment credits row-level security with a guarantee no schema in this tree carries | `rlsclaims_test.go` |
 | Errors are classified by SQLSTATE, never `Error()` text | `errmatch_test.go` |
@@ -317,6 +318,11 @@ You don't have to remember these — a fitness test fails your PR if you break o
   `Validate` fail at the write, which is where you want to find out.
 - **Bind a `correlation_id`** on any write path the HTTP/runner middleware doesn't cover (a bespoke
   background job).
+- **Pick a side on liveness.** `auth.EnsureWritableLive` is what a write that ADDS to a record owes —
+  archived means frozen. `auth.EnsureRetractable` is its twin for a write that REVOKES, VOIDS,
+  CANCELS or RETRACTS: an archived anchor must never freeze the cleanup its own retirement implies.
+  The two run the same probes and differ in which one a reader (and `writeliveness_test.go`) can see
+  you chose.
 
 ## Where the code lives
 
