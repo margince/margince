@@ -47299,6 +47299,9 @@ type ServerInterface interface {
 	// Put back the value a newer statement replaced.
 	// (POST /people/{id}/profile-fields/{field}/restore)
 	RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id Id, field PersonProfileFieldKey)
+	// Share a contact your mailbox created with the rest of the organization.
+	// (POST /people/{id}/publish)
+	PublishCapturedPerson(w http.ResponseWriter, r *http.Request, id Id)
 	// Ask the connected provider what is publicly known about this person.
 	// (POST /people/{id}/research)
 	RunPersonResearch(w http.ResponseWriter, r *http.Request, id Id)
@@ -50272,6 +50275,12 @@ func (_ Unimplemented) GetPersonProfileFields(w http.ResponseWriter, r *http.Req
 // Put back the value a newer statement replaced.
 // (POST /people/{id}/profile-fields/{field}/restore)
 func (_ Unimplemented) RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id Id, field PersonProfileFieldKey) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Share a contact your mailbox created with the rest of the organization.
+// (POST /people/{id}/publish)
+func (_ Unimplemented) PublishCapturedPerson(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68559,6 +68568,38 @@ func (siw *ServerInterfaceWrapper) RestorePersonProfileField(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// PublishCapturedPerson operation middleware
+func (siw *ServerInterfaceWrapper) PublishCapturedPerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishCapturedPerson(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RunPersonResearch operation middleware
 func (siw *ServerInterfaceWrapper) RunPersonResearch(w http.ResponseWriter, r *http.Request) {
 
@@ -77361,6 +77402,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/profile-fields/{field}/restore", wrapper.RestorePersonProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/publish", wrapper.PublishCapturedPerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/research", wrapper.RunPersonResearch)
