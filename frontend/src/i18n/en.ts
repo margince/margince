@@ -8299,6 +8299,11 @@ export const en = {
   "worklist.verb.pinFailed": "That row could not be pinned.",
   "worklist.verb.unpinFailed": "That row could not be unpinned.",
   "worklist.verb.completed": "Task done.",
+  "worklist.verb.dismiss": "Not now",
+  "worklist.verb.dismissed": "Set aside for a month.",
+  "worklist.verb.dismissUndo": "Undo",
+  "worklist.verb.dismissFailed": "That contact could not be set aside.",
+  "worklist.verb.dismissUndoFailed": "That contact could not be put back.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "That task could not be reopened.",
   // The frame states the fact and the source follows it, rather than the

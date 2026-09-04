@@ -105,8 +105,12 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 // Derived from the lanes rather than listed, so a fourth joins the check by
 // existing.
 func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
+	// `dismiss` joined this set when the worklist row grew a control for it:
+	// NudgeDismiss puts a lapsed contact aside through the person's own
+	// dismissal endpoint, which takes exactly the id a decay row carries.
 	performable := map[crmcontracts.AttentionItemActions]bool{
 		"complete": true, "snooze": true, "open": true, "acknowledge": true,
+		"dismiss": true,
 	}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},

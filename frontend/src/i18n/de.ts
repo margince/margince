@@ -8216,6 +8216,13 @@ export const de = {
   "worklist.verb.pinFailed": "Diese Zeile konnte nicht angeheftet werden.",
   "worklist.verb.unpinFailed": "Diese Zeile konnte nicht gelöst werden.",
   "worklist.verb.completed": "Aufgabe erledigt.",
+  "worklist.verb.dismiss": "Nicht jetzt",
+  "worklist.verb.dismissed": "Für einen Monat zurückgestellt.",
+  "worklist.verb.dismissUndo": "Rückgängig",
+  "worklist.verb.dismissFailed":
+    "Dieser Kontakt konnte nicht zurückgestellt werden.",
+  "worklist.verb.dismissUndoFailed":
+    "Dieser Kontakt konnte nicht zurückgeholt werden.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Diese Aufgabe konnte nicht wieder geöffnet werden.",
