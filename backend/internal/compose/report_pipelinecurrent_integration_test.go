@@ -18,6 +18,8 @@ package compose
 // production expression proves only that it was copied correctly.
 
 import (
+	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -231,4 +233,77 @@ func TestPipelineCurrentDetailCarriesTheHeadlinesInstant(t *testing.T) {
 	if got := wireInt(t, derivation.Aggregates, "base"); got != headline {
 		t.Errorf("detail recomputed to %d, want the headline's %d", got, headline)
 	}
+}
+
+// A drill-through says WHICH instant it converted at, and whether that was the
+// headline's or one of its own.
+//
+// The pin makes the two agree, but it cannot help a link minted before the key
+// existed — or one a reader saved. There is no way to recover the instant such
+// a link was made at, so recomputing is all that is left, and the answer has to
+// say it recomputed. Silence is the original defect arriving by another route:
+// figures that do not add up to the number above them, shown as though they do.
+func TestADerivationSaysWhetherItConvertedAtItsHeadlinesInstant(t *testing.T) {
+	e := setupForecast(t)
+	seedRate(t, e, "0.5", 1)
+	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
+
+	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
+	handle, ok := row["derivation_url"].(string)
+	if !ok || handle == "" {
+		t.Fatalf("no derivation handle on the converted row: %+v", row)
+	}
+
+	pinned := e.explainReport(e.Admin(), t, "pipeline-current", handle)
+	if pinned.AsOfPinned == nil || !*pinned.AsOfPinned {
+		t.Errorf("a freshly minted handle reports as_of_pinned %v — the mint is what "+
+			"puts the instant in it, so anything but true here means it never went in",
+			shownFlag(pinned.AsOfPinned))
+	}
+	if pinned.AsOf == nil || pinned.AsOf.IsZero() {
+		t.Errorf("the answer names no instant (%v) — which moment these figures were "+
+			"converted at is the question a reader doubting them is asking", pinned.AsOf)
+	}
+
+	// The same handle as a link minted before the key existed.
+	unpinned := e.explainReport(e.Admin(), t, "pipeline-current", withoutAsOf(t, handle))
+	if unpinned.AsOfPinned == nil || *unpinned.AsOfPinned {
+		t.Errorf("an unpinned handle reports as_of_pinned %v, want false — a reader "+
+			"cannot know the figures may have moved unless the answer says so",
+			shownFlag(unpinned.AsOfPinned))
+	}
+	// It still RESOLVES: refusing would break every drill-through anybody saved.
+	if len(unpinned.Rows) != 1 {
+		t.Errorf("an old link opened %d rows, want the one deal — saying the figures "+
+			"were recomputed is the fix, refusing to compute them is not",
+			len(unpinned.Rows))
+	}
+}
+
+// withoutAsOf strips the pinned instant from a handle, which is what a link
+// minted before that key looks like.
+func withoutAsOf(t *testing.T, handle string) string {
+	t.Helper()
+	parsed, err := url.Parse(handle)
+	if err != nil {
+		t.Fatalf("parsing the minted handle: %v", err)
+	}
+	q := parsed.Query()
+	if !q.Has(asOfKey) {
+		t.Fatalf("the handle carries no %s to strip, so this case would prove "+
+			"nothing about an unpinned one: %s", asOfKey, handle)
+	}
+	q.Del(asOfKey)
+	parsed.RawQuery = q.Encode()
+	return parsed.String()
+}
+
+// shownFlag renders an optional wire boolean as a reader sees it, so a failure
+// names true, false or absent rather than a pointer address.
+func shownFlag(v *bool) string {
+	if v == nil {
+		return "absent"
+	}
+	return strconv.FormatBool(*v)
 }

@@ -100,5 +100,7 @@ func (h reportHandlers) ExplainReport(w http.ResponseWriter, r *http.Request, re
 		TotalRows:            &outcome.TotalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
 		GeneratedAt:          &outcome.GeneratedAt,
+		AsOf:                 &outcome.AsOf,
+		AsOfPinned:           &outcome.AsOfPinned,
 	})
 }

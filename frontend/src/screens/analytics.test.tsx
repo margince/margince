@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { formatMoney, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 
 type Stage = components["schemas"]["Stage"];
 
@@ -393,6 +394,60 @@ describe("AnalyticsScreen", () => {
     // by/agg alone would explain the wrong slice.
     expect(derivationUrls[0]).toContain("stage_id=pl-s1");
     expect(derivationUrls[0]).toContain("by=stage_id");
+  });
+
+  // A link minted before the handle carried an instant. The figures were
+  // recomputed at a NEW moment, so a rate sheet effective in between makes them
+  // disagree with the number they explain — and this is opened by someone
+  // checking a figure they already doubt.
+  it("says the figures were recalculated when the link pinned no instant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        derivation: {
+          report: "deals-by-stage",
+          definition: "Sum over open deals",
+          plan: {},
+          columns: ["name"],
+          rows: [{ name: "Fleet retrofit" }],
+          as_of_pinned: false,
+        },
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    const explains = await screen.findAllByRole("button", { name: /Explain/ });
+    await userEvent.click(explains[0]);
+    expect(await screen.findByText(en["explain.mayHaveMoved"])).toBeTruthy();
+    // The rows are still shown: saying they were recomputed is the fix,
+    // withholding them is not.
+    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
+  });
+
+  // The ordinary case says nothing, because a caveat on every drill-through is
+  // a caveat nobody reads.
+  it("stays silent when the link pinned the headline's instant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        derivation: {
+          report: "deals-by-stage",
+          definition: "Sum over open deals",
+          plan: {},
+          columns: ["name"],
+          rows: [{ name: "Fleet retrofit" }],
+          as_of_pinned: true,
+        },
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    const explains = await screen.findAllByRole("button", { name: /Explain/ });
+    await userEvent.click(explains[0]);
+    await waitFor(() =>
+      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+    );
+    expect(screen.queryByText(en["explain.mayHaveMoved"])).toBeNull();
   });
 });
 

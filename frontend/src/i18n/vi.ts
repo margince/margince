@@ -249,6 +249,8 @@ export const vi = {
   "common.close": "Đóng",
 
   "explain.open": "Giải thích con số này",
+  "explain.mayHaveMoved":
+    "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng sẽ không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
   "explain.rate": "tỷ giá {rate} ngày {date}",
 

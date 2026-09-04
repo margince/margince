@@ -24454,6 +24454,25 @@ export interface components {
             excluded_by_permission?: number | null;
             /** Format: date-time */
             generated_at?: string;
+            /**
+             * Format: date-time
+             * @description The instant these figures were computed at — the moment any currency conversion read the
+             *     rate sheet, not the moment this response was assembled (`generated_at`).
+             *
+             *     When the handle pinned an instant this is the one the explained number was computed at, so
+             *     the detail reconciles to its headline. When it did not, this is a fresh reading and
+             *     `as_of_pinned` is false.
+             */
+            as_of?: string;
+            /**
+             * @description Whether the handle carried the instant the explained number was computed at.
+             *
+             *     False means the link predates that key, so these figures were recomputed at a NEW moment
+             *     and a rate sheet effective in between will make them disagree with the number they explain.
+             *     A reader opening a drill-through is checking a figure they already doubt, so a detail set
+             *     that quietly reconciles to something else is worse than none.
+             */
+            as_of_pinned?: boolean;
         };
         SearchResult: {
             /** @enum {string} */
