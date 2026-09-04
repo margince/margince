@@ -3241,9 +3241,19 @@ export const en = {
   "compose.scheduleTomorrow": "Tomorrow morning",
   "compose.scheduleMonday": "Monday morning",
   "compose.scheduleNow": "Send now instead",
-  "compose.purpose": "Consent purpose",
-  "compose.purposeHint":
-    "The send is allowed only if every recipient has granted consent for this purpose.",
+  "compose.why": "Why are you writing?",
+  "compose.whyHint":
+    "The record decides what is allowed; this says what you are doing so the answer can be checked against it.",
+  "compose.why.requestedFollowup": "They asked me to get in touch",
+  "compose.why.activeDeal": "About a deal we are working on",
+  "compose.why.quote": "A quote or proposal they asked for",
+  "compose.why.service": "Support for something they bought",
+  "compose.why.invoice": "About an invoice or a payment",
+  "compose.why.contract": "About their contract",
+  "compose.why.account": "About their account",
+  "compose.why.marketing": "Marketing",
+  "compose.derivedReply":
+    "This continues their own message, so it needs no reason from you.",
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
@@ -3303,7 +3313,7 @@ export const en = {
   "compose.emptyRecipients": "Add at least one recipient.",
   "compose.missingSubject": "Give this email a subject.",
   "compose.missingBody": "Write the message before sending it.",
-  "compose.missingPurpose": "Choose what this message is for.",
+  "compose.missingWhy": "Say why you are writing to them.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 

@@ -58,12 +58,16 @@ import {
 } from "./common";
 import { recordNamesIn, useOrganization360 } from "./company360";
 import {
+  asksWhy,
+  type CommunicationContext,
+  contextFor,
+} from "./compose-context";
+import {
   ConversationChoices,
   ThreadPane,
   useRecentConversations,
   useThreadMessages,
 } from "./composethread";
-import { useConsentPurposes } from "./consent";
 import { useRoster } from "./entityref";
 import { usePerson360 } from "./person360";
 import {
@@ -83,7 +87,6 @@ import "./compose.css";
 // and typed on the backend; this file only calls them.
 
 type Activity = components["schemas"]["Activity"];
-type ConsentPurpose = components["schemas"]["ConsentPurpose"];
 type EmailDraft = components["schemas"]["EmailDraft"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
@@ -1330,18 +1333,22 @@ function rejectionTarget(
 }
 
 // sharedUnsubscribeAhead predicts the refusal above from what is on the form.
-// Every purpose but the locked transactional one renders an unsubscribe link,
-// and that link is one addressee's own consent record, so a second addressee is
-// refused outright. This mirrors the server rule (which remains the authority)
-// only to move a certain refusal ahead of the irreversible click.
-const TRANSACTIONAL_PURPOSE = "transactional";
-
+// A marketing send renders an unsubscribe link, and that link is one
+// addressee's own consent record, so a second addressee is refused outright.
+// This mirrors the server rule (which remains the authority) only to move a
+// certain refusal ahead of the irreversible click.
+//
+// MARKETING, not "anything but transactional". The server keys this on the
+// category now (commsauthz.Category.CarriesUnsubscribe), because the old
+// purpose-key question had no answer for a message carrying no key — and a
+// reply carries none, so the looser test predicted a refusal for every reply
+// to two people.
 function sharedUnsubscribeAhead(
   to: string[],
   cc: string[],
-  purpose: string,
+  context: CommunicationContext | undefined,
 ): boolean {
-  if (purpose === "" || purpose === TRANSACTIONAL_PURPOSE) {
+  if (context !== "marketing") {
     return false;
   }
   const addressees = new Set(
@@ -1350,20 +1357,26 @@ function sharedUnsubscribeAhead(
   return addressees.size > 1;
 }
 
-// The purpose list the rep chooses from. The unset entry is a real OPTION
-// rather than the select's placeholder: a placeholder is only a face for an
-// unset value, and a rep who picked a purpose has to be able to come back to
-// none before sending. Its face stays the em dash the field has always shown —
-// a glyph, with no words to translate.
-function purposeOptions(
-  purposes: readonly ConsentPurpose[] | undefined,
-): SelectOption[] {
+// The categories a rep may claim, in the order a first message is usually
+// about. The unset entry is a real OPTION rather than the select's placeholder:
+// a placeholder is only a face for an unset value, and a rep who picked one has
+// to be able to come back to none before sending.
+//
+// The five subject-serving categories are absent, and not by omission — the
+// contract's enum excludes them, because a caller who could claim one could
+// dress marketing as a security warning and reach somebody who has objected.
+// They are the installation's own controller mail and nothing a rep composes.
+function contextOptions(t: ReturnType<typeof useT>): SelectOption[] {
   return [
     { value: "", label: "—" },
-    ...(purposes ?? []).map((purpose) => ({
-      value: purpose.key,
-      label: purpose.label,
-    })),
+    { value: "requested_followup", label: t("compose.why.requestedFollowup") },
+    { value: "active_deal_followup", label: t("compose.why.activeDeal") },
+    { value: "precontract_quote", label: t("compose.why.quote") },
+    { value: "customer_service", label: t("compose.why.service") },
+    { value: "invoice_or_payment", label: t("compose.why.invoice") },
+    { value: "contract_notice", label: t("compose.why.contract") },
+    { value: "account_notice", label: t("compose.why.account") },
+    { value: "marketing", label: t("compose.why.marketing") },
   ];
 }
 
@@ -1387,11 +1400,15 @@ async function sendFrom(args: {
     to: string[];
     cc?: string[];
     draft_ref?: string;
-    consent_purpose: string;
+    // OMITTED on a reply, deliberately. The engine resolves reply_to_inbound
+    // from the anchor, and a claim added on top could only agree with it or
+    // contradict it — and a contradiction is recorded as a claim the evidence
+    // does not carry.
+    communication_context?: CommunicationContext;
     scheduled_at?: string;
     scheduled_tz?: string;
   };
-  channelBody: { body: string; consent_purpose: string };
+  channelBody: { body: string; communication_context?: CommunicationContext };
   links: { entity_type: RelinkKind; entity_id: string }[];
 }) {
   if (args.isChannelReply) {
@@ -1451,11 +1468,22 @@ export function scheduleFields(local: string): {
 // about what, and the reader is left comparing the form against a button that
 // will not talk to them. Pressing it now names every field it is waiting for,
 // on the field itself.
-export type MissingField = "to" | "subject" | "body" | "purpose";
+export type MissingField = "to" | "subject" | "body" | "context";
 
 export function missingToSend(
   isChannelReply: boolean,
-  fields: { to: string[]; subject: string; body: string; purpose: string },
+  fields: {
+    to: string[];
+    subject: string;
+    body: string;
+    context: string;
+    // asksContext is false where the anchor already answers what this message
+    // is. A reply derives reply_to_inbound from the thread, so requiring the
+    // reader to restate it would block a send on a question nobody needs to
+    // answer — which is what the consent-purpose dropdown this replaces did on
+    // every reply.
+    asksContext: boolean;
+  },
 ): readonly MissingField[] {
   const missing: MissingField[] = [];
   // A channel resolves its own recipient and carries no subject, so neither is
@@ -1469,8 +1497,8 @@ export function missingToSend(
   if (fields.body.trim() === "") {
     missing.push("body");
   }
-  if (fields.purpose === "") {
-    missing.push("purpose");
+  if (fields.asksContext && fields.context === "") {
+    missing.push("context");
   }
   return missing;
 }
@@ -1789,12 +1817,16 @@ function MailOnlyFields({
 function MailSendNotices({
   to,
   cc,
-  purpose,
-}: Readonly<{ to: string[]; cc: string[]; purpose: string }>) {
+  context,
+}: Readonly<{
+  to: string[];
+  cc: string[];
+  context: CommunicationContext | undefined;
+}>) {
   const t = useT();
   return (
     <>
-      {sharedUnsubscribeAhead(to, cc, purpose) && (
+      {sharedUnsubscribeAhead(to, cc, context) && (
         <p className="t-caption" style={{ color: "var(--danger)" }}>
           {t("compose.multiRecipientWarning")}
         </p>
@@ -2286,7 +2318,6 @@ export function ComposeModal({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const purposes = useConsentPurposes();
   const voiceProfile = useVoiceProfile();
   // Which ENDPOINT the reply posts to is a question about the kind, not the
   // transport: every channel message goes to send-message whatever carried it,
@@ -2298,7 +2329,9 @@ export function ComposeModal({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [intent, setIntent] = useState("");
-  const [purpose, setPurpose] = useState("");
+  // What this message is, when the record does not already say. Empty until the
+  // reader answers, and never asked at all on a reply — see contextFor.
+  const [context, setContext] = useState<CommunicationContext | "">("");
   // The moment a rep chose to send at, as the browser's datetime-local gives
   // it: wall-clock text in THEIR zone, with no offset. It becomes an absolute
   // instant at submit — see scheduleFields.
@@ -2702,7 +2735,7 @@ export function ComposeModal({
         to,
         cc: cc.length ? cc : undefined,
         draft_ref: draftRef ?? undefined,
-        consent_purpose: purpose,
+        communication_context: claimedContext,
         ...scheduleFields(sendAt),
       };
       const { data, error, response } = await sendFrom({
@@ -2716,7 +2749,7 @@ export function ComposeModal({
         activityId: answering,
         isChannelReply,
         mail,
-        channelBody: { body, consent_purpose: purpose },
+        channelBody: { body, communication_context: claimedContext },
         links: composedLinks(
           { entityType, entityId },
           grounding,
@@ -2775,11 +2808,19 @@ export function ComposeModal({
   const refusal = refusalOf(send.error);
   const sendError =
     send.isError && refusal === null ? problemMessageOf(send.error, t) : null;
+  // What travels on the wire. The ONE place the claim is decided, so the mail
+  // and channel arms cannot drift into claiming different things about the same
+  // message.
+  const claimedContext = contextFor({
+    anchor: anchorActivity,
+    chosen: context,
+  });
   const missing = missingToSend(isChannelReply, {
     to,
     subject,
     body,
-    purpose,
+    context,
+    asksContext: asksWhy(anchorActivity),
   });
   // Whether the reader has ASKED to send yet. The fields say nothing until
   // then: a form that reports what is missing before anybody has tried is a
@@ -3071,24 +3112,38 @@ export function ComposeModal({
               />
             )}
 
-            <label className="t-body compose-check">
-              {t("compose.purpose")}
-              <Select
-                aria-label={t("compose.purpose")}
-                options={purposeOptions(purposes.data?.data)}
-                value={purpose}
-                aria-invalid={flagged.has("purpose") || undefined}
-                onChange={setPurpose}
-              />
-            </label>
-            <FieldNeed
-              show={flagged.has("purpose")}
-              need={t("compose.missingPurpose")}
-            />
-            <p className="t-caption">{t("compose.purposeHint")}</p>
+            {/* Asked only where the record does not already answer it. A reply
+            derives its category from the thread it answers, so the reader is
+            told what this message is rather than made to restate it — a
+            question with an obvious answer trains people to answer without
+            reading, which is how the dropdown this replaces ended up set to
+            whatever came first in the list. */}
+            {asksWhy(anchorActivity) ? (
+              <>
+                <label className="t-body compose-check">
+                  {t("compose.why")}
+                  <Select
+                    aria-label={t("compose.why")}
+                    options={contextOptions(t)}
+                    value={context}
+                    aria-invalid={flagged.has("context") || undefined}
+                    onChange={(value) =>
+                      setContext(value as CommunicationContext | "")
+                    }
+                  />
+                </label>
+                <FieldNeed
+                  show={flagged.has("context")}
+                  need={t("compose.missingWhy")}
+                />
+                <p className="t-caption">{t("compose.whyHint")}</p>
+              </>
+            ) : (
+              <p className="t-caption">{t("compose.derivedReply")}</p>
+            )}
 
             {!isChannelReply && (
-              <MailSendNotices to={to} cc={cc} purpose={purpose} />
+              <MailSendNotices to={to} cc={cc} context={claimedContext} />
             )}
             {sendUnavailable && (
               <p className="t-caption">{t("compose.sendUnavailable")}</p>

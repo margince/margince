@@ -3162,9 +3162,19 @@ export const vi = {
   "compose.scheduleTomorrow": "Sáng mai",
   "compose.scheduleMonday": "Sáng thứ Hai",
   "compose.scheduleNow": "Gửi ngay bây giờ",
-  "compose.purpose": "Mục đích chấp thuận",
-  "compose.purposeHint":
-    "Lượt gửi chỉ được phép nếu mọi người nhận đều đã chấp thuận cho mục đích này.",
+  "compose.why": "Vì sao bạn viết?",
+  "compose.whyHint":
+    "Hồ sơ quyết định điều gì được phép; phần này nói bạn đang làm gì để đối chiếu được.",
+  "compose.why.requestedFollowup": "Họ đã nhờ tôi liên hệ",
+  "compose.why.activeDeal": "Về một thương vụ đang tiến hành",
+  "compose.why.quote": "Báo giá hoặc đề xuất họ đã hỏi",
+  "compose.why.service": "Hỗ trợ cho thứ họ đã mua",
+  "compose.why.invoice": "Về hóa đơn hoặc thanh toán",
+  "compose.why.contract": "Về hợp đồng của họ",
+  "compose.why.account": "Về tài khoản của họ",
+  "compose.why.marketing": "Tiếp thị",
+  "compose.derivedReply":
+    "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
   "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email này?",
@@ -3218,7 +3228,7 @@ export const vi = {
   "compose.emptyRecipients": "Hãy thêm ít nhất một người nhận.",
   "compose.missingSubject": "Hãy đặt tiêu đề cho email này.",
   "compose.missingBody": "Hãy viết nội dung trước khi gửi.",
-  "compose.missingPurpose": "Hãy chọn mục đích của tin nhắn này.",
+  "compose.missingWhy": "Hãy cho biết vì sao bạn viết cho họ.",
   "compose.removeRecipient": "Gỡ {recipient}",
   "compose.actionFailed": "Yêu cầu thất bại. Hãy thử lại.",
 
