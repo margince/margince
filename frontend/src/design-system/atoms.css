@@ -185,12 +185,22 @@
   height: 46px;
   font-size: var(--fs-h2);
 }
-/* The mark of a record PAGE, the mock's 56px: the one picture in the head,
-   beside a display-size name. */
+/* The mark of a record PAGE: the one picture in the head, beside a name set
+   at the record rung. Sized to the reference's 72, which reads as the page's
+   own mark rather than as a large list avatar — at 56 beside a 44px name it
+   was the smaller of the two things naming the record. Squared to the pane's
+   radius, because at this size a chip's radius reads as a rounded photo. */
 .avatar-xl {
-  width: 56px;
-  height: 56px;
-  font-size: var(--fs-h2);
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-lg);
+  font-size: var(--fs-h1);
+}
+/* A round mark keeps its circle at every rung: a person is a portrait, an
+   organization is a tile. `.avatar-org` squares the small rungs and this one
+   is square already, so the rule that has to be stated is the round one. */
+.avatar-xl:not(.avatar-org) {
+  border-radius: var(--r-full);
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
