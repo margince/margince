@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SLOWEST_MEASURED_TEST_MS } from "../vitest.budget";
 import type { components } from "./api/schema";
 import {
   memoryStorage,
@@ -19,14 +20,21 @@ import {
 // lives above every screen: that suite mounts the page with a `tab` prop and can
 // never see the router decide.
 //
-// KNOWN GAP, #3675: these two cases pass alone and fail when another App suite
-// has run first. The person page then never leaves "Loading…" — the address is
-// right and the record's name resolves, so the /360 read is what does not
-// settle, and something above this file is holding a react-query cache across
-// suites that `renderApp`'s fresh client does not clear. It is not this file's
-// stubs: it reproduces on an unmodified tree. Until that is found, treat a
-// failure here as the leak rather than as a broken identity key, and check by
-// running this file alone.
+// WHY THIS FILE STATES ITS OWN BUDGETS.
+//
+// Each case mounts the whole App and then waits for a tab to become current,
+// which is two chained reads behind a full shell render — the record itself for
+// the header, then its /360 projection for the tabs. Measured on this machine:
+// ~500ms for the file alone, ~700-800ms with one other App suite beside it,
+// against Testing Library's un-overridden one-second default
+// (`ASYNC_UTIL_TIMEOUT_MS`). A quarter of a second of headroom is not a budget,
+// and `make check-fe` runs far more than one suite alongside it.
+//
+// This was read as a cache leaking across suites (#3675, #3971): the page sits
+// at "Loading…" and the /360 read looks like it never settles. It does settle —
+// lifting the waiter to 8s makes the same run pass, and the instrumented wait
+// completes in ~600ms with a sibling. What was missing was budget, not data,
+// and the diagnosis matters because the two want opposite fixes.
 
 type Person360 = components["schemas"]["Person360"];
 
@@ -130,6 +138,21 @@ function currentTab(): string {
   return on.textContent ?? "";
 }
 
+// The routed subtree has to mount the shell and answer two chained reads before
+// a tab can be current, so this states a budget that survives a loaded machine
+// rather than riding the default.
+const SETTLE_MS = 10_000;
+
+// A test may spend the SUM of its waiters' budgets without any one of them
+// failing, so its own ceiling has to cover that — and the suite's ceiling is
+// derived for tests that wait at the default. Both cases here wait twice, and
+// the allowance for the work BETWEEN the waits is the same measured figure the
+// suite ceiling uses, so the two rest on one measurement rather than on a round
+// number picked here. Without it these fail while a settle is still inside its
+// own budget, and the failure names the test rather than the read that was slow
+// (the arithmetic vitest.budget.ts records).
+const TWO_SETTLES_MS = SETTLE_MS * 2 + SLOWEST_MEASURED_TEST_MS;
+
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -147,32 +170,48 @@ afterEach(() => {
 });
 
 describe("the routed subtree's key", () => {
-  it("keeps the record's chrome while a tab change swaps the panel", async () => {
-    window.location.hash = "#/contacts/p-1/overview";
-    renderApp();
-    await waitFor(() => expect(currentTab()).toBe("Overview"));
-    const chromeBefore = recordHead();
-    const stripBefore = tabStrip();
+  it(
+    "keeps the record's chrome while a tab change swaps the panel",
+    async () => {
+      window.location.hash = "#/contacts/p-1/overview";
+      renderApp();
+      await waitFor(() => expect(currentTab()).toBe("Overview"), {
+        timeout: SETTLE_MS,
+      });
+      const chromeBefore = recordHead();
+      const stripBefore = tabStrip();
 
-    window.location.hash = "#/contacts/p-1/deals";
-    await waitFor(() => expect(currentTab()).toBe("Deals"));
+      window.location.hash = "#/contacts/p-1/deals";
+      await waitFor(() => expect(currentTab()).toBe("Deals"), {
+        timeout: SETTLE_MS,
+      });
 
-    // The same NODES, not merely equal markup: a remount would have replaced
-    // both, and every block between them would have re-animated with them.
-    expect(recordHead()).toBe(chromeBefore);
-    expect(tabStrip()).toBe(stripBefore);
-  });
+      // The same NODES, not merely equal markup: a remount would have replaced
+      // both, and every block between them would have re-animated with them.
+      expect(recordHead()).toBe(chromeBefore);
+      expect(tabStrip()).toBe(stripBefore);
+    },
+    TWO_SETTLES_MS,
+  );
 
-  it("still throws the page away when the record itself changes", async () => {
-    window.location.hash = "#/contacts/p-1/overview";
-    renderApp();
-    await waitFor(() => expect(currentTab()).toBe("Overview"));
-    const chromeBefore = recordHead();
+  it(
+    "still throws the page away when the record itself changes",
+    async () => {
+      window.location.hash = "#/contacts/p-1/overview";
+      renderApp();
+      await waitFor(() => expect(currentTab()).toBe("Overview"), {
+        timeout: SETTLE_MS,
+      });
+      const chromeBefore = recordHead();
 
-    // The control for the case above, and the reason the key exists at all: one
-    // person's screen must never be reconciled into another's, or the state it
-    // holds — an open drawer, a half-typed note — arrives on the wrong record.
-    window.location.hash = "#/contacts/p-2/overview";
-    await waitFor(() => expect(recordHead()).not.toBe(chromeBefore));
-  });
+      // The control for the case above, and the reason the key exists at all: one
+      // person's screen must never be reconciled into another's, or the state it
+      // holds — an open drawer, a half-typed note — arrives on the wrong record.
+      window.location.hash = "#/contacts/p-2/overview";
+      await waitFor(() => expect(recordHead()).not.toBe(chromeBefore), {
+        timeout: SETTLE_MS,
+      });
+    },
+    TWO_SETTLES_MS,
+  );
 });
