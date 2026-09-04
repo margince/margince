@@ -250,6 +250,8 @@ const withheldColumn = "_withheld"
 // A count that failed to parse answers ZERO, which the floor reads as below it
 // and withholds. Failing open here would serve a group whose size nothing
 // established.
+//
+//craft:ignore naked-any a driver returns a count as whichever integer width it chose, and reading it is the whole job of this function — naming one width here would be this code deciding what pgx returns
 func rowCount(v any) int {
 	switch n := v.(type) {
 	case int64:
