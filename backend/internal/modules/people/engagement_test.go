@@ -5,49 +5,89 @@ package people
 
 import (
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestEngagementOfReadsTheThreeStatesOffTheDirectionCounts(t *testing.T) {
+// Answered is earned by replying, not by receiving: a contact whose latest
+// message has no outbound after it reads as waiting however much traffic the
+// window holds, because one unprompted mail nobody answered is not a success.
+func TestEngagementOfReadsTheFourStatesOffWhoWroteLast(t *testing.T) {
 	t.Parallel()
+	base := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	at := func(daysLater int) *time.Time {
+		v := base.AddDate(0, 0, daysLater)
+		return &v
+	}
 	for _, tc := range []struct {
-		name     string
-		inbound  int
-		outbound int
-		want     Engagement
+		name string
+		rs   RelationshipStrength
+		want Engagement
 	}{
-		{"they wrote back", 2, 0, EngagementAnswered},
-		{"they wrote back after we chased", 1, 4, EngagementAnswered},
-		{"we wrote and heard nothing", 0, 3, EngagementNoReply},
-		{"nobody has written at all", 0, 0, EngagementUntried},
-		{"they wrote first and we never replied", 1, 0, EngagementAnswered},
+		{
+			"we replied to their latest mail",
+			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(1)},
+			EngagementAnswered,
+		},
+		{
+			"they wrote again after our reply",
+			RelationshipStrength{Inbound90d: 2, Outbound90d: 1, LastInbound: at(2), LastOutbound: at(1)},
+			EngagementWaiting,
+		},
+		{
+			"they wrote first and we never replied",
+			RelationshipStrength{Inbound90d: 1, LastInbound: at(0)},
+			EngagementWaiting,
+		},
+		{
+			"their mail and ours carry one timestamp",
+			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0)},
+			EngagementWaiting,
+		},
+		{
+			"we wrote and heard nothing",
+			RelationshipStrength{Outbound90d: 3, LastOutbound: at(0)},
+			EngagementNoReply,
+		},
+		{
+			"their reply aged out of the window and we chased since",
+			RelationshipStrength{Outbound90d: 1, LastInbound: at(-200), LastOutbound: at(0)},
+			EngagementNoReply,
+		},
+		{
+			"nobody has written at all",
+			RelationshipStrength{},
+			EngagementUntried,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := EngagementOf(RelationshipStrength{Inbound90d: tc.inbound, Outbound90d: tc.outbound})
-			if got != tc.want {
-				t.Fatalf("inbound=%d outbound=%d: got %q, want %q",
-					tc.inbound, tc.outbound, got, tc.want)
+			if got := EngagementOf(tc.rs); got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
 	}
 }
 
-// An answered contact outranks an untried one and an untried one outranks a
-// silent one — the order a rep triages in, and the reason untried sits in the
-// middle rather than last: on an account where everyone has gone quiet, the
-// person nobody has tried is the only move that is not another follow-up.
-func TestRankContactsOrdersAnsweredThenUntriedThenNoReply(t *testing.T) {
+// A contact waiting on our reply outranks one we answered, an answered one
+// outranks an untried one, and untried outranks silent — the order a rep
+// triages in. Untried sits above no-reply because on an account where everyone
+// has gone quiet, the person nobody has tried is the only move that is not
+// another follow-up.
+func TestRankContactsOrdersWaitingThenAnsweredThenUntriedThenNoReply(t *testing.T) {
 	t.Parallel()
-	silent := contactAt(t, "11111111-1111-4111-8111-111111111111", RelationshipStrength{Outbound90d: 5, Strength: 90})
+	inAt := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	outAt := inAt.Add(time.Hour)
+	silent := contactAt(t, "11111111-1111-4111-8111-111111111111", RelationshipStrength{Outbound90d: 5, LastOutbound: &outAt, Strength: 90})
 	untried := contactAt(t, "22222222-2222-4222-8222-222222222222", RelationshipStrength{Strength: 10})
-	answered := contactAt(t, "33333333-3333-4333-8333-333333333333", RelationshipStrength{Inbound90d: 1, Strength: 5})
+	answered := contactAt(t, "33333333-3333-4333-8333-333333333333", RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: &inAt, LastOutbound: &outAt, Strength: 5})
+	waiting := contactAt(t, "44444444-4444-4444-8444-444444444444", RelationshipStrength{Inbound90d: 1, LastInbound: &inAt, Strength: 1})
 
-	got := []ContactStrength{silent, untried, answered}
+	got := []ContactStrength{silent, untried, answered, waiting}
 	RankContacts(got)
 
-	want := []ids.PersonID{answered.PersonID, untried.PersonID, silent.PersonID}
+	want := []ids.PersonID{waiting.PersonID, answered.PersonID, untried.PersonID, silent.PersonID}
 	assertOrder(t, got, want)
 }
 
@@ -55,8 +95,10 @@ func TestRankContactsOrdersAnsweredThenUntriedThenNoReply(t *testing.T) {
 // the page would open on the one person whose next move needs a reason.
 func TestRankContactsPutsEngagementAboveScore(t *testing.T) {
 	t.Parallel()
-	strongSilent := contactAt(t, "11111111-1111-4111-8111-111111111111", RelationshipStrength{Outbound90d: 9, Strength: 99})
-	weakAnswered := contactAt(t, "22222222-2222-4222-8222-222222222222", RelationshipStrength{Inbound90d: 1, Strength: 1})
+	inAt := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	outAt := inAt.Add(time.Hour)
+	strongSilent := contactAt(t, "11111111-1111-4111-8111-111111111111", RelationshipStrength{Outbound90d: 9, LastOutbound: &outAt, Strength: 99})
+	weakAnswered := contactAt(t, "22222222-2222-4222-8222-222222222222", RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: &inAt, LastOutbound: &outAt, Strength: 1})
 
 	got := []ContactStrength{strongSilent, weakAnswered}
 	RankContacts(got)

@@ -75,6 +75,8 @@ func summarise(all []people.ContactStrength) crmcontracts.OrganizationCoverageSu
 	out := crmcontracts.OrganizationCoverageSummary{ContactsTotal: len(all)}
 	for _, c := range all {
 		switch people.EngagementOf(c.Strength) {
+		case people.EngagementWaiting:
+			out.Waiting++
 		case people.EngagementAnswered:
 			out.Answered++
 		case people.EngagementNoReply:
@@ -102,9 +104,10 @@ func (s *Service) fillBestWayIn(
 	copy(ranked, all)
 	people.RankContacts(ranked)
 	best := ranked[0]
-	// Nobody has answered and nobody is untried only when the account is all
-	// no-reply, and then there is no way IN to name — following up again is a
-	// decision the reader makes, not a route the page recommends.
+	// The top-ranked contact is no-reply only when every contact on the account
+	// is, since waiting, answered and untried all outrank it — and then there is
+	// no way IN to name: following up again is a decision the reader makes, not
+	// a route the page recommends.
 	if people.EngagementOf(best.Strength) == people.EngagementNoReply {
 		return nil
 	}

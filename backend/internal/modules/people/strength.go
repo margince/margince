@@ -56,12 +56,12 @@ type RelationshipStrength struct {
 	Outbound90d         int
 	ContributingIDs     []ids.ActivityID
 
-	// The two directions dated separately, because "they answered" and "we
-	// wrote and heard nothing" are opposite next moves and the counts above
-	// cannot tell them apart once both are non-zero: a contact who replied in
-	// March and was chased in August has inbound and outbound alike, and only
-	// the dates say which way the conversation is owed. EngagementOf reads the
-	// counts; a caller deciding whether a reply is outstanding reads these.
+	// The two directions dated separately, because the counts above cannot say
+	// who wrote LAST once both are non-zero: a contact who replied in March and
+	// was chased in August has inbound and outbound alike, and only the dates
+	// say which way the conversation is owed. EngagementOf reads the counts for
+	// the window and these dates for the direction that separates answered from
+	// waiting.
 	LastInbound  *time.Time
 	LastOutbound *time.Time
 	// LastInboundActivity is the message a follow-up would answer — the anchor

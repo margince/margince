@@ -1747,16 +1747,18 @@ export interface paths {
          *     would make every 360 pay for them.
          *
          *     **The default order is a recommendation, not an alphabet.** `recommended` puts
-         *     whoever has answered first, because they are the way in; then whoever nobody has
-         *     tried, because on an account where everyone has gone quiet they are the only move
-         *     that is not a fourth follow-up; then whoever we wrote to and heard nothing from.
-         *     Within a state the stronger relationship leads. This is the one ranking, shared
-         *     with the 360's section — a client that re-sorts is answering a different question
-         *     than the server did.
+         *     whoever is waiting on a reply from us first, because answering them is the one
+         *     move that is already owed; then whoever we replied to, because that conversation
+         *     is alive; then whoever nobody has tried, because on an account where everyone has
+         *     gone quiet they are the only move that is not a fourth follow-up; then whoever we
+         *     wrote to and heard nothing from. Within a state the stronger relationship leads.
+         *     This is the one ranking, shared with the 360's section — a client that re-sorts
+         *     is answering a different question than the server did.
          *
-         *     **Engagement is three states and they are not degrees of one thing.** `answered`
-         *     means they have written back inside the 90-day window. `no_reply` means we wrote
-         *     and heard nothing. `untried` means nobody has written to them at all. Untried and
+         *     **Engagement is four states and they are not degrees of one thing.** `waiting`
+         *     means their latest message has no reply from us. `answered` means we replied to
+         *     their latest message, inside the 90-day window. `no_reply` means we wrote and
+         *     heard nothing. `untried` means nobody has written to them at all. Untried and
          *     no-reply look alike in a roster and call for opposite next actions, which is why
          *     they are separate values rather than a boolean plus a date.
          *
@@ -19308,7 +19310,9 @@ export interface components {
         OrganizationCoverageSummary: {
             /** @description Every contact the caller may see at this account, not a page of them. */
             contacts_total: number;
-            /** @description Contacts who have written back inside the 90-day window. */
+            /** @description Contacts whose latest message we have not replied to. */
+            waiting: number;
+            /** @description Contacts whose latest message we replied to inside the 90-day window. */
             answered: number;
             /** @description Contacts we have written to with nothing back. */
             no_reply: number;
@@ -19453,17 +19457,24 @@ export interface components {
         };
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
-         *     score uses.
+         *     score uses. What decides between the two conversational states is who wrote
+         *     LAST, not whether both directions have traffic.
          *
-         *     `answered` — they have written back inside the window. The way in.
+         *     `waiting` — their latest message has no reply from us. They are waiting on us,
+         *     and answering is the obvious next move.
+         *     `answered` — we replied to their latest message. The conversation is current
+         *     from our side; the ball is with them.
          *     `no_reply` — we have written and had nothing back. Writing again is a decision.
          *     `untried` — nobody has written to them at all. Free to approach.
          *
-         *     Untried is deliberately not folded into no-reply: "never asked" and "asked and
-         *     ignored" look identical in a roster and call for opposite next actions.
+         *     Waiting is deliberately not folded into answered: one inbound mail nobody has
+         *     replied to is not a success, and showing it as one hides the account's most
+         *     urgent row. Untried is likewise not folded into no-reply: "never asked" and
+         *     "asked and ignored" look identical in a roster and call for opposite next
+         *     actions.
          * @enum {string}
          */
-        ContactEngagement: "answered" | "no_reply" | "untried";
+        ContactEngagement: "waiting" | "answered" | "no_reply" | "untried";
         OrganizationContact: {
             /** Format: uuid */
             person_id: string;
