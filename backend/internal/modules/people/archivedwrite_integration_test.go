@@ -198,3 +198,160 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 		t.Errorf("person.title = %q after refused applies, want unset", *title)
 	}
 }
+
+// The same refusal one layer down, in the STATEMENTS rather than at the gates.
+//
+// The four editable company columns are written by three paths, and each used
+// to rely entirely on a probe an entry point two or three frames up had taken.
+// A probe and its write are two statements with a window between them, and
+// these are the most contended columns in the product — so the rule is in the
+// statement now as well, where no future caller can arrive without it.
+//
+// Asserted against the writers directly, because no public path can reach them
+// on an archived company any more: the gates above refuse first. That is the
+// point — this is the second lock on a door the first one already holds, and a
+// test that went through the door would be testing the first lock again.
+// derefOrEmpty renders a nullable column for a failure message, so a refusal
+// that wrote anyway names the value rather than its address.
+func derefOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, orgID := e.seedEmployedPerson(ctx, t,
+		"Rune Aasen", "rune@haldenkraft.test", "Halden Kraft GmbH", "haldenkraft.test")
+
+	// Live first, so a statement that refused everything could not pass this.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		filled, err := writeOrgColumn(ctx, tx, orgID, columnIndustry, "Energietechnik", false)
+		if err != nil || !filled {
+			t.Errorf("filling industry on a LIVE company: filled=%v err=%v", filled, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("live write: %v", err)
+	}
+
+	if _, err := e.store.ArchiveOrganization(e.asArchiver(), orgID, nil); err != nil {
+		t.Fatalf("archive organization: %v", err)
+	}
+
+	// Every arm of the shared table, both authorities, on the retired row.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for _, tc := range []struct {
+			name      string
+			column    string
+			overwrite bool
+		}{
+			{"fill legal_name", columnLegalName, false},
+			{"fill address", columnAddress, false},
+			{"replace legal_name", columnLegalName, true},
+			{"replace industry", columnIndustry, true},
+			{"replace description", columnDescription, true},
+		} {
+			filled, err := writeOrgColumn(ctx, tx, orgID, tc.column, "Halden Kraft AS", tc.overwrite)
+			if err != nil {
+				t.Errorf("%s on an archived company: %v", tc.name, err)
+			}
+			if filled {
+				t.Errorf("%s wrote onto an archived company", tc.name)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("archived writes: %v", err)
+	}
+
+	// And the column is what it was before the archive, not what the refused
+	// writes carried: a statement that reported nothing while writing anyway
+	// would pass every assertion above.
+	var industry, legalName *string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT industry, legal_name FROM organization WHERE id = $1`, orgID).
+			Scan(&industry, &legalName)
+	}); err != nil {
+		t.Fatalf("reading the columns back: %v", err)
+	}
+	if industry == nil || *industry != "Energietechnik" {
+		t.Errorf("industry = %q, want the value written while the company was live", derefOrEmpty(industry))
+	}
+	if legalName != nil {
+		t.Errorf("legal_name = %q on an archived company, want nothing", *legalName)
+	}
+}
+
+// The EVIDENCE the columns are answered by refuses the same record, and the two
+// have to agree: a profile-field row landing on a company whose column write
+// skipped it would leave one accept recorded twice, differently.
+//
+// Both arms of one upsert, on one archived company: the row that would be
+// INSERTED where none stands, and the row that would be UPDATED where one does.
+func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, orgID := e.seedEmployedPerson(ctx, t,
+		"Sigrid Berg", "sigrid@nordkraft.test", "Nordkraft AS", "nordkraft.test")
+
+	// One field stated while the company is live, so the conflict arm has a row
+	// to collide with after the archive.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, upsertOrgProfileField,
+			orgID, fieldIndustry, "Energietechnik", "", "", humanAuthoredConfidence,
+			companySourceHuman, "human:seed", true)
+		return err
+	}); err != nil {
+		t.Fatalf("stating a field while the company is live: %v", err)
+	}
+
+	if _, err := e.store.ArchiveOrganization(e.asArchiver(), orgID, nil); err != nil {
+		t.Fatalf("archive organization: %v", err)
+	}
+
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for _, tc := range []struct{ name, field, value string }{
+			{"the insert arm", fieldLegalName, "Nordkraft Holding AS"},
+			{"the conflict arm", fieldIndustry, "Something else entirely"},
+		} {
+			tag, err := tx.Exec(ctx, upsertOrgProfileField,
+				orgID, tc.field, tc.value, "", "", humanAuthoredConfidence,
+				companySourceHuman, "human:seed", true)
+			if err != nil {
+				t.Errorf("%s on an archived company: %v", tc.name, err)
+				continue
+			}
+			if tag.RowsAffected() != 0 {
+				t.Errorf("%s wrote %d row(s) onto an archived company", tc.name, tag.RowsAffected())
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("archived upserts: %v", err)
+	}
+
+	// The evidence stands exactly as it did before the archive: the field stated
+	// while the company was live, unchanged, and no second row beside it.
+	var fields int
+	var industry string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM organization_profile_field WHERE organization_id = $1`,
+			orgID).Scan(&fields); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`SELECT value FROM organization_profile_field WHERE organization_id = $1 AND field = $2`,
+			orgID, fieldIndustry).Scan(&industry)
+	}); err != nil {
+		t.Fatalf("reading the evidence back: %v", err)
+	}
+	if fields != 1 || industry != "Energietechnik" {
+		t.Errorf("the company carries %d evidence row(s) and industry %q, want 1 and the value stated while it was live",
+			fields, industry)
+	}
+}
