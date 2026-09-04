@@ -130,9 +130,7 @@ type Radius = { property: string; value: string; waived: boolean };
  */
 function radii(body: string): Radius[] {
   const out: Radius[] = [];
-  const active = body.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
-    " ".repeat(comment.length),
-  );
+  const active = withoutComments(body);
   const decl = /(border(?:-[a-z]+)*-radius)\s*:\s*([^;}]+)(;?)/g;
   for (let m = decl.exec(active); m; m = decl.exec(active)) {
     const lineEnd = body.indexOf("\n", m.index + m[0].length);
@@ -216,23 +214,37 @@ function namedRungs(text: string, rungs: Set<string>): string[] {
 }
 
 /**
+ * The same text with every comment blanked to spaces of its own length. A
+ * commented-out declaration declares nothing, and offsets are worth keeping:
+ * the in-line waiver lives in a comment of its own, read from the original.
+ */
+function withoutComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+    " ".repeat(comment.length),
+  );
+}
+
+/**
  * The selectors the squircle rule is declared against, one per entry. Read from
  * the rule that actually sets `corner-shape`, so the coverage check below is
  * asking about the declaration rather than about the text of the file.
  */
 function squircleSelectors(tokens: string): string[] {
-  const block = tokens.slice(
-    tokens.indexOf("@supports (corner-shape: squircle)"),
+  const block = withoutComments(
+    tokens.slice(tokens.indexOf("@supports (corner-shape: squircle)")),
   );
   const rule = /([^{}]*)\{([^{}]*)\}/g;
   for (let m = rule.exec(block); m; m = rule.exec(block)) {
     if (!/corner-shape\s*:\s*squircle/.test(m[2])) {
       continue;
     }
+    // Whitespace inside a selector is the DESCENDANT combinator, so it is
+    // collapsed and not removed: `:where(*) ::before` is every descendant's
+    // generated box and NOT the subject's own, which is the near miss this
+    // check has to fail. Runs of space become one; the two forms stay apart.
     return m[1]
-      .replace(/\/\*[\s\S]*?\*\//g, "")
       .split(",")
-      .map((one) => one.trim().replace(/\s+/g, ""))
+      .map((one) => one.trim().replace(/\s+/g, " "))
       .filter(Boolean);
   }
   return [];
@@ -519,6 +531,22 @@ describe("the corner detector sees what it claims to", () => {
       squircleSelectors(decoy).includes(":where(*)::before"),
       "a pseudo-element named on an unrelated rule under the query covers nothing",
     ).toBe(false);
+    const descendant =
+      "@supports (corner-shape: squircle) {\n" +
+      "  :where(*) ::before { corner-shape: squircle; }\n}";
+    expect(
+      squircleSelectors(descendant),
+      "the space is the descendant combinator: that rule paints every " +
+        "descendant's generated box and not the subject's own, so it must not " +
+        "read as the exact form",
+    ).toEqual([":where(*) ::before"]);
+    const commented =
+      "@supports (corner-shape: squircle) {\n" +
+      "  :where(*)::before { /* corner-shape: squircle; */ }\n}";
+    expect(
+      squircleSelectors(commented),
+      "a commented-out declaration declares nothing",
+    ).toEqual([]);
   });
 
   it("reads a round corner in every spelling it is written in", () => {
