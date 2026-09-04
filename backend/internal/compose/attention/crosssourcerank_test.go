@@ -57,6 +57,11 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 			Subject:    "Can you confirm the retrofit price?",
 			Since:      rankInstant.Add(-72 * time.Hour),
 			PersonID:   waitPerson,
+			// A conversation we are already in, which is what earns this row
+			// the top band at all: a wait with nothing to prove we ever wrote
+			// is demoted to routine, and the order below would then be
+			// asserting that instead of what it says.
+			Engaged: true,
 		}},
 		crmcontracts.Attention{
 			AsOf:        rankInstant,
@@ -90,6 +95,10 @@ func TestSystemNewsNeverLeadsACustomerWaiting(t *testing.T) {
 			Subject:    "Still waiting on that quote",
 			Since:      rankInstant.Add(-2 * time.Hour),
 			PersonID:   waitPerson,
+			// The customer in the name is one we have answered before. An
+			// unproven wait is routine by design, so leaving this false would
+			// make the test demand the opposite of the rule it is checking.
+			Engaged: true,
 		}},
 		crmcontracts.Attention{
 			AsOf:             rankInstant,
