@@ -219,17 +219,34 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 // the field unset — which is exactly why the mail-shaped derivation above could
 // never answer for one.
 //
-// No authorship test here, and that is the difference from the inbound arm
-// rather than an omission. That arm needs role 'from' because a filing link
-// says only that a message belongs on somebody's record, and being copied on
-// somebody else's mail initiates nothing. Attendance carries no such ambiguity:
-// every attendee of a meeting is a party to it, and the organizer is the one
-// party who might not be the counterparty.
+// THREE BOUNDS, and every one of them is what stops this being a way to write
+// your own permission slip. A qualifying event makes it LAWFUL to mail somebody,
+// and everything below is caller-supplied unless it is bounded.
 //
-// A FUTURE meeting counts. `since` bounds how far BACK evidence stays good, and
-// a meeting in the diary is the clearest possible statement that a relationship
-// is live — refusing to write to somebody we are meeting on Tuesday is the
-// defect this exists to fix, not a case to guard against.
+// A CONNECTOR must have captured it. `POST /activities` takes kind, occurred_at
+// and links from the request body, and the log path stamps a participant row for
+// every linked person (activities/participantlog.go) — so any seat that can see
+// a contact could otherwise log a "meeting" naming them and mail them on the
+// strength of it. A connector-captured meeting came from a calendar the mailbox
+// owner actually holds. This is the same boundary capture's own noise sweep
+// draws, for the same reason.
+//
+// The meeting must not have been DECLINED or abandoned. meeting_status carries
+// `no_show` and `canceled`, and neither is a meeting that happened: an invitation
+// somebody declined is the opposite of evidence they welcome contact. NULL is
+// admitted — the calendar mappers record no acceptance state, so most captured
+// meetings carry none, and refusing those would refuse the whole feature.
+//
+// And it must not be dated beyond the horizon. A future meeting is the case this
+// arm exists for, but "future" has to mean the diary rather than the next
+// century: the derived row is stamped and later read back without revalidating
+// its source, so a meeting dated 2099 would authorize sending forever.
+//
+// No authorship test, unlike the inbound arm — that is a difference rather than
+// an omission. That arm needs role 'from' because a filing link says only that a
+// message belongs on somebody's record, and being copied on somebody else's mail
+// initiates nothing. Attendance carries no such ambiguity: every attendee of a
+// meeting a connector captured is a party to it.
 func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
@@ -238,9 +255,12 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.person_id = $1::uuid
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.captured_by LIKE 'connector:%'
+		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
 		  AND a.occurred_at >= $2
+		  AND a.occurred_at <= now() + $3::interval
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, personID, since).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, personID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -252,3 +272,13 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
+
+// meetingHorizonInterval is how far into the diary a meeting still says a
+// relationship is live.
+//
+// A quarter, because that is the outer edge of a real booking — a demo, a
+// renewal review, a conference — and the derived row outlives its source: it is
+// stamped once and read back afterwards without revalidating the activity, so a
+// meeting dated far enough ahead would authorize sending indefinitely. The bound
+// is what keeps "a meeting in the diary" from meaning "a date somebody typed".
+const meetingHorizonInterval = "90 days"
