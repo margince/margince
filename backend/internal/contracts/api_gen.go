@@ -34497,6 +34497,10 @@ type GetAvailabilityParams struct {
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
+	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
+	// build emails these addresses or adds them to a calendar event, and the
+	// created activity does not carry them either. Supply them for the caller's
+	// own record of intent, and tell the attendee yourself.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
