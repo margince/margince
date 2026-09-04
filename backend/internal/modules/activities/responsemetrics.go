@@ -152,7 +152,17 @@ const firstResponseSQL = `
 // An INNER join, so an audit row whose activity is gone counts for nobody. A
 // deleted conversation is not a judgement anyone can still check, and admitting
 // it would be the one direction this figure must not fail in: reporting work
-// under a reader who cannot reach it.
+// under a reader who cannot reach it. Production does not delete activity rows
+// — erasure anonymizes them in place — so this drops nothing a live workspace
+// holds; it is the honest answer for the case where a row IS gone.
+//
+// ARCHIVED activities are kept, and that is the one place this query and the
+// median deliberately differ. The median excludes them because an archived
+// thread is not a wait anybody is still serving. A judgement is a different
+// kind of fact: the reader made it, in the window, and archiving the thread
+// afterwards does not unmake it. Counting only unarchived ones would make the
+// figure fall as a workspace tidied up — the same defect reading from
+// activity_reader_state had, taking a different route.
 const dispositionsSQL = `
 	SELECT count(*) FILTER (WHERE a.after->>'disposition' = ANY($3)),
 	       count(*) FILTER (WHERE a.after->>'disposition' = $4)

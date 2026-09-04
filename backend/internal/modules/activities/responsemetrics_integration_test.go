@@ -496,3 +496,40 @@ func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
 			after.Disposed-before.Disposed)
 	}
 }
+
+// Archiving a thread does not unmake the judgement somebody recorded on it.
+//
+// The median beside these counts excludes archived activities, because an
+// archived thread is not a wait anybody is still serving. A disposal figure is
+// a different kind of fact — the reader made the call, inside the window — so
+// counting only unarchived ones would make it fall as a workspace tidied up.
+// That is the same defect reading from activity_reader_state had, reached by a
+// different route, and it is the direction this figure must not fail in.
+func TestArchivingAThreadDoesNotUnmakeTheJudgementOnIt(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	activity := e.seedWait(t, "Judged then archived", "person_id", person)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+		VALUES ('human', 'human:seed', 'update', 'activity', $1, '{"disposition":"not_sales"}'::jsonb)`,
+		activity)
+	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, activity)
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Disposed != before.Disposed+1 {
+		t.Fatalf("the disposal figure moved %d over a judgement whose thread was "+
+			"archived afterwards, want 1 — a figure that falls as a workspace "+
+			"tidies up reports less judgement the more of it happened",
+			after.Disposed-before.Disposed)
+	}
+}
