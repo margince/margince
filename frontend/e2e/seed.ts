@@ -2275,10 +2275,33 @@ export async function mockApi(
         computed_at: "2026-07-13T00:00:00Z",
       });
     }
+    // Analytics reads its own frame — which population the caller measures and
+    // what they may do with it — and every analytics screen reads it BEFORE it
+    // renders. It has to be answered ahead of the `/context` prefix below,
+    // which would hand it the 360 panel's envelope: `capabilities` undefined,
+    // a TypeError on the first read of it, and a blank shell on all three
+    // analytics routes rather than an empty screen.
+    if (path === "/analytics/context") {
+      const workspace = { kind: "workspace", label: "Ganzer Arbeitsbereich" };
+      return json({
+        default_scope: workspace,
+        allowed_scopes: [workspace],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-07-13T00:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     // RS-3's context panel and the IT-1 tool console both read fixed-shape
     // envelopes the list catch-all below doesn't produce (`{sections:[]}`,
     // `{data:[AgentTool]}` vs `{data:[],page}`) — mock them explicitly so a
     // 360 open or the tool console doesn't crash on an undefined field.
+    // MATCHED BY PREFIX, so a route added later under any `/context` path is
+    // answered with this shape rather than its own: give it a branch of its own
+    // above, as `/analytics/context` has.
     if (path.includes("/context")) {
       return json({ anchor: { type: "person", id: "x" }, sections: [] });
     }
