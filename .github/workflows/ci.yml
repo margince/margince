@@ -679,8 +679,9 @@ jobs:
   # BEFORE the merge, not by the artifact producer that runs after it. sbom.yml
   # still gates its own signing path, which is what that copy exists for.
   #
-  # `make sbom` first because sbom-check reads the generated document — the gate
-  # judges the resolved dependency graph, not the manifests.
+  # One `make sbom-gate` step: the gate judges the resolved dependency graph
+  # rather than the manifests, so the scan and the judgement travel together and
+  # a retry has to repeat both.
   license-gate:
     name: license gate
     timeout-minutes: 30
@@ -704,10 +705,13 @@ jobs:
           fetch-depth: 0
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
-      - name: Generate the SBOMs
-        run: make sbom
+      # One step, because the retry has to wrap BOTH: `.syft.yaml` sets
+      # `enrich: all`, so a failed registry lookup resolves a package to no
+      # licence and grant denies it, unable to tell "we could not ask" from
+      # "it has a forbidden one". Re-judging the same document would re-read
+      # the same failed lookup, so the scan has to run again with it.
       - name: License gate
-        run: make sbom-check
+        run: make sbom-gate
 
   # CI-based SonarCloud scan. Unlike Automatic Analysis, the scanner reads the
   # committed sonar-project.properties (exclusions + rule tuning + coverage

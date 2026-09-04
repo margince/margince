@@ -49,14 +49,18 @@ jobs:
           # describe --tags --exact-match`), else the full git revision; resolving
           # that tag needs the tags and history.
           fetch-depth: 0
-      - name: Generate SBOMs
-        run: make sbom
       # Kept on this path even though ci.yml gates every PR: it is the
       # precondition for the sign job below (`needs: sbom`). A keyless signature
       # lands permanently in a public transparency log and cannot be retracted,
       # so a policy-failing SBOM must never reach it.
-      - name: License gate
-        run: make sbom-check
+      #
+      # `sbom-gate` scans AND judges, retrying the pair when a registry lookup
+      # fails and leaves a package with no resolved licence. The document left
+      # on disk is the one that passed, which is the one published and signed
+      # below — a retry that judged one scan and published another would be a
+      # signature over something nothing checked.
+      - name: Generate and gate the SBOMs
+        run: make sbom-gate
       - name: Publish SBOMs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
