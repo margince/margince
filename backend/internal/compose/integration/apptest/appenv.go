@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,6 +47,11 @@ type AppEnv struct {
 	Client *http.Client
 	Owner  *pgx.Conn
 	Pool   *pgxpool.Pool
+	// Vault is the harness's in-memory key vault, exposed because the confirm
+	// link lives there between minting and dispatch: the delivery row carries a
+	// placeholder, so a suite that needs the link the SUBJECT would receive
+	// reads the same bytes the dispatcher substitutes.
+	Vault keyvault.Vault
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -118,6 +124,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	if err != nil {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
+	vault := keyvault.NewMemory()
 	// Unstarted, so the listener's port is known before the handler is
 	// composed: StartTLS below serves the same handler NewTLSServer would.
 	ts := httptest.NewUnstartedServer(nil)
@@ -137,6 +144,24 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 		// the app under test unbounded is the honest spelling: a suite that
 		// wants the bound composes its own metered Server.
 		compose.WithAgentVolume(agentvolume.Unmetered()),
+		// The lane the installation's OWN mail rides. Without it a confirm
+		// link is minted and never staged, so every suite whose subject is what
+		// the subject does with that link would be testing the
+		// installation-cannot-send path instead.
+		//
+		// A memory vault rather than none: the link is sealed there and the
+		// delivery carries only a placeholder, which is the property the lane
+		// exists for. A suite that needs to read the link back does what
+		// confirmLinkToken does — reads it from the vault, which is the same
+		// bytes the dispatcher substitutes.
+		//
+		// WithConfirmLinkVault and not WithKeyvault: the latter also installs
+		// the send pre-flight over the capture registry, which would refuse
+		// every send in this harness as "mailbox not send capable" — a check
+		// that is correct in production and would be answering a question none
+		// of these suites is asking.
+		compose.WithConfirmLinkVault(vault),
+		compose.WithControllerMail(sendInserter),
 	}, opts(origin)...)
 	ts.Config.Handler = compose.New(pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
 	ts.StartTLS()
@@ -149,7 +174,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	client := ts.Client()
 	client.Jar = jar
 
-	return &AppEnv{TS: ts, Client: client, Owner: owner, Pool: pool}
+	return &AppEnv{TS: ts, Client: client, Owner: owner, Pool: pool, Vault: vault}
 }
 
 // BootstrapWorkspace provisions the organization + admin (the A107 boot

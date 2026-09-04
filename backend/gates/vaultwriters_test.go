@@ -62,6 +62,13 @@ var vaultWriters = map[string]string{
 	"internal/modules/ai/providerkeystore.go":       "audit_log via the settings write, under the ProviderKeys verb",
 	"internal/modules/capture/connectorappstore.go": "audit_log via the settings write, under capture settings' update verb",
 
+	// Sealed inside the transaction that mints the confirm link, so the token
+	// row's own audit entry IS the record: it names the person, the address the
+	// link was posted to and the kind, which is the evidence a later reader
+	// needs. The sealed value itself is deliberately absent from it — auditing
+	// the link would put a live credential in the audit log.
+	"internal/modules/consent/confirmstage.go": "audit_log, under the confirm_token create verb",
+
 	// The declared no-domain-fact posture: bytes move, nothing changes meaning,
 	// so it records operationally rather than as an entity change.
 	"internal/platform/extsecrets/store.go": "system_log — the explicit no-domain-fact posture",

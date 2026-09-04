@@ -378,18 +378,24 @@ export function ConsentSection({
   );
 }
 
-/** What to say about a link that was just issued. The three outcomes are three
- * different next moves for the reader, so each gets its own sentence. */
+/** What to say about a link that was just issued.
+ *
+ * TWO outcomes, where there used to be three. The message is staged in the same
+ * transaction that mints the link, so "the link exists but the send failed"
+ * cannot happen any more — either both committed or neither did. What is left
+ * is: it is on its way, or this installation cannot send at all.
+ *
+ * And it says "on its way", not "sent". The message is queued here and
+ * transmitted later by the dispatcher, which retries and can park, so claiming
+ * delivery on this screen would tell a rep somebody was asked when the message
+ * may still be waiting. */
 function sentenceFor(
   issued: components["schemas"]["ConfirmRequestIssued"],
   t: ReturnType<typeof useT>,
 ): string {
   const address = issued.delivered_to;
-  if (issued.provider_accepted) {
-    return t("consent.askSent", { address });
-  }
-  return issued.sendable
-    ? t("consent.askSendFailed", { address })
+  return issued.queued
+    ? t("consent.askQueued", { address })
     : t("consent.askNotDelivered", { address });
 }
 

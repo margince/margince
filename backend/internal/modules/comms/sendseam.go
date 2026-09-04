@@ -79,6 +79,13 @@ type sendSeam struct {
 // a row is mail-shaped or channel-shaped and never half of each, so a channel
 // delivery cannot be rendered as mail even if a provider were mis-registered.
 func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, error) {
+	// The installation's own mail resolves FIRST, because it is the one shape
+	// with no connected mailbox behind it: asking the resolver for a credential
+	// that cannot exist would report "nothing is connected" about a lane that
+	// never needed a connection.
+	if del.IsController() {
+		return d.controllerSeam(ctx, del)
+	}
 	if del.IsChannel() {
 		sender, auth, err := d.resolver.ResolveChannel(ctx, del.UserID, del.Provider)
 		if err != nil {

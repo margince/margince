@@ -9054,11 +9054,13 @@ export interface paths {
          *     confirmed now that no operator-held token exists.
          *     A fresh request supersedes any unspent earlier link of the SAME KIND for this person — a record-confirmation request does not expire a pending subscription-confirmation link, because they ask different questions and arrive in different mails.
          *
-         *     `provider_accepted` reports whether the relay took the message, and `sendable` says whether
-         *     this installation can send at all. Both, because they are different facts and a reader's next
-         *     move differs: configure a relay, or try again. An installation with no relay still mints
-         *     the token and answers 201, because the write happened and reporting it as a failure would
-         *     invite a second request that mints another token and supersedes the first.
+         *     The mail rides the same durable lane as every other outbound message: it takes a delivery
+         *     row, an authorization decision recording why the installation was allowed to send it, and a
+         *     timeline entry — which is what makes it visible to a subject-access export and reachable by
+         *     erasure. `queued` reports that the message was staged, in the same transaction that minted
+         *     the link; `sendable` says whether this installation has a lane at all. An installation with
+         *     no lane still mints the token and answers 201, because the write happened and reporting it
+         *     as a failure would invite a second request that mints another token and supersedes the first.
          */
         post: operations["requestDetailsConfirmation"];
         delete?: never;
@@ -25982,9 +25984,9 @@ export interface components {
             status: "queued";
         };
         /**
-         * @description A confirm link that now exists, and what became of the attempt to deliver it. Three
-         *     outcomes rather than two, because a reader's next move differs: it went, this
-         *     installation cannot send at all, or the send was tried and failed.
+         * @description A confirm link that now exists, and whether a message carrying it was queued. What
+         *     becomes of that message afterwards is the delivery's own answer, not this one: the
+         *     dispatcher transmits it later, retries a transient failure, and parks one it cannot send.
          */
         ConfirmRequestIssued: {
             /** @description The address the link was posted to — the person's own live primary email. */
@@ -25992,12 +25994,15 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             /**
-             * @description Whether the relay accepted the message. False while `sendable` is true means the send
-             *     was attempted and failed, which is a different fact from an installation that cannot
-             *     send at all. It is deliberately not called `delivered`: a relay returns before any
-             *     mailbox has seen the message, and a later bounce cannot travel back to change this.
+             * @description Whether the message was put on the outbound send lane, in the same transaction that
+             *     minted the link. False while `sendable` is true should not happen — staging and
+             *     minting commit together — so it reads as an installation that cannot send.
+             *
+             *     Deliberately not `delivered`, and no longer `provider_accepted`: the message is
+             *     queued here and transmitted later by the dispatcher, which retries and can park. What
+             *     became of it is the delivery's own answer and changes as the dispatcher learns more.
              */
-            provider_accepted: boolean;
+            queued: boolean;
             /**
              * @description Whether this installation has an outbound relay and a link origin configured. False
              *     means nothing was attempted — the link exists and must be passed on by hand.

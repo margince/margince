@@ -551,7 +551,7 @@ describe("asking a contact to confirm their details", () => {
             {
               delivered_to: "ada@example.test",
               expires_at: "2026-09-13T09:00:00Z",
-              provider_accepted: true,
+              queued: true,
               sendable: true,
             },
             201,
@@ -573,7 +573,7 @@ describe("asking a contact to confirm their details", () => {
     expect(ask?.body).toBeFalsy();
   });
 
-  it("tells a failed send apart from an installation that cannot send", async () => {
+  it("says a queued link is on its way rather than claiming it was delivered", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
       "POST /people/person-1/consent/confirm-request": () =>
@@ -581,11 +581,7 @@ describe("asking a contact to confirm their details", () => {
           {
             delivered_to: "ada@example.test",
             expires_at: "2026-09-13T09:00:00Z",
-            provider_accepted: false,
-            // The relay exists and refused this one message. Telling a rep
-            // "this installation sends no mail" would send them to configure
-            // something that is already configured, and pressing again is what
-            // actually helps.
+            queued: true,
             sendable: true,
           },
           201,
@@ -595,8 +591,11 @@ describe("asking a contact to confirm their details", () => {
 
     await userEvent.click(await screen.findByTestId("confirm-details-ask"));
 
+    // The message is staged here and transmitted later by the dispatcher, which
+    // retries and can park. "Sent" would tell a rep somebody was asked while the
+    // message is still waiting, and they would stop watching for an answer.
     const sent = await screen.findByTestId("confirm-details-sent");
-    expect(sent).toHaveTextContent(/did not go out/i);
+    expect(sent).toHaveTextContent(/on its way/i);
     expect(sent).not.toHaveTextContent(/sends no mail/i);
   });
 
@@ -608,7 +607,7 @@ describe("asking a contact to confirm their details", () => {
           {
             delivered_to: "ada@example.test",
             expires_at: "2026-09-13T09:00:00Z",
-            provider_accepted: false,
+            queued: false,
           },
           201,
         ),

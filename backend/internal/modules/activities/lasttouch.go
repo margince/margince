@@ -59,7 +59,7 @@ func lastTouchCandidateQuery() string {
 				SELECT a.id, a.occurred_at
 				FROM activity a
 				WHERE a.archived_at IS NULL
-				  AND a.origin <> 'system_remediation'
+				  `+auth.OriginIsEngagement("a")+`
 				  AND NOT (a.source = $1
 				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
 			), direct AS (

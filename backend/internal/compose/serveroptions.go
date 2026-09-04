@@ -18,10 +18,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
@@ -53,14 +51,14 @@ type Option func(*Server, *pgxpool.Pool)
 // through WithPublicBaseURL, because an installation with no mailer still
 // builds set-password links (ADR-0061 Amendment 1).
 func WithOperatorMail(m mailer.Mailer) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
+	return func(s *Server, pool *pgxpool.Pool) {
 		s.authHandlers = s.WithPasswordReset(m)
-		// The confirm-details link rides the same relay, and unlike the Deal
-		// Room invitation below it is wired here rather than held back: the
-		// screen it opens is served by the SPA today, so a recipient who
-		// follows it lands on their own record rather than on a not-found page
-		// having spent their one token getting there.
-		s.consentHandlers = s.WithConfirmMailer(m)
+		// The confirm-details link no longer rides this relay directly: it goes
+		// through the durable send lane, which gives it a delivery row, an
+		// authorization decision and a timeline entry like every other message.
+		// The relay still transmits it, one layer down, as the controller seam.
+		s.controllerRelay = mailerRelay{m}
+		s.rewireConfirmationLane(pool)
 	}
 }
 
@@ -215,6 +213,8 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// have already run, and a reset that cannot reach the vault leaves the
 		// sealed credentials of the installation it just wiped resident.
 		s.dataResetHandlers.vault = vault
+		// The confirm link is sealed in the same vault (controllermailwiring.go).
+		s.rewireConfirmationLane(pool)
 		// The BYOK credential surface exists only where there is somewhere to
 		// seal a key. Wired here rather than in the AI block so a role that
 		// composes no vault serves 501 on those routes instead of recording a
@@ -424,7 +424,8 @@ func WithPublicBaseURL(base string) Option {
 		s.dealroomsHandlers = s.WithInviteLinkBase(base)
 		// So does the confirm-details link, which opens one person's own record
 		// to whoever holds it.
-		s.consentHandlers = s.WithConfirmLinkBase(base)
+		s.confirmLinkBase = base
+		s.rewireConfirmationLane(pool)
 		// Reported to an operator, never enforced: the boot and send guards
 		// are what refuse an unusable origin, and a readiness check here
 		// would deadlock a rollout on its own ingress.
@@ -458,41 +459,5 @@ func WithSendAuthority(authority activities.SendAuthority) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.send.SendAuthority = authority
 		s.rebuildToolRegistry(pool)
-	}
-}
-
-// WithColdStart enables the cold-start read-back over the given fetch
-// and model seams. Without it the operation stays an explicit 501 —
-// the api role must DECLARE its model path, never pick one silently.
-func WithColdStart(fetch PageFetcher, brain completer) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
-		s.coldstartHandlers = coldstartHandlers{engine: &coldStartEngine{
-			extract:   evidenceExtractor{fetch: fetch, brain: brain},
-			approvals: approvals.NewService(InstallationDB(pool)),
-		}}
-	}
-}
-
-// WithScrape enables per-organization enrichment (scrapeCompany) over the same
-// fetch and model seams as the read-back. Without it the operation stays an
-// explicit 501 — the api role must DECLARE its model path, never pick one
-// silently.
-func WithScrape(fetch PageFetcher, brain completer) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
-		s.scrapeHandlers = scrapeHandlers{engine: &scrapeEngine{
-			extract:   evidenceExtractor{fetch: fetch, brain: brain},
-			people:    people.NewStore(InstallationDB(pool)),
-			approvals: approvals.NewService(InstallationDB(pool)),
-		}}
-	}
-}
-
-// WithBrief enables the Morning-Brief L2 ranker (B-E05.2) over the given
-// model lane. Without it the brief still serves fully on the deterministic
-// §10.1 composite — the L2 layer is advisory over that floor, never a
-// prerequisite for the home surface.
-func WithBrief(brain completer) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.WithL2Ranker(brain, s.log)
 	}
 }
