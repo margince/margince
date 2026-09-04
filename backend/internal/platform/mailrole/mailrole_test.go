@@ -155,3 +155,43 @@ func TestThePromptsRoleExamplesAreAllRoleTokens(t *testing.T) {
 		}
 	}
 }
+
+// The observed defect: "steireif Partnernet" at partner@steireif.net opened a
+// draft with "steireif," — the company greeted as a person.
+//
+// `partner` is deliberately outside the role vocabulary, so Match cannot reach
+// this and the greeting rule has to read the name against its own domain.
+func TestAMailboxNamedAfterItsOwnDomainGreetsNobody(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ name, address string }{
+		{"steireif Partnernet", "partner@steireif.net"},
+		{"Contoso Vertrieb", "vertrieb@contoso.com"},
+		// Reached by the role vocabulary rather than by the domain rule, so
+		// the display name is a person's and the answer still has to be no.
+		{"Anna Weber", "info@contoso.com"},
+		// Reached by the display-name rule: all role words, personal address.
+		{"Support Team", "a.weber@contoso.com"},
+	} {
+		if !mailrole.GreetsNobody(c.name, c.address) {
+			t.Errorf("%q <%s>: wanted nobody to greet, got a person", c.name, c.address)
+		}
+	}
+}
+
+func TestAPersonIsStillGreetedByName(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ name, address string }{
+		{"Anna Weber", "a.weber@contoso.com"},
+		// The domain label appears, but not FIRST: the rule reads the opening
+		// token, because that is the one a greeting takes for a first name.
+		{"Anna Contoso", "anna@contoso.com"},
+		// No address to read, and a name that is not a department. Nothing
+		// here says this is not a person, so nothing may claim it.
+		{"Anna Weber", ""},
+		{"Lars Jankowfsky", "lars@jankowfsky.de"},
+	} {
+		if mailrole.GreetsNobody(c.name, c.address) {
+			t.Errorf("%q <%s>: wanted a person to greet, got nobody", c.name, c.address)
+		}
+	}
+}

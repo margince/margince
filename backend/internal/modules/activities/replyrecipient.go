@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -105,7 +106,12 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, '')
+			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
+			       coalesce((SELECT pe.email
+			                   FROM person_email pe
+			                  WHERE pe.person_id = p.id AND pe.archived_at IS NULL
+			                  ORDER BY pe.is_primary DESC, pe.position, pe.id
+			                  LIMIT 1), '')
 			  FROM person p
 			  JOIN (
 			       SELECT person_id,
@@ -124,14 +130,32 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		}
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
-		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName)
+		var address string
+		err = tx.QueryRow(ctx, q, args...).Scan(
+			&out.FullName, &out.FirstName, &out.LastName, &address)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a person out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
 			// than a refused draft.
 			return nil
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		// A shared mailbox has a record and no person behind it, and its
+		// display name splits into a first name like any other: "steireif
+		// Partnernet" at partner@steireif.net greeted a company as "steireif,"
+		// in a message a rep was about to send.
+		//
+		// Cleared WHOLE rather than just the first name, because the drafter
+		// falls back to the full name when the first is empty — a half-cleared
+		// recipient would greet "steireif Partnernet," which is worse than
+		// either. The empty recipient is already this type's documented answer
+		// for "no name", and the floor opens without one.
+		if mailrole.GreetsNobody(out.FullName, address) {
+			out = ReplyRecipient{}
+		}
+		return nil
 	})
 	if err != nil {
 		return ReplyRecipient{}, err

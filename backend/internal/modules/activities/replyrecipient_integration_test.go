@@ -460,3 +460,61 @@ func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
 		t.Errorf("full name = %q, want Cher", got.FullName)
 	}
 }
+
+// The observed defect: a reply drafted on a shared mailbox opened with
+// "steireif," — the first token of the display name "steireif Partnernet",
+// used as a person's given name in a message a rep was about to send.
+//
+// The record is faithful; the mailbox is not a person. `partner` is
+// deliberately outside the role vocabulary, so the resolver has to read the
+// name against its own domain rather than the local part.
+func TestASharedMailboxIsGreetedByNoName(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+
+	sender := e.linkPerson(t, anchor, "steireif Partnernet")
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE person SET first_name = 'steireif', last_name = 'Partnernet' WHERE id = $1`,
+		sender); err != nil {
+		t.Fatalf("seeding the split name: %v", err)
+	}
+	e.seedPersonEmail(t, sender, "partner@steireif.net")
+	e.participate(t, anchor, sender, "from", nil)
+
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	// Every field, not just the first name: the drafter falls back to the full
+	// name when the first is empty, so a half-cleared recipient greets
+	// "steireif Partnernet," — worse than either.
+	if got != (ReplyRecipient{}) {
+		t.Errorf("a shared mailbox resolved to %+v, want no name at all — the "+
+			"floor opens without one, which is the honest form", got)
+	}
+}
+
+// The rule abstains rather than guessing, so the case it must NOT reach is a
+// real person at the company whose domain this is.
+func TestAPersonAtTheSameDomainIsStillGreetedByName(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+
+	sender := e.linkPerson(t, anchor, "Anna Steireif")
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE person SET first_name = 'Anna', last_name = 'Steireif' WHERE id = $1`,
+		sender); err != nil {
+		t.Fatalf("seeding the split name: %v", err)
+	}
+	e.seedPersonEmail(t, sender, "anna@steireif.net")
+	e.participate(t, anchor, sender, "from", nil)
+
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	if got.FirstName != "Anna" {
+		t.Errorf("first name = %q, want Anna — the domain appears in this name, "+
+			"but not as the word a greeting would take", got.FirstName)
+	}
+}
