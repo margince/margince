@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -153,18 +158,29 @@ function useLeadStatusCounts() {
 type TerminalStatus = (typeof LEAD_TERMINAL_STAGES)[number]["stage"];
 
 function useTerminalLeads(status: TerminalStatus, enabled: boolean) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: leadTerminalKey(status),
     enabled,
-    queryFn: async () => {
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/leads", {
         params: {
-          query: { status, include_archived: true, limit: 50 },
+          query: {
+            status,
+            include_archived: true,
+            limit: 50,
+            cursor: pageParam ?? undefined,
+          },
         },
       });
       if (error) throwProblem(error);
-      return data.data;
+      return data;
     },
+    // The cursor the page hands back, so a column whose count runs to
+    // thousands is reachable past its first fifty. A list that stopped there
+    // while its own head stated 12,000 would be a page contradicting itself.
+    getNextPageParam: (last) =>
+      last.page.has_more ? (last.page.next_cursor ?? null) : null,
   });
 }
 
@@ -308,7 +324,10 @@ export function LeadBoard({
   });
   // The terminal pair, whose count comes from the report and whose cards are
   // fetched only for the one that is open.
-  const opened = openTerminal !== null ? (terminalRows.data ?? []) : [];
+  const opened =
+    openTerminal !== null
+      ? (terminalRows.data?.pages.flatMap((page) => page.data) ?? [])
+      : [];
   for (const stage of LEAD_TERMINAL_STAGES) {
     const isOpen = openTerminal === stage.stage;
     const held = isOpen
@@ -337,11 +356,17 @@ export function LeadBoard({
   // The drop opens the dialog that collects what the transition needs; only an
   // open stage is a move.
   function dropLeadOn(stage: string, lead: Lead) {
+    // The SOURCE has to be a live lead. The cards refuse to drag a terminal
+    // one, and this refuses to act on one anyway — a drop carries an id
+    // through a dataTransfer string, so the guard belongs where the decision
+    // is taken and not only where the gesture starts.
+    if (!isOpenStatus(lead.status)) return;
     const terminal = LEAD_TERMINAL_STAGES.find((s) => s.stage === stage);
     if (terminal) {
-      if (lead.status !== terminal.stage) {
-        setPending({ lead, dialog: terminal.dialog });
-      }
+      // No "is it already there" test: the guard above has already ruled out
+      // every terminal status, and the compiler says so — the comparison this
+      // replaced was dead code once the source had to be live.
+      setPending({ lead, dialog: terminal.dialog });
       return;
     }
     const target = LEAD_BOARD_STAGES.find((s) => s.stage === stage);
@@ -360,9 +385,35 @@ export function LeadBoard({
       {rows.length > 0 && live.length === 0 && (
         <p className="t-caption">{t("lead.boardTerminalOnly")}</p>
       )}
+      {/* The two reads behind the terminal columns, when they fail. A failed
+          report renders as 0 and a failed row read as an empty column, and
+          both read as fact — "nobody was ever disqualified" is a very
+          different statement from "we could not ask". */}
+      {counts.isError && (
+        <p className="t-caption" style={{ color: "var(--danger)" }}>
+          {t("lead.boardCountsUnavailable")}
+        </p>
+      )}
+      {terminalRows.isError && (
+        <p className="t-caption" style={{ color: "var(--danger)" }}>
+          {t("lead.boardTerminalRowsUnavailable")}
+        </p>
+      )}
       <PipelineBoard
         variant="plain"
         columns={columns}
+        columnExtras={(column) =>
+          column.stage === openTerminal && terminalRows.hasNextPage ? (
+            <Button
+              small
+              onClick={() => {
+                terminalRows.fetchNextPage();
+              }}
+            >
+              {t("list.loadMore")}
+            </Button>
+          ) : null
+        }
         countLabel={(count) =>
           t("lead.boardCount", { count: formatNumber(count, locale) })
         }
@@ -377,17 +428,26 @@ export function LeadBoard({
                   navigate({ screen: "leads", id: opened.id });
                 }
               }}
-              dragHandlers={{
-                draggable: true,
-                onDragStart: (event) => {
-                  dragging.current = lead.id;
-                  event.dataTransfer.setData("text/plain", lead.id);
-                },
-                onDragEnd: () => {
-                  dragging.current = null;
-                  lastDragEnd.current = Date.now();
-                },
-              }}
+              // A TERMINAL lead does not drag. It is archived, and every
+              // destination refuses it: UpdateLead reads live rows only, so a
+              // drop on an open stage 409s, and the other terminal dialog's
+              // own mutation rejects it too. Offering the gesture and then
+              // failing it is worse than not offering it.
+              dragHandlers={
+                isOpenStatus(lead.status)
+                  ? {
+                      draggable: true,
+                      onDragStart: (event) => {
+                        dragging.current = lead.id;
+                        event.dataTransfer.setData("text/plain", lead.id);
+                      },
+                      onDragEnd: () => {
+                        dragging.current = null;
+                        lastDragEnd.current = Date.now();
+                      },
+                    }
+                  : undefined
+              }
             />
           );
         }}

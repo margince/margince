@@ -1,12 +1,16 @@
 /* Composed surfaces (B-EP09.3b) — consume the trust primitives; staged vs
  * real vs human-typed carries through unchanged (§5c). */
 
+/* FLEX, not grid tracks. Every column used to be an implicit
+ * `minmax(220px, 1fr)` track, and a track is sized by the board rather than by
+ * the item in it — so a collapsed column still reserved its 220px and the fold
+ * bought nothing. Flex lets one column opt out of the shared basis while the
+ * rest keep it: `1 1 220px` is the same "at least 220, share what is left"
+ * the track gave them. */
 .board {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
+  display: flex;
   gap: 12px;
-  align-items: start;
+  align-items: flex-start;
   overflow-x: auto;
   padding-bottom: 8px;
 }
@@ -19,6 +23,8 @@
      scroll, and dragged the shell's content scroller 807px past a 390px
      viewport. */
   position: relative;
+  flex: 1 1 220px;
+  min-width: 220px;
   background: var(--bgCard);
   border-radius: var(--r-md);
   padding: 10px;
@@ -41,9 +47,10 @@
  * board can hold both shapes at once — which is exactly the lead board, three
  * open stages beside two folded terminal ones. */
 .board-col-collapsed {
-  grid-column: auto / span 1;
+  /* Out of the shared basis: it takes the width its name and count need and
+     gives the rest back to the columns a reader is working out of. */
+  flex: 0 0 auto;
   min-width: 0;
-  width: max-content;
   min-height: 120px;
 }
 .board-col-collapsed .board-col-head {

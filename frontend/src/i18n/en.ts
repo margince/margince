@@ -2114,6 +2114,10 @@ export const en = {
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.callNotInOverlay":
     "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
+  "lead.boardCountsUnavailable":
+    "The Qualified and Disqualified counts could not be read.",
+  "lead.boardTerminalRowsUnavailable":
+    "These leads could not be read. The count above still stands.",
   "lead.boardTerminalOnly":
     "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
   "person.fromLead": "From lead",

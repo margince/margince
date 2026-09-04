@@ -327,6 +327,24 @@ function BoardLayout<Record extends BoardRecord>({
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
+  // The head's interactive half, or nothing at all. Written as a function so
+  // the column's JSX stays one line of props rather than a spread conditional
+  // the reader has to unpick.
+  function foldProps(column: BoardColumn<Record>) {
+    if (!onToggleColumn || column.collapsed === undefined) return {};
+    return {
+      role: "button",
+      tabIndex: 0,
+      "aria-expanded": !column.collapsed,
+      onClick: () => onToggleColumn(column),
+      onKeyDown: (event: React.KeyboardEvent) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onToggleColumn(column);
+        }
+      },
+    };
+  }
   return (
     <div className="board">
       {columns.map((column) => {
@@ -348,28 +366,14 @@ function BoardLayout<Record extends BoardRecord>({
                 its place. The count moved up here with it: it is the figure a
                 reader compares ACROSS the board, and under the money totals it
                 was the third figure on a two-line sub. */}
-            {/* A BUTTON only where there is something to press. A board with
-                no collapsed column passes no onToggleColumn, and its head stays
-                the plain div it has always been — a control that does nothing
-                is worse than no control, and a screen reader announcing one on
-                every deal stage would be noise. */}
-            <div
-              className="board-col-head"
-              {...(onToggleColumn
-                ? {
-                    role: "button",
-                    tabIndex: 0,
-                    "aria-expanded": !column.collapsed,
-                    onClick: () => onToggleColumn(column),
-                    onKeyDown: (event: React.KeyboardEvent) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onToggleColumn(column);
-                      }
-                    },
-                  }
-                : {})}
-            >
+            {/* A BUTTON only where there is something to press, and that is
+                per COLUMN rather than per board. A column says it can fold by
+                carrying `collapsed` at all; one that never folds keeps the
+                plain div it has always been, even on a board that has a
+                foldable column beside it. A control that does nothing is worse
+                than no control, and a lead board would otherwise have made its
+                three open stages focusable to no effect. */}
+            <div className="board-col-head" {...foldProps(column)}>
               <span className="stage">{column.label}</span>
               {/* TWO SPANS, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters

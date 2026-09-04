@@ -279,6 +279,65 @@ describe("lead work-board presentation", () => {
     dropOn("disqualified", lead.id);
     await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
   });
+
+  // An archived lead does not drag, and is not acted on if one arrives anyway.
+  //
+  // Every destination refuses it: UpdateLead reads live rows only, so a drop on
+  // an open stage would 409, and the other terminal dialog's own mutation
+  // rejects it too. Offering the gesture and then failing it is worse than not
+  // offering it — so the card carries no drag handlers AND the drop decision
+  // refuses a terminal source, because a drop carries an id through a
+  // dataTransfer string that no card had to originate.
+  it("neither drags a terminal lead nor acts on one that is dropped", async () => {
+    const terminal: Lead = { ...lead, status: "disqualified" };
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/reports/")) {
+          return jsonOk({ rows: [{ status: "disqualified", leads: 1 }] });
+        }
+        return jsonOk({
+          data: [terminal],
+          page: { has_more: false, next_cursor: null },
+        });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderBoard(
+      <LeadBoard
+        rows={[]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    const head = await waitFor(() => {
+      const found = document.querySelector(
+        '.board-col[data-stage="disqualified"] .board-col-head',
+      );
+      if (found === null) throw new Error("no Disqualified head");
+      return found;
+    });
+    fireEvent.click(head);
+
+    const card = await waitFor(() => {
+      const found = document.querySelector(
+        `.deal-card[data-lead="${terminal.id}"]`,
+      );
+      if (found === null) throw new Error("the opened column drew no card");
+      return found;
+    });
+    expect(card.getAttribute("draggable")).not.toBe("true");
+
+    // And a drop naming it anyway moves nothing: no PATCH, no dialog.
+    dropOn("contacted", terminal.id);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    for (const call of fetchMock.mock.calls) {
+      const init = call[1] as RequestInit | undefined;
+      expect(String(init?.method ?? "GET").toUpperCase()).not.toBe("PATCH");
+    }
+  });
 });
 
 // jsonOk is one JSON 200, spelled once — every stub in the new tests answers
