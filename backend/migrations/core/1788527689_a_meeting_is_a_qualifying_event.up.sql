@@ -20,6 +20,12 @@
 -- place. The rewrite is additive in effect: every value either constraint
 -- admitted before is still admitted.
 
+-- The table is small and these are catalog-only rewrites, but the ALTERs still take
+-- ACCESS EXCLUSIVE: an open transaction holding a conflicting lock would stall every
+-- write to the table for as long as this is willing to queue. Bounded, so a busy
+-- database fails the deploy instead of freezing consent writes.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE consent_qualifying_event
   DROP CONSTRAINT consent_qualifying_event_kind_check;
 

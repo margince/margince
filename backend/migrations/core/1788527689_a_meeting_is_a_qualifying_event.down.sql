@@ -11,6 +11,12 @@
 -- The evidence CHECK is restored first so the table is never briefly held to a
 -- rule the surviving rows fail.
 
+-- The table is small and these are catalog-only rewrites, but the ALTERs still take
+-- ACCESS EXCLUSIVE: an open transaction holding a conflicting lock would stall every
+-- write to the table for as long as this is willing to queue. Bounded, so a busy
+-- database fails the deploy instead of freezing consent writes.
+SET LOCAL lock_timeout = '3s';
+
 DELETE FROM consent_qualifying_event WHERE kind = 'meeting';
 
 ALTER TABLE consent_qualifying_event
