@@ -8258,6 +8258,9 @@ export const en = {
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
+  "worklist.verb.completed": "Task done.",
+  "worklist.verb.completeUndo": "Undo",
+  "worklist.verb.completeUndoFailed": "That task could not be reopened.",
   // The frame states the fact and the source follows it, rather than the
   // source standing as the subject. `sourceName` returns a row TITLE — "A
   // mailbox connection needs attention", "Two records look like the same one"
