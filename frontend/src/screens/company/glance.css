@@ -51,13 +51,48 @@
   }
 }
 
-/* The 360's foot: the fold that opens the thread, and the way to the whole
-   history. A row of two quiet verbs, under the spine. */
-.co-360-foot {
+/* The 360's foot: the row that teases the thread and opens it, with the way to
+   the whole history at its end.
+
+   The panel already draws the seam above this body (panel.css's
+   `.panel-body + .panel-body` rule), so the fold draws no rule of its own —
+   two lines a hair apart read as a mistake rather than as a boundary. Its
+   padding-top STAYS: `.disclosure-action` is positioned against it, so zeroing
+   it drops "Full history" below the row it belongs to. The bottom margin goes
+   because the panel body's own padding already ends the section. */
+.co-thread-fold.disclosure {
+  border-top: 0;
+  margin-bottom: 0;
+}
+
+/* The section's own name never gives way: it is what says where pressing this
+   row leads, and a name broken across two lines makes the row read as two. */
+.co-thread-name {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The newest exchange, teased on the row that opens the rest. Quieter than the
+   section's own name and after it: the name says what pressing this gets you,
+   the teaser says whether it is worth pressing. It gives way first when the
+   row runs out of width — the label and the chevron are what make the row
+   legible as a control. */
+.co-thread-teaser {
+  color: var(--textMeta);
+  font-weight: var(--fw-regular);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The teaser sits after the section's name on one line, with the room between
+   them that keeps it from reading as part of the name. */
+.co-thread-fold .disclosure-summary .t-label {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 /* The lead row of the needs list: the moment, at the weight of a headline.

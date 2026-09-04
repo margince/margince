@@ -2030,16 +2030,70 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
 
-    // The thread is open on arrival, and the one call is in it whether or not
-    // it has a subject.
+    // Folded on arrival, naming how much it holds: that subjectless call
+    // counts.
     const stack = container.querySelector(".co-overview-stack");
-    expect(stack?.textContent).not.toContain("Nothing logged with them yet");
-
-    // Folded away, it names how much it holds: that same call counts.
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Hide the thread" }),
+    const fold = stack?.querySelector("details");
+    const summary = fold?.querySelector("summary");
+    await waitFor(() =>
+      expect(summary?.textContent).toContain("What happened · 1"),
     );
-    await screen.findByRole("button", { name: "Read the thread · 1" });
+    expect(fold?.open).toBe(false);
+
+    // Opened, the call is IN it — not the sentence an account with nothing
+    // logged would get.
+    if (!summary) {
+      throw new Error("the thread fold draws no summary to open it by");
+    }
+    await userEvent.click(summary);
+    expect(fold?.open).toBe(true);
+    expect(stack?.textContent).not.toContain("Nothing logged with them yet");
+  });
+
+  // A control that says only "show" makes a reader open it to find out whether
+  // it was worth opening. The folded row carries the newest exchange, so the
+  // decision is made before the click and the glance keeps its space.
+  it("teases the newest exchange on the folded row, without opening it", async () => {
+    stubFetch(companyBackstop, {
+      org360: {
+        ...org360,
+        activities: {
+          data: [
+            {
+              id: "a-new",
+              kind: "email",
+              subject: "Rate sheet sent",
+              occurred_at: "2026-06-02T09:00:00Z",
+              direction: "outbound",
+            },
+            {
+              id: "a-old",
+              kind: "call",
+              subject: "Quarterly review",
+              occurred_at: "2026-06-01T08:30:00Z",
+              direction: "inbound",
+            },
+          ],
+          page: { has_more: false, next_cursor: null },
+        },
+      },
+    });
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByText("Brandt Automotive GmbH");
+
+    const fold = container
+      .querySelector(".co-overview-stack")
+      ?.querySelector("details");
+    const summary = fold?.querySelector("summary");
+    await waitFor(() =>
+      expect(summary?.textContent).toContain("Rate sheet sent"),
+    );
+
+    // Teased, not opened: the row says what is under it while the section
+    // stays folded.
+    expect(fold?.open).toBe(false);
+    // The NEWEST, not merely the first the reader would meet scrolling.
+    expect(summary?.textContent).not.toContain("Quarterly review");
   });
 
   // None of the reference cards comes from the 360 — each runs its own read —
