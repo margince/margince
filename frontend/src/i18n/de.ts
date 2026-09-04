@@ -7974,6 +7974,13 @@ export const de = {
   "worklist.manager.reassign": "Neu zuweisen",
   "worklist.manager.reassignTo": "Übergeben an",
   "worklist.manager.reassignConfirm": "Übergeben",
+  "worklist.manager.takeOwnership": "Übernehmen",
+  "worklist.manager.takeOwnershipAsk":
+    "Damit wandert der Datensatz aus ihrer Liste in deine.",
+  "worklist.manager.takeOwnershipConfirm": "Übernehmen",
+  "worklist.manager.tookOwnership": "Gehört jetzt dir.",
+  "worklist.manager.takeOwnershipFailed":
+    "Das konnte nicht übernommen werden. Es bleibt bei ihnen.",
   "worklist.manager.reassigned": "Übergeben.",
   "worklist.manager.reassignFailed": "Das konnte nicht übergeben werden.",
   "worklist.manager.coach": "Notiz hinterlassen",
@@ -8009,6 +8016,7 @@ export const de = {
   "worklist.exceptions.subject": "Wozu",
   "worklist.exceptions.owner": "Wer antwortet",
   "worklist.exceptions.basis": "Gemessen an",
+  "worklist.exceptions.intervene": "Eingriff",
   "worklist.exceptions.nobody": "Noch niemand",
   "worklist.exceptions.ownerWithheld": "Für Sie nicht sichtbar",
   "worklist.exceptions.truncated":

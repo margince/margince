@@ -17,6 +17,8 @@
 import { DataTable, Disclosure } from "../design-system/atoms";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { useViewerId } from "./common";
+import { TakeOwnershipControl } from "./worklist.manager";
 import { type TeamException, useTeamExceptions } from "./worklist.queries";
 
 /**
@@ -30,11 +32,20 @@ export function TeamExceptionsPanel({
   enabled,
   onOwner,
 }: Readonly<{ enabled: boolean; onOwner: (id: string) => void }>) {
+  // The whole body is a child rather than this function's own, so that a
+  // reader below the tier MOUNTS NOTHING. Hooks cannot sit under an early
+  // return, so keeping the reads here would have made a rep's page ask who
+  // they are on behalf of a panel they are not shown — a request whose only
+  // purpose was to fill a control that never rendered.
+  return enabled ? <TeamExceptions onOwner={onOwner} /> : null;
+}
+
+function TeamExceptions({
+  onOwner,
+}: Readonly<{ onOwner: (id: string) => void }>) {
   const t = useT();
-  const exceptions = useTeamExceptions(enabled);
-  if (!enabled) {
-    return null;
-  }
+  const viewerId = useViewerId();
+  const exceptions = useTeamExceptions(true);
   const state = exceptions.isPending
     ? "loading"
     : exceptions.isError
@@ -111,6 +122,27 @@ export function TeamExceptionsPanel({
                   key: "threshold",
                   header: t("worklist.exceptions.basis"),
                   render: (row: TeamException) => row.threshold,
+                },
+                {
+                  key: "take",
+                  header: t("worklist.exceptions.intervene"),
+                  // The press must not ALSO open the owner's queue. Every row
+                  // navigates on click, so a button inside one fires both: the
+                  // handover runs and the page walks away from its own
+                  // confirmation, which reads as a control that did something
+                  // unrelated to what it said.
+                  //
+                  // The control stops it on its own buttons rather than under a
+                  // wrapper: a handler on a static element is invisible to a
+                  // keyboard and the a11y lint rejects it, and the buttons are
+                  // already the interactive things the event comes from.
+                  render: (row: TeamException) => (
+                    <TakeOwnershipControl
+                      subject={row.subject}
+                      viewerId={viewerId ?? ""}
+                      insideAClickableRow
+                    />
+                  ),
                 },
               ]}
             />
