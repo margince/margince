@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,10 +35,19 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the capture package: %v", err)
 	}
-	// A range over the recorded addresses that lowercases what it compares:
-	// the shape any re-spelling of this rule would take.
-	compare := regexp.MustCompile(`(?s)range\s+seen\b.{0,400}?strings\.ToLower`)
-	lower := regexp.MustCompile(`(?s)strings\.ToLower.{0,400}?range\s+seen\b`)
+	// The rule's SHAPE, not its vocabulary: a function that takes a []string of
+	// addresses and decides whether one is among them. Matching on the word
+	// `seen` would be defeated by renaming the parameter to `observed`, which
+	// is the first thing a second copy would do.
+	//
+	// Two signatures cover it — the slice second (addressWasSeen's own shape)
+	// or first — and the body is then any of the ways Go compares strings:
+	// ==, EqualFold, a map lookup, or slices.Contains.
+	signature := regexp.MustCompile(
+		`func\s+\w+\(\s*\w+\s+string,\s*\w+\s+\[\]string\s*\)\s*bool` +
+			`|func\s+\w+\(\s*\w+\s+\[\]string,\s*\w+\s+string\s*\)\s*bool`)
+	compares := regexp.MustCompile(
+		`strings\.EqualFold|slices\.Contains|map\[string\]|==\s*\w+\b`)
 
 	var found []string
 	for _, e := range entries {
@@ -49,8 +59,14 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}
-		if compare.Match(body) || lower.Match(body) {
-			found = append(found, name)
+		// Every match in the file, not merely whether the file matches: two
+		// copies inside one file would otherwise register as one.
+		for _, decl := range signature.FindAll(body, -1) {
+			at := bytes.Index(body, decl)
+			window := body[at:min(at+600, len(body))]
+			if compares.Match(window) {
+				found = append(found, name)
+			}
 		}
 	}
 	if len(found) == 0 {

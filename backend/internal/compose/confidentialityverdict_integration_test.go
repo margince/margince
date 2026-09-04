@@ -698,3 +698,96 @@ func TestOneSeatsSiblingStampDoesNotPublishAColleaguesHeldMessage(t *testing.T) 
 		t.Fatalf("the answering seat's own contribution says %q, want cleared", got)
 	}
 }
+
+// TestAnOutboundSiblingIsJudgedByItsOwnPartyNotOpenedOnATrade is the direction
+// case, and the one a `counterparty_email` comparison gets wrong on its own.
+//
+// That column holds the OTHER party, so it is the author of an inbound message
+// and the recipient of an outbound one. An ordinary verdict about mail from a
+// customer must not open, on that evidence alone, an unread message the seat
+// WROTE to somebody else on the same thread.
+func TestAnOutboundSiblingIsJudgedByItsOwnPartyNotOpenedOnATrade(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	const lawyer = "anwalt@kanzlei.example"
+
+	judged := seedHeldThreadMail(t, e, "thread-outbound", customer, "Nachbestellung")
+	// The seat's own reply, addressed to the SAME customer. Its counterparty is
+	// therefore an address the verdict read — while its author is the seat, and
+	// its text is one nothing has judged.
+	ownReply := seedHeldThreadMail(t, e, "thread-outbound", customer, "Re: Nachbestellung")
+	toLawyer := seedHeldThreadMail(t, e, "thread-outbound", lawyer, "Aufhebungsvertrag")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET direction = 'outbound' WHERE id = ANY($1)`,
+			[]ids.UUID{ownReply, toLawyer})
+		return err
+	}); err != nil {
+		t.Fatalf("making the siblings outbound: %v", err)
+	}
+	threadID := seedThreadQuestion(t, e, "thread-outbound", judged)
+
+	runConfidentiality(t, e, threadID, confidentialityOrdinary, 0.95)
+
+	// The seat's own reply to the party the verdict read is part of that same
+	// exchange, and opens with it.
+	if got := activityAudience(t, e, ownReply); got != "workspace" {
+		t.Fatalf("the seat's own reply to the party the verdict read is %q, want workspace", got)
+	}
+	if got := activityAudience(t, e, toLawyer); got != "participants" {
+		t.Fatalf("a message the seat WROTE to a party the verdict never read is %q, want "+
+			"participants: the answer was about somebody else's mail", got)
+	}
+}
+
+// TestAThirdSenderCohortIsHeldRatherThanLeftUndecided is the end of the budget.
+//
+// A claim charges an attempt and the ceiling is two, so a thread carrying three
+// parties the classifier has to be asked about separately runs out. The thread
+// then retires to `unsure`, which HOLDS — and the messages of the cohort nobody
+// reached must end held too, rather than sitting undecided forever with the
+// ledger saying the question is over.
+func TestAThirdSenderCohortIsHeldRatherThanLeftUndecided(t *testing.T) {
+	e := integration.Setup(t)
+	judged := seedHeldThreadMail(t, e, "thread-three", "a@kunde.example", "Erste")
+	second := seedHeldThreadMail(t, e, "thread-three", "b@kunde.example", "Zweite")
+	third := seedHeldThreadMail(t, e, "thread-three", "c@kunde.example", "Dritte")
+	threadID := seedThreadQuestion(t, e, "thread-three", judged)
+
+	// Two passes: each answers one cohort and re-opens for the next. The
+	// re-open is due a minute out, so the row is aged between them the way a
+	// later tick would find it.
+	for i := 0; i < 2; i++ {
+		runConfidentiality(t, e, threadID, confidentialityOrdinary, 0.95)
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			_, err := tx.Exec(context.Background(), `
+				UPDATE capture_thread_verdict
+				   SET next_attempt_at = now() - interval '1 minute',
+				       updated_at = now() - interval '1 hour'
+				 WHERE id = $1`, threadID)
+			return err
+		}); err != nil {
+			t.Fatalf("ageing the re-opened thread: %v", err)
+		}
+	}
+
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	if _, err := store.RetireExhausted(e.Admin(), "attempts"); err != nil {
+		t.Fatalf("retiring: %v", err)
+	}
+
+	if got := threadStatus(t, e, threadID); got != "unsure" {
+		t.Fatalf("thread status = %q, want unsure: a thread nobody could finish must reach a "+
+			"terminal state rather than staying claimable forever", got)
+	}
+	// The two cohorts that WERE answered are open; the one nobody reached is
+	// held, which is the safe direction for a message nothing judged.
+	for _, id := range []ids.UUID{judged, second} {
+		if got := activityAudience(t, e, id); got != "workspace" {
+			t.Fatalf("an answered cohort's message is %q, want workspace", got)
+		}
+	}
+	if got := activityAudience(t, e, third); got != "participants" {
+		t.Fatalf("the cohort nobody reached is %q, want participants", got)
+	}
+}

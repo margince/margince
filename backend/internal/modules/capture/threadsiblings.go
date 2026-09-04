@@ -133,6 +133,14 @@ func undecidedSiblingsTx(
 
 // stampSiblingsTx writes the verdict onto the import rows named.
 //
+// No audit row of its own, for the same reason RecordOutcomeTx writes none: a
+// capture_import row is one seat's CONTRIBUTION to a derivation, not a domain
+// record, and what a reader is owed a trail of is the message's audience. Every
+// change to that goes through activities.RecomputeAudienceTx, which audits and
+// emits when the row actually moves. A stamp that moves nothing — because a
+// colleague's mailbox is still holding the message — has nothing to report, and
+// an audit row saying otherwise would claim a disclosure that did not happen.
+//
 // The undecided predicate is restated in the UPDATE rather than trusted from
 // the read: between the two, another pass may have decided one of these rows,
 // and overwriting a decision with one taken before it is how a held message

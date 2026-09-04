@@ -97,9 +97,18 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 // senderWasSeen answers whether this message's author is one of the addresses
 // the thread's verdict was given.
 //
-// The FROM address alone, not every party on the message. A cleared thread that
+// The counterparty alone, not every party on the message. A cleared thread that
 // a new recipient is copied on is still the conversation the classifier read;
-// a message WRITTEN by somebody it never saw is not.
+// a message whose OTHER PARTY it never saw is not.
+//
+// counterparty_email is the party across the exchange, so it is the author of
+// an inbound message and the recipient of an outbound one — and the rule is
+// deliberately the same for both. A verdict is about a CORRESPONDENCE with
+// somebody: the seat's own reply to a customer whose mail was just called
+// ordinary belongs to that same exchange, and holding it while publishing what
+// it answers would show a conversation with half its turns missing. A message
+// to or from a party the verdict never read is a different correspondence
+// whatever direction it travelled in, and is not admitted.
 func senderWasSeen(rec connector.NormalizedRecord, seen []string) bool {
 	return addressWasSeen(rec.Counterparty.Email, seen)
 }
