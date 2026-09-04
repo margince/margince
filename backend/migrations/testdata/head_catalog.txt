@@ -1459,7 +1459,7 @@ public.communication_basis.valid_until timestamp with time zone gen=- def=-
 public.communication_basis_live_lead CREATE INDEX communication_basis_live_lead ON public.communication_basis USING btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_live_person CREATE INDEX communication_basis_live_person ON public.communication_basis USING btree (person_id, kind) WHERE ((person_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_pkey CREATE UNIQUE INDEX communication_basis_pkey ON public.communication_basis USING btree (id)
-public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=ard/margince_owner rls=false force=false
 public.communication_decision.actor text NOT NULL gen=- def=-
 public.communication_decision.attempt integer NOT NULL gen=- def=0
 public.communication_decision.basis text gen=- def=-
@@ -1546,7 +1546,7 @@ public.consent_doi_token.purpose_id uuid NOT NULL gen=- def=-
 public.consent_doi_token.token_hash text NOT NULL gen=- def=-
 public.consent_doi_token_hash_unique CREATE UNIQUE INDEX consent_doi_token_hash_unique ON public.consent_doi_token USING btree (token_hash)
 public.consent_doi_token_pkey CREATE UNIQUE INDEX consent_doi_token_pkey ON public.consent_doi_token USING btree (id)
-public.consent_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.consent_event acl=margince_owner=arwdDxt/margince_owner,margince_app=ard/margince_owner rls=false force=false
 public.consent_event.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
@@ -1600,7 +1600,7 @@ public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.c
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_evidence CHECK ((((kind = 'in_person'::text) AND (note IS NOT NULL)) OR ((kind <> 'in_person'::text) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))
-public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text])))
+public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text, 'meeting'::text])))
 public.consent_qualifying_event.consent_qualifying_event_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.consent_qualifying_event.consent_qualifying_event_pkey PRIMARY KEY (id)
 public.consent_qualifying_event.consent_qualifying_event_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))
@@ -5506,6 +5506,20 @@ public.worklist_pin.worklist_pin_identified CHECK (((row_id <> ''::text) AND (so
 public.worklist_pin.worklist_pin_pkey PRIMARY KEY (reader_id, source, row_id)
 public.worklist_pin.worklist_pin_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.worklist_pin_pkey CREATE UNIQUE INDEX worklist_pin_pkey ON public.worklist_pin USING btree (reader_id, source, row_id)
+public.worklist_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.worklist_snapshot.as_of timestamp with time zone NOT NULL gen=- def=-
+public.worklist_snapshot.buckets jsonb NOT NULL gen=- def=-
+public.worklist_snapshot.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.worklist_snapshot.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.worklist_snapshot.id uuid NOT NULL gen=- def=uuidv7()
+public.worklist_snapshot.params_fingerprint text NOT NULL gen=- def=-
+public.worklist_snapshot.reader_id uuid NOT NULL gen=- def=-
+public.worklist_snapshot.rows jsonb NOT NULL gen=- def=-
+public.worklist_snapshot.worklist_snapshot_forward CHECK ((expires_at > created_at))
+public.worklist_snapshot.worklist_snapshot_pkey PRIMARY KEY (id)
+public.worklist_snapshot.worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_snapshot_by_reader CREATE INDEX worklist_snapshot_by_reader ON public.worklist_snapshot USING btree (reader_id, created_at DESC)
+public.worklist_snapshot_pkey CREATE UNIQUE INDEX worklist_snapshot_pkey ON public.worklist_snapshot USING btree (id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace.archived_at timestamp with time zone gen=- def=-
 public.workspace.created_at timestamp with time zone NOT NULL gen=- def=now()

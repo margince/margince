@@ -18,6 +18,7 @@ package attention
 // it has in common with the rest.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -335,6 +336,9 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 	return ranked{
 		item:       row,
 		foldedFrom: from,
+		// The members' own identities, so a walk freezes THEM rather than the
+		// synthetic id above: this row exists only while the fold produces it.
+		members:    memberIdentities(members),
 		occurredAt: occurred,
 		// The group's own answer, from the members it stands for. A fold is one
 		// row in place of many, so it can only name an owner where the many
@@ -367,4 +371,18 @@ func ownerOfTheGroup(members []ranked) ownerRef {
 		}
 	}
 	return first
+}
+
+// memberIdentities names the rows a group stands for.
+//
+// A walk freezes these rather than the group's own id, which is minted from the
+// key and cause and therefore exists only while the fold produces this group.
+// Freezing the synthetic id lost the whole group the moment one member was
+// dealt with and the rest fell below the floor.
+func memberIdentities(members []ranked) []worklistsnap.Row {
+	out := make([]worklistsnap.Row, 0, len(members))
+	for _, member := range members {
+		out = append(out, rowIdentity(member))
+	}
+	return out
 }
