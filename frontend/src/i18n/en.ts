@@ -186,6 +186,7 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
+  "shell.poweredByPrefix": "Powered by",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
@@ -6328,18 +6329,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
-  "settings.companyMark": "Company mark",
+  "settings.companyMark": "Company logo",
   "settings.companyMarkPresent":
-    "Shown wherever this company appears, including the top of the sidebar.",
+    "Shown here and as the main brand at the top of the sidebar.",
   "settings.companyMarkNone":
-    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
-  "settings.companyMarkAdd": "Add a mark",
+    "No logo yet, so the initials stand in. A website read can fill this in, or add one here.",
+  "settings.companyMarkAdd": "Add a logo",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkPick": "Company logo",
   "settings.companyMarkHint":
-    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
-  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
+    "Best results: SVG or a transparent PNG around 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Your logo keeps its proportions.",
+  "settings.companyMarkEmpty": "Drop your logo here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",

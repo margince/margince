@@ -2421,10 +2421,11 @@ paths:
       x-agent-access: human-only
       summary: Stream an organization's logo image.
       description: |
-        The bytes behind `Organization.logo_url` (A55): the company mark resolved from its
-        own website during enrichment, normalized once at store time to a square PNG. The
-        response is always `image/png` — whatever the source format was, what is served is
-        the server's own re-encode, so no third-party markup is ever served from this origin.
+        The bytes behind `Organization.logo_url` (A55): the company logo resolved from its
+        own website during enrichment or uploaded by a person, normalized once at store time
+        to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
+        The response is always `image/png` — whatever the source format was, what is served
+        is the server's own re-encode, so no third-party markup is ever served from this origin.
         404 when the organization has no resolved logo, is invisible to the caller, or does
         not exist — a client renders the deterministic monogram for all three alike. 501 when
         the deployment has no object store configured.
@@ -8785,11 +8786,11 @@ paths:
       # A person choosing their own company's face. The agent path to this field is the
       # website read, which resolves a mark from the site rather than being handed one.
       x-agent-access: human-only
-      summary: Replace the installation's own company mark with an uploaded image.
+      summary: Replace the installation's own company logo with an uploaded image.
       description: |
-        Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
-        normalized to, so what is served from `logo_url` is always this origin's own bytes
-        and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+        Multipart upload. The image is re-encoded to an aspect-preserving PNG, so a wide
+        wordmark remains wide and what is served from `logo_url` is always this origin's own
+        bytes, never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
         anything that will not decode is refused as 415.
 
         The upload is a HUMAN write and takes precedence: while it stands, a website read
@@ -8834,7 +8835,7 @@ paths:
       operationId: deleteCompanyLogo
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Take the installation's own company mark off the record.
+      summary: Take the installation's own company logo off the record.
       description: |
         The record goes back to its deterministic monogram and the stored object is
         collected. It also gives the field back: a person's mark is what holds a website
@@ -23490,11 +23491,12 @@ components:
           type: [string, 'null']
           readOnly: true
           description: |
-            Where to fetch the company's resolved logo image (A55) — the `getOrganizationLogo`
-            path for this record, cookie-authenticated and same-origin. The key is ABSENT
-            entirely (not null) when no logo resolved, which is the common case and never an
-            error: a client renders the deterministic monogram then, so it never shows a
-            broken image or an empty slot.
+            Where to fetch the company's logo image (A55) — the `getOrganizationLogo`
+            path for this record, cookie-authenticated and same-origin. A revision query changes
+            with the stored image so a replacement cannot remain hidden behind an older cached
+            response. The key is ABSENT entirely (not null) when no logo is stored, which is the
+            common case and never an error: a client renders the deterministic monogram then,
+            so it never shows a broken image or an empty slot.
             The stored object key is deliberately not exposed; it names a bucket path, and a
             client's business is the endpoint that streams the bytes.
         strength: { allOf: [ { $ref: '#/components/schemas/RelationshipStrength' } ], readOnly: true, description: 'Deterministic org-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.' }
@@ -33278,7 +33280,9 @@ components:
           description: |
             Where to fetch the installation's own company logo — the same `getOrganizationLogo`
             path `Organization.logo_url` carries for that record, cookie-authenticated and
-            same-origin. The mark is whichever one the company is wearing: the one a website
+            same-origin. A revision query changes whenever the stored image changes so a browser
+            never holds a replacement behind an older cached URL. The logo is whichever one the
+            company is wearing: the one a website
             read resolved from its own site, or the one a person uploaded through
             `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
             is never an error: a client draws the deterministic monogram then.

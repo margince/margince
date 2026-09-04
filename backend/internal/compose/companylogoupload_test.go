@@ -37,8 +37,8 @@ func multipartWith(t *testing.T, part, filename string, content []byte) (*bytes.
 	return body, form.FormDataContentType()
 }
 
-// A real PNG, taller than it is wide, so the square re-encode has something
-// to do: the stored mark must come back square and no larger than the edge.
+// A real PNG, taller than it is wide, so the aspect-preserving re-encode has
+// something to do.
 func tallPNG(t *testing.T) []byte {
 	t.Helper()
 	img := image.NewRGBA(image.Rect(0, 0, 300, 600))
@@ -63,7 +63,7 @@ func decodeUpload(t *testing.T, body *bytes.Buffer, contentType string) (*httpte
 	return rec, out, name, ok
 }
 
-func TestAnUploadedImageIsReEncodedAsASquarePNGNoLargerThanTheEdge(t *testing.T) {
+func TestAnUploadedLogoKeepsItsAspectAndFitsWithinTheStoredEdge(t *testing.T) {
 	body, contentType := multipartWith(t, "file", "  brand.png  ", tallPNG(t))
 	rec, out, name, ok := decodeUpload(t, body, contentType)
 	if !ok {
@@ -77,8 +77,8 @@ func TestAnUploadedImageIsReEncodedAsASquarePNGNoLargerThanTheEdge(t *testing.T)
 		t.Fatalf("the stored bytes are not a PNG: %v", err)
 	}
 	bounds := img.Bounds()
-	if bounds.Dx() != bounds.Dy() {
-		t.Fatalf("stored mark is %dx%d, want square", bounds.Dx(), bounds.Dy())
+	if bounds.Dx() != companyLogoEdge/2 || bounds.Dy() != companyLogoEdge {
+		t.Fatalf("stored logo is %dx%d, want the source's 1:2 aspect", bounds.Dx(), bounds.Dy())
 	}
 	if bounds.Dx() > companyLogoEdge {
 		t.Fatalf("stored mark edge %d exceeds %d", bounds.Dx(), companyLogoEdge)

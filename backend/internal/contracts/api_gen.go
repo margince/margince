@@ -18659,7 +18659,9 @@ type CompanyProfile struct {
 
 	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
 	// path `Organization.logo_url` carries for that record, cookie-authenticated and
-	// same-origin. The mark is whichever one the company is wearing: the one a website
+	// same-origin. A revision query changes whenever the stored image changes so a browser
+	// never holds a replacement behind an older cached URL. The logo is whichever one the
+	// company is wearing: the one a website
 	// read resolved from its own site, or the one a person uploaded through
 	// `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
 	// is never an error: a client draws the deterministic monogram then.
@@ -24764,11 +24766,12 @@ type Organization struct {
 	// LinkedinUrl Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
-	// LogoUrl Where to fetch the company's resolved logo image (A55) — the `getOrganizationLogo`
-	// path for this record, cookie-authenticated and same-origin. The key is ABSENT
-	// entirely (not null) when no logo resolved, which is the common case and never an
-	// error: a client renders the deterministic monogram then, so it never shows a
-	// broken image or an empty slot.
+	// LogoUrl Where to fetch the company's logo image (A55) — the `getOrganizationLogo`
+	// path for this record, cookie-authenticated and same-origin. A revision query changes
+	// with the stored image so a replacement cannot remain hidden behind an older cached
+	// response. The key is ABSENT entirely (not null) when no logo is stored, which is the
+	// common case and never an error: a client renders the deterministic monogram then,
+	// so it never shows a broken image or an empty slot.
 	// The stored object key is deliberately not exposed; it names a bucket path, and a
 	// client's business is the endpoint that streams the bytes.
 	LogoUrl      *string             `json:"logo_url,omitempty"`
@@ -46194,10 +46197,10 @@ type ServerInterface interface {
 	// Get the effective server-side company-context rollout capability.
 	// (GET /company/context/capabilities)
 	GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request)
-	// Take the installation's own company mark off the record.
+	// Take the installation's own company logo off the record.
 	// (DELETE /company/logo)
 	DeleteCompanyLogo(w http.ResponseWriter, r *http.Request)
-	// Replace the installation's own company mark with an uploaded image.
+	// Replace the installation's own company logo with an uploaded image.
 	// (POST /company/logo)
 	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
@@ -48315,13 +48318,13 @@ func (_ Unimplemented) GetCompanyContextCapabilities(w http.ResponseWriter, r *h
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Take the installation's own company mark off the record.
+// Take the installation's own company logo off the record.
 // (DELETE /company/logo)
 func (_ Unimplemented) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Replace the installation's own company mark with an uploaded image.
+// Replace the installation's own company logo with an uploaded image.
 // (POST /company/logo)
 func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
