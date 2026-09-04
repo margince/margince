@@ -65,7 +65,13 @@ export function CountUp({
       // Cubic ease-out: fast enough to read as arriving, slow enough at the end
       // that the final figure settles rather than snapping.
       const eased = 1 - (1 - k) ** 3;
-      setShown(Math.round(start + (value - start) * eased));
+      const drawn = Math.round(start + (value - start) * eased);
+      // Recorded every frame, not only at the end: a poll landing mid-run
+      // cancels this one, and the next must continue from the number on
+      // screen. Reading a value the run never reached is what made the figure
+      // drop back and climb again — the reset this component exists to avoid.
+      from.current = drawn;
+      setShown(drawn);
       if (k < 1) {
         frame = requestAnimationFrame(tick);
         return;

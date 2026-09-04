@@ -165,6 +165,13 @@ export function ImapMailboxForm({
   // button stands: pressable whatever is filled in, and the press is what
   // marks the missing fields and names them beside it.
   const submit = () => {
+    // The button carries `pending`, but Enter in a field reaches this directly
+    // and mutations run in parallel by default — so a second press while the
+    // first is in flight would open a second IMAP session with the same
+    // credentials. The guard belongs here, where both paths meet.
+    if (connect.isPending) {
+      return;
+    }
     if (!ready) {
       setAttempted(true);
       return;

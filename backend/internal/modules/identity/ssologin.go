@@ -92,8 +92,8 @@ type OIDCExchanger interface {
 // loginStateSignerAdapter satisfies this; identity never sees compose's HMAC
 // details.
 type OIDCStateSigner interface {
-	Sign(provider, nonce, codeVerifier string, ttl time.Duration) (token string)
-	Verify(token string) (provider, nonce, codeVerifier string, err error)
+	Sign(provider, clientID, nonce, codeVerifier string, ttl time.Duration) (token string)
+	Verify(token string) (provider, clientID, nonce, codeVerifier string, err error)
 }
 
 const (
@@ -223,7 +223,7 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		return
 	}
 	challenge := sha256.Sum256([]byte(verifier))
-	token := h.stateSigner.Sign(provider, nonce, verifier, oidcStateTTL)
+	token := h.stateSigner.Sign(provider, cfg.ClientID, nonce, verifier, oidcStateTTL)
 	setLoginStateCookie(w, token, oidcStateTTL)
 
 	q := url.Values{
@@ -331,9 +331,20 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		fail(ctx, "no state cookie", nil)
 		return
 	}
-	stProvider, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
+	stProvider, stClientID, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
 	if err != nil || stProvider != provider || stNonce != state {
 		fail(ctx, "state verification", err)
+		return
+	}
+	// The client the flow STARTED on. A stored app resolves per request, so an
+	// app replaced mid-flow would otherwise have this callback redeem a code
+	// issued to the previous client — the provider rejects that, and the
+	// operator would be reading a token-endpoint error instead of the reason.
+	// Its own failure marker, because "the app changed under an open sign-in"
+	// and "the state did not verify" call for different answers from whoever
+	// is reading the log.
+	if stClientID != p.Config.ClientID {
+		fail(ctx, "the sign-in app changed while this flow was open", nil)
 		return
 	}
 	clearLoginStateCookie(w) // one-shot: consumed now that the state has genuinely matched

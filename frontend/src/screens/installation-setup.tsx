@@ -117,6 +117,20 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
  */
 const PLATFORM_DECLINED_KEY = "margince.first-run.platform-declined";
 
+// The accounts that declined in THIS tab, whether or not storage kept it.
+const declinedThisSession = new Set<string>();
+
+/**
+ * Forgets the in-tab declines — the counterpart to `localStorage.clear()`,
+ * and needed for the same reason: this set is the half of the answer that
+ * storage did not keep, so clearing one without the other leaves a decline
+ * standing that the caller believes they erased. A test suite whose cases
+ * each start from an unanswered question is the only caller today.
+ */
+export function forgetPlatformDeclines(): void {
+  declinedThisSession.clear();
+}
+
 function declinedKey(account: string): string {
   return `${PLATFORM_DECLINED_KEY}:${account}`;
 }
@@ -128,11 +142,15 @@ function platformDeclined(account: string | null): boolean {
   if (account === null) {
     return false;
   }
+  if (declinedThisSession.has(account)) {
+    return true;
+  }
   try {
     return window.localStorage.getItem(declinedKey(account)) === "1";
   } catch {
-    // Storage blocked (a private window, a policy): the question is asked
-    // again, which is the safe reading of not knowing.
+    // Storage blocked (a private window, a policy) and nothing declined in
+    // this session either: the question is asked again, which is the safe
+    // reading of not knowing.
     return false;
   }
 }
@@ -148,13 +166,18 @@ function subscribeDeclined(listener: () => void): () => void {
 }
 
 function rememberPlatformDeclined(account: string | null): void {
+  if (account === null) {
+    return;
+  }
+  // Recorded here FIRST, and read back first: a browser that refuses storage
+  // still has to honour the answer for as long as the tab is open. Writing
+  // only to storage meant a private window asked the question again on the
+  // very next render, which is the step reappearing under the reader.
+  declinedThisSession.add(account);
   try {
-    if (account !== null) {
-      window.localStorage.setItem(declinedKey(account), "1");
-    }
+    window.localStorage.setItem(declinedKey(account), "1");
   } catch {
-    // Nothing to remember it in; the reader is let through regardless, and
-    // asked again next time.
+    // Only this session remembers it, which the set above has already done.
   }
   for (const listener of declinedListeners) {
     listener();

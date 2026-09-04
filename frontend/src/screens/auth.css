@@ -528,12 +528,17 @@
      copy's stagger: it is the subject, so it is what a reader meets first. */
   animation: auth-rise 0.7s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
-/* The region itself: words only. It keeps its own grid so the copy and the
-   server-read line stay one cluster. */
+/* The region itself: words only — the greeting and the one line under it, held
+   together as one cluster beneath the Core.
+
+   Rows by content, and only the rows there are: two explicit rows were left
+   behind when the region stopped carrying the kicker, the promise and the
+   handover, and the second one added a gap's worth of empty space under the
+   copy with nothing in it. */
 .auth-identity {
   min-width: 0;
   display: grid;
-  grid-template-rows: repeat(2, auto);
+  grid-auto-rows: auto;
   justify-items: center;
   gap: var(--space-4);
 }

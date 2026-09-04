@@ -39,7 +39,12 @@ type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 
 // The wizard steps whose restore needs the voice server truth (built
 // versions, corpus meter); the member path never does.
+// "invite" is in the set because accepting the invite walks straight into the
+// voice act without another restore: probing only from "voice" onwards handed
+// VoiceAct a null summary, and the collect scene then reported zero words over
+// a corpus the server already held.
 const voiceProbeSteps = new Set<OnboardingState["step"]>([
+  "invite",
   "voice",
   "results",
   "connect",

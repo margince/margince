@@ -122,7 +122,7 @@ export function VoiceActArtifact({
         >
           {continueBar.reason === "failed" && continueBar.onRetry && (
             <Button
-              disabled={continueBar.retryPending}
+              pending={continueBar.retryPending}
               onClick={continueBar.onRetry}
             >
               {t("ob.conv.voice.retryBuild")}

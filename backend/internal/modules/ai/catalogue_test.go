@@ -192,3 +192,33 @@ func TestModelCatalogueListNeverCachesAFailure(t *testing.T) {
 		t.Fatalf("fetcher called %d times across two failures, want 2 (a failure must never be cached)", fetcher.calls)
 	}
 }
+
+// A billing-lane variant that outscores its own base model still reaches the
+// screen under the id a screen can bind. The tie-break in the sort only
+// prefers the bare id when the scores are EQUAL, so nothing before this
+// collapse step keeps a `:batch` suffix off the ranked list.
+func TestModelCatalogueRanksAnAliasUnderItsBindableID(t *testing.T) {
+	const aliasScoresHigher = `{"data":[
+		{"id":"anthropic/claude-opus-5","name":"Claude Opus 5","context_length":200000,
+		 "pricing":{"prompt":"0.00000015","completion":"0.00000075"},
+		 "benchmarks":{"artificial_analysis":{"intelligence_index":63.1}}},
+		{"id":"anthropic/claude-opus-5:batch","name":"Claude Opus 5 (batch)","context_length":200000,
+		 "pricing":{"prompt":"0.000000075","completion":"0.000000375"},
+		 "benchmarks":{"artificial_analysis":{"intelligence_index":64.2}}}
+	]}`
+	fetcher := &fakeCatalogueFetcher{body: []byte(aliasScoresHigher)}
+	clock := &fixedClock{now: time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)}
+	resp := newTestCatalogue(fetcher, clock).List(context.Background(), 10)
+
+	if len(resp.Models) != 1 {
+		t.Fatalf("got %d entries, want the two lanes collapsed onto one: %+v", len(resp.Models), resp.Models)
+	}
+	if resp.Models[0].ID != "anthropic/claude-opus-5" {
+		t.Errorf("ranked id = %q, want the bindable id without its billing suffix", resp.Models[0].ID)
+	}
+	// The WINNER's numbers, under the base id: collapsing the lanes must not
+	// quietly swap in the lower-scoring row's price or score.
+	if resp.Models[0].RankScore == nil || *resp.Models[0].RankScore != "64.2" {
+		t.Errorf("ranked score = %v, want the higher-scoring lane's 64.2", resp.Models[0].RankScore)
+	}
+}

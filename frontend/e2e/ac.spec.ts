@@ -1805,18 +1805,17 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       //
       // Named ROW BY ROW rather than counted: the copy is one paragraph in one
       // voice, so a row missing from the middle of it is a sentence the system
-      // stopped saying, and a count would pass on any five elements.
-      const identityRows = [
-        ".auth-kicker",
-        ".auth-statement",
-        ".auth-purpose",
-        ".auth-promise",
-        ".auth-handover",
-      ];
+      // stopped saying, and a count would pass on any two elements.
+      //
+      // Two rows, since the surface stopped making claims about itself: the
+      // greeting and the one line about what the product is for. The kicker,
+      // the send promise and the handover line were removed with the AI
+      // posture readout they belonged to.
+      const identityRows = [".auth-statement", ".auth-purpose"];
 
       test("shows the identity region whole", async ({ page }) => {
         await page.goto("/");
-        await expect(page.locator("aside.auth-identity")).toBeVisible();
+        await expect(page.locator(".auth-identity")).toBeVisible();
         for (const row of identityRows) {
           const line = page.locator(row);
           await expect(line).toHaveCount(1);
@@ -1848,7 +1847,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       // The class, not the tag: see the note beside the other `.auth-task`
       // locator above — one `<main>` per screen, and it belongs to the frame.
       const task = page.locator(".auth-task");
-      const identity = page.locator("aside.auth-identity");
+      const identity = page.locator(".auth-identity");
       await expect(task).toBeVisible();
       await expect(identity).toBeVisible();
       const taskBox = await task.boundingBox();
@@ -1856,7 +1855,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       expect(identityBox?.y ?? 0).toBeLessThan(taskBox?.y ?? 0);
       const order = await page.evaluate(() => {
         const first = document.querySelector(".auth-task");
-        const second = document.querySelector("aside.auth-identity");
+        const second = document.querySelector(".auth-identity");
         return first && second
           ? (first.compareDocumentPosition(second) &
               Node.DOCUMENT_POSITION_FOLLOWING) !==

@@ -68,36 +68,55 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
   }
 }
 
-export function stopState(
+// The read is its own stop and its own truth: it is done the moment the server
+// says so, whether or not the conversation has moved on.
+function readStopState(
+  state: ConversationState,
+  pastTheRead: boolean,
+): RailStopState {
+  if (state.readCompleted || pastTheRead) {
+    return "done";
+  }
+  return state.phase === "co.reading" ? "now" : "todo";
+}
+
+// Where a stop sits relative to the one the conversation is standing on.
+function stopStateByPosition(
   stop: RailStop["key"],
   state: ConversationState,
+  index: number,
+  currentIndex: number,
 ): RailStopState {
-  const stops = railStops(state.memberPath).map((entry) => entry.key);
-  const current = currentStop(state);
-  const index = stops.indexOf(stop);
-
-  // The read is its own stop and its own truth: it is done the moment the
-  // server says so, whether or not the conversation has moved on.
-  if (stop === "read") {
-    if (state.readCompleted || currentIndexOf(current, stops) > 0) {
-      return "done";
-    }
-    return state.phase === "co.reading" ? "now" : "todo";
-  }
-
-  const currentIndex = currentIndexOf(current, stops);
-  if (currentIndex < 0 || index < 0) {
+  if (currentIndex < 0 || index < 0 || index > currentIndex) {
     return "todo";
   }
   if (index < currentIndex) {
     return "done";
   }
-  if (index > currentIndex) {
-    return "todo";
-  }
   // The last stop only reads `done` once the flow actually finished, so
   // it does not claim completion while the user is still choosing.
   return stop === "prefs" && state.act === "done" ? "done" : "now";
+}
+
+export function stopState(
+  stop: RailStop["key"],
+  state: ConversationState,
+): RailStopState {
+  const stops = railStops(state.memberPath).map((entry) => entry.key);
+  const currentIndex = currentIndexOf(currentStop(state), stops);
+
+  // The team act stands on no stop, so `currentIndex` is -1 and the position
+  // arithmetic would read every stop as `todo` — including the two the creator
+  // finished to get here, and including `read` on a restored flow where
+  // `readCompleted` has not come back yet. It is a way OUT of the personal
+  // stops: those stay `todo` because this creator will not be walking them.
+  if (state.act === "team") {
+    return stop === "read" || stop === "confirm" ? "done" : "todo";
+  }
+  if (stop === "read") {
+    return readStopState(state, currentIndex > 0);
+  }
+  return stopStateByPosition(stop, state, stops.indexOf(stop), currentIndex);
 }
 
 function currentIndexOf(

@@ -118,6 +118,11 @@ func rankOpenRouterModels(models []openRouterModel) []openRouterModel {
 			continue
 		}
 		seen[base] = true
+		// The bindable id, not the lane the winner happened to arrive on: the
+		// tie-break above prefers the bare id only when the scores are equal,
+		// so a variant scoring strictly higher would otherwise carry its
+		// billing suffix onto a screen that has to bind what it shows.
+		m.ID = base
 		ranked = append(ranked, m)
 	}
 	return ranked

@@ -46,11 +46,13 @@ func (f fixedExchanger) Exchange(context.Context, string, string, string) (strin
 	return f.idToken, nil
 }
 
-type fixedStateSigner struct{ provider, nonce, codeVerifier string }
+type fixedStateSigner struct{ provider, clientID, nonce, codeVerifier string }
 
-func (f fixedStateSigner) Sign(string, string, string, time.Duration) string { return "irrelevant" }
-func (f fixedStateSigner) Verify(string) (string, string, string, error) {
-	return f.provider, f.nonce, f.codeVerifier, nil
+func (f fixedStateSigner) Sign(string, string, string, string, time.Duration) string {
+	return "irrelevant"
+}
+func (f fixedStateSigner) Verify(string) (string, string, string, string, error) {
+	return f.provider, f.clientID, f.nonce, f.codeVerifier, nil
 }
 
 type erroringExchanger struct{}
@@ -475,4 +477,59 @@ func offeredProviderKeys(t *testing.T, h Handlers) []string {
 		keys = append(keys, p.Key)
 	}
 	return keys
+}
+
+// An app replaced between /start and /callback refuses the callback rather
+// than redeeming the code against the new client.
+//
+// Stored apps resolve per REQUEST, so the client the callback sees is not
+// necessarily the one the authorization began on — an operator registering a
+// new app while somebody's sign-in is open is enough. The provider would
+// reject a code issued to the previous client anyway; catching it here is the
+// difference between an operator reading "the sign-in app changed while this
+// flow was open" and reading a token-endpoint error from Google.
+//
+// The assertion is that the code is NEVER SENT, not merely that no session is
+// minted: every later refusal on this path also redirects to the same failure
+// URL, so a test watching only the redirect would pass with the guard deleted.
+func TestOidcSignInCallbackRefusesAClientChangedMidFlow(t *testing.T) {
+	redeemed := &countingExchanger{}
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config:    OIDCProviderConfig{Key: "google", ClientID: "the-new-app"},
+			Verifier:  fixedVerifier{email: "dana@example.com", sub: "sub-dana", emailVerified: true},
+			Exchanger: redeemed,
+		})},
+		// Signed when "the-old-app" was the registered client.
+		fixedStateSigner{provider: "google", clientID: "the-old-app", nonce: "n", codeVerifier: "v"},
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=c&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
+		State: oidcStrPtr("n"), Code: oidcStrPtr("c"),
+	})
+
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
+		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+	if redeemed.calls != 0 {
+		t.Fatalf("the code was sent to the token endpoint %d time(s), want none — "+
+			"it was issued to a client this deployment no longer holds", redeemed.calls)
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookieName {
+			t.Fatal("a flow whose app changed under it must never mint a session")
+		}
+	}
+}
+
+// countingExchanger records whether the token endpoint was reached at all.
+type countingExchanger struct{ calls int }
+
+func (c *countingExchanger) Exchange(context.Context, string, string, string) (string, error) {
+	c.calls++
+	return "", errors.New("token endpoint must not have been reached")
 }

@@ -77,7 +77,17 @@ export function CrawlCanvas({
   // animation clock and pop every node in again from nothing.
   const latest = useRef<readonly CrawlPage[]>(pages);
   latest.current = pages;
+  // Under reduced motion `runCrawl` paints one frame and stops, so a page
+  // arriving afterwards would never be drawn — and pages arrive by poll, so
+  // the still picture a reader was left with was usually the empty one. That
+  // mode therefore re-runs the effect per arrival to repaint.
+  //
+  // The animated path must NOT take this dependency: re-running its effect
+  // restarts the clock and pops every node in again from nothing, which is
+  // exactly what `latest` being a ref exists to prevent.
+  const stillPaints = reduced ? pages.length : 0;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep — `stillPaints` is not read in the body; re-running the effect IS the repaint, and it holds at 0 while the loop is animating so the clock is never restarted.
   useEffect(() => {
     const el = canvas.current;
     const ctx = el?.getContext("2d");
@@ -85,7 +95,7 @@ export function CrawlCanvas({
       return;
     }
     return runCrawl(el, ctx, latest, reduced, motes, flowToId);
-  }, [reduced, flowToId]);
+  }, [reduced, flowToId, stillPaints]);
 
   return (
     <>

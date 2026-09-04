@@ -98,11 +98,23 @@ export function createFullscreenProgram(
     `${label} vertex`,
   );
   const frag = compile(gl, gl.FRAGMENT_SHADER, fragment, `${label} fragment`);
+  // Every path out of here before the attach owns whichever shaders compiled:
+  // nothing else holds them yet, and this setup runs again whenever the
+  // ambient ground is rebuilt, so a survivor left behind accumulates in the
+  // context one preference change at a time.
   if (!vert || !frag) {
+    if (vert) {
+      gl.deleteShader(vert);
+    }
+    if (frag) {
+      gl.deleteShader(frag);
+    }
     return null;
   }
   const program = gl.createProgram();
   if (!program) {
+    gl.deleteShader(vert);
+    gl.deleteShader(frag);
     return null;
   }
   gl.attachShader(program, vert);

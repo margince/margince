@@ -15,11 +15,19 @@ import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { InstallationSetup, outstandingStep } from "./installation-setup";
+import {
+  forgetPlatformDeclines,
+  InstallationSetup,
+  outstandingStep,
+} from "./installation-setup";
 
 afterEach(() => {
   // Every case starts with the platform question unanswered by this account.
+  // BOTH halves of the answer: a decline is remembered in the tab as well as
+  // in storage, so clearing only storage would carry one case's decline into
+  // the next.
   window.localStorage.clear();
+  forgetPlatformDeclines();
   cleanup();
   vi.unstubAllGlobals();
 });

@@ -158,17 +158,19 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 
 func TestLoginStateSignerAdapterRoundTrips(t *testing.T) {
 	adapter := loginStateSignerAdapter{s: newLoginStateSigner([]byte("0123456789012345678901234567890123"))}
-	token := adapter.Sign("google", "nonce-1", "verifier-1", 10*time.Minute)
+	token := adapter.Sign("google", "client-1", "nonce-1", "verifier-1", 10*time.Minute)
 
-	provider, nonce, codeVerifier, err := adapter.Verify(token)
+	provider, clientID, nonce, codeVerifier, err := adapter.Verify(token)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if provider != "google" || nonce != "nonce-1" || codeVerifier != "verifier-1" {
-		t.Fatalf("provider=%q nonce=%q codeVerifier=%q", provider, nonce, codeVerifier)
+	if provider != "google" || clientID != "client-1" ||
+		nonce != "nonce-1" || codeVerifier != "verifier-1" {
+		t.Fatalf("provider=%q clientID=%q nonce=%q codeVerifier=%q",
+			provider, clientID, nonce, codeVerifier)
 	}
 
-	if _, _, _, err := adapter.Verify("not-a-real-token"); err == nil {
+	if _, _, _, _, err := adapter.Verify("not-a-real-token"); err == nil {
 		t.Fatal("expected an error to pass through for a malformed token")
 	}
 }

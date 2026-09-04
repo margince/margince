@@ -46,6 +46,13 @@ export function WayOnward({
 }>) {
   const [attempted, setAttempted] = useState(false);
   const blocked = blockers.length > 0;
+  // A step that stops being blocked forgets the early press. Without this the
+  // flag outlives the reason for it, so a step invalidated again later speaks
+  // its blockers through `role="alert"` with nobody having asked — the reasons
+  // are said when the button is pressed, and only then.
+  if (attempted && !blocked) {
+    setAttempted(false);
+  }
   return (
     <StageActions>
       {attempted && blocked ? (

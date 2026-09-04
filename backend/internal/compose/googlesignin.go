@@ -159,16 +159,18 @@ func (g googleSignInSource) provider(ctx context.Context) (identity.OIDCProvider
 // loginStateSigner (oidcloginstate.go).
 type loginStateSignerAdapter struct{ s loginStateSigner }
 
-func (a loginStateSignerAdapter) Sign(provider, nonce, codeVerifier string, ttl time.Duration) string {
-	return a.s.sign(loginState{Provider: provider, Nonce: nonce, CodeVerifier: codeVerifier}, time.Now().Add(ttl))
+func (a loginStateSignerAdapter) Sign(provider, clientID, nonce, codeVerifier string, ttl time.Duration) string {
+	return a.s.sign(loginState{
+		Provider: provider, ClientID: clientID, Nonce: nonce, CodeVerifier: codeVerifier,
+	}, time.Now().Add(ttl))
 }
 
-func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVerifier string, err error) {
+func (a loginStateSignerAdapter) Verify(token string) (provider, clientID, nonce, codeVerifier string, err error) {
 	st, err := a.s.verify(token, time.Now())
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
-	return st.Provider, st.Nonce, st.CodeVerifier, nil
+	return st.Provider, st.ClientID, st.Nonce, st.CodeVerifier, nil
 }
 
 // WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when the
