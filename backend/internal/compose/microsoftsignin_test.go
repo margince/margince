@@ -443,10 +443,13 @@ func TestAStoredMicrosoftAppSignsInOnItsOwnDirectory(t *testing.T) {
 func TestMicrosoftSignInKeepsOneVerifierPerAuthority(t *testing.T) {
 	const second = "22222222-3333-4444-5555-666666666677"
 	src := &microsoftSignInSource{}
-	if src.verifierFor(testTenant) != src.verifierFor(testTenant) {
+	first := src.verifierFor(testTenant)
+	again := src.verifierFor(testTenant)
+	other := src.verifierFor(second)
+	if first != again {
 		t.Fatal("the same authority was given two verifiers, and two JWKS caches")
 	}
-	if src.verifierFor(testTenant) == src.verifierFor(second) {
+	if first == other {
 		t.Fatal("two directories share one verifier, and one key endpoint")
 	}
 }
