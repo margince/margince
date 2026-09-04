@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The definition is the (a) half of AC-R6: the exact filter + group +
@@ -97,7 +98,8 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 		map[string]any{"pipeline_id": "018f-pipe"},
 		[]string{"owner_id", "forecast_category"},
 		aggs,
-		map[string]any{"owner_id": "018f-owner", "forecast_category": nil, "deals": int64(3)})
+		map[string]any{"owner_id": "018f-owner", "forecast_category": nil, "deals": int64(3)},
+		time.Time{})
 
 	parsed, err := url.Parse(minted)
 	if err != nil {
@@ -228,5 +230,48 @@ func TestForecastSpecShape(t *testing.T) {
 	}
 	if spec.measures["amount_minor"] != "t.amount_minor" {
 		t.Errorf("unweighted measure = %q", spec.measures["amount_minor"])
+	}
+}
+
+// A handle carries the instant its headline was computed at, and gives it back.
+//
+// This is the half a database test cannot show: the FX lookup compares by DAY,
+// so two reads taken minutes apart see the same rate however the sheet moved.
+// The case that matters crosses a date boundary — a stage totalled at 23:50 and
+// opened at 00:10 — and stating both instants exactly is what makes it testable
+// at all.
+func TestADerivationHandleCarriesTheInstantItWasComputedAt(t *testing.T) {
+	lateThursday := time.Date(2026, 9, 3, 23, 50, 0, 0, time.UTC)
+
+	minted := derivationURL("pipeline-current", nil, []string{"stage_id"},
+		[]reportAggregate{{Fn: "sum", Field: "amount_base_minor", As: "base"}},
+		map[string]any{"stage_id": "s1", "base": int64(5000)}, lateThursday)
+
+	parsed, err := url.Parse(minted)
+	if err != nil {
+		t.Fatalf("the minted handle is not a URL: %v", err)
+	}
+	q, err := parseDerivationQuery(parsed.Query())
+	if err != nil {
+		t.Fatalf("the engine cannot read back a handle it minted: %v", err)
+	}
+	if !q.AsOf.Equal(lateThursday) {
+		t.Fatalf("handle round-tripped as_of as %v, want %v.\n\n"+
+			"Opened after midnight, a handle that lost this converts at Friday's "+
+			"rate while the headline above it was Thursday's.", q.AsOf, lateThursday)
+	}
+}
+
+// A handle minted before this key existed still resolves, at the current
+// instant, exactly as it always did. Those links are in bookmarks and in sent
+// mail, and refusing them would be a worse answer than the old behaviour.
+func TestAHandleWithoutAnInstantStillResolves(t *testing.T) {
+	q, err := parseDerivationQuery(url.Values{"by": {"stage_id"}, "stage_id": {"s1"}})
+	if err != nil {
+		t.Fatalf("a handle with no as_of was refused: %v", err)
+	}
+	if !q.AsOf.IsZero() {
+		t.Errorf("a handle naming no instant produced %v, want the zero time that "+
+			"tells the engine to read the frame's own", q.AsOf)
 	}
 }

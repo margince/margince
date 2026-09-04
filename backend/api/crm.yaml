@@ -16363,6 +16363,78 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/calls:
+    get:
+      tags: [Reports]
+      operationId: listForecastCalls
+      summary: What this period's forecast has been called, newest first.
+      description: |
+        The calls made for one period and scope, newest first — not just the one standing now.
+
+        Capped at the most recent 500. Nothing bounds how often a period may be called, so an
+        uncapped answer could grow without limit; the cap sits far above what a period
+        accumulates in practice, and takes the NEWEST entries, which are the ones a reader
+        reviewing a period is asking about.
+
+        A call supersedes rather than overwrites, so the table already holds what was
+        believed on the day it was believed. This is how that gets read: the sequence is the
+        record of how a period's expectation moved, and who moved it, which is what anyone
+        reviewing how forecasting went is actually asking for.
+
+        The chain is linear per period and scope. Each entry names the call it replaced in
+        `supersedes_id`, and the first call of a period names none — a different fact from
+        replacing nothing.
+
+        Answers the same scope the readings do, resolved the same way and refused the same
+        way: asking for a wider tier than the caller's seat is `403`, and naming a team or
+        person outside their lens is `404` — naming it at all would confirm the subject
+        exists.
+
+        A period nobody has called yet is an empty list, not a `404`. That a period has no
+        calls is a real answer about a period the caller may read.
+      parameters:
+        - name: period
+          in: query
+          # Named rather than left to the generator. Unprefixed, this pair would
+          # claim the bare `Quarter` and `Month` in the shared contracts package,
+          # and the next enum carrying either value would take them and silently
+          # rename these — a compile error at best, and at worst two constants
+          # swapping meaning.
+          schema:
+            type: string
+            enum: [quarter, month]
+            default: quarter
+            x-enum-varnames: [ForecastCallsPeriodQuarter, ForecastCallsPeriodMonth]
+          description: The window length. Quarters follow the installation's financial year.
+        - name: as_of
+          in: query
+          schema: { type: string, format: date }
+          description: >-
+            Which period to read, named by a day inside it. Defaults to today, so a caller
+            who names nothing asks about the period they are in.
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [workspace, team, owner], default: workspace }
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Whose forecast, for a team or owner scope. A workspace scope names none.
+      responses:
+        '200':
+          description: The calls made for that period and scope, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [calls]
+                additionalProperties: false
+                properties:
+                  calls:
+                    type: array
+                    items: { $ref: '#/components/schemas/ForecastCall' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Reports]
       operationId: recordForecastCall
@@ -20301,7 +20373,7 @@ components:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
-        name: { type: string, description: Rename the organization. }
+        name: { type: string, maxLength: 200, description: Rename the organization. }
         timezone: { type: string, description: The IANA reporting zone. }
         base_currency:
           type: string
@@ -23538,6 +23610,18 @@ components:
         last_name: { type: [string, 'null'] }
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
+        employer:
+          readOnly: true
+          description: >-
+            Where this contact works TODAY: their current primary employment edge, resolved to
+            the account it names. History is not here — the full career ribbon is
+            `person_360.employments`, and a past employer never appears in this field.
+            Absent is not "works nowhere": the field is also absent when the caller may not
+            read relationship edges (an edge discloses its endpoints as a PAIR, which the
+            grant on the person does not cover) or when the employer sits outside their
+            organization row scope. A reader is told who somebody works for or nothing at all,
+            never a company they have no grant for.
+          allOf: [{ $ref: '#/components/schemas/PersonEmployer' }]
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string
@@ -23626,6 +23710,17 @@ components:
         request still succeeds. A picklist value outside the declared options is the one
         typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
         columns; a retired field's stored values are preserved but leave the payload.
+
+    PersonEmployer:
+      type: object
+      description: >-
+        The account a contact works at today, by their current primary employment edge —
+        the one `uq_rel_current_primary_employer` keeps unique per person, so a contact
+        has at most one.
+      required: [organization_id, organization_name]
+      properties:
+        organization_id: { type: string, format: uuid }
+        organization_name: { type: string }
 
     CreatePersonRequest:
       type: object
@@ -38457,6 +38552,13 @@ components:
         `due` is asked of every item whatever its level, so an overdue promise counts in
         both `urgent` and `due` — deliberately, because a reader wants both answers about
         it. Read them as four questions about one day rather than four slices of it.
+
+        `buckets` IS the partition, and it is the one to render an additive sentence from.
+        The figures above it answer four questions about the day; the four inside it slice
+        that day into parts that sum to `total`. Both are sent because both are wanted: a
+        reader asking "how much is overdue" wants `due` counted across every level, and a
+        reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+        parts to add up to the whole they are shown beside.
       required: [urgent, due, lower_priority, total]
       properties:
         urgent: { type: integer, minimum: 0, description: 'Items at the top two levels: somebody is waiting, or a promise is breaking.' }
@@ -38473,6 +38575,8 @@ components:
             of rows, which is the one thing this line promises cannot happen.
         lower_priority: { type: integer, minimum: 0, description: 'Routine work: decisions that block nothing, and data hygiene.' }
         total: { type: integer, minimum: 0, description: 'How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.' }
+        buckets:
+          $ref: '#/components/schemas/WorklistBuckets'
         material_threshold_minor:
           type: [integer, 'null']
           format: int64
@@ -38482,6 +38586,40 @@ components:
             the client can say WHY a deal ranked where it did. Null when the pipeline has
             no open deals to take a median of.
         base_currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$', description: 'The currency every expected-revenue figure here is converted to.' }
+
+    WorklistBuckets:
+      type: object
+      description: |
+        The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+        lands in exactly one of them.
+
+        The order below is the order they are read in, and it is a precedence rather than a
+        set of independent tests: an overdue promise is urgent, not due-today, because the
+        first arm that matches takes the row. Without a precedence the same item would be
+        counted twice and the sentence would add up to more than the day holds.
+
+        `review` is every row whose `destination` is not `today` — a judgement to make, a
+        source to restore, a receipt to read. It is counted from that field rather than from
+        the source, so the sentence and the screens cannot disagree about which rows are
+        seller work.
+      required: [urgent, due_today, planned, review]
+      properties:
+        urgent:
+          type: integer
+          minimum: 0
+          description: 'Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.'
+        due_today:
+          type: integer
+          minimum: 0
+          description: 'Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends.'
+        planned:
+          type: integer
+          minimum: 0
+          description: 'The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.'
+        review:
+          type: integer
+          minimum: 0
+          description: 'Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.'
 
     WorklistReadings:
       type: object
@@ -38751,6 +38889,24 @@ components:
           type: string
           enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
+        destination:
+          type: string
+          enum: [today, review, system_health, receipt]
+          x-enum-varnames: [WorklistDestinationToday, WorklistDestinationReview, WorklistDestinationSystemHealth, WorklistDestinationReceipt]
+          description: |
+            Which SCREEN this row belongs on. The server decides it once, and every count,
+            fold and page in this response is computed from the same value the row carries,
+            so a client that groups by it cannot disagree with the figures above it.
+
+            `today` is work a seller executes. `review` is a judgement somebody must make
+            before work continues — an approval, a duplicate pair, an introduction.
+            `system_health` is a source or automation an administrator must restore.
+            `receipt` is completed work, reported so the reader can see it happened.
+
+            A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+            `source` that a browser could recompute: two rows of one source can differ,
+            and the mapping is a product decision that moves. A client that re-derived it
+            would put a row on one screen while the count above it put the row on another.
         level:
           type: integer
           minimum: 0

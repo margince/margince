@@ -11118,7 +11118,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * What this period's forecast has been called, newest first.
+         * @description The calls made for one period and scope, newest first — not just the one standing now.
+         *
+         *     Capped at the most recent 500. Nothing bounds how often a period may be called, so an
+         *     uncapped answer could grow without limit; the cap sits far above what a period
+         *     accumulates in practice, and takes the NEWEST entries, which are the ones a reader
+         *     reviewing a period is asking about.
+         *
+         *     A call supersedes rather than overwrites, so the table already holds what was
+         *     believed on the day it was believed. This is how that gets read: the sequence is the
+         *     record of how a period's expectation moved, and who moved it, which is what anyone
+         *     reviewing how forecasting went is actually asking for.
+         *
+         *     The chain is linear per period and scope. Each entry names the call it replaced in
+         *     `supersedes_id`, and the first call of a period names none — a different fact from
+         *     replacing nothing.
+         *
+         *     Answers the same scope the readings do, resolved the same way and refused the same
+         *     way: asking for a wider tier than the caller's seat is `403`, and naming a team or
+         *     person outside their lens is `404` — naming it at all would confirm the subject
+         *     exists.
+         *
+         *     A period nobody has called yet is an empty list, not a `404`. That a period has no
+         *     calls is a real answer about a period the caller may read.
+         */
+        get: operations["listForecastCalls"];
         put?: never;
         /**
          * Record what somebody believes will close.
@@ -16394,6 +16420,8 @@ export interface components {
             full_name: string;
             /** @description Denormalized current title; authoritative title is on the employment relationship. */
             title?: string | null;
+            /** @description Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `person_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the person does not cover) or when the employer sits outside their organization row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for. */
+            readonly employer?: components["schemas"]["PersonEmployer"];
             /** Format: uuid */
             owner_id?: string | null;
             /**
@@ -16457,6 +16485,12 @@ export interface components {
             archived_at?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per person, so a contact has at most one. */
+        PersonEmployer: {
+            /** Format: uuid */
+            organization_id: string;
+            organization_name: string;
         };
         CreatePersonRequest: {
             full_name: string;
@@ -28956,6 +28990,13 @@ export interface components {
          *     `due` is asked of every item whatever its level, so an overdue promise counts in
          *     both `urgent` and `due` — deliberately, because a reader wants both answers about
          *     it. Read them as four questions about one day rather than four slices of it.
+         *
+         *     `buckets` IS the partition, and it is the one to render an additive sentence from.
+         *     The figures above it answer four questions about the day; the four inside it slice
+         *     that day into parts that sum to `total`. Both are sent because both are wanted: a
+         *     reader asking "how much is overdue" wants `due` counted across every level, and a
+         *     reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+         *     parts to add up to the whole they are shown beside.
          */
         WorklistSummary: {
             /** @description Items at the top two levels: somebody is waiting, or a promise is breaking. */
@@ -28975,6 +29016,7 @@ export interface components {
             lower_priority: number;
             /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
             total: number;
+            buckets?: components["schemas"]["WorklistBuckets"];
             /**
              * Format: int64
              * @description The expected-revenue bar a deal must clear to count as material, in the
@@ -28985,6 +29027,30 @@ export interface components {
             material_threshold_minor?: number | null;
             /** @description The currency every expected-revenue figure here is converted to. */
             base_currency?: string | null;
+        };
+        /**
+         * @description The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+         *     lands in exactly one of them.
+         *
+         *     The order below is the order they are read in, and it is a precedence rather than a
+         *     set of independent tests: an overdue promise is urgent, not due-today, because the
+         *     first arm that matches takes the row. Without a precedence the same item would be
+         *     counted twice and the sentence would add up to more than the day holds.
+         *
+         *     `review` is every row whose `destination` is not `today` — a judgement to make, a
+         *     source to restore, a receipt to read. It is counted from that field rather than from
+         *     the source, so the sentence and the screens cannot disagree about which rows are
+         *     seller work.
+         */
+        WorklistBuckets: {
+            /** @description Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows. */
+            urgent: number;
+            /** @description Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends. */
+            due_today: number;
+            /** @description The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar. */
+            planned: number;
+            /** @description Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is. */
+            review: number;
         };
         /**
          * @description The day's four OUTCOME figures, for the strip above the queue: what money is
@@ -29244,6 +29310,23 @@ export interface components {
              * @enum {string}
              */
             category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            /**
+             * @description Which SCREEN this row belongs on. The server decides it once, and every count,
+             *     fold and page in this response is computed from the same value the row carries,
+             *     so a client that groups by it cannot disagree with the figures above it.
+             *
+             *     `today` is work a seller executes. `review` is a judgement somebody must make
+             *     before work continues — an approval, a duplicate pair, an introduction.
+             *     `system_health` is a source or automation an administrator must restore.
+             *     `receipt` is completed work, reported so the reader can see it happened.
+             *
+             *     A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+             *     `source` that a browser could recompute: two rows of one source can differ,
+             *     and the mapping is a product decision that moves. A client that re-derived it
+             *     would put a row on one screen while the count above it put the row on another.
+             * @enum {string}
+             */
+            destination?: "today" | "review" | "system_health" | "receipt";
             /**
              * @description The hard priority band, and the whole of the product rule: 0 pinned by the
              *     reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
@@ -47592,6 +47675,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastMovement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listForecastCalls: {
+        parameters: {
+            query?: {
+                /** @description The window length. Quarters follow the installation's financial year. */
+                period?: "quarter" | "month";
+                /** @description Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in. */
+                as_of?: string;
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description Whose forecast, for a team or owner scope. A workspace scope names none. */
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The calls made for that period and scope, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        calls: components["schemas"]["ForecastCall"][];
+                    };
                 };
             };
             401: components["responses"]["Unauthorized"];

@@ -237,9 +237,17 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	if err != nil {
 		return "", err
 	}
-	if err := gate.RequireGrantedForEmails(ctx, in.Recipients, in.ConsentPurpose); err != nil {
-		return "", err
-	}
+	// NO CONSENT CHECK HERE. It was the old purpose gate, asked before the
+	// engine existed and kept while the engine only observed. The engine now
+	// decides, and it decides at STAGING — inside the transaction that writes
+	// the delivery, where it can read the anchor, the links and the evidence
+	// this function has never been handed. Asking a weaker authority first
+	// meant a reply the engine authorizes on the subject's own thread was
+	// refused here for want of a consent row nobody had reason to record.
+	//
+	// The refusal still reaches the rep at the keyboard: compose's
+	// refuseAtStaging returns it from the same request, before the activity
+	// commits.
 	return provider, nil
 }
 

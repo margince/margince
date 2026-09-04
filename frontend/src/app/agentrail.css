@@ -356,7 +356,7 @@
 
 /* ===== The collapsed rail =====
  *
- * At 64px the orb IS the report, and it keeps as much of that width as the rail
+ * At 56px the orb IS the report, and it keeps as much of that width as the rail
  * will give it. The words, the chevron and the CTA go; the count stays, because a
  * number waiting for a person is the one thing that still has to get through at
  * this width. The button keeps its accessible name, so nothing is lost to a
@@ -415,6 +415,7 @@
     padding: 0;
     border: 1px solid var(--borderSubtle);
     border-radius: 50%;
+    corner-shape: round;
     /* The bar's ground, not the page's: the well is the bar rising, and a
        different fill would read as an object resting on it. Solid where the bar
        is glass, because a translucent circle over the content it floats above
@@ -561,7 +562,7 @@
     rotate: 45deg;
     border-right: 1px solid var(--borderSubtle);
     border-bottom: 1px solid var(--borderSubtle);
-    border-bottom-right-radius: 3px; /* ds:ignore the notch's own tip */
+    border-bottom-right-radius: var(--r-xs); /* the notch's own tip */
     background: var(--bgElevated);
     z-index: 28;
     /* Opacity alone. The notch already carries `rotate` and `translate` of its
@@ -667,6 +668,7 @@
   width: 5px;
   height: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
@@ -839,6 +841,7 @@
   height: 5px;
   margin-top: 5px; /* ds:ignore drops the 5px mark onto the first line's baseline */
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--arTone);
   /* The mark is a light rather than a dot: the same tone the orb is running,
      with its own small halo, so the panel and the ball are visibly one
@@ -936,6 +939,7 @@
   width: 5px;
   height: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--success);
 }
 /* A source it cannot reach is `error`, so the dot beside it is the error tone.
@@ -943,63 +947,6 @@
    the same fact is. */
 .arconn.down i {
   background: var(--orbRed);
-}
-
-/* The state switcher: review scaffolding, and dressed as scaffolding. It sits
-   last, under its own rule, so nobody mistakes it for something the product
-   offers. */
-/* The run control. Dressed as the scaffolding it is: it sits with the chips,
-   under the review-only heading, and it does not borrow the accent a real action
-   would wear. */
-.arplay {
-  padding: 7px 13px; /* ds:ignore the chips' own pill optics, so the row is one scale */
-  border: 1px solid var(--arTone);
-  border-radius: var(--r-full);
-  background: color-mix(in srgb, var(--arTone) 10%, transparent);
-  color: var(--accentText);
-  /* A button's label is a word the reader presses, so it is set in the face
-     the rest of the product's buttons use. Nothing here is a figure or a
-     payload, which is the only thing mono is for. */
-  font-family: var(--f-body);
-  font-size: 12px;
-  cursor: pointer;
-}
-.arplay:hover {
-  background: color-mix(in srgb, var(--arTone) 18%, transparent);
-}
-.arplay[aria-pressed="true"] {
-  background: var(--arTone);
-  color: var(--textOnAccentControl);
-}
-.arplay:focus-visible {
-  outline: var(--focus-ring-forced);
-  box-shadow: var(--focus-glow);
-}
-
-.archips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-.archip {
-  padding: 7px 13px; /* ds:ignore pill optics on a 12px label */
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  background: transparent;
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: 12px;
-  cursor: pointer;
-}
-.archip[aria-pressed="true"] {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-}
-.archip:focus-visible {
-  outline: var(--focus-ring-forced);
-  box-shadow: var(--focus-glow);
 }
 
 /* ── Running now ─────────────────────────────────────────────────────────────

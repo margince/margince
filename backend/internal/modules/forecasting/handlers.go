@@ -168,10 +168,27 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 func scopeFromParams(
 	kind *crmcontracts.GetForecastParamsScopeKind, id *openapi_types.UUID,
 ) (Scope, error) {
-	var scope Scope
+	var spelled string
 	if kind != nil {
-		scope.Kind = string(*kind)
+		spelled = string(*kind)
 	}
+	return readScope(spelled, id)
+}
+
+// readScope is the READ door's rule, spelled once for the endpoints that take
+// a scope off the query string. Each arrives carrying its OWN generated
+// scope_kind type for the same three values, so the shared rule takes the
+// string they both convert to — a copy per endpoint is how one comes to admit
+// a scope the other refuses.
+//
+// Held by: TestTheReadScopeRuleHasOneSpelling (scope_test.go)
+//
+// Distinct from callScopeFromBody below, which is the WRITE door and defaults
+// an omission to the workspace. Here an omission stays unset for the seam to
+// resolve against the caller's own lens, because a reader who names no scope
+// is asking about whatever they can see rather than about the whole company.
+func readScope(kind string, id *openapi_types.UUID) (Scope, error) {
+	scope := Scope{Kind: kind}
 	if id != nil {
 		asID := ids.UUID(*id)
 		scope.ID = &asID

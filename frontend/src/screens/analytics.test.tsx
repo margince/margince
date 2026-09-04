@@ -18,6 +18,8 @@ type Stage = components["schemas"]["Stage"];
 import {
   AnalyticsScreen,
   buildStageAggregates,
+  derivationCellCurrency,
+  derivationColumns,
   parseDerivationQuery,
   sectionFromAddress,
 } from "./analytics";
@@ -728,5 +730,76 @@ describe("the report frame", () => {
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
     expect(screen.queryByText(/As of/)).toBeNull();
+  });
+});
+
+// A drill-through row carries money in two different currencies at once, and
+// which one a cell is written in depends on the COLUMN.
+//
+// `pipeline-current` converts server-side and exposes `amount_base_minor`, in
+// the installation's base currency. The forecast does not convert: it exposes
+// the deal's own `amount_minor` with the currency it was written in on the
+// same row. Formatting both against the base currency puts a euro sign on a
+// dollar deal — a wrong number wearing a right-looking symbol, which is the
+// misreading the whole renderer exists to prevent.
+describe("drill-through money", () => {
+  it("writes a converted measure in the base currency", () => {
+    const row = { amount_base_minor: 500000, currency: "USD" };
+    expect(derivationCellCurrency("amount_base_minor", row, "EUR")).toBe("EUR");
+  });
+
+  it("writes an unconverted measure in the deal's own currency", () => {
+    const row = { amount_minor: 500000, currency: "USD" };
+    expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
+  });
+
+  // A row that names no currency has nothing to write the figure in. Falling
+  // back to the base currency would be a guess presented as a fact.
+  it("names no currency for an unconverted measure on a row without one", () => {
+    expect(derivationCellCurrency("amount_minor", {}, "EUR")).toBeNull();
+    expect(
+      derivationCellCurrency("amount_minor", { currency: "" }, "EUR"),
+    ).toBeNull();
+  });
+});
+
+// The id is noise beside a name — but only when every row HAS one. Labelling
+// is per row, so a reader who may not read one record gets a label column
+// with a gap in it.
+describe("drill-through columns", () => {
+  const derivation = (columns: string[], rows: Record<string, unknown>[]) =>
+    ({ columns, rows }) as unknown as Parameters<typeof derivationColumns>[0];
+
+  it("drops the id once every row is named", () => {
+    expect(
+      derivationColumns(
+        derivation(
+          ["id", "label", "amount_minor"],
+          [
+            { id: "a", label: "Acme" },
+            { id: "b", label: "Globex" },
+          ],
+        ),
+      ),
+    ).toEqual(["label", "amount_minor"]);
+  });
+
+  // The row whose name was withheld is the one a reader can least account
+  // for. Dropping the id here would leave it showing a blank and nothing else.
+  it("keeps the id when any row's name was withheld", () => {
+    expect(
+      derivationColumns(
+        derivation(
+          ["id", "label", "amount_minor"],
+          [{ id: "a", label: "Acme" }, { id: "b" }],
+        ),
+      ),
+    ).toEqual(["id", "label", "amount_minor"]);
+  });
+
+  it("keeps the id when no row could be named", () => {
+    expect(
+      derivationColumns(derivation(["id", "amount_minor"], [{ id: "a" }])),
+    ).toEqual(["id", "amount_minor"]);
   });
 });

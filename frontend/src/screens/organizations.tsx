@@ -23,6 +23,7 @@ import {
 } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { OverlayFallback } from "../design-system/overlayfallback";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -119,7 +120,7 @@ import {
 import { PersonMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
-import { OverlayFallback, RecordSpine } from "./record360";
+import { RecordSpine } from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,

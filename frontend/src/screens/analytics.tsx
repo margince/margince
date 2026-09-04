@@ -619,11 +619,98 @@ function StageTable({
   );
 }
 
+// The vocabulary's own words for the columns a drill-through can carry.
+// A column outside it keeps its wire name, which is honest: the reader sees
+// what the plan selected rather than a guess at what it meant.
+const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
+  label: "explain.col.record",
+  amount_base_minor: "analytics.unweighted",
+  weighted_base_minor: "analytics.weighted",
+  amount_minor: "analytics.unweighted",
+  currency: "analytics.currency",
+  stage_id: "explain.col.stage",
+  owner_id: "explain.col.owner",
+  pipeline_id: "explain.col.pipeline",
+  organization_id: "analytics.company",
+};
+
+// A column the vocabulary knows gets its word; anything else keeps the wire
+// name the plan selected it under.
+function derivationHeader(col: string, t: (key: MessageKey) => string): string {
+  const key = DERIVATION_HEADERS[col];
+  return key ? t(key) : col;
+}
+
+// The server names the row and the reader reads the name, so the raw id
+// becomes noise beside it — but only once EVERY row has a name.
+//
+// Labelling is per row: the seam withholds a name for a record this reader
+// may not read, and the label column appears as soon as one row was named.
+// Dropping the id on that alone would leave the withheld rows showing a blank
+// where their only identifier used to be, so the rows a reader can least
+// account for become the ones they cannot identify at all.
+export function derivationColumns(derivation: Derivation): string[] {
+  const rows = derivation.rows ?? [];
+  const everyRowNamed =
+    derivation.columns.includes("label") &&
+    rows.length > 0 &&
+    rows.every((row) => typeof row.label === "string" && row.label !== "");
+  return derivation.columns.filter((col) => !everyRowNamed || col !== "id");
+}
+
+// Which money a row's minor-unit figure is written in.
+//
+// The two are not the same column. A `_base_minor` measure was converted by
+// the server, so it is in the installation's base currency. A plain `_minor`
+// measure is the deal's OWN amount, and the forecast's rows carry the
+// currency it was written in beside it — reading the base currency there
+// would put a euro sign on a dollar deal, which is the exact misreading this
+// renderer exists to prevent.
+export function derivationCellCurrency(
+  col: string,
+  row: Record<string, unknown>,
+  baseCurrency: string | null,
+): string | null {
+  if (col.endsWith("_base_minor")) {
+    return baseCurrency;
+  }
+  const own = row.currency;
+  return typeof own === "string" && own !== "" ? own : null;
+}
+
+// Money on these rows is stored in minor units, and a minor-unit integer
+// printed raw is the single most misread thing on this screen: 500000 next
+// to €5,000.00 are the same number wearing different clothes.
+function renderDerivationCell(
+  col: string,
+  row: Record<string, unknown>,
+  baseCurrency: string | null,
+  locale: Locale,
+): string {
+  const value = row[col];
+  if (value == null) {
+    return "";
+  }
+  if (col.endsWith("_minor") && typeof value === "number") {
+    return formatMoneyOrAbsent(
+      value,
+      derivationCellCurrency(col, row, baseCurrency),
+      locale,
+    );
+  }
+  return String(value);
+}
+
 // The source rows the explained figure reconciles to. A section INSIDE the
 // explain card's own section, so its heading steps down with the outline
 // rather than reading as a peer of the card's title.
-function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
+function DerivationRows({
+  derivation,
+  baseCurrency,
+}: Readonly<{ derivation: Derivation; baseCurrency: string | null }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const columns = derivationColumns(derivation);
   return (
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
@@ -634,10 +721,11 @@ function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
       ) : (
         <DataTable
           label={t("explain.sources")}
-          columns={derivation.columns.map((col) => ({
+          columns={columns.map((col) => ({
             key: col,
-            header: col,
-            render: (row: Record<string, unknown>) => String(row[col] ?? ""),
+            header: derivationHeader(col, t),
+            render: (row: Record<string, unknown>) =>
+              renderDerivationCell(col, row, baseCurrency, locale),
           }))}
           rows={derivation.rows}
           rowKey={(row) => derivation.rows.indexOf(row).toString()}
@@ -653,12 +741,16 @@ function ExplainCard({
   id,
   url,
   query,
+  baseCurrency,
 }: Readonly<{
   // The toggle above points `aria-controls` here, so the card has to carry the
   // id the toggle was given rather than mint one of its own.
   id: string;
   url: string | null;
   query: UseQueryResult<Derivation>;
+  // The currency the report converted into, so the source rows behind a
+  // converted total are written in the same money as the total.
+  baseCurrency: string | null;
 }>) {
   const t = useT();
   return (
@@ -691,7 +783,9 @@ function ExplainCard({
           </div>
         </>
       )}
-      {query.data && <DerivationRows derivation={query.data} />}
+      {query.data && (
+        <DerivationRows derivation={query.data} baseCurrency={baseCurrency} />
+      )}
     </Card>
   );
 }
@@ -830,6 +924,7 @@ function ReportCard({
               id={explainId}
               url={derivationUrl}
               query={derivationQuery}
+              baseCurrency={run.base_currency ?? null}
             />
           )}
         </>

@@ -24,7 +24,7 @@
 .file-chip-kind {
   flex: none;
   padding: 2px 5px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   background: var(--bgCard);
   color: var(--textMeta);
   font-size: 10px;

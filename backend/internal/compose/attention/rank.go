@@ -211,6 +211,17 @@ func rankAll(rows []ranked) []crmcontracts.WorklistItem {
 		// describes a row's place on the page it is actually on.
 		band := crmcontracts.WorklistItemBand(bandOfRow(row))
 		item.Band = &band
+		// And which SCREEN it belongs on, from the one map that decides that.
+		// Stamped for the same reason as the two above: a source added later
+		// carries it by arriving here, not by its author remembering to.
+		//
+		// A folded group already carries its own, copied from the members it
+		// stands for, so it is not overwritten with an answer derived from the
+		// word `batch`.
+		if item.Destination == nil {
+			at := destinationOf(row)
+			item.Destination = &at
+		}
 		out = append(out, item)
 	}
 	return out

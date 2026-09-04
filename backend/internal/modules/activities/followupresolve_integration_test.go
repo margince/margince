@@ -143,11 +143,24 @@ func (e *resolveEnv) seedTaskLinkedToPersonAt(t *testing.T, source, capturedBy s
 // it. OccurredAt is the API host's own stamp and the resolver's bound no
 // longer reads it — TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails
 // is the test that holds that, by moving this field and expecting no effect.
-func leadPromotedEvent(t *testing.T, lead, person ids.UUID, dedupeOutcome string) workflow.Event {
+func leadPromotedEvent(
+	t *testing.T, lead, person ids.UUID, dedupeOutcome string, carried ...ids.UUID,
+) workflow.Event {
 	t.Helper()
-	payload, err := json.Marshal(map[string]string{
+	body := map[string]any{
 		"promoted_person_id": person.String(), "dedupe_outcome": dedupeOutcome, "trigger": "human_qualify",
-	})
+	}
+	// Absent rather than empty when a case names none, because that is what a
+	// payload written before the field existed looks like — and the two
+	// readings this handler keeps are told apart by exactly that.
+	if len(carried) > 0 {
+		names := make([]string, 0, len(carried))
+		for _, activity := range carried {
+			names = append(names, activity.String())
+		}
+		body["carried_activity_ids"] = names
+	}
+	payload, err := json.Marshal(body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -410,6 +423,91 @@ func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T
 
 	if !e.isDone(t, carried) {
 		t.Error("the carried follow-up is still open because the handler's host clock trails the database's — a loop the system opened and can no longer close")
+	}
+}
+
+// THE case this arm could not answer: a lead that promoted by MERGING into an
+// existing person. The survivor can already carry its own open system-minted
+// reminders, so "every open system task on this person" is the wrong set —
+// which is why the person-keyed reading is gated on a freshly created person,
+// and why a merged promotion's carried follow-up stayed open.
+//
+// The payload names what the promotion MOVED, so the answer is exact for both
+// outcomes: the carried task completes and the survivor's own reminder does
+// not.
+func TestAMergedPromotionCompletesTheTaskItCarriedAndNothingElse(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	// The survivor's own reminder, minted long before this promotion and
+	// nothing to do with it.
+	unrelated := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	// The lead's follow-up, carried onto the survivor by this promotion.
+	carried := e.seedTaskLinkedToPerson(t, "system", "system", person)
+
+	ctx := e.systemCtx()
+	h := handlerFor(t, store, "lead.promoted")
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged", carried))
+
+	if !e.isDone(t, carried) {
+		t.Error("the task the merge carried is still open — the loop the system " +
+			"opened stays open, which is the whole of this defect")
+	}
+	if e.isDone(t, unrelated) {
+		t.Error("the survivor's own reminder was completed, with an audit row " +
+			"claiming a follow-up happened that this promotion never touched")
+	}
+}
+
+// A human's task among the carried ones is still theirs. The named ids say
+// which activities moved, not which may be ticked — the system-minted
+// predicate still decides that, and it is the same one both doors apply.
+func TestACarriedHumanTaskIsNotCompletedByThePromotion(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	human := e.seedTaskLinkedToPerson(t, "web", "human:"+e.rep.String(), person)
+	// A task a caller PLANTED with source "system": captured_by names the
+	// person, because no client write can spell the system principal.
+	forged := e.seedTaskLinkedToPerson(t, "system", "human:"+e.rep.String(), person)
+
+	ctx := e.systemCtx()
+	h := handlerFor(t, store, "lead.promoted")
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged", human, forged))
+
+	if e.isDone(t, human) {
+		t.Error("the HUMAN's carried task was completed — being moved by a promotion " +
+			"does not make a person's own work the system's to finish")
+	}
+	if e.isDone(t, forged) {
+		t.Error("a task carrying a planted source was completed: captured_by is the " +
+			"unforgeable half of the predicate and it names a person here")
+	}
+}
+
+// A payload written before the ids were carried keeps the behaviour it had.
+// A replayed old event is then no worse than it was, and a MERGED one still
+// completes nothing rather than guessing at the person's whole task list.
+func TestAnOldPayloadStillCompletesOnlyForAFreshPerson(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	task := e.seedTaskLinkedToPerson(t, "system", "system", person)
+
+	ctx := e.systemCtx()
+	h := handlerFor(t, store, "lead.promoted")
+	// No carried ids, and a merge: the reading that remains is the person-keyed
+	// one, which this outcome has always refused.
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged"))
+	if e.isDone(t, task) {
+		t.Error("an old merged payload completed by person id, which is the " +
+			"over-completion the outcome gate exists to refuse")
+	}
+
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "created"))
+	if !e.isDone(t, task) {
+		t.Error("an old created payload stopped completing, so the fallback lost " +
+			"the one case it was already answering")
 	}
 }
 

@@ -65,7 +65,7 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).
-		WithConsent(consent.NewGate(consent.NewStore(InstallationDB(pool)))).
+		WithConsent(consentGateFor(pool)).
 		// The public booking capture seams (feedback/14): people is the
 		// idempotent-on-email person path, consent records the
 		// passthrough — both injected here, never sibling imports.

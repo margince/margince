@@ -22,25 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// addressColumns destructures the contract's Address into the six
-// person/organization columns; a nil address is six NULLs.
-func addressColumns(a *crmcontracts.Address) crmcontracts.Address {
-	if a == nil {
-		return crmcontracts.Address{}
-	}
-	return *a
-}
-
-// addressOrNil collapses six all-NULL columns back to "no address" so
-// the wire shape stays a null, not an empty object.
-func addressOrNil(a crmcontracts.Address) *crmcontracts.Address {
-	if a.Line1 == nil && a.Line2 == nil && a.City == nil && a.Region == nil &&
-		a.PostalCode == nil && a.Country == nil {
-		return nil
-	}
-	return &a
-}
-
 // replacePersonSocial makes the person_social relation mirror the given
 // (platform → handle) map — the queryable form of what used to hide in
 // a jsonb column. nil means "not supplied": existing rows stand.
@@ -368,6 +349,9 @@ func attachPersonChildren(ctx context.Context, tx pgx.Tx, people []crmcontracts.
 		return err
 	}
 	if err := attachPersonSocial(ctx, tx, idx, personIDs); err != nil {
+		return err
+	}
+	if err := attachPersonEmployers(ctx, tx, idx, personIDs); err != nil {
 		return err
 	}
 	if err := storekit.AttachRowTags(ctx, tx, personEntity, people,

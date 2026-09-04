@@ -1,10 +1,50 @@
--- Narrowing the CHECK back would fail on any row already carrying one of the
--- two verbs this migration added, so those rows go first. The DELETE is scoped
--- to exactly those verbs, which by construction exist only because the up half
--- ran -- no audit history predating this migration is touched.
+-- Narrowing the CHECK back cannot succeed while any row carries the two Deal Room access verbs this migration added,
+-- and this migration REFUSES rather than trying to make room.
+--
+-- It used to open with `DELETE FROM audit_log WHERE action ...`, under a comment
+-- saying the rows "go first". They do not and never did: audit_log carries
+-- trg_audit_no_mutate, a BEFORE DELETE OR UPDATE trigger that raises
+-- `audit_log is append-only` on the first matching row. So the statement was
+-- either a no-op (no row carries the verb) or an abort — it never once removed
+-- an audit row, and three migrations described it as if it had.
+-- margince/margince#496.
+--
+-- Refusing says the same thing the trigger would, earlier and in the operator's
+-- terms: the ledger is append-only, so a vocabulary that has been WRITTEN cannot
+-- be narrowed, and the way back is to leave the verb in the CHECK. A trigger
+-- error names a row id; this names the decision.
+--
+-- No row_security change and no workspace bind, because audit_log carries
+-- neither: the committed schema records it `rls=false force=false` and no
+-- migration enables it. An earlier reading of this gap assumed FORCE RLS made
+-- the probe blind; it does not exist to be blind.
+
+-- The timeout FIRST, because everything below can block: this is a down
+-- migration on a live table, and a lock that waits forever is how a rollback
+-- becomes an outage.
 SET LOCAL lock_timeout = '3s';
 
-DELETE FROM audit_log WHERE action IN ('invite', 'revoke');
+DO $$
+DECLARE
+    written bigint;
+BEGIN
+    -- Locked BEFORE the count, and held for the rest of the transaction.
+    -- The count decides whether this migration refuses, and the constraint it
+    -- guards is validated later in the same transaction — so a row written
+    -- under the verb in between would make the refusal miss and the VALIDATE
+    -- fail instead, with the generic constraint error this exists to replace.
+    -- SHARE ROW EXCLUSIVE stops writers and admits readers, which is the
+    -- narrowest mode that closes the window.
+    LOCK TABLE audit_log IN SHARE ROW EXCLUSIVE MODE;
+    SELECT count(*) INTO written FROM audit_log WHERE action IN ('invite', 'revoke');
+    IF written > 0 THEN
+        RAISE EXCEPTION
+            'audit_log holds % row(s) written under a verb this migration would remove from audit_log_action_check, and audit_log is append-only', written
+            USING ERRCODE = 'check_violation',
+                  HINT = 'The rows cannot be deleted and the narrowed CHECK cannot validate around them. Leave the verb in the vocabulary, or reverse to a point before it was ever written.';
+    END IF;
+END;
+$$;
 
 ALTER TABLE audit_log ADD CONSTRAINT audit_log_action_check_v2
     CHECK (action IN ('create', 'update', 'archive', 'merge', 'promote', 'restore',

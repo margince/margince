@@ -244,10 +244,17 @@ func TestSendMessageRefusesWhenTheConversationReachesNobody(t *testing.T) {
 	}
 }
 
-// The consent gate must be asked about the RESOLVED account, not about an empty
-// list: a default-deny gate asked about nobody refuses nobody, which is how
-// suppression silently stops applying to a whole channel.
-func TestSendMessageAsksTheConsentGateAboutTheResolvedRecipient(t *testing.T) {
+// THE DELIVERY MUST CARRY THE RESOLVED ACCOUNT, because that account is what
+// the engine authorizes at staging.
+//
+// The invariant is unchanged and the authority moved. This used to assert that
+// the OLD purpose gate was asked about the resolved recipient here, at request
+// time; the engine now decides at staging, inside the transaction that writes
+// the delivery, so what has to be true is that the delivery names the account
+// the conversation resolved to. A delivery staged against a different account
+// would be authorized for somebody else — which is how suppression silently
+// stops applying to a whole channel.
+func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	person := e.linkPerson(t, anchor, "Telegram Buyer")
@@ -260,20 +267,31 @@ func TestSendMessageAsksTheConsentGateAboutTheResolvedRecipient(t *testing.T) {
 		t.Fatalf("SendMessage: %v", err)
 	}
 
-	if len(gate.recipients) != 1 || gate.recipients[0].Channel == nil {
-		t.Fatalf("the gate was asked about %+v, want exactly one channel recipient", gate.recipients)
+	if len(stager.staged) != 1 {
+		t.Fatalf("staged %+v, want exactly one delivery", stager.staged)
 	}
-	if got := gate.recipients[0].Channel.ChannelUserID; got != testChannelAccount {
-		t.Fatalf("the gate was asked about account %q, want the conversation's %q", got, testChannelAccount)
+	if got := stager.staged[0].Recipient.ChannelUserID; got != testChannelAccount {
+		t.Fatalf("staged against account %q, want the conversation's %q", got, testChannelAccount)
 	}
-	if gate.recipients[0].Email != "" {
-		t.Fatal("the gate was handed a channel recipient carrying a mail address; Recipient names exactly one subject")
+	// The authorization request the staging seam carries names the same one
+	// subject, and carries no mail address beside it: Recipient names exactly
+	// one subject, and a channel send that also named an email would put two
+	// people in one decision.
+	authorized := stager.staged[0].Authorization.Recipients
+	if len(authorized) != 1 || authorized[0].Channel == nil {
+		t.Fatalf("the engine is asked about %+v, want exactly one channel recipient", authorized)
 	}
-	// What the gate answered about is what the delivery carries — a message
-	// staged against a different account would have been consented for somebody
-	// else.
-	if len(stager.staged) != 1 || stager.staged[0].Recipient.ChannelUserID != testChannelAccount {
-		t.Fatalf("staged %+v, want one delivery to the account the gate cleared", stager.staged)
+	if got := authorized[0].Channel.ChannelUserID; got != testChannelAccount {
+		t.Fatalf("the engine is asked about account %q, want the conversation's %q", got, testChannelAccount)
+	}
+	if authorized[0].Email != "" {
+		t.Fatal("the engine was handed a channel recipient carrying a mail address")
+	}
+	// The old purpose gate is no longer asked at request time: the engine
+	// decides at staging, where it can read the anchor this function never
+	// hands over.
+	if len(gate.recipients) != 0 {
+		t.Errorf("the request-time purpose gate was asked about %+v, want nothing", gate.recipients)
 	}
 	if got := e.storedThreadKey(t, ids.UUID(sent.Id)); got != testChannelThreadKey {
 		t.Fatalf("outbound activity thread_key = %q, want the conversation's %q", got, testChannelThreadKey)

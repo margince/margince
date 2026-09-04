@@ -64,8 +64,11 @@ checked against it. The sources are listed at the end of the section.
    1px inset white highlight on their top edge; nothing else does.
 4. **Nested radii obey one law.** Mismatched corners on a control inside a
    card is the most common single reason an interface reads as "off":
-   inner radius = outer radius − padding. **Rule:** an 18px pane with an 8px
-   inset holds 10px controls; `--r-lg` 18, `--r-control` 10, and a keycap 4.
+   inner radius = outer radius − padding. **Rule:** a 20px pane with an 8px
+   inset holds 12px controls; `--r-lg` 20, `--r-control` 12, and a keycap 4.
+   The ladder runs in fours — 4 / 8 / 12 / 16 / 20 and the pill — and doubles
+   under `corner-shape: squircle`, where a superellipse of radius R reads about
+   as round as a circular corner of R/2.
 5. **Text is near-black slate, never pure black; grays carry the brand hue.**
    Stripe sets text in deep slate on near-white; Refactoring UI's rule is that
    a gray far from mid-lightness needs saturation or it looks washed out.
@@ -124,7 +127,7 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 1. **A lit ground, and one pane per zone.** The page is a pale green paper lit
    from two corners, an emerald glow behind the sidebar and an indigo one
    behind the far edge. Each zone of a record is one white pane on it, with a
-   hairline edge and an 18px corner, and inside a pane there is only ever a
+   hairline edge and a 20px corner, and inside a pane there is only ever a
    title, a rule and rows. Dark is the same room with the lights down.
 2. **Everything is a list.** A record's attributes are a list of label and
    value in a panel on the left that folds. What happened is a list. What
@@ -216,9 +219,9 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
-- **Radii by role**: 18px for a pane, the details panel and a reading card;
-  14px for a board card and the agent's row; 10px for a control; full for a
-  pill and a monogram.
+- **Radii by role**: 20px for a pane, the details panel and a reading card;
+  16px for a board card and the agent's row; 12px for a control; 8px for a chip
+  and 4px for a keycap; full for a pill and a monogram.
 - **Depth is light, not shadow.** A pane is translucent over the lit ground
   with a hairline edge; that is its whole elevation. Nothing at rest casts a
   shadow, glows or has a gradient. A popover, menu or drawer takes the one
@@ -815,8 +818,8 @@ looks now.
 | `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
 | `Badge` | `quiet` by default: a 6px dot and a word. The pill (`--bg3`, 20px, 11.5px 500) is for the one status that must not be missed and for the record's standing badges beside its name. |
 | `Chip` | The same pill. There is one pill. |
-| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and an 18px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | The **reading card**: `--pane` with the hairline and an 18px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
+| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
+| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |

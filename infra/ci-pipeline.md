@@ -524,7 +524,7 @@ Wiring details:
 
 `ci.yml` is the merge gate, and `_lane-integration.yml` / `_lane-frontend.yml` are
 part of it — called by it, never triggered on their own (see
-[Two lanes are called](#two-lanes-are-called-not-inlined)). Seven workflows sit
+[Two lanes are called](#two-lanes-are-called-not-inlined)). Eight workflows sit
 beside the gate, deliberately outside it:
 
 - **`cache-warm.yml`** — the Go build cache's only writer, on `main` every three
@@ -536,6 +536,26 @@ beside the gate, deliberately outside it:
   branch plus the default branch, and a queue ref is throwaway). See
   [The shared Go build cache](#the-shared-go-build-cache) for why it is scheduled
   rather than per-push.
+
+- **`merge-attest.yml`** — on every push to `main`, and it runs no lane: two API
+  reads and a jq, which is what makes a push trigger affordable at ~85 merges a
+  day. It asks one question the health check cannot — not *is `main` red*, but
+  *did what just landed have a verdict behind it*: a pull request that named the
+  commit, and a `ci` check that reported, was green, and finished **before** the
+  merge. A required check that never reported is the case it exists for, because
+  an absent verdict is not a red one and nothing asking "was it green?" can tell
+  them apart.
+
+  **Gates nothing, and never will.** It runs after the merge. A repository role
+  merging past `ci` is deliberate — an infrastructure outage that reds every
+  pull request, a revert that has to land now — and what this changes is only
+  that the fact is loud and attributed at push time instead of surfacing two
+  hours later as somebody else's pull request going red against a base they did
+  not break. Prevention is a branch-protection decision (#2496). Judged by
+  [`scripts/check-merge-verdict.sh`](../scripts/check-merge-verdict.sh), which
+  reads its evidence from the environment so every arm is drivable from a
+  fixture (`make test-merge-verdict`); a finding is filed as one issue per
+  offending pull request through the same reporter the health check uses.
 
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`

@@ -44,15 +44,8 @@ import (
 type AppEnv struct {
 	TS     *httptest.Server
 	Client *http.Client
-	// Slug mirrors identity.slugify(organizationName). It is NOT tenancy
-	// state and selects nothing: ADR-0091 retired the column, and no request
-	// has ever carried a workspace. It survives as an EMAIL FRAGMENT — the
-	// agent seat's local address is agent@<slug>.gradion.local, and
-	// roster_integration_test.go reconstructs that address to assert the seat
-	// is listed. That is its one reader.
-	Slug  string
-	Owner *pgx.Conn
-	Pool  *pgxpool.Pool
+	Owner  *pgx.Conn
+	Pool   *pgxpool.Pool
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -156,7 +149,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	client := ts.Client()
 	client.Jar = jar
 
-	return &AppEnv{TS: ts, Client: client, Slug: "fable-e2e", Owner: owner, Pool: pool}
+	return &AppEnv{TS: ts, Client: client, Owner: owner, Pool: pool}
 }
 
 // BootstrapWorkspace provisions the organization + admin (the A107 boot
@@ -165,18 +158,17 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
 	t.Helper()
 	BootstrapWorkspaceSession(t, e, "Fable E2E", "ada@example.com", "Ada Admin")
-	e.Slug = "fable-e2e" // slugify("Fable E2E")
 }
 
 // SetWorkspaceSeat flips the installation's PEOPLE to a seat type through the
 // owner connection, inside one transaction. Used to drive the read-seat ceiling
 // from a test.
 //
-// The agent seat is left alone because the schema refuses to demote it
-// (app_user_agent_is_full): an agent identity is never a read seat, and the
-// read ceiling reaches an agent through the human it acts for instead. Sweeping
-// it in would abort on the constraint, which a caller reads as a broken fixture
-// rather than as the rule it is.
+// An agent identity is left alone because the schema refuses to demote one
+// (app_user_agent_is_full): an agent is never a read seat, and the read ceiling
+// reaches it through the human it acts for instead. Sweeping one in would abort
+// on the constraint, which a caller reads as a broken fixture rather than as the
+// rule it is.
 func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 	t.Helper()
 	ctx := context.Background()

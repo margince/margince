@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -35,15 +36,26 @@ import (
 // evidence, and a model that only recognised events recorded after this build
 // shipped would tell a rep they may not answer somebody who wrote to them last
 // week.
-func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (QualifyingEvent, eventSource, error) {
-	event, found, err := recordedQualifyingEvent(ctx, tx, personID)
+//
+// SINCE BOUNDS BOTH SOURCES, and it is the reply window
+// (authorizewindows.go). An event older than it stops supporting an unprompted
+// message: somebody who asked a question two years ago and never came back has
+// not agreed to an ongoing relationship, and treating one inbound as permanent
+// authority is what let unrelated cold outreach ride on a single old message.
+//
+// What this does NOT bound is a same-thread reply. That path never reaches
+// here — resolveCategory answers CategoryReplyToInbound from the anchor before
+// the legacy verdict is consulted — so a rep answering a months-old thread is
+// unaffected. The window governs contact the subject did not prompt.
+func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, eventSource, error) {
+	event, found, err := recordedQualifyingEvent(ctx, tx, personID, since)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
 	if found {
 		return event, sourceRecorded, nil
 	}
-	event, found, err = inboundQualifyingEvent(ctx, tx, personID)
+	event, found, err = inboundQualifyingEvent(ctx, tx, personID, since)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -111,15 +123,15 @@ func RecordDerivedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID strin
 }
 
 // recordedQualifyingEvent reads a row a human or an integration wrote.
-func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (QualifyingEvent, bool, error) {
+func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var sourceType, sourceID, note *string
 	err := tx.QueryRow(ctx, `
 		SELECT kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE person_id = $1
+		WHERE person_id = $1 AND occurred_at >= $2
 		ORDER BY occurred_at DESC
-		LIMIT 1`, personID).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, personID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -139,21 +151,36 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (Q
 }
 
 // inboundQualifyingEvent derives the event from the captured timeline: they
-// wrote to us, and the message itself is the proof.
+// WROTE to us, and the message itself is the proof.
 //
-// The activity is reached through activity_link, the same table every
-// person-scoped timeline read walks, so this cannot count a message the record
-// does not show.
-func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (QualifyingEvent, bool, error) {
+// Authorship, not filing. The activity is reached through activity_link — the
+// same table every person-scoped timeline read walks, so this cannot count a
+// message the record does not show — but a link is a FILING and says only that
+// the message belongs on this person's record. Being copied on a message
+// somebody else wrote is not the subject initiating correspondence, and
+// counting it would let anyone manufacture a lawful basis for writing to a
+// third party by putting them in Cc. So the participant row has to name them as
+// the author too, which is the same test authorizeevidence.go applies for the
+// same reason (authorIsTheSubject).
+//
+// Both halves are load-bearing. Without the link this would count a message
+// nobody filed under the person; without the authorship test it counts one they
+// merely received. Capture files a message under every participant it resolves
+// (capture/sinkmaillinks.go), so the link alone stopped meaning authorship the
+// moment a cc'd contact could be filed under.
+func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
 	err := tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
+		JOIN activity_participant p ON p.activity_id = a.id
+		     AND p.role = 'from' AND p.person_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
+		  AND a.occurred_at >= $2
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, personID).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, personID, since).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}

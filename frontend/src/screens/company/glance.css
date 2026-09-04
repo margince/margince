@@ -99,6 +99,7 @@
   padding: 0 var(--space-3) 0 var(--space-1);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textPrimary);
   font-size: var(--fs-sm);

@@ -119,7 +119,7 @@
   font-size: 11.5px;
   color: var(--textSecondary);
   background: var(--bgElevated);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: var(--space-1) var(--space-2);
 }
 
@@ -185,6 +185,7 @@
   color: var(--textSecondary);
   background: var(--bgCard);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: var(--space-1) var(--space-3);
 }
 
