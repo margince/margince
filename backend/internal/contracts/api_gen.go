@@ -24286,6 +24286,18 @@ type MeetingPlanUnknownKind string
 type MergeTagsRequest struct {
 	// IntoTagId The tag that survives. Must be live, and must not be this tag.
 	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+
+	// IntoTagVersion The version the surviving tag was read at, refusing the merge with 409 if it has
+	// moved since. A merge is a TWO-row operation and the routed id pins only one of
+	// them, so without this the word a caller decided to fold INTO can be renamed
+	// between the decision and the act, and the merge still runs as though it had not
+	// been.
+	//
+	// Optional, and absent means unpinned — the same reading `If-Match` has everywhere
+	// else here. It belongs in the body rather than in `If-Match` because it qualifies
+	// the id beside it, not the resource in the path: `If-Match` on this route would
+	// pin the tag being retired, which is a different precondition.
+	IntoTagVersion *int64 `json:"into_tag_version,omitempty"`
 }
 
 // MergeTagsResult What the merge did, in the two numbers that differ.

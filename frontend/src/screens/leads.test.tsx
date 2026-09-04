@@ -2079,8 +2079,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     const viewControls = new Set([
       "Overview",
       "History",
-      "Hide panel",
-      "Show panel",
+      "Details",
       // The day's work opens the task LIST: a door to another screen, which
       // writes nothing on this record.
       "View tasks",
