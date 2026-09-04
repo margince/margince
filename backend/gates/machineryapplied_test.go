@@ -206,6 +206,14 @@ func hasMachineryApplied(expr ast.Expr) bool {
 func entryName(expr ast.Expr, pkg string, aliases map[string]string, shadowed map[string]bool) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
+		// The SAME rule the selector arm applies below, and it is needed on
+		// this arm too: a local named for the package-level entry it shadows —
+		// `Country := somethingElse` — would otherwise resolve to the
+		// declaration while ApplyTx receives the local. Unreadable is the only
+		// safe answer here for the reason given there.
+		if shadowed[e.Name] {
+			return ""
+		}
 		return pkg + "." + e.Name
 	case *ast.SelectorExpr:
 		qualifier, ok := e.X.(*ast.Ident)
