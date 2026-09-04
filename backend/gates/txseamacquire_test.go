@@ -39,6 +39,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path"
 	"strings"
 	"testing"
 
@@ -83,14 +84,17 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 		// owns its own connection is not one.
 		"tools/seed-demo/nightlypasses.go": "requestNightlyWorklistPasses opens the transaction itself and hands it to the two request helpers; nothing here runs on a caller's tx",
 	})
+	roots := []string{"internal", "cmd"}
 	scope := gatekit.Scope{
-		Roots:   []string{"internal", "cmd"},
+		Roots:   roots,
 		Subject: func(_ string, file *ast.File) bool { return len(txBorrowingBodies(file)) > 0 },
 		Exempt:  exempt,
 	}
 	defer exempt.AssertAllMatched(t)
 
+	index := indexPackageFunctions(t, roots)
 	for _, parsed := range scope.Files(t) {
+		dir := path.Dir(parsed.Path)
 		for _, body := range txBorrowingBodies(parsed.File) {
 			for _, found := range body.acquires() {
 				t.Errorf("%s: %s runs on a caller's pgx.Tx and then %s (%s) — fetch it before the "+
@@ -98,6 +102,21 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 					"a second connection inside someone else's transaction commits separately and "+
 					"deadlocks undetectably against a lock that transaction holds",
 					parsed.Path, body.name, connectionAcquirers[found], found)
+			}
+			// The same prohibition one hop further out. A wrapper takes no
+			// pgx.Tx, so nothing above judges it, and the connection it takes
+			// deadlocks exactly as the direct one would.
+			for _, called := range body.calledNames() {
+				if _, direct := connectionAcquirers[called]; direct {
+					continue // already reported above, in source order
+				}
+				if chain, reaches := index.reachesAcquirer(dir, called, map[string]bool{}); reaches {
+					t.Errorf("%s: %s runs on a caller's pgx.Tx and calls %s, which takes a "+
+						"connection %s — same deadlock as taking it here, one call further "+
+						"away from the transaction that will wait on it. Fetch above the "+
+						"transaction and thread the result in.",
+						parsed.Path, body.name, called, strings.Join(chain, " → "))
+				}
 			}
 		}
 	}
