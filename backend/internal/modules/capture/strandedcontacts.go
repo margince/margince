@@ -202,6 +202,9 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 // and the per-retraction recheck both build from it, so the scan and the write
 // cannot drift into asking different questions. Both arguments are
 // compile-time SQL expressions, never caller data.
+//
+// Held by: TestTheSettledAnswerThatDisownsAContactHasOneSpelling
+// (backend/gates/noiseverdictonespelling_test.go)
 func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	return `((EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                   WHERE q.email = ` + emailExpr + `
