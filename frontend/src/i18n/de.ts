@@ -7888,7 +7888,7 @@ export const de = {
   "worklist.pair.refused":
     "Sie können dieses Paar nicht entscheiden. Beide Datensätze müssten Ihnen gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
   "worklist.pair.alreadySettled":
-    "Jemand war schneller: Das Paar ist bereits entschieden und aus der Liste verschwunden.",
+    "Das Paar konnte so nicht entschieden werden — vielleicht war jemand schneller, vielleicht haben sich die Datensätze geändert. Bitte die Liste neu laden.",
   "worklist.pair.stewardOnly":
     "Nur wer beide Datensätze ändern darf, kann das entscheiden — eine Administratorin oder eine Vertriebsleitung.",
   "worklist.needsPrep": "Unvorbereitet",

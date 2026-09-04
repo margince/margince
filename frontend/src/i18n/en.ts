@@ -7971,7 +7971,7 @@ export const en = {
   "worklist.pair.refused":
     "You cannot settle this pair. Both records have to be yours to change, so an admin or a sales lead can settle it.",
   "worklist.pair.alreadySettled":
-    "Somebody settled this pair first. It is gone from the list.",
+    "This pair could not be settled the way you asked — somebody may have decided it first, or the records changed under you. Reload the list to see where it stands.",
   "worklist.pair.stewardOnly":
     "Only somebody who can change both records can settle this — an admin or a sales lead.",
   "worklist.needsPrep": "Needs prep",

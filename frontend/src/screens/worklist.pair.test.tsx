@@ -163,10 +163,11 @@ describe("deciding a duplicate pair on the row", () => {
   // A refused decision leaves the row rendering exactly as an unpressed one
   // does, and the reader believes the pair is settled when it is not.
   //
-  // A CONFLICT is its own answer: somebody settled the pair first, so the row
-  // is gone rather than waiting. Telling this reader to try again would send
-  // them back to a decision nobody is asking for any more.
-  it("says the pair was already settled when the server answers conflict", async () => {
+  // A CONFLICT means the decision did not land as asked — a colleague settled
+  // it first, or the records moved underneath. It deliberately does NOT claim
+  // the pair is gone: a merge the server refuses REOPENS the candidate, so
+  // "already settled" would be false exactly when the reader needs the truth.
+  it("says the decision did not land when the server answers conflict", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -181,7 +182,11 @@ describe("deciding a duplicate pair on the row", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
 
-    expect(await screen.findByText(/settled this pair first/)).toBeTruthy();
+    expect(
+      await screen.findByText(/could not be settled the way you asked/),
+    ).toBeTruthy();
+    // Never the claim that it is gone: a refused merge puts the pair back.
+    expect(screen.queryByText(/gone from the list/)).toBeNull();
   });
 
   // A REFUSAL will refuse again however often it is pressed, so "try again" is

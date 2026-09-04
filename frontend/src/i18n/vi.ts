@@ -7797,7 +7797,7 @@ export const vi = {
   "worklist.pair.refused":
     "Bạn không thể xử lý cặp này. Bạn phải sửa được cả hai bản ghi, nên quản trị viên hoặc trưởng nhóm kinh doanh sẽ xử lý.",
   "worklist.pair.alreadySettled":
-    "Người khác đã xử lý cặp này trước. Nó không còn trong danh sách.",
+    "Không xử lý được cặp này theo cách bạn chọn — có thể người khác đã quyết định trước, hoặc bản ghi đã thay đổi. Hãy tải lại danh sách.",
   "worklist.pair.stewardOnly":
     "Chỉ người sửa được cả hai bản ghi mới xử lý được — quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Chưa chuẩn bị",
