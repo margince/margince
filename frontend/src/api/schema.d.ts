@@ -8670,6 +8670,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a contact your mailbox created with the rest of the organization.
+         * @description A contact a connector created from a message nothing had judged yet is yours alone until
+         *     something judges it. Usually that is the sender classifier. This is the door for when it
+         *     never will: the ceiling on open questions refused to ask and the correspondence went quiet,
+         *     or the answer was `advisor` and you disagree, or you simply know who this is.
+         *
+         *     The OWNER is taken from your session, never from the request. That is what ties the
+         *     authority to the row: naming somebody else's capture-private contact answers 404, the same
+         *     as a contact that does not exist, because existence is what capture privacy hides. It is
+         *     also why an admin cannot do this on your behalf — the boundary is the importing user's, and
+         *     a seniority override would be the disclosure it exists to prevent.
+         *
+         *     The contact's own mail and meetings follow it, so a colleague opening the record finds the
+         *     history rather than a name nobody has ever spoken to. Individual messages keep their own
+         *     audience: publishing the CONTACT is not publishing the correspondence.
+         *
+         *     One direction only. A contact the organization can see is not narrowed back by this door or
+         *     any other, because a colleague may already have written to them on the strength of seeing
+         *     them.
+         */
+        post: operations["publishCapturedPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/consent/confirm-request": {
         parameters: {
             query?: never;
@@ -43038,6 +43078,30 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    publishCapturedPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contact is the organization's. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestDetailsConfirmation: {

@@ -12796,6 +12796,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [People]
+      operationId: publishCapturedPerson
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Share a contact your mailbox created with the rest of the organization.
+      description: |
+        A contact a connector created from a message nothing had judged yet is yours alone until
+        something judges it. Usually that is the sender classifier. This is the door for when it
+        never will: the ceiling on open questions refused to ask and the correspondence went quiet,
+        or the answer was `advisor` and you disagree, or you simply know who this is.
+
+        The OWNER is taken from your session, never from the request. That is what ties the
+        authority to the row: naming somebody else's capture-private contact answers 404, the same
+        as a contact that does not exist, because existence is what capture privacy hides. It is
+        also why an admin cannot do this on your behalf — the boundary is the importing user's, and
+        a seniority override would be the disclosure it exists to prevent.
+
+        The contact's own mail and meetings follow it, so a colleague opening the record finds the
+        history rather than a name nobody has ever spoken to. Individual messages keep their own
+        audience: publishing the CONTACT is not publishing the correspondence.
+
+        One direction only. A contact the organization can see is not narrowed back by this door or
+        any other, because a colleague may already have written to them on the strength of seeing
+        them.
+      responses:
+        '204': { description: The contact is the organization's. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /people/{id}/consent/confirm-request:
     parameters:
       - $ref: '#/components/parameters/Id'

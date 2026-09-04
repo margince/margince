@@ -530,6 +530,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/people/{id}/merge":                                         {Op: "mergePerson", Access: "tool", Tool: "merge_records", RecordType: "person", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/people/{id}/moment/dismiss":                                {Op: "dismissPersonMoment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/profile-fields/{field}/restore":                {Op: "restorePersonProfileField", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/people/{id}/publish":                                       {Op: "publishCapturedPerson", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/research":                                      {Op: "runPersonResearch", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/research/save":                                 {Op: "savePersonResearch", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/view-ack":                                      {Op: "acknowledgePersonView", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
