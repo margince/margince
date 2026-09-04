@@ -73,7 +73,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldOwnerID:        colOwnerID,
 			fieldCurrency:       colCurrency,
 		},
-		measures: map[string]string{fieldAmountMinor: colAmountMinor},
+		measures:       map[string]string{fieldAmountMinor: colAmountMinor},
+		nativeMeasures: nativeMoney(fieldAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,
 			fieldPipelineID: colPipelineID,
@@ -165,6 +166,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		},
+		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
 		// agent surface (the run_report catalog, mcp-info.{json,md}) with no
@@ -334,6 +336,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountBaseMinor:     pipelineBaseValueExpr,
 			fieldWeightedBaseMinor:   pipelineWeightedBaseExpr,
 		},
+		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:        colOwnerID,
 			fieldStageID:        colStageID,
