@@ -62,6 +62,28 @@ export function subjectHref(item: WorklistItem): string | undefined {
 // that decision would keep pointing at the old address the day it moves.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   dsr: routeHash(settingsAddress("privacy")),
+  // A rule that failed, and the page that lists the rules.
+  //
+  // The row named a broken automation and offered no address at all — not the
+  // run, not the rule, not the screen either lives on — so a reader was told
+  // something was wrong and left to go and find it. The queue still performs
+  // nothing here: fixing a rule is the automations page's job, and this is the
+  // difference between saying where a room is and claiming to have opened the
+  // door.
+  //
+  // NOT a retry. A re-run would have to replay the event that fired the rule,
+  // and `workflow_run` does not keep it — the row holds a pointer to a bus
+  // event the bus drops after about three days, so a retry would silently do
+  // nothing on day four. Offering one would be the promise this table exists
+  // to avoid making.
+  //
+  // The `ai` tab is where the automations list lives, and its read is the one
+  // every seeded role holds — so this address answers for a rep as well as for
+  // an operator rather than routing most readers into a refusal.
+  automation_run: routeHash(settingsAddress("ai")),
+  // The same page answers for the AI work that a rule set off, for the same
+  // reason and with the same limit.
+  ai_work_health: routeHash(settingsAddress("ai")),
 };
 
 // The address a row's headline links to: its record where it has one, the
