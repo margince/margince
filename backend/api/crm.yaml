@@ -16530,7 +16530,12 @@ paths:
         values for its cells. Nothing is dropped: a document that cannot be rendered whole
         is refused, because a report missing a block it was composed with says something
         different from the report that was composed.
-      x-agent-access: human-only
+      # compose_analytics_report. Auto-execute rather than staged: rendering
+      # reads, stores nothing and moves no record, and every figure it returns
+      # is one the caller could have read directly — the document only decides
+      # which of them appear together.
+      x-mcp-tool: { verb: compose_analytics_report, tier: auto_execute, scope: read }
+
       requestBody:
         required: true
         content:

@@ -126,25 +126,29 @@ func (k Kind) carriesFigures() bool {
 }
 
 // known says whether a kind is in the grammar.
+//
+// Derived from allKinds, which is also what the published catalog iterates, so
+// a kind added in one place is accepted and described in one edit. A switch
+// here beside that list would be two copies of the grammar, disagreeing the
+// first time a block was added.
 func (k Kind) known() bool {
-	switch k {
-	case KindTitle, KindSubtitle, KindScope, KindGeneratedAt, KindSummary,
-		KindMethodology, KindFollowUps, KindStatStrip, KindBar, KindWaterfall,
-		KindRankedList, KindRecordTable, KindCallout, KindEvidenceDrawer:
-		return true
-	default:
-		return false
+	for _, known := range allKinds {
+		if k == known {
+			return true
+		}
 	}
+	return false
 }
 
-// known says whether a severity is in the closed set.
+// known says whether a severity is in the closed set. Derived from
+// allSeverities for the same reason Kind.known is derived from allKinds.
 func (s Severity) known() bool {
-	switch s {
-	case SeverityNote, SeverityWarning, SeverityPartial, SeverityUnknown, SeverityUnsupported:
-		return true
-	default:
-		return false
+	for _, known := range allSeverities {
+		if s == known {
+			return true
+		}
 	}
+	return false
 }
 
 // blockRef names a block in a refusal so a composer can find it.

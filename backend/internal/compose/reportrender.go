@@ -28,20 +28,25 @@ import (
 )
 
 // RenderedValue is one figure as this reader may see it.
+// The json tags are the WIRE SHAPE, and both surfaces serve it. Without them
+// the tool surface answered Go field names (`Value`, `Withheld`) while the HTTP
+// handler mapped the same struct to its contract's snake_case — two surfaces
+// disagreeing about one document, which is the drift the seam exists to
+// prevent.
 type RenderedValue struct {
 	// Value is nil for a withheld figure AND for a cell that resolved to
 	// nothing. Withheld tells the two apart, which matters: one is a number
 	// somebody may not see, the other is a number that does not exist.
-	Value    any
-	Withheld bool
+	Value    any  `json:"value,omitempty"`
+	Withheld bool `json:"withheld"`
 }
 
 // RenderedBlock is one block with its figures filled in.
 type RenderedBlock struct {
-	Kind     string
-	Text     string
-	Severity string
-	Values   []RenderedValue
+	Kind     string          `json:"kind"`
+	Text     string          `json:"text,omitempty"`
+	Severity string          `json:"severity,omitempty"`
+	Values   []RenderedValue `json:"values"`
 }
 
 // RenderReport resolves every figure a document cites.
