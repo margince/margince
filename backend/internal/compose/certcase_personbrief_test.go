@@ -65,10 +65,14 @@ func personBriefScenario(t *testing.T) (json.RawMessage, json.RawMessage) {
 	fixture, err := json.Marshal(personBriefFixture{
 		Name: "Anna Weber", Title: "Head of Operations", Employer: "Acme Logistik GmbH",
 		Messages: []personBriefMessage{
-			{Label: "scheduling", DaysAgo: 1, Direction: "inbound", Subject: "Re: renewal call",
-				Preview: "Thursday at ten works for me."},
-			{Label: "objection", DaysAgo: 6, Direction: "inbound", Subject: "Sub-processor list",
-				Preview: "We cannot go ahead while the analytics vendor is on it.", Move: "needs_reply"},
+			{
+				Label: "scheduling", DaysAgo: 1, Direction: fixtureInbound, Subject: "Re: renewal call",
+				Preview: "Thursday at ten works for me.",
+			},
+			{
+				Label: "objection", DaysAgo: 6, Direction: fixtureInbound, Subject: "Sub-processor list",
+				Preview: "We cannot go ahead while the analytics vendor is on it.", Move: "needs_reply",
+			},
 		},
 	})
 	if err != nil {
@@ -180,10 +184,14 @@ func TestThePersonBriefCaseOrdersFixtureMessagesNewestFirst(t *testing.T) {
 	fixture, err := json.Marshal(personBriefFixture{
 		Name: "Anna Weber",
 		Messages: []personBriefMessage{
-			{Label: "objection", DaysAgo: 6, Direction: "inbound", Subject: "Sub-processor list",
-				Preview: "We cannot go ahead while the analytics vendor is on it."},
-			{Label: "scheduling", DaysAgo: 1, Direction: "inbound", Subject: "Re: renewal call",
-				Preview: "Thursday at ten works for me."},
+			{
+				Label: "objection", DaysAgo: 6, Direction: fixtureInbound, Subject: "Sub-processor list",
+				Preview: "We cannot go ahead while the analytics vendor is on it.",
+			},
+			{
+				Label: "scheduling", DaysAgo: 1, Direction: fixtureInbound, Subject: "Re: renewal call",
+				Preview: "Thursday at ten works for me.",
+			},
 		},
 	})
 	if err != nil {

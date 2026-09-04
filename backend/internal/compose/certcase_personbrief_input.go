@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/personbrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -91,6 +92,15 @@ type personBriefExpectation struct {
 	Avoids []string `json:"avoids"`
 }
 
+// The activity kind and direction a fixture message folds to, DERIVED from the
+// contract's own enums rather than re-spelled — the same rule the site itself
+// follows, and the reason a rename upstream fails to compile here instead of
+// leaving a fixture describing a shape the product no longer has.
+const (
+	fixtureKindEmail = string(crmcontracts.ActivityKindEmail)
+	fixtureInbound   = string(crmcontracts.ActivityDirectionInbound)
+)
+
 // personBriefInput assembles what the service assembles, with minted ids.
 func personBriefInput(f personBriefFixture) (personbrief.Input, map[string]string) {
 	now := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
@@ -149,14 +159,14 @@ func foldFixtureMessages(
 		byLabel[message.Label] = id
 		at := now.AddDate(0, 0, -message.DaysAgo)
 		folded := personbrief.ActIn{
-			ID: id, Kind: "email", Direction: message.Direction,
+			ID: id, Kind: fixtureKindEmail, Direction: message.Direction,
 			At: at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
 		}
 		if !message.Withheld {
 			folded.Subject, folded.Preview, folded.Move = message.Subject, message.Preview, message.Move
 		}
 		in.Recent = append(in.Recent, folded)
-		if message.Direction == "inbound" {
+		if message.Direction == fixtureInbound {
 			in.LastInbound = maxStamp(in.LastInbound, folded.At)
 			continue
 		}
