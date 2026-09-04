@@ -13513,6 +13513,24 @@ func (e WorklistMoveAction) Valid() bool {
 	}
 }
 
+// Defines values for WorklistOwnerKind.
+const (
+	WorklistOwnerUnassigned WorklistOwnerKind = "unassigned"
+	WorklistOwnerUser       WorklistOwnerKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the WorklistOwnerKind enum.
+func (e WorklistOwnerKind) Valid() bool {
+	switch e {
+	case WorklistOwnerUnassigned:
+		return true
+	case WorklistOwnerUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistReachSource.
 const (
 	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
@@ -30054,10 +30072,15 @@ type SendAccountEmailRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-	// suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-	// `person_consent` for THIS purpose.
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
 	// Omit for independently composed mail.
@@ -30219,10 +30242,15 @@ type SendEmailRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-	// The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-	// `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// DraftRef Opaque reference returned by the drafting operation. After a successful send, the
 	// server compares this protected original with the final body and records accepted or
@@ -30345,10 +30373,15 @@ type SendMessageRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
-	// suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-	// `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
@@ -33010,6 +33043,26 @@ type WorklistItem struct {
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
+	// Owner Who this row answers to.
+	//
+	// RESPONSIBILITY, not visibility. The two are different facts and reading one
+	// for the other is how a rep's queue fills with a colleague's work: a notice
+	// addressed to somebody else may be unreadable, and a shared deal may be
+	// readable by a whole team while exactly one person owes the next move.
+	//
+	// Stated by the PRODUCER that raised the row, never inferred downstream. A
+	// reader who can see a row is not thereby its owner; a row surviving a `mine`
+	// filter is not evidence either, because several lanes take the scope as a
+	// query argument and answer it in SQL. Both of those inferences were available
+	// here and both are wrong in the same direction — they would make every row a
+	// reader can see look like a row a reader owes.
+	//
+	// `kind: unassigned` is a real answer and the honest one for work nobody has
+	// taken. It is what the `unassigned` scope surfaces, and a row that reached a
+	// rep's Mine queue while answering `unassigned` is a bug in the lane that
+	// produced it rather than a display choice here.
+	Owner *WorklistOwner `json:"owner,omitempty"`
+
 	// Pair The two records a `dedupe_candidate` proposes to merge, and the evidence that
 	// raised it — the same payload the lane feed carries, forwarded so the decision
 	// can be MADE where it is shown rather than sent somewhere to be made.
@@ -33177,6 +33230,43 @@ type WorklistMove struct {
 // read the same to a reader, so the producers drop it and send no `move`. A
 // client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
+
+// WorklistOwner Who this row answers to.
+//
+// RESPONSIBILITY, not visibility. The two are different facts and reading one
+// for the other is how a rep's queue fills with a colleague's work: a notice
+// addressed to somebody else may be unreadable, and a shared deal may be
+// readable by a whole team while exactly one person owes the next move.
+//
+// Stated by the PRODUCER that raised the row, never inferred downstream. A
+// reader who can see a row is not thereby its owner; a row surviving a `mine`
+// filter is not evidence either, because several lanes take the scope as a
+// query argument and answer it in SQL. Both of those inferences were available
+// here and both are wrong in the same direction — they would make every row a
+// reader can see look like a row a reader owes.
+//
+// `kind: unassigned` is a real answer and the honest one for work nobody has
+// taken. It is what the `unassigned` scope surfaces, and a row that reached a
+// rep's Mine queue while answering `unassigned` is a bug in the lane that
+// produced it rather than a display choice here.
+type WorklistOwner struct {
+	// Id The owning user. Present when `kind` is `user`.
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whether a person answers for this row, or nobody does yet.
+	Kind WorklistOwnerKind `json:"kind"`
+
+	// Label The owner's display name, resolved under the CALLER's own grants.
+	//
+	// Absent where the caller may not resolve it — the same refusal shape the
+	// rest of this response uses for a name it cannot read. A client draws the
+	// row without a name rather than inventing one, and never treats an absent
+	// label as an absent owner: `kind` is what says whether anybody answers.
+	Label *string `json:"label,omitempty"`
+}
+
+// WorklistOwnerKind Whether a person answers for this row, or nobody does yet.
+type WorklistOwnerKind string
 
 // WorklistPinRequest defines model for WorklistPinRequest.
 type WorklistPinRequest struct {

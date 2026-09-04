@@ -44,9 +44,9 @@ export function RecordReadingPair({
 }
 
 /**
- * CallCard is THE CALL: the head that says a machine read this record, the
- * standing it reached with the sentence it rests on, and under them whatever
- * the call was read from — the record's thread, its findings.
+ * CallCard is THE CALL: the head whose mark says a machine read this record,
+ * the standing it reached with the sentence it rests on, and under them
+ * whatever the call was read from — the record's thread, its findings.
  *
  * Its own card rather than a section of the day's work, because a verdict and
  * a to-do list are two different things to a reader who is scanning: one is

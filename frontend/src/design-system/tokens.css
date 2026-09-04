@@ -292,6 +292,14 @@
      to whatever its padding produced. */
   --control-h: 36px;
   --control-h-sm: 32px;
+  /* One rung ABOVE the form control, for the verbs a page owns rather than the
+     ones inside a card: a record's own actions stand beside a name set at the
+     record rung, and at the form rung they read as chrome that happens to sit
+     near it. Under touch the pointer arm below takes every rung to 44, so this
+     one stops being a step up there — a bigger target is the right answer to a
+     finger, and a verb taller than 44 would be the only oversized thing on the
+     screen. */
+  --control-h-lg: 40px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
@@ -371,11 +379,19 @@
   --fs-h3: 17px; /* card title */
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
-  --fs-display: 32px; /* a record's name; the title of a full-viewport moment */
-  /* Two fluid rungs, for the two surfaces that own a whole viewport and
-     therefore have room to answer to it: the gate and the handoff scene. */
+  --fs-display: 32px; /* the title of a full-viewport moment */
+  /* Three fluid rungs, for the surfaces that own their width and therefore
+     have room to answer to it: the gate, the handoff scene, and a RECORD's
+     own name. A record's name is the largest thing on its page, so it is the
+     first thing to stop being a name and start being a banner when the header
+     narrows — which happens whenever a reader opens the nav rail.
+     Measured in `cqi` and not `vw` for that reason: the window does not
+     change when the rail does, and the header is what the name has to fit.
+     `.record-head-wide` declares the container; with none in the tree the
+     unit falls back to the viewport, which is the pre-container answer. */
   --fs-display-fluid: clamp(24px, 2.6vw, 32px);
   --fs-hero-fluid: clamp(30px, 6vw, 46px);
+  --fs-record-fluid: clamp(26px, 3.7cqi, 44px);
 
   /* Four weights. Outfit and DM Sans are both variable, so 550/560/580/600/620/
      650 rendered as six genuinely different weights for one "emphasis" role —
@@ -759,6 +775,7 @@
   :root {
     --control-h: 44px;
     --control-h-sm: 36px;
+    --control-h-lg: 44px;
   }
 }
 
