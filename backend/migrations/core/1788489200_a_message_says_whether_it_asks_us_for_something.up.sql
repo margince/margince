@@ -25,15 +25,35 @@ ALTER TABLE activity
     ADD COLUMN IF NOT EXISTS owed_verdict text,
     ADD COLUMN IF NOT EXISTS owed_verdict_at timestamptz;
 
+-- NOT VALID, then validated separately, and the distinction is the whole reason
+-- this is two statements rather than one.
+--
+-- A plain ADD CONSTRAINT ... CHECK scans every existing row while holding ACCESS
+-- EXCLUSIVE, which on a table the size of activity locks out every reader and
+-- writer for the length of the scan. lock_timeout does not help: it bounds how
+-- long we WAIT for the lock, never how long we hold it. NOT VALID takes the
+-- strong lock only long enough to record the constraint, and VALIDATE CONSTRAINT
+-- then does the scan under SHARE UPDATE EXCLUSIVE, which readers and writers
+-- pass.
+--
+-- The rows being validated all carry NULL, since nothing has written the column
+-- yet, so both constraints hold by construction — but the shape is what a later
+-- migration on this table should copy, and getting it right when it is free is
+-- cheaper than remembering when it is not.
 ALTER TABLE activity
     ADD CONSTRAINT activity_owed_verdict_check
-    CHECK (owed_verdict IS NULL OR owed_verdict IN ('asks_us', 'informs_us'));
+    CHECK (owed_verdict IS NULL OR owed_verdict IN ('asks_us', 'informs_us'))
+    NOT VALID;
 
 -- Both together or neither: a verdict with no moment cannot be aged out, and a
 -- moment with no verdict claims a judgement that was never made.
 ALTER TABLE activity
     ADD CONSTRAINT activity_owed_verdict_stamped
-    CHECK ((owed_verdict IS NULL) = (owed_verdict_at IS NULL));
+    CHECK ((owed_verdict IS NULL) = (owed_verdict_at IS NULL))
+    NOT VALID;
+
+ALTER TABLE activity VALIDATE CONSTRAINT activity_owed_verdict_check;
+ALTER TABLE activity VALIDATE CONSTRAINT activity_owed_verdict_stamped;
 
 COMMENT ON COLUMN activity.owed_verdict IS
     'Whether this inbound message asks its recipient side for something. Routes attention only; never hides a row. NULL means unjudged.';

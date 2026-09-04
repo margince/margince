@@ -71,6 +71,38 @@ func TestTheBacklogIsTheWaitingQueueAndNotEveryUnjudgedMail(t *testing.T) {
 	}
 }
 
+// An older unjudged message is reachable however many newer ones are judged.
+//
+// THE FAILURE THIS PREVENTS is total and silent. The waiting query takes the
+// NEWEST WaitingScanCap threads and no more, so a filter applied outside it
+// selects from those 200 rather than from the backlog: once the newest are
+// judged, an older unjudged message can never be read again, and the classifier
+// spends every pass re-reading rows it has already answered. Nothing fails —
+// the backlog simply reports itself empty while work sits in it.
+//
+// It is the same defect waitingsql.go warns about for its own rules, one level
+// up: a filter after LIMIT lets rows nobody wants fill the scan.
+func TestAnOlderUnjudgedMessageSurvivesNewerJudgedOnes(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	old := e.waitingAgedFrom(t, "The oldest question", "buyer@customer.test", person, 80)
+	// Judged, and newer — enough of them to fill the waiting query's own scan
+	// cap. That is what makes this a test rather than a hope: with the filter
+	// applied outside the statement, these WaitingScanCap newer rows are the
+	// whole candidate set and the older one is unreachable.
+	for i := range WaitingScanCap {
+		newer := e.waitingAgedFrom(t, "Newer thread", "buyer@customer.test", person, (i%70)+1)
+		if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), newer, OwedVerdictAsksUs); err != nil {
+			t.Fatalf("judging newer message %d: %v", i, err)
+		}
+	}
+
+	if !unjudged(t, e)[old] {
+		t.Error("the oldest unjudged message is not in the backlog — judged rows " +
+			"are spending the scan the unjudged ones need")
+	}
+}
+
 // The recipient context travels, because the question needs it.
 //
 // "Is something owed by me" is not answerable from a subject and a body: a
@@ -166,6 +198,26 @@ func TestAMessageNarrowedDuringTheModelCallIsNotJudged(t *testing.T) {
 	}
 }
 
+// A message archived during the model call is not judged.
+//
+// Same window as the narrowing case and the same answer: somebody filed the
+// message away while the model was reading it, and coming back with an opinion
+// about it writes a verdict and an audit row for a message nobody will see.
+func TestAMessageArchivedDuringTheModelCallIsNotJudged(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	activity := e.waitingFrom(t, "Filed away", "buyer@customer.test", person)
+	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, activity)
+
+	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs)
+	if err != nil {
+		t.Fatalf("setting the verdict: %v", err)
+	}
+	if applied {
+		t.Error("a verdict landed on a message archived since it was read")
+	}
+}
+
 // The write is audited, because a model touched a customer's mail.
 //
 // capture_label beside it is deliberately neither audited nor evented, under a
@@ -211,6 +263,20 @@ func TestAnUnknownVerdictIsRefused(t *testing.T) {
 	if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, "maybe"); err == nil {
 		t.Error("an undefined verdict was accepted")
 	}
+}
+
+// waitingAgedFrom seeds a qualifying wait a given number of days back.
+func (e *loadEnv) waitingAgedFrom(t *testing.T, subject, address string, person ids.UUID, days int) ids.UUID {
+	t.Helper()
+	activity := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
+		VALUES ($1, 'email', 'inbound', $2, now() - make_interval(days => $4), $3, 'seed', 'system')`,
+		activity, subject, "thread-"+activity.String(), days)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
+		VALUES ($1, $2, 'from', $3)`, ids.NewV7(), activity, address)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
+		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), activity, person)
+	return activity
 }
 
 // unjudged reads the backlog as a set of ids.

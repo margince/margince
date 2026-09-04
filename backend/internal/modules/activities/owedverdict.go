@@ -98,7 +98,20 @@ func (s *Store) UnjudgedInbound(ctx context.Context, asOf time.Time, limit, body
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		body := arg(bodyLimit)
-		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, mustOwnDomains(ctx, tx, s))
+		own, err := s.ownDomainList(ctx, tx)
+		if err != nil {
+			return err
+		}
+		// The unjudged predicate goes INSIDE the waiting statement, before its
+		// scan cap. Outside it, the filter would select from the newest 200
+		// waits rather than from the backlog — and once those were judged, an
+		// older unjudged message would be unreachable for good while the
+		// backlog reported itself empty.
+		//
+		// The rest of the partial index's predicate rides along, so the index
+		// and this query ask the same question and the planner can use it.
+		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own,
+			`a.owed_verdict IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
 		if err != nil {
 			return err
 		}
@@ -111,8 +124,7 @@ func (s *Store) UnjudgedInbound(ctx context.Context, asOf time.Time, limit, body
 			                FILTER (WHERE p.role = 'cc' AND p.address <> ''), '{}')
 			  FROM activity a
 			  LEFT JOIN activity_participant p ON p.activity_id = a.id
-			 WHERE a.owed_verdict IS NULL
-			   AND %[2]s
+			 WHERE %[2]s
 			 GROUP BY a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.occurred_at
 			 ORDER BY a.occurred_at
 			 LIMIT $%[3]d`, body, waiting, arg(limit)), args...)
@@ -136,21 +148,6 @@ func (s *Store) UnjudgedInbound(ctx context.Context, asOf time.Time, limit, body
 	return out, nil
 }
 
-// mustOwnDomains reads the colleague domains for a query that cannot return an
-// error from where it needs them.
-//
-// An unwired or failing read yields no domains, which admits every sender — the
-// same open default WithOwnDomains documents. Here that is the safe direction
-// twice over: it can only WIDEN the candidate set, so the classifier judges a
-// colleague's message it did not need to rather than skipping a customer's.
-func mustOwnDomains(ctx context.Context, tx pgx.Tx, s *Store) []string {
-	domains, err := s.ownDomainList(ctx, tx)
-	if err != nil {
-		return nil
-	}
-	return domains
-}
-
 // SetOwedVerdict writes one verdict, reporting whether it applied.
 //
 // THE CAS IS `owed_verdict IS NULL`: a concurrent pass that judged the row first
@@ -158,8 +155,8 @@ func mustOwnDomains(ctx context.Context, tx pgx.Tx, s *Store) []string {
 // than being overwritten, because two model calls on one message are two
 // opinions and the tree has no rule for preferring the later one.
 //
-// The audience and hold clauses are re-tested at WRITE time, not merely in the
-// read that selected the row. The classifier reads a batch, spends a model call
+// The audience, hold and archive clauses are re-tested at WRITE time, not merely
+// in the read that selected the row. The classifier reads a batch, spends a model call
 // per message and writes the answers back; a human or a privacy verdict can
 // narrow the row inside that window, and a write landing after the narrowing
 // would stamp a judgement on a message the queue's readers may no longer open.
@@ -178,6 +175,7 @@ func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict string)
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET owed_verdict = $2, owed_verdict_at = now()
 			WHERE id = $1 AND owed_verdict IS NULL
+			  AND archived_at IS NULL
 			  AND audience = 'workspace' AND restricted_at IS NULL`, id, verdict)
 		if err != nil {
 			return fmt.Errorf("activities: setting the owed verdict: %w", err)
