@@ -66,7 +66,7 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","properties":{
 			"period":{"type":"string","enum":["quarter","month"],"description":"The window length. Quarters follow the installation's own financial year, which may not start in January."},
 			"as_of":{"type":"string","format":"date","description":"Which period to read, by naming a day inside it. Omit for the current one."},
-			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Whose forecast. Omit it to measure whatever this caller measures by default — their own records, or the teams they hold. Naming a wider population than the caller holds is refused."},
+			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Whose forecast. Omit for this caller's own default population; a wider one is refused."},
 			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastReadingsResult](),
