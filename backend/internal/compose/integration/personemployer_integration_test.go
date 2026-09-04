@@ -55,6 +55,9 @@ func listedPerson(ctx context.Context, t *testing.T, e *Env, person ids.UUID) cr
 	return crmcontracts.Person{}
 }
 
+// Today's employer, on the list row and on the record read alike — the two
+// surfaces share one attach, so a reader asking "who is this and where do they
+// work" gets the same answer wherever they ask.
 func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
 	e := Setup(t)
 	acme := e.SeedOrg(t, "Acme", nil)
@@ -86,6 +89,9 @@ func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
 	}
 }
 
+// A job somebody has left names nobody: the read pairs the current-primary flag
+// with the end date, so a leaver's old company does not go on standing as where
+// they work.
 func TestAContactWhoseOnlyEmploymentEndedNamesNoEmployer(t *testing.T) {
 	e := Setup(t)
 	former := e.SeedOrg(t, "Former Employer", nil)

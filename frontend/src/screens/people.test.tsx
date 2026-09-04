@@ -131,31 +131,33 @@ describe("ContactsScreen (B-EP09.10a)", () => {
   });
 
   it("names the company each contact works at, from the row alone", async () => {
-    const fetchMock = vi.fn(async () =>
-      jsonResponse({
-        data: [
-          {
-            ...anna,
-            employer: {
-              organization_id: "o-1",
-              organization_name: "Brandt AG",
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        urls.push(request.url);
+        return jsonResponse({
+          data: [
+            {
+              ...anna,
+              employer: {
+                organization_id: "o-1",
+                organization_name: "Brandt AG",
+              },
             },
-          },
-          { ...anna, id: "p-2", full_name: "Bruno Klein" },
-        ],
-        page: { next_cursor: null },
+            { ...anna, id: "p-2", full_name: "Bruno Klein" },
+          ],
+          page: { next_cursor: null },
+        });
       }),
     );
-    vi.stubGlobal("fetch", fetchMock);
     render(<ContactsScreen />);
     await waitFor(() => expect(screen.getByText("Brandt AG")).toBeTruthy());
     // The name rides on the person row, so the column costs no second read:
     // one company per contact would otherwise be one fetch per row.
-    expect(
-      fetchMock.mock.calls.filter(([request]: [Request]) =>
-        request.url.includes("/organizations"),
-      ),
-    ).toHaveLength(0);
+    expect(urls.filter((url) => url.includes("/organizations"))).toHaveLength(
+      0,
+    );
     // A contact whose employer the wire withheld — no edge grant, no grant on
     // that account, or nobody has recorded one — states nothing. A dash would
     // read as "works nowhere", which is the one thing an absent field does
