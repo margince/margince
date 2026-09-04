@@ -952,3 +952,58 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 		t.Fatalf("the creating rep attaching their new project to a new deal: %v", err)
 	}
 }
+
+// The CARD and the MERGE agree about who carries projects.
+//
+// The duplicates lane offers a Merge button on any pair whose two records the
+// reader may write. Two companies each holding live work refuse to combine, so
+// a data steward with authority over both was handed a button that answered
+// 409 every time — the same dead end the authority check was added to remove,
+// reached by another path.
+//
+// Both readings go through one predicate now. This is what holds them
+// together: the same two companies that make the merge refuse make the card
+// withhold, and archiving one side releases both in the same breath.
+func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
+	e := Setup(t)
+	source := e.SeedOrg(t, "BAER Pharma GmbH", nil)
+	target := e.SeedOrg(t, "BAER Pharma", nil)
+	seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
+	kept := seedProject(e.Admin(), t, e, "Validation", target, nil)
+
+	carrying, err := e.People.OrganizationsCarryingLiveProjects(e.Admin(),
+		[]ids.UUID{source, target})
+	if err != nil {
+		t.Fatalf("reading which companies carry live projects: %v", err)
+	}
+	if !carrying[source] || !carrying[target] {
+		t.Fatalf("carrying = %+v, want both — these are the two the merge refuses on, "+
+			"so a card reading anything else offers a button that answers 409", carrying)
+	}
+
+	// The merge refuses on exactly that pair, which is the agreement.
+	_, err = e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target))
+	var both *people.BothCompaniesCarryProjectsError
+	if !errors.As(err, &both) {
+		t.Fatalf("the merge produced %v, want the refusal the card is predicting", err)
+	}
+
+	// Archive one side and BOTH answers change together. A card still
+	// withholding here would be the mirror defect: a merge that would now
+	// succeed, offered nowhere.
+	if _, err := e.Projects.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
+		t.Fatalf("archiving the target's project: %v", err)
+	}
+	carrying, err = e.People.OrganizationsCarryingLiveProjects(e.Admin(),
+		[]ids.UUID{source, target})
+	if err != nil {
+		t.Fatalf("re-reading after the archive: %v", err)
+	}
+	if carrying[target] {
+		t.Errorf("the target still reads as carrying live work after its only project " +
+			"was archived — an archived project is a grouping already ended")
+	}
+	if _, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target)); err != nil {
+		t.Errorf("the merge the card would now offer was refused: %v", err)
+	}
+}

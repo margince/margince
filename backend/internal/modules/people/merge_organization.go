@@ -357,6 +357,23 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 	return err
 }
 
+// liveProjectEdge is the ONE spelling of "this company carries live work".
+//
+// Read through the EDGES, not project.organization_id: that column stopped
+// being written when a project became work several companies do together, so a
+// guard reading it would let a merge through that joins two companies both
+// genuinely carrying projects.
+//
+// Shared by the refusal below and by the read the duplicates lane makes before
+// offering a Merge button. Two spellings would drift, and the way they would
+// show it is a button that is offered and then refuses.
+//
+// Held by: TestTheCardAndTheMergeAgreeOnWhoCarriesProjects
+// (backend/internal/compose/integration/project_integration_test.go)
+const liveProjectEdge = `FROM relationship c
+		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
+		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL`
+
 // refuseWhenBothCarryProjects enforces PROJ-LIFE-4's ask. Two companies
 // that each hold live bodies of work may, once merged, be running the same
 // one twice or two genuinely different ones — and nothing in the data says
@@ -392,9 +409,7 @@ func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targe
 	// both genuinely carrying projects.
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT c.organization_id, p.name
-		  FROM relationship c
-		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
-		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL
+		  `+liveProjectEdge+`
 		   AND c.organization_id IN ($%d, $%d)
 		 ORDER BY c.organization_id, p.name`, sourcePos, targetPos), args...)
 	if err != nil {

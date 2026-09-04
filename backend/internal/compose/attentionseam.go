@@ -455,3 +455,41 @@ func attentionZone(pool *pgxpool.Pool) attention.Zone {
 		return installationZone(ctx, pool)
 	}
 }
+
+// SettleablePairs answers which pairs a merge would actually accept.
+//
+// Only organizations have a refusal beyond authority: two companies each
+// carrying live work do not combine (PROJ-LIFE-4), because the merged company
+// would be running the same body of work twice or two different ones, and
+// nothing in the data says which. People and leads carry no such rule, so they
+// are settleable by construction rather than by a query nobody needs.
+//
+// It reads through the same store the merge refuses from, so the card's offer
+// and the write's refusal are two readings of one rule — the property the
+// authority answer beside it already has.
+func (d attentionDuplicates) SettleablePairs(
+	ctx context.Context, pairs []attention.DuplicatePair,
+) (map[ids.UUID]bool, error) {
+	settleable := make(map[ids.UUID]bool, len(pairs))
+	var companies []ids.UUID
+	for _, pair := range pairs {
+		settleable[pair.ID] = true
+		if pair.EntityType == flipObjectOrganization {
+			companies = append(companies, pair.LeftID, pair.RightID)
+		}
+	}
+	if len(companies) == 0 {
+		return settleable, nil
+	}
+	carrying, err := d.store.OrganizationsCarryingLiveProjects(ctx, companies)
+	if err != nil {
+		return nil, err
+	}
+	for _, pair := range pairs {
+		if pair.EntityType == flipObjectOrganization &&
+			carrying[pair.LeftID] && carrying[pair.RightID] {
+			settleable[pair.ID] = false
+		}
+	}
+	return settleable, nil
+}

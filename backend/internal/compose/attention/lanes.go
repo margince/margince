@@ -82,6 +82,13 @@ type Duplicates interface {
 	CountOpen(ctx context.Context) (int, error)
 	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 	DecidableSubset(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
+	// SettleablePairs asks the PAIR's own question, which authority cannot:
+	// whether the merge would be accepted at all. Two companies each carrying
+	// live work refuse to combine (PROJ-LIFE-4), so a steward holding both
+	// sides' write authority was still offered a button that answered 409
+	// every time. Per pair rather than per record, because "both carry
+	// projects" is not a property either record has alone.
+	SettleablePairs(ctx context.Context, pairs []DuplicatePair) (map[ids.UUID]bool, error)
 }
 
 // DuplicatePair is one open candidate: the pair, and what the detector saw.
