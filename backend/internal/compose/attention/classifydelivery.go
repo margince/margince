@@ -18,6 +18,15 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+// The two system sources that are ONE person's: a mailbox belongs to whoever
+// connected it, and a notice is addressed to whoever it names. Spelled as
+// constants because both the consequence switch and the ownership switch read
+// them, and a typo in either would silently move a row to the wrong answer.
+const (
+	sourceCaptureHealth = crmcontracts.AttentionItemSource("capture_health")
+	sourceNotice        = crmcontracts.AttentionItemSource("notice")
+)
+
 // classifyBounce: a customer never received something the rep believes they
 // sent. A consequence with a named customer and a verb, so it ranks as its own
 // row rather than disappearing into an aggregate.
@@ -58,18 +67,39 @@ func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked
 // an admin screen.
 func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	consequence := crmcontracts.WorklistItemConsequence("work_blocked")
-	if item.Source == "capture_health" || item.Source == "sync_health" {
+	if item.Source == sourceCaptureHealth || item.Source == "sync_health" {
 		consequence = "mailbox_blind"
 	}
-	if item.Source == "notice" {
+	if item.Source == sourceNotice {
 		consequence = valueNone
 	}
 	row := base(item, levelBlocking, "system", consequence)
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),
-		// The lane is bound to the acting user, so no other person's row could
-		// have come back.
-		ownerRef: ownedByWhoeverIsReading(),
+		// ONE classifier, two different truths — which is why this branches
+		// rather than stating a single answer for everything it draws.
+		ownerRef: systemRowOwner(item.Source),
+	}
+}
+
+// systemRowOwner separates the personal system rows from the workspace ones.
+//
+// classifySystem draws five sources and they do not agree about ownership. A
+// notice is addressed to one person and a mailbox belongs to one person: both
+// lanes read per-user, so the row is the reader's by construction. A failing
+// sync, a broken AI task and a stopped automation are the WORKSPACE's — those
+// services read no user at all, several admins see the same row, and naming
+// whoever opened the page would make one shared failure look like five people's
+// separate problems.
+//
+// Stated here rather than in the classifier's literal so the difference is
+// visible: a source added to that switch has to answer this question too.
+func systemRowOwner(source crmcontracts.AttentionItemSource) ownerRef {
+	switch source {
+	case sourceNotice, sourceCaptureHealth:
+		return ownedByWhoeverIsReading()
+	default:
+		return unassigned()
 	}
 }

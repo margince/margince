@@ -215,7 +215,11 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
-		ownerRef:   ownedByWhoeverIsReading(),
+		// A compliance queue, not a personal one: the lane reads every open
+		// request due soonest behind the DSR-admin gate, so several admins see
+		// the same case and none of them owns it by having looked. The request
+		// has no assignee column to read.
+		ownerRef:   unassigned(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),

@@ -201,3 +201,44 @@ func dayOfEveryLane() crmcontracts.Attention {
 		Introductions:     lane(item("introduction", "introduction_request")),
 	}
 }
+
+// TestOnlyAReaderBoundLaneNamesTheReader is the claim's evidence.
+//
+// `ownedByWhoeverIsReading` asserts something specific about the LANE: its
+// query takes the acting user, so no other person's row could have come back.
+// That is checkable, and four of the lanes that first carried the claim failed
+// it — decisions, meetings, DSR and three of the five system sources are read
+// under the caller's ROW SCOPE instead, which is a different thing. A
+// team-scoped reader receives their team's rows there, and naming the reader
+// would have made a colleague's duplicate pair look like the reader's own work.
+//
+// The table is the audit. A source moving between the columns is somebody
+// changing what a lane reads, and it should cost them this test.
+func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
+	t.Parallel()
+	readerBound := map[crmcontracts.WorklistItemSource]string{
+		"conversation_claim":   "OpenCommitmentsDue takes the actor's id",
+		"failed_approval":      "ListWire with FailedForDecider carries the decider",
+		"introduction_request": "AwaitingMyAnswer is the reader's own asks",
+		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",
+		"bounce":               "HardBouncesFor is the comms store's per-user read",
+		"undelivered":          "the same per-user read as the bounce beside it",
+		"notice":               "a notice is addressed to one person",
+		"capture_health":       "a mailbox belongs to one person",
+	}
+	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	for _, row := range rows {
+		why, claimed := readerBound[row.item.Source]
+		isReaderBound := row.ownerRef.kind == ownerTheReader
+		if claimed && !isReaderBound {
+			t.Errorf("%q no longer names the reader, though %s — if the lane still reads "+
+				"per-user the claim belongs back on it", row.item.Source, why)
+		}
+		if !claimed && isReaderBound {
+			t.Errorf("%q names whoever is reading, and no entry here says its query is bound "+
+				"to them: a row read under the caller's ROW SCOPE reaches a team-scoped "+
+				"reader carrying a colleague's work, and this would call it theirs",
+				row.item.Source)
+		}
+	}
+}
