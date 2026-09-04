@@ -1920,8 +1920,55 @@ describe("TimelineActions", () => {
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
-  // A note, a call or a meeting has no drawer to be sent to, and its audience
-  // is never derived — so the row keeps the control for every kind but email.
+  // A connector-captured conversation derives its audience from what each
+  // importing mailbox asked for, exactly as an email does. Offering the
+  // per-message control anyway gave a member a dialog that opened, took their
+  // answer, and refused it with `audience_is_derived` — naming a thread-level
+  // control the page does not have. A control that cannot work is worse than
+  // none: it is the one somebody trying to keep a conversation private presses.
+  it("offers no audience control on a captured message whose audience is derived", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a8",
+          kind: "message",
+          captured_by: "connector:ext:openchannel:1",
+          thread_key: "openchannel:abc",
+          audience_reason: "posture",
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    // The row is still actionable — this withholds one control, not the row.
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
+  });
+
+  // `manual` is a HUMAN's own answer, not the system's, so it stays theirs to
+  // change. Without this the fix above would read as "any reason at all hides
+  // the control", which withholds it from every row somebody has already set.
+  it("keeps the audience control on a row a human set the audience of", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a9",
+          kind: "message",
+          audience_reason: "manual",
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+  });
+
+  // A note, a call or a meeting derives no audience, so the row keeps the
+  // control for every kind but email.
   it("keeps the audience control on a row that is not an email", () => {
     stubRoutes();
     render(
