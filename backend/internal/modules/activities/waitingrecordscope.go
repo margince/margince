@@ -87,7 +87,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			reader,
 			entityClause,
 			neverRelaxed, neverRelaxed,
-			neverRelaxed, arg(ownDomains)) +
+			neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains))) +
 		") waiting_thread)", nil
 }
 

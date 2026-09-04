@@ -254,7 +254,7 @@ func (s *Store) countWaiting(
 		arg(relax.reader),
 		scopeUnbounded,
 		notSales, unlinked,
-		colleague, arg(ownDomains))
+		colleague, ownDomainSenderSQL("a", arg(ownDomains)))
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

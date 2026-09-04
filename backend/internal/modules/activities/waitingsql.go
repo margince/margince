@@ -214,15 +214,7 @@ const waitingRepliesSQL = `
 	   -- Matched on the address's domain, and on a subdomain of one of ours, the
 	   -- way the seam's own set does — mail from a departmental host is still
 	   -- from a colleague.
-	   AND (%[14]s OR NOT EXISTS (
-	         SELECT 1 FROM activity_participant ours
-	          WHERE ours.activity_id = a.id
-	            AND ours.role = 'from'
-	            AND EXISTS (
-	                  SELECT 1 FROM unnest($%[15]d::text[]) AS own(domain)
-	                   WHERE lower(split_part(ours.address, '@', 2)) = own.domain
-	                      OR lower(split_part(ours.address, '@', 2))
-	                         LIKE '%%.' || own.domain)))
+	   AND (%[14]s OR NOT %[15]s)
 	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
 	   -- LIMIT lets two hundred notification threads fill the scan and push a
 	   -- real customer past it, and the page then says nobody is waiting —

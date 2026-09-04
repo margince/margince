@@ -121,6 +121,68 @@ func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 	}
 }
 
+// A sender cannot get their own message suppressed by naming us inside it.
+//
+// A quoted local part may legally contain an at-sign, so `"x@ourco.test"@evil.test`
+// is one address whose domain is evil.test. Reading the domain after the FIRST
+// at-sign returns `ourco.test"` — one trailing quote from a match — and a sender
+// who trimmed it right would have their message silently dropped from every
+// rep's queue. The domain is read after the LAST at-sign for that reason.
+func TestASenderCannotHideBehindOurDomainInTheirLocalPart(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	quoted := e.waitingFrom(t, "Suppress me", `"x@ourco.test"@evil.test`, person)
+	doubled := e.waitingFrom(t, "And me", "a@ourco.test@evil.test", person)
+
+	s := storeKnowing(e, "ourco.test")
+	if _, ok := present(t, s, e, quoted); !ok {
+		t.Error("a quoted local part naming our domain suppressed the sender's message")
+	}
+	if _, ok := present(t, s, e, doubled); !ok {
+		t.Error("an address with two at-signs was read as internal")
+	}
+}
+
+// An own-domain entry is operator-typed text, never a pattern.
+//
+// Underscore and percent are LIKE wildcards. An entry of `our_.test` matched
+// `ourx.test` while this rule used LIKE, which hides a real customer's mail
+// across the whole workspace with nothing on any page to say why. The suffix is
+// compared with right() so an entry can only ever match itself.
+func TestAnOwnDomainIsNeverReadAsAPattern(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	// A SUBDOMAIN, because that is the branch a pattern can reach: the equality
+	// branch compares whole strings and can never treat one as a pattern, so a
+	// fixture using a bare domain passes whether or not the suffix is safe.
+	customer := e.waitingFrom(t, "A real customer", "buyer@mail.ourx.test", person)
+
+	// The operator typed a wildcard character, deliberately or by accident.
+	s := storeKnowing(e, "our_.test")
+	if _, ok := present(t, s, e, customer); !ok {
+		t.Error("an underscore in an own-domain entry matched a customer's subdomain")
+	}
+}
+
+// An empty entry matches nothing, not everything.
+//
+// The suffix comparison would otherwise be against a bare dot, and an empty
+// string equals no domain — but a blank row in the list must not be able to
+// empty the queue, so it is refused explicitly.
+func TestABlankOwnDomainMatchesNothing(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	// A subdomain again: a blank entry makes the suffix comparison ask whether
+	// the domain ends in a bare dot, which only a dotted address could satisfy.
+	// Against "customer.test" the test would pass with the guard removed.
+	customer := e.waitingFrom(t, "A real customer", "buyer@mail.customer.test", person)
+
+	s := storeKnowing(e, "")
+	if _, ok := present(t, s, e, customer); !ok {
+		t.Error("a blank own-domain entry excluded a customer")
+	}
+}
+
 // No domains wired, nobody excluded.
 //
 // The open default is deliberate: a deployment that cannot say which domains are
