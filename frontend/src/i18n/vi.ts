@@ -3202,7 +3202,8 @@ export const vi = {
   "tasks.isDone": "Đã hoàn thành",
   "tasks.logged": "Đã ghi nhận",
 
-  "analytics.sub": "chỉ deal đang mở, mỗi deal quy đổi riêng sang {currency} — chưa trọng số cạnh có trọng số",
+  "analytics.sub":
+    "chỉ deal đang mở, mỗi deal quy đổi riêng sang {currency} — chưa trọng số cạnh có trọng số",
   "analytics.currency": "Tiền tệ",
   "analytics.count": "Deal",
   "analytics.unweighted": "Chưa trọng số",

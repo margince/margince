@@ -3287,7 +3287,8 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "analytics.sub": "open deals only, each converted into {currency} — unweighted next to weighted",
+  "analytics.sub":
+    "open deals only, each converted into {currency} — unweighted next to weighted",
   "analytics.currency": "Currency",
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",

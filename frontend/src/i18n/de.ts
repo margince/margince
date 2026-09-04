@@ -3235,7 +3235,8 @@ export const de = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
-  "analytics.sub": "nur offene Deals, jeder einzeln in {currency} umgerechnet — ungewichtet neben gewichtet",
+  "analytics.sub":
+    "nur offene Deals, jeder einzeln in {currency} umgerechnet — ungewichtet neben gewichtet",
   "analytics.currency": "Währung",
   "analytics.count": "Deals",
   "analytics.unweighted": "Ungewichtet",
