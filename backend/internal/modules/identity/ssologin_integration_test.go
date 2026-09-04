@@ -194,12 +194,7 @@ func TestResolveFederatedUserRefusesAnUnactivatedInvite(t *testing.T) {
 func TestResolveFederatedUserRefusesTheAgentSeat(t *testing.T) {
 	svc, conn, _, _ := seedSSOEnv(t, "sso-agent-seat")
 	agentEmail := "agent@sso-agent-seat.gradion.local"
-	if _, err := conn.Exec(context.Background(),
-		`INSERT INTO app_user (id, email, display_name, is_agent, seat_type, status)
-		 VALUES ($1, $2, 'Margince Agent', true, 'full', 'active')`,
-		ids.New[ids.UserKind](), agentEmail); err != nil {
-		t.Fatal(err)
-	}
+	seedAgentIdentity(t, conn, agentEmail)
 
 	err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
 		_, _, resolveErr := svc.resolveFederatedUser(context.Background(), tx, "google", "sub-agent", agentEmail)

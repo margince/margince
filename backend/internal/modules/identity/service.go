@@ -129,15 +129,6 @@ type BootstrapInput struct {
 	Timezone      string
 }
 
-// normalize parse-don't-validates the tenant-root inputs in place. The timezone
-// drives every date-boundary sweep, so a malformed value here would haunt the
-// whole installation's lifetime and is rejected before any row is written.
-//
-// There is no slug any more. It was parsed here long after ADR-0091 stopped
-// storing it, for one reader: the seeded agent seat's local address. That seat
-// is retired, so the derived value, its validation and the shape that carried
-// it went together — a field nothing reads is a field that cannot be wrong in a
-// way anyone notices.
 // The password bound, shared by every path that accepts one. Counted in RUNES:
 // a four-emoji password is sixteen bytes and would clear a byte floor of twelve
 // while being a quarter of the length the floor intends. Named here
@@ -166,6 +157,9 @@ func passwordLengthError(field, pw string) error {
 	return nil
 }
 
+// normalize parse-don't-validates the tenant-root inputs in place. The timezone
+// drives every date-boundary sweep, so a malformed value here would haunt the
+// whole installation's lifetime and is rejected before any row is written.
 func (in *BootstrapInput) normalize() error {
 	if in.Timezone == "" {
 		in.Timezone = "UTC"

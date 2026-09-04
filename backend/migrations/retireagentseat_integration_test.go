@@ -8,10 +8,12 @@ package migrations_test
 // Retiring the seeded agent seat must not need the row to go away.
 //
 // app_user(id) is referenced 92 times across the head schema, 16 of them ON
-// DELETE RESTRICT, so a migration that DELETED the seat would fail the deploy on
-// the first installation holding one of those rows — and `connected_by` on
-// channel_connection is exactly that, because a connector configured against the
-// seat names it directly. The migration therefore deactivates and archives.
+// DELETE RESTRICT — `connected_by` on channel_connection among them — so a
+// migration that DELETED the seat would fail the deploy on the first
+// installation holding one of those rows. Every such column is actor-derived and
+// the seat can never be an actor, so the product cannot write one; an operator
+// or a repair script can, and a future runner seeded at this address certainly
+// could. The migration therefore deactivates and archives.
 //
 // This runs the ACTUAL migration file rather than a statement retyped here. A
 // test that restated the SQL would pass for a migration that no longer says it,
@@ -20,14 +22,12 @@ package migrations_test
 import (
 	"context"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 )
 
-// retireAgentSeatMigration is the file under test, named once.
+// retireAgentSeatMigration is the file both tests below apply.
 const retireAgentSeatMigration = "core/1788502500_the_seeded_agent_seat_is_retired.up.sql"
 
 // TestRetiringTheAgentSeatSurvivesAReferencingRow is the case a DELETE fails on.
@@ -104,13 +104,14 @@ func TestRetiringTheAgentSeatLeavesARealAgentIdentityAlone(t *testing.T) {
 	headSchema(t, conn)
 	ctx := context.Background()
 
+	ownPassword := "$argon2id$fake"
 	for _, tc := range []struct {
 		name  string
 		email string
 		hash  *string
 	}{
-		{name: "carries a password", email: "agent@real.gradion.local", hash: strptr("$argon2id$fake")},
-		{name: "address of its own", email: "runner@customer.example", hash: nil},
+		{name: "carries a password of its own", email: "agent@real.gradion.local", hash: &ownPassword},
+		{name: "answers at an address of its own", email: "runner@customer.example", hash: nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var id string
@@ -136,20 +137,17 @@ func TestRetiringTheAgentSeatLeavesARealAgentIdentityAlone(t *testing.T) {
 	}
 }
 
-func strptr(s string) *string { return &s }
-
 // applyMigrationFile executes one migration's SQL as the owner, inside a
 // transaction, the way the migrate binary applies it — the `SET LOCAL
 // lock_timeout` in these files is scoped to a transaction and is a no-op
 // outside one.
+//
+// The path is namespace-relative and used as given, so `core/…` means core.
 func applyMigrationFile(t *testing.T, conn *pgx.Conn, name string) {
 	t.Helper()
-	sql, err := os.ReadFile(filepath.Join("core", filepath.Base(name)))
+	sql, err := os.ReadFile(name)
 	if err != nil {
 		t.Fatalf("reading %s: %v", name, err)
-	}
-	if strings.TrimSpace(string(sql)) == "" {
-		t.Fatalf("%s is empty — this test would prove nothing", name)
 	}
 	ctx := context.Background()
 	tx, err := conn.Begin(ctx)

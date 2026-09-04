@@ -532,21 +532,14 @@ func TestAnOperatorResetRefusesTheAgentSeat(t *testing.T) {
 	// under it.
 	e := setupRevocationEnv(t, "operator-reset-agent")
 	agentEmail := "agent@operator-reset-agent.gradion.local"
-	if err := database.WithInfraTx(context.Background(), e.svc.db.Pool(), func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`INSERT INTO app_user (email, display_name, is_agent, seat_type, status)
-			 VALUES ($1, 'Margince Agent', true, 'full', 'active')`, agentEmail)
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
+	seedAgentIdentity(t, e.owner, agentEmail)
 	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
 		return OperatorResetPassword(context.Background(), tx, e.ws, agentEmail, "a password it cannot use")
 	})
 	if err == nil {
 		t.Fatal("the agent seat accepted a password reset; it is an identity, not an authority")
 	}
-	if !strings.Contains(err.Error(), "agent seat") {
+	if !strings.Contains(err.Error(), "agent identity") {
 		t.Errorf("err = %v; an operator needs to be told WHICH account this is, not that a constraint fired", err)
 	}
 }

@@ -303,14 +303,10 @@ func TestPasswordLinkHandlerRefusesTheAgentSeat(t *testing.T) {
 	e := setupRevocationEnv(t, "link-http-agent")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 
-	// Seeded, through the same helper the service-level agent refusals use.
-	//
-	// This used to read the row bootstrap wrote, and argued for that: a hand-made
-	// row would prove only that the handler refuses a row the test invented,
-	// rather than one an admin can reach. Bootstrap writes none now, so that
-	// argument has no row left to prefer — and the refusal still has to hold,
-	// because any agent identity is listed in the roster and therefore reachable
-	// by every member action this endpoint serves.
+	// Seeded, through the same helper the service-level agent refusals use: no
+	// writer in the product makes one. The refusal has to hold for any agent
+	// identity, because the roster lists them and this endpoint serves every
+	// member action an admin can reach from there.
 	seat := agentSeatOf(t, e)
 
 	rec := httptest.NewRecorder()

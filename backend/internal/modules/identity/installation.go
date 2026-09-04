@@ -220,8 +220,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	var wsID ids.WorkspaceID
 	// The row is identity and lifecycle now, nothing else: ADR-0090 moved the
 	// installation's configuration into `setting`, and ADR-0091 retired the
-	// slug it used to carry. The derived slug went with the seeded agent seat,
-	// whose local address was its last reader.
+	// slug it used to carry.
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&wsID); err != nil {
 		return ids.WorkspaceID{}, err

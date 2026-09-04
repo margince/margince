@@ -74,10 +74,12 @@ func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, s
 	return wsID, slug
 }
 
-// readAgentSeats reads the agent identities present, naming the workspace
-// explicitly: the owner connection is a superuser, which row-level security
-// does not filter, so an unqualified read answers with every workspace's rows.
-func readAgentSeats(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) []agentSeatRow {
+// readAgentSeats reads every agent identity in the database.
+//
+// Unqualified on purpose, and safe because setupIdentityDB gives each test its
+// own reset database: no table here carries a workspace column to filter on, and
+// no policy would narrow the owner connection if it did.
+func readAgentSeats(t *testing.T, owner *pgx.Conn) []agentSeatRow {
 	t.Helper()
 	rows, err := owner.Query(context.Background(),
 		`SELECT id, email, display_name, status, seat_type,
@@ -97,38 +99,35 @@ func readAgentSeats(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) []agent
 	return seats
 }
 
-// seedAgentIdentity writes one agent row directly, because no writer in the
-// product creates one any more.
+// seedAgentIdentity writes one agent identity at email and answers its id. It
+// is THE fixture for an agent row in this package — every suite whose subject is
+// what such a row may not do goes through it.
 //
-// A direct insert rather than a seam, and that is not a shortcut: the rules
-// under test are the SCHEMA's and the service's rules about a row shape, so the
-// fixture's job is to produce that shape. It is the same fixture
-// federatedidentity's and overlay's suites already use for the same reason.
+// A direct insert rather than a seam, and that is not a shortcut: no writer in
+// the product creates an agent row any more, which is itself what
+// TestBootstrapMintsNoAgentSeat asserts. The rules under test are the schema's
+// and the service's rules about a row SHAPE, so the fixture's job is to produce
+// that shape.
+//
 // 'full' and 'active' are spelled out because app_user_agent_is_full admits no
 // other seat type for an agent, so the row states the constraint it is subject
 // to rather than satisfying it by accident.
-func seedAgentIdentity(t *testing.T, owner *pgx.Conn, slug string) agentSeatRow {
+func seedAgentIdentity(t *testing.T, owner *pgx.Conn, email string) ids.UserID {
 	t.Helper()
-	seat := agentSeatRow{
-		id:          ids.NewV7(),
-		email:       "agent@" + slug + ".gradion.local",
-		displayName: "Margince Agent",
-		status:      "active",
-		seatType:    "full",
-	}
+	id := ids.New[ids.UserKind]()
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name, is_agent, seat_type, status)
-		 VALUES ($1, $2, $3, true, 'full', 'active')`,
-		seat.id, seat.email, seat.displayName); err != nil {
-		t.Fatalf("seeding an agent identity: %v", err)
+		 VALUES ($1, $2, 'Margince Agent', true, 'full', 'active')`,
+		id, email); err != nil {
+		t.Fatalf("seeding an agent identity at %s: %v", email, err)
 	}
-	return seat
+	return id
 }
 
 // theAgentSeat asserts exactly one agent identity is present and returns it.
-func theAgentSeat(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) agentSeatRow {
+func theAgentSeat(t *testing.T, owner *pgx.Conn) agentSeatRow {
 	t.Helper()
-	seats := readAgentSeats(t, owner, wsID)
+	seats := readAgentSeats(t, owner)
 	if len(seats) != 1 {
 		t.Fatalf("%d agent identity/identities present, want exactly 1 — this suite seeds its own, "+
 			"so any other count means the fixture did not land or bootstrap started seeding one again",
@@ -137,43 +136,18 @@ func theAgentSeat(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) agentSeat
 	return seats[0]
 }
 
-// TestBootstrapMintsNoAgentSeat is the change, asserted at the writer.
+// TestBootstrapMintsNoAgentSeat: a fresh installation holds no agent identity.
 //
-// This test held the opposite until the seeded seat was retired: it required
-// exactly one agent row after bootstrap, with a derived address, a full seat, no
-// password and no roles. Every one of those described a row that is no longer
-// created. What replaces it is the absence, because the absence is what frees a
-// licence seat on every installation.
+// The absence is the point. A seeded agent is a full seat metered against the
+// licence on every installation, for a row nothing in the product reads.
 func TestBootstrapMintsNoAgentSeat(t *testing.T) {
-	owner, pool := setupIdentityDB(t)
-	wsID, _ := bootstrapForAgentSeat(t, pool)
-
-	if seats := readAgentSeats(t, owner, wsID); len(seats) != 0 {
-		t.Fatalf("bootstrap wrote %d agent identity/identities (%q), want none — a seeded agent is a "+
-			"full seat metered against the licence on every installation, for a row nothing reads",
-			len(seats), seats[0].email)
-	}
-}
-
-// TestBootstrapCountsOnlyPeopleAgainstTheLicence is the visible half of the same
-// change: the number an admin reads on Settings → License.
-//
-// A fresh installation has exactly ONE full seat — its first admin. It used to
-// have two, the second being an identity that signs in nowhere and acts on
-// nobody's data. This is the assertion that would fail if the seed came back.
-func TestBootstrapCountsOnlyPeopleAgainstTheLicence(t *testing.T) {
 	owner, pool := setupIdentityDB(t)
 	bootstrapForAgentSeat(t, pool)
 
-	var full int
-	if err := owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM app_user
-		  WHERE seat_type = 'full' AND status NOT IN ('suspended', 'deactivated')`).Scan(&full); err != nil {
-		t.Fatalf("counting metered full seats: %v", err)
-	}
-	if full != 1 {
-		t.Errorf("a fresh installation meters %d full seat(s), want 1 (the first admin) — anything "+
-			"more is an installation billed for an identity no person uses", full)
+	if seats := readAgentSeats(t, owner); len(seats) != 0 {
+		t.Fatalf("bootstrap wrote %d agent identity/identities (%q), want none — a seeded agent is a "+
+			"full seat metered against the licence on every installation, for a row nothing reads",
+			len(seats), seats[0].email)
 	}
 }
 
@@ -194,7 +168,7 @@ func TestBootstrapCountsOnlyPeopleAgainstTheLicence(t *testing.T) {
 func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 	owner, pool := setupIdentityDB(t)
 	wsID, slug := bootstrapForAgentSeat(t, pool)
-	seedAgentIdentity(t, owner, slug)
+	seedAgentIdentity(t, owner, "agent@"+slug+".gradion.local")
 	// Bound to the workspace this test just bootstrapped: the suite seeds one
 	// per test, so there is no installation singleton to resolve.
 	svc := NewServiceFor(database.BindTo(pool, wsID))
@@ -211,7 +185,7 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
-	seat := theAgentSeat(t, owner, wsID)
+	seat := theAgentSeat(t, owner)
 
 	_, _, err = svc.IssuePasswordLink(wsCtx, admin, ids.From[ids.UserKind](seat.id))
 	if !errors.Is(err, errAgentSeatHasNoPassword) {
@@ -231,7 +205,7 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 		t.Errorf("the refused issue left %d live token(s) for the agent identity; a refusal that "+
 			"still mints the credential refuses nothing", tokens)
 	}
-	if theAgentSeat(t, owner, wsID).hasPassword {
+	if theAgentSeat(t, owner).hasPassword {
 		t.Error("the agent identity acquired a password hash during a refused issue")
 	}
 }

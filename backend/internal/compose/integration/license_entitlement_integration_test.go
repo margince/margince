@@ -16,16 +16,13 @@ package integration
 //   a deactivated seat is not counted   the access is already gone
 //   an agent seat IS counted            it acts on the estate like a human
 //
-// The third rule is unchanged and untested here, for a reason worth stating:
-// bootstrap no longer seeds an agent identity, so a fresh installation has none
-// to count. The rule belongs to the predicate (identity/seatusage.go) and to the
-// resident runner that will land under `is_agent`, not to a row the product
-// creates.
+// The third rule is untested here because no product path creates an agent row:
+// it belongs to the predicate (identity/seatusage.go) and to the resident runner
+// that will land under `is_agent`.
 //
 // A unit test cannot see any of it: what is real here is the predicate running
 // against rows a real database holds, and the verdict the server reaches with
-// it. The seats come from bootstrap and the members surface wherever they can —
-// one row below is written directly, and says why it has to be.
+// it.
 
 import (
 	"context"
@@ -71,18 +68,11 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	}))
 	e.BootstrapWorkspace(t)
 
-	// A SECOND person, written directly, and the directness is the point.
-	//
-	// Over-limit used to be reached for free: a bootstrapped installation held
-	// the admin plus a seeded Agent Runner seat, two seats against a grant of
-	// one. Bootstrap seeds no agent identity any more, so a fresh installation
-	// sits exactly AT a grant of one and the over-limit arm below had nothing to
-	// report.
-	//
-	// The invite endpoint cannot produce this state either — the seat ceiling
-	// refuses a seat the entitlement does not cover, which is the product working
-	// — so the only way an installation is over its limit is that the rows
-	// existed before the grant shrank. That is what this row models.
+	// A SECOND person, written directly, and the directness is the point: the
+	// invite endpoint cannot produce an over-limit installation, because the seat
+	// ceiling refuses a seat the entitlement does not cover. The only way to be
+	// over the limit is for the rows to have existed before the grant shrank, and
+	// that is the state this row models.
 	if _, err := e.Owner.Exec(context.Background(),
 		`INSERT INTO app_user (email, display_name) VALUES ($1, 'Second Person')`,
 		"second@example.com"); err != nil {
@@ -123,12 +113,10 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 		t.Errorf("seats in use = %d after every human became a read seat, was %d — read seats are being counted",
 			afterDemotion.SeatsUsed, before)
 	}
-	// And it reaches ZERO, because every seat on a fresh installation belongs to
-	// a person. This asserted `>= 1` while bootstrap seeded an agent identity —
-	// the seat that survived the demotion, since app_user_agent_is_full refuses
-	// to demote one, and whose counting is what stops an installation acting
-	// without limit through agents. That rule is unchanged and still holds for
-	// any agent row; there is simply no longer one nobody asked for.
+	// And it reaches ZERO, because every metered seat belongs to a person. An
+	// agent row would survive the demotion — app_user_agent_is_full refuses to
+	// demote one — and would still count, which is what stops an installation
+	// acting without limit through agents. There is simply never one here.
 	if afterDemotion.SeatsUsed != 0 {
 		t.Errorf("seats in use = %d after every human became a read seat, want 0 — something is "+
 			"metered that no person uses", afterDemotion.SeatsUsed)

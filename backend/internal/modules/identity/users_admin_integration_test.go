@@ -318,28 +318,15 @@ func TestConcurrentLastAdminDeactivationsKeepOneAdmin(t *testing.T) {
 	}
 }
 
-// agentSeatOf writes an agent identity and answers it.
+// agentSeatOf writes an agent identity into this env and answers it.
 //
-// It used to READ the one bootstrap wrote. Bootstrap writes none any more — the
-// row's only consumer was the extension-job dispatcher, and a tick now answers
-// as the job it is — so a suite whose subject is what an agent identity may NOT
-// do has to create one.
-//
-// The refusals under test are not retired with the seed. `is_agent` is still a
-// supported column, still filtered on by overlay and federatedidentity, and a
-// resident runner will land under it; these tests are what keep its doors shut
-// in the meantime. Written through the owner connection because no writer in the
-// product creates one, which is exactly the state being asserted elsewhere.
+// No writer in the product creates one, so a suite whose subject is what such a
+// row may NOT do has to seed it. The refusals below are live rules all the same:
+// `is_agent` is a supported column, filtered on by overlay and
+// federatedidentity, and a resident runner will land under it.
 func agentSeatOf(t *testing.T, e *revocationEnv) ids.UserID {
 	t.Helper()
-	seat := ids.New[ids.UserKind]()
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO app_user (id, email, display_name, is_agent, seat_type, status)
-		 VALUES ($1, $2, 'Margince Agent', true, 'full', 'active')`,
-		seat, "agent@"+seat.String()+".gradion.local"); err != nil {
-		t.Fatalf("seeding an agent identity: %v", err)
-	}
-	return seat
+	return seedAgentIdentity(t, e.owner, "agent@"+ids.NewV7().String()+".gradion.local")
 }
 
 func TestTheAgentSeatCannotBeGivenARole(t *testing.T) {

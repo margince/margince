@@ -409,12 +409,14 @@ func routingSeedFrom(declared yaml.Node) (ai.RoutingConfig, bool, error) {
 
 // seedBookingPage provisions the admin's public booking page.
 //
-// The installation holds TWO users at seed time, not one: bootstrap writes the
-// admin and the Agent Runner seat in the same transaction, so `now()` gives
-// them the same created_at and "first by created_at" decides nothing. The
-// is_agent predicate is what names the admin — without it the page a stranger
-// books through can be provisioned against the agent seat, and which one it
-// lands on is heap order.
+// The is_agent predicate is DEFENSIVE now rather than load-bearing, and it
+// stays. Bootstrap used to write a second row in the same transaction — an agent
+// seat — so `now()` gave both the same created_at and "first by created_at"
+// decided nothing between them; without the predicate the page a stranger books
+// through could be provisioned against the agent, on heap order. That seed is
+// retired, so a fresh installation holds one user here. The predicate stays
+// because the rule it states is about what a booking page may name, not about
+// how many rows happen to exist.
 func seedBookingPage(ctx context.Context, tx pgx.Tx) error {
 	var adminID ids.UserID
 	if err := tx.QueryRow(ctx,

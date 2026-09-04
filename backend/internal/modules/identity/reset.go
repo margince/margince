@@ -413,13 +413,18 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	if lookupErr != nil {
 		return lookupErr
 	}
-	// The agent seat carries an address, so it is reachable by this lookup, but
-	// it has no password by design (seed-and-fixtures §1.5) and giving it one
-	// would turn an identity into an authority. Refusing by name beats letting
-	// the write fail on `app_user_agent_never_forced`, which would report a
-	// constraint to an operator who asked a reasonable-looking question.
+	// An agent identity carries an address, so it is reachable by this lookup,
+	// but it has no password by design and giving it one would turn an identity
+	// into an authority. Refusing by name beats letting the write fail on
+	// `app_user_agent_never_forced`, which would report a constraint to an
+	// operator who asked a reasonable-looking question.
+	//
+	// This refusal is also what keeps the retirement migration's predicate
+	// complete: that migration finds the seeded seat by `password_hash IS NULL`,
+	// so a reset that succeeded here would move a row out from under it and the
+	// retirement would silently skip exactly the installation where it happened.
 	if isAgent {
-		return fmt.Errorf("identity: %q is the agent seat, which has no password to reset", email)
+		return fmt.Errorf("identity: %q is an agent identity, which has no password to reset", email)
 	}
 	// An operator-chosen password is exactly the state the forced rotation
 	// exists for: the subject did not pick this credential and the operator
