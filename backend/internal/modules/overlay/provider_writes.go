@@ -249,7 +249,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	// afterIncumbentCommit).
 	localCtx, cancel := afterIncumbentCommit(ctx)
 	defer cancel()
-	if err := p.commitUpdateWriteBack(localCtx, inc, res.Record, in.Ref, before, fields); err != nil {
+	if err := p.commitUpdateWriteBack(localCtx, inc, res.Record, in.Ref, before); err != nil {
 		return datasource.EntityRef{}, writePathError(err)
 	}
 	p.openWriteLedger(localCtx, res)
