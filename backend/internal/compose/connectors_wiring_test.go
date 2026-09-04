@@ -289,17 +289,19 @@ func TestListAndDisconnectNotImplementedWhenUnwired(t *testing.T) {
 }
 
 // A stored-app installation — no Google app in the ENVIRONMENT, the deployment's
-// own state key and callback base present — mounts the transport and must still
-// refuse the connect verb, because the registry registers the Google connectors
-// only from the environment-composed app and Registry.Connect would have nothing
-// to hand the credential to.
+// own state key and callback base present — mounts the transport, registers the
+// Google connectors off the stored-app resolver, and must still refuse the
+// connect verb until an app is actually stored. NOTHING here is unbuilt: the
+// resolver is wired, gmail and gcal are registered, and the only thing this
+// composition lacks is a row in the store. The refusal is `app_missing`, which
+// is what an empty store means.
 //
 // The refusal is the point. Before this was gated, the transport mounted and
 // gmailApp fell back to the env-composed client, which existed with an EMPTY
 // client id: the caller was redirected to Google's consent screen with
 // `client_id=` and the flow failed THERE, after they had already been sent away,
-// with nothing they could act on. A 501 at the gate is the honest answer while
-// serving a stored app end to end is still unbuilt.
+// with nothing they could act on. A 501 at the gate is the honest answer to a
+// vendor this installation has not registered an app for.
 func TestAStoredAppInstallationRefusesConnectRatherThanSigningBlankCredentials(t *testing.T) {
 	var s Server
 	// cmd/api's order, and the stored-app shape: a vault to seal into, no
