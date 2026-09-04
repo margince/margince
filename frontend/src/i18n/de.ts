@@ -2067,8 +2067,12 @@ export const de = {
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
   "lead.callNotInOverlay":
     "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
+  "lead.boardCountsUnavailable":
+    "Die Z\u00e4hler f\u00fcr Qualifiziert und Disqualifiziert konnten nicht gelesen werden.",
+  "lead.boardTerminalRowsUnavailable":
+    "Diese Leads konnten nicht gelesen werden. Der Z\u00e4hler oben gilt weiterhin.",
   "lead.boardTerminalOnly":
-    "Das Board zeigt nur offene Leads. Diese Leads sind übernommen oder disqualifiziert.",
+    "Keiner dieser Leads ist noch offen \u2014 sie z\u00e4hlen unter Qualifiziert und Disqualifiziert.",
   "person.fromLead": "Aus Lead übernommen",
   "lead.promotedTitle": "Als Kontakt übernommen",
   "lead.promotedMerged":

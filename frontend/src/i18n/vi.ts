@@ -2055,8 +2055,12 @@ export const vi = {
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.callNotInOverlay":
     "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
+  "lead.boardCountsUnavailable":
+    "Không đọc được số lượng ở cột Đã chuyển đổi và Đã loại.",
+  "lead.boardTerminalRowsUnavailable":
+    "Không đọc được các khách hàng tiềm năng này. Số lượng ở trên vẫn đúng.",
   "lead.boardTerminalOnly":
-    "Bảng chỉ hiện khách hàng tiềm năng đang mở. Những mục này đã chuyển hoặc bị loại.",
+    "Không còn mục nào đang mở — chúng được tính ở cột Đã chuyển đổi và Đã loại.",
   "person.fromLead": "Từ khách hàng tiềm năng",
   "lead.promotedTitle": "Đã chuyển thành liên hệ",
   "lead.promotedMerged":
