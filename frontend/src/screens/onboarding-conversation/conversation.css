@@ -56,7 +56,7 @@
 .ob-conv-narration p {
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--space-1) var(--r-lg) var(--r-lg) var(--r-lg);
+  border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
   background: var(--bgCard);
   color: var(--textContent);
   font: var(--fw-regular) var(--fs-body) / var(--lh-relaxed) var(--f-body);
@@ -115,7 +115,7 @@
 .ob-conv-user p {
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--r-md) var(--r-lg) var(--space-1) var(--r-lg);
+  border-radius: var(--r-md) var(--r-lg) var(--r-xs) var(--r-lg);
   background: var(--accent);
   color: var(--textOnAccentControl);
   font: var(--fw-medium) var(--fs-body) / var(--lh-relaxed) var(--f-body);
