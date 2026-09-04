@@ -59,7 +59,7 @@ func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
 		seen[row.Id]++
 		order = append(order, row.Id)
 	}
-	cursor := decodedCursor(t, *first.NextCursor, scopeAll, "")
+	cursor := decodedCursor(t, *first.NextCursor)
 	for page := 0; page < 4 && cursor.At > 0; page++ {
 		next := svc.worklistFrom(context.Background(), moved, scopeAll, "", 3,
 			waitingRead{}, leadRead{}, cursor, nil)
@@ -70,7 +70,7 @@ func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
 		if next.NextCursor == nil {
 			break
 		}
-		cursor = decodedCursor(t, *next.NextCursor, scopeAll, "")
+		cursor = decodedCursor(t, *next.NextCursor)
 	}
 
 	if len(seen) != 8 {
@@ -87,7 +87,7 @@ func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
 	// And in the SEQUENCE it started in, which is the promise the row set alone
 	// does not carry: a walk that re-ranked its survivors would return the same
 	// eight rows in an order the reader had not been shown.
-	want := frozenOrderOf(svc, day)
+	want := frozenOrderOf(svc)
 	if len(order) != len(want) {
 		t.Fatalf("the walk served %d rows, want the %d it froze", len(order), len(want))
 	}
@@ -102,7 +102,7 @@ func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
 //
 // Read from the store rather than restated here, so the assertion is about the
 // walk KEEPING its order rather than about a list somebody typed twice.
-func frozenOrderOf(svc *Service, day crmcontracts.Attention) []string {
+func frozenOrderOf(svc *Service) []string {
 	store, held := svc.walks.(*walkStore)
 	if !held {
 		return nil
@@ -143,7 +143,7 @@ func TestWorkThatArrivesWaitsForARefreshAndSaysSo(t *testing.T) {
 		item("newcomer-one", "task"), item("newcomer-two", "task"))
 
 	next := svc.worklistFrom(context.Background(), busier, scopeAll, "", 2,
-		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor, scopeAll, ""), nil)
+		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor), nil)
 
 	if next.Walk == nil || next.Walk.NewAvailable == nil {
 		t.Fatal("a resumed page said nothing about work waiting behind the walk")
@@ -174,7 +174,7 @@ func TestWorkThatLeavesGoesImmediatelyAndIsCounted(t *testing.T) {
 	thinner.Planned = thinner.Planned[:4]
 
 	next := svc.worklistFrom(context.Background(), thinner, scopeAll, "", 10,
-		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor, scopeAll, ""), nil)
+		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor), nil)
 
 	if next.Walk == nil {
 		t.Fatal("a resumed page carried no walk state")
@@ -239,9 +239,14 @@ func TestWithoutAStoreTheQueuePagesTheWayItAlwaysDid(t *testing.T) {
 }
 
 // decodedCursor reads a minted token back the way the handler does.
-func decodedCursor(t *testing.T, token, scope, filter string) worklistCursor {
+//
+// Fixed to the unnarrowed question, which is the only one these walks ask. A
+// cursor carried onto a different scope or filter is refused by design, and the
+// test that proves that refusal builds its own token rather than coming through
+// here — so a parameter for either would only ever receive one value.
+func decodedCursor(t *testing.T, token string) worklistCursor {
 	t.Helper()
-	cursor, err := decodeCursor(token, scope, filter, ids.UUID{})
+	cursor, err := decodeCursor(token, scopeAll, "", ids.UUID{})
 	if err != nil {
 		t.Fatalf("decoding the cursor this server just minted: %v", err)
 	}

@@ -94,9 +94,13 @@ func bucketsOf(rows []ranked) crmcontracts.WorklistBuckets {
 // is waiting or a promise is breaking, and a rep pinning hygiene to the top of
 // their morning has made neither true.
 //
-// Spelled once because three readers now want it — the summary's bands, its
-// partition, and the partition a walk freezes — and three copies of a rule this
-// subtle is how one of them quietly stops agreeing with the others.
+// Read by three callers — the summary's bands, its partition, and the partition
+// a walk freezes — and three copies of a rule this subtle is how one of them
+// quietly stops agreeing with the others.
+//
+// Held by: TestAPinnedRowIsCountedAtWhatItMeans (worklistbuckets_test.go),
+// which fails when the sort level reaches a figure that answers what the day
+// holds.
 func semanticLevelOf(row ranked) int {
 	if row.pinned {
 		return row.semanticLevel
