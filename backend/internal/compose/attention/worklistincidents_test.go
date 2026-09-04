@@ -249,3 +249,54 @@ func TestAnIncidentGroupIsDrawnFromTheRulesNameNotItsIdentity(t *testing.T) {
 		t.Fatalf("the group is named %q, want the rule's own name", *got[0].Batch.Label)
 	}
 }
+
+// A group belongs to ONE screen, and rows that would sit on different ones do
+// not fold however alike they read.
+//
+// The system CATEGORY spans destinations — a stopped mailbox is an
+// administrator's job, a notice is a judgement, a bounce is a seller's
+// customer — so grouping by a shared condition can reach across them. Folding
+// there would take a row off the screen that counts it and hide it under a
+// heading that means something else, with nothing left on the page to notice.
+// The members go back as themselves instead: more rows, nothing lost.
+func TestRowsBoundForDifferentScreensDoNotFold(t *testing.T) {
+	cause := "sync_failing"
+	mixed := []ranked{
+		systemRowWithCause("notice", "one", cause),
+		systemRowWithCause("capture_health", "two", cause),
+		systemRowWithCause("capture_health", "three", cause),
+	}
+	// The fixture has to be foldable but for the destination, or this test
+	// passes on a floor it never reached.
+	if len(mixed) < batchFloor {
+		t.Fatalf("the fixture holds %d rows, below the fold floor of %d", len(mixed), batchFloor)
+	}
+	alike := []ranked{
+		systemRowWithCause("capture_health", "one", cause),
+		systemRowWithCause("capture_health", "two", cause),
+		systemRowWithCause("capture_health", "three", cause),
+	}
+	if folded := foldRoutineDecisions(alike); len(folded) != 1 {
+		t.Fatalf("three rows of one screen drew %d rows, so this fixture cannot show a refusal", len(folded))
+	}
+
+	got := foldRoutineDecisions(mixed)
+
+	if len(got) != len(mixed) {
+		t.Fatalf("rows bound for different screens folded into %d rows: a judgement and a broken "+
+			"mailbox were counted as one thing", len(got))
+	}
+	for _, row := range got {
+		if row.item.Batch != nil {
+			t.Error("a mixed group produced a batch row")
+		}
+	}
+}
+
+// systemRowWithCause is one system row naming a shared condition, built through
+// the classifier production uses so the fold sees the shape it really gets.
+func systemRowWithCause(source crmcontracts.AttentionItemSource, id, cause string) ranked {
+	at := item(fmt.Sprintf("%s-%s", source, id), source)
+	at.CauseRef = &cause
+	return classifySystem(at, rankInstant)
+}

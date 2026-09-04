@@ -97,6 +97,15 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 			kept = append(kept, members...)
 			continue
 		}
+		// A group belongs to ONE screen. Rows that would sit on different ones
+		// are not one pile however alike they read, and folding them would take
+		// a judgement somebody owes off the review screen and count it as
+		// something else — with nothing left on the page to notice it went.
+		// They go back as themselves, which costs rows and loses nothing.
+		if !sameDestination(members) {
+			kept = append(kept, members...)
+			continue
+		}
 		// The bound belongs to the lane the members CAME from. It is the
 		// decision lane's own scan depth, and a system incident read from a
 		// different lane never hit it — marking one "8+" because an unrelated
@@ -288,6 +297,12 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			Sample: &sample,
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
+		// The members' own screen, carried onto the row that stands for them.
+		// The fold has already refused to group rows that disagree, so the first
+		// member answers for all of them — and deriving it from the word `batch`
+		// instead would put a pile of approvals wherever `batch` was mapped
+		// rather than where its members belong.
+		Destination: destinationPtr(destinationOf(members[0])),
 	}
 	if cause != "" {
 		row.Batch.Cause = &cause
