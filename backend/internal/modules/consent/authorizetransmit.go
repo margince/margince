@@ -115,6 +115,12 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	}
 	set := commsauthz.DecisionSet{}
 	now := g.store.now().UTC()
+	// What this delivery was staged as, so the transmit phase asks about the
+	// same message rather than about a purpose key.
+	staged, err := stagedRequest(ctx, tx, req)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
@@ -122,7 +128,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, req.PurposeKey)
+		d, err := g.decideOne(ctx, tx, r, staged)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -146,8 +152,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 }
 
 // decideOne answers about a single recipient: who they are, whether anything
-// suppresses them, and what the purpose class says.
-func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, purposeKey string) (commsauthz.Decision, error) {
+// suppresses them, and what the record says this message is.
+//
+// It takes the whole request rather than a purpose key, because the category is
+// now RESOLVED from the anchor and the links (authorizeresolve.go) instead of
+// read off the caller's label. The purpose key is still in there and still
+// consulted, as the weakest of the four grounds.
+func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
 	personID, found, err := resolvePerson(ctx, tx, r)
 	if err != nil {
@@ -167,7 +178,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// the sends the legacy gate allows — an inversion rather than a
 		// tightening, and it would have arrived the day somebody flipped a
 		// mode rather than the day this code was written.
-		return g.decideLead(ctx, tx, r, purposeKey, d)
+		return g.decideLead(ctx, tx, r, req, d)
 	}
 	parsed, err := ids.Parse(personID)
 	if err != nil {
@@ -185,18 +196,47 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		d.Suppression = kind
 		return d, nil
 	}
-	return classVerdict(ctx, tx, personID, purposeKey, d)
+	return g.decideResolved(ctx, tx, req, subjectRef{
+		Kind: entityPerson, ID: personID, Address: r.Email,
+	}, d)
 }
 
-// classVerdict reads the purpose the delivery was staged under and answers in
-// the engine's vocabulary.
+// decideResolved answers about a person once nothing suppresses them: what the
+// record says this message is, and whether that is supported.
+//
+// The resolution decides the CATEGORY and the legacy verdict decides the
+// PERMISSION, and both are recorded. Keeping them separate is what makes the
+// engine measurable: a row can say "this is a reply, and the old gate refused
+// it", which is exactly the disagreement a rollout needs to see before anybody
+// flips a mode.
+func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision) (commsauthz.Decision, error) {
+	res, err := g.resolveCategory(ctx, tx, req, subject)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	d.Resolved = res.Category
+	if res.Supported {
+		// The record bears the category out on its own evidence, so the engine
+		// allows on that ground and names it. This is the arm the old model had
+		// no way to reach: a reply to a thread the subject started needed no
+		// consent row, and the purpose gate had no way to know it was a reply.
+		d.Verdict = commsauthz.VerdictAllow
+		d.ReasonCode = commsauthz.ReasonAllowed
+		d.Basis = res.Basis
+		return d, nil
+	}
+	return legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d)
+}
+
+// legacyVerdictFor answers on the old purpose model when the record supports no
+// category on its own.
 //
 // It calls VerdictForPerson rather than reimplementing the class model, which
 // is what keeps the engine, the legacy transmit gate and the guard endpoint
 // answering with one body of code about one person. A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
-func classVerdict(ctx context.Context, tx pgx.Tx, personID, purposeKey string, d commsauthz.Decision) (commsauthz.Decision, error) {
+func legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision) (commsauthz.Decision, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -206,8 +246,6 @@ func classVerdict(ctx context.Context, tx pgx.Tx, personID, purposeKey string, d
 		d.ReasonCode = commsauthz.ReasonUnknownPurpose
 		return d, nil
 	}
-	d.Resolved = categoryForClass(purpose.Class)
-
 	verdict, err := VerdictForPerson(ctx, tx, personID, purpose)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -221,8 +259,12 @@ func classVerdict(ctx context.Context, tx pgx.Tx, personID, purposeKey string, d
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = blockedReasonCode(verdict)
 	default:
+		// The resolution's own reason, not a blanket "no marketing consent".
+		// An unevidenced operational claim and an unconsented marketing send
+		// are different problems with different fixes, and a reader who is
+		// told the wrong one goes looking in the wrong place.
 		d.Verdict = commsauthz.VerdictReview
-		d.ReasonCode = commsauthz.ReasonNoMarketingConsent
+		d.ReasonCode = res.Reason
 	}
 	return d, nil
 }
