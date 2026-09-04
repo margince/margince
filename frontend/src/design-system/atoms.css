@@ -1737,7 +1737,7 @@
   flex-shrink: 0;
   font-size: var(--fs-meta);
   font-weight: var(--fw-regular);
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
   color: var(--textMeta);
   border: 1px solid var(--borderSubtle);
