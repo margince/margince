@@ -202,6 +202,10 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 // and the per-retraction recheck both build from it, so the scan and the write
 // cannot drift into asking different questions. Both arguments are
 // compile-time SQL expressions, never caller data.
+//
+// Held by: TestTheNoiseVerdictQuestionHasOneSpelling (backend/gates/noiseverdictclaim_test.go)
+// — a second statement pairing the override with a ledger verdict is a second
+// answer to this question, and the write it guards archives somebody's contact.
 func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	return `((EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                   WHERE q.email = ` + emailExpr + `
