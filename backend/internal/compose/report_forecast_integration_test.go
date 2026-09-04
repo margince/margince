@@ -283,9 +283,16 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, archived_at, source, captured_by)
 		VALUES ($1, 'Archived', $2, $3, 77777, 'EUR', now(), 'manual', 'human:x')`, e.pipeline, e.stages[60])
 
-	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["forecast_category"]}`)
-	if len(result.Rows) != 3 {
-		t.Fatalf("rows = %d (%+v), want commit + best_case + the NULL group", len(result.Rows), result.Rows)
+	// Grouped by currency as well, which a native money sum requires — a total
+	// spanning currencies has no unit. Four rows, not three: the amountless
+	// deal carries no currency either, so `commit` splits into its EUR rows and
+	// that one. The categories are what this reconciles, so the currency
+	// dimension is folded back up below rather than asserted on.
+	result := e.runReport(e.Admin(), t, "forecast",
+		`{"group_by":["forecast_category","currency"]}`)
+	if len(result.Rows) != 4 {
+		t.Fatalf("rows = %d (%+v), want commit in two currencies, best_case, and the NULL category",
+			len(result.Rows), result.Rows)
 	}
 	if result.DerivationURL == "" {
 		t.Error("result-level derivation_url missing")
@@ -307,31 +314,36 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 		}
 		wantByCategory[key] = want
 	}
+	// Folded back to categories before comparing. The currency rows of one
+	// category are that category, and summing them is safe HERE for the reason
+	// the engine cannot rely on in general: every priced deal seeded is EUR.
+	gotByCategory := map[string]struct{ deals, unweighted, weighted int64 }{}
 	var gotDeals, gotUnweighted, gotWeighted int64
 	for _, row := range result.Rows {
 		key := ""
 		if s, ok := row["forecast_category"].(string); ok {
 			key = s
 		}
-		want, ok := wantByCategory[key]
-		if !ok {
+		if _, known := wantByCategory[key]; !known {
 			t.Fatalf("unexpected group %q: %+v", key, row)
 		}
 		if url, ok := row["derivation_url"].(string); !ok || url == "" {
 			t.Errorf("group %q: aggregate row without a derivation_url handle", key)
 		}
-		if got := wireInt(t, row, "deals"); got != want.deals {
-			t.Errorf("group %q deals = %d, want %d", key, got, want.deals)
+		got := gotByCategory[key]
+		got.deals += wireInt(t, row, "deals")
+		got.unweighted += wireIntOrZero(t, row, "unweighted_minor")
+		got.weighted += wireIntOrZero(t, row, "weighted_minor")
+		gotByCategory[key] = got
+	}
+	for key, want := range wantByCategory {
+		got := gotByCategory[key]
+		if got != want {
+			t.Errorf("group %q = %+v, want %+v", key, got, want)
 		}
-		if got := wireInt(t, row, "unweighted_minor"); got != want.unweighted {
-			t.Errorf("group %q unweighted = %d, want %d", key, got, want.unweighted)
-		}
-		if got := wireInt(t, row, "weighted_minor"); got != want.weighted {
-			t.Errorf("group %q weighted = %d, want %d", key, got, want.weighted)
-		}
-		gotDeals += wireInt(t, row, "deals")
-		gotUnweighted += wireInt(t, row, "unweighted_minor")
-		gotWeighted += wireInt(t, row, "weighted_minor")
+		gotDeals += got.deals
+		gotUnweighted += got.unweighted
+		gotWeighted += got.weighted
 	}
 	if gotDeals != 5 || gotUnweighted != 100000+12341+999+54321 ||
 		gotWeighted != weightedMinor(100000, 20)+weightedMinor(12341, 60)+weightedMinor(999, 55)+weightedMinor(54321, 55) {
@@ -351,7 +363,7 @@ func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 			VALUES ($1, 'deal_stakeholder', $2, $3, $4, 'manual', 'human:x')`, dealID, personID, role)
 	}
 
-	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id"]}`)
+	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id","currency"]}`)
 	if len(result.Rows) != 1 {
 		t.Fatalf("rows = %+v, want exactly one owner group", result.Rows)
 	}
@@ -381,15 +393,19 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 	e.seedOpenDeal(t, "Gamma", 55, &e.Rep1, nil, stringp("commit"))
 	e.seedOpenDeal(t, "Foreign owner", 60, &e.Rep3, int64p(999999), stringp("commit"))
 
-	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id"]}`)
+	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id","currency"]}`)
 	var row map[string]any
+	// The owner's EUR row. The plan groups by currency — a native money sum
+	// requires it — so rep1 draws one row per currency, and the amountless deal
+	// carries none. Taking whichever came last picked that one: a drill-through
+	// into a group of one, which is a true answer to a different question.
 	for _, r := range result.Rows {
-		if r["owner_id"] == e.Rep1.String() {
+		if r["owner_id"] == e.Rep1.String() && r["currency"] == "EUR" {
 			row = r
 		}
 	}
 	if row == nil {
-		t.Fatalf("no aggregate row for rep1: %+v", result.Rows)
+		t.Fatalf("no aggregate row for rep1 in EUR: %+v", result.Rows)
 	}
 
 	handle, ok := row["derivation_url"].(string)
@@ -400,7 +416,8 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 
 	for _, phrase := range []string{
 		"open, unarchived deals",
-		`within the group where owner_id = "` + e.Rep1.String() + `"`,
+		`owner_id = "` + e.Rep1.String() + `"`,
+		`currency = "EUR"`,
 		"the sum of weighted_amount_minor as weighted_minor",
 	} {
 		if !strings.Contains(derivation.Definition, phrase) {
@@ -408,8 +425,14 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 		}
 	}
 
-	if len(derivation.Rows) != 3 || derivation.TotalRows != 3 {
-		t.Fatalf("drill-through = %d rows (total %d), want rep1's 3 deals: %+v",
+	// Two, not rep1's three. The third carries no amount and so no currency, so
+	// it belongs to a different group of this same plan — and a drill-through
+	// that opened it would be reconciling against a row it was not taken from.
+	// What this case holds is that the detail equals the figure above it, which
+	// the sums below check; the count is here so a group that quietly changed
+	// shape is noticed rather than reconciling to a different two.
+	if len(derivation.Rows) != 2 || derivation.TotalRows != 2 {
+		t.Fatalf("drill-through = %d rows (total %d), want the 2 priced deals in rep1's EUR group: %+v",
 			len(derivation.Rows), derivation.TotalRows, derivation.Rows)
 	}
 	var unweighted, weighted int64
@@ -456,7 +479,7 @@ func TestForecastDerivationReadsEveryDealWhateverTheTier(t *testing.T) {
 	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, int64p(40000), stringp("commit"))
 
 	rep := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
-	result := e.runReport(rep, t, "forecast", `{"group_by":["owner_id"]}`)
+	result := e.runReport(rep, t, "forecast", `{"group_by":["owner_id","currency"]}`)
 	if len(result.Rows) != 2 {
 		t.Fatalf("team-scoped report rows = %+v, want both owners' groups", result.Rows)
 	}
@@ -522,7 +545,7 @@ func TestTheForecastBucketsInTheZoneTheSettingNames(t *testing.T) {
 	commit := "commit"
 	amount := int64(100000)
 	e.seedOpenDeal(t, "Zoned", 60, nil, &amount, &commit)
-	body := `{"group_by":["forecast_category"]}`
+	body := `{"group_by":["forecast_category","currency"]}`
 	if got := e.forecastStatus(e.Admin(), body); got != http.StatusOK {
 		t.Fatalf("the control run answered %d, want 200 — the fixture is broken before the setting moves", got)
 	}
@@ -555,7 +578,7 @@ func TestForecastGroupsThePipelineByPartner(t *testing.T) {
 		VALUES ($1, 'Kestrel open', $2, $3, $4, 'sourced', 70000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], kestrel)
 
 	result := e.runReport(e.Admin(), t, "forecast",
-		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
+		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
 
 	byPartner := map[string]int64{}
 	for _, row := range result.Rows {
@@ -584,7 +607,7 @@ func TestForecastNarrowsToOnePartner(t *testing.T) {
 		VALUES ($1, 'Somebody else', $2, $3, $4, 'sourced', 90000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], other)
 
 	result := e.runReport(e.Admin(), t, "forecast",
-		fmt.Sprintf(`{"group_by":["partner_org_id"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}],"filters":{"partner_org_id":%q}}`, wanted.String()))
+		fmt.Sprintf(`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}],"filters":{"partner_org_id":%q}}`, wanted.String()))
 
 	// One row, and it is theirs. A filter that returned both would read as a
 	// working narrow to anyone who only checked the partner they asked for.
@@ -615,7 +638,7 @@ func TestForecastByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 
 	reader := e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
 	result := e.runReport(reader, t, "forecast",
-		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
+		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
 
 	for _, row := range result.Rows {
 		if id, ok := row["partner_org_id"].(string); ok && id == hidden.String() {
@@ -632,4 +655,81 @@ func TestForecastByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 	if !sawOpen {
 		t.Error("the partner this caller CAN open was dropped too — the clause blanked the dimension rather than narrowing it")
 	}
+}
+
+// Summing money in each row's own currency across a grouping that does not
+// split by currency is REFUSED.
+//
+// Two open deals — 2,500,000 EUR and 1,000,000 USD — grouped by category
+// alone answered 3,500,000: euros added to dollars and returned as a plain
+// integer, where the honest converted total is 3,420,000 EUR. The default
+// plans append currency, so the invariant was held by a default rather than by
+// a rule, and a caller naming its own group_by walked straight past it — which
+// the MCP schema resource invites by listing group_by as a free choice.
+func TestAReportRefusesNativeMoneySummedAcrossCurrencies(t *testing.T) {
+	e := setupForecast(t)
+	eur := int64(2_500_000)
+	usd := int64(1_000_000)
+	e.seedOpenDeal(t, "Home", 20, &e.Rep1, &eur, nil)
+	e.seedOpenDeal(t, "Abroad", 20, &e.Rep1, &usd, nil)
+
+	status, body := e.runReportStatus(e.Admin(), t, "forecast",
+		`{"group_by":["forecast_category"],`+
+			`"aggregates":[{"fn":"sum","field":"amount_minor","as":"bad"}]}`)
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("summing amount_minor without a currency grouping answered %d, want 422 — "+
+			"the answer is a number with no unit, and it does not look like one", status)
+	}
+	if !strings.Contains(body, "currency") {
+		t.Errorf("the refusal does not name `currency`: %s\nA caller who cannot see what "+
+			"to add has been told no and nothing else", body)
+	}
+
+	// The same sum WITH the currency split is answered, so this refuses the
+	// combination rather than the measure — a report that could no longer
+	// report its own money would be a worse fix than the defect.
+	ok, _ := e.runReportStatus(e.Admin(), t, "forecast",
+		`{"group_by":["forecast_category","currency"],`+
+			`"aggregates":[{"fn":"sum","field":"amount_minor","as":"native"}]}`)
+	if ok != http.StatusOK {
+		t.Errorf("the same sum grouped by currency answered %d, want 200", ok)
+	}
+
+	// COUNT of the same measure is answered without the split. It reports how
+	// many rows could compute the amount — a dimensionless integer that means
+	// the same thing in every currency — where every other function combines
+	// the values. Refusing it would have made "how many deals are priced"
+	// unanswerable without a grouping the question does not need.
+	counted, _ := e.runReportStatus(e.Admin(), t, "forecast",
+		`{"group_by":["forecast_category"],`+
+			`"aggregates":[{"fn":"count","field":"amount_minor","as":"priced"}]}`)
+	if counted != http.StatusOK {
+		t.Errorf("counting amount_minor without a currency grouping answered %d, want 200 — "+
+			"a count of money is not money", counted)
+	}
+}
+
+// runReportStatus is runReport for a case about the ANSWER's status rather than
+// its rows: it returns the code and the raw body instead of insisting on 200.
+func (e *forecastEnv) runReportStatus(
+	ctx context.Context, t *testing.T, report, body string,
+) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/reports/"+report, strings.NewReader(body)).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	e.handlers.RunReport(rec, req, report)
+	return rec.Code, rec.Body.String()
+}
+
+// wireIntOrZero is wireInt for a column a GROUP may legitimately have no value
+// in: a sum over rows that carry no amount is SQL NULL, not zero, and the two
+// mean different things — nothing was measured, rather than measured as none.
+// Callers folding groups together read it as zero because that is what adding
+// nothing to a total does.
+func wireIntOrZero(t *testing.T, row map[string]any, key string) int64 {
+	t.Helper()
+	if row[key] == nil {
+		return 0
+	}
+	return wireInt(t, row, key)
 }

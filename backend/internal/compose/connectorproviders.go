@@ -38,3 +38,9 @@ var oauthProviders = []string{providerGmail, providerGcal, providerGraph, provid
 func isOAuthProvider(provider string) bool {
 	return slices.Contains(oauthProviders, provider)
 }
+
+// listedProviders are the mail providers a person picks between on the
+// connect screen: gmail, graph, and imap. gcal and graphcal are omitted,
+// since each is created by its paired MAIL grant rather than picked directly,
+// so there is nothing for the screen to ask about them on their own.
+var listedProviders = []string{providerGmail, providerGraph, providerIMAP}

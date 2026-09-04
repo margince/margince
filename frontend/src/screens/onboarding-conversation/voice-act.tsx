@@ -1,19 +1,18 @@
 import type { ChangeEvent, Dispatch, RefObject } from "react";
 import { useRef } from "react";
 import type { components } from "../../api/schema";
-import { formatNumber, ordinalNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { ordinalNumber } from "../../format/format";
+import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import { useFileDrop } from "../use-file-drop";
+import { parseVoiceInsights } from "../voice-insights";
 import { VOICE_MIN_WORDS } from "../voice-intake-core";
 import type {
   ConversationEvent,
   ConversationState,
 } from "./conversation-machine";
-import { NarrationBubble } from "./entries";
 import { presenceFor } from "./presence";
 import { railStops } from "./rail";
-import { ConversationThread, selectionFor } from "./thread";
 import { useVoiceBuild } from "./use-voice-build";
 import { useVoiceCorpus } from "./use-voice-corpus";
 import type { VoiceContinueReason } from "./voice-artifact";
@@ -28,14 +27,12 @@ import { ConversationWorkbench, useConfiguredModel } from "./workbench";
 
 // The voice act driver: intake and ingestion live in useVoiceCorpus, the
 // build lifecycle in useVoiceBuild. Every source — a browsed file, a window
-// drop, a pasted text — lands through the collect scene; the rail beside it
-// narrates and never offers a way to add material of its own. Every
-// consequence a scene already shows (a source in the sources list, a
-// decision on its own surface, Continue in its own foot) is filtered out of
-// the rail's thread below — a fact live on the surface has no business
-// repeating itself as a rail bubble.
+// drop, a pasted text — lands through the collect scene, which is the
+// board's own content; the room asks one question at a time, so there is no
+// separate rail transcript to keep in step with it.
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
+type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 
 type VoiceActProps = Readonly<{
   state: ConversationState;
@@ -98,7 +95,6 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
     <VoiceSurface
       state={state}
       dispatch={dispatch}
-      eyebrow={eyebrow}
       corpus={corpus}
       build={build}
       canBuild={canBuild}
@@ -109,114 +105,88 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
     />
   );
 
-  // Upload consequences (a source's own word count, the corpus meter, the
-  // speaker decision itself) render on the scene, not twice — an unresolved
-  // question is EVERY caller's own filter (see thread.tsx's `selectionFor`
-  // docstring); the id patterns below are the whole of what useVoiceCorpus
-  // narrates for an ingest already ON the collect scene's sources list.
-  const threadEntries = state.thread.filter((entry, index) => {
-    if (entry.kind === "question") {
-      return selectionFor(state.thread, index) !== null;
-    }
-    return !isSurfaceRedundant(entry.id);
-  });
-
   return (
     <ConversationWorkbench
       core={presence.core}
       progress={presence.progress}
+      // The build scene draws the Core itself, with the progress ring inside
+      // it; the room's own would be a second orb saying the same thing.
+      coreHidden={state.phase === "vo.building"}
       railState={state}
       status={t(
         state.phase === "vo.building"
           ? "ob.conv.voice.statusBuilding"
           : "ob.ai.ready",
       )}
-      artifact={scene}
+      {...boardHeading(state, eyebrow, build.builtVersion.data ?? null, t)}
     >
-      <div className={`mw-thread${dragOver ? " ob-conv-dragover" : ""}`}>
-        <ConversationThread
-          entries={threadEntries}
-          pendingQuestionId={state.pendingQuestion?.id ?? null}
-          onAnswer={handleAnswer}
-        >
-          {state.phase === "vo.collecting" && (
-            // The controls live on the scene now; the rail says only what
-            // the machine wants and why.
-            <CollectingNarration
-              serverWords={serverWords}
-              canBuild={canBuild}
-            />
-          )}
-          {state.phase === "vo.speaker" && (
-            <NarrationBubble
-              entry={{
-                kind: "narration",
-                id: "voice:guide-speaker",
-                i18nKey: "ob.conv.voice.guideSpeaker",
-              }}
-            />
-          )}
-        </ConversationThread>
-      </div>
+      {/* The whole window stays the drop target while collecting (see
+          useFileDrop below); the board is what shows that now, since there
+          is no rail thread left to ring. */}
+      <div className={dragOver ? "ob-conv-dragover" : undefined}>{scene}</div>
+      {corpus.failure && (
+        <p className="ob-conv-notice" role="alert">
+          {t(corpus.failure.i18nKey, corpus.failure.params)}
+        </p>
+      )}
     </ConversationWorkbench>
   );
 }
 
-// Upload consequences the collect scene's own sources list and meter already
-// show: the "Added {name}." turn UPLOAD_ADDED appends, its per-source
-// reaction ("Words kept/counted: …"), and the corpus-growth counter
-// (diffCorpus's stable "words"/"band:<band>" ids). `withEntries` stamps
-// every id with a `<seq>:` prefix, so the match is a suffix test on the
-// SHAPE those three narrations always take, not the reaction's own text.
-function isSurfaceRedundant(id: string): boolean {
-  return (
-    /^\d+:upload:/.test(id) ||
-    /^\d+:react:/.test(id) ||
-    /^\d+:words$/.test(id) ||
-    /^\d+:band:/.test(id)
-  );
-}
-
-// What the machine wants while it collects, and nothing it can press: the
-// drop target, the sources and the build action are the scene's.
-function CollectingNarration({
-  serverWords,
-  canBuild,
-}: Readonly<{ serverWords: number; canBuild: boolean }>) {
-  const { locale } = useLocale();
-  return (
-    <>
-      <NarrationBubble
-        entry={{
-          kind: "narration",
-          id: "voice:collect",
-          i18nKey: "ob.conv.voice.collectAsk",
-        }}
-      />
-      {serverWords > 0 && serverWords < VOICE_MIN_WORDS && (
-        <NarrationBubble
-          entry={{
-            kind: "narration",
-            id: "voice:floor",
-            i18nKey: "ob.conv.voice.buildFloor",
-            params: {
-              words: formatNumber(serverWords, locale),
-              min: formatNumber(VOICE_MIN_WORDS, locale),
-            },
-          }}
-        />
-      )}
-      {canBuild && (
-        <NarrationBubble
-          entry={{
-            kind: "narration",
-            id: "voice:nudge",
-            i18nKey: "ob.conv.voice.buildNudge",
-          }}
-        />
-      )}
-    </>
-  );
+/**
+ * What the room says this screen is, per phase. THE QUESTION IS THE TITLE
+ * while the speaker decision is pending, the same rule the company act's
+ * clarify branch follows. Every other phase points at the scene's own
+ * existing headline; `sceneTitle`/`sceneSub` describe the whole voice step,
+ * so they also stand in for the fallback branch (skipped, failed, deferred)
+ * that no longer has a scene heading of its own.
+ */
+function boardHeading(
+  state: ConversationState,
+  eyebrow: string,
+  builtVersion: VoiceProfileVersion | null,
+  t: ReturnType<typeof useT>,
+): Readonly<{ eyebrow?: string; title: string; sub?: string }> {
+  if (state.phase === "vo.speaker" && state.pendingQuestion !== null) {
+    return {
+      eyebrow,
+      title: t(state.pendingQuestion.i18nKey, state.pendingQuestion.params),
+    };
+  }
+  if (state.phase === "vo.building") {
+    return { eyebrow, title: t("ob.conv.voice.buildingTitle") };
+  }
+  if (state.phase === "vo.result" && state.lastBuildStatus === "succeeded") {
+    const data =
+      builtVersion !== null ? parseVoiceInsights(builtVersion) : null;
+    // A version with no reserved held-out samples (the starter-corpus case:
+    // too few sources to spare any) never carries a sample draft, and the
+    // sub line says so rather than promising one.
+    const hasSample = data !== null && data.sampleDrafts.length > 0;
+    return {
+      eyebrow,
+      title: t("ob.conv.voice.resultTitle"),
+      sub: t(
+        data !== null && !hasSample
+          ? "ob.conv.voice.resultSubNoSample"
+          : "ob.conv.voice.resultSub",
+      ),
+    };
+  }
+  // A build that did not finish, or is waiting on budget, is the room's own
+  // headline: left under "teach me how you write" the reader takes the dossier
+  // below for the result and never learns nothing was built.
+  if (state.phase === "vo.result" && state.lastBuildStatus === "failed") {
+    return { eyebrow, title: t("ob.conv.build.failed") };
+  }
+  if (state.phase === "vo.result" && state.lastBuildStatus === "deferred") {
+    return { eyebrow, title: t("ob.conv.build.deferred") };
+  }
+  return {
+    eyebrow,
+    title: t("ob.conv.voice.sceneTitle"),
+    sub: t("ob.conv.voice.sceneSub"),
+  };
 }
 
 // The fallback branch's own Continue: `vo.skipped` has nothing left to
@@ -233,7 +203,7 @@ function continueBarFor(
   retryPending?: boolean;
   onRetry?: () => void;
 }> | null {
-  const onContinue = () => dispatch({ type: "RESULTS_CONTINUE" });
+  const onContinue = () => dispatch({ type: "VOICE_DONE" });
   if (state.phase === "vo.skipped") {
     return { reason: "skipped", onContinue };
   }
@@ -262,7 +232,6 @@ function continueBarFor(
 function VoiceSurface({
   state,
   dispatch,
-  eyebrow,
   corpus,
   build,
   canBuild,
@@ -273,7 +242,6 @@ function VoiceSurface({
 }: Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  eyebrow: string;
   corpus: ReturnType<typeof useVoiceCorpus>;
   build: ReturnType<typeof useVoiceBuild>;
   canBuild: boolean;
@@ -286,7 +254,6 @@ function VoiceSurface({
   if (state.phase === "vo.collecting") {
     return (
       <VoiceCollectScene
-        eyebrow={eyebrow}
         summary={corpus.summary}
         manifest={corpus.manifest}
         fileRef={fileRef}
@@ -306,11 +273,7 @@ function VoiceSurface({
   }
   if (state.phase === "vo.speaker" && state.pendingQuestion !== null) {
     return (
-      <VoiceSpeakerScene
-        eyebrow={eyebrow}
-        question={state.pendingQuestion}
-        onAnswer={onAnswer}
-      />
+      <VoiceSpeakerScene question={state.pendingQuestion} onAnswer={onAnswer} />
     );
   }
   if (state.phase === "vo.building") {
@@ -326,10 +289,10 @@ function VoiceSurface({
   if (state.phase === "vo.result" && state.lastBuildStatus === "succeeded") {
     return (
       <VoiceResultScene
-        eyebrow={eyebrow}
         loading={build.builtVersion.isPending}
         version={build.builtVersion.data ?? null}
-        onContinue={() => dispatch({ type: "RESULTS_CONTINUE" })}
+        onContinue={() => dispatch({ type: "VOICE_DONE" })}
+        onRevise={() => dispatch({ type: "VOICE_REVISE" })}
       />
     );
   }

@@ -34,18 +34,45 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// OIDCProviderConfig is one configured external identity provider, injected
-// by compose. "google" is the only key today; the shape is generic so a
-// second provider is a config entry, not a refactor. It carries only what
-// ssologin.go itself reads (ClientID for the authorization request, AuthURL
-// to redirect to) — the client secret and token endpoint belong to the
-// OIDCExchanger compose injects separately (googleTokenExchanger), and this
-// struct is not a second place for them to live.
+// OIDCProviderConfig is one external identity provider as the login screen and
+// the authorization request see it. It carries only what ssologin.go itself
+// reads (ClientID for the authorization request, AuthURL to redirect to) — the
+// client secret and token endpoint belong to the OIDCExchanger beside it, and
+// this struct is not a second place for them to live.
 type OIDCProviderConfig struct {
 	Key      string
 	Label    string
 	ClientID string
 	AuthURL  string
+}
+
+// OIDCProvider is one provider AS RESOLVED FOR ONE REQUEST: which client the
+// browser is sent out with, and how what comes back is redeemed and verified.
+// The three travel together because they are three views of one OAuth client
+// — a verifier checking one app's audience beside an exchanger holding another
+// app's secret is a flow that fails at the token endpoint with nothing naming
+// the mismatch.
+type OIDCProvider struct {
+	Config    OIDCProviderConfig
+	Verifier  OIDCVerifier
+	Exchanger OIDCExchanger
+}
+
+// OIDCProviderSource hands out a provider at the moment it is used.
+//
+// Resolved per request rather than fixed at boot because the OAuth client may
+// be the one an admin saved under Settings, and that app has to reach the login
+// screen without a restart. ok=false is "no client to offer right now" — the
+// deployment composed the routes but nothing supplies a client yet — and every
+// route treats it exactly as a provider that was never composed: the button is
+// withheld and the flow 404s. An error is neither of those and is never read as
+// absence, for the reason the provider policy's own read is not.
+type OIDCProviderSource func(ctx context.Context) (p OIDCProvider, ok bool, err error)
+
+// FixedOIDCProvider is a source whose answer never changes: the client a
+// deployment composed from its environment, and what every test wires.
+func FixedOIDCProvider(p OIDCProvider) OIDCProviderSource {
+	return func(context.Context) (OIDCProvider, bool, error) { return p, true, nil }
 }
 
 // OIDCVerifier is what ssologin needs from an ID-token verifier — defined
@@ -65,8 +92,8 @@ type OIDCExchanger interface {
 // loginStateSignerAdapter satisfies this; identity never sees compose's HMAC
 // details.
 type OIDCStateSigner interface {
-	Sign(provider, nonce, codeVerifier string, ttl time.Duration) (token string)
-	Verify(token string) (provider, nonce, codeVerifier string, err error)
+	Sign(provider, clientID, nonce, codeVerifier string, ttl time.Duration) (token string)
+	Verify(token string) (provider, clientID, nonce, codeVerifier string, err error)
 }
 
 const (
@@ -131,7 +158,7 @@ func clearLoginStateCookie(w http.ResponseWriter) {
 // parameter type is generated from crm.yaml's enumerated path parameter.
 func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, providerParam crmcontracts.StartOidcSignInParamsProvider) {
 	provider := string(providerParam)
-	cfg, ok := h.oidcProviders[provider]
+	source, ok := h.oidcProviders[provider]
 	if !ok {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
@@ -168,6 +195,23 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
+	// After the policy, for the same reason the policy comes after the budget:
+	// this read may open a stored secret, and a provider the admin turned off
+	// should cost nothing past the settings row that says so. The same two
+	// answers as the policy's — an outage is a server-side failure, absence is
+	// the 404 — and the cause stays in the log for the same reason.
+	p, ok, err := source(r.Context())
+	if err != nil {
+		slog.ErrorContext(r.Context(), "resolving the sign-in provider's client",
+			"provider", provider, "err", err)
+		httperr.Write(w, r, errors.New("identity: the sign-in provider could not be resolved"))
+		return
+	}
+	if !ok {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	cfg := p.Config
 	nonce, err := randomTokenOfLength(oidcNonceBytes)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -179,7 +223,7 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		return
 	}
 	challenge := sha256.Sum256([]byte(verifier))
-	token := h.stateSigner.Sign(provider, nonce, verifier, oidcStateTTL)
+	token := h.stateSigner.Sign(provider, cfg.ClientID, nonce, verifier, oidcStateTTL)
 	setLoginStateCookie(w, token, oidcStateTTL)
 
 	q := url.Values{
@@ -218,7 +262,8 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		http.Redirect(w, r, h.oidcRoutes.FailureURL, http.StatusFound)
 	}
 
-	if _, ok := h.oidcProviders[provider]; !ok {
+	source, ok := h.oidcProviders[provider]
+	if !ok {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
@@ -247,6 +292,20 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		fail(ctx, "provider disabled", nil)
 		return
 	}
+	// Resolved again on the way back rather than remembered from the start:
+	// the app may have been replaced while the browser was away, and a code
+	// minted by the old client must be redeemed by whatever client is current
+	// — which refuses it, honestly, rather than succeeding on a secret that
+	// no longer exists.
+	p, ok, err := source(ctx)
+	if err != nil {
+		fail(ctx, "provider resolution", err)
+		return
+	}
+	if !ok {
+		fail(ctx, "provider unavailable", nil)
+		return
+	}
 
 	var code, state string
 	if params.Code != nil {
@@ -272,9 +331,20 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		fail(ctx, "no state cookie", nil)
 		return
 	}
-	stProvider, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
+	stProvider, stClientID, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
 	if err != nil || stProvider != provider || stNonce != state {
 		fail(ctx, "state verification", err)
+		return
+	}
+	// The client the flow STARTED on. A stored app resolves per request, so an
+	// app replaced mid-flow would otherwise have this callback redeem a code
+	// issued to the previous client — the provider rejects that, and the
+	// operator would be reading a token-endpoint error instead of the reason.
+	// Its own failure marker, because "the app changed under an open sign-in"
+	// and "the state did not verify" call for different answers from whoever
+	// is reading the log.
+	if stClientID != p.Config.ClientID {
+		fail(ctx, "the sign-in app changed while this flow was open", nil)
 		return
 	}
 	clearLoginStateCookie(w) // one-shot: consumed now that the state has genuinely matched
@@ -287,7 +357,7 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	email, sub, reason, err := h.exchangeAndVerify(ctx, provider, code, codeVerifier)
+	email, sub, reason, err := h.exchangeAndVerify(ctx, provider, p, code, codeVerifier)
 	if reason != "" {
 		fail(ctx, reason, err)
 		return
@@ -307,12 +377,12 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 // branching stays over the state/cookie plumbing rather than growing to
 // cover the token round trip too. A non-empty reason means refuse; email/sub
 // are meaningful only when reason is empty.
-func (h Handlers) exchangeAndVerify(ctx context.Context, provider, code, codeVerifier string) (email, sub, reason string, err error) {
-	idToken, err := h.oidcExchangers[provider].Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
+func (h Handlers) exchangeAndVerify(ctx context.Context, provider string, p OIDCProvider, code, codeVerifier string) (email, sub, reason string, err error) {
+	idToken, err := p.Exchanger.Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
 	if err != nil {
 		return "", "", "token exchange", err
 	}
-	email, sub, emailVerified, err := h.oidcVerifiers[provider].Verify(ctx, idToken)
+	email, sub, emailVerified, err := p.Verifier.Verify(ctx, idToken)
 	if err != nil {
 		return "", "", "id token verification", err
 	}

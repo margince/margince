@@ -1,0 +1,141 @@
+/*
+ * The ignition: the four seconds after a model is bound.
+ *
+ * ALL OF THE TIMING IS HERE, and that is the point. The component runs three
+ * timers, and they only tell the orb what it is doing; every delay a reader
+ * perceives is an `animation-delay` in this file, so the reduced-motion block at
+ * the bottom turns the whole sequence into its end state in ONE place. A
+ * sequence split between keyframes and `setTimeout` is a sequence where the two
+ * halves drift and nothing fails.
+ *
+ * THE DURATIONS ARE NAMED HERE rather than taken from `tokens.css`, and this is
+ * the one surface where that is right. The token ladder is deliberately folded
+ * to four rungs because it times a CONTROL changing or a block arriving — 90ms
+ * to 360ms, the range where a reader reads a response. This is neither: it is a
+ * sequence somebody watches, and the rungs it needs are seconds. They are
+ * declared once, on the block, named for the beat they time.
+ */
+
+.ob-ig {
+  /* The one rung this block needs, named for the beat it times. The wash itself
+     belongs to the stage, beside the orb whose light it is. */
+  --ig-beat: 2000ms;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@keyframes ob-ig-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The key, gone. Green because this one IS recorded — the vault holds it, and
+   the sentence is about what happened rather than what an agent proposes. */
+.ob-ig-sealed {
+  margin: 0;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accentLight);
+  color: var(--accentText);
+  font-size: var(--fs-meta);
+  animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
+}
+
+/* Reaching the vendor. It settles to a low opacity rather than leaving: what it
+   says stays true, and a line that vanishes reads as a step undone. */
+.ob-ig-beat {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--aiText);
+  animation: ob-ig-appear var(--ig-beat) var(--ease-out) 1500ms both;
+}
+
+@keyframes ob-ig-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  16% {
+    opacity: 1;
+    transform: none;
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* What is true now, and the one thing that is not. */
+.ob-ig-can {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ob-ig-can li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--textContent);
+  animation: ob-ig-rise var(--dur-enter) var(--ease-out) both;
+}
+.ob-ig-can li:nth-child(1) {
+  animation-delay: 3100ms;
+}
+.ob-ig-can li:nth-child(2) {
+  animation-delay: 3250ms;
+}
+.ob-ig-can li:nth-child(3) {
+  animation-delay: 3400ms;
+}
+/* Indigo for what the agent may now do, and the ordinary meta ink for what it
+   may not: the refusal is not a warning, it is the shape of the product. */
+/* The type is `.t-eyebrow` on the element itself (base.css owns the size, the
+   tracking and the case). What is left here is what belongs to THIS list: a
+   label column the two rows align down, set in mono because it names a machine
+   state, and indigo because the state it names is the agent's. */
+.ob-ig-can li b {
+  flex: none;
+  min-width: 6.5ch;
+  font-family: var(--f-mono);
+  color: var(--aiText);
+}
+.ob-ig-can li[data-can="false"] b {
+  color: var(--textMeta);
+}
+
+.ob-ig-go {
+  margin-top: var(--space-2);
+  animation: ob-ig-rise var(--dur-enter) var(--ease-out) 3600ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * The sequence ENDS rather than never happening. Every line is present and
+   * legible at once, the wash does not run, and what the screen says is exactly
+   * what it says four seconds in — which is the whole content. A reader who has
+   * asked not to be moved is not a reader who should be told less.
+   */
+  .ob-ig-sealed,
+  .ob-ig-beat,
+  .ob-ig-can li,
+  .ob-ig-go {
+    animation: none;
+  }
+}

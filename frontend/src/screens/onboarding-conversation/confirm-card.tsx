@@ -21,14 +21,7 @@ import { type Locale, useLocale, usePluralKey, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
-import {
-  CUSTOMER_FIELDS,
-  LEGAL_IDENTITY_FIELDS,
-  normalizeUrl,
-  OFFER_FIELDS,
-  REQUIRED_FIELDS,
-  SALES_FIELDS,
-} from "../onboarding";
+import { normalizeUrl, REQUIRED_FIELDS } from "../onboarding";
 import {
   CapNotice,
   type FactSelection,
@@ -40,8 +33,10 @@ import type { ClarifyAnswer } from "./company-proposal";
 import { evidencedFields, isCompanyField } from "./company-proposal";
 import {
   isWork,
+  type ReviewGroupKey,
   type ReviewRow,
   type RowState,
+  reviewGroups,
   rowFor,
   STATE_RANK,
 } from "./company-review-state";
@@ -91,30 +86,14 @@ type CompanyConfirmCardProps = Readonly<{
   error: string | null;
 }>;
 
-// The four field groups of the classic form, in its order: one vocabulary
-// for what belongs where, whichever surface is doing the reviewing. A
-// function, not a module-level const: this module and ../onboarding sit on
-// an import cycle, so the group arrays only exist by the time a render asks.
-function reviewGroups(): readonly Readonly<{
-  key: string;
-  labelKey: MessageKey;
-  fields: readonly CompanyFieldName[];
-}>[] {
-  return [
-    {
-      key: "identity",
-      labelKey: "ob.s1.identityLabel",
-      fields: LEGAL_IDENTITY_FIELDS,
-    },
-    { key: "offer", labelKey: "ob.s1.offerLabel", fields: OFFER_FIELDS },
-    {
-      key: "customer",
-      labelKey: "ob.s1.customerLabel",
-      fields: CUSTOMER_FIELDS,
-    },
-    { key: "sales", labelKey: "ob.s1.salesLabel", fields: SALES_FIELDS },
-  ];
-}
+// The form's words for the record's four groups; which field sits under
+// which heading is `reviewGroups()`'s, shared with the whole-record article.
+const GROUP_LABELS: Readonly<Record<ReviewGroupKey, MessageKey>> = {
+  identity: "ob.s1.identityLabel",
+  offer: "ob.s1.offerLabel",
+  customer: "ob.s1.customerLabel",
+  sales: "ob.s1.salesLabel",
+};
 
 const STATE_WORD: Readonly<Record<RowState, MessageKey>> = {
   required: "ob.conv.triage.stateRequired",
@@ -1323,6 +1302,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
       .map((field) => [field.field, field]),
   );
   const groups = reviewGroups().map((group) => {
+    const labelKey = GROUP_LABELS[group.key];
     const rows = group.fields
       .map((field) =>
         rowFor(
@@ -1335,7 +1315,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
         ),
       )
       .sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state]);
-    return { ...group, rows };
+    return { ...group, labelKey, rows };
   });
   const rows = groups.flatMap((group) => group.rows);
   const facts = props.proposal.facts ?? [];

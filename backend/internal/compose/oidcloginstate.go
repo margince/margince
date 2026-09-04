@@ -25,7 +25,13 @@ import (
 )
 
 type loginState struct {
-	Provider     string
+	Provider string
+	// ClientID is the OAuth client the authorization was actually started
+	// with. Stored apps resolve per request, so the client can be replaced
+	// between /start and /callback; a code issued to the old client is not
+	// redeemable by the new one, and without this the callback would send it
+	// anyway and surface the provider's rejection instead of the real cause.
+	ClientID     string
 	Nonce        string
 	CodeVerifier string
 }
@@ -47,6 +53,7 @@ const loginStateTyp = "oidc-login"
 type wireLoginState struct {
 	Typ string `json:"t"`
 	P   string `json:"p"`
+	CID string `json:"cid"`
 	N   string `json:"n"`
 	CV  string `json:"cv"`
 	Exp int64  `json:"exp"`
@@ -63,7 +70,8 @@ func newLoginStateSigner(key []byte) loginStateSigner {
 
 func (s loginStateSigner) sign(st loginState, exp time.Time) string {
 	payload, _ := json.Marshal(wireLoginState{ //nolint:errchkjson // string/int-only struct never errors
-		Typ: loginStateTyp, P: st.Provider, N: st.Nonce, CV: st.CodeVerifier, Exp: exp.Unix(),
+		Typ: loginStateTyp, P: st.Provider, CID: st.ClientID,
+		N: st.Nonce, CV: st.CodeVerifier, Exp: exp.Unix(),
 	})
 	enc := base64.RawURLEncoding.EncodeToString(payload)
 	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc))
@@ -95,7 +103,7 @@ func (s loginStateSigner) verify(token string, now time.Time) (loginState, error
 	if now.Unix() > w.Exp {
 		return loginState{}, errors.New("oidc login state: expired")
 	}
-	return loginState{Provider: w.P, Nonce: w.N, CodeVerifier: w.CV}, nil
+	return loginState{Provider: w.P, ClientID: w.CID, Nonce: w.N, CodeVerifier: w.CV}, nil
 }
 
 func (s loginStateSigner) mac(enc string) []byte {

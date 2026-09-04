@@ -123,17 +123,17 @@ func TestTheAuthorOfAnInboundMessageStillMakesCorrespondenceLawful(t *testing.T)
 // attendedMeeting plants a meeting the subject was in, at the given offset from
 // now — negative for one that has happened, positive for one in the diary.
 //
-// capturedBy and status are parameters because they are the two things the arm
-// refuses on, and a fixture that hard-coded the passing value would let a test
-// prove the feature while proving nothing about its bounds.
-func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capturedBy, status string) {
+// capturedBy, status and counterparty are parameters because they are the three
+// things the arm refuses on, and a fixture that hard-coded the passing value
+// would let a test prove the feature while proving nothing about its bounds.
+func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capturedBy, status, counterparty string) {
 	t.Helper()
 	id := ids.NewV7()
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status)
-			VALUES ($1, 'meeting', 'gcal', now() + $2::interval, $3, NULLIF($4, ''))`,
-			id, fmt.Sprintf("%d seconds", int(offset.Seconds())), capturedBy, status); err != nil {
+			INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status, counterparty_email)
+			VALUES ($1, 'meeting', 'gcal', now() + $2::interval, $3, NULLIF($4, ''), NULLIF($5, ''))`,
+			id, fmt.Sprintf("%d seconds", int(offset.Seconds())), capturedBy, status, counterparty); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
@@ -145,9 +145,15 @@ func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capt
 	}
 }
 
-// capturedMeeting is the ordinary case: a calendar the mailbox owner holds,
-// synced by a connector, with no acceptance state recorded.
-const capturedMeeting = "connector:gcal:x"
+// The ordinary case, spelled out at the call sites: a calendar the mailbox owner
+// holds, synced by a connector, with no acceptance state recorded and no
+// counterparty — attendance is a LIST, so the mapper leaves the field unset, and
+// that shape is what tells a calendar record from mail wearing its kind.
+const (
+	capturedMeeting   = "connector:gcal:x"
+	noAcceptanceState = ""
+	namesNobody       = ""
+)
 
 // A meeting we are about to have makes correspondence lawful.
 //
@@ -161,7 +167,7 @@ const capturedMeeting = "connector:gcal:x"
 func TestAMeetingInTheDiaryMakesCorrespondenceLawful(t *testing.T) {
 	e := setupQualifying(t)
 
-	e.attendedMeeting(t, 4*24*time.Hour, capturedMeeting, "")
+	e.attendedMeeting(t, 4*24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
 
 	got := e.verdict(t)
 	if got.State != VerdictAllowed {
@@ -179,7 +185,7 @@ func TestAMeetingInTheDiaryMakesCorrespondenceLawful(t *testing.T) {
 func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 	e := setupQualifying(t)
 
-	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, "")
+	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
 
 	if got := e.verdict(t); got.State != VerdictAllowed {
 		t.Fatalf("verdict %q (%s) for somebody we met yesterday, want allowed", got.State, got.Reason)
@@ -198,7 +204,7 @@ func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 func TestAHandLoggedMeetingIsNotEvidence(t *testing.T) {
 	e := setupQualifying(t)
 
-	e.attendedMeeting(t, 4*24*time.Hour, "human:"+e.user.String(), "")
+	e.attendedMeeting(t, 4*24*time.Hour, "human:"+e.user.String(), noAcceptanceState, namesNobody)
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
 		t.Fatalf("verdict %q (%s) on a meeting a seat logged by hand, want not allowed — "+
@@ -213,7 +219,7 @@ func TestADeclinedOrAbandonedMeetingIsNotEvidence(t *testing.T) {
 		t.Run(status, func(t *testing.T) {
 			e := setupQualifying(t)
 
-			e.attendedMeeting(t, -24*time.Hour, capturedMeeting, status)
+			e.attendedMeeting(t, -24*time.Hour, capturedMeeting, status, namesNobody)
 
 			if got := e.verdict(t); got.State == VerdictAllowed {
 				t.Fatalf("verdict %q (%s) on a %s meeting, want not allowed — an invitation "+
@@ -224,6 +230,28 @@ func TestADeclinedOrAbandonedMeetingIsNotEvidence(t *testing.T) {
 	}
 }
 
+// A record that NAMES a sender is not a meeting, whatever kind it wears.
+//
+// A connector reports the kind per message and the extension ingress copies it
+// off a third-party unit's record with no vocabulary check in front of it, so a
+// message a connector really did capture can arrive wearing this one. This arm
+// applies no authorship test — every attendee of a meeting is a party to it —
+// so without the counterparty bound, relabelling a message somebody was merely
+// copied on makes writing to everyone on it lawful.
+//
+// Mutation: drop the counterparty_email clause and this passes.
+func TestARecordNamingASenderIsNotEvidenceWhateverItsKind(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, noAcceptanceState, "sender@example.com")
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a record naming a counterparty, want not allowed — "+
+			"attendance is a list, so a record that names one party is mail however it is "+
+			"labelled, and the label is a word the caller chose", got.State, got.Reason)
+	}
+}
+
 // A meeting dated beyond the horizon is not evidence.
 //
 // The derived row is stamped and read back afterwards without revalidating its
@@ -231,7 +259,7 @@ func TestADeclinedOrAbandonedMeetingIsNotEvidence(t *testing.T) {
 func TestAMeetingBeyondTheHorizonIsNotEvidence(t *testing.T) {
 	e := setupQualifying(t)
 
-	e.attendedMeeting(t, 365*24*time.Hour, capturedMeeting, "")
+	e.attendedMeeting(t, 365*24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
 		t.Fatalf("verdict %q (%s) on a meeting a year out, want not allowed — the stamped row "+

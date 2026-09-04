@@ -33,8 +33,6 @@ import {
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 
-const EYEBROW = "Step 4 of 5";
-
 // `maturity` and `quality_band` are the server's own readings of the corpus, so
 // they are derived from the count rather than picked per story: a fixture that
 // set them independently would describe a summary no server sends.
@@ -56,6 +54,12 @@ const MANIFEST: readonly CorpusManifestEntry[] = [
     keptWords: 2840,
     inputWords: 2840,
     transcript: false,
+    lines: [
+      "Let us move the kickoff to Thursday so the data team can actually join.",
+      "I have attached the revised offer with the two changes we discussed on the call.",
+      "Short answer: yes, but only if the migration finishes before the quarter closes.",
+      "Happy to walk your finance team through the pricing whenever suits them.",
+    ],
   },
   {
     ref: "src-2",
@@ -63,6 +67,7 @@ const MANIFEST: readonly CorpusManifestEntry[] = [
     keptWords: 1380,
     inputWords: 4210,
     transcript: true,
+    lines: [],
   },
 ];
 
@@ -88,7 +93,6 @@ function Collect({
   return (
     <StoryProviders locale={locale}>
       <VoiceCollectScene
-        eyebrow={EYEBROW}
         summary={corpus}
         manifest={manifest}
         fileRef={fileRef}
@@ -216,11 +220,7 @@ const SPEAKER_QUESTION: ConversationQuestion = {
 export const SpeakerAsk: Story = {
   render: () => (
     <StoryProviders>
-      <VoiceSpeakerScene
-        eyebrow={EYEBROW}
-        question={SPEAKER_QUESTION}
-        onAnswer={() => {}}
-      />
+      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
     </StoryProviders>
   ),
 };
@@ -230,11 +230,7 @@ export const SpeakerAsk: Story = {
 export const SpeakerAskGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <VoiceSpeakerScene
-        eyebrow={EYEBROW}
-        question={SPEAKER_QUESTION}
-        onAnswer={() => {}}
-      />
+      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
     </StoryProviders>
   ),
 };
@@ -388,10 +384,10 @@ function result(
   return () => (
     <StoryProviders locale={locale}>
       <VoiceResultScene
-        eyebrow={EYEBROW}
         loading={loading}
         version={built}
         onContinue={() => {}}
+        onRevise={() => {}}
       />
     </StoryProviders>
   );

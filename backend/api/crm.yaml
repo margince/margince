@@ -9175,6 +9175,40 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /company/site-reads/{readId}/logo:
+    parameters:
+      - name: readId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Organizations, AI]
+      operationId: getCompanySiteReadLogo
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Stream the mark a website read resolved, before anything adopts it.
+      description: |
+        The bytes behind `CompanySiteRead.logo_url`: the company mark the read resolved from
+        its own site, parked on the dossier until a confirmation binds it to the record.
+        Served here so the review can show the company it is about while the record does not
+        exist yet. Normalized like every stored mark, so the response is always `image/png`
+        and never third-party markup. 404 when the read resolved no mark or does not exist;
+        501 when the deployment has no object store configured.
+      responses:
+        '200':
+          description: The normalized logo bytes.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /company/site-reads/{readId}/messages:
     parameters:
       - name: readId
@@ -11409,6 +11443,19 @@ paths:
           vendor at two — a broker on one lane and a self-hosted gateway on another, which the
           routing validator permits. Omitted, or naming a lane bound to some other vendor, the host
           falls back to any binding on this vendor and then to the adapter's own default.
+      - name: top
+        in: query
+        required: false
+        schema: { type: integer, minimum: 1, maximum: 100 }
+        description: >-
+          Return only the best N under the vendor's own published measure, and name that measure in
+          `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing
+          form binds an id its reader already knows, while a first run puts a shortlist in front of
+          somebody who has never seen these names, and four hundred rows is not a shortlist.
+
+          Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that
+          publishes no such measure cannot honour this: it answers with the full list and no
+          `ranked_by`, rather than inventing an order and calling it a ranking.
     get:
       tags: [AI]
       operationId: listAvailableModels
@@ -21061,6 +21108,13 @@ components:
         models:
           type: array
           items: { $ref: '#/components/schemas/AvailableModel' }
+        ranked_by:
+          type: string
+          description: >-
+            The measure the order came from, in words a screen can print, and absent when the list
+            is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw
+            list arrives in no useful order at all: a first-time admin choosing among four hundred
+            ids needs to be told what made ten of them the ten.
         unavailable:
           type: string
           enum: [no_key, profile_forbids, not_published, unreachable, no_endpoint]
@@ -21077,8 +21131,17 @@ components:
       additionalProperties: false
       required: [id]
       description: >-
-        One model a vendor says it serves. Three fields and no fourth: the vendors disagree about
-        everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+        One model a vendor says it serves.
+
+        Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors
+        disagree about what they publish, and a caller that assumed a field was there would read a
+        silence as a value. Absent is absent, never a default.
+
+        The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed
+        against. `/ai-model-rates` is that record: it is effective-dated and this installation has
+        agreed to it, where these are a number the vendor printed today and nobody has confirmed.
+        A screen may put the two side by side, and must say which is which. A model this
+        installation cannot price is still bindable and reports UNPRICED.
       properties:
         id:
           type: string
@@ -21092,6 +21155,27 @@ components:
           description: >-
             What the vendor says the model is FOR, absent where it does not say. Absent means
             UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+        context_length:
+          type: integer
+          description: Absent where the vendor publishes none.
+        input_per_mtok:
+          type: string
+          pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$'
+          description: >-
+            The vendor's asking price per million input tokens, in the same USD decimal strings as
+            `AiModelRate` so a screen can show a vendor's price beside a recorded one without
+            converting between them. Absent where the vendor publishes no price.
+        output_per_mtok:
+          type: string
+          pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$'
+          description: The same, per million output tokens.
+        rank_score:
+          type: string
+          description: >-
+            This model's score under the list's `ranked_by`, so a screen can show WHY a model is in
+            a shortened list rather than asking a reader to trust the order. A decimal string for
+            the same reason the prices are: it is displayed, never arithmetic. Absent where the
+            vendor publishes no such measure, which is also when the list cannot be ranked.
     AiProviderKeyStatus:
       type: object
       additionalProperties: false
@@ -21949,6 +22033,30 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/CaptureConnection' } }
         public_origin: { $ref: '#/components/schemas/PublicOriginStatus' }
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureProviderAvailability' }
+          description: |
+            Whether a connect started right now would proceed, per provider a person can choose
+            between, so the connect screen can say so before the click rather than after a 501.
+    CaptureProviderAvailability:
+      type: object
+      description: |
+        Whether a connect started right now would proceed, decided by the same predicate the connect
+        endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+        choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+        created by a mail grant rather than picked, so they are absent.
+      required: [provider, reason]
+      properties:
+        provider: { type: string, enum: [gmail, graph, imap], description: The mail provider a person picks between. }
+        reason:
+          type: string
+          enum: [ready, app_missing, app_unusable, unsupported]
+          description: |
+            `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+            app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+            is a different fix from registering one. `unsupported`: this deployment does not serve the
+            provider at all.
     PublicOriginStatus:
       type: object
       description: |
@@ -32060,10 +32168,18 @@ components:
 
     AuthCapabilities:
       type: object
-      required: [password, password_reset, oidc_providers]
+      required: [password, password_reset, oidc_providers, first_run]
       properties:
         password: { type: boolean, description: Email + password login is enabled. }
         password_reset: { type: boolean, description: The A74 reset flow can complete end to end (outbound email configured + healthy). }
+        first_run:
+          type: boolean
+          description: >
+            Whether this installation has yet to finish its setup, so an unconfigured one can be
+            greeted rather than only asked for credentials. Deliberately readable without a session,
+            which is the narrowest form of a fact `/installation/setup` reports in full to a human
+            session: it says that setup is unfinished and nothing else. It names no account, no step,
+            no configured value, and says nothing about any credential.
         oidc_providers:
           type: array
           description: Operational OIDC providers (empty until the OIDC flow ships).
@@ -34535,7 +34651,16 @@ components:
       required: [expected_version, step, source_mode, company_draft, selected_fact_keys, voice_skipped, connect_skipped]
       properties:
         expected_version: { type: integer, minimum: 0, description: Zero creates; otherwise the version last read. }
-        step: { type: string, enum: [read, confirm, voice, results, connect, complete] }
+        step:
+          type: string
+          enum: [read, confirm, invite, team, voice, results, connect, complete]
+          description: >
+            Where the creator's setup stands. `invite` is the question asked once the company is
+            confirmed — whether the person setting the installation up will also work in it, which
+            is what decides whether the optional `voice` and `connect` steps are offered at all.
+            `team` is where a creator who will not work in it invites the first person who will.
+            `results` is kept for rows written before that question existed; a client treats it as
+            the connect step being next.
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }
@@ -34553,7 +34678,7 @@ components:
       required: [path, step, source_mode, company_draft, selected_fact_keys, voice_skipped, connect_skipped, version, created_at, updated_at]
       properties:
         path: { type: string, enum: [creator, member], readOnly: true }
-        step: { type: string, enum: [read, confirm, voice, results, connect, complete] }
+        step: { type: string, enum: [read, confirm, invite, team, voice, results, connect, complete] }
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }
@@ -35180,6 +35305,15 @@ components:
           description: 'Why the crawl ended early; null when it exhausted discovery. Same column and vocabulary as SiteReadReport — one deep-read engine serves onboarding and every organization.'
         phase: { type: [string, 'null'], enum: [crawling, extracting] }
         pages_read: { type: integer, minimum: 0 }
+        logo_url:
+          type: string
+          readOnly: true
+          description: |
+            Where to fetch the mark the read resolved from the company's own site — the
+            `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+            same-origin. ABSENT when the read resolved none, which a client answers with the
+            deterministic monogram. A confirmation moves the same mark onto the record, where
+            `CompanyProfile.logo_url` carries it from then on.
         pages:
           type: array
           items: { $ref: '#/components/schemas/CompanySiteReadPage' }

@@ -212,6 +212,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/company/context":                                            {Op: "getCompanyContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/context/capabilities":                               {Op: "getCompanyContextCapabilities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/site-reads/{readId}":                                {Op: "getCompanySiteRead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/company/site-reads/{readId}/logo":                           {Op: "getCompanySiteReadLogo", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/connectors":                                                 {Op: "listConnectors", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contracts/{id}":                                             {Op: "getContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/custom-fields":                                              {Op: "listCustomFields", Access: "tool", Tool: "search_records", RecordType: "custom_field", Tier: "auto_execute", Scope: "read"},

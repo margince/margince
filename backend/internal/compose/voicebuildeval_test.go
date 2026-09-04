@@ -230,6 +230,55 @@ func TestEvaluateVoiceCandidateScoresHeldOutDrafts(t *testing.T) {
 	}
 }
 
+// A single-source corpus reserves nothing, so no evaluation runs — and the
+// voice step would otherwise show the reader their profile with not one line
+// of their own voice on it. The demonstration draft fills exactly that gap,
+// and is careful not to look like the scoring that did not happen.
+func TestADemonstrationDraftStandsInWhereNothingCouldBeHeldOut(t *testing.T) {
+	samples := evalSamples(1)
+	heldOut, _ := splitVoiceHeldOut(samples, "hash-d")
+	if len(heldOut) != 0 {
+		t.Fatalf("held out = %d, want a single-source corpus to reserve nothing", len(heldOut))
+	}
+	artifact := ai.VoiceArtifact{
+		Markdown: "# Voice DNA\n\n## Identity\n\ndirect", Stats: ai.AnalyzeVoice(samples),
+		Inference: ai.VoiceInference{IdentitySummary: "direct"},
+	}
+	brain := &scriptedEvalBrain{judgeScore: 0.9}
+
+	result, err := evaluateVoiceCandidate(context.Background(), brain, artifact, "", heldOut, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.SampleDrafts) != 0 {
+		t.Fatalf("sample drafts = %d, want none from a build that scored nothing", len(result.SampleDrafts))
+	}
+	if median := result.Evaluation["candidate_median_voice_score"]; median != nil {
+		t.Fatalf("median = %v, want null on an unevaluated build", median)
+	}
+
+	drafts, err := demonstrationDraft(context.Background(), brain, artifact, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(drafts) != 1 {
+		t.Fatalf("drafts = %d, want exactly one", len(drafts))
+	}
+	if body, _ := drafts[0][voiceDraftFieldBody].(string); body == "" {
+		t.Fatalf("draft = %v, want a body to read", drafts[0])
+	}
+	// The whole point of the distinction: an unscored draft must not arrive
+	// carrying a number, which would report an evaluation this build refused
+	// to fake. Zero is what a FAILED draft scores, so absent is not enough.
+	score, present := drafts[0]["voice_score"]
+	if !present || score != nil {
+		t.Fatalf("voice_score = %v (present=%v), want null — nothing held this out to score it against", score, present)
+	}
+	if brain.judgeCalls != 0 {
+		t.Fatalf("judge calls = %d, want none: a demonstration is never judged", brain.judgeCalls)
+	}
+}
+
 func TestEvaluateVoiceCandidatePropagatesBudgetExhaustion(t *testing.T) {
 	samples := evalSamples(8)
 	heldOut, buildSamples := splitVoiceHeldOut(samples, "hash-b")

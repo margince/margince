@@ -10,14 +10,20 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { Disclosure } from "../design-system/atoms";
+import { CountUp } from "../design-system/countup";
+import { CrawlCanvas } from "../design-system/crawl-canvas";
+import type { MarginceCoreState } from "../design-system/margince-core";
 import {
-  MarginceCoreScene,
-  type MarginceCoreState,
-} from "../design-system/margince-core";
+  OnboardingStage,
+  STAGE_CORE_ID,
+} from "../design-system/onboarding-stage";
+import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { factFieldLabelKey } from "./factview";
 import { normalizeUrl, skipReasonText } from "./onboarding";
+import { CORE_LABELS } from "./onboarding-core-label";
 import "./onboarding-gate.css";
 
 // The first screen of onboarding: one question, then the wait for the website
@@ -42,6 +48,7 @@ type GateScan = Readonly<{
   locale: Locale;
 }>;
 type CompanySiteReadPage = components["schemas"]["CompanySiteReadPage"];
+type CompanySiteReadFact = components["schemas"]["CompanySiteReadFact"];
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 
 type Translate = ReturnType<typeof useT>;
@@ -84,8 +91,11 @@ export function OnboardingGate({
   notice,
   configuredModel,
   scan,
+  readBroken,
+  uncertainCount,
   onSubmit,
   onManual,
+  onRetryRead,
 }: Readonly<{
   name?: string;
   running: boolean;
@@ -97,8 +107,29 @@ export function OnboardingGate({
    * state where the column has a read but not the host it is reading.
    */
   scan?: GateScan;
+  /**
+   * The read the reader is waiting on could not be fetched, and there is no
+   * `scan` to fall back on: a resumed session whose OWN first poll fails
+   * before any snapshot has ever landed narrates nothing `notice` can find
+   * (the thread only carries what a running session watched happen), so
+   * without this the column keeps `running` true forever over a plain form —
+   * indistinguishable from a screen with nothing on it. `notice` still wins
+   * where it has something to say.
+   */
+  readBroken?: boolean;
+  /**
+   * How many fields the read will hand to the confirm deck rather than settle
+   * itself — the exact count `deckCards` builds one card per. This screen has
+   * no query of its own that could derive it (PROP-DRIVEN, see the file
+   * header), and the caller only has a real answer once the review proposal
+   * exists, which is most of the way through a read. Absent, not zero, for
+   * every render before that: a zero here would read as "nothing to decide"
+   * when the honest fact is "not counted yet".
+   */
+  uncertainCount?: number;
   onSubmit: (host: string) => void;
   onManual: () => void;
+  onRetryRead?: () => void;
 }>) {
   const t = useT();
   const [website, setWebsite] = useState("");
@@ -114,7 +145,25 @@ export function OnboardingGate({
           read={scan.read}
           locale={scan.locale}
           configuredModel={configuredModel}
+          uncertainCount={uncertainCount}
         />
+      </GateColumn>
+    );
+  }
+
+  if (readBroken && notice === undefined) {
+    return (
+      <GateColumn name={named}>
+        <SurfaceState
+          state="failed"
+          // Read by the `empty` arm alone, which a failed read never reaches:
+          // what there is none of is not a question a broken poll has an
+          // answer to.
+          emptyLabel={t("common.empty")}
+          detail={{ onRetry: onRetryRead }}
+        >
+          {null}
+        </SurfaceState>
       </GateColumn>
     );
   }
@@ -230,6 +279,83 @@ export function OnboardingGate({
  * phase 0, and the entrance would replay. The most important moment in the flow
  * would flash and re-enter instead of continuing.
  */
+/**
+ * What the stage says above the column, for both faces of this screen.
+ *
+ * A function rather than a branch inside the component: the two faces are one
+ * shape with different values, and stating that as a returned object is what
+ * keeps them from drifting into two layouts. It is also why GateColumn stays
+ * readable — the branching is HERE, over data, not over markup.
+ */
+type StageHead = Readonly<{
+  core: MarginceCoreState;
+  /**
+   * What the Core is doing, in words, for the band above (WDS-CORE-4).
+   *
+   * While a read runs it is the read's OWN phase line — the sentence the
+   * theatre already writes from `phaseKey`, not a second vocabulary for the
+   * same fact. A read carrying no phase leaves it absent, exactly as the
+   * theatre's line does: the band says nothing rather than inventing a fifth
+   * message.
+   */
+  coreLabel?: string;
+  /** The part of this stop the reader is in, for the band beside the step. */
+  where?: string;
+  title: string;
+  sub: string;
+}>;
+
+// `pages_read` is the server's own tally; where it is absent the fetched pages
+// are the same fact counted from the array rather than a guess. One helper, so
+// the band and the tally beneath it cannot disagree about how many were read.
+function pagesReadOf(read: CompanySiteRead): number {
+  return (
+    read.pages_read ??
+    read.pages.filter((page) => page.status === "fetched").length
+  );
+}
+
+function stageHead(
+  t: Translate,
+  scan: GateScan | undefined,
+  running: boolean,
+  name: string | undefined,
+): StageHead {
+  if (scan === undefined) {
+    // At rest before the press, the orb is carrying nothing worth announcing —
+    // and a band that says "idle" over an empty form is chrome describing
+    // itself. It speaks from the moment there is something to say.
+    const core = running ? "ingest" : "idle";
+    return {
+      core,
+      coreLabel: running ? t(CORE_LABELS[core]) : undefined,
+      title: name ? t("ob.gate.title", { name }) : t("ob.gate.titleAnonymous"),
+      sub: t("ob.gate.sub"),
+    };
+  }
+  const settled = SETTLED.has(scan.read.status);
+  const core = coreStateFor(scan.read);
+  return {
+    core,
+    coreLabel: t(CORE_LABELS[core]),
+    title: settled
+      ? t("ob.scan.doneTitle", { host: scan.host })
+      : t("ob.scan.title", { host: scan.host }),
+    sub: settled
+      ? t("ob.scan.doneSub", {
+          facts: formatNumber(scan.read.facts.length, scan.locale),
+          fields: formatNumber(scan.read.profile_fields.length, scan.locale),
+        })
+      : t("ob.scan.sub"),
+    // The page count belongs here, in the band, and only here: it used to be
+    // printed a second time as its own line directly above a tally whose label
+    // is the same two words.
+    where: t("ob.scan.pagesRead", {
+      pages: formatNumber(pagesReadOf(scan.read), scan.locale),
+    }),
+  };
+}
+
 function GateColumn({
   scan,
   running,
@@ -242,48 +368,47 @@ function GateColumn({
   children: ReactNode;
 }>) {
   const t = useT();
+  const head = stageHead(t, scan, running === true, name);
   const settled = scan !== undefined && SETTLED.has(scan.read.status);
-  const head: Readonly<{
-    core: MarginceCoreState;
-    title: string;
-    sub: string;
-  }> =
-    scan === undefined
-      ? {
-          core: running === true ? "ingest" : "idle",
-          title: name
-            ? t("ob.gate.title", { name })
-            : t("ob.gate.titleAnonymous"),
-          sub: t("ob.gate.sub"),
-        }
-      : {
-          core: coreStateFor(scan.read),
-          title: settled
-            ? t("ob.scan.doneTitle", { host: scan.host })
-            : t("ob.scan.title", { host: scan.host }),
-          sub: settled
-            ? t("ob.scan.doneSub", {
-                facts: formatNumber(scan.read.facts.length, scan.locale),
-                fields: formatNumber(
-                  scan.read.profile_fields.length,
-                  scan.locale,
-                ),
-              })
-            : t("ob.scan.sub"),
-        };
   return (
-    <div className="ob-gate-stage">
+    <OnboardingStage
+      flow={t("ob.stage.flow")}
+      // Nothing reaches this screen until first run is done, so a model is
+      // always bound by the time anyone is here. The room says so, and it says
+      // only that: a second trigger per screen is how one colour acquires two
+      // meanings.
+      lit
+      coreState={head.core}
+      // The orb is the subject while the screen asks one question, and steps
+      // back once the reader has a read of their own to watch. Same element,
+      // same place: it gives ground rather than being replaced.
+      coreScale={scan === undefined ? "hero" : "work"}
+      // The Core is aria-hidden, so the band says what it is showing. While a
+      // read runs that is the read's own phase line — the sentence the theatre
+      // already writes — rather than a second vocabulary for the same fact.
+      coreStateLabel={head.coreLabel}
+      // A read GROWS under the reader, tile by tile. Centred, the column would
+      // re-centre on every arriving page and carry the line being read upward.
+      anchor={scan === undefined ? "center" : "start"}
+      // Where the reader is, on the screen they wait on longest. The band
+      // carried the mark alone here, so the one place in the passage where
+      // somebody sits for two minutes was the one place that did not say where
+      // they were. The NAME only, with no marks: this surface is prop-driven
+      // and cannot see the flow around it, so it says what it is and does not
+      // invent how many stops the passage has.
+      step={t("ob.stop.read")}
+      where={scan === undefined ? undefined : head.where}
+      title={head.title}
+      sub={head.sub}
+    >
       <div
         className={`ob-gate${scan === undefined ? "" : " ob-scan"}${
           settled ? " is-settled" : ""
         }`}
       >
-        <MarginceCoreScene state={head.core} />
-        <h1 className="ob-gate-title">{head.title}</h1>
-        <p className="ob-gate-sub">{head.sub}</p>
         {children}
       </div>
-    </div>
+    </OnboardingStage>
   );
 }
 
@@ -337,12 +462,24 @@ function phaseKey(read: CompanySiteRead): MessageKey | null {
   return null;
 }
 
+// The path alone, because every row shares the host and printing it on each one
+// buys nothing. A URL the browser cannot parse is shown whole rather than
+// dropped: it came from the server, and hiding it would lose the one clue an
+// operator has about why that page behaved oddly.
+function pathOf(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
 function reasonOf(t: Translate, page: CompanySiteReadPage): string {
   return skipReasonText(t, page.reason);
 }
 
-// Colour is never the only carrier: the tile's own name says what happened to
-// the page and why, and it is both the tooltip and the accessible name.
+// What happened to one page and why, as one sentence. The crawl picture cannot
+// carry this and does not try: it is the accessible statement of the same walk.
 function pageLabel(t: Translate, page: CompanySiteReadPage): string {
   const reason = reasonOf(t, page);
   if (page.status === "skipped") {
@@ -400,11 +537,15 @@ export function ReadTheatre({
   host,
   locale,
   configuredModel,
+  uncertainCount,
 }: Readonly<{
   read: CompanySiteRead;
   host: string;
   locale: Locale;
   configuredModel: string;
+  /** See `OnboardingGate`'s own prop of the same name for what this counts
+   * and why it is absent rather than zero for most of a read. */
+  uncertainCount?: number;
 }>) {
   return (
     <GateColumn scan={{ read, host, locale }}>
@@ -412,6 +553,7 @@ export function ReadTheatre({
         read={read}
         locale={locale}
         configuredModel={configuredModel}
+        uncertainCount={uncertainCount}
       />
     </GateColumn>
   );
@@ -424,20 +566,18 @@ function TheatreTail({
   read,
   locale,
   configuredModel,
+  uncertainCount,
 }: Readonly<{
   read: CompanySiteRead;
   locale: Locale;
   configuredModel: string;
+  uncertainCount?: number;
 }>) {
   const t = useT();
   const settled = SETTLED.has(read.status);
   const phase = phaseKey(read);
   const runtime = read.ai_runtime;
-  // `pages_read` is the server's own tally; where it is absent the fetched
-  // tiles are the same fact counted from the array rather than a guess.
-  const pagesRead =
-    read.pages_read ??
-    read.pages.filter((page) => page.status === "fetched").length;
+  const pagesRead = pagesReadOf(read);
   const skipped = read.pages.filter((page) => page.status === "skipped").length;
   const latestPage = useLatestArrivedPage(read.pages);
 
@@ -459,21 +599,31 @@ function TheatreTail({
           )}
         </p>
 
-        <ul className="ob-scan-strip" aria-label={t("ob.scan.pageStripLabel")}>
-          {read.pages.map((page) => {
-            const label = pageLabel(t, page);
-            return (
-              <li key={page.url}>
-                <span
-                  className="ob-scan-tile"
-                  data-page-status={page.status}
-                  role="img"
-                  title={label}
-                  aria-label={label}
-                />
-              </li>
-            );
-          })}
+        {/* The site as it is read. It replaced a strip of one tile per page,
+            which said the same thing in the same order and said nothing about
+            the shape it was walking: a reader waiting two minutes can find
+            their own site in this one. The tiles' accessible statement is not
+            lost: the list right under this names every page in words, the
+            ticker names each as it lands, and the counters carry the totals. */}
+        <CrawlCanvas
+          pages={read.pages.map((page) => ({
+            path: pathOf(page.url),
+            note: pageStatusWord(t, page),
+          }))}
+          label={t("ob.scan.pageStripLabel")}
+          // The evidence goes INTO the Core, which is the whole claim of the
+          // screen: the read is feeding the thing that will answer with it.
+          flowToId={STAGE_CORE_ID}
+        />
+        {/* The same pages in words, for a reader the picture cannot reach. The
+            tiles it replaced named every page and its status one by one, and a
+            canvas carrying one summary label would have quietly taken that
+            away: the ticker below announces only the page that just landed, so
+            without this there is no way to review what was walked. */}
+        <ul className="sr-only" aria-label={t("ob.scan.pageStripLabel")}>
+          {read.pages.map((page) => (
+            <li key={page.url}>{pageLabel(t, page)}</li>
+          ))}
         </ul>
 
         {/* The page itself: which one the crawl just walked, not a growing
@@ -490,25 +640,55 @@ function TheatreTail({
             aria-label={t("ob.scan.logLabel")}
           >
             {latestPage === null ? null : (
-              <ScanTickerEntry key={latestPage.url} page={latestPage} t={t} />
+              <ScanTickerEntry
+                key={latestPage.url}
+                page={latestPage}
+                facts={read.facts}
+                t={t}
+              />
             )}
           </ul>
-          <p className="ob-scan-ticker-total">
-            {t("ob.scan.pagesRead", {
-              pages: formatNumber(pagesRead, locale),
-            })}
-          </p>
         </div>
+
+        {/* The two figures the read is actually earning, at the size of the
+            thing being waited for. They COUNT UP because they are still being
+            earned: a number climbing while somebody waits is the difference
+            between a wait that is going somewhere and one that is not. The
+            counts are open on purpose, with no denominator anywhere, because
+            the crawl does not know how many pages a site has and a total it
+            invented would be the one number here nobody could trust. */}
+        <dl className="ob-scan-tally">
+          <div>
+            <dt>{t("ob.scan.tallyPages")}</dt>
+            <dd>
+              <CountUp value={pagesRead} locale={locale} />
+            </dd>
+          </div>
+          <div>
+            <dt>{t("ob.scan.tallyFacts")}</dt>
+            <dd>
+              <CountUp value={read.facts.length} locale={locale} />
+            </dd>
+          </div>
+          {/* Absent, not zero, until `uncertainCount` says otherwise — see its
+              own doc comment on `OnboardingGate`. A bar of two live counters
+              and one that silently sits at 0 for most of the read would read
+              as "nothing to decide yet", which is not a fact this screen has
+              at that point. */}
+          {uncertainCount !== undefined && (
+            <div>
+              <dt>{t("ob.scan.tallyUncertain")}</dt>
+              <dd>
+                <CountUp value={uncertainCount} locale={locale} />
+              </dd>
+            </div>
+          )}
+        </dl>
 
         <p className="ob-scan-counts">
           <span>
             {t("ob.scan.pagesSkipped", {
               count: formatNumber(skipped, locale),
-            })}
-          </span>
-          <span className="ob-scan-found">
-            {t("ob.scan.factsSoFar", {
-              count: formatNumber(read.facts.length, locale),
             })}
           </span>
           {settled ? null : <span>{t("ob.scan.stillReading")}</span>}
@@ -597,24 +777,69 @@ function useLatestArrivedPage(
 // page — never on the reader expanding an old one.
 function ScanTickerEntry({
   page,
+  facts,
   t,
-}: Readonly<{ page: CompanySiteReadPage; t: Translate }>) {
+}: Readonly<{
+  page: CompanySiteReadPage;
+  facts: readonly CompanySiteReadFact[];
+  t: Translate;
+}>) {
   const [expanded, setExpanded] = useState(false);
-  const reason = pageStatusWord(t, page);
+  const note = tickerNoteFor(page, facts, t);
   return (
     <li className="ob-scan-ticker-entry" data-page-status={page.status}>
       <span className="ob-scan-ticker-path">{sourcePath(page.url) ?? "/"}</span>
-      <button
-        type="button"
-        className="ob-scan-ticker-kind"
-        aria-expanded={expanded}
-        aria-label={reason}
-        onClick={() => setExpanded((current) => !current)}
-      >
-        {reason}
-      </button>
+      {/* No button, no reason, when there is nothing honest to say yet: a
+          freshly fetched page with no fact grounded to it is not "fetched" —
+          that word describes the request, not what the page gave up, and
+          printing it here would be filler standing in for a finding this
+          screen does not have. */}
+      {note !== null && (
+        <button
+          type="button"
+          className="ob-scan-ticker-kind"
+          aria-expanded={expanded}
+          aria-label={note}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {note}
+        </button>
+      )}
     </li>
   );
+}
+
+/**
+ * What the ticker says the page gave up, or null for "nothing to say yet".
+ *
+ * A skipped or failed page has a real reason and no fact ever will, so its
+ * status word IS the honest note. A fetched page instead looks for the
+ * fact whose `evidence_url` names it — the same grounding link the deck and
+ * the record page trust — and takes the one this read is most confident of
+ * when more than one landed on the same page. No match is a real, current
+ * state (the extraction has not reached this page's content yet, or found
+ * nothing worth a field on it) and stays null rather than falling back to a
+ * word that would only restate the page's own status.
+ */
+function tickerNoteFor(
+  page: CompanySiteReadPage,
+  facts: readonly CompanySiteReadFact[],
+  t: Translate,
+): string | null {
+  if (page.status !== "fetched") {
+    return pageStatusWord(t, page);
+  }
+  const found = facts
+    .filter((fact) => fact.evidence_url === page.url)
+    .sort((a, b) => b.confidence - a.confidence)
+    .at(0);
+  if (found === undefined) {
+    return null;
+  }
+  return t("ob.scan.tickerFact", {
+    field: t(factFieldLabelKey(found.field)),
+    value: found.value,
+  });
 }
 
 // The page a crawled URL is, as the site's own path. Parsed with a pattern

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { Radio } from "./atoms";
 import "./choicelist.css";
 
@@ -44,6 +44,16 @@ export type Choice<Value extends string> = Readonly<{
   label: string;
   /** What choosing it means, when the label cannot carry it alone. */
   description?: string;
+  /**
+   * A mark that identifies the answer faster than its name does, for a choice
+   * between things the reader already recognises by sight: a vendor picking its
+   * own logo out of three is not reading, and making them read is slower.
+   *
+   * DECORATIVE, always. The label stays the answer and the accessible name, so
+   * a mark that fails to load or cannot be seen costs nothing. Never the only
+   * carrier of which option is which.
+   */
+  mark?: ReactNode;
 }>;
 
 export function ChoiceList<Value extends string>({
@@ -80,8 +90,14 @@ export function ChoiceList<Value extends string>({
    * A `row` option with a `description` is the one combination to avoid: side by
    * side, the help lines set the options' widths against each other and the
    * shorter one reads as clipped.
+   *
+   * `cards` gives every answer a plate of its own and draws the chosen one as a
+   * selected card, for a question whose options are THINGS being chosen between
+   * rather than settings: a platform, a vendor, a plan. It is where `mark`
+   * earns its place, because a plate is big enough to be recognised before it
+   * is read.
    */
-  layout?: "stack" | "row";
+  layout?: "stack" | "row" | "cards";
   /** Layout the surrounding form owns — the margin its own rhythm expects. It
    * lands on the fieldset, which is the only element a caller can position. */
   className?: string;
@@ -119,6 +135,11 @@ export function ChoiceList<Value extends string>({
           onChange={() => onChange(choice.value)}
           label={
             <span className="choicelist-text">
+              {choice.mark === undefined ? null : (
+                <span className="choicelist-mark" aria-hidden="true">
+                  {choice.mark}
+                </span>
+              )}
               <span className="choicelist-label">{choice.label}</span>
               {choice.description !== undefined && (
                 <span className="choicelist-note">{choice.description}</span>

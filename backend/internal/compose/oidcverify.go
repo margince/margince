@@ -103,6 +103,15 @@ func newGoogleOIDCVerifier(jwksURL string, matchIdentity func(oidcClaims) error)
 	return newOIDCVerifier(jwksURL, googleIssuer, matchIdentity)
 }
 
+// identityResolvedPerRequest marks a verifier whose identity check arrives with
+// each call, through verifyAs: a sign-in's OAuth client is resolved when the
+// flow runs, so no audience is known when the verifier is built. Verify fails
+// closed on it, which is the right answer for a caller that never said whose
+// token it expects.
+func identityResolvedPerRequest(oidcClaims) error {
+	return fmt.Errorf("%w: the identity check belongs to the request", errOIDCRejected)
+}
+
 // googleIssuer accepts the two spellings Google issues ID tokens under.
 func googleIssuer(c oidcClaims) error {
 	if c.Iss != "accounts.google.com" && c.Iss != "https://accounts.google.com" {
@@ -147,6 +156,14 @@ type oidcClaims struct {
 // Verify returns the decoded claims only for a well-formed, correctly-signed
 // token whose issuer and identity both pass the injected checks.
 func (v *oidcTokenVerifier) Verify(ctx context.Context, bearer string) (oidcClaims, error) {
+	return v.verifyAs(ctx, bearer, v.matchIdentity)
+}
+
+// verifyAs is Verify against an identity the CALLER names, for a flow whose
+// OAuth client is resolved per request. The JWKS cache, the signature and the
+// issuer check are the same either way; only the last question — whose token
+// this must be — moves from construction to the call.
+func (v *oidcTokenVerifier) verifyAs(ctx context.Context, bearer string, matchIdentity func(oidcClaims) error) (oidcClaims, error) {
 	if bearer == "" {
 		return oidcClaims{}, fmt.Errorf("%w: empty bearer", errOIDCRejected)
 	}
@@ -176,13 +193,13 @@ func (v *oidcTokenVerifier) Verify(ctx context.Context, bearer string) (oidcClai
 	// but refused: a caller that checks err after claims — one careless
 	// read away given every caller here checks err first today — must not
 	// be handed an attacker-controlled email/sub on the rejection path.
-	if err := v.checkClaims(claims); err != nil {
+	if err := v.checkClaims(claims, matchIdentity); err != nil {
 		return oidcClaims{}, err
 	}
 	return claims, nil
 }
 
-func (v *oidcTokenVerifier) checkClaims(c oidcClaims) error {
+func (v *oidcTokenVerifier) checkClaims(c oidcClaims, matchIdentity func(oidcClaims) error) error {
 	// Fail CLOSED on a missing issuer check rather than calling through a nil
 	// and panicking. Both constructors supply one, so this cannot happen today
 	// — but the consequence of it happening is a token nobody has established
@@ -190,6 +207,11 @@ func (v *oidcTokenVerifier) checkClaims(c oidcClaims) error {
 	// accept" is none.
 	if v.checkIssuer == nil {
 		return fmt.Errorf("%w: no issuer check wired", errOIDCRejected)
+	}
+	// The same fail-closed reading for the identity: an adapter built without
+	// one is a caller that never said whose token it expects.
+	if matchIdentity == nil {
+		return fmt.Errorf("%w: no identity check wired", errOIDCRejected)
 	}
 	if err := v.checkIssuer(c); err != nil {
 		return err
@@ -204,7 +226,7 @@ func (v *oidcTokenVerifier) checkClaims(c oidcClaims) error {
 	if now.Add(oidcSkew).Before(time.Unix(c.Iat, 0)) {
 		return fmt.Errorf("%w: issued in the future", errOIDCRejected)
 	}
-	return v.matchIdentity(c)
+	return matchIdentity(c)
 }
 
 // key returns the cached public key for kid, refreshing the JWKS if the

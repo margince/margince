@@ -186,8 +186,13 @@ func TestProjectFilterRunsTheProjectReadGate(t *testing.T) {
 			t.Fatalf("create deal %q: %v", name, err)
 		}
 	}
+	// Grouped by currency as well as status, the way the default plan is: this
+	// report's default aggregates sum a NATIVE minor-unit amount, and naming a
+	// group_by that drops the currency split is refused rather than answered
+	// with euros added to dollars. The subject here is the project filter, and
+	// one deal is one row either way.
 	rows := runPrebuiltReport(admin, t, e, "deals-by-stage",
-		`{"filters":{"project_id":"`+p.ID.String()+`"},"group_by":["status"]}`)
+		`{"filters":{"project_id":"`+p.ID.String()+`"},"group_by":["status","currency"]}`)
 	if len(rows) != 1 || cell(rows[0], "deals") != "1" {
 		t.Fatalf("deals-by-stage filtered by project = %v, want the project's one deal", rows)
 	}

@@ -302,3 +302,44 @@ export function useClearDisposition() {
     },
   });
 }
+
+/**
+ * The reader's own override: this row leads their day, whatever the ranking
+ * chose.
+ *
+ * ONE HOOK FOR BOTH DIRECTIONS, because they are one decision made twice. The
+ * pin and the unpin are separate operations on the wire — a PUT and a DELETE —
+ * and a component holding two hooks would have to decide which is pending, and
+ * would get it wrong the first time somebody pressed during a write.
+ *
+ * The row identity is the pair, not the id: the lanes mint ids independently,
+ * so an id alone can name a row in a lane the reader was not looking at. The
+ * pin store keys on the same pair for the same reason.
+ */
+export function usePinRow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      source: string;
+      rowId: string;
+      pinned: boolean;
+    }) => {
+      const { error } = input.pinned
+        ? await api.DELETE("/worklist/pins", {
+            params: { query: { source: input.source, row_id: input.rowId } },
+          })
+        : await api.PUT("/worklist/pins", {
+            body: { source: input.source, row_id: input.rowId },
+          });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      // The whole day, because a pin REORDERS it: the row moves to the top and
+      // every row it passed moves down. Invalidating the one row would leave
+      // the page holding an order the server no longer agrees with.
+      queryClient.invalidateQueries({ queryKey: worklistKey });
+    },
+  });
+}

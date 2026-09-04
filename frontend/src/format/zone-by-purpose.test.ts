@@ -316,6 +316,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Asserts that same card shows the configured zone verbatim — the one screen where the zone name is the content.",
   },
   {
+    file: "screens/onboarding-conversation/prefs-act.stories.tsx",
+    why: "The preferences act prefills the installation's reporting zone from the same settings record; the story needs a configured value.",
+  },
+  {
+    file: "screens/onboarding-conversation/prefs-act.test.tsx",
+    why: "Asserts the reporting zone is prefilled verbatim and left out of the patch when unchanged — the zone name is the content.",
+  },
+  {
     file: "screens/integrations-provider.test.tsx",
     why: "The signed-in `me` fixture behind the provider screen carries the reader's stored `timezone` as wire data.",
   },

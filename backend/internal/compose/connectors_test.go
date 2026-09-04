@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -380,6 +381,110 @@ func TestCallbackDenialWithUntrustedStateKeepsTheDefaultSurface(t *testing.T) {
 	}
 	if loc := rec.Header().Get("Location"); loc != "https://app.test/#/onboarding/connect/denied/gmail" {
 		t.Errorf("Location = %q, want the onboarding default", loc)
+	}
+}
+
+// A provider this deployment does not serve must agree between the two
+// surfaces that both answer the question: the roster reports unsupported, and
+// clicking connect for the very same provider still answers the declared 501,
+// never a click that surprises a screen that just said "connect would proceed"
+// and never one that contradicts what it just listed.
+func TestConnectabilityAgreesWithConnectConnectorWhenTheDeploymentDoesNotServeIt(t *testing.T) {
+	h := wiredHandlers() // gmail + gcal wired; graph is not.
+
+	avail := h.connectability(context.Background(), "graph")
+	if avail.reason != connectUnsupported {
+		t.Fatalf("connectability(graph) = %+v, want unsupported", avail)
+	}
+	if avail.err != nil {
+		t.Errorf("connectability(graph).err = %v, want nil for a provider nothing wired", avail.err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/connectors/graph/connect", nil).WithContext(humanCtx())
+	h.ConnectConnector(rec, req, "graph")
+
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("ConnectConnector(graph) status = %d, want 501 to match the roster entry", rec.Code)
+	}
+}
+
+// The defect that ordering exists to prevent. An installation that HAS
+// registered its app, on a deployment that cannot run the consent flow — no
+// state key, so no OAuth transport mounts — was told it had registered
+// nothing, and the card offered the one remedy that could not work: register
+// another app in Settings, against a gap only whoever runs the server can
+// close.
+func TestConnectabilityNeverReportsAStoredAppAsMissing(t *testing.T) {
+	h := wiredHandlers()
+	// No state key, so canRunConsent refuses and the stored app below can
+	// never be reached through the flow.
+	h.signer = stateSigner{}
+	h.microsoftCredentials = func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret"}, true, nil
+	}
+
+	avail := h.connectability(context.Background(), "graph")
+	if avail.reason == connectAppMissing {
+		t.Fatal("connectability(graph) = app_missing, but this installation registered an app")
+	}
+	if avail.reason != connectUnsupported {
+		t.Fatalf("connectability(graph) = %+v, want unsupported: the deployment cannot run the flow", avail)
+	}
+}
+
+// A stored app that will not resolve reports app_unusable on its own roster
+// entry, and, the point of reporting per-provider rather than failing the
+// whole read, every OTHER provider still appears rather than the one bad
+// app taking the roster down with it.
+func TestConnectabilityReportsAppUnusableWithoutFailingTheOtherProviders(t *testing.T) {
+	h := wiredHandlers()
+	// A non-nil transport clears the early gate in graphApp so it reaches the
+	// credential read; the resolver below is what fails.
+	h.graphOAuth = graph.NewOAuth(graph.OAuthConfig{ClientID: "cid", ClientSecret: "sec"})
+	boom := errors.New("vault: sealed secret will not open")
+	h.microsoftCredentials = func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{}, false, boom
+	}
+
+	avail := h.connectability(context.Background(), "graph")
+	if avail.reason != connectAppUnusable {
+		t.Fatalf("connectability(graph) = %+v, want app_unusable", avail)
+	}
+	if !errors.Is(avail.err, boom) {
+		t.Errorf("connectability(graph).err = %v, want the resolution failure", avail.err)
+	}
+
+	// The exact loop ListConnectors runs to build the roster (its own DB read
+	// for the connection list needs a live pool, which this unit test has
+	// none of; the invariant under test is this loop, not that read).
+	got := map[string]connectResult{}
+	for _, p := range listedProviders {
+		got[p] = h.connectability(context.Background(), p).reason
+	}
+	if got[providerGraph] != connectAppUnusable {
+		t.Errorf("graph reason = %q, want app_unusable", got[providerGraph])
+	}
+	if got[providerGmail] != connectReady {
+		t.Errorf("gmail reason = %q, want ready, graph's failure must not reach it", got[providerGmail])
+	}
+	if got[providerIMAP] != connectReady {
+		t.Errorf("imap reason = %q, want ready, graph's failure must not reach it", got[providerIMAP])
+	}
+}
+
+// IMAP never needs an OAuth app: its credentials are per-connection and
+// vault-sealed, so the registry alone decides whether it is ready.
+func TestConnectabilityImapIsReadyWithJustTheRegistry(t *testing.T) {
+	h := wiredHandlers()
+
+	if avail := h.connectability(context.Background(), "imap"); avail.reason != connectReady {
+		t.Errorf("connectability(imap) = %+v, want ready", avail)
+	}
+
+	var unwired connectorHandlers // zero value: no registry
+	if avail := unwired.connectability(context.Background(), "imap"); avail.reason != connectUnsupported {
+		t.Errorf("connectability(imap) with no registry = %+v, want unsupported", avail)
 	}
 }
 

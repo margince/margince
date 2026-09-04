@@ -7,9 +7,20 @@ import type { MessageKey } from "../../i18n/en";
 export type ConversationAct =
   | "welcome"
   | "company"
+  // The question a creator is asked once the company is confirmed: will they
+  // work in Margince themselves? Voice and connect are only offered to
+  // someone who will; an administrator setting the installation up for
+  // others finishes here.
+  | "invite"
+  // Where a creator who declined the invite adds the first person who will
+  // work in Margince, and finishes.
+  | "team"
   | "voice"
-  | "results"
   | "connect"
+  // The last word before the app: the installation's reporting basis and
+  // what the agent may change on its own, prefilled from what is already
+  // recorded. Every path ends here — the team act's and the connect act's.
+  | "prefs"
   | "done";
 
 export type ConversationPhase =
@@ -28,13 +39,17 @@ export type ConversationPhase =
   | "vo.building"
   | "vo.result"
   | "vo.skipped"
-  | "re.recap"
+  | "in.ask"
+  | "tm.ask"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
   // the required gate (it is what CONNECT_DONE waits on), LinkedIn is the
   // recommended addition beside it (linkedinStatus tracks its own
   // resolution independently and never gates the act's finish).
   | "cn.consent"
-  | "cn.done";
+  // The preferences act: asked once, then the one terminal every path shares.
+  // The team act reaches it without ever entering connect.
+  | "pf.ask"
+  | "pf.done";
 
 // Exactly one label source — a blank button is unrepresentable.
 type LabelSource =
@@ -51,6 +66,18 @@ type LabelSource =
 
 export type QuestionOption = {
   value: string;
+  /**
+   * The exact string this answer puts on the record, when it puts one there.
+   *
+   * SEPARATE FROM `value`, which is only what the answer is called on the wire.
+   * The two happen to agree for a clarify, where the server says the value is
+   * verbatim what the selection authorizes; they do not for a question that
+   * chooses something other than a profile field, and a surface that printed
+   * `value` as "this is what gets written" would be inventing a consequence for
+   * those. Absent means this option writes nothing a screen can quote, which is
+   * a fact worth stating and never one to guess at.
+   */
+  writes?: string;
   detailKey?: MessageKey;
   params?: Record<string, string>;
 } & LabelSource;
@@ -149,7 +176,7 @@ export type BuildTerminalStatus = "succeeded" | "failed" | "deferred";
  */
 export type ResumePoint = Extract<
   ConversationPhase,
-  "vo.collecting" | "vo.skipped" | "re.recap" | "cn.consent"
+  "in.ask" | "tm.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
 >;
 
 export type ConversationEvent =
@@ -198,11 +225,26 @@ export type ConversationEvent =
   // member path) takes the same route the live confirmation takes; a target
   // fast-forwards a creator to the stable point the wizard state recorded.
   | { type: "RESUME"; target?: ResumePoint }
+  // The two answers to the invite. Accepting opens the voice act; declining
+  // opens the team act instead, because the steps left are all about the
+  // person who just said they will not be here — so the one thing left to do
+  // is name who will be.
+  | { type: "INVITE_ACCEPTED" }
+  | { type: "INVITE_DECLINED" }
+  // Leaving the team act, with or without an invite sent, ends the journey.
+  | { type: "TEAM_DONE" }
   | { type: "VOICE_SKIPPED" }
   | { type: "UPLOAD_ADDED"; id: string; name: string }
   | { type: "SPEAKER_NEEDED"; question: ConversationQuestion }
   | { type: "BUILD_STARTED"; buildId: string }
   | { type: "BUILD_STAGE"; buildId: string; stage: BuildStage }
   | { type: "BUILD_TERMINAL"; buildId: string; status: BuildTerminalStatus }
-  | { type: "RESULTS_CONTINUE" }
-  | { type: "CONNECT_DONE" };
+  // Leaving the voice act, built or skipped, lands straight on connect.
+  | { type: "VOICE_DONE" }
+  // A succeeded build the reader does not recognise as their own: back to
+  // collecting, so more of their writing can go in before the next build.
+  | { type: "VOICE_REVISE" }
+  // Leaving the connect act and leaving the team act both land on the
+  // preferences act; PREFS_DONE is the one terminal move.
+  | { type: "CONNECT_DONE" }
+  | { type: "PREFS_DONE" };

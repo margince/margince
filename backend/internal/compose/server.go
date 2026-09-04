@@ -83,6 +83,12 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	// Wired unconditionally, not inside WithKeyvault: a role composed with no
+	// vault still serves /installation/setup (every step reads "not
+	// configured"), and the anonymous capabilities probe must report the same
+	// first_run for it rather than only for a role that wired one. Reuses
+	// identitySvc — see its own comment below for why the process holds one.
+	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
 
 	api := contractAPI(srv, pool, identitySvc)
 	// ONE identity.Service for the whole process: contractAPI's admission

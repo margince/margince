@@ -54,6 +54,13 @@ type onboardingCopy struct {
 	// statusMissing answers it when the research works and details remain.
 	// %d is how many.
 	statusMissing string
+	// selectionRecorded is what the conversation says when a clicked clarify
+	// option is recorded without the model — the choice is already a verified
+	// fact, so it lands whether or not prose could be written about it.
+	selectionRecorded string
+	// selectionReason is that change's provenance on the record: the human
+	// picked it, which is a stronger source than any page.
+	selectionReason string
 }
 
 // onboardingCopyByLang is the census. Keyed by textlang.Lang rather than by a
@@ -71,6 +78,8 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		statusFailed:      "My website research has stopped without completing. We can fill the %d missing required details together here; nothing is saved yet.",
 		statusResearching: "Yes. I'm still researching and will add grounded findings to the company draft as they arrive. Nothing is saved yet.",
 		statusMissing:     "Yes. The company workspace is working. %d required details remain; nothing is saved yet.",
+		selectionRecorded: "Recorded — your choice is on the draft. The assistant did not answer this turn, so there is nothing more to read here.",
+		selectionReason:   "You chose this.",
 	},
 	textlang.German: {
 		entityQuestion:    "Die rechtlichen Angaben der Website nennen mehrere juristische Personen. Welche ist Ihr Unternehmen?",
@@ -84,6 +93,8 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		statusFailed:      "Meine Web-Recherche ist beendet, konnte aber nicht abgeschlossen werden. Wir können die %d fehlenden Pflichtangaben hier gemeinsam manuell ergänzen; gespeichert ist noch nichts.",
 		statusResearching: "Ja. Ich recherchiere noch und zeige neue belegte Funde im Unternehmensentwurf. Gespeichert ist noch nichts.",
 		statusMissing:     "Ja. Meine Recherche funktioniert. Es fehlen noch %d Pflichtangaben; gespeichert ist noch nichts.",
+		selectionRecorded: "Übernommen — Ihre Auswahl steht im Entwurf. Der Assistent hat in dieser Runde nicht geantwortet, deshalb gibt es hier nicht mehr zu lesen.",
+		selectionReason:   "Von Ihnen ausgewählt.",
 	},
 	// Addressed as "bạn", the neutral second person this product's Vietnamese
 	// UI already uses. The parenthesised keep_current / accept_proposal stay in
@@ -102,6 +113,8 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		statusFailed:      "Phần tìm hiểu website của tôi đã dừng mà chưa hoàn tất. Chúng ta có thể cùng điền %d thông tin bắt buộc còn thiếu ngay tại đây; hiện chưa có gì được lưu.",
 		statusResearching: "Vâng. Tôi vẫn đang tìm hiểu và sẽ bổ sung vào bản nháp công ty những thông tin có căn cứ khi tìm được. Hiện chưa có gì được lưu.",
 		statusMissing:     "Vâng. Không gian làm việc của công ty đang hoạt động. Còn thiếu %d thông tin bắt buộc; hiện chưa có gì được lưu.",
+		selectionRecorded: "Đã ghi nhận — lựa chọn của bạn đã nằm trong bản nháp. Trợ lý không trả lời ở lượt này, nên ở đây không còn gì để đọc thêm.",
+		selectionReason:   "Bạn đã chọn giá trị này.",
 	},
 }
 
