@@ -7925,6 +7925,7 @@ export const vi = {
   "worklist.exceptions.owner": "Ai chịu trách nhiệm",
   "worklist.exceptions.basis": "Căn cứ theo",
   "worklist.exceptions.nobody": "Chưa có ai",
+  "worklist.exceptions.ownerWithheld": "Không hiển thị với bạn",
   "worklist.exceptions.truncated":
     "Còn nhiều hơn thế. Danh sách dừng ở mức một lần xem có thể chứa.",
   "worklist.exceptions.kind.response_breached": "Phản hồi đầu tiên đã trễ",

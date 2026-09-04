@@ -8010,6 +8010,7 @@ export const de = {
   "worklist.exceptions.owner": "Wer antwortet",
   "worklist.exceptions.basis": "Gemessen an",
   "worklist.exceptions.nobody": "Noch niemand",
+  "worklist.exceptions.ownerWithheld": "Für Sie nicht sichtbar",
   "worklist.exceptions.truncated":
     "Mehr als das. Die Liste endet bei dem, was eine Sitzung fasst.",
   "worklist.exceptions.kind.response_breached":

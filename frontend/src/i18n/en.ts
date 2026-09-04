@@ -8104,6 +8104,7 @@ export const en = {
   "worklist.exceptions.owner": "Who answers",
   "worklist.exceptions.basis": "Judged against",
   "worklist.exceptions.nobody": "Nobody yet",
+  "worklist.exceptions.ownerWithheld": "Not shown to you",
   "worklist.exceptions.truncated":
     "More than this. The list stops at what one sitting can hold.",
   "worklist.exceptions.kind.response_breached": "A first reply is late",
