@@ -95,9 +95,30 @@ func bucketOf(row ranked, level int, buckets *crmcontracts.WorklistBuckets) {
 	switch {
 	case level <= levelPromise:
 		buckets.Urgent++
-	case row.item.Overdue != nil && *row.item.Overdue:
+	case dueToday(row):
 		buckets.DueToday++
 	default:
 		buckets.Planned++
 	}
+}
+
+// dueToday is whether this row's clock runs out before the day does.
+//
+// The DEADLINE, not the overdue flag. Reading `overdue` alone answered the
+// bucket's own name wrongly in the direction that hurts: a task due at 14:00 is
+// not yet overdue, so it fell into `planned`, and the sentence told a rep
+// nothing was due today while a deadline sat in their afternoon.
+//
+// A non-zero deadline is enough, and that is a fact about the assembly rather
+// than a shortcut. Every due-dated lane is read to `endOfDay` — one instant,
+// resolved once per assembly in the installation's own timezone — so a row that
+// reached this queue carrying a deadline has a deadline inside today. Asking
+// the boundary again here would need a context and a second resolution, and two
+// resolutions of one fact are how one lane gets yesterday's midnight and the
+// next gets today's inside a single response.
+func dueToday(row ranked) bool {
+	if !row.deadlineAt.IsZero() {
+		return true
+	}
+	return row.item.Overdue != nil && *row.item.Overdue
 }

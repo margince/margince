@@ -21,6 +21,7 @@ package gates
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -38,6 +39,21 @@ const batchStandsForOtherRows = "batch"
 func TestEveryWorklistSourceHasADestination(t *testing.T) {
 	t.Parallel()
 	declared := crmYAMLEnum(t, "WorklistItem", "source")
+	// The corpus has to be the WHOLE vocabulary, and under-reading is the one
+	// way this gate can fail short: a parse that silently dropped members would
+	// leave a smaller list, every member of it would be classified, and the gate
+	// would report PASS over sources it never looked at.
+	//
+	// So the YAML is cross-checked against a SECOND derivation of the same
+	// enum — the constants oapi-codegen generated from it. The two are produced
+	// by different readers of one contract, so a parse that loses a member here
+	// disagrees with the generated code rather than quietly shrinking the world.
+	generated := generatedWorklistSources(t)
+	if !slices.Equal(declared, generated) {
+		t.Fatalf("the contract's worklist sources read %v from crm.yaml and %v from the generated "+
+			"constants: one of the two readings is wrong, and a census over the shorter one "+
+			"would pass without looking at every source", declared, generated)
+	}
 	classified := []string{}
 	for _, source := range attention.ClassifiedSources() {
 		classified = append(classified, string(source))
@@ -82,4 +98,30 @@ func TestEveryDestinationIsOneTheContractDeclares(t *testing.T) {
 			t.Errorf("source %q is sent to %q, which crm.yaml does not declare as a destination", source, at)
 		}
 	}
+}
+
+// generatedWorklistSources is the same vocabulary as read by the OTHER reader
+// of the contract: the constants oapi-codegen wrote from it.
+//
+// The point is that this derivation shares no code with the YAML walk beside
+// it. A regex over the generated block and a yaml.Unmarshal of the schema fail
+// in different ways, so a bug that shortens one shows up as a disagreement
+// rather than as a smaller corpus that still passes.
+func generatedWorklistSources(t *testing.T) []string {
+	t.Helper()
+	out := []string{}
+	for name, value := range constValuesIn(t, "internal/contracts/api_gen.go") {
+		// The constants oapi-codegen writes for this enum, and only those: the
+		// prefix is the generated type's own name, so a constant of a different
+		// type that happens to hold the same word is not one of these.
+		if strings.HasPrefix(name, "WorklistItemSource") {
+			out = append(out, value)
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("no WorklistItemSource constants found in the generated contracts: " +
+			"this reading yields nothing, so it can confirm nothing")
+	}
+	slices.Sort(out)
+	return out
 }

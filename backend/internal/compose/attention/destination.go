@@ -71,20 +71,28 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// who notices. The mailbox that carried it may be healthy.
 	crmcontracts.WorklistItemSourceBounce:      destinationToday,
 	crmcontracts.WorklistItemSourceUndelivered: destinationToday,
+	// The rep pressed Accept and believes it happened, and that belief is the
+	// damage. It is classified at the promise level and carried back to the
+	// APPROVER rather than to an administrator, so it is that person's own
+	// broken promise — the same shape as the undelivered message beside it, and
+	// not a pipe anybody else can restore.
+	crmcontracts.WorklistItemSourceFailedApproval: destinationToday,
+	// A notice is addressed to one reader and offers `acknowledge`. Nothing
+	// waits on a judgement and nothing is broken: reading it IS the work, and it
+	// leaves the lane when they do.
+	crmcontracts.WorklistItemSourceNotice: destinationToday,
 
 	// Judgements. Work waits on a person deciding.
 	crmcontracts.WorklistItemSourceApproval:            destinationReview,
 	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,
-	crmcontracts.WorklistItemSourceNotice:              destinationReview,
 	crmcontracts.WorklistItemSourceDsr:                 destinationReview,
 
 	// The product reporting on itself. An administrator restores these.
-	crmcontracts.WorklistItemSourceSyncHealth:     destinationSystemHealth,
-	crmcontracts.WorklistItemSourceCaptureHealth:  destinationSystemHealth,
-	crmcontracts.WorklistItemSourceAiWorkHealth:   destinationSystemHealth,
-	crmcontracts.WorklistItemSourceAutomationRun:  destinationSystemHealth,
-	crmcontracts.WorklistItemSourceFailedApproval: destinationSystemHealth,
+	crmcontracts.WorklistItemSourceSyncHealth:    destinationSystemHealth,
+	crmcontracts.WorklistItemSourceCaptureHealth: destinationSystemHealth,
+	crmcontracts.WorklistItemSourceAiWorkHealth:  destinationSystemHealth,
+	crmcontracts.WorklistItemSourceAutomationRun: destinationSystemHealth,
 }
 
 // destinationOf answers for one row.

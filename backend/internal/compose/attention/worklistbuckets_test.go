@@ -42,6 +42,21 @@ func TestTheBucketsPartitionTheDay(t *testing.T) {
 	if buckets.Urgent+buckets.DueToday+buckets.Planned == 0 {
 		t.Error("no row reached a seller bucket, so this fixture cannot tell a partition from a single bucket")
 	}
+	// And the fixture's own rows reach the buckets they belong in. Asserting
+	// only the sum let a row bound for `due_today` land in `planned` and go
+	// unnoticed: the four figures still added up, because a partition that puts
+	// a row in the wrong bucket is still a partition.
+	if buckets.DueToday != 1 {
+		t.Errorf("the day holds one task with a clock and %d reached due_today: %+v",
+			buckets.DueToday, *buckets)
+	}
+	if buckets.Planned != 1 {
+		t.Errorf("the day holds one task with no clock and %d reached planned: %+v",
+			buckets.Planned, *buckets)
+	}
+	if buckets.Review != 2 {
+		t.Errorf("the day holds two approvals and %d reached review: %+v", buckets.Review, *buckets)
+	}
 }
 
 // TestAJudgementIsNeverUrgentSellerWork holds the precedence's leading arm.
@@ -169,8 +184,12 @@ func mixedDestinationsDay() crmcontracts.Attention {
 	return crmcontracts.Attention{
 		AsOf: rankInstant,
 		Planned: []crmcontracts.AttentionItem{
-			item("task-soon", "task", withDue(rankInstant.Add(time.Hour))),
-			item("task-later", "task", withDue(rankInstant.Add(48*time.Hour))),
+			// A clock inside the day, and one with no clock at all. Both are
+			// seller work, and they must reach DIFFERENT buckets — a fixture
+			// where every seller row carried a deadline could not tell
+			// `due_today` from `planned`.
+			item("task-due", "task", withDue(rankInstant.Add(time.Hour))),
+			item("task-someday", "task"),
 		},
 		NeedsYou: []crmcontracts.AttentionItem{
 			item("approval-one", "approval"),
