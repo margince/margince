@@ -124,3 +124,88 @@ function panelNamed(heading: HTMLElement): HTMLElement {
   }
   return panel as HTMLElement;
 }
+
+describe("the day's headings describe the day", () => {
+  it("draws no empty heading for work that moved to review", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "waiting-1",
+            source: "customer_waiting",
+            title: "Kirsten replied",
+            destination: "today",
+            band: "now",
+          }),
+          row({
+            id: "pair-1",
+            source: "dedupe_candidate",
+            title: "Two records for one company",
+            destination: "review",
+            band: "review",
+          }),
+        ],
+        // The SERVER's band list counts every row it ranked, review included.
+        bands: [
+          { band: "now", shown: 1 },
+          { band: "review", shown: 1 },
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 1, total: 2 },
+      }),
+    );
+
+    renderWorklist();
+
+    const today = panelNamed(await screen.findByText(en["worklist.queue"]));
+    // The review band's rows are drawn BELOW now, so a heading for it inside
+    // the day would stand over nothing and say the work is clear — while the
+    // same work sits in the panel underneath. A band the day no longer holds
+    // is not an empty band; it is a band that belongs somewhere else.
+    expect(
+      within(today).queryByText(en["worklist.bandClear.review"]),
+    ).toBeNull();
+  });
+});
+
+describe("each panel numbers its own rows", () => {
+  it("starts both lists at one", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "w1",
+            source: "customer_waiting",
+            title: "Kirsten replied",
+            destination: "today",
+          }),
+          row({
+            id: "p1",
+            source: "dedupe_candidate",
+            title: "Two records for one company",
+            destination: "review",
+          }),
+          row({
+            id: "w2",
+            source: "customer_waiting",
+            title: "Anders is waiting",
+            destination: "today",
+          }),
+        ],
+        summary: { urgent: 2, due: 0, lower_priority: 1, total: 3 },
+      }),
+    );
+
+    renderWorklist();
+
+    const today = panelNamed(await screen.findByText(en["worklist.queue"]));
+    const review = panelNamed(await screen.findByText(en["worklist.review"]));
+    // Numbered within the list each row is drawn in. Ranking across the whole
+    // day is arithmetically honest and reads as a fault: it puts 1 and 3 in one
+    // panel and 2 in the other, and a list starting at 2 tells a reader nothing
+    // they can act on.
+    expect(within(today).getByText("1")).toBeTruthy();
+    expect(within(today).getByText("2")).toBeTruthy();
+    expect(within(today).queryByText("3")).toBeNull();
+    expect(within(review).getByText("1")).toBeTruthy();
+  });
+});

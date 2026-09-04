@@ -364,7 +364,11 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  const selected = rowInHand(queue, selectedId);
+  // The pane belongs to the DAY, so only a row in the day can fill it. A review
+  // row selected here would draw its context beside the Today panel while the
+  // highlighted row sat in the panel below — the two halves of one answer, a
+  // screen apart, with nothing joining them.
+  const selected = rowInHand(sellerWork(queue), selectedId);
   // The day cut into the two jobs it holds. `destination` says which, and the
   // server decides it — the counts above the queue are computed from the same
   // field, so a split derived here from `source` or `category` would drift
@@ -373,11 +377,18 @@ function WorklistBody({
   const review = reviewWork(queue);
 
   const rowProps: RowContext = {
-    // Ranks are still counted over the WHOLE queue. A row's number is its place
-    // in the day the server ranked, not its place within whichever of the two
-    // panels it landed in — renumbering per panel would tell a reader the
-    // fourth-most-urgent thing is their first.
-    positions: new Map(queue.map((item, at) => [rowIdentity(item), at])),
+    // Numbered WITHIN the panel each row is drawn in, not across the day.
+    //
+    // Ranking over the whole queue is arithmetically honest and reads as a
+    // fault: the split puts 1, 4, 7 in one panel and 2, 3, 5 in the other on
+    // one screen, and a reader meeting a list that starts at 4 and skips 5 has
+    // no way to know they are seeing a correct number rather than a broken one.
+    // A rank says WHERE IN THIS LIST, which is the only question the number is
+    // asked, and the day's own order is what put the rows in these lists.
+    positions: new Map([
+      ...sellerWork(queue).map((item, at) => [rowIdentity(item), at] as const),
+      ...reviewWork(queue).map((item, at) => [rowIdentity(item), at] as const),
+    ]),
     owner,
     // The RESOLVED selection, not the raw state. The pane falls back to the
     // first row when the reader has chosen nothing, and a highlight reading
