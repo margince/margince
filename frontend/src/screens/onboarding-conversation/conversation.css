@@ -864,6 +864,7 @@
   width: 8px;
   height: 8px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--ai);
   animation: ob-distill-pulse 1.6s ease-in-out infinite;
 }

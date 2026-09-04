@@ -93,6 +93,7 @@
 .rdeck-tag {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--aiText);
 }
@@ -177,6 +178,7 @@
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   color: var(--textMeta);
   font-family: var(--f-mono);

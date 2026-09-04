@@ -206,7 +206,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--accent);
   /* The mark draws itself in `currentColor`, so the badge's colour is the
      mark's colour and the brand geometry's three stepped opacities survive. */
@@ -241,6 +241,7 @@
   width: 22px;
   height: 3px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--textMuted);
   transition:
     background var(--dur-move) var(--ease-out),
@@ -503,6 +504,7 @@
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
+  corner-shape: round;
   pointer-events: none;
   background: radial-gradient(
     circle,
