@@ -488,6 +488,33 @@ export function ContactsScreen() {
               </span>
             ),
           },
+          {
+            // Who they work for TODAY, from the row itself: the wire carries
+            // the current primary employment resolved to its account, so the
+            // column costs no lookup and shows no company the reader has no
+            // grant for.
+            //
+            // Empty is not "works nowhere" — the field is also absent when the
+            // caller may not read edges or that account — so the cell states
+            // nothing rather than drawing a dash a reader would take for an
+            // answer. No `sort`: the API's person vocabulary (DM-VOCAB-1) has
+            // no employer key, and a header that looked sortable and refused
+            // would be worse than one that never offered.
+            key: "company",
+            header: t("create.organization"),
+            cell: (person: Person) =>
+              person.employer ? (
+                // asText because the row is already the link to the contact: a
+                // control nested inside one is invalid markup. The name comes
+                // with the row, so EntityRef resolves nothing.
+                <EntityRef
+                  kind="organization"
+                  id={person.employer.organization_id}
+                  name={person.employer.organization_name}
+                  asText
+                />
+              ) : null,
+          },
           tagsColumn<Person>(t),
           ownerColumn<Person>(t),
           lastActivityColumn<Person>(t, locale, recordZone),
