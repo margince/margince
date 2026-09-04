@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -185,7 +184,7 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 			return workflow.RunResult{}, fmt.Errorf("decoding the promoted person: %w", err)
 		}
 		if promoted.DedupeOutcome == dedupeOutcomeCreated {
-			done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, promoted.PersonID, ev.OccurredAt)
+			done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, promoted.PersonID)
 			if err != nil {
 				return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on person %s: %w", promoted.PersonID, err)
 			}
@@ -258,7 +257,7 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // linked to the lead — see completeOpenSystemTasksLinkedBy for the write
 // shape, the version-skew handling and what "system-minted" means.
 func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
-	return s.completeOpenSystemTasksLinkedBy(ctx, "lead_id", leadID.UUID, nil)
+	return s.completeOpenSystemTasksLinkedBy(ctx, leadLinkColumn, leadID.UUID)
 }
 
 // CompleteOpenSystemTasksForPerson is CompleteOpenSystemTasksForLead's
@@ -267,16 +266,26 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 // in the same transaction that emits lead.promoted, so a lead id can no
 // longer find it — only the person id it was carried to can.
 //
-// before bounds completion to tasks that existed by that instant. This
+// Completion is bounded to the tasks that existed when the person did. This
 // arm's caller runs asynchronously off the outbox, so "the person is fresh
 // and cannot yet carry anything else" is only true up to the moment the
 // promotion committed — a sibling automation (no_activity_reminder,
 // check_in_cadence) can anchor its own system task on the same person before
 // this handler runs, and completing every open system task on the person
-// would claim that task too. The caller passes the triggering event's own
-// OccurredAt.
-func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID ids.PersonID, before time.Time) (int, error) {
-	return s.completeOpenSystemTasksLinkedBy(ctx, "person_id", personID.UUID, &before)
+// would claim that task too.
+//
+// The bound is the person's OWN created_at, and it takes no argument on
+// purpose. A promotion mints the person in the same transaction that carries
+// the tasks onto them, so that row's creation IS the promotion instant — and
+// unlike a timestamp threaded in from the caller it is written by the same
+// clock as the activity.created_at it is compared against. The event's
+// app-stamped OccurredAt used to fill this role, and could not: a host clock
+// trailing the database's by more than the gap between a follow-up task's
+// creation and the promotion put the carried task on the wrong side of the
+// bound, which returns completed == 0 with no error — a loop left open
+// forever and nothing to notice it by.
+func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID ids.PersonID) (int, error) {
+	return s.completeOpenSystemTasksLinkedBy(ctx, personLinkColumn, personID.UUID)
 }
 
 // completeOpenSystemTasksLinkedBy completes every open system-minted task the
@@ -311,12 +320,15 @@ func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID i
 // request body. Its placeholder is spelled right here, beside the argument
 // that fills it, rather than split across a call boundary.
 //
-// `before`, when non-nil, adds the created_at bound
-// CompleteOpenSystemTasksForPerson needs; nil (CompleteOpenSystemTasksForLead's
-// own call) asks the original, unbounded question — a lead's own follow-up
-// cannot be confused with a sibling automation's task the way a shared
-// person id can.
-func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column string, linkValue ids.UUID, before *time.Time) (int, error) {
+// The created_at bound is derived from `column` rather than asked for
+// alongside it, because the two are one fact: the bound reads the PERSON row
+// $1 names, so it means something only when $1 is a person id. A separate
+// flag would let a caller pair it with leadLinkColumn, and that pairing does
+// not fail — it looks a lead id up in `person`, finds nothing, and completes
+// nothing at all. leadLinkColumn asks the original, unbounded question: a
+// lead's own follow-up cannot be confused with a sibling automation's task
+// the way a shared person id can.
+func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column string, linkValue ids.UUID) (int, error) {
 	type openTask struct {
 		id      ids.ActivityID
 		version int64
@@ -327,15 +339,20 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 			linkValue, string(crmcontracts.ActivityKindTask), systemSource,
 			systemCapturedBy, systemCapturedByPattern,
 		}
-		arg := func(v any) int { args = append(args, v); return len(args) }
 		query := storekit.SQLf(`
 			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.%s = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL`, column)
-		if before != nil {
-			query += storekit.SQLf(" AND a.created_at <= $%d", arg(*before))
+		if column == personLinkColumn {
+			// Both sides are Postgres's clock: person.created_at and
+			// activity.created_at are each DEFAULT now(), and reading them
+			// in one statement leaves no second clock for a caller to
+			// introduce. A person that has since been deleted makes the
+			// subquery NULL, so nothing matches and nothing is completed —
+			// the safe direction.
+			query += " AND a.created_at <= (SELECT p.created_at FROM person p WHERE p.id = $1)"
 		}
 		query += " ORDER BY a.id"
 		rows, err := tx.Query(ctx, query, args...)
@@ -367,6 +384,15 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 	}
 	return completed, nil
 }
+
+// The two activity_link columns this file resolves follow-ups through, named
+// because completeOpenSystemTasksLinkedBy derives its created_at bound from
+// which one it was handed. Both are compile-time literals reaching SQL as
+// identifiers, never a value off a request body.
+const (
+	leadLinkColumn   = "lead_id"
+	personLinkColumn = "person_id"
+)
 
 // completionAttempts bounds the re-read below. Each attempt is a lost race
 // with a DIFFERENT writer, so more than a couple means a row somebody is
