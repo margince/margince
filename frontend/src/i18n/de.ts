@@ -3265,7 +3265,7 @@ export const de = {
   "analytics.share.copyFailed":
     "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
   "analytics.share.done": "Fertig",
-  "analytics.frame": "Stand {asOf} · {zone} · {currency}",
+  "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
   "review.ready": "Bereit",
   "review.readyWithExceptions": "Bereit, mit Anmerkungen",
