@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /**
- * The crawl picture's geometry and paint, apart from the component that hosts
- * it.
+ * The crawl picture's geometry, apart from the component that hosts it and the
+ * canvas calls that draw it.
  *
  * Split out because the layout is the part with decisions in it, and a decision
  * that can only be exercised through a real canvas context is a decision nobody
- * tests. `layOutCrawl` is arithmetic and is tested directly; `drawCrawl` is the
- * part that genuinely needs a context and holds no branching of its own.
+ * tests. Everything here is arithmetic and is tested directly; the painting it
+ * feeds lives in `crawl-paint.ts`, which cannot be reached without a real
+ * context and holds no branching of its own.
  */
 
 /** One page's place in the picture, and which page it hangs off. */
@@ -22,16 +23,11 @@ export type CrawlNode = Readonly<{
 
 /** How long each page takes to arrive, and how long its halo lingers. */
 export const CRAWL_BEAT_S = 0.4;
-const GROW_S = 0.34;
-const POP_S = 0.3;
-const HALO_S = 0.9;
 const ROOT_X = 0.06;
 const RING_ONE_X = 0.38;
 const RING_TWO_X = 0.74;
 const RING_ONE_SIZE = 4;
 /** How many marks of evidence each page sends back, and how long they fly. */
-const MOTES_PER_PAGE = 3;
-const MOTE_LIFE_S = 1.1;
 
 /**
  * Where each page sits.
@@ -140,140 +136,8 @@ export function crawlArrived(ages: readonly number[]): number {
   return ages.length;
 }
 
-export function drawCrawl(
-  ctx: CanvasRenderingContext2D,
-  scene: Readonly<{
-    nodes: readonly CrawlNode[];
-    /** Seconds since each node arrived, in the same order as `nodes`. */
-    ages: readonly number[];
-    width: number;
-    height: number;
-    ink: string;
-    faint: string;
-    dim: string;
-  }>,
-): void {
-  const { nodes, ages, width, height, ink, faint, dim } = scene;
-  const arrived = Math.min(nodes.length, ages.length);
-  ctx.clearRect(0, 0, width, height);
-  ctx.lineWidth = 1;
-
-  // Edges first, so a node always sits on top of the line that reached it.
-  ctx.strokeStyle = faint;
-  for (let i = 0; i < arrived; i++) {
-    const node = nodes[i];
-    // Not due yet: the first hand is dealt a beat apart, so a page's stamp can
-    // sit in the future and its age be negative until its turn comes.
-    if (node.parent < 0 || ages[i] < 0) {
-      continue;
-    }
-    const from = nodes[node.parent];
-    const grow = span(ages[i], GROW_S);
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.quadraticCurveTo(
-      (from.x + node.x) / 2,
-      from.y + (node.y - from.y) * 0.15,
-      from.x + (node.x - from.x) * grow,
-      from.y + (node.y - from.y) * grow,
-    );
-    ctx.stroke();
-  }
-
-  for (let i = 0; i < arrived; i++) {
-    const node = nodes[i];
-    const age = ages[i];
-    if (age < 0) {
-      continue;
-    }
-    const halo = Math.max(0, 1 - age / HALO_S);
-    if (halo > 0) {
-      ctx.fillStyle = ink;
-      ctx.globalAlpha = halo * 0.16;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.r + 14 * (1 - halo), 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    // A page cools from the agent's colour to a resting grey once it is read:
-    // indigo marks what is happening NOW, and a graph where everything stays
-    // indigo says the whole site is being read at once.
-    ctx.fillStyle = i === 0 || age < 1.2 ? ink : dim;
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, node.r * span(age, POP_S), 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.globalAlpha = 1;
-}
-
 /** A point in the room's own coordinates, which every surface shares. */
 export type Point = Readonly<{ x: number; y: number }>;
-
-/**
- * What each page gave up, travelling back into the Core.
- *
- * This is the claim the whole screen rests on, in motion: a page was read,
- * something came off it, and that something goes into the thing doing the
- * reading. It arcs rather than sliding, because a straight line between two
- * dots reads as a wire and this is meant to read as something carried.
- *
- * IT ENDS IN THE ORB, not at the graph's own root. The root is a page like any
- * other; the Core is what the evidence is FOR, and a mote that stopped at the
- * left edge of the picture was a delivery to nobody. The orb lives outside this
- * canvas — several elements away, in the room rather than in the picture — so
- * both ends arrive here already measured, in one shared space (see
- * `MoteScene.nodes`). That is also why the two cannot drift apart when the Core
- * changes size: the caller measures the real element every frame.
- *
- * DERIVED FROM THE CLOCK, not accumulated in a list. Each page emits its motes
- * at a known time and they live a known span, so the whole population is a pure
- * function of the ages. Keeping a growing array here would make the picture
- * depend on how many frames had been drawn, and a tab left in the background
- * would come back with a different scene than one that stayed open.
- */
-export function drawMotes(
-  ctx: CanvasRenderingContext2D,
-  scene: Readonly<{
-    /** Where each page sits, in the shared space. Index 0 is the root. */
-    nodes: readonly Point[];
-    /** Seconds since each page arrived, in the same order as `nodes`. */
-    ages: readonly number[];
-    /** The Core's centre, in the same space. */
-    home: Point;
-    width: number;
-    height: number;
-    ink: string;
-  }>,
-): void {
-  const { nodes, ages, home, width, height, ink } = scene;
-  const arrived = Math.min(nodes.length, ages.length);
-  ctx.clearRect(0, 0, width, height);
-  for (let i = 1; i < arrived; i++) {
-    for (let k = 0; k < MOTES_PER_PAGE; k++) {
-      const span = MOTE_LIFE_S + k * 0.16;
-      const life = ages[i];
-      if (life < 0 || life > span) {
-        continue;
-      }
-      const node = nodes[i];
-      const k2 = (life / span) ** 2;
-      const offset = (k - 1) * 9;
-      ctx.globalAlpha = (1 - life / span) * 0.9;
-      ctx.fillStyle = ink;
-      ctx.beginPath();
-      ctx.arc(
-        node.x + (home.x - node.x) * k2,
-        node.y + (home.y + offset - node.y) * k2 - Math.sin(k2 * Math.PI) * 16,
-        2.4,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-}
 
 /**
  * The graph's nodes, moved from the picture's own box into the room's space.
@@ -285,9 +149,4 @@ export function drawMotes(
  */
 export function motePath(nodes: readonly CrawlNode[], offset: Point): Point[] {
   return nodes.map((node) => ({ x: node.x + offset.x, y: node.y + offset.y }));
-}
-
-/** How far through its own entrance a node of this age is, 0..1. */
-function span(age: number, over: number): number {
-  return Math.max(0, Math.min(1, age / over));
 }

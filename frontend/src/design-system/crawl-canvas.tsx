@@ -6,11 +6,10 @@ import {
   arrivalStamps,
   type CrawlNode,
   crawlAges,
-  drawCrawl,
-  drawMotes,
   layOutCrawl,
   motePath,
 } from "./crawl-graph";
+import { drawCrawl, drawMotes } from "./crawl-paint";
 import { usePrefersReducedMotion } from "./motion";
 import "./crawl-canvas.css";
 

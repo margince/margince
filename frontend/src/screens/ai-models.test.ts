@@ -3,7 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { suggestionsFor } from "./ai-models";
+import {
+  suggestionsFor,
+  type VendorCatalogue,
+  type VendorModel,
+  vendorSuggestions,
+} from "./ai-models";
 
 type ModelRate = components["schemas"]["AiModelRate"];
 
@@ -92,5 +97,71 @@ describe("suggestionsFor", () => {
 
   it("is empty when the catalogue never arrived", () => {
     expect(suggestionsFor(undefined, "gemini", "chat", "en")).toEqual([]);
+  });
+});
+
+// The vendor catalogue is the OTHER half of the same field: what the vendor
+// says it serves today, offered beside what this installation can price. Its
+// own three questions are the sheet's, asked of a list nobody has agreed a
+// price for — so the two must not drift into different answers about the same
+// model.
+function vendorModel(
+  id: string,
+  input_per_mtok?: string,
+  output_per_mtok?: string,
+): VendorModel {
+  return { id, input_per_mtok, output_per_mtok };
+}
+
+// A vendor that answered. `rankedBy` and `unavailable` travel with every
+// catalogue, and neither reaches the suggestions — naming them once here keeps
+// that true of the fixtures too.
+function answered(models: readonly VendorModel[]): VendorCatalogue {
+  return { models, rankedBy: "throughput", unavailable: false };
+}
+
+describe("vendorSuggestions", () => {
+  // A model the sheet already prices is the sheet's to offer, with the number
+  // this installation agreed to. Offering it twice would put two hints on one
+  // id and leave a reader to guess which price they are binding at.
+  it("leaves out what the price sheet already offers, for this provider", () => {
+    const vendor = answered([
+      vendorModel("gemini-3.5-flash"),
+      vendorModel("gemini-4-pro"),
+    ]);
+    expect(
+      vendorSuggestions(vendor, SHEET, "gemini", "en").map((s) => s.value),
+    ).toEqual(["gemini-4-pro"]);
+  });
+
+  // Scoped to the provider being bound: an id the sheet prices for ANOTHER
+  // vendor says nothing about this one, and dropping it here would hide a model
+  // that is genuinely on offer.
+  it("does not let another provider's sheet entry hide a model", () => {
+    const vendor = answered([vendorModel("claude-opus-4-8", "3.00", "15.00")]);
+    expect(vendorSuggestions(vendor, SHEET, "gemini", "en")).toEqual([
+      { value: "claude-opus-4-8", hint: "US$3.00 → US$15.00" },
+    ]);
+  });
+
+  // Half a price is not a price. The vendor states each side only where it
+  // publishes one, so a model priced on one side offers the field without a
+  // hint rather than printing a number that means something else.
+  it.each([
+    ["neither side", undefined, undefined],
+    ["input only", "2.00", undefined],
+    ["output only", undefined, "8.00"],
+    ["an unreadable figure", "n/a", "8.00"],
+  ])("offers a model priced on %s, without a hint", (_, input, output) => {
+    const vendor = answered([vendorModel("gemini-4-pro", input, output)]);
+    expect(vendorSuggestions(vendor, SHEET, "gemini", "en")).toEqual([
+      { value: "gemini-4-pro", hint: undefined },
+    ]);
+  });
+
+  // A read that never landed is an empty list, the same as a vendor that
+  // publishes nothing: the field is a plain text box and the admin types an id.
+  it("is empty when the vendor never answered", () => {
+    expect(vendorSuggestions(undefined, SHEET, "gemini", "en")).toEqual([]);
   });
 });
