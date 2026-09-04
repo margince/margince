@@ -113,8 +113,21 @@ func TestTheRepairIsANoOpOnADatabaseThatWasNeverDrifted(t *testing.T) {
 	conn := connect(t, ownerDSN)
 	ctx := context.Background()
 
+	// The index's identity, not merely its presence. A repair that DROPped the
+	// correct index and CREATEd it again would leave a database that infers
+	// perfectly and still be the wrong thing to ship: on a populated table that
+	// is an exclusive lock and a full rebuild, during a migration a fresh
+	// installation is told costs nothing. Only the oid separates the two, since
+	// the name and the definition are identical either way.
+	before := indexOID(t, ctx, conn)
+
 	replayDecisionIndexRepair(t, conn)
 
+	if after := indexOID(t, ctx, conn); after != before {
+		t.Errorf("the repair replaced the decision index (oid %d became %d) — it is "+
+			"meant to leave a correct one alone, and dropping it to recreate it takes "+
+			"an exclusive lock and rebuilds every row", before, after)
+	}
 	if err := inferOnDecisionSet(ctx, conn); err != nil {
 		t.Fatalf("the send's inference broke on an undrifted database: %v", err)
 	}
@@ -128,4 +141,21 @@ func TestTheRepairIsANoOpOnADatabaseThatWasNeverDrifted(t *testing.T) {
 	if attempt != 0 {
 		t.Error("the retired index is present on a fresh database")
 	}
+}
+
+// indexOID reads the identity of the index a send's inference depends on.
+//
+// Fatal when it is missing rather than answering zero: a comparison of two
+// absences would be equal, and this is the one reading whose whole purpose is
+// to notice a difference.
+func indexOID(t *testing.T, ctx context.Context, conn *pgx.Conn) uint32 {
+	t.Helper()
+	var oid uint32
+	if err := conn.QueryRow(ctx, `
+		SELECT oid FROM pg_class
+		 WHERE relkind = 'i' AND relname = 'communication_decision_one_per_decision'`).
+		Scan(&oid); err != nil {
+		t.Fatalf("reading the decision index's identity: %v", err)
+	}
+	return oid
 }
