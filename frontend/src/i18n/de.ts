@@ -4220,7 +4220,7 @@ export const de = {
   "ob.s4.provImap": "Anderes Postfach (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Zugriff auf mein Microsoft erlauben",
   "ob.s4.microsoftHint":
-    "Liest deine Mails und sendet nur, was du freigibst. Du kannst die Verbindung jederzeit in den Einstellungen trennen.",
+    "Liest deine Mails und kann daraus senden. Beides bestätigst du bei Microsoft, und du kannst jederzeit trennen.",
   "ob.s4.microsoftUnverified":
     "Eventuell erscheint ein Hinweis „nicht verifizierte App“ — das ist diese selbstgehostete Installation, kein Dritter.",
   "ob.s4.microsoftFailed":

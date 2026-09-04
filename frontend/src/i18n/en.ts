@@ -4271,7 +4271,7 @@ export const en = {
   "ob.s4.provImap": "Any other mailbox (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Allow access to my Microsoft",
   "ob.s4.microsoftHint":
-    "Reads your mail, and sends only what you approve. You can disconnect any time from Settings.",
+    "Reads your mail, and can send from it. You grant both on Microsoft's own screen, and can disconnect any time.",
   "ob.s4.microsoftUnverified":
     'You may see an "unverified app" notice — that\'s this self-hosted install, not a third party.',
   "ob.s4.microsoftFailed": "The Microsoft connection didn't complete.",
