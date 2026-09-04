@@ -94,6 +94,12 @@ var workspaceLevelEntities = map[string]struct{}{
 	"passport":                {},
 	"onboarding_wizard_state": {},
 	"incumbent_connection":    {},
+	// A daily snapshot is a fact about the workspace's whole forecast, not
+	// about any owner's slice of it: the pass freezes the workspace scope, and
+	// the envelope carries the period and the readings rather than the deals
+	// they were summed from. A receiver reads the detail back under its own
+	// scope, which is what this list is for.
+	"forecast_snapshot": {},
 }
 
 // deferredDeliveryEvents are subscribable events whose subject cannot be
