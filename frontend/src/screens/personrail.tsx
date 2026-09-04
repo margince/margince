@@ -713,6 +713,7 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
     >
       <PanelBody>
         <SurfaceState
+          loadingLabel={t("person.rail.employmentTitle")}
           state={bodyState(
             withheldSections(view).employments,
             employments.length,
@@ -1193,6 +1194,7 @@ function WhoKnows({
     <Panel title={t("person.rail.whoKnows", { name: firstName })}>
       <PanelBody>
         <SurfaceState
+          loadingLabel={t("person.rail.whoKnows", { name: firstName })}
           state={bodyState(withheldSections(view).network, colleagues.length)}
           emptyLabel={t("person.rail.nobodyYet")}
         >
@@ -1236,6 +1238,7 @@ function SignalsAndRisks({ view }: Readonly<{ view: Person360 }>) {
     <Panel title={t("person.rail.signals")}>
       <PanelBody>
         <SurfaceState
+          loadingLabel={t("person.rail.signals")}
           state={signalsState(signals.length, skipped)}
           emptyLabel={t("person.rail.noSignals")}
         >
@@ -1468,6 +1471,7 @@ function RecentActivity({
     >
       <PanelBody>
         <SurfaceState
+          loadingLabel={t("person.rail.recentActivity")}
           state={bodyState(withheld, rows.length)}
           emptyLabel={t("person.rail.nothingCaptured")}
         >

@@ -425,7 +425,7 @@ export function JobHealthCard() {
     // Behind the probe, so the notice states a settled denial rather than the
     // absence of an answer: while /me is in flight nobody holds any role yet.
     body = (
-      <QueryGate query={me}>
+      <QueryGate query={me} pendingLabel={t("settings.jobs")}>
         {() => <EmptyState>{t("jobs.adminOnly")}</EmptyState>}
       </QueryGate>
     );
@@ -433,7 +433,7 @@ export function JobHealthCard() {
     // No `empty` predicate on the gate: its generic copy would understate the
     // one thing this card exists to report, so the body owns that rung.
     body = (
-      <QueryGate query={query}>
+      <QueryGate query={query} pendingLabel={t("settings.jobs")}>
         {(health) => <JobHealthBody health={health} zone={zone} />}
       </QueryGate>
     );

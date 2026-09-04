@@ -217,7 +217,11 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
           )
         ) : (
           <PanelBody>
-            <SurfaceState state={state} emptyLabel={t("contracts.empty")}>
+            <SurfaceState
+              state={state}
+              emptyLabel={t("contracts.empty")}
+              loadingLabel={t("contracts.title")}
+            >
               {null}
             </SurfaceState>
           </PanelBody>
@@ -444,6 +448,7 @@ function ContractPaper({
           first and the label stops reading as a label for both. */}
       <div className="rec-files-items">
         <SurfaceState
+          loadingLabel={t("contracts.files")}
           state={complete ? "ready" : "partial"}
           emptyLabel=""
           detail={{ remaining: paper.remaining }}

@@ -178,6 +178,7 @@ export function ThreadPane({
           <PendingBody label={t("compose.threadPending")} lines={3} />
         ) : (
           <SurfaceState
+            loadingLabel={t("compose.threadPending")}
             state={failed ? "failed" : "ready"}
             emptyLabel={t("compose.threadPending")}
             detail={{ onRetry }}
@@ -322,6 +323,7 @@ export function ConversationChoices({
           <PendingBody label={t("compose.threadPending")} lines={3} />
         ) : (
           <SurfaceState
+            loadingLabel={t("compose.threadPending")}
             state={failed ? "failed" : "ready"}
             emptyLabel={t("compose.threadPending")}
             detail={{ onRetry }}

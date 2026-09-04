@@ -132,7 +132,7 @@ export function AiProviderKeysCard() {
   // paste fields to find the one vendor that is not set up.
   return (
     <Panel title={t("aiProviderKeys.title")} sub={t("aiProviderKeys.sub")}>
-      <QueryGate query={query}>
+      <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
         {(list) => (
           <>
             {list.providers.map((p) => (

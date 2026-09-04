@@ -84,7 +84,10 @@ export function RecordContextPanel({
 
   return (
     <Card className="record-context" title={t("context.title")}>
-      <QueryGate query={query as QueryLike<ContextResponse>}>
+      <QueryGate
+        query={query as QueryLike<ContextResponse>}
+        pendingLabel={t("context.title")}
+      >
         {(data) => {
           const sections = neighbourhood(
             data.sections ?? [],

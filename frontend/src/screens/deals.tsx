@@ -1859,6 +1859,7 @@ function DealBoardBody({
     typeof PipelineBoard
   >["columnDropHandlers"];
 }>) {
+  const t = useT();
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useOrgMarks), so no card is left
   // standing over a company the board simply failed to look up.
@@ -1869,7 +1870,7 @@ function DealBoardBody({
   const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
   return (
     <>
-      <QueryGate query={pipelinesQuery}>
+      <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
         {() =>
           effectivePipeline ? (
             // Only the INITIAL load goes through the gate. An infinite
@@ -1880,7 +1881,9 @@ function DealBoardBody({
             // retries — exactly what OverlayDealsTable does above, and for
             // the same reason.
             (dealsQuery.data?.pages ?? []).length === 0 ? (
-              <QueryGate query={dealsQuery}>{() => null}</QueryGate>
+              <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
+                {() => null}
+              </QueryGate>
             ) : (
               <>
                 <PipelineBoard
@@ -4140,7 +4143,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={dealQuery}>
+      <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
         {(deal) => {
           const stages = [...(pipelineQuery.data?.stages ?? [])].sort(
             (a, b) => a.position - b.position,

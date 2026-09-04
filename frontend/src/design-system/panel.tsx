@@ -281,7 +281,15 @@ export function RailPanel({
         children
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={emptyLabel} detail={detail}>
+          {/* The panel's own title is what it is waiting for, so the caller is
+              not asked to say it twice. Every other SurfaceState takes the
+              label from whoever knows; here the wrapper knows. */}
+          <SurfaceState
+            state={state}
+            emptyLabel={emptyLabel}
+            loadingLabel={title}
+            detail={detail}
+          >
             {null}
           </SurfaceState>
         </PanelBody>

@@ -651,7 +651,7 @@ export function RelationshipsTab({
       title={t(copy.title)}
       actions={<AddRelationshipAction scope={scope} />}
     >
-      <QueryGate query={query}>
+      <QueryGate query={query} pendingLabel={t(copy.title)}>
         {(rows) =>
           rows.length === 0 ? (
             <EmptyState>{t(copy.empty)}</EmptyState>

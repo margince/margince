@@ -132,8 +132,16 @@ export function DealRoomConversation({
     actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
   }));
   return (
-    <QueryStates query={docs} pendingLines={3}>
-      <QueryStates query={threads} pendingLines={3}>
+    <QueryStates
+      query={docs}
+      pendingLines={3}
+      pendingLabel={t("room.docs.title")}
+    >
+      <QueryStates
+        query={threads}
+        pendingLines={3}
+        pendingLabel={t("room.docs.title")}
+      >
         {threads.data && docs.data ? (
           <DocumentBoard
             title={t("room.docs.title")}

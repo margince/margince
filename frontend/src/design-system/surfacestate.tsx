@@ -232,7 +232,7 @@ export function SurfaceState({
   // `loadingLabel` is the caller's because only the caller knows: the loading
   // arm used to be a mute bar, and three screens had bolted their own spoken
   // line beside it rather than being able to hand it one.
-  loadingLabel?: string;
+  loadingLabel: string;
   loadingLines?: number;
   // What the four §7 states need in order to be honest. Each is read by
   // exactly one state and ignored by the rest; a state whose detail is absent

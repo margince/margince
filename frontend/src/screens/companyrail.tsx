@@ -267,6 +267,7 @@ function DealsSection({
       ) : (
         <PanelBody>
           <SurfaceState
+            loadingLabel={t("co.rail.deals.title")}
             state={state}
             emptyLabel={
               hasClosedHistory
@@ -463,7 +464,11 @@ function PeopleSection({
         ))
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={t("co.rail.people.empty")}>
+          <SurfaceState
+            state={state}
+            emptyLabel={t("co.rail.people.empty")}
+            loadingLabel={t("co.rail.people.title")}
+          >
             {null}
           </SurfaceState>
           {/* The empty state's one verb; the foot below stands only once
@@ -691,6 +696,7 @@ export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
       ) : (
         <PanelBody>
           <SurfaceState
+            loadingLabel={t("co.signals.title")}
             state={state}
             emptyLabel={t("co.signals.empty")}
             emptyDetail={t("co.signals.emptyDetail")}

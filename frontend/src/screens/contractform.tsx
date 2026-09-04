@@ -481,6 +481,7 @@ export function SignedFileField({
               missing UNDER them, which is where a count about a list belongs. */}
           {state === "empty" ? null : (
             <SurfaceState
+              loadingLabel={t("contracts.form.file")}
               state={state}
               emptyLabel=""
               detail={{

@@ -145,11 +145,12 @@ export function useUpdateInstallationSettings(onSaved: () => void) {
 }
 
 export function InstallationSettingsCard() {
+  const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings();
 
   return (
-    <QueryGate query={query}>
+    <QueryGate query={query} pendingLabel={t("nav.settings")}>
       {(settings) => (
         <InstallationSettingsForm settings={settings} canManage={canManage} />
       )}

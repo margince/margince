@@ -78,7 +78,11 @@ export function PersonDealRooms({
   }
   return (
     <Panel title={t("persondealrooms.title")} sub={t("persondealrooms.sub")}>
-      <QueryStates query={rooms} pendingLines={2}>
+      <QueryStates
+        query={rooms}
+        pendingLines={2}
+        pendingLabel={t("persondealrooms.title")}
+      >
         {seats.map(({ room, email }) => (
           <RoomRow key={room.id} room={room} email={email} emails={emails} />
         ))}

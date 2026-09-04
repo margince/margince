@@ -158,7 +158,7 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
     >
       <div className="ob-scene ob-prefs-scene">
         {canManage && (
-          <QueryGate query={settings}>
+          <QueryGate query={settings} pendingLabel={t("ob.conv.prefs.title")}>
             {(current) => (
               <section className="ob-prefs-section">
                 <h3>{t("ob.conv.prefs.reportingTitle")}</h3>

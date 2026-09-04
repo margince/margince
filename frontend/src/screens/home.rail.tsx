@@ -172,7 +172,7 @@ export function OvernightPanel() {
   const recordZone = useRecordZone();
   const digestQuery = useMorningDigest();
   return (
-    <QueryGate query={digestQuery}>
+    <QueryGate query={digestQuery} pendingLabel={t("home.panel.overnight")}>
       {(digest) => {
         if (digest === null) {
           return null;
@@ -396,7 +396,11 @@ export function WatchPanel({
   return (
     <Panel title={t("home.panel.watch")} className="rail-panel">
       <PanelBody className={deals.length > 0 ? "rail-watch-list" : undefined}>
-        <SurfaceState state={resolved} emptyLabel={t("home.watch.clear")}>
+        <SurfaceState
+          state={resolved}
+          emptyLabel={t("home.watch.clear")}
+          loadingLabel={t("home.panel.watch")}
+        >
           {deals.map((deal) => (
             <DealCard
               key={deal.id}

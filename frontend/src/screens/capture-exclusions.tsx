@@ -153,7 +153,10 @@ export function CaptureExclusionsCard() {
             description={t("captureExclusions.notRetroactive")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("captureExclusions.current")}
+              >
                 {(list) => (
                   <ExclusionRows
                     list={list.data}

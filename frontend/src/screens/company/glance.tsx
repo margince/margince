@@ -71,6 +71,7 @@ export function ThreadFold({
         ) : (
           <PanelBody>
             <SurfaceState
+              loadingLabel={t("co.recent.title")}
               state={state}
               emptyLabel={t("co.recent.empty")}
               emptyDetail={t("co.recent.emptyDetail")}
@@ -182,6 +183,7 @@ export function MoneyPane({
           <PanelGroupHead title={t("companyProjects.title")} level="h3" />
           <PanelBody>
             <SurfaceState
+              loadingLabel={t("companyProjects.title")}
               state={projectsState}
               emptyLabel={t("projectLinks.emptyTitle")}
             >
@@ -259,7 +261,11 @@ export function PeopleChips({
             )}
           </ul>
         ) : (
-          <SurfaceState state={state} emptyLabel={t("co.rail.people.empty")}>
+          <SurfaceState
+            state={state}
+            emptyLabel={t("co.rail.people.empty")}
+            loadingLabel={t("co.rail.people.title")}
+          >
             {null}
           </SurfaceState>
         )}

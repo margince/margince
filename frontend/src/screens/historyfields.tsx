@@ -309,7 +309,9 @@ export function FieldHistoryTimeline({
           </div>
         )}
       </div>
-      <QueryStates query={query}>{body}</QueryStates>
+      <QueryStates query={query} pendingLabel={t("history.allFields")}>
+        {body}
+      </QueryStates>
     </Card>
   );
 }

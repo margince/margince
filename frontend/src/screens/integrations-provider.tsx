@@ -98,7 +98,7 @@ export function ProviderCard() {
           <p className="settings-panel-sub">{t("provider.readOnly")}</p>
         )}
       </PanelBody>
-      <QueryGate query={query}>
+      <QueryGate query={query} pendingLabel={t("provider.title")}>
         {(result) =>
           // An empty list means the same thing a 501 does: no adapter is
           // compiled in. The server returns a row for every REGISTERED

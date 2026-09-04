@@ -134,7 +134,7 @@ function MembersCard({
           {t("users.membersSub")}
           {probeSettled && !canAdminister && ` ${t("users.adminOnly")}`}
         </p>
-        <QueryGate query={members}>
+        <QueryGate query={members} pendingLabel={t("users.membersTitle")}>
           {(list) =>
             list.length === 0 ? (
               <EmptyState>{t("users.empty")}</EmptyState>
