@@ -917,7 +917,11 @@ describe("every obligation is drawn once", () => {
     stub(
       day({
         queue: [
-          row({ id: "a", source: "customer_waiting", title: "Kirsten replied" }),
+          row({
+            id: "a",
+            source: "customer_waiting",
+            title: "Kirsten replied",
+          }),
           row({ id: "b", source: "task", title: "Send the quote" }),
           row({ id: "c", source: "meeting", title: "Quarterly review" }),
         ],

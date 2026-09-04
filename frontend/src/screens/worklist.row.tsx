@@ -15,7 +15,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
-import { useNoticeRead } from "./taskactions";
+import { useNoticeRead, useTaskUpdate } from "./taskactions";
 import {
   comparisonText,
   consequenceText,
@@ -228,6 +228,15 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   if (item.source === "notice" && item.actions.includes("acknowledge")) {
     return <NoticeAcknowledge id={item.id} />;
   }
+  // A task the server says can be finished, finished HERE. Not a batch: a group
+  // row stands for a pile and names no single activity to complete.
+  if (
+    item.source === "task" &&
+    !item.batch &&
+    item.actions.includes("complete")
+  ) {
+    return <TaskComplete id={item.id} />;
+  }
   return null;
 }
 
@@ -388,6 +397,47 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
         }
       >
         {t("worklist.verb.acknowledge")}
+      </Button>
+    </div>
+  );
+}
+
+// Finishing a task where the reader is standing.
+//
+// The verb ACTS, it does not navigate. `VERB_DESTINATION` routes `complete` to
+// the task's own record, which is a reasonable address and the wrong promise: a
+// control labelled "Done" that opens a page leaves the task open, and the reader
+// believes otherwise. The mutation exists and every other surface already uses
+// it, so the row completes the task rather than renaming the promise down.
+//
+// This lived on the focus card while that card existed. The card was the only
+// surface in the whole queue that could finish a task in one press, so folding
+// the card into the queue had to bring the verb with it or take the capability
+// away.
+function TaskComplete({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const update = useTaskUpdate([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        variant="primary"
+        pending={update.isPending}
+        onClick={() =>
+          update.mutate(
+            { id, body: { is_done: true } },
+            {
+              // A rejected PATCH otherwise leaves the button idle with nothing
+              // on screen to say so — the same rendering a click that did
+              // nothing would leave, and the reader has no reason to try again.
+              onError: () =>
+                toast.show(t("worklist.verb.completeFailed"), { mark: false }),
+            },
+          )
+        }
+      >
+        {t("tasks.complete")}
       </Button>
     </div>
   );
