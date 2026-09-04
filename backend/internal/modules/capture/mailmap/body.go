@@ -56,6 +56,9 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
 			continue
 		}
 	}
+	// Everything the sender named has had its claim on the bounds; what was
+	// held back takes what is left.
+	files.settle()
 	return bodyText(plain, html), files.parts, files.drops(), calendar
 }
 
@@ -112,17 +115,18 @@ func readInlinePart(
 		files.takeInline(inline, name, body)
 		return true
 	}
-	// An UNNAMED calendar part is the invitation itself, and it goes to the
-	// collector before anything reads it. Handing it over after a read would
-	// hand over a spent reader, and the collector's bounds are the only ones
-	// that apply to a file — so the order here is what makes the part both kept
-	// and bounded.
+	// An UNNAMED calendar part is the invitation itself. It is read here — the
+	// reader is single-pass, so this is its only look — and admitted to the
+	// collector only once the walk is over.
 	//
-	// The name is ours because the sender supplied none. It is presentational
-	// only: the object key is generated, as Part.Filename says.
+	// LAST, deliberately. A part admitted mid-walk spends an ordinal, a count
+	// slot and message budget that the sender's own files needed, so an
+	// invitation arriving before twenty attachments silently pushed the
+	// twentieth off the cap. The files a person chose to send are what a rep
+	// opens; the invitation is evidence, and evidence yields.
 	if isCalendarType(contentType) {
 		*calendar = true
-		files.takeInline(inline, unnamedCalendarFilename, body)
+		files.holdCalendar(readBoundedRaw(body))
 		return true
 	}
 	content, err := readBounded(body)
@@ -141,6 +145,22 @@ func readInlinePart(
 // unnamedCalendarFilename names the invitation a sender rendered inline without
 // naming. Every client that sends this shape calls it the same thing.
 const unnamedCalendarFilename = "invite.ics"
+
+// calendarContentType is what the held part DECLARED. The collector sniffs the
+// bytes and keeps this only where the two disagree, exactly as it does for a
+// part the sender named.
+const calendarContentType = "text/calendar"
+
+// readBoundedRaw reads a part under the per-part ceiling and reports nothing:
+// an unreadable calendar payload is an absent one, which the collector's own
+// bounds already account for.
+func readBoundedRaw(body io.Reader) []byte {
+	content, err := readBounded(body)
+	if err != nil {
+		return nil
+	}
+	return content
+}
 
 // readBounded reads one body part under the same per-part ceiling a file gets.
 //

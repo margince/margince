@@ -135,15 +135,19 @@ func TestACalendarPartDoesNotDisplaceAUserFile(t *testing.T) {
 	b.WriteString("Subject: everything at once\r\n")
 	b.WriteString("Date: Mon, 01 Jun 2026 22:03:51 +0000\r\n")
 	b.WriteString("Content-Type: multipart/mixed; boundary=\"bb\"\r\n\r\n")
+	// The invitation FIRST, which is where the defect lives: a calendar part
+	// that takes an early ordinal spends a slot the sender's own files needed,
+	// and the last one silently falls off the cap. A fixture with it last
+	// passes against the broken parser too.
+	b.WriteString("--bb\r\n")
+	b.WriteString("Content-Type: text/calendar; charset=UTF-8; method=REQUEST\r\n\r\n")
+	b.WriteString("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
 	for i := 0; i < extension.MaxInboundFiles; i++ {
 		b.WriteString("--bb\r\n")
 		fmt.Fprintf(&b, "Content-Type: application/pdf; name=\"doc%d.pdf\"\r\n", i)
 		fmt.Fprintf(&b, "Content-Disposition: attachment; filename=\"doc%d.pdf\"\r\n\r\n", i)
 		b.WriteString("PDFBYTES\r\n")
 	}
-	b.WriteString("--bb\r\n")
-	b.WriteString("Content-Type: text/calendar; charset=UTF-8; method=REQUEST\r\n\r\n")
-	b.WriteString("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
 	b.WriteString("--bb--\r\n")
 
 	msg, err := Parse([]byte(b.String()), "owner@myco.com")
