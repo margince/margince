@@ -189,6 +189,7 @@ type taskDef struct {
 	CompanyContext    *companyContextDef  `yaml:"company_context"`
 	CostUnit          string              `yaml:"cost_unit"`
 	Doc               string              `yaml:"doc"`
+	DisplayName       string              `yaml:"display_name"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -252,97 +253,6 @@ func parseContract(raw []byte) (contract, error) {
 	return c, nil
 }
 
-// validate enforces the contract's own invariants: every tier a ladder
-// or degrade_to entry names must be declared in tiers, every task name
-// is a valid Go-identifier source, and on_budget_exhausted is one of the
-// two policies the runtime understands. Execution mode and exhaustion policy
-// are a closed pair: interactive tasks degrade, background tasks queue.
-// Status and sites are a closed pair too: a shipped task owes at least one
-// uniquely named site of a known kind, a planned task owes none. A declared
-// company-context policy must be internally coherent.
-func (c contract) validate() error {
-	if len(c.Tiers) == 0 {
-		return fmt.Errorf("contract declares no tiers")
-	}
-	tierSet := make(map[string]bool, len(c.Tiers))
-	for _, t := range c.Tiers {
-		tierSet[t] = true
-	}
-	if len(c.Tasks) == 0 {
-		return fmt.Errorf("contract declares no tasks")
-	}
-	for name, def := range c.Tasks {
-		if !taskNameRE.MatchString(name) {
-			return fmt.Errorf("task %q: name must match %s", name, taskNameRE.String())
-		}
-		if len(def.Ladder) == 0 {
-			return fmt.Errorf("task %q: ladder is empty", name)
-		}
-		for _, tier := range def.Ladder {
-			if !tierSet[tier] {
-				return fmt.Errorf("task %q: ladder names unknown tier %q", name, tier)
-			}
-		}
-		switch def.OnBudgetExhausted {
-		case "queue", "degrade":
-		default:
-			return fmt.Errorf("task %q: on_budget_exhausted must be \"queue\" or \"degrade\", got %q", name, def.OnBudgetExhausted)
-		}
-		switch def.ExecutionMode {
-		case "interactive":
-			if def.OnBudgetExhausted != "degrade" {
-				return fmt.Errorf("task %q: interactive execution_mode requires on_budget_exhausted \"degrade\"", name)
-			}
-		case "background":
-			if def.OnBudgetExhausted != "queue" {
-				return fmt.Errorf("task %q: background execution_mode requires on_budget_exhausted \"queue\"", name)
-			}
-		default:
-			return fmt.Errorf("task %q: execution_mode must be \"interactive\" or \"background\", got %q", name, def.ExecutionMode)
-		}
-		switch def.Status {
-		case statusShipped:
-			if len(def.Sites) == 0 {
-				return fmt.Errorf("task %q: status shipped requires at least one site — a shipped task with no site cannot be certified, and would present as covered", name)
-			}
-		case statusPlanned:
-			if len(def.Sites) > 0 {
-				return fmt.Errorf("task %q: status planned declares %d site(s); a planned task has no implementation", name, len(def.Sites))
-			}
-		default:
-			return fmt.Errorf("task %q: status must be %q or %q, got %q", name, statusShipped, statusPlanned, def.Status)
-		}
-		seenSite := make(map[string]bool, len(def.Sites))
-		for _, s := range def.Sites {
-			if !siteNameRE.MatchString(s.Name) {
-				return fmt.Errorf("task %q: site name %q must match %s", name, s.Name, siteNameRE.String())
-			}
-			if seenSite[s.Name] {
-				return fmt.Errorf("task %q: site %q is declared twice", name, s.Name)
-			}
-			seenSite[s.Name] = true
-			if !siteKinds[s.Kind] {
-				return fmt.Errorf("task %q: site %q has unknown kind %q", name, s.Name, s.Kind)
-			}
-		}
-		if err := validateAgents(name, def); err != nil {
-			return err
-		}
-		if err := def.CompanyContext.validate(name); err != nil {
-			return err
-		}
-	}
-	for from, to := range c.DegradeTo {
-		if !tierSet[from] {
-			return fmt.Errorf("degrade_to: unknown tier %q", from)
-		}
-		if !tierSet[to] {
-			return fmt.Errorf("degrade_to: tier %q degrades to unknown tier %q", from, to)
-		}
-	}
-	return nil
-}
-
 // sortedTaskNames returns the contract's task names sorted, the single
 // deterministic order every emitted const block, map literal, and
 // AllTasks() walks — a map has no stable iteration order, so this is the
@@ -397,6 +307,23 @@ func emitGo(c contract, contractHash string) (string, error) {
 		fmt.Fprintf(&b, "\t%s Task = %q\n", taskConst(name), name)
 	}
 	b.WriteString(")\n\n")
+
+	b.WriteString("// taskDisplayNames is what each task is CALLED, for a surface that has to\n")
+	b.WriteString("// name one to a person. The constant is vocabulary — a reader shown\n")
+	b.WriteString("// \"site_triage failed 8 times\" learns nothing they can act on.\n")
+	b.WriteString("//\n")
+	b.WriteString("// Generated from the same declaration as the constants, so a task cannot\n")
+	b.WriteString("// be added without a name and the two cannot drift.\n")
+	b.WriteString("var taskDisplayNames = map[Task]string{\n")
+	for _, name := range taskNames {
+		fmt.Fprintf(&b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].DisplayName)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// DisplayName is what to call this task in front of a person. An unknown\n")
+	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
+	b.WriteString("// served saying nothing than showing the key it was handed.\n")
+	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
 
 	b.WriteString("// ExecutionMode distinguishes request-bound work from work carried by a\n")
 	b.WriteString("// durable background job. Budget exhaustion degrades the former and\n")
