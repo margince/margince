@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // syncItem draws one sync concern. The card carries no subject and no verbs:
@@ -97,23 +98,25 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 	if run.Kind != "" {
 		cause := "ai_work_health:" + run.Kind
 		item.CauseRef = &cause
-		// And NO label. This lane has no reader-facing name for its condition,
-		// so it mints none rather than a plausible-looking one.
+		// The label is the task's DISPLAY NAME, generated from the same
+		// declaration as the task keys (api/ai-tasks.yaml), so a task cannot be
+		// added without one and the two cannot drift.
 		//
-		// The task kind is the obvious candidate and it is a generated enum key
-		// — `site_triage`, `signal_extract`, a hundred and sixty of them. A rep
-		// reading "site_triage failed 8 times" is being shown the vocabulary,
-		// which is the defect the label exists to remove; sending it would move
-		// the leak rather than close it. Translating them client-side would be a
-		// hand-kept list of 162 keys in three languages, silently rotting as the
-		// generator adds more.
+		// Not the key. `site_triage`, `signal_extract` and their siblings are
+		// generated enum vocabulary, and a rep reading "site_triage failed 8
+		// times" learns nothing they can act on — which is the defect the label
+		// exists to remove, so sending the key would move the leak rather than
+		// close it. Not the run's own summary either: it is written per run, so
+		// a group of twelve failures would be named after whichever was sampled.
 		//
-		// The run's own summary is not it either: it is written per run, so a
-		// group of twelve failures would be named after whichever was sampled.
-		//
-		// So the group says what KIND of thing broke and how often, which is
-		// what a row with no named condition is supposed to say. Naming the AI
-		// task properly is issue #3870.
+		// Empty is left unlabelled rather than filled. DisplayName answers ""
+		// for a task this build does not know — a kind read back from a row an
+		// older binary wrote — and a group with no name it can trust says the
+		// generic phrase, which is what it said for every kind before.
+		if name := ai.DisplayName(ai.Task(run.Kind)); name != "" {
+			label := name
+			item.CauseLabel = &label
+		}
 	}
 	if run.Summary != "" {
 		summary := run.Summary

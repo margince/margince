@@ -162,6 +162,7 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 		row.Because = append(row.Because, reason("overdue", nil))
 	}
 	return ranked{
+		ownerRef:   ownedByWhoeverIsReading(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -175,7 +176,12 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		item:       row,
+		occurredAt: occurredOf(item, asOf),
+		// Carried back to the person who APPROVED it, by a lane bound to them.
+		ownerRef: ownedByWhoeverIsReading(),
+	}
 }
 
 // classifyIntroduction: a colleague is waiting on this reader to answer.
@@ -194,6 +200,7 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("blocks_customer_work", nil)}
 	return ranked{
+		ownerRef:   ownedByWhoeverIsReading(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -208,6 +215,11 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
+		// A compliance queue, not a personal one: the lane reads every open
+		// request due soonest behind the DSR-admin gate, so several admins see
+		// the same case and none of them owns it by having looked. The request
+		// has no assignee column to read.
+		ownerRef:   unassigned(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -348,6 +360,14 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// without this it is a row the filters cannot place: a named owner's
 		// queue dropped every one of them.
 		owner: waiting.OwnerID,
+		// The same fact for the CLIENT — but NOT through ownerFrom, because a
+		// zero here does not mean what a zero means to the task and lead lanes.
+		// This lane qualifies a row through an ungated lookup and reads its
+		// owner through a gated one, so a customer whose owning record the
+		// reader may not open arrives with no owner id at all. Reporting that
+		// as `unassigned` would turn a withheld fact into a claim that nobody
+		// owes the reply, and the reader has no way to tell the two apart.
+		ownerRef: waitingOwner(waiting.OwnerID),
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.
@@ -423,43 +443,17 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
 		occurredAt: occurredOf(item, asOf),
+		// The assignee the lane read, which is the same fact the reason above
+		// states in words. Absent means nobody has taken it — the state the
+		// unassigned scope exists to surface — and the two must agree: a row
+		// saying "unassigned" in its reasons while naming an owner beside them
+		// is a row a reader cannot make sense of.
+		ownerRef: ownerFromAssignee(item.AssigneeId),
+		// And the SAME id where the scope filters read it. Without this a task
+		// answers nobody to answersTo, so keepTeams keeps it as unowned work —
+		// which is the hole its own comment describes for link-less tasks, and
+		// which now also puts an outside-team colleague's user id on the wire
+		// through the owner field. One assignee, read by both.
+		owner: assigneeID(item.AssigneeId),
 	}
-}
-
-// classifyBounce: a customer never received something the rep believes they
-// sent. A consequence with a named customer and a verb, so it ranks as its own
-// row rather than disappearing into an aggregate.
-func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelPromise, "system", "customer_never_received")
-	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// classifyUndelivered: a message the rep believes they sent and which never
-// left. The belief is the damage — they are waiting on a reply to something
-// nobody has — so it sits with the broken promises rather than with the system
-// news, exactly where a bounce sits.
-//
-// It is a separate consequence from the bounce beside it: nobody received this
-// one because nobody was ever sent it, and the reader's move is to send it
-// rather than to fix an address.
-func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelPromise, "system", "you_believe_it_happened")
-	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// classifySystem: the pipes. A mailbox that stopped capturing makes every quiet
-// claim on this page suspect, which is why it is here at all rather than only in
-// an admin screen.
-func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	consequence := crmcontracts.WorklistItemConsequence("work_blocked")
-	if item.Source == "capture_health" || item.Source == "sync_health" {
-		consequence = "mailbox_blind"
-	}
-	if item.Source == "notice" {
-		consequence = valueNone
-	}
-	row := base(item, levelBlocking, "system", consequence)
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }

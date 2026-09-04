@@ -24,10 +24,8 @@ import {
   pillCount,
   sourceUnavailableText,
 } from "./worklist.copy";
-import { FocusCard, focusOf } from "./worklist.focus";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
-import { NextUp, nextUpOf } from "./worklist.nextup";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   loadedQueue,
@@ -158,10 +156,6 @@ function WorklistHeader({
           },
         )}
       </p>
-      {/* What the day is WORTH, above the controls that narrow it. The figures
-          describe the whole day rather than the page or the filter, so they sit
-          above both rather than beside the pills they would be confused with. */}
-      <WorklistReadings day={day} onLane={onFilter} />
       {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
       {scopes.length > 1 && owner === "" && (
@@ -203,6 +197,59 @@ function WorklistHeader({
       )}
     </div>
   );
+}
+
+/**
+ * The reader has put every row down.
+ *
+ * Distinct from `""`, which means they have chosen NOTHING yet — and the two
+ * must not share a value. With nothing chosen the pane falls back to the first
+ * row, so a "closed" spelled as `""` resolved straight back to row one and the
+ * rank button became a control that did nothing when pressed.
+ *
+ * An identity no row can carry: `rowIdentity` joins a source and an id, and no
+ * source is empty.
+ */
+const NOTHING_IN_HAND = "\u0000none";
+
+/**
+ * The row the pane is about.
+ *
+ * Resolved from the identity rather than held as the item itself: a refetch
+ * replaces every row object, and a held one would go on describing a version of
+ * the day that is no longer on screen.
+ *
+ * With nothing chosen this is the FIRST row, which is what makes the top of the
+ * queue the focus without a card above it saying so. The queue was already the
+ * ranking's answer to what matters most; a separate card repeated that row, a
+ * second list repeated the three after it, and one morning was drawn three
+ * times on one screen.
+ *
+ * The fallback is deliberately not written back into state. The reader chose
+ * nothing, so there is nothing to remember: a refetch that reorders the day
+ * moves this with it, where a stored id would pin the pane to whichever row
+ * happened to be first when the page loaded.
+ */
+function rowInHand(
+  queue: readonly WorklistItem[],
+  selectedId: string,
+): WorklistItem | undefined {
+  const chosen = queue.find((item) => rowIdentity(item) === selectedId);
+  if (chosen) {
+    return chosen;
+  }
+  if (selectedId !== "") {
+    return undefined;
+  }
+  // Only a row that HAS a pane is taken up by default. A row without one draws
+  // no aside and offers no rank button, so marking it selected would leave the
+  // accent stripe on a row the reader cannot open and cannot put down — a
+  // highlight that means nothing and never clears.
+  //
+  // The FIRST such row rather than the first row: a day led by a deal still has
+  // a person further down whose context is worth standing open, and skipping to
+  // it keeps the pane useful without moving the queue's own order.
+  return queue.find(hasPane);
 }
 
 // Everything a row needs that is the same for every row on the page.
@@ -257,7 +304,9 @@ function QueueRows({
               hasPane(item)
                 ? () =>
                     onSelect(
-                      selectedId === rowIdentity(item) ? "" : rowIdentity(item),
+                      selectedId === rowIdentity(item)
+                        ? NOTHING_IN_HAND
+                        : rowIdentity(item),
                     )
                 : undefined
             }
@@ -314,19 +363,16 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  const focus = focusOf(queue);
-  // What follows it, bounded, in the server's own order. These rows may all be
-  // one kind of work — worklist.nextup.tsx says why that is the ranking's to
-  // fix rather than this page's.
-  const next = nextUpOf(queue, focus);
-  // The row the pane is about. Resolved from the identity rather than held as
-  // the item itself: a refetch replaces every row object, and a held one would
-  // go on describing a version of the day that is no longer on screen.
-  const selected = queue.find((item) => rowIdentity(item) === selectedId);
+  const selected = rowInHand(queue, selectedId);
+
   const rowProps: RowContext = {
     positions: new Map(queue.map((item, at) => [rowIdentity(item), at])),
     owner,
-    selectedId,
+    // The RESOLVED selection, not the raw state. The pane falls back to the
+    // first row when the reader has chosen nothing, and a highlight reading
+    // the state alone would leave the pane describing a row the queue does not
+    // mark — one screen disagreeing with itself about which row is in hand.
+    selectedId: selected ? rowIdentity(selected) : "",
     onSelect,
     onOpenEmail,
     onFilter,
@@ -343,6 +389,17 @@ function WorklistBody({
         onFilter={onFilter}
         onOwner={onOwner}
       />
+      {/* What the day is WORTH. A SIBLING of the queue rather than part of the
+          header, which is what lets the phone put the work first.
+
+          On a wide screen it reads above the queue, where a figure describing
+          the whole day belongs. On a phone the four cards stack into a 338px
+          block, and with the title and controls above them the first row's
+          verb landed 972px down an 844px screen — a rep opened their morning
+          and had to scroll before they could do anything. The stylesheet moves
+          this below the queue under 720px; the DOM order stays as it reads,
+          so a screen reader still meets the day's figures before its rows. */}
+      <WorklistReadings day={day} onLane={onFilter} />
       {/* Who on the team is carrying what.
           Offered on the SAME tier the server admits the board on, read off
           scope_options so the control and the refusal cannot disagree — the
@@ -395,14 +452,6 @@ function WorklistBody({
           })}
         </Callout>
       )}
-      {/* The one thing to do next, said rather than implied. The row stays in
-          the queue below: removing it would make the rank numbers lie and the
-          counts disagree with the page. */}
-      {focus && <FocusCard item={focus} onOpenEmail={onOpenEmail} />}
-      {/* And then? A finite list a reader can see the end of, so a morning has a
-          shape rather than a backlog. Drawn only under a focus card: without
-          one there is no "next", only the queue. */}
-      {focus && <NextUp items={next} />}
       {queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         //

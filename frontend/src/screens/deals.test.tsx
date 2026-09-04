@@ -1843,7 +1843,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await screen.findByRole("button", { name: "Northgate" });
-    const line = document.querySelector(".record-sub")?.textContent ?? "";
+    const line = document.querySelector(".identity-line")?.textContent ?? "";
 
     expect(line).toContain("·");
     expect(line).not.toContain("€48,000.00Acme");

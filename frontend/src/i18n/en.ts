@@ -232,15 +232,31 @@ export const en = {
   // extensions/<unit>/frontend/i18n/, namespaced `ext<Unit>.` and merged into
   // the catalogue by gen-composition (see i18n/index.tsx).
 
-  "search.placeholder": "Search people, companies, deals, activities, leads…",
+  "search.placeholder":
+    "Search people, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Type what you are looking for.",
   "search.empty": "No matches for “{q}”.",
   "search.group.person": "People",
   "search.group.organization": "Organizations",
   "search.group.deal": "Deals",
+  "search.group.project": "Projects",
+  "search.group.product": "Products",
+  "search.group.offerTemplate": "Offer templates",
   "search.group.activity": "Activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.kind.person": "Person",
+  "search.kind.organization": "Organization",
+  "search.kind.deal": "Deal",
+  "search.kind.project": "Project",
+  "search.kind.product": "Product",
+  "search.kind.offerTemplate": "Offer template",
+  "search.kind.activity": "Activity",
+  "search.kind.lead": "Lead",
+  "search.kind.tag": "Tag",
+  "search.filter.label": "Show only",
+  "search.filter.all": "Everything",
+  "search.pending": "Searching…",
   "search.tag.carriedBy": "On {count} records",
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
@@ -256,6 +272,9 @@ export const en = {
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
   "palette.seeAll": "See all results for “{query}”",
+  "palette.searching": "Searching records…",
+  "palette.searchFailed":
+    "Records could not be searched just now. The commands above still work.",
   "action.newDeal": "New deal",
   "action.readCompany": "Read a company",
   "action.booking": "Booking page",
@@ -868,7 +887,8 @@ export const en = {
   "co.strip.financeUnknown": "—",
   "co.strip.open.deals": "Open deals",
   "co.strip.open.finance": "Open finance",
-  "co.strip.basis.reading": "How it stands",
+  "stat.evidence": "Evidence",
+  "stat.evidence.rests": "What this rests on",
   "co.strip.fin.notACustomer": "Not a customer yet",
   "co.strip.fin.noConnection": "Connect your accounting",
   "co.strip.fin.unmapped": "Not matched to a customer yet",
@@ -1463,7 +1483,7 @@ export const en = {
   "co.ask.q.whats_changed": "What's changed recently?",
   "co.ask.nothing": "Nothing here that you can see would answer that.",
   "co.ask.failed": "That question could not be answered — try it again.",
-  "co.suggest.title": "Margince found this",
+  "co.suggest.title": "Margince suggests",
   "co.suggest.kind.no_reply": "No reply",
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "Nothing scheduled",
@@ -1471,7 +1491,7 @@ export const en = {
   "co.suggest.more": "{count} more not shown here.",
   "co.suggest.basedOn": "What this is based on",
   "co.suggest.dismiss": "Not now",
-  "co.suggest.found": "Margince found this",
+  "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":
     "That could not be dismissed — it is still showing for you",
   "co.suggest.viewTasks": "View tasks",
@@ -2949,7 +2969,6 @@ export const en = {
   "co.spine.singleThreaded": "One contact, and no reply from them",
   "co.spine.overdue": "Past its date",
   "co.spine.expectedClose": "Expected close",
-  "co.360.title": "Margince read this record",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "This account · 360",
   "today.title": "What needs you",
@@ -3603,8 +3622,11 @@ export const en = {
   "settings.autonomySub": "what runs instantly vs. what waits in the inbox",
   "settings.tierRead": "Read, summarize, draft — runs instantly, fully logged.",
   "settings.tierSend":
-    "Send email, book meetings, change records — waits for your approval.",
-  "settings.tierAdvance": "Advance a deal stage — always confirm-first.",
+    "Send email, book meetings, update a contact or a deal — runs instantly too, if you gave the agent that scope. Your grant is the approval, given once.",
+  "settings.tierWait":
+    "Enrichment, custom fields, webhooks, merging tags — these wait in your inbox.",
+  "settings.tierAdvance":
+    "Advance a deal stage — waits only when the move closes the deal as won or lost.",
   "settings.locked": "locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
@@ -4229,9 +4251,9 @@ export const en = {
   "ob.s4.connectDenied": "You declined access — nothing was connected.",
   "ob.s4.googleBtn": "Allow access to my Gmail",
   "ob.s4.googleHint":
-    "Reads your mail, and sends only what you approve. You grant it on Google's own screen, and can disconnect any time.",
+    "Reads your mail, and can send from it. You grant both on Google's own screen, and can disconnect any time.",
   "ob.s4.googleUnverified":
-    "If Google warns about an “unverified app”, choose Advanced → Continue. Nothing sends without your approval.",
+    "If Google warns about an “unverified app”, choose Advanced → Continue. Google’s screen lists exactly what you are granting.",
   "backfill.title": "Import your mail history",
   "backfill.intro":
     "Choose how far back to import. You'll see the scope and estimated cost before anything runs — and you can skip this entirely.",
@@ -4301,7 +4323,7 @@ export const en = {
     "Margince works through your deals while you sleep and has your morning ready when you arrive. It acts as you, sees only what you can see, and you can stop it at any time.",
   "overnightGrant.label": "Let Margince prepare my morning brief overnight",
   "overnightGrant.help":
-    "It reads your deals and mail to rank what needs you today. It never sends anything on its own — anything that leaves the building waits for your approval.",
+    "It reads your deals and mail to rank what needs you today, and writes notes back. It cannot send: the permission you give here covers reading and writing only, never sending.",
   "overnightGrant.danger":
     "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
   "overnightGrant.saveFailed":
@@ -4659,8 +4681,9 @@ export const en = {
   "ob.s4.scope1Lead": "We read — we don't clutter.",
   "ob.s4.scope1Rest":
     "Your mail becomes contacts, companies and activities, captured automatically.",
-  "ob.s4.scope2Lead": "We never send anything without your approval.",
-  "ob.s4.scope2Rest": "Drafts wait for your decision.",
+  "ob.s4.scope2Lead": "Sending is part of this permission.",
+  "ob.s4.scope2Rest":
+    "Margince can send from this mailbox — when you send, and when you give an agent a passport that allows sending. That grant is your approval, given once. You can withdraw it at any time.",
   "ob.s4.scope3Lead": "Your data stays in your organization.",
   "ob.s4.scope3Rest": "Own-your-data — export or delete everything anytime.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
@@ -4878,7 +4901,7 @@ export const en = {
     "You already picked a mailbox. Disconnect it in Settings to switch.",
   "ob.conv.connect.guaranteesToggle": "What connecting actually does",
   "ob.conv.connect.railPromise":
-    "We only read, and nothing sends without your approval.",
+    "We read your mail, and we can send from it once you allow that.",
   "ob.conv.connect.dialogHeadlineAccess": "{name} access needed",
   "ob.conv.connect.dialogHeadlineImap": "Connect your mail host",
   "ob.conv.connect.dialogIntro":
@@ -4892,7 +4915,7 @@ export const en = {
     "Something went wrong loading your connection status. Try again before picking a provider.",
   "ob.conv.voice.sceneTitle": "Teach me how you write.",
   "ob.conv.voice.sceneSub":
-    "This CRM drafts every email in your own words, and nothing sends until you approve it.",
+    "This CRM drafts every email in your own words, so what goes out sounds like you.",
   "ob.conv.voice.heroBody":
     "It learns your tone, rhythm and phrasing from your own writing, and from nobody else's.",
   "ob.conv.voice.whyToggle": "Why this matters",
@@ -5052,7 +5075,7 @@ export const en = {
     "I read your site and draft your company profile. You approve before anything is saved. About two minutes.",
   "ob.gate.trustToggle": "How this works",
   "ob.gate.trustBody":
-    "I read only public pages. Nothing is saved until you confirm it, and nothing is ever sent without your approval.",
+    "I read only public pages. Nothing is saved until you confirm it, and reading your site sends nothing to anyone.",
   "ob.gate.field": "Your website address",
   "ob.gate.placeholder": "yourcompany.com",
   "ob.gate.submit": "Read my site",
@@ -5247,11 +5270,14 @@ export const en = {
   "auth.coreWork":
     "I’ll keep your CRM up to date, spot what needs attention, and prepare the next step—so you can focus on customers.",
   // The one limit left, and the only sentence here a reader has to be able to
-  // rely on: nothing leaves the installation until a person says so. It keeps
-  // the icon badge the four older limits carried, because it is the same
-  // register — an absolute the system enforces, not a feature.
+  // rely on. It keeps the icon badge the four older limits carried, because it
+  // is the same register — an absolute the system enforces, not a feature. So it
+  // states the limit that IS absolute: an agent inherits one person's authority
+  // and cannot exceed it. The older promise here said nothing is sent without
+  // asking first, which the send verbs stopped doing when a person's grant of
+  // the `send` scope became the approval.
   "auth.corePromise":
-    "And don’t worry: I’ll never send an email or message without asking you first.",
+    "And I only ever act with the permission you gave me — never more than you can do yourself.",
   "auth.coreHandover": "First, let me make sure it’s really you…",
   "auth.coreConfigured": "Configured",
   "auth.coreUnconfigured": "AI not configured",
@@ -6210,7 +6236,7 @@ export const en = {
     "Drop your writing here, or click to choose files",
   "settings.voice.whyToggle": "Why this matters",
   "settings.voice.whyBody":
-    "Margince drafts emails for you in your own words, and nothing sends until you approve it. It learns your tone, rhythm and phrasing from your own writing, and from nobody else's. Your samples stay private to you.",
+    "Margince drafts emails for you in your own words, so what goes out sounds like you. It learns your tone, rhythm and phrasing from your own writing, and from nobody else's. Your samples stay private to you.",
   "settings.voice.worksTitle": "What works best",
   "settings.voice.worksEmails":
     "Sent emails, saved as .txt or .md. They show how you write when you want something.",
@@ -7383,7 +7409,6 @@ export const en = {
 
   "person.rail.reviewFirst": "Review first",
   "person.rail.blocked": "Blocked",
-  "person.rail.ready": "Ready",
   "person.rail.pulseTitle": "Relationship pulse",
   "person.rail.explain": "Explain",
   "person.rail.direction": "Direction",
@@ -7965,7 +7990,7 @@ export const en = {
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Reading your day…",
-  "worklist.queue": "What to do next",
+  "worklist.queue": "Today",
   "worklist.more": "Show more",
   "worklist.more.failed": "Could not load more. Try again.",
   "worklist.summary":
@@ -7999,19 +8024,6 @@ export const en = {
   "worklist.pane.lastInbound": "They last wrote",
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
-  "worklist.focus.title": "Do this next",
-  "worklist.nextup.title": "And then",
-  "worklist.focus.verb.decide": "Decide",
-  "worklist.focus.verb.merge": "Review the pair",
-  "worklist.focus.verb.complete": "Complete it",
-  "worklist.focus.verb.act": "Act on it",
-  // Required by the template's key type, never produced: worthActingOn
-  // excludes primary_action "acknowledge" before this key is ever built.
-  "worklist.focus.verb.acknowledge": "Acknowledge",
-  "worklist.focus.verb.open": "Open it",
-  "worklist.focus.verb.snooze": "Open it",
-  "worklist.focus.verb.dismiss": "Open it",
-  "worklist.focus.verb.set_aside": "Open it",
   "worklist.band.now": "Now",
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
@@ -8247,6 +8259,7 @@ export const en = {
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
+  "worklist.verb.completeFailed": "That task could not be completed.",
   // The frame states the fact and the source follows it, rather than the
   // source standing as the subject. `sourceName` returns a row TITLE — "A
   // mailbox connection needs attention", "Two records look like the same one"

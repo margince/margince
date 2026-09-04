@@ -5,7 +5,7 @@ Legibility is not polish applied at the end — it is the property that decides
 whether the next change is cheap or dangerous.
 
 The binding form is *Craftsmanship* in the
-rulebook: the anti-tell catalog T1–T10, the positive rules P1–P5, and the
+rulebook: the anti-tell catalog T1–T11, the positive rules P1–P5, and the
 deterministic `craft static` gate,
 diff-scoped and strict. It judges the **Go files a push changes** — a docs-only
 push exits before it runs at all. This page is the reasoning
@@ -23,8 +23,8 @@ The sharpest instance: **a comment that reaches a machine reader needs its
 caveat spelled out.** A rule about deriving SQL placeholders was drafted showing
 `fmt.Sprintf("%s = $%d", col, len(args))` without saying what may fill `%s` — a
 human would have inferred "not a request-body string"; the text as written would
-have taught identifier injection to every future agent, because `AGENTS.md` goes
-verbatim into the gate prompt.
+have taught identifier injection to every future agent, because the rulebook's
+`## Craftsmanship` section goes into the gate prompt as written.
 
 ## The method
 

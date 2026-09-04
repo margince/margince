@@ -24,7 +24,9 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -115,5 +117,138 @@ func TestTheAuthorOfAnInboundMessageStillMakesCorrespondenceLawful(t *testing.T)
 	if got.Qualifying == nil || got.Qualifying.Kind != "inbound_message" {
 		t.Errorf("qualifying event %+v, want an inbound_message — the basis has to name the "+
 			"message it was read from, or nothing can be stamped for Art 5(2)", got.Qualifying)
+	}
+}
+
+// attendedMeeting plants a meeting the subject was in, at the given offset from
+// now — negative for one that has happened, positive for one in the diary.
+//
+// capturedBy and status are parameters because they are the two things the arm
+// refuses on, and a fixture that hard-coded the passing value would let a test
+// prove the feature while proving nothing about its bounds.
+func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capturedBy, status string) {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status)
+			VALUES ($1, 'meeting', 'gcal', now() + $2::interval, $3, NULLIF($4, ''))`,
+			id, fmt.Sprintf("%d seconds", int(offset.Seconds())), capturedBy, status); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, person_id, role)
+			VALUES ($1, $2, 'attendee')`, id, e.person)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a meeting at %s: %v", offset, err)
+	}
+}
+
+// capturedMeeting is the ordinary case: a calendar the mailbox owner holds,
+// synced by a connector, with no acceptance state recorded.
+const capturedMeeting = "connector:gcal:x"
+
+// A meeting we are about to have makes correspondence lawful.
+//
+// This is the case the whole arm exists for. A partner invited to a demo next
+// week was refused as somebody who "has never written to you" — and the
+// invitation made it worse, because the classifier read the machine-generated
+// calendar mail as transactional and judged the person noise on it.
+//
+// Mutation: drop the meetingQualifyingEvent arm from latestQualifyingEvent and
+// this fails, the verdict still unknown.
+func TestAMeetingInTheDiaryMakesCorrespondenceLawful(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, 4*24*time.Hour, capturedMeeting, "")
+
+	got := e.verdict(t)
+	if got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) for somebody we are meeting in four days, want allowed — "+
+			"a meeting means both sides put time in a calendar, which is stronger evidence of a "+
+			"relationship than an email anybody may send unsolicited", got.State, got.Reason)
+	}
+	if got.Qualifying == nil || got.Qualifying.Kind != KindMeeting {
+		t.Fatalf("qualifying event %+v, want a %s — the basis has to name the meeting it was read "+
+			"from, or nothing can be stamped for Art 5(2)", got.Qualifying, KindMeeting)
+	}
+}
+
+// A meeting that already happened counts too, while it is inside the window.
+func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, "")
+
+	if got := e.verdict(t); got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) for somebody we met yesterday, want allowed", got.State, got.Reason)
+	}
+}
+
+// A meeting a HUMAN logged is not evidence, however it is labelled.
+//
+// POST /activities takes kind, occurred_at and links from the request body, and
+// the log path stamps a participant row for every linked person. So without this
+// bound any seat that can see a contact could log a "meeting" naming them and
+// mail them on the strength of it — writing its own permission slip.
+//
+// Mutation: drop the captured_by clause and this passes, which is the whole
+// forgery.
+func TestAHandLoggedMeetingIsNotEvidence(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, 4*24*time.Hour, "human:"+e.user.String(), "")
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a meeting a seat logged by hand, want not allowed — "+
+			"the request body names the kind, the date and the people, so anybody who can see a "+
+			"contact could otherwise authorize themselves to mail them", got.State, got.Reason)
+	}
+}
+
+// A meeting that was declined or abandoned is not evidence either.
+func TestADeclinedOrAbandonedMeetingIsNotEvidence(t *testing.T) {
+	for _, status := range []string{"no_show", "canceled"} {
+		t.Run(status, func(t *testing.T) {
+			e := setupQualifying(t)
+
+			e.attendedMeeting(t, -24*time.Hour, capturedMeeting, status)
+
+			if got := e.verdict(t); got.State == VerdictAllowed {
+				t.Fatalf("verdict %q (%s) on a %s meeting, want not allowed — an invitation "+
+					"somebody declined is the opposite of evidence they welcome contact",
+					got.State, got.Reason, status)
+			}
+		})
+	}
+}
+
+// A meeting dated beyond the horizon is not evidence.
+//
+// The derived row is stamped and read back afterwards without revalidating its
+// source, so a meeting dated far enough ahead would authorize sending forever.
+func TestAMeetingBeyondTheHorizonIsNotEvidence(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, 365*24*time.Hour, capturedMeeting, "")
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a meeting a year out, want not allowed — the stamped row "+
+			"outlives its source, so a far-future date would authorize sending indefinitely",
+			got.State, got.Reason)
+	}
+}
+
+// Somebody with no meeting and nothing else on the record is still refused.
+//
+// Without this the tests above are satisfied by an arm that allows nobody, which
+// is the failure mode a default-deny gate hides best.
+func TestSomebodyWithNoMeetingIsStillRefused(t *testing.T) {
+	e := setupQualifying(t)
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) for somebody with nothing on the record, want not allowed — "+
+			"default-deny is the whole posture", got.State, got.Reason)
 	}
 }

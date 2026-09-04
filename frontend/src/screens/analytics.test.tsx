@@ -212,13 +212,18 @@ describe("AnalyticsScreen", () => {
     ).toBe(true);
     // AC-F1: the weighted forecast is the server's own figure —
     // requested and rendered, not left computed-and-unshown.
+    //
+    // Matched by SHAPE rather than by the exact field name, because the
+    // forecast moved from the native weighted column to the converted one and
+    // a test pinned to either spelling asserts which column is fashionable
+    // rather than that the figure is asked for at all.
     expect(
       bodies.some(
         (b) =>
           b.key === "forecast" &&
           Array.isArray(b.body.aggregates) &&
-          (b.body.aggregates as { field?: string }[]).some(
-            (a) => a.field === "weighted_amount_minor",
+          (b.body.aggregates as { field?: string }[]).some((a) =>
+            a.field?.startsWith("weighted_"),
           ),
       ),
     ).toBe(true);
@@ -504,9 +509,24 @@ describe("reports never sum money across currencies", () => {
   });
 
   // The money plans that are still NATIVE keep their currency grouping: the
-  // company table and the forecast strip sum amount_minor, and a total spanning
-  // currencies there would be a number with no unit.
-  it("still groups the native money plans by currency", async () => {
+  // company table sums amount_minor, and a total spanning currencies there
+  // would be a number with no unit.
+  //
+  // Every plan is checked, not a named list of them — a list would go on
+  // passing after a plan was converted (its entry simply removed) or after one
+  // was added summing native money nobody thought to add. The rule is about
+  // what a plan ASKS FOR: sum a native minor-unit column and currency must be
+  // in the grouping.
+  //
+  // The scan reads the field NAME, which is as strong as the convention behind
+  // it. Every money measure the report engine offers today ends in `_minor`
+  // (`amount_minor`, `weighted_amount_minor`) or `_base_minor` (converted),
+  // and nothing on the server enforces that — a measure named `amount_cents`
+  // would sum across currencies with this test still green. Two things would
+  // have to happen for that: somebody adds a money measure AND spells it
+  // outside the convention. If you are that person, the fix is #4131's — the
+  // server refusing the combination — not a longer suffix list here.
+  it("groups every native money plan by currency", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -515,10 +535,29 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
-    for (const key of ["forecast", "open-deals-per-company"]) {
-      const plan = bodies.find((sent) => sent.key === key);
-      expect(plan?.body.group_by).toContain("currency");
+
+    expect(bodies.length).toBeGreaterThan(0);
+    let nativePlans = 0;
+    for (const { key, body } of bodies) {
+      const aggregates = (body.aggregates ?? []) as { field?: string }[];
+      const sumsNative = aggregates.some(
+        (aggregate) =>
+          aggregate.field != null &&
+          aggregate.field.endsWith("_minor") &&
+          !aggregate.field.endsWith("_base_minor"),
+      );
+      if (!sumsNative) {
+        continue;
+      }
+      nativePlans += 1;
+      expect(
+        body.group_by,
+        `${key} sums a native minor-unit column without grouping by currency`,
+      ).toContain("currency");
     }
+    // A scan that matched nothing would pass over a screen where every plan
+    // had quietly gone native.
+    expect(nativePlans).toBeGreaterThan(0);
   });
 
   it("draws one row per stage, in the installation's base currency", async () => {
@@ -629,26 +668,109 @@ describe("reports never sum money across currencies", () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        // Converted rows: one per category, the server having already summed
+        // each deal in the base currency. The uncategorised row is the one
+        // this test is about — on the demo dataset it was 22 of 27 open deals,
+        // and a slot set built from the named enum alone does not move that
+        // money to another tile, it drops it off the screen.
         forecastRows: [
           {
             forecast_category: "omitted",
-            currency: "EUR",
             raw_minor: 58_860_000,
             weighted_minor: 31_502_500,
             deal_count: 5,
           },
           {
             forecast_category: null,
-            currency: "EUR",
             raw_minor: 202_720_000,
             weighted_minor: 76_460_000,
             deal_count: 17,
           },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent.setup().click(await screen.findByText("Pipeline"));
+
+    expect(
+      await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
+    ).toBeTruthy();
+    // And never folded into a named category: the two totals added together
+    // is the number that must NOT appear anywhere.
+    expect(
+      screen.queryByText(formatMoney(261_580_000, "EUR", "en")),
+    ).toBeNull();
+  });
+
+  // The forecast is ONE comparison now, not one per currency.
+  //
+  // It drew a band per currency for as long as the report summed native money,
+  // and that was honest but defeated the point: a manager comparing commit
+  // against best case compared them inside each currency and never across the
+  // business. The server converts, so there is one denomination — and the
+  // proof is that a currency CODE no longer appears as a heading over the
+  // tiles.
+  it("draws the categories as one comparison, in the base currency", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        onRun: (key, body) => bodies.push({ key, body }),
+        forecastRows: [
           {
-            forecast_category: null,
-            currency: "VND",
-            raw_minor: 262_000_000_000,
-            weighted_minor: 185_500_000_000,
+            forecast_category: "commit",
+            raw_minor: 2_500_000,
+            weighted_minor: 250_000,
+            deal_count: 1,
+          },
+          {
+            forecast_category: "best_case",
+            raw_minor: 920_000,
+            weighted_minor: 460_000,
+            deal_count: 1,
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent.setup().click(await screen.findByText("Pipeline"));
+
+    // Both categories, both figures, all in the one base currency.
+    expect(
+      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
+    ).toBeTruthy();
+    expect(screen.getByText(formatMoney(920_000, "EUR", "en"))).toBeTruthy();
+
+    // The plan asks for converted money and does NOT group by currency: those
+    // two go together, and a request that changed one without the other would
+    // either band a single denomination or sum minor units across several.
+    const plan = bodies.find((sent) => sent.key === "forecast");
+    expect(plan?.body.group_by).toEqual(["forecast_category"]);
+    expect(plan?.body.aggregates).toContainEqual({
+      fn: "sum",
+      field: "amount_base_minor",
+      as: "raw_minor",
+    });
+  });
+
+  // A converted total silently skips a deal the rate sheet cannot price, so the
+  // tile says how many deals it is about as well as what they are worth.
+  //
+  // The sum has no honest alternative — guessing a rate would invent money —
+  // but a tile printing the total alone tells a reader a category is worth
+  // €25,000 when it holds two deals and one of them was left out. The count is
+  // what makes that visible: two deals, one figure.
+  it("says how many deals a category holds, not only what it is worth", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        forecastRows: [
+          {
+            forecast_category: "commit",
+            // Two deals; one is in a currency the sheet cannot price, so it
+            // contributes nothing to the sum and is still counted.
+            raw_minor: 2_500_000,
+            weighted_minor: 250_000,
             deal_count: 2,
           },
         ],
@@ -656,17 +778,12 @@ describe("reports never sum money across currencies", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.setup().click(await screen.findByText("Pipeline"));
-    // Both currencies of the uncategorised pipeline, each in its own unit.
+
     expect(
-      await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
+      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
     ).toBeTruthy();
-    expect(
-      screen.getByText(formatMoney(262_000_000_000, "VND", "en")),
-    ).toBeTruthy();
-    // And never folded into one of the named categories.
-    expect(
-      screen.queryByText(formatMoney(261_580_000, "EUR", "en")),
-    ).toBeNull();
+    // The count rides on the tile's second line beside the weighted figure.
+    expect(screen.getByText((text) => text.includes("Deals: 2"))).toBeTruthy();
   });
 
   // An installation whose deals are all categorised should not be shown an empty

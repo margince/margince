@@ -194,8 +194,12 @@ func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
 // be released — and a kind that registered the executor without the preflight
 // would answer it only where the answer is too late to act on.
 type lateApprovalEffect struct {
-	effect   func(*approvals.Service, *activities.Store, activities.ConsentGate, activities.DeliveryStager) approvals.ApprovedEffect
-	precheck func(*activities.Store, activities.ConsentGate, activities.DeliveryStager) approvals.ReleasePrecheck
+	effect func(*approvals.Service, *activities.Store, activities.ConsentGate, activities.DeliveryStager) approvals.ApprovedEffect
+	// The CONCRETE gate, not the activities.ConsentGate seam the effect takes.
+	// A precheck has to ask the engine what it would decide, and Preview is not
+	// on that seam — the seam is the send path's default-deny door and this is
+	// the question behind it.
+	precheck func(*activities.Store, *consent.Gate, activities.DeliveryStager) approvals.ReleasePrecheck
 }
 
 // lateApprovalEffects are the approve-side pairs that cannot be registered with

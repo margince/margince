@@ -42,7 +42,7 @@ export {
 
 // The primary nav. Order is normative and rail.test.tsx pins it. Home stands
 // alone above three labeled groups; the groups are the expanded sidebar's own
-// structure and collapse to hairline rules at 64px, so the collapsed rail is the
+// structure and collapse to hairline rules at 56px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
 //
 // It carries ten rows. Filters & views and Projects are destinations here and

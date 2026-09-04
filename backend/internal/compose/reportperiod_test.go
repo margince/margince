@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,12 @@ import (
 // REPORT-VOCAB-1 pins win-loss's four vocabularies. These assert the
 // PROPERTIES it pins rather than re-listing the map, so a deliberate addition
 // stays green and a rule broken goes red.
+// The aggregate spellings a per-deal measure may not contain. OVER catches a
+// window function, which is the shape that would NOT fail loudly: Postgres
+// accepts it and answers per partition.
+var aggregateInExpr = regexp.MustCompile(
+	`(?i)\b(sum|avg|count|min|max|percentile_cont|percentile_disc|array_agg|string_agg)\s*\(|\bOVER\s*\(`)
+
 func TestWinLossVocabularyMatchesItsPinnedShape(t *testing.T) {
 	spec, ok := prebuiltReports["win-loss"]
 	if !ok {
@@ -35,8 +42,32 @@ func TestWinLossVocabularyMatchesItsPinnedShape(t *testing.T) {
 	if _, ok := spec.measures["win_rate"]; ok {
 		t.Error("win_rate is a measure; it is a ratio across groups and must be read off the rows")
 	}
-	if !reflect.DeepEqual(sortedKeys(spec.measures), []string{"amount_minor"}) {
-		t.Errorf("measures = %v, want only amount_minor", sortedKeys(spec.measures))
+	// Every measure is a figure ONE closed deal carries, so the engine's own
+	// sum, median and p75 over a group of them mean something.
+	//
+	// Read off the EXPRESSION, not the name. This replaced an exact list of
+	// measure names, written when there was one, which failed a deliberate
+	// addition and a mistake identically — and this file's header says it pins
+	// properties for that reason. A name-shaped rule was the first attempt and
+	// was no better: "win_rate" is refused by a suffix scan and "win_ratio"
+	// walks past it, so the test would have asserted a spelling convention
+	// rather than the thing that makes a measure summable.
+	//
+	// A measure whose SQL already aggregates is the real defect. The engine
+	// wraps every measure in its own aggregate — sum(expr), percentile over
+	// expr — so an expr containing one produces nested aggregates, which
+	// Postgres refuses outright, or a window function, which silently returns
+	// a figure per PARTITION rather than per deal.
+	for name, expr := range spec.measures {
+		if aggregateInExpr.MatchString(expr) {
+			t.Errorf("measure %q already aggregates: %s\n\n"+
+				"A measure is a figure ONE deal carries; the engine applies the "+
+				"aggregate. A ratio or a group figure belongs in the reader's "+
+				"arithmetic over the rows, as win rate does.", name, expr)
+		}
+	}
+	if len(spec.measures) == 0 {
+		t.Error("win-loss offers no measures, so it can answer no question about size or duration")
 	}
 	// The grain is one row per deal: no join may widen it.
 	if got := spec.fromClause(); got != "deal t" {

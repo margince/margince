@@ -34,12 +34,14 @@ import (
 // declares its fields. It is a type binding, not a field list: nothing about
 // WHICH fields are askable is decided here.
 var contractRecords = map[string]reflect.Type{
-	entityPerson:       reflect.TypeOf(crmcontracts.Person{}),
-	entityOrganization: reflect.TypeOf(crmcontracts.Organization{}),
-	entityDeal:         reflect.TypeOf(crmcontracts.Deal{}),
-	entityLead:         reflect.TypeOf(crmcontracts.Lead{}),
-	entityProject:      reflect.TypeOf(crmcontracts.Project{}),
-	entityActivity:     reflect.TypeOf(crmcontracts.Activity{}),
+	entityPerson:        reflect.TypeOf(crmcontracts.Person{}),
+	entityOrganization:  reflect.TypeOf(crmcontracts.Organization{}),
+	entityDeal:          reflect.TypeOf(crmcontracts.Deal{}),
+	entityLead:          reflect.TypeOf(crmcontracts.Lead{}),
+	entityProject:       reflect.TypeOf(crmcontracts.Project{}),
+	entityActivity:      reflect.TypeOf(crmcontracts.Activity{}),
+	entityProduct:       reflect.TypeOf(crmcontracts.Product{}),
+	entityOfferTemplate: reflect.TypeOf(crmcontracts.OfferTemplate{}),
 }
 
 // geoStructs names the contract types that carry a place rather than a value.

@@ -134,7 +134,13 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	// VND with no rate sheet entry at all.
 	seedPricedDeal(t, e, "No rate", 5_000_000, "VND", "open")
 
-	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
+	// The same plan plus the count OF the money, which is what says the total
+	// is short. `count` of a measure counts the rows it could be computed for.
+	const withPriced = `{"group_by":["stage_id"],"aggregates":[` +
+		`{"fn":"count","as":"deals"},` +
+		`{"fn":"count","field":"amount_base_minor","as":"priced"},` +
+		`{"fn":"sum","field":"amount_base_minor","as":"base"}]}`
+	result := e.runReport(e.Admin(), t, "pipeline-current", withPriced)
 	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 
 	if got := wireInt(t, row, "deals"); got != 2 {
@@ -142,6 +148,33 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	}
 	if got := wireInt(t, row, "base"); got != 10_000 {
 		t.Errorf("money total was %v, want only the deal that could be priced", got)
+	}
+	// The two numbers disagreeing is the whole point: a reader comparing them
+	// can see the total covers one deal of the two. Equal counts would say the
+	// money is complete, which is the state this row is not in.
+	if got := wireInt(t, row, "priced"); got != 1 {
+		t.Errorf("the money covers %v deals, want 1 — a short total beside a complete "+
+			"count reads as whole, and nothing else on the row says otherwise", got)
+	}
+}
+
+// The default plan carries it too, so a caller who asks nothing still gets the
+// number that says whether the total is complete. A measure only the deliberate
+// caller receives does not close this: the screens and the MCP door both run
+// the default.
+func TestPipelineCurrentDefaultsToReportingWhatTheMoneyCovers(t *testing.T) {
+	e := setupForecast(t)
+	seedPricedDeal(t, e, "Priced", 10_000, "EUR", "open")
+	seedPricedDeal(t, e, "No rate", 5_000_000, "VND", "open")
+
+	result := e.runReport(e.Admin(), t, "pipeline-current", `{"group_by":["stage_id"]}`)
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
+
+	if got := wireInt(t, row, "deals"); got != 2 {
+		t.Errorf("the default plan counted %v deals, want 2", got)
+	}
+	if got := wireInt(t, row, "priced_deals"); got != 1 {
+		t.Errorf("the default plan says the money covers %v deals, want 1", got)
 	}
 }
 

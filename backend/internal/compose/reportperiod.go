@@ -28,6 +28,12 @@ const (
 	colClosedAt = "t.closed_at"
 	colSource   = "t.source"
 
+	// fieldDaysToClose is named because it is spelled in the measure map and
+	// in the default aggregates, and a name written twice can come to be
+	// written two ways — which makes an aggregate reference a measure that
+	// does not exist.
+	fieldDaysToClose = "days_to_close"
+
 	fieldSource        = "source"
 	fieldPeriodYear    = "period_year"
 	fieldPeriodQuarter = "period_quarter"
@@ -49,6 +55,38 @@ const (
 	// and the two are concatenated.
 	patternFiscalQuarter = "Q"
 )
+
+// daysToCloseExpr is how long a deal took: whole days from the day it was
+// created to the day it closed.
+//
+// Both columns sit on the deal, so this needs no join and no history.
+// closed_at is NOT NULL for every row this report reads, and created_at is
+// NOT NULL on every deal there is, so the measure is never absent.
+//
+// DATES subtracted, not instants. A deal created at 23:50 and closed at 00:10
+// the next night took two calendar days by any reader's reckoning and 0.01 by
+// the clock's; every other duration on this surface — stage age, the slipped
+// rule — already counts the days a person would count.
+//
+// Both days are read on the INSTALLATION's reporting clock, which is what the
+// period buckets beside them use. Cast in the session's zone instead, the same
+// pair of instants is two days in UTC and one in Asia/Ho_Chi_Minh — so the
+// duration would move with the deployment region while the period bucket on
+// the very same row did not, and a row could disagree with itself.
+//
+// Zero is a real answer: a deal created and closed the same day closed
+// same-day, which is a fact about the sale rather than a missing figure.
+//
+// A NEGATIVE span is not an answer, and answers NULL. Nothing in the schema
+// orders closed_at after created_at — the product's own write path sets
+// closed_at to now() and never takes it from a caller, so the pair can only
+// invert through an import or a hand-written UPDATE. Left in, one backdated
+// row drags a median toward a duration nobody experienced, and a reader has no
+// way to see it happen. Absent, the count beside it still says how many deals
+// there were, which is the same bargain the sample floor makes.
+var daysToCloseExpr = "(CASE WHEN " + zonedAnchor(colClosedAt) + "::date >= " +
+	zonedAnchor("t.created_at") + "::date THEN " +
+	zonedAnchor(colClosedAt) + "::date - " + zonedAnchor("t.created_at") + "::date END)"
 
 // periodBucketExpr renders one grain over one anchor.
 //
@@ -219,7 +257,25 @@ func winLossSpec() reportSpec {
 		basePlain: "live (unarchived) deals that have been won or lost, bucketed by when they closed " +
 			"in the installation's reporting timezone (an open deal is absent from this report, not a zero in it)",
 		dimensions: dimensions,
-		measures:   map[string]string{fieldAmountMinor: colAmountMinor},
+		// Money in both denominations, and how long the deal took.
+		//
+		// The NATIVE pair keeps its place because this spec's default grouping
+		// includes currency, so a sum under one currency row is well defined —
+		// the same reason the forecast and deals-by-stage keep theirs.
+		//
+		// The BASE pair is what makes a period comparable with the one before
+		// it. "Did we win more this quarter" is a question about the business,
+		// not about each currency it trades in, and a caller who groups by
+		// period alone can only ask it of converted money.
+		//
+		// days_to_close is the measure this report existed without: it knew
+		// how much closed and never how long it took, so a team getting slower
+		// at the same revenue looked identical to one that was not.
+		measures: map[string]string{
+			fieldAmountMinor:     colAmountMinor,
+			fieldAmountBaseMinor: pipelineBaseValueExpr,
+			fieldDaysToClose:     daysToCloseExpr,
+		},
 		// Every dimension also filters (REPORT-VOCAB-1): the period grains
 		// included, so "won deals in 2026" is one call rather than a group-by
 		// the caller then has to sift.
@@ -234,9 +290,25 @@ func winLossSpec() reportSpec {
 		// partner dimension does on deals-by-stage.
 		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
 		defaultBy:       moneyDefaultBy(fieldStatus),
+		// The count and the native sum keep their names and their places: they
+		// are what every caller of this report already reads, and renaming or
+		// reordering a default column breaks them for no gain.
+		//
+		// Median and p75 days are ADDED rather than substituted. How long a
+		// deal takes is the other half of how a team is doing, and a report
+		// that knew only the money could not tell a team getting slower at the
+		// same revenue from one that was not.
+		//
+		// Both percentiles together, for the reason stage-age gives: one
+		// without the other invites the reading that the middle deal is the
+		// whole story, and the gap between them is what says whether the tail
+		// is long. Below the engine's sample floor they come back NULL, and the
+		// count beside them says why.
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
+			{Fn: aggFnMedian, Field: fieldDaysToClose, As: "median_days_to_close"},
+			{Fn: aggFnP75, Field: fieldDaysToClose, As: "p75_days_to_close"},
 		},
 	}
 }

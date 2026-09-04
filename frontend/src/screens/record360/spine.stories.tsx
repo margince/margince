@@ -46,7 +46,10 @@ const base = {
   next_steps: { data: [], page },
 } as unknown as View;
 
-function Card({ view }: Readonly<{ view: View }>) {
+function Card({
+  view,
+  onOpenEmail,
+}: Readonly<{ view: View; onOpenEmail?: (activityId: string) => void }>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
@@ -54,6 +57,7 @@ function Card({ view }: Readonly<{ view: View }>) {
           <RecordSpine
             source={view}
             commercial={view?.state_strip?.commercial}
+            onOpenEmail={onOpenEmail}
           />
         </Panel>
       </div>
@@ -202,6 +206,56 @@ const withHistory = {
 } as unknown as View;
 
 export const WithHistory: Story = { render: () => <Card view={withHistory} /> };
+
+// Real mail, which does not write subject lines to fit a column: a receipt
+// carrying a tracking reference with no space in it, and an invoice subject
+// three times the width of the stop it belongs to. Every stop stays inside its
+// own stretch of the axis — the state this exists to hold, because a subject
+// that escaped its column printed straight across the stops beside it and the
+// thread became one smear of overlapping words.
+const longSubjects = {
+  ...goneQuiet,
+  activities: {
+    data: [
+      {
+        id: "m-3",
+        kind: "email",
+        direction: "inbound",
+        subject:
+          "Apartment Management Services — Invoice for June, July and August 2026",
+        occurred_at: "2026-08-18T09:00:00Z",
+        thread_key: "t-invoice",
+        email_summary: { display_status: "visible" },
+        links: [],
+      },
+      {
+        id: "m-2",
+        kind: "email",
+        direction: "inbound",
+        subject: "YoSC-eSNpTHBr7_A0H0t_p16FBCWDD5389B22k64593Hmlet",
+        occurred_at: "2026-08-14T09:00:00Z",
+        thread_key: "t-receipt",
+        email_summary: { display_status: "visible" },
+        links: [],
+      },
+      {
+        id: "m-1",
+        kind: "email",
+        direction: "inbound",
+        subject: "Receipt for Lars Jankowsky (Re:Fly)",
+        occurred_at: "2026-08-06T09:00:00Z",
+        thread_key: "t-fly",
+        email_summary: { display_status: "visible" },
+        links: [],
+      },
+    ],
+    page: { has_more: true, next_cursor: null },
+  },
+} as unknown as View;
+
+export const LongSubjects: Story = {
+  render: () => <Card view={longSubjects} onOpenEmail={() => {}} />,
+};
 
 const meta: Meta<typeof RecordSpine> = {
   title: "Records/Company 360/Spine",

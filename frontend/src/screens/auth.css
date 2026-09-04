@@ -193,8 +193,8 @@
 .auth-card h1 {
   font-family: var(--f-display);
   font-weight: 600;
-  font-size: clamp(27px, 2.2vw, 33px);
-  letter-spacing: -0.02em;
+  font-size: clamp(var(--fs-h1), 2.2vw, var(--fs-display));
+  letter-spacing: var(--tracking-display);
   line-height: 1.15;
   color: var(--textPrimary);
 }
@@ -203,7 +203,7 @@
    quietest thing on a screen with only three sentences on it. */
 .auth-card .card-sub {
   margin-top: var(--space-2);
-  font-size: 14.5px;
+  font-size: var(--fs-lead);
   color: var(--textSecondary);
   line-height: 1.55;
   /* Balanced, not merely orphan-free: two lines of roughly equal length under a
@@ -263,9 +263,9 @@
   gap: var(--space-3);
   margin: var(--space-6) 0 var(--space-1);
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }
@@ -324,12 +324,12 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--accentText);
   padding: 0;
   text-transform: none;
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
 }
 .auth-link:hover,
 .auth-link:focus-visible {
@@ -350,12 +350,12 @@
   padding: var(--space-3);
 }
 .auth-error .ae-t {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--danger);
 }
 .auth-error .ae-m {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   margin-top: var(--space-1);
   line-height: 1.45;
@@ -368,7 +368,7 @@
    dressed as one — the user has nothing to correct. */
 .auth-notice {
   text-align: left;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
   background: var(--bgCard);
   border: 1px solid var(--borderSubtle);
@@ -415,7 +415,7 @@
   width: 100%;
   max-width: 400px;
   padding-top: calc(var(--space-6) * 1.5);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   line-height: 1.5;
   color: var(--textMeta);
 }
@@ -452,6 +452,7 @@
   width: 3px;
   height: 3px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderStrong);
 }
 
@@ -628,9 +629,9 @@
    the same sentence read as a state indicator for something. */
 .auth-kicker {
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: 600;
-  letter-spacing: 0.11em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--accentText);
 }
@@ -643,10 +644,10 @@
      what they say. */
   margin-top: var(--space-1);
   font-family: var(--f-display);
-  font-size: clamp(22px, 2.4vw, 32px);
+  font-size: clamp(var(--fs-h2), 2.4vw, var(--fs-display));
   font-weight: 500;
   line-height: 1.14;
-  letter-spacing: -0.025em;
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 /* ZERO layout shift while typing. The ghost is the full sentence rendered
@@ -686,7 +687,7 @@
   margin-top: var(--space-3);
   max-width: 36ch;
   font-family: var(--f-display);
-  font-size: 17px;
+  font-size: var(--fs-h3);
   font-weight: 500;
   line-height: 1.4;
   color: var(--textPrimary);
@@ -698,7 +699,7 @@
 .auth-scope {
   margin-top: var(--space-3);
   max-width: 42ch;
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.55;
   color: var(--textContent);
   /* Same reason as the task column's sub-line: no one-word last line. */
@@ -716,7 +717,7 @@
   gap: var(--space-2);
   min-height: 31px;
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 /* --borderControl, and for the same reason a field's outline reads a visible
@@ -735,6 +736,7 @@
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--borderControl);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textContent);
 }
@@ -762,7 +764,7 @@
      caption that lost its picture. */
   max-width: 42ch;
   margin-inline: auto;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.4;
   color: var(--textContent);
   text-align: left;
@@ -773,7 +775,7 @@
    that gives the screen back to the reader and points at the form. */
 .auth-handover {
   margin-top: var(--space-4);
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   /* Quieter than the sentences above, but still body-weight text: it is the one
      line on this half of the screen that asks the reader to do something, and
@@ -910,7 +912,7 @@
     padding: 0;
   }
   .auth-statement {
-    font-size: 23px;
+    font-size: var(--fs-h1);
   }
   .auth-promise {
     /* Tighter than the wide layout's: the same 24px that separates two registers

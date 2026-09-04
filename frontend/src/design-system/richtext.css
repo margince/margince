@@ -64,7 +64,7 @@
 
 .richtext-input {
   font-family: var(--f-body);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   color: var(--textPrimary);
   padding: 9px 11px;
   outline: none;

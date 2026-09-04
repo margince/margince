@@ -182,8 +182,8 @@ export const Ladder: Story = {
             style={{
               color: "var(--textMeta)",
               fontFamily: "var(--f-mono)",
-              fontSize: "11px",
-              letterSpacing: "0.08em",
+              fontSize: "var(--fs-eyebrow)",
+              letterSpacing: "var(--tracking-eyebrow)",
               textTransform: "uppercase",
             }}
           >
