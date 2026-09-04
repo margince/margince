@@ -11118,7 +11118,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * What this period's forecast has been called, newest first.
+         * @description The calls made for one period and scope, newest first — not just the one standing now.
+         *
+         *     Capped at the most recent 500. Nothing bounds how often a period may be called, so an
+         *     uncapped answer could grow without limit; the cap sits far above what a period
+         *     accumulates in practice, and takes the NEWEST entries, which are the ones a reader
+         *     reviewing a period is asking about.
+         *
+         *     A call supersedes rather than overwrites, so the table already holds what was
+         *     believed on the day it was believed. This is how that gets read: the sequence is the
+         *     record of how a period's expectation moved, and who moved it, which is what anyone
+         *     reviewing how forecasting went is actually asking for.
+         *
+         *     The chain is linear per period and scope. Each entry names the call it replaced in
+         *     `supersedes_id`, and the first call of a period names none — a different fact from
+         *     replacing nothing.
+         *
+         *     Answers the same scope the readings do, resolved the same way and refused the same
+         *     way: asking for a wider tier than the caller's seat is `403`, and naming a team or
+         *     person outside their lens is `404` — naming it at all would confirm the subject
+         *     exists.
+         *
+         *     A period nobody has called yet is an empty list, not a `404`. That a period has no
+         *     calls is a real answer about a period the caller may read.
+         */
+        get: operations["listForecastCalls"];
         put?: never;
         /**
          * Record what somebody believes will close.
@@ -47600,6 +47626,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastMovement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listForecastCalls: {
+        parameters: {
+            query?: {
+                /** @description The window length. Quarters follow the installation's financial year. */
+                period?: "quarter" | "month";
+                /** @description Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in. */
+                as_of?: string;
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description Whose forecast, for a team or owner scope. A workspace scope names none. */
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The calls made for that period and scope, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        calls: components["schemas"]["ForecastCall"][];
+                    };
                 };
             };
             401: components["responses"]["Unauthorized"];

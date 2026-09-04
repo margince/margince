@@ -927,6 +927,10 @@ func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
 }
 
+func (stubs) ListForecastCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListForecastCallsParams) {
+	httperr.NotImplemented(w, r, "ListForecastCalls")
+}
+
 func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RecordForecastCall")
 }
