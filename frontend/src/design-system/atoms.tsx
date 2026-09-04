@@ -940,6 +940,13 @@ export function StatCard({
         {label}
         {source && <span className="stat-card-source">{source}</span>}
         {basis && (
+          // The panel is READ, never operated: it holds the working and
+          // nothing to press. That is what lets it open on hover — a panel
+          // carrying a control could not, because `onHover` closes it as the
+          // pointer leaves and keyboard focus never enters it, which is how
+          // the door repeated inside here became a control no keyboard reader
+          // could reach. The door lives once, in the card's foot, where a
+          // reader who has just read the working finds it directly below.
           <Popover
             className="stat-card-basis"
             onHover
@@ -953,16 +960,6 @@ export function StatCard({
               {t("stat.evidence.rests")}
             </span>
             {basis}
-            {/* The same door as the reading's own, repeated where the reader
-                has just finished reading the working. Going to the tab is what
-                most readers do next, and sending them back to find it is a trip
-                the panel can save. */}
-            {onOpen && openLabel && (
-              <button type="button" className="stat-card-open" onClick={onOpen}>
-                {openLabel}
-                <span aria-hidden="true">{" \u2192"}</span>
-              </button>
-            )}
           </Popover>
         )}
       </span>
