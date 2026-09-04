@@ -71,6 +71,20 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 			pkg = file.Name.Name
 		}
 		aliases := aliasesOf(file, packageOfDir)
+		// The identifiers each function declares for itself. A local, a
+		// parameter or a receiver may share a name with an imported package and
+		// SHADOWS it inside that function — Go says so, and the gate would
+		// otherwise map the qualifier to the package's declarations and match
+		// one, while ApplyTx receives something else entirely and refuses it at
+		// runtime. That is the one direction this gate must not fail in.
+		//
+		// Resolved from the syntax rather than through go/types: a gate that
+		// loaded and type-checked the tree to answer one qualifier would cost
+		// the whole build for a question this answers. It over-refuses instead —
+		// a function holding an unrelated local named like an import makes its
+		// ApplyTx call unreadable — which is a loud, fixable failure rather than
+		// a silent pass, and no call site in the tree hits it today.
+		shadowed := shadowedNamesByFunc(file)
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch node := n.(type) {
 			case *ast.ValueSpec:
@@ -83,7 +97,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
 					return true
 				}
-				entry := entryName(node.Args[2], pkg, aliases)
+				entry := entryName(node.Args[2], pkg, aliases, shadowed[enclosingFunc(file, node.Pos())])
 				if entry == "" {
 					// The other half of the same rule. An entry whose EXPRESSION
 					// this walk cannot name — one handed through a call, an
@@ -189,7 +203,7 @@ func hasMachineryApplied(expr ast.Expr) bool {
 // resolves the QUALIFIER through the file's imports, so an alias names the
 // package that actually declares the entry rather than whatever the importer
 // chose to call it.
-func entryName(expr ast.Expr, pkg string, aliases map[string]string) string {
+func entryName(expr ast.Expr, pkg string, aliases map[string]string, shadowed map[string]bool) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		return pkg + "." + e.Name
@@ -199,12 +213,99 @@ func entryName(expr ast.Expr, pkg string, aliases map[string]string) string {
 			return ""
 		}
 		name := qualifier.Name
+		// A qualifier the enclosing function declares for itself is NOT the
+		// package it looks like. Answering "" makes the call site unreadable
+		// and fails, which is the only safe answer: mapping it through the
+		// aliases would name a package's entry the call never passed.
+		if shadowed[name] {
+			return ""
+		}
 		if declared, found := aliases[name]; found {
 			name = declared
 		}
 		return name + "." + e.Sel.Name
 	}
 	return ""
+}
+
+// enclosingFunc names the function declaration a position falls inside, or ""
+// for a call at file scope. The NAME rather than the node, because it is only
+// ever used to look one set up.
+func enclosingFunc(file *ast.File, pos token.Pos) string {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		if pos >= fn.Pos() && pos <= fn.End() {
+			return fn.Name.Name
+		}
+	}
+	return ""
+}
+
+// shadowedNamesByFunc collects, per function, every identifier that function
+// binds — receiver, parameters, named results, short declarations, var specs
+// and range bindings.
+//
+// Deliberately coarse: it does not model block scope, so a name bound anywhere
+// in a function counts as shadowed throughout it. That over-refuses and cannot
+// under-refuse, which is the direction a gate is allowed to be wrong in.
+func shadowedNamesByFunc(file *ast.File) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		bound := map[string]bool{}
+		for _, field := range fieldsOf(fn) {
+			for _, name := range field.Names {
+				bound[name.Name] = true
+			}
+		}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			switch node := n.(type) {
+			case *ast.AssignStmt:
+				if node.Tok != token.DEFINE {
+					return true
+				}
+				for _, lhs := range node.Lhs {
+					if ident, ok := lhs.(*ast.Ident); ok {
+						bound[ident.Name] = true
+					}
+				}
+			case *ast.ValueSpec:
+				for _, name := range node.Names {
+					bound[name.Name] = true
+				}
+			case *ast.RangeStmt:
+				for _, expr := range []ast.Expr{node.Key, node.Value} {
+					if ident, ok := expr.(*ast.Ident); ok {
+						bound[ident.Name] = true
+					}
+				}
+			}
+			return true
+		})
+		out[fn.Name.Name] = bound
+	}
+	return out
+}
+
+// fieldsOf is a function's receiver, parameters and named results together.
+func fieldsOf(fn *ast.FuncDecl) []*ast.Field {
+	var out []*ast.Field
+	if fn.Recv != nil {
+		out = append(out, fn.Recv.List...)
+	}
+	if fn.Type.Params != nil {
+		out = append(out, fn.Type.Params.List...)
+	}
+	if fn.Type.Results != nil {
+		out = append(out, fn.Type.Results.List...)
+	}
+	return out
 }
 
 // aliasesOf maps each import qualifier in this file to the package name that
