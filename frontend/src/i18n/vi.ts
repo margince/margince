@@ -7827,6 +7827,8 @@ export const vi = {
   "worklist.summary.noMiddle":
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
+  "worklist.review.partial":
+    "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
   "worklist.completeness.bounded": "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
   "worklist.clearOfWhatWasRead":

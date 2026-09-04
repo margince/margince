@@ -7915,6 +7915,8 @@ export const de = {
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} nachrangig — {total} insgesamt",
   "worklist.completeness": "{shown} von {considered} angezeigt",
+  "worklist.review.partial":
+    "{loaded} von {total} angezeigt — blättern Sie den Tag weiter, um den Rest zu erreichen",
   "worklist.completeness.bounded":
     "{shown} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",

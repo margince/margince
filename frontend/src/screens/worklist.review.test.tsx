@@ -209,3 +209,79 @@ describe("each panel numbers its own rows", () => {
     expect(within(review).getByText("1")).toBeTruthy();
   });
 });
+
+// What the panel says about the work it is NOT holding.
+//
+// The panel has no cursor of its own: review rows arrive as a side effect of
+// paging the day. Before this, an approval past the page cut simply did not
+// render and nothing on the screen said it existed — a rep saw a clean panel
+// and had no way to learn otherwise.
+describe("the review panel admits what it is not showing", () => {
+  it("says how many the day holds when the panel has fewer", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "t1",
+            source: "task",
+            destination: "today",
+            title: "A task",
+          }),
+          row({
+            id: "a1",
+            source: "dedupe_candidate",
+            destination: "review",
+            title: "Two records for one company",
+          }),
+        ],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 2,
+          total: 2,
+          buckets: { urgent: 0, due_today: 0, planned: 1, review: 4 },
+        },
+      }),
+    );
+
+    renderWorklist();
+    await screen.findByText("Two records for one company");
+
+    expect(
+      screen.getByText(
+        en["worklist.review.partial"]
+          .replace("{loaded}", "1")
+          .replace("{total}", "4"),
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing when the panel holds the day's whole review", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "a1",
+            source: "dedupe_candidate",
+            destination: "review",
+            title: "Two records for one company",
+          }),
+        ],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 1,
+          total: 1,
+          buckets: { urgent: 0, due_today: 0, planned: 0, review: 1 },
+        },
+      }),
+    );
+
+    renderWorklist();
+    await screen.findByText("Two records for one company");
+
+    // "1 of 1" is noise on a complete list, and the completeness line above
+    // the queue falls silent on the same condition.
+    expect(screen.queryByText(/of 1/)).toBeNull();
+  });
+});

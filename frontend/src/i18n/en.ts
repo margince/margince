@@ -8006,6 +8006,8 @@ export const en = {
   "worklist.summary.noMiddle":
     "{urgent} urgent · {due} due · {lower} routine — {total} in all",
   "worklist.completeness": "{shown} of {considered} shown",
+  "worklist.review.partial":
+    "{loaded} of {total} shown — page the day to reach the rest",
   "worklist.completeness.bounded":
     "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
