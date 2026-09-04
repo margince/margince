@@ -276,6 +276,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/capture-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What capture's judgement queues are holding, and in whose mailbox.
+         * @description Admin-only. Reports how much is waiting on a sender decision or a thread verdict, by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a subject, a body, or the reason a thread was held: those describe the correspondence, and an operational page is not an exemption from the capture-privacy boundary.
+         *
+         *     The contacts it counts are owner-private and invisible to an administrator by design (the importing user only, not even Admin) — which is exactly why a count is worth serving: nobody could otherwise tell that a backlog exists. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getCaptureHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -24263,6 +24285,58 @@ export interface components {
         ExtensionDirectory: {
             extensions: components["schemas"]["ComposedExtension"][];
         };
+        /**
+         * @description What capture's judgement queues are holding, for an administrator asking whether
+         *     anything is stuck.
+         *
+         *     COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+         *     those describe the correspondence, which is what the capture-privacy boundary
+         *     exists to protect, and an operational page is not an exemption from it. A mailbox
+         *     is named because an administrator cannot act on "somewhere in the installation";
+         *     what is waiting inside it is not named at all.
+         */
+        CaptureHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
+            mailboxes: components["schemas"]["CaptureMailboxHealth"][];
+            classifier: components["schemas"]["CaptureClassifierHealth"];
+        };
+        CaptureMailboxHealth: {
+            /**
+             * Format: uuid
+             * @description The mailbox owner.
+             */
+            user_id: string;
+            /** @description The owner's name; absent if the caller may not read it. */
+            display_name?: string;
+            /**
+             * @description Captured contacts that are still owner-private because nothing has answered the
+             *     sender question about them. These are invisible to everyone but their owner —
+             *     not even an administrator — so a count is the only thing this page can say, and
+             *     a growing one is the signal that nobody is answering.
+             */
+            contacts_awaiting_decision: number;
+            /** @description How long the oldest of them has been waiting. Null when none are. */
+            oldest_contact_age_seconds?: number | null;
+            /** @description Threads whose confidentiality question is still open, so their messages stay held. */
+            threads_awaiting_verdict: number;
+            oldest_thread_age_seconds?: number | null;
+        };
+        /** @description The sender queue as a whole, across every mailbox. */
+        CaptureClassifierHealth: {
+            /** @description Asked and not yet answered. */
+            pending: number;
+            /**
+             * @description Answered "cannot tell" and waiting for a human. An installation with no model
+             *     configured retires every row here, so a large number beside a small `pending`
+             *     says the machine is not running rather than that the mail is hard.
+             */
+            unsure: number;
+            /** @description Out of attempts, so nothing will ask again without a human. */
+            exhausted: number;
+            oldest_pending_age_seconds?: number | null;
+        };
         JobHealth: {
             /** Format: date-time */
             generated_at: string;
@@ -30774,6 +30848,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCaptureHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's capture-queue health. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureHealth"];
                 };
             };
             401: components["responses"]["Unauthorized"];
