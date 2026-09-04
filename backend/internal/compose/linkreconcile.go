@@ -163,6 +163,14 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 		w.log.InfoContext(ctx, "link reconcile: captured contacts nobody had been asked about are queued",
 			"workspace", job.Args.Workspace.String(), "contacts", asked)
 	}
+	retracted, err := w.retractNoiseJudgedContacts(sweepCtx)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if retracted > 0 {
+		w.log.InfoContext(ctx, "link reconcile: contacts a noise verdict already covered are retracted",
+			"workspace", job.Args.Workspace.String(), "contacts", retracted)
+	}
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, job.Args.Workspace)))
 }
 

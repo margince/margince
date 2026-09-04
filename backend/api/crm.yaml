@@ -9465,7 +9465,9 @@ paths:
 
         `business` readmits a sender: they are a counterparty after all, and their mail belongs in
         the CRM like anyone else's. `keep_out` ends it — no record, and the mail this sender
-        already brought in is destroyed.
+        already brought in is destroyed. A contact capture had already minted for you from their
+        mail is withdrawn too; a record you have edited, or a sender your workspace genuinely
+        corresponds with, stays.
 
         Your own mailbox only. A sender is personal to the person who knows them: one rep's family
         member is another rep's customer.
