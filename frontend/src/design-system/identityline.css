@@ -1,0 +1,62 @@
+/* IdentityLine — the facts under a record's name.
+
+   One sheet for what company360.css and person360.css each spelled: the row,
+   its separator, and a fact inside it. The three records that draw this line
+   now draw the same one. */
+
+/* Lines stack; they do not run together. A record saying two different things
+   under its name — what it is, then when its row was written — reads as two
+   answers rather than one sentence to re-parse. */
+.identity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  /* The head's identity block is a flex item, and a floor of min-content would
+     let one unbreakable fact — an address, a long domain — set the block's
+     width and push the record's verbs off its row. */
+  min-width: 0;
+}
+
+.identity-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  /* The facts themselves are content — read at a glance under the name — so
+     they take the content ink, and the quieter roles below step down from it.
+     Never --textTertiary: that is a 3:1 token for marks and rules, and small
+     text set in it fails the contrast law the axe gate holds this page to. */
+  color: var(--textContent);
+}
+
+/* The gap follows from the separator, because it is the same job done two
+   ways: with a dot between them two facts need only enough room for the mark,
+   and without one the whitespace IS the separator and has to read as a break. */
+.identity-line-dotted {
+  gap: var(--space-1) var(--space-2);
+}
+.identity-line-spaced {
+  gap: var(--space-1) var(--space-4);
+}
+
+.identity-sep {
+  color: var(--textMeta);
+}
+
+/* A fact and its glyph stay on one line together, and the fact can be narrower
+   than its content so a long one truncates inside the row rather than widening
+   it. */
+.identity-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* A fact that qualifies the record rather than being a way to act on it — who
+   owns it, what buying role a person holds. It sits in the same line as the
+   handles beside it but does not compete with them for the eye. */
+.identity-fact-quiet {
+  color: var(--textMeta);
+}

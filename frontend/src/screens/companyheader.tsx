@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Fragment, type ReactElement, useId } from "react";
+import { type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -7,6 +7,7 @@ import { useCanWrite, useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { IdentityLine, IdentityMeta } from "../design-system/identityline";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
@@ -930,17 +931,12 @@ export function CompanyIdentityLine({
     );
   }
   facts.push(<CompanyRecordProvenance key="provenance" org={org} />);
+  // Clauses of ONE sentence about the account — what it is, where, how big,
+  // whose — so they are strung on dots rather than left to stand apart.
   return (
-    <div className="co-identity-meta">
-      <div className="co-meta-line">
-        {facts.map((fact, i) => (
-          <Fragment key={fact.key}>
-            {i > 0 && <span className="co-sep">·</span>}
-            {fact}
-          </Fragment>
-        ))}
-      </div>
-    </div>
+    <IdentityMeta>
+      <IdentityLine>{facts}</IdentityLine>
+    </IdentityMeta>
   );
 }
 
