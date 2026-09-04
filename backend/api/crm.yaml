@@ -10165,6 +10165,72 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/pins:
+    put:
+      tags: [Brief]
+      operationId: pinWorklistRow
+      x-agent-access: human-only
+      # Session cookie only: deciding what leads your own day is a person's
+      # judgement about their own morning, and an agent has no day to order.
+      security: [{ cookieAuth: [] }]
+      summary: Put a row at the top of your own day, above what the ranking chose.
+      description: |
+        The queue's whole promise is an order somebody else decided. That is right almost
+        always and wrong sometimes: the rep knows a thing the product does not, and until
+        now the page gave them nowhere to say so — every other control changes what the
+        server THINKS, and none of them says "I know, and I want this first anyway".
+
+        PER READER. Pinning reorders the caller's own morning; applying it to a colleague
+        would reorder a day whose owner never asked for it. Contrast `not_sales` on a
+        message, which settles what a thread IS and holds for everybody.
+
+        A row is named by its SOURCE and its id together, because that pair is what
+        identifies it. The lanes mint ids independently — a task and a waiting message can
+        carry the same underlying record's id — so an id alone would pin a row the caller
+        never saw.
+
+        The pin does not make a row exist. A pinned row that the day no longer assembles
+        is simply absent, and the pin waits: nothing is fabricated to honour it, because a
+        queue that invented rows to satisfy a pin would be answering with something other
+        than the day.
+
+        Pinning the same row again is the same success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorklistPinRequest' }
+      responses:
+        '204': { description: 'Pinned, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Brief]
+      operationId: unpinWorklistRow
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Let the ranking have the row back — the undo behind the pin.
+      description: |
+        Clears what THIS reader pinned. Idempotent: unpinning a row nobody pinned is the
+        same success, because the reader's goal state already holds.
+      parameters:
+        - name: source
+          in: query
+          required: true
+          schema: { type: string }
+          description: The lane the row came from, paired with `row_id` to name it.
+        - name: row_id
+          in: query
+          required: true
+          schema: { type: string }
+          description: The row's own id within that lane.
+      responses:
+        '204': { description: 'Back under the ranking, or was never pinned.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /worklist/team:
     get:
       tags: [Brief]
@@ -29218,6 +29284,25 @@ components:
       type: string
       enum: [workspace, participants, selected]
       description: Who may read an activity's content — see Activity.audience.
+    WorklistPinRequest:
+      type: object
+      additionalProperties: false
+      required: [source, row_id]
+      properties:
+        source:
+          type: string
+          description: |
+            The lane the row came from. Paired with `row_id` because that pair is what
+            identifies a row: the lanes mint ids independently, so an id alone can name a
+            row in a lane the caller was not looking at.
+        row_id:
+          type: string
+          description: |
+            The row's own id within that lane. A string rather than a uuid: most rows
+            carry a record id, but a folded group carries a synthetic key its lane mints,
+            and a uuid-only field would leave those rows unpinnable for a reason no reader
+            could see.
+
     DismissRelationshipNudgeRequest:
       type: object
       additionalProperties: false

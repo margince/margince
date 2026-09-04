@@ -89,6 +89,13 @@ type Service struct {
 	captureHealth CaptureHealth
 	// aiWork is OPTIONAL and per-user exactly as captureHealth is.
 	aiWork AIWork
+	// pins is OPTIONAL like the lanes above it: nil means this feed applies no
+	// reader override, and the day ranks as it did before pinning existed.
+	pins Pins
+	// pinned is what THIS request's reader put at the top, resolved once by
+	// readingPins onto a copy of the service. Nil on the shared service, which
+	// is what keeps one reader's override off another's page.
+	pinned map[RowRef]bool
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
 	// undelivered is OPTIONAL and per-user for the same reasons: mail that

@@ -134,7 +134,19 @@ func (s *Service) Worklist(
 	// the readings, so a rep refused the who-is-waiting lane was shown "0
 	// customers waiting on an answer" as an exact figure — above the warning
 	// that contradicted it.
-	out := reader.worklistFrom(
+	// What this reader put at the top, read BEFORE the projection because the
+	// projection returns no error: it is the pure part, and a failure here has
+	// to reach the caller rather than be swallowed into a page that quietly
+	// ignores the override the reader asked for.
+	//
+	// Carried on a COPY of the service, the way the narrowed reader above is:
+	// one Service serves every request, so pins set on it would follow one
+	// reader's page onto another's.
+	withPins, err := reader.readingPins(ctx)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
@@ -234,6 +246,14 @@ func (s *Service) worklistFrom(
 	// it judges against is the same wherever it sits. A fourth pass that
 	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
+	// The reader's own override, raised AFTER the dedupe passes and before the
+	// ranking. After, because a pin on a row those passes remove is a pin on a
+	// row that is not on the page — the day decides what it holds, and the pin
+	// only says which of what it holds leads. Before the ranking, because a pin
+	// is a level: the ordering, the band heading and the "why here" line all
+	// read it, so moving rows after the sort would leave those three saying
+	// something the page contradicts.
+	rows = applyPins(rows, s.pinned)
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this

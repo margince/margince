@@ -154,6 +154,7 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/voice-profiles/{id}":                                     {Op: "deleteVoiceProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/voice-profiles/{id}/sources/{sourceId}":                  {Op: "deleteVoiceCorpusSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/webhook-subscriptions/{id}":                              {Op: "archiveWebhookSubscription", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"DELETE /v1/worklist/pins":                                           {Op: "unpinWorklistRow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/activities":                                                 {Op: "listActivities", Access: "tool", Tool: "search_records", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}":                                            {Op: "getActivity", Access: "tool", Tool: "read_record", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}/email-presentation":                         {Op: "getEmailPresentation", Access: "tool", Tool: "read_record", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
@@ -618,4 +619,5 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/weekly-plans/commitments/{id}/help":                         {Op: "askForWeeklyPlanHelp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/response":                     {Op: "answerWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/state":                        {Op: "setWeeklyPlanCommitmentState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/worklist/pins":                                              {Op: "pinWorklistRow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 }

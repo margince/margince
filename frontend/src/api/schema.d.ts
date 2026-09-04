@@ -6786,6 +6786,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a row at the top of your own day, above what the ranking chose.
+         * @description The queue's whole promise is an order somebody else decided. That is right almost
+         *     always and wrong sometimes: the rep knows a thing the product does not, and until
+         *     now the page gave them nowhere to say so — every other control changes what the
+         *     server THINKS, and none of them says "I know, and I want this first anyway".
+         *
+         *     PER READER. Pinning reorders the caller's own morning; applying it to a colleague
+         *     would reorder a day whose owner never asked for it. Contrast `not_sales` on a
+         *     message, which settles what a thread IS and holds for everybody.
+         *
+         *     A row is named by its SOURCE and its id together, because that pair is what
+         *     identifies it. The lanes mint ids independently — a task and a waiting message can
+         *     carry the same underlying record's id — so an id alone would pin a row the caller
+         *     never saw.
+         *
+         *     The pin does not make a row exist. A pinned row that the day no longer assembles
+         *     is simply absent, and the pin waits: nothing is fabricated to honour it, because a
+         *     queue that invented rows to satisfy a pin would be answering with something other
+         *     than the day.
+         *
+         *     Pinning the same row again is the same success.
+         */
+        put: operations["pinWorklistRow"];
+        post?: never;
+        /**
+         * Let the ranking have the row back — the undo behind the pin.
+         * @description Clears what THIS reader pinned. Idempotent: unpinning a row nobody pinned is the
+         *     same success, because the reader's goal state already holds.
+         */
+        delete: operations["unpinWorklistRow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/team": {
         parameters: {
             query?: never;
@@ -20985,6 +21029,21 @@ export interface components {
          * @enum {string}
          */
         ActivityAudience: "workspace" | "participants" | "selected";
+        WorklistPinRequest: {
+            /**
+             * @description The lane the row came from. Paired with `row_id` because that pair is what
+             *     identifies a row: the lanes mint ids independently, so an id alone can name a
+             *     row in a lane the caller was not looking at.
+             */
+            source: string;
+            /**
+             * @description The row's own id within that lane. A string rather than a uuid: most rows
+             *     carry a record id, but a folded group carries a synthetic key its lane mints,
+             *     and a uuid-only field would leave those rows unpinnable for a reason no reader
+             *     could see.
+             */
+            row_id: string;
+        };
         DismissRelationshipNudgeRequest: {
             /**
              * @description How long the contact stays off the lane, counted from now. A COUNT rather than
@@ -40775,6 +40834,57 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Worklist"];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    pinWorklistRow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorklistPinRequest"];
+            };
+        };
+        responses: {
+            /** @description Pinned, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    unpinWorklistRow: {
+        parameters: {
+            query: {
+                /** @description The lane the row came from, paired with `row_id` to name it. */
+                source: string;
+                /** @description The row's own id within that lane. */
+                row_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back under the ranking, or was never pinned. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
