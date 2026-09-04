@@ -88,31 +88,8 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		if err := requireLiveTag(ctx, tx, target, intoTagIDField); err != nil {
 			return err
 		}
-		// The TARGET's pin, read under the lock taken above so the check and
-		// the merge cannot be separated by another writer.
-		//
-		// A merge is a two-row act with, until now, a one-row precondition:
-		// the routed id pins the word being retired, and the word being folded
-		// INTO was unpinned. So the survivor could be renamed between the
-		// moment a caller read it and the moment the merge ran, and the merge
-		// went ahead as though it had not been — which matters most on the
-		// confirm-first path, where a human approves a sentence naming both
-		// words and gets an act naming one of them differently.
-		//
-		// Zero means the caller sent none, the same reading UpdateTag takes of
-		// an absent If-Match.
-		if expectedTargetVersion != 0 {
-			targetRow, err := scanTag(tx.QueryRow(ctx,
-				"SELECT "+tagColumns+" FROM tag WHERE id = $1", target))
-			if errors.Is(err, pgx.ErrNoRows) {
-				return apperrors.ErrNotFound
-			}
-			if err != nil {
-				return err
-			}
-			if targetRow.Version != expectedTargetVersion {
-				return apperrors.ErrVersionSkew
-			}
+		if err := checkTargetVersion(ctx, tx, target, expectedTargetVersion); err != nil {
+			return err
 		}
 		sourceRow, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", source))
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -178,6 +155,39 @@ func requireLiveTag(ctx context.Context, tx pgx.Tx, id ids.TagID, field string) 
 	}
 	if archived != nil {
 		return &BadInputError{Field: field, Reason: "names a tag that was archived"}
+	}
+	return nil
+}
+
+// checkTargetVersion holds the SURVIVOR's pin.
+//
+// Read under the lock the merge has already taken, so the check and the merge
+// cannot be separated by another writer: a version read outside it would pass
+// against a rename that lands before the merge's own statements.
+//
+// A merge is a two-row act that, until this pin, had a one-row precondition —
+// the routed id pins the word being retired, and the word being folded INTO
+// was free. So the survivor could be renamed between the moment a caller read
+// it and the moment the merge ran, and the merge went ahead as though it had
+// not been. That matters most on the confirm-first path, where a human
+// approves a sentence naming both words.
+//
+// Zero means the caller sent none, the same reading UpdateTag takes of an
+// absent If-Match.
+func checkTargetVersion(ctx context.Context, tx pgx.Tx, target ids.TagID, expected int64) error {
+	if expected == 0 {
+		return nil
+	}
+	row, err := scanTag(tx.QueryRow(ctx,
+		"SELECT "+tagColumns+" FROM tag WHERE id = $1", target))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if row.Version != expected {
+		return apperrors.ErrVersionSkew
 	}
 	return nil
 }
