@@ -50,6 +50,20 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetTeamExceptions answers what is going wrong on this lead's team.
+//
+// No parameters, for the reason GetTeamBoard has none: whose team it is comes
+// from the principal, so a reader cannot ask about somebody else's. The tier
+// that admits the read is checked in the service, beside the roster it needs.
+func (h Handlers) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.TeamExceptions(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetHiddenBacklog answers what the queue is NOT showing, and which rule holds
 // it back.
 //

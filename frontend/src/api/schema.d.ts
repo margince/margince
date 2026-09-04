@@ -6997,6 +6997,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What is going wrong on this lead's team, and what it was judged against.
+         * @description The lead's own page. `/worklist/team` answers "who is carrying what" and routes to
+         *     a person; this answers "what is going wrong", which is the question a lead opens
+         *     the page for and which counts structurally cannot answer — a board of three
+         *     numbers per teammate cannot say that one customer has waited past the target while
+         *     another rep's queue is merely long.
+         *
+         *     EVERY ROW NAMES ITS BASIS. `threshold` carries the policy state that decided the
+         *     row rather than a number invented for this reading, so a lead disputing it can see
+         *     the rule. The response-breach rows read the SAME lead-response policy the rep's own
+         *     queue reads, which is what stops the manager and the rep holding two rules that
+         *     agree today and drift tomorrow.
+         *
+         *     Gated to the lead tier and read under the caller's visibility, like every figure on
+         *     this surface. A rep gets 403 rather than an empty list: a refusal that answered
+         *     differently depending on whether exceptions existed would leak the team's state to
+         *     somebody the tier is meant to exclude.
+         *
+         *     Bounded, and it says so. A page a lead cannot finish is a page they stop opening,
+         *     and `truncated` is the same admission `/worklist/team` makes about its counts.
+         */
+        get: operations["getTeamExceptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/hidden": {
         parameters: {
             query?: never;
@@ -29264,6 +29302,81 @@ export interface components {
             more_available: boolean;
         };
         /**
+         * @description One condition on a lead's team that a person can act on, with the evidence that
+         *     raised it and the basis it was judged against.
+         *
+         *     NOT A COUNT. The team board answers "who is carrying what" and routes a lead to a
+         *     person; this answers "what is going wrong", which is a different question and the
+         *     one a lead opens the page for. A board of three numbers per teammate cannot say
+         *     that one customer has been waiting past the target while another rep's queue is
+         *     merely long.
+         *
+         *     EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
+         *     — the policy state that decided it, never a number invented for the reading — so a
+         *     lead disputing the row can see the rule rather than the verdict alone. A condition
+         *     with no stated basis is a claim the reader cannot check, and this surface exists to
+         *     be checked.
+         */
+        TeamException: {
+            /**
+             * @description Which condition this is. Four, and each is a thing a lead can DO something
+             *     about: talk to the person, protect the revenue, give the work an owner, or fix
+             *     what keeps failing.
+             *
+             *     Capacity is deliberately absent. "This rep is overloaded" needs a configured
+             *     capacity to be a fact rather than an opinion, and this installation has none —
+             *     so the board's counts are offered as a reading and no exception claims it.
+             * @enum {string}
+             */
+            kind: "response_breached" | "revenue_at_risk" | "unassigned" | "repeated_failure";
+            owner: components["schemas"]["WorklistOwner"];
+            subject: components["schemas"]["AttentionSubject"];
+            /**
+             * Format: date-time
+             * @description When the condition started — the moment the clock a lead is being asked about began running.
+             */
+            since: string;
+            /** @description What it costs if nobody acts, in the queue's own vocabulary. */
+            consequence: string;
+            /**
+             * @description The basis this row was judged against, in words a lead can check: the policy
+             *     state that decided it rather than a number chosen for this reading.
+             *
+             *     A `response_breached` row names the lead-response policy's own state, which is
+             *     the same vocabulary the rep's queue uses — so the manager and the rep are
+             *     reading one rule rather than two that agree today.
+             */
+            threshold: string;
+            /**
+             * @description One line of what raised it, where the producer has one. Absent rather than
+             *     invented: a row that cannot say what it saw says nothing, and a lead reads the
+             *     subject and the clock instead.
+             */
+            evidence?: string;
+        };
+        /**
+         * @description What is going wrong on this lead's team, finite and caller-scoped.
+         *
+         *     FINITE because a page a lead cannot finish is a page they stop opening. The rows
+         *     are bounded and `truncated` says when the bound was reached, the same admission
+         *     the team board makes about its own counts.
+         *
+         *     Read under the CALLER's visibility like every figure on the manager surface, and
+         *     gated to the lead tier: a rep asking gets 403 rather than an empty list, so nobody
+         *     learns whether exceptions exist by the shape of a refusal.
+         */
+        TeamExceptions: {
+            /**
+             * Format: date-time
+             * @description The instant every condition below was read at.
+             */
+            as_of: string;
+            /** @description The conditions, worst first. Empty is the honest common case and means the team is clear of what this surface can see. */
+            exceptions: components["schemas"]["TeamException"][];
+            /** @description True when more conditions exist than were read. The list is a floor, not a total, and a lead must not read a bounded page as a clear team. */
+            truncated: boolean;
+        };
+        /**
          * @description Who on the team is carrying what. One row per live teammate, plus the work that
          *     reached nobody.
          */
@@ -41724,6 +41837,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getTeamExceptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team's exceptions, worst first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamExceptions"];
                 };
             };
             401: components["responses"]["Unauthorized"];
