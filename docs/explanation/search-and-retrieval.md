@@ -44,10 +44,22 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
                          ranked hits (fused score)
 ```
 
-- **Six searchable entity types**, declared once in `searchBranches`: `person`,
-  `organization`, `deal`, `lead`, `project`, `activity`. Adding a searchable
-  entity is a row there (plus the matching `embedText` / `pendingSources`
-  entries) — the query builder derives the rest.
+- **Nine searchable entity types**, declared once in `searchBranches`: `person`,
+  `organization`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`,
+  `activity`. Adding a searchable entity is a row there (plus the matching
+  `embedText` / `pendingSources` entries) — the query builder derives the rest,
+  and `SearchedTables()` is what the structural GIN proof asks about, so a
+  branch added without an index fails rather than going unexamined.
+- **Two of them carry no owner.** `product` and `offer_template` are the price
+  list and the offer layouts: one catalog the whole workspace sells from, so
+  they declare `workspaceWide` and the OBJECT grant is the whole of the gate.
+  `tag` is `workspaceWide` for the same reason and `textOnly` besides — a word
+  has no record shape to plan a query over, no neighbours to walk and no prose
+  to embed, which is why it alone is not a context anchor.
+- **`active` is not a discovery narrowing.** A discontinued product still stands
+  on last quarter's offers, and a rep looking one up is usually holding one of
+  them; `archived_at`, which every branch carries, is the liveness question that
+  does bear on being found.
 - **The lexical arm** ranks with `ts_rank_cd` over each table's generated
   `search_tsv` column, and pages by a keyset cursor on `(score DESC, rtype, id)`
   so the page boundary is stable under concurrent writes. Name fields parse
@@ -282,10 +294,13 @@ into `recent_touches` and `open_tasks`) → those activities' *other* link targe
 `related_projects`).
 Every leg reads at most 50 rows before ranking trims to `max_items` (default 5,
 capped at 25), so an anchor with thousands of links costs about what one with
-fifty costs. Anchors are the four non-activity searchable types the contract's
-path enum names — `person`, `organization`, `deal`, `lead` — derived from
-`searchBranches` rather than kept as a parallel list; an activity is a link, not
-a thing links hang off. A `lead` has no `activity_link` neighborhood at all, so
+fifty costs. Anchors are the non-activity, non-`textOnly` searchable types the contract's
+path enum names — derived from `searchBranches` rather than kept as a parallel
+list; an activity is a link, not a thing links hang off. Only `person`,
+`organization`, `deal` and `project` are WALKABLE (`anchorLinkColumn`): `lead`,
+`product` and `offer_template` name no `activity_link` column this walk follows,
+so their context is honestly their profile alone rather than a walk silently
+skipped. A `lead` has no `activity_link` neighborhood at all, so
 its context is honestly its profile alone.
 
 Ranking follows the retrieval-ranking weights
@@ -306,7 +321,7 @@ mechanism with its own maintenance rules — see
 
 | Concern | Where |
 |---|---|
-| Lexical index | generated `search_tsv` columns on `person`, `organization`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`); linguistics `0052`, apostrophe folding `0077` |
+| Lexical index | generated `search_tsv` columns on `person`, `organization`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`), `tag`, and `product` + `offer_template`; linguistics `0052`, apostrophe folding `0077` |
 | Vector store | `embedding` (migration `0022`; identity stamp + unbounded `vector` + corpus wipe in `0114`) — **non-tenant**, no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`0114`, run/identity/pending-set fan-out shape in `0174`) — **non-tenant**, no `workspace_id`, no RLS |
 | Relationship projection | `graph_interaction_edge` (`0158`) — see [relationship-graph.md](relationship-graph.md) |

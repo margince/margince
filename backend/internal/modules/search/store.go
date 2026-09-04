@@ -244,6 +244,25 @@ var searchBranches = []searchBranch{
 	// which is how a person tells the hits apart; see projectSnippet for the
 	// gate the company name passes first.
 	{entity: "project", table: "project", title: "name", snippet: "t.key", snippetFor: projectSnippet},
+	// The catalog a quote is priced from. A rep reaching for a line item knows
+	// it by its name or by the sku printed on the offer in front of them, so the
+	// sku is the excerpt as well as an 'A'-weighted match arm — a hit showing
+	// only the name would leave two variants of one product indistinguishable
+	// in the result list.
+	//
+	// workspaceWide because the catalog carries no owner: a price list is one
+	// list the whole workspace sells from, so a seat that may read it reads all
+	// of it and there is no per-row predicate to render. `active` is
+	// deliberately NOT narrowed — a discontinued product still appears on last
+	// quarter's offers, and a rep looking one up is usually holding one of
+	// them. archived_at, which the union applies to every branch, is the
+	// liveness question that does bear on discovery.
+	{entity: "product", table: "product", title: "name", snippet: "t.sku", workspaceWide: true},
+	// The layouts an offer is built from. `name` is the only text this table
+	// holds — `layout` is jsonb, and a template's body is authored structure
+	// rather than prose anybody would search for — so there is no excerpt to
+	// draw and the branch says NULL rather than inventing one.
+	{entity: "offer_template", table: "offer_template", title: "name", snippet: "NULL", workspaceWide: true},
 	// `entity` stays a literal and `table` takes the constant, which looks
 	// inconsistent and is not: TestContextAnchorEnumMatchesTheSearchableEntities
 	// AST-parses the `entity` values and can only read literals, while goconst
@@ -262,6 +281,21 @@ var searchBranches = []searchBranch{
 	// on one leads to a page that cannot be acted on.
 	{entity: "tag", table: "tag", title: "name", snippet: "NULL", workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
 	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true},
+}
+
+// SearchedTables names every physical table the search union reads, derived
+// from the branch table rather than restated beside it. The PERF-3 structural
+// proof — that each of them defines a GIN index over its search_tsv column —
+// asks the question of THIS list, so a branch added without an index fails the
+// proof instead of quietly not being asked about. A hand-kept copy of this list
+// had already fallen two branches behind, which is the failure mode a census
+// cannot report: it reads a smaller set, finds nothing wrong, and passes.
+func SearchedTables() []string {
+	tables := make([]string, 0, len(searchBranches))
+	for _, branch := range searchBranches {
+		tables = append(tables, branch.table)
+	}
+	return tables
 }
 
 // Search runs the ranked cross-object query (contract /search). Every

@@ -8428,7 +8428,7 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
+            items: { type: string, enum: [person, organization, deal, activity, lead, project, product, offer_template, tag] }
           style: form
           explode: false
           description: Restrict to these object types (default all).
@@ -12128,7 +12128,7 @@ paths:
       - name: entity_type
         in: path
         required: true
-        schema: { type: string, enum: [person, organization, deal, lead, project, activity] }
+        schema: { type: string, enum: [person, organization, deal, lead, project, product, offer_template, activity] }
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Search]
@@ -33681,7 +33681,7 @@ components:
         # `tag` is a WORD, not a record: finding it is the step before finding
         # the records that carry it, and without it a reader has to know the
         # vocabulary already.
-        type: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
+        type: { type: string, enum: [person, organization, deal, activity, lead, project, product, offer_template, tag] }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
@@ -33728,7 +33728,7 @@ components:
       properties:
         type:
           type: string
-          enum: [person, organization, deal, lead, project, activity, user]
+          enum: [person, organization, deal, lead, project, product, offer_template, activity, user]
           description: |
             `user` is a workspace MEMBER, not a record — it appears only in the
             `who_knows` section, where the item is a colleague who interacts with the
