@@ -70,14 +70,17 @@ function directionLine(
   counterparty: string | null | undefined,
   t: ReturnType<typeof useT>,
 ): string | null {
-  const named = counterparty !== null && counterparty !== undefined;
+  // TRIMMED, and blank counts as absent: the server sends "" for a
+  // counterparty it could not resolve, and "" is not null — so a bare presence
+  // check picked the named form and rendered "Received from " with a trailing
+  // space. That is the same dangling preposition this function exists to
+  // remove, one character longer.
+  const name = counterparty?.trim() ?? "";
   if (direction === "inbound") {
-    return named
-      ? t("email.receivedFrom", { who: counterparty })
-      : t("email.received");
+    return name ? t("email.receivedFrom", { who: name }) : t("email.received");
   }
   if (direction === "outbound") {
-    return named ? t("email.sentTo", { who: counterparty }) : t("email.sent");
+    return name ? t("email.sentTo", { who: name }) : t("email.sent");
   }
   return null;
 }

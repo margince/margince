@@ -140,6 +140,20 @@ describe("EmailEntry", () => {
     expect(screen.queryByText("Received from")).not.toBeInTheDocument();
   });
 
+  // A counterparty the server could not resolve arrives as "", not as null.
+  // A bare presence check took that for a name and rendered "Received from "
+  // — the same dangling preposition, one space longer.
+  it("treats a blank counterparty as no name at all", () => {
+    wrap(
+      <EmailEntry
+        summary={{ ...READABLE, counterparty: "   " }}
+        timestamp="1 Sep 09:12"
+      />,
+    );
+    expect(screen.getByText("Received")).toBeInTheDocument();
+    expect(screen.queryByText(/^Received from/)).not.toBeInTheDocument();
+  });
+
   it("says the direction WITH the name when there is one", () => {
     wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
     // One sentence from one string, so the two forms cannot drift and a
@@ -159,6 +173,9 @@ describe("EmailEntry", () => {
     );
     expect(screen.getByText("Sent")).toBeInTheDocument();
     expect(screen.queryByText(/^Received/)).not.toBeInTheDocument();
+    // The symmetric half: "Sent" alone is right, "Sent to" alone is the
+    // defect wearing the other direction.
+    expect(screen.queryByText(/^Sent to\b/)).not.toBeInTheDocument();
   });
 
   // Every other timeline kind announces itself through a Badge. This one said
@@ -166,7 +183,11 @@ describe("EmailEntry", () => {
   // without being told what kind of thing it was.
   it("announces that the row is an email", () => {
     wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
-    expect(screen.getByText("Email")).toBeInTheDocument();
+    // Asked of the sr-only span itself: "Email" appearing SOMEWHERE on the row
+    // would still pass after the announcement was removed.
+    expect(
+      screen.getByText("Email", { selector: ".sr-only" }),
+    ).toBeInTheDocument();
   });
 
   it("opens on Enter and on Space, and says it opens a dialog", async () => {
