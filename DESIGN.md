@@ -148,10 +148,17 @@ Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
 ## 3. Colour
 
-The semantic split is unchanged and remains pinned by `tokens.test.ts`:
-`--accent` (emerald) is brand and primary action, `--ai*` (indigo) is agent
-provenance, `--success` / `--warn` / `--danger` are status. What changes is the
-ground, which is lit, and the surface, which is one translucent pane per zone.
+The semantic split is unchanged: `--accent` (emerald) is brand and primary
+action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
+`--danger` are status. Those names are the ones `tokens.test.ts` pins, together
+with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
+which is lit, and the surface, which is one translucent pane per zone.
+
+The tables below are the design TARGET, and they name some rungs the tree does
+not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
+does not appear in `frontend/src` as a value still to be introduced, not as one
+to reach for today: the shipped spelling of the agent tint is `--aiLight`, its
+edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 
 ### Light (the default)
 
@@ -892,10 +899,10 @@ rest one screen at a time.
 - [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
       a shadow at rest.
 - [ ] One emerald-filled control in view.
-- [ ] Anything an agent wrote is a row on `--aiBg` carrying the indigo mark,
+- [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark,
       and a row that ASKS for something says "Margince suggests" — never over
       the answer that nothing needs doing, which is nobody's suggestion; a
-      staged change has a dashed edge until accepted.
+      staged change carries a `--aiMed` dashed edge until accepted.
 - [ ] A withheld section says "Hidden from you"; an empty one says what to do.
 - [ ] Checked in both themes and with the sidebar and the details panel folded.
 - [ ] The page carries every section the current screen renders (§7), or says

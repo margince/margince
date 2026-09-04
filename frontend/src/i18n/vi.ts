@@ -3509,8 +3509,11 @@ export const vi = {
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp — chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
-    "Gửi email, đặt lịch họp, thay đổi bản ghi — chờ bạn phê duyệt.",
-  "settings.tierAdvance": "Chuyển giai đoạn của deal — luôn xác nhận trước.",
+    "Gửi email, đặt lịch họp, sửa một liên hệ hay một deal — cũng chạy ngay, nếu bạn đã cấp phạm vi đó cho tác nhân. Việc bạn cấp quyền chính là phê duyệt, cấp một lần.",
+  "settings.tierWait":
+    "Làm giàu dữ liệu, trường tuỳ chỉnh, webhook, gộp thẻ — những việc này chờ trong hộp phê duyệt.",
+  "settings.tierAdvance":
+    "Chuyển giai đoạn của deal — chỉ chờ khi bước đó kết thúc deal là thắng hoặc thua.",
   "settings.locked": "đã khoá",
   "settings.purposes": "Mục đích chấp thuận",
   "settings.purposesSub":
@@ -4135,9 +4138,9 @@ export const vi = {
   "ob.s4.connectDenied": "Bạn đã từ chối cấp quyền — không có gì được kết nối.",
   "ob.s4.googleBtn": "Cho phép truy cập Gmail của tôi",
   "ob.s4.googleHint":
-    "Đọc thư của bạn và chỉ gửi những gì bạn duyệt. Bạn cấp quyền trên màn hình của Google và ngắt kết nối lúc nào cũng được.",
+    "Đọc thư của bạn và có thể gửi từ đó. Bạn cấp cả hai trên màn hình của Google và ngắt kết nối lúc nào cũng được.",
   "ob.s4.googleUnverified":
-    "Nếu Google báo “ứng dụng chưa xác minh”, chọn Nâng cao → Tiếp tục. Không gì được gửi nếu bạn chưa duyệt.",
+    "Nếu Google báo “ứng dụng chưa xác minh”, chọn Nâng cao → Tiếp tục. Màn hình của Google liệt kê đúng những gì bạn đang cấp.",
   "backfill.title": "Nhập lịch sử thư của bạn",
   "backfill.intro":
     "Hãy chọn nhập ngược lại bao xa. Bạn sẽ thấy phạm vi và chi phí ước tính trước khi có gì chạy — và bỏ qua hẳn bước này cũng được.",
@@ -4205,7 +4208,7 @@ export const vi = {
   "overnightGrant.label":
     "Cho phép Margince chuẩn bị bản tóm tắt buổi sáng qua đêm",
   "overnightGrant.help":
-    "Nó đọc thương vụ và email của bạn để sắp xếp việc gì cần bạn hôm nay. Nó không bao giờ tự gửi gì — mọi thứ gửi ra ngoài đều chờ bạn phê duyệt.",
+    "Nó đọc thương vụ và email của bạn để sắp xếp việc gì cần bạn hôm nay, và ghi ghi chú trở lại. Nó không thể gửi: quyền bạn cấp ở đây chỉ gồm đọc và ghi, không bao giờ gửi.",
   "overnightGrant.danger":
     "NGUY HIỂM: Không có quyền này, bản tóm tắt buổi sáng, danh sách công việc và bản đánh giá tuần của bạn sẽ trống. Đó là những màn hình Margince mở đầu tiên — phần lớn sản phẩm sẽ trông như không hoạt động.",
   "overnightGrant.saveFailed":
@@ -4561,8 +4564,9 @@ export const vi = {
   "ob.s4.scope1Lead": "Chúng tôi chỉ đọc — không làm rối hộp thư.",
   "ob.s4.scope1Rest":
     "Email của bạn thành contact, công ty và hoạt động, được thu thập tự động.",
-  "ob.s4.scope2Lead": "Chúng tôi không gửi gì nếu bạn chưa duyệt.",
-  "ob.s4.scope2Rest": "Bản nháp nằm chờ bạn quyết định.",
+  "ob.s4.scope2Lead": "Quyền này bao gồm cả việc gửi.",
+  "ob.s4.scope2Rest":
+    "Margince có thể gửi từ hộp thư này — khi bạn gửi, và khi bạn cấp cho tác nhân một passport có quyền gửi. Việc cấp quyền đó chính là phê duyệt, cấp một lần. Bạn có thể thu hồi bất cứ lúc nào.",
   "ob.s4.scope3Lead": "Dữ liệu của bạn nằm trong tổ chức của bạn.",
   "ob.s4.scope3Rest":
     "Dữ liệu là của bạn — xuất hoặc xoá sạch lúc nào cũng được.",
@@ -4770,7 +4774,7 @@ export const vi = {
     "Bạn đã chọn một hộp thư rồi. Hãy ngắt kết nối trong Cài đặt nếu muốn đổi.",
   "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
   "ob.conv.connect.railPromise":
-    "Chúng tôi chỉ đọc, và không gửi gì nếu bạn chưa duyệt.",
+    "Chúng tôi đọc thư của bạn, và có thể gửi từ đó khi bạn cho phép.",
   "ob.conv.connect.dialogHeadlineAccess": "Cần quyền truy cập {name}",
   "ob.conv.connect.dialogHeadlineImap": "Kết nối máy chủ thư của bạn",
   "ob.conv.connect.dialogIntro":
@@ -4784,7 +4788,7 @@ export const vi = {
     "Có trục trặc khi tải trạng thái kết nối của bạn. Hãy thử lại trước khi chọn nhà cung cấp.",
   "ob.conv.voice.sceneTitle": "Dạy tôi cách bạn viết.",
   "ob.conv.voice.sceneSub":
-    "CRM này soạn mọi email bằng lời của bạn, và không gửi gì cho đến khi bạn duyệt.",
+    "CRM này soạn mọi email bằng lời của bạn, nên thư gửi đi nghe giống bạn.",
   "ob.conv.voice.heroBody":
     "Margince học giọng, nhịp và cách dùng từ từ chính bài bạn viết, không của ai khác.",
   "ob.conv.voice.whyToggle": "Vì sao điều này quan trọng",
@@ -4943,7 +4947,7 @@ export const vi = {
     "Tôi đọc website của bạn và soạn hồ sơ công ty. Bạn duyệt trước khi lưu. Khoảng hai phút.",
   "ob.gate.trustToggle": "Cách hoạt động",
   "ob.gate.trustBody":
-    "Tôi chỉ đọc trang công khai. Không gì được lưu cho đến khi bạn xác nhận, và không gì được gửi đi nếu bạn chưa duyệt.",
+    "Tôi chỉ đọc trang công khai. Không gì được lưu cho đến khi bạn xác nhận, và việc đọc website của bạn không gửi gì cho ai.",
   "ob.gate.field": "Địa chỉ website của bạn",
   "ob.gate.placeholder": "congtycuaban.com",
   "ob.gate.submit": "Đọc website của tôi",
@@ -5125,7 +5129,7 @@ export const vi = {
   "auth.coreWork":
     "Tôi sẽ giữ CRM của bạn luôn cập nhật, phát hiện điều cần chú ý và chuẩn bị bước tiếp theo — để bạn tập trung vào khách hàng.",
   "auth.corePromise":
-    "Và đừng lo: tôi sẽ không bao giờ gửi email hay tin nhắn mà chưa hỏi bạn trước.",
+    "Và tôi chỉ hành động trong quyền bạn đã cấp — không bao giờ nhiều hơn những gì chính bạn làm được.",
   "auth.coreHandover": "Trước tiên, hãy để tôi xác minh đúng là bạn…",
   "auth.coreConfigured": "Đã cấu hình",
   "auth.coreUnconfigured": "AI chưa được cấu hình",
@@ -6077,7 +6081,7 @@ export const vi = {
     "Kéo thả văn bản của bạn vào đây, hoặc nhấp để chọn tệp",
   "settings.voice.whyToggle": "Vì sao điều này quan trọng",
   "settings.voice.whyBody":
-    "Margince soạn email cho bạn bằng chính lời văn của bạn, và không gì được gửi đi trước khi bạn duyệt. Nó học giọng điệu, nhịp và cách diễn đạt từ văn bản của chính bạn, không phải của ai khác. Các mẫu của bạn được giữ riêng tư.",
+    "Margince soạn email cho bạn bằng chính lời văn của bạn, nên thư gửi đi nghe giống bạn. Nó học giọng điệu, nhịp và cách diễn đạt từ văn bản của chính bạn, không phải của ai khác. Các mẫu của bạn được giữ riêng tư.",
   "settings.voice.worksTitle": "Loại nào hiệu quả nhất",
   "settings.voice.worksEmails":
     "Email đã gửi, lưu dưới dạng .txt hoặc .md. Chúng cho thấy bạn viết thế nào khi muốn điều gì đó.",
