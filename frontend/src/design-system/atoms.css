@@ -1233,6 +1233,19 @@
   outline-offset: 2px;
 }
 
+/* The clear affordance a `type="search"` field gets from the engine, which is
+   the same platform blue the checkbox ring above refuses — and unlike that ring
+   it cannot be recoloured, only replaced or removed. It is drawn by the browser
+   inside a field built entirely from these tokens, so it reads as the hole in
+   the surface that `<select>` reads as, and it appears the moment the field has
+   focus and content: in the ⌘K palette, that is always.
+   Nothing is lost by removing it. The palette clears its box on Escape and on
+   every reopen, and the results field is a form a reader retypes into. */
+.input[type="search"]::-webkit-search-cancel-button,
+.input[type="search"]::-webkit-search-decoration {
+  appearance: none;
+}
+
 .input-icon {
   position: relative;
   display: inline-flex;
