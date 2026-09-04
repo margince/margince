@@ -6,7 +6,6 @@ import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { formatDate } from "../format/format";
@@ -139,7 +138,8 @@ function markName(
 export function VatMark({
   orgId,
   stated,
-}: Readonly<{ orgId: string; stated: string }>): ReactNode {
+  canAsk,
+}: Readonly<{ orgId: string; stated: string; canAsk: boolean }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -230,7 +230,7 @@ export function VatMark({
         ) : (
           <VatReceipt check={answer} locale={locale} zone={zone} />
         )}
-        <AskTheRegister consulted={answer !== null} ask={ask} />
+        <AskTheRegister consulted={answer !== null} ask={ask} canAsk={canAsk} />
         {/* The number this mark answers for, last: a receipt names what it was
             issued for, and the row above the mark can be edited after a check
             — so a mark that showed only a verdict could sit beside a number
@@ -434,13 +434,22 @@ function useAskTheRegister(orgId: string, answeredAt: string | null) {
 function AskTheRegister({
   consulted,
   ask,
+  canAsk,
 }: Readonly<{
   consulted: boolean;
   ask: ReturnType<typeof useAskTheRegister>;
+  // The record's own writability, not the role's grant. The server runs
+  // EnsureWritableLive on THIS organization, so a rep holding `organization:
+  // update` who does not own the account was offered a button whose request
+  // is refused — a false affordance and a workflow that fails on click.
+  //
+  // Passed in rather than derived here: the grid above already holds the
+  // answer, and the two must not be able to disagree about whether this
+  // reader may write the company.
+  canAsk: boolean;
 }>): ReactNode {
   const t = useT();
-  const canEdit = useCan("organization", "update");
-  if (!canEdit) {
+  if (!canAsk) {
     return null;
   }
   return (

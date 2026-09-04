@@ -64,9 +64,9 @@ function stubFetch(answer: (request: Request) => Promise<Response>) {
   return calls;
 }
 
-// The card's own read, plus the grant read the ask button gates on. Without a
-// /me answer every viewer reads as unable to write, and the button would be
-// absent for the correct reason — which is how a test passes proving nothing.
+// The card's own read, plus the /me read the rest of the panel performs. The
+// ask button no longer gates on the grant alone — the caller passes the
+// record's writability in — so `canAsk` is what decides it here.
 function answerWith(body: unknown, status = 200) {
   return stubFetch(async (request) =>
     new URL(request.url).pathname.endsWith("/me")
@@ -86,8 +86,8 @@ function render(ui: ReactNode) {
   );
 }
 
-function mark(stated = NUMBER) {
-  return <VatMark orgId={ORG_ID} stated={stated} />;
+function mark(stated = NUMBER, canAsk = true) {
+  return <VatMark orgId={ORG_ID} stated={stated} canAsk={canAsk} />;
 }
 
 describe("the VAT mark beside the number", () => {
@@ -245,13 +245,21 @@ describe("the VAT mark beside the number", () => {
   });
 
   it("offers no ask to a reader who cannot change the company", async () => {
+    // Two different reasons converge on one answer here: no `organization:
+    // update` grant at all, and the grant held over a company this reader may
+    // not write. The caller tells them apart — this component is told.
+    //
+    // The /me answer deliberately DOES carry the grant, so a gate that had
+    // gone back to reading the grant alone would show the button and fail.
     const user = userEvent.setup();
     stubFetch(async (request) =>
       new URL(request.url).pathname.endsWith("/me")
-        ? jsonResponse(meFixture({ allow: { organization: ["read"] } }))
+        ? jsonResponse(
+            meFixture({ allow: { organization: ["read", "update"] } }),
+          )
         : jsonResponse(CHECKED),
     );
-    render(mark());
+    render(mark(NUMBER, false));
 
     await user.click(
       await screen.findByRole("button", { name: "VAT ID: Valid" }),

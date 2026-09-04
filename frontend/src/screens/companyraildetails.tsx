@@ -587,7 +587,7 @@ export function SidecarFieldRow({
           number exists: a mark on an empty field would say the register had
           declined to recognise something nobody has stated. */}
       {field === "register_vat" && current?.value && (
-        <VatMark orgId={orgId} stated={current.value} />
+        <VatMark orgId={orgId} stated={current.value} canAsk={canEdit} />
       )}
     </FieldRow>
   );

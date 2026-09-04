@@ -217,6 +217,41 @@ describe("the legal identity a person can state", () => {
     expect(row).toContainElement(mark);
   });
 
+  // The grant is held and the RECORD is not writable — the case the button's
+  // old gate could not see. POST /organizations/{id}/vat-check runs
+  // EnsureWritableLive on this organization, so a rep holding `organization:
+  // update` who does not own the account was offered a check that comes back
+  // refused on click.
+  //
+  // Asserted from the grid rather than from the mark alone: the mark is told
+  // whether it may ask, so a unit test of the mark cannot show that the answer
+  // it is told is the record's.
+  it("offers no register check on a company the reader may not write", async () => {
+    const user = userEvent.setup();
+    // Not renderSettledGrid: its settle signal is an EDIT affordance, and a
+    // grid this reader cannot write draws none. The number itself is the
+    // signal here.
+    stub([profileField("register_vat", "DE811907980")], {
+      vatCheck: () =>
+        json({
+          organization_id: "o-1",
+          vat_number: "DE811907980",
+          status: "valid",
+          checked_at: "2026-08-14T09:12:00Z",
+        }),
+    });
+    renderGrid({ ...ORG, writable: false });
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    // The verdict is still theirs to read: withholding the ask is not
+    // withholding the record.
+    expect((await screen.findAllByText("DE811907980"))[0]).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Check/ })).toBeNull();
+  });
+
   // A profile-field read that has NOT answered says nothing about whether the
   // field has a row. Treating its empty stand-in as "no row yet" sends the
   // correction with no If-Match, and the server's patch is a locked
