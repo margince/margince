@@ -516,7 +516,11 @@ export interface paths {
          * Merge this person into a target (non-lossy).
          * @description Merge A→B relinks A's emails/phones/relationships/activity links to B with zero
          *     orphaned FKs, archives A with `merged_into_id = B` (features/01 §1.3). One audit
-         *     transaction; reversible within audit.
+         *     transaction.
+         *
+         *     **Not reversible.** The audit trail records what happened; it does not undo it, and no
+         *     endpoint does — a merged dedupe pair answers `not_undoable`. B also keeps whatever it
+         *     took from A. Treat this as destructive and confirm before calling it.
          */
         post: operations["mergePerson"];
         delete?: never;
@@ -1486,8 +1490,12 @@ export interface paths {
          * Merge this organization into a target (non-lossy).
          * @description Merge A→B relinks A's domains, people-employment, deals, relationships and activity links to
          *     B with zero orphaned FKs, archives A with `merged_into_id = B`. Mirrors person merge
-         *     (features/01 §1.3). One audit transaction (action `merge`); reversible within audit. This is
+         *     (features/01 §1.3). One audit transaction (action `merge`). This is
          *     the org half of the `merge_records` MCP verb.
+         *
+         *     **Not reversible**, exactly as the person half is not: the audit trail records the merge,
+         *     nothing undoes it, a merged dedupe pair answers `not_undoable`, and B keeps what it took
+         *     from A. Treat this as destructive and confirm before calling it.
          */
         post: operations["mergeOrganization"];
         delete?: never;
@@ -6220,7 +6228,9 @@ export interface paths {
          *
          *     `business` readmits a sender: they are a counterparty after all, and their mail belongs in
          *     the CRM like anyone else's. `keep_out` ends it — no record, and the mail this sender
-         *     already brought in is destroyed.
+         *     already brought in is destroyed. A contact capture had already minted for you from their
+         *     mail is withdrawn too; a record you have edited, or a sender your workspace genuinely
+         *     corresponds with, stays.
          *
          *     Your own mailbox only. A sender is personal to the person who knows them: one rep's family
          *     member is another rep's customer.
@@ -6773,6 +6783,50 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklist/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a row at the top of your own day, above what the ranking chose.
+         * @description The queue's whole promise is an order somebody else decided. That is right almost
+         *     always and wrong sometimes: the rep knows a thing the product does not, and until
+         *     now the page gave them nowhere to say so — every other control changes what the
+         *     server THINKS, and none of them says "I know, and I want this first anyway".
+         *
+         *     PER READER. Pinning reorders the caller's own morning; applying it to a colleague
+         *     would reorder a day whose owner never asked for it. Contrast `not_sales` on a
+         *     message, which settles what a thread IS and holds for everybody.
+         *
+         *     A row is named by its SOURCE and its id together, because that pair is what
+         *     identifies it. The lanes mint ids independently — a task and a waiting message can
+         *     carry the same underlying record's id — so an id alone would pin a row the caller
+         *     never saw.
+         *
+         *     The pin does not make a row exist. A pinned row that the day no longer assembles
+         *     is simply absent, and the pin waits: nothing is fabricated to honour it, because a
+         *     queue that invented rows to satisfy a pin would be answering with something other
+         *     than the day.
+         *
+         *     Pinning the same row again is the same success.
+         */
+        put: operations["pinWorklistRow"];
+        post?: never;
+        /**
+         * Let the ranking have the row back — the undo behind the pin.
+         * @description Clears what THIS reader pinned. Idempotent: unpinning a row nobody pinned is the
+         *     same success, because the reader's goal state already holds.
+         */
+        delete: operations["unpinWorklistRow"];
         options?: never;
         head?: never;
         patch?: never;
@@ -11200,6 +11254,42 @@ export interface paths {
          *     opening the file reads them as the text the record holds rather than evaluating them.
          */
         get: operations["exportForecastShare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which population this caller measures by default, and which they may choose.
+         * @description The frame every analytics answer is placed in: the population this caller measures
+         *     when they ask for nothing, the populations they may ask for instead, the base
+         *     currency and zone their money and days are counted in, and what the screen may
+         *     offer them.
+         *
+         *     The POPULATION is not the same question as which records the caller may open.
+         *     Deals are workspace-readable so two reps do not call the same buyer, so a rep's row
+         *     scope narrows nothing — and a rep handed the workspace total has been answered a
+         *     question nobody asked. `default_scope` is what their own lens measures.
+         *
+         *     Every `label` here is written by the server. A client resolving a team or user id
+         *     into a name would be naming a subject it may not read, and the two would disagree
+         *     the first time a grant changed.
+         *
+         *     `allowed_scopes` is what the screen may OFFER, not what it may send unchecked:
+         *     every data route validates a requested population again. A control built from this
+         *     list simply never offers one that would be refused.
+         */
+        get: operations["getAnalyticsContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20977,6 +21067,21 @@ export interface components {
          * @enum {string}
          */
         ActivityAudience: "workspace" | "participants" | "selected";
+        WorklistPinRequest: {
+            /**
+             * @description The lane the row came from. Paired with `row_id` because that pair is what
+             *     identifies a row: the lanes mint ids independently, so an id alone can name a
+             *     row in a lane the caller was not looking at.
+             */
+            source: string;
+            /**
+             * @description The row's own id within that lane. A string rather than a uuid: most rows
+             *     carry a record id, but a folded group carries a synthetic key its lane mints,
+             *     and a uuid-only field would leave those rows unpinnable for a reason no reader
+             *     could see.
+             */
+            row_id: string;
+        };
         DismissRelationshipNudgeRequest: {
             /**
              * @description How long the contact stays off the lane, counted from now. A COUNT rather than
@@ -23206,8 +23311,11 @@ export interface components {
              * @description The last day INSIDE the period, not an exclusive bound.
              */
             period_end: string;
-            /** @enum {string} */
-            scope_kind: "workspace" | "team" | "owner";
+            /**
+             * @description Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
+             * @enum {string}
+             */
+            scope_kind: "workspace" | "managed_teams" | "team" | "owner";
             /** Format: uuid */
             scope_id?: string;
             /**
@@ -23508,6 +23616,44 @@ export interface components {
             readings: components["schemas"]["ForecastReadings"];
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
+        };
+        /** @description One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read. */
+        AnalyticsScope: {
+            /**
+             * @description `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
+             * @enum {string}
+             */
+            kind: "workspace" | "managed_teams" | "team" | "owner";
+            /**
+             * Format: uuid
+             * @description The team or person measured. Absent for workspace and managed_teams, which name no single subject.
+             */
+            id?: string;
+            /** @description What to call this population on screen. */
+            label: string;
+        };
+        /** @description What this caller may actually do, so a screen never offers a control the server will refuse. */
+        AnalyticsCapabilities: {
+            /** @description Whether the manager forecast is a destination for this caller at all. */
+            view_manager_forecast: boolean;
+            /** @description Whether this caller may publish a forecast for the population they are measuring. False hides the action rather than letting the save fail. */
+            submit_manager_forecast: boolean;
+        };
+        /** @description The frame every analytics answer for this caller is placed in. */
+        AnalyticsContext: {
+            default_scope: components["schemas"]["AnalyticsScope"];
+            /** @description What the screen may offer. Every data route validates a requested population again; this list only keeps a control from offering a refusal. */
+            allowed_scopes: components["schemas"]["AnalyticsScope"][];
+            capabilities: components["schemas"]["AnalyticsCapabilities"];
+            /**
+             * Format: date-time
+             * @description The instant this frame was resolved.
+             */
+            as_of: string;
+            /** @description The zone whose days a period is cut in. */
+            timezone: string;
+            /** @description The currency money readings are counted in. */
+            base_currency: string;
         };
         /** @description The populations and fields one caller may ask about. */
         AnalyticsSchema: {
@@ -24229,7 +24375,11 @@ export interface components {
             as_of: string;
             /** @description The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone. */
             timezone: string;
-            /** @description The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve. */
+            /**
+             * @description The installation's configured base currency, as an ISO-4217 code.
+             *     WHICH COLUMNS IT DENOMINATES DEPENDS ON THE REPORT. A native money measure (`amount_minor`, `weighted_amount_minor`) carries each record's OWN currency, so a report offering one groups by `currency` and this code labels the frame rather than those columns. A BASE measure (`amount_base_minor`, `weighted_base_minor`) is already converted per record before summing, and this code is its denomination.
+             *     `pipeline-current` is the first report of the second kind: it offers base measures only, precisely so a plan cannot ask it for a sum of minor units across currencies.
+             */
             base_currency: string;
             /** @description The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January. */
             fiscal_year_start_month: number;
@@ -40773,6 +40923,57 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    pinWorklistRow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorklistPinRequest"];
+            };
+        };
+        responses: {
+            /** @description Pinned, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    unpinWorklistRow: {
+        parameters: {
+            query: {
+                /** @description The lane the row came from, paired with `row_id` to name it. */
+                source: string;
+                /** @description The row's own id within that lane. */
+                row_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back under the ranking, or was never pinned. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getTeamBoard: {
         parameters: {
             query?: never;
@@ -47518,6 +47719,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAnalyticsContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's analytics frame. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsContext"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getAnalyticsSchema: {

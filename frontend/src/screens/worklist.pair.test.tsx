@@ -162,7 +162,12 @@ describe("deciding a duplicate pair on the row", () => {
 
   // A refused decision leaves the row rendering exactly as an unpressed one
   // does, and the reader believes the pair is settled when it is not.
-  it("says so when the decision is refused", async () => {
+  //
+  // A CONFLICT means the decision did not land as asked — a colleague settled
+  // it first, or the records moved underneath. It deliberately does NOT claim
+  // the pair is gone: a merge the server refuses REOPENS the candidate, so
+  // "already settled" would be false exactly when the reader needs the truth.
+  it("says the decision did not land when the server answers conflict", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -177,6 +182,55 @@ describe("deciding a duplicate pair on the row", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
 
-    expect(await screen.findByText(/Could not settle the pair/)).toBeTruthy();
+    expect(
+      await screen.findByText(/could not be settled the way you asked/),
+    ).toBeTruthy();
+    // Never the claim that it is gone: a refused merge puts the pair back.
+    expect(screen.queryByText(/gone from the list/)).toBeNull();
+  });
+
+  // A REFUSAL will refuse again however often it is pressed, so "try again" is
+  // the one instruction that must not appear. This is the toast a rep met on
+  // every pair spanning two owners.
+  it("names the steward when the decision is refused, and never says try again", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ code: "permission_denied" }), {
+            status: 403,
+            headers: { "content-type": "application/problem+json" },
+          }),
+      ),
+    );
+    draw(pairRow());
+
+    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+
+    expect(await screen.findByText(/cannot settle this pair/)).toBeTruthy();
+    expect(screen.queryByText(/Try again/)).toBeNull();
+  });
+
+  // The pair is still SHOWN — a reader who cannot settle it still needs to know
+  // a duplicate is waiting — but nothing is offered, because every press would
+  // refuse.
+  it("shows the pair without verbs when the server offered no merge", () => {
+    draw(pairRow({ actions: [] }));
+
+    expect(screen.getByText("Acme GmbH")).toBeTruthy();
+    expect(screen.getByText("ACME Gmbh")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.getByText(/Only somebody who can change both records/),
+    ).toBeTruthy();
+  });
+
+  // The steward still gets the verbs. Without this the case above would pass
+  // against a card that had simply stopped offering them to anybody.
+  it("offers the verbs when the server offered merge", () => {
+    draw(pairRow());
+
+    expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Not the same" })).toBeTruthy();
   });
 });

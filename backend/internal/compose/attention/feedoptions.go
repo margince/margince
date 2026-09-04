@@ -102,3 +102,14 @@ func (s *Service) WithOverdueLoad(o OverdueLoad) *Service {
 	s.overdueLoad = o
 	return s
 }
+
+// WithPins binds the reader's own pinned rows — an option for the reason
+// WithWaiting is one.
+//
+// Unbound means no pins, and a day assembled that way ranks exactly as it did
+// before pinning existed. That is the honest absence rather than a degraded
+// answer: an installation with no pin store has none.
+func (s *Service) WithPins(p Pins) *Service {
+	s.pins = p
+	return s
+}

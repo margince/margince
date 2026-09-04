@@ -49,7 +49,7 @@ func (e *forecastEnv) freezeTwoTeams(t *testing.T, mine, theirs int64) ids.UUID 
 		if err != nil {
 			return err
 		}
-		deals, _, err := ForecastDeals(ctx, tx, period,
+		deals, _, _, err := ForecastDeals(ctx, tx, period,
 			forecasting.Scope{Kind: forecasting.ScopeWorkspace}, time.Now(), baseCurrency)
 		if err != nil {
 			return err

@@ -850,6 +850,21 @@ jobs:
       # "became main".
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
+        # A CAP ON THE HANG, not on the scan. The scan itself runs in 72-125
+        # seconds; eight minutes is a hang, not a slow day.
+        #
+        # What it bounds is the action's signature verification of the scanner
+        # download, which fetches SonarSource's key from a public keyserver. On
+        # run 32687876395 keyserver.ubuntu.com simply stopped answering, and the
+        # step sat silent for 30 minutes until the JOB timeout killed it — a
+        # runner slot spent for nothing inside a 20-concurrent org ceiling every
+        # pull-request lane also queues in. A rerun of the same commit finished
+        # in 95 seconds. margince/margince#2543.
+        #
+        # NOT skipSignatureVerification. That would make the hang impossible by
+        # not verifying the scanner binary at all, trading an occasional lost
+        # scan for permanently trusting an unverified download.
+        timeout-minutes: 8
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         with:
           args: ${{ github.event_name == 'merge_group' && '-Dsonar.branch.name=main' || '' }}

@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -187,5 +188,91 @@ func TestTheLegacyTransactionalAllowIsWhatEnforcementWouldStop(t *testing.T) {
 	}
 	if got.ReasonCode != commsauthz.ReasonLegacyTransactionalUnevidenced {
 		t.Errorf("reason = %q, want the legacy-transactional code so an operator can see WHY", got.ReasonCode)
+	}
+}
+
+// plantDecisionAt writes a transmit decision stamped at a chosen instant, which
+// is what the window reads on.
+func (e *resolveEnv) plantDecisionAt(t *testing.T, category, reason, engine, legacy string, at time.Time) {
+	t.Helper()
+	delivery := e.plantDelivery(t)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_decision
+		  (delivery_id, attempt, decision_set_id, recipient_address, phase,
+		   resolved_category, verdict, reason_code, legacy_verdict, mode, actor, decided_at)
+		VALUES ($1, 1, $2, 'someone@corp.test', 'transmit', $3, $4, $5, $6, 'observe', 'test', $7)`,
+		delivery, ids.NewV7(), category, engine, reason, legacy, at); err != nil {
+		t.Fatalf("planting the decision: %v", err)
+	}
+}
+
+// reportSince reads the windowed report.
+func (e *resolveEnv) reportSince(t *testing.T, since time.Time) []Disagreement {
+	t.Helper()
+	out, err := e.store.DisagreementReportSince(e.ctx, since)
+	if err != nil {
+		t.Fatalf("reading the windowed report: %v", err)
+	}
+	return out
+}
+
+// THE WINDOW IS WHAT MAKES A REPEATED READING SAY ANYTHING. Unbounded, each pass
+// re-reads what the last one read plus a little, so a disagreement that appeared
+// today is invisible under one that was fixed months ago.
+//
+// Mutation: drop the decided_at clause from the query and this fails, the old
+// row coming back inside a window it is far outside.
+func TestTheWindowExcludesADisagreementOlderThanIt(t *testing.T) {
+	e := setupResolve(t)
+	now := time.Now()
+	e.plantDecisionAt(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
+		string(commsauthz.VerdictReview), string(commsauthz.VerdictAllow), now.Add(-30*24*time.Hour))
+	e.plantDecisionAt(t, "reply_to_inbound", commsauthz.ReasonAllowed,
+		string(commsauthz.VerdictAllow), string(commsauthz.VerdictDeny), now.Add(-time.Hour))
+
+	within := e.reportSince(t, now.Add(-25*time.Hour))
+	if len(within) != 1 {
+		t.Fatalf("the windowed report carries %d shapes, want only the recent one", len(within))
+	}
+	if within[0].Category != "reply_to_inbound" {
+		t.Errorf("the window returned %q, want the decision taken inside it", within[0].Category)
+	}
+}
+
+// A ZERO WINDOW IS EVERY DECISION, which is what the one-off subcommand asks
+// for. Both readings are one query text, and the zero time is what makes that
+// possible: Go's zero time is year 1, so the bound admits every row.
+//
+// This pins the entry point rather than the clause — the test above holds the
+// clause. Kept separate because the unwindowed reading is a caller with its own
+// promise: DisagreementReport must keep answering about all of history however
+// the windowed one is later tuned.
+func TestAZeroWindowReadsEveryDecisionOnRecord(t *testing.T) {
+	e := setupResolve(t)
+	now := time.Now()
+	e.plantDecisionAt(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
+		string(commsauthz.VerdictReview), string(commsauthz.VerdictAllow), now.Add(-90*24*time.Hour))
+
+	if got := e.reportSince(t, time.Time{}); len(got) != 1 {
+		t.Fatalf("the unwindowed report carries %d shapes, want the one on record", len(got))
+	}
+	// And the unwindowed entry point answers the same, because it IS this call.
+	if got := e.report(t); len(got) != 1 {
+		t.Fatalf("DisagreementReport carries %d shapes, want the same one", len(got))
+	}
+}
+
+// THE WINDOW IS A LOWER BOUND, not a range. A decision taken after the pass
+// started — one racing the read — is reported rather than dropped, because a
+// disagreement nobody ever reports is the failure this whole reading exists to
+// prevent.
+func TestTheWindowHasNoUpperBound(t *testing.T) {
+	e := setupResolve(t)
+	e.plantDecisionAt(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
+		string(commsauthz.VerdictReview), string(commsauthz.VerdictAllow),
+		time.Now().Add(time.Minute))
+
+	if got := e.reportSince(t, time.Now().Add(-time.Hour)); len(got) != 1 {
+		t.Fatalf("the report carries %d shapes, want the decision taken after the window opened", len(got))
 	}
 }

@@ -71,10 +71,17 @@ type ApprovalQuery struct {
 // naming them one by one is twenty scoped reads on the surface a rep opens first
 // every morning. An id the reader may not see is simply ABSENT from the answer,
 // which is what its refusal meant.
+//
+// DecidableSubset asks the OTHER question about the same records: not whether
+// this reader may see them, but whether they could change them. Settling a pair
+// archives one record and rewrites the other, so a reader holding neither
+// side's write authority has no verb to be offered — and the card is where they
+// should learn that, rather than from a refusal after the press.
 type Duplicates interface {
 	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
 	CountOpen(ctx context.Context) (int, error)
 	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
+	DecidableSubset(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 }
 
 // DuplicatePair is one open candidate: the pair, and what the detector saw.
