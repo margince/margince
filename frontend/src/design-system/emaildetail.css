@@ -26,9 +26,11 @@
   margin: 0;
 }
 
+/* Wide enough for the longest label in every catalog — "Gesendet" is the one
+   that sets it — so the values line up in a column instead of stepping. */
 .emaildetail__partyLabel {
   display: inline-block;
-  min-width: 3.5rem;
+  min-width: 5.5rem;
   color: var(--textSecondary);
 }
 
@@ -66,12 +68,6 @@
   color: var(--textSecondary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-.emaildetail__when {
-  margin: 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-meta);
 }
 
 /* The heading and the way out, on one line. */
