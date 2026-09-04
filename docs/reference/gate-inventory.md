@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (71)
+## Parity (72)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -27,6 +27,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
+| `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled TWICE — once in Go, once as a CHECK constraint on communication\_decision — and the two must agree. |
 | `backfillwindow_test.go` | H3 | The CAP-PARAM-4 window set as a fitness function: the contract's four enums, the Go validator and the capture\_backfill CHECK all state the SAME set, derived from the tree rather than remembered here. |
 | `basevaluespelling_test.go` | H2 | One deal's base-currency value is spelled twice, in two packages that cannot import each other, and this is what stops the two from drifting. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
@@ -91,7 +92,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (93)
+## Census (94)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -117,6 +118,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
+| `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has ONE reader. |
