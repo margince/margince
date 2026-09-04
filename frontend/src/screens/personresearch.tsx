@@ -51,7 +51,11 @@ export function PersonResearchTab({
     return (
       <Panel title={t("tab.research")}>
         <PanelBody>
-          <SurfaceState state="empty" emptyLabel={t("person.research.empty")}>
+          <SurfaceState
+            state="empty"
+            emptyLabel={t("person.research.empty")}
+            loadingLabel={t("tab.research")}
+          >
             {null}
           </SurfaceState>
         </PanelBody>
@@ -66,6 +70,7 @@ export function PersonResearchTab({
           <Panel title={t("provider.profile.title")}>
             <PanelBody>
               <SurfaceState
+                loadingLabel={t("provider.profile.title")}
                 state="withheld"
                 emptyLabel={t("person.research.empty")}
               >
@@ -82,6 +87,7 @@ export function PersonResearchTab({
       <Panel title={t("person.research.fields")}>
         <PanelBody>
           <SurfaceState
+            loadingLabel={t("person.research.fields")}
             state={fieldsState}
             emptyLabel={t("person.research.fieldsEmpty")}
           >

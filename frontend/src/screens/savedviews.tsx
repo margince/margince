@@ -335,6 +335,7 @@ export function SaveViewAction({
     <>
       {railDrawn && views.isError && (
         <SurfaceState
+          loadingLabel={t("views.rail")}
           state="failed"
           label={t("views.rail")}
           // Read by the `empty` arm alone, which this call never reaches: what

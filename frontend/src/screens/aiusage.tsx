@@ -356,7 +356,7 @@ export function AiUsageCard() {
       <Panel title={t("aiusage.title")}>
         <PanelBody>
           <p className="settings-panel-sub">{t("aiusage.sub")}</p>
-          <QueryGate query={me}>
+          <QueryGate query={me} pendingLabel={t("aiusage.title")}>
             {() => <EmptyState>{t("aiusage.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
@@ -369,7 +369,7 @@ export function AiUsageCard() {
     <Panel title={t("aiusage.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("aiusage.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("aiusage.title")}>
           {(data) => (
             <AiUsageBody data={data} month={month} onMonth={setMonth} />
           )}

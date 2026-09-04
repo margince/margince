@@ -156,6 +156,7 @@ export function PersonTimelineTab({
           />
         ) : (
           <SurfaceState
+            loadingLabel={t("tab.timeline")}
             state={timelineState(
               view,
               filter,
@@ -291,7 +292,11 @@ export function PersonDealsTab({
   return (
     <div className="record-stack">
       <Panel title={t("tab.deals")}>
-        <SurfaceState state={state} emptyLabel={t("person.deals.empty")}>
+        <SurfaceState
+          state={state}
+          emptyLabel={t("person.deals.empty")}
+          loadingLabel={t("tab.deals")}
+        >
           {roles.map((role) => (
             <PanelRow className="pe-row" key={role.relationship_id}>
               {/* The seat first, in the row grid's own label column: which
@@ -403,6 +408,7 @@ export function PersonMeetingsTab({
       <Panel title={t("person.meetings.next")}>
         <PanelBody>
           <SurfaceState
+            loadingLabel={t("person.meetings.next")}
             state={sectionState(
               view,
               "next_meeting",
@@ -456,6 +462,7 @@ export function PersonMeetingsTab({
       <Panel title={t("person.meetings.past")}>
         <PanelBody>
           <SurfaceState
+            loadingLabel={t("person.meetings.past")}
             state={past === "ready" && hasMore ? "partial" : past}
             emptyLabel={t("person.meetings.noneLogged")}
           >

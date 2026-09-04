@@ -105,10 +105,18 @@ export function DealRoomAccess({
         ) : undefined
       }
     >
-      <QueryStates query={participants} pendingLines={2}>
+      <QueryStates
+        query={participants}
+        pendingLines={2}
+        pendingLabel={t("access.title")}
+      >
         {rows.length === 0 ? (
           <PanelBody>
-            <SurfaceState state="empty" emptyLabel={t("access.empty")}>
+            <SurfaceState
+              state="empty"
+              emptyLabel={t("access.empty")}
+              loadingLabel={t("access.title")}
+            >
               {null}
             </SurfaceState>
           </PanelBody>

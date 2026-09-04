@@ -296,7 +296,7 @@ export function OAuthConsent() {
 
   return (
     <div className="wrap narrow">
-      <QueryGate query={query}>
+      <QueryGate query={query} pendingLabel={t("consent.title")}>
         {(data) => (
           <ConsentSelector data={data} params={params} consent={consent} />
         )}

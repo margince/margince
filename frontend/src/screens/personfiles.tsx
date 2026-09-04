@@ -125,6 +125,7 @@ export function PersonFilesTab({ personId }: Readonly<{ personId: string }>) {
         onClose={() => setAdding(false)}
       />
       <SurfaceState
+        loadingLabel={t("tab.documents")}
         state={state}
         emptyLabel={t("person.documents.empty")}
         detail={

@@ -274,6 +274,10 @@ export type DecisionCardLabels = Readonly<{
   showLess?: string;
   /** What there is none OF: a proposal whose payload carries nothing to read. */
   noContent: string;
+  // What the card's body is waiting for, spoken while it waits. Beside
+  // noContent because they answer the same question in the two states a body
+  // can be absent in, and the card knows neither — only the screen does.
+  loading: string;
 }>;
 
 /** The old→new sides of one field the proposal would change. */
@@ -856,6 +860,7 @@ export function DecisionCard({
         <SurfaceState
           state={state ?? (payload.hasContent ? "ready" : "empty")}
           emptyLabel={labels.noContent}
+          loadingLabel={labels.loading}
         >
           <DecisionContent
             draft={payload.draft}

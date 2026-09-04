@@ -1337,7 +1337,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={offerQuery}>
+      <QueryGate query={offerQuery} pendingLabel={t("nav.offers")}>
         {(offer) => (
           <>
             <Card>

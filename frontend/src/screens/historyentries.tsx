@@ -500,7 +500,9 @@ export function RecordHistory({
 
   return (
     <Card style={{ marginBottom: "var(--space-4)" }}>
-      <QueryStates query={query}>{body}</QueryStates>
+      <QueryStates query={query} pendingLabel={t("tab.timeline")}>
+        {body}
+      </QueryStates>
     </Card>
   );
 }

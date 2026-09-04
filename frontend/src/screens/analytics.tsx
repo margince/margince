@@ -731,7 +731,11 @@ function DerivationRows({
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
       {derivation.rows.length === 0 ? (
-        <SurfaceState state="empty" emptyLabel={t("common.empty")}>
+        <SurfaceState
+          state="empty"
+          emptyLabel={t("common.empty")}
+          loadingLabel={t("explain.sources")}
+        >
           {null}
         </SurfaceState>
       ) : (
@@ -876,7 +880,7 @@ function ReportCard({
   });
 
   return (
-    <QueryGate query={reportQuery}>
+    <QueryGate query={reportQuery} pendingLabel={t(REPORT_LABEL_KEY[report])}>
       {(run) => (
         <>
           <Card title={t(REPORT_LABEL_KEY[report])}>

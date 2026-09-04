@@ -318,7 +318,11 @@ function WeeklyBody({
     // hand-rolled here, it was the one line on the card set as a caption while
     // every other absence on the page read as prose.
     return (
-      <SurfaceState state="empty" emptyLabel={t("home.weekly.none")}>
+      <SurfaceState
+        state="empty"
+        emptyLabel={t("home.weekly.none")}
+        loadingLabel={t("home.panel.weekly")}
+      >
         {null}
       </SurfaceState>
     );

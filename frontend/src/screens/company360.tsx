@@ -244,7 +244,11 @@ export function DealsCard({
         </>
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={t("co.deals.empty")}>
+          <SurfaceState
+            state={state}
+            emptyLabel={t("co.deals.empty")}
+            loadingLabel={t("co.deals.title")}
+          >
             {null}
           </SurfaceState>
         </PanelBody>
@@ -386,7 +390,11 @@ export function CommercialPanel({
             read as an empty account. */}
         {state !== "ready" && state !== "empty" && (
           <PanelBody>
-            <SurfaceState state={state} emptyLabel={t("co.deals.empty")}>
+            <SurfaceState
+              state={state}
+              emptyLabel={t("co.deals.empty")}
+              loadingLabel={t("co.deals.title")}
+            >
               {null}
             </SurfaceState>
           </PanelBody>
@@ -457,7 +465,11 @@ export function CommercialPanel({
         </>
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={t("co.deals.empty")}>
+          <SurfaceState
+            state={state}
+            emptyLabel={t("co.deals.empty")}
+            loadingLabel={t("co.deals.title")}
+          >
             {null}
           </SurfaceState>
         </PanelBody>
@@ -579,7 +591,11 @@ export function RecentActivityPanel({
       ))
     ) : (
       <PanelBody>
-        <SurfaceState state={state} emptyLabel={t("co.recent.empty")}>
+        <SurfaceState
+          state={state}
+          emptyLabel={t("co.recent.empty")}
+          loadingLabel={t("co.recent.title")}
+        >
           {null}
         </SurfaceState>
       </PanelBody>

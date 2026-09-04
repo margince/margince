@@ -83,7 +83,7 @@ export function TagVocabularyCard() {
               label={t("tagAdmin.listLabel")}
               layout="stack"
               control={
-                <QueryGate query={catalog}>
+                <QueryGate query={catalog} pendingLabel={t("tagAdmin.title")}>
                   {(answer) => {
                     const words = answer.data ?? [];
                     if (words.length === 0) {
