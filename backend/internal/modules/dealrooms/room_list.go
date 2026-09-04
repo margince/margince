@@ -130,7 +130,9 @@ func (s *Store) ArchiveRoom(ctx context.Context, id ids.DealRoomID, ifVersion *i
 		if err != nil {
 			return err
 		}
-		if err := ensureDealWritable(ctx, tx, current); err != nil {
+		// Ending a room takes buyer access away, so an archived deal is no
+		// reason to refuse it.
+		if err := ensureDealRetractable(ctx, tx, current); err != nil {
 			return err
 		}
 		if current.ArchivedAt != nil {

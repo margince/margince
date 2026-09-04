@@ -60,10 +60,10 @@ describe("the details pane is closed until asked", () => {
   it("remembers a fold and an unfold", async () => {
     const user = userEvent.setup();
     const { pane, getByRole } = record();
-    await user.click(getByRole("button", { name: "Show panel" }));
+    await user.click(getByRole("button", { name: "Details" }));
     expect(pane()).not.toBeNull();
     expect(localStorage.getItem(KEY)).toBe("0");
-    await user.click(getByRole("button", { name: "Hide panel" }));
+    await user.click(getByRole("button", { name: "Details" }));
     expect(pane()).toBeNull();
     expect(localStorage.getItem(KEY)).toBe("1");
   });

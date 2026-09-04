@@ -161,7 +161,7 @@ func stampSiblingsTx(
 		   SET verdict_status = $3, verdict_reason = NULLIF($4, '')
 		 WHERE user_id = $1 AND activity_id = ANY($2)
 		   AND (verdict_status IS NULL OR verdict_status = $5)`,
-		user, ids_, status, kind, VerdictPending)
+		user, ids_, status, rowReasonForKind(kind), VerdictPending)
 	if err != nil {
 		return fmt.Errorf("capture: recording a thread verdict on its earlier messages: %w", err)
 	}

@@ -55,6 +55,12 @@ type stubDuplicates struct {
 	// asked records every batch the lane requested, so a test can count the
 	// reads rather than assume them.
 	asked *[]string
+	// undecidable is a record this caller may READ but could not CHANGE — the
+	// case a rep meets on every pair a colleague owns. The pair is still named
+	// in full; only the verb is withheld.
+	undecidable ids.UUID
+	// decideErr is an authority read that BROKE rather than one that refused.
+	decideErr error
 }
 
 func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, error) {
@@ -82,6 +88,23 @@ func (s stubDuplicates) DescribeMany(
 		faces[id] = RecordFace{Label: "Record " + id.String()[:8]}
 	}
 	return faces, nil
+}
+
+// DecidableSubset answers writability. Every record is decidable unless a test
+// names one that is not: the lane's other cases are about naming and ordering,
+// and a stub that withheld the verb by default would make each of them assert
+// the absence of a button for the wrong reason.
+func (s stubDuplicates) DecidableSubset(
+	_ context.Context, _ string, rowIDs []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	if s.decideErr != nil {
+		return nil, s.decideErr
+	}
+	writable := make(map[ids.UUID]bool, len(rowIDs))
+	for _, id := range rowIDs {
+		writable[id] = id != s.undecidable
+	}
+	return writable, nil
 }
 
 type stubTasks struct {
@@ -452,6 +475,83 @@ func TestAnUnreadableSideCostsTheMergeVerbRatherThanLeakingTheRecord(t *testing.
 		if action == "merge" {
 			t.Error("merge is offered over a record the reader cannot see")
 		}
+	}
+}
+
+// A pair naming a record the reader may see but could not change offers no
+// verb. This is the ordinary case for a rep: everyone here reads every
+// colleague's customer records and can write almost none of them, so a merge
+// button decided by visibility refused every press it invited.
+func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
+	theirs := ids.NewV7()
+	svc := NewService(
+		stubApprovals{},
+		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
+			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			LeftID: ids.NewV7(), RightID: theirs,
+		}}},
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	// The pair is still NAMED. Withholding the verb is not withholding the
+	// fact: a reader who cannot merge these two still needs to know a duplicate
+	// is waiting, and who it is about.
+	if out.NeedsYou[0].Pair == nil {
+		t.Fatal("a pair the reader may read was hidden because they cannot decide it")
+	}
+	for _, action := range out.NeedsYou[0].Actions {
+		if action == "merge" {
+			t.Error("merge is offered over a record the reader cannot change, which is the press that always refused")
+		}
+	}
+}
+
+// Authority over ONE side is not authority to decide the pair: the merge
+// archives one record and rewrites the other, so half the authority settles
+// nothing and a verb offered on it would refuse.
+func TestOwningOneSideOfAPairDoesNotOfferTheVerb(t *testing.T) {
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	svc := NewService(
+		stubApprovals{},
+		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
+			ID: ids.NewV7(), EntityType: "organization", Confidence: 1,
+			LeftID: mine, RightID: theirs,
+		}}},
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if len(out.NeedsYou[0].Actions) != 0 {
+		t.Errorf("actions %v offered on a pair the reader owns half of", out.NeedsYou[0].Actions)
+	}
+}
+
+// A reader who can change both records still gets the verb. Without this the
+// two tests above would pass against a lane that had simply stopped offering
+// merge to anybody.
+func TestAPairTheReaderCanChangeStillOffersTheVerb(t *testing.T) {
+	svc := NewService(
+		stubApprovals{},
+		stubDuplicates{open: 1, pairs: []DuplicatePair{{
+			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			LeftID: ids.NewV7(), RightID: ids.NewV7(),
+		}}},
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	var offered bool
+	for _, action := range out.NeedsYou[0].Actions {
+		if action == "merge" {
+			offered = true
+		}
+	}
+	if !offered {
+		t.Error("a steward who can change both records was offered no way to settle the pair")
 	}
 }
 

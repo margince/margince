@@ -259,3 +259,32 @@ func (h Handlers) ClearActivityDisposition(
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// PinWorklistRow puts a row at the top of the calling reader's own day.
+func (h Handlers) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.WorklistPinRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.PinWorklistRow(r.Context(),
+		WorklistRowRef{Source: req.Source, RowID: req.RowId}); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UnpinWorklistRow gives the row back to the ranking.
+//
+// The row is named in the QUERY rather than in a body, because a DELETE with a
+// body is a shape half the tooling between here and the browser will drop.
+func (h Handlers) UnpinWorklistRow(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.UnpinWorklistRowParams,
+) {
+	if err := h.store.UnpinWorklistRow(r.Context(),
+		WorklistRowRef{Source: params.Source, RowID: params.RowId}); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
