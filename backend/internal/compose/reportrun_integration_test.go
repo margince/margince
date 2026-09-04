@@ -20,12 +20,14 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -428,6 +430,121 @@ func (e *forecastEnv) explainRunCell(
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			out, err = ExplainReportRunCell(ctx, tx, id, group, analyticsquery.DefaultFloor)
+			return err
+		})
+	return out, err
+}
+
+// A composed report resolves its figures for whoever is reading.
+//
+// The document carries a handle where the number goes; this is the proof that
+// the number arrives from the database rather than from the document.
+func TestAComposedReportResolvesItsFiguresFromTheRun(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	blocks, err := e.render(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindTitle, Text: "Open deals"},
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}})
+	if err != nil {
+		t.Fatalf("rendering a report: %v", err)
+	}
+	if len(blocks) != 2 {
+		t.Fatalf("a two-block document rendered %d blocks", len(blocks))
+	}
+	if len(blocks[0].Values) != 0 {
+		t.Errorf("the title rendered %d figures and carries none", len(blocks[0].Values))
+	}
+	if len(blocks[1].Values) != 1 {
+		t.Fatalf("the stat strip rendered %d figures and named one", len(blocks[1].Values))
+	}
+	got := blocks[1].Values[0]
+	if got.Withheld {
+		t.Fatal("six deals were withheld from a floor of five")
+	}
+	if fmt.Sprint(got.Value) != "6" {
+		t.Errorf("the figure resolved to %v and six deals were seeded", got.Value)
+	}
+}
+
+// A figure the floor withholds renders as withheld, not as a number.
+//
+// The block still renders: a figure that vanished would leave the report
+// reading as complete while saying less.
+func TestAWithheldFigureRendersAsWithheld(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	// Two deals, under the floor of five.
+	for i := 0; i < 2; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	blocks, err := e.render(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}})
+	if err != nil {
+		t.Fatalf("rendering a withheld report: %v", err)
+	}
+	if len(blocks) != 1 || len(blocks[0].Values) != 1 {
+		t.Fatalf("the document rendered %d blocks", len(blocks))
+	}
+	if !blocks[0].Values[0].Withheld {
+		t.Error("a figure under the floor rendered as a number rather than as withheld")
+	}
+	if blocks[0].Values[0].Value != nil {
+		t.Errorf("a withheld figure carried the value %v", blocks[0].Values[0].Value)
+	}
+}
+
+// A report citing a run this reader may not read is refused whole.
+func TestAReportCitingAnUnreadableRunIsRefused(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"forecast": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if _, err := e.render(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}}); err == nil {
+		t.Fatal("a reader with no grant on the population rendered a report of it")
+	}
+}
+
+func (e *forecastEnv) render(
+	ctx context.Context, t *testing.T, doc reportdoc.Document,
+) ([]RenderedBlock, error) {
+	t.Helper()
+	var out []RenderedBlock
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			out, err = RenderReport(ctx, tx, doc, analyticsquery.DefaultFloor)
 			return err
 		})
 	return out, err

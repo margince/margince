@@ -11237,6 +11237,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/reports/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a report document's figures for this reader.
+         * @description A report document carries STRUCTURE and WORDS. It never carries a figure: every
+         *     number names a saved run and a cell inside it, and this is where those handles turn
+         *     into numbers.
+         *
+         *     THE DOCUMENT IS REFUSED IF IT CARRIES A NUMBER OF ITS OWN — and it is refused even
+         *     when a valid handle sits beside the literal. That case is the dangerous one rather
+         *     than the harmless one: the literal is what would render, the two can disagree, and
+         *     no reader could tell the page is showing a figure the database never computed.
+         *
+         *     Each cited run is resolved the way reading a run directly resolves: the saved
+         *     QUESTION is re-asked under this caller's own authority and re-judged against the
+         *     current privacy floor. So the same document shows different figures to readers who
+         *     may see different populations, and a cell the floor withholds renders as withheld
+         *     rather than as a number.
+         *
+         *     The blocks come back in the order they were composed, each carrying the resolved
+         *     values for its cells. Nothing is dropped: a document that cannot be rendered whole
+         *     is refused, because a report missing a block it was composed with says something
+         *     different from the report that was composed.
+         */
+        post: operations["renderAnalyticsReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/explain": {
         parameters: {
             query?: never;
@@ -23376,6 +23414,61 @@ export interface components {
             asked_by: string;
             /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
             stored_floor: number;
+        };
+        /** @description A report as composed: structure and words, with every figure named by a handle. */
+        ReportDocument: {
+            blocks: components["schemas"]["ReportBlock"][];
+        };
+        /** @description One element of a report. What fields are legal is decided by `kind`. */
+        ReportBlock: {
+            /**
+             * @description The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+             * @enum {string}
+             */
+            kind: "title" | "subtitle" | "scope" | "generated_at" | "summary" | "methodology" | "follow_ups" | "stat_strip" | "bar" | "waterfall" | "ranked_list" | "record_table" | "callout" | "evidence_drawer";
+            /** @description The composer's own words. Prose, never a figure. */
+            text?: string;
+            /** @description The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown. */
+            cells?: components["schemas"]["ReportCell"][];
+            /**
+             * @description Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+             * @enum {string}
+             */
+            severity?: "note" | "warning" | "partial" | "unknown" | "unsupported";
+            /**
+             * Format: double
+             * @description ALWAYS REFUSED, and the field exists so the refusal can name what it found. A composer that puts a number here is asking the renderer to draw a figure the database never computed. Carrying one beside a valid handle is refused too, and that case is worse: the literal is what renders, the two can disagree, and nothing downstream can tell.
+             */
+            value?: number;
+        };
+        /** @description One figure, named by the run it lives in and the cell within it. */
+        ReportCell: {
+            /**
+             * Format: uuid
+             * @description The saved run. Resolved under the reading caller's own authority.
+             */
+            run_id: string;
+            /** @description The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell. */
+            group?: unknown[];
+            /** @description Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick. */
+            column: string;
+        };
+        /** @description The composed document with every figure resolved for this reader. */
+        RenderedReport: {
+            blocks: components["schemas"]["RenderedBlock"][];
+        };
+        RenderedBlock: {
+            kind: string;
+            text?: string;
+            severity?: string;
+            /** @description One entry per cell the block named, in the same order. */
+            values: components["schemas"]["RenderedValue"][];
+        };
+        RenderedValue: {
+            /** @description The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back. */
+            value?: unknown;
+            /** @description The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less. */
+            withheld: boolean;
         };
         /** @description One cell of a saved run, named by its group keys. */
         ReportRunCell: {
@@ -47232,6 +47325,43 @@ export interface operations {
                 };
             };
             /** @description The cell names a different number of group keys than the saved question grouped by. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    renderAnalyticsReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportDocument"];
+            };
+        };
+        responses: {
+            /** @description The document with every figure resolved for this caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderedReport"];
+                };
+            };
+            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout. The message names the block by index. */
             400: {
                 headers: {
                     [name: string]: unknown;

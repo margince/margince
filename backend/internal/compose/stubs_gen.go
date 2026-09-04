@@ -195,6 +195,10 @@ func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
 
+func (stubs) RenderAnalyticsReport(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RenderAnalyticsReport")
+}
+
 func (stubs) GetReportRun(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetReportRun")
 }
