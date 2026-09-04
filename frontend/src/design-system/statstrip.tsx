@@ -69,13 +69,16 @@ export function StatStrip({
       {children}
     </section>
   );
-  if (!floor) {
-    return row;
-  }
+  // The wrapper is always drawn, floor or no floor: it is what the strip's
+  // fold MEASURES. The row cannot query its own width, and every ancestor
+  // above this one is wider than the space the readings actually have — the
+  // window most of all, which is what the fold used to read and why five
+  // readings stayed five across a work column squeezed between an open nav
+  // and an open details pane.
   return (
     <div className="stat-strip-wrap">
       {row}
-      <ReadingsFloor>{floor}</ReadingsFloor>
+      {floor ? <ReadingsFloor>{floor}</ReadingsFloor> : null}
     </div>
   );
 }

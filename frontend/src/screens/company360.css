@@ -9,6 +9,15 @@
   gap: 12px;
 }
 
+/* A pane in the margin pays the card's inset, not the work column's. The
+   panel's own --space-5 is sized for a body a reader reads across; in a
+   360px column it spends a tenth of the width on air and pushes every value
+   further from the label naming it. The readings row beside it is on
+   --space-4, and these read as the same kind of card. */
+.record-aside .panel-body {
+  padding: var(--space-4);
+}
+
 .co-card {
   padding: var(--space-3);
 }
