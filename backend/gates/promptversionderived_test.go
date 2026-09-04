@@ -28,11 +28,11 @@ package gates
 // it does:
 //
 //   - Wording built by Go code from runtime facts — a `fmt.Sprintf` inside a
-//     deterministic floor — is not a string anything can hash. Those surfaces
-//     keep an explicit version constant for that half, and the two ride the
-//     fingerprint together. `personbrief` is the pure case: it declares no
-//     prompt at all and writes its whole output from code, so the rule does not
-//     apply to it and it needs no waiver.
+//     deterministic floor — is not a string anything can hash. A surface with
+//     both halves keeps a hand-typed `floorVersion` beside its derived
+//     `promptVersion`, and the two ride one fingerprint together; only the
+//     second is this rule's subject, and the census reads the name rather than
+//     the pair, so a floor version is invisible here whatever it is called.
 //   - A prompt declared in a different package from the version that caches its
 //     output. Both censuses key on the declaring directory, so such a split is
 //     invisible here.

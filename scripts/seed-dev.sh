@@ -218,6 +218,54 @@ echo "  OK: $API_BASE is up"
 echo "== seed-dev: demo installation =="
 sign_in_as_admin
 
+# The installation's own company — the anchor organization, and the one row the
+# app shell gates on. GET /company 404s until it exists, and that 404 IS the
+# "this installation has not described itself yet" signal onboarding reads, so
+# a stack this script has finished seeding still lands every login in
+# onboarding rather than on the Brief. The redirect is right; the state it
+# reacts to is what the seed should not have left behind.
+#
+# Through the API, for the reason the whole file is an API client: SaveCompany
+# marks the row is_anchor, stamps every field human/captured_by from this
+# session, and commits it with its audit and outbox rows. Written as SQL it
+# would be all of that spelled a second time, drifting from the writer that
+# owns it.
+#
+# The identity is the one frontend/e2e/seed.ts serves its mocked lane, so the
+# specs that sign into a real stack (brief.spec.ts) and the specs that mock
+# (ac.spec.ts) describe the same installation instead of two.
+#
+# The semantic pair rides along because the server requires it of a submission
+# without a complete legal block, and a company saved without it reads back
+# minimum_complete=false — a described installation that the current form
+# immediately asks to finish. The legal fields are the mock's; nothing here
+# needs a real one.
+describe_company() {
+  local status
+  # PUT converges rather than conflicting: a re-run writes its own values over
+  # its own values, which is what makes this safe to repeat like every ensure
+  # above.
+  status="$(api PUT /company '{
+    "display_name":"Brandt Automotive GmbH",
+    "legal_name":"Brandt Automotive GmbH",
+    "registered_address":"Werkstraße 4, 70435 Stuttgart",
+    "register_vat":"DE811234567",
+    "industry":"Automotive",
+    "website":"brandt.example",
+    "offer_summary":"Retrofit kits and workshop software for independent vehicle fleets.",
+    "icp":"Independent fleet operators in DACH running 50 to 500 vehicles."
+  }')"
+  case "$status" in
+    200) echo "  OK: the installation describes itself" ;;
+    *)
+      echo "  response body:" >&2
+      cat "$workdir/body" >&2
+      fail "PUT /v1/company returned HTTP $status — without it every login lands in onboarding"
+      ;;
+  esac
+}
+describe_company
+
 # Demo records ride the same natural-key dedupe the product uses: a 201
 # created it, a 409 means an earlier run did — anything else is a defect.
 # A moment N days from now, in the format the API takes. Negative for the past.

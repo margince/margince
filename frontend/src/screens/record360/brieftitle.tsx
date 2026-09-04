@@ -2,19 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The head of the card a machine wrote: the mark that says WHO produced this
-// reading, WHAT it is a reading of, and the claim of authorship in words.
+// reading, and WHAT it is a reading of.
 //
 // One line (DESIGN.md §7): the mark leads it, so a reader has the authorship
-// before they weigh a word of it; the name follows as the subject; the words
-// close it at the eyebrow's weight, set apart from the name so the authorship
-// does not read as part of the record's name.
+// before they weigh a word of it, and the name follows as the subject.
+//
+// The mark carries the claim ALONE. Indigo on its own tile means "a machine
+// wrote what is under this" everywhere in the product, so the sentence that
+// used to close the line ("Margince read this record") said a second time, in
+// the eyebrow's shout, what the tile beside it had already said — and it read
+// as a caption somebody had typed onto the record's name.
 //
 // In the kit rather than on the account page, because every record that gets
-// a written reading owes the same claim in the same words. Two records
+// a written reading owes the same claim in the same shape. Two records
 // spelling it themselves is how one of them comes to say it differently.
 
 import { Sparkles } from "lucide-react";
-import { Eyebrow } from "../../design-system/eyebrow";
 import { useT } from "../../i18n";
 import "../company360.css";
 
@@ -35,7 +38,6 @@ export function BriefTitle({ name }: Readonly<{ name?: string }>) {
       <span className="co-360-subject">
         {name ? t("co.360.subject", { name }) : t("co.360.subjectUnnamed")}
       </span>
-      <Eyebrow as="span">{t("co.360.title")}</Eyebrow>
     </span>
   );
 }

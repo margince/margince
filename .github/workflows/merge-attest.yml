@@ -1,0 +1,166 @@
+# Did what just landed on main have a verdict behind it?
+#
+# `ci` is the one required check on a pull request, and a repository role can
+# merge past it. That stays: an infrastructure outage that reds every pull
+# request, a revert that has to land now. What did not stay is the fact being
+# invisible — the pull request closes green-looking in the list, `main-health`
+# is two-hourly and goes on reporting the last green it saw, and the next signal
+# anybody gets is somebody ELSE's pull request going red against a base they did
+# not break. #2504 was found that way twice, independently, each finder spending
+# a rebase and a full local lane to rule their own diff out.
+#
+# It is NOT a gate and will never be one. It runs AFTER the merge, on the tip,
+# and blocks nothing. Prevention is a branch-protection decision (#2496).
+#
+# It runs no lane. That is what makes a push trigger affordable at ~85 merges a
+# day: two API reads and a jq. `main-health` still owns the question of whether
+# main actually works, at its own cadence and its own cost — this one answers
+# only whether the merge had an answer, which is the question that was going
+# unasked for two hours at a time.
+name: merge-attest
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Per COMMIT, and never cancelled. Each push asks about its own merge, so a
+# later one does not supersede an earlier one the way a health check does — a
+# cancelled run here loses the only chance to ask about that commit, and nothing
+# would ever come back for it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verdict:
+    name: verdict
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The pull request that carried this commit, and the checks that ran on
+      # its head.
+      pull-requests: read
+      checks: read
+    outputs:
+      why: ${{ steps.judge.outputs.why }}
+      pr: ${{ steps.judge.outputs.pr }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The association between a squash commit and its pull request is written
+      # by GitHub after the merge, not with it, so a read the instant the push
+      # event fires can legitimately come back empty. Retried rather than
+      # trusted first time: "no pull request named this commit" is this alarm's
+      # loudest finding, and reporting it on a race would be the way to get the
+      # alarm switched off.
+      - name: The pull request that carried this commit
+        id: pulls
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            # ONE element, chosen here by the same rule the judge applies, and
+            # everything downstream derives from it. The endpoint can return
+            # SEVERAL pull requests for one commit, and picking the head from
+            # `.[0]` while the judge reported on `min_by(.number)` meant the
+            # alarm could describe pull request A while judging B's checks and
+            # comparing them against A's merge time — a finding about a merge
+            # that never happened, which is the one output this must never
+            # produce.
+            pulls="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+              --jq '[[.[] | {number, merged_at, head_sha: .head.sha}] | min_by(.number)] | map(select(. != null))')"
+            [ "$pulls" != "[]" ] && break
+            echo "attempt $attempt: no pull request yet, waiting for the association to be written"
+            sleep 10
+          done
+          {
+            echo "pulls<<EOF"
+            echo "$pulls"
+            echo "EOF"
+            echo "head=$(jq -r '.[0].head_sha // ""' <<<"$pulls")"
+          } >>"$GITHUB_OUTPUT"
+      - name: The checks that ran on its head
+        id: checks
+        if: steps.pulls.outputs.head != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "runs<<EOF"
+            # filter=all, not the endpoint's default of `latest`. The judge
+            # deliberately reads the OLDEST attempt, so that a re-run after the
+            # merge cannot clear the record of the merge it was absent for —
+            # and `latest` returns only the most recent attempt per check,
+            # which is exactly the one that would clear it. The default would
+            # have made that rule silently unenforceable.
+            # PAGINATED. per_page caps at 100, and with filter=all every
+            # ATTEMPT of every check counts toward it — a pull request that was
+            # re-run a few times passes 100 easily. Truncating drops the tail,
+            # and the tail is precisely what the judge reads: it takes the
+            # OLDEST attempt so a re-run after the merge cannot clear the
+            # record of the merge it was absent for.
+            #
+            # --slurp because --paginate alone emits one JSON document per
+            # page, which is not a value jq can fold; slurped, the pages arrive
+            # as an array and .[].check_runs[] flattens them into the one list
+            # the judge expects.
+            #
+            # A KNOWN CEILING remains and is GitHub's rather than ours: this
+            # endpoint stops at the 1000 most recent check SUITES for a ref.
+            # Reaching that would need a commit re-run into four figures, and
+            # the alternative is walking the check-suites endpoint instead —
+            # more request budget on every push to cover a case nothing here
+            # has approached. Named rather than silently inherited.
+            gh api --paginate --slurp "repos/${{ github.repository }}/commits/${{ steps.pulls.outputs.head }}/check-runs?per_page=100&filter=all" \
+              --jq '{check_runs: [.[].check_runs[] | {name, status, conclusion, completed_at}]}'
+            echo "EOF"
+          } >>"$GITHUB_OUTPUT"
+      - name: Was there a verdict behind this merge?
+        id: judge
+        env:
+          MERGE_VERDICT_SHA: ${{ github.sha }}
+          MERGE_VERDICT_PULLS: ${{ steps.pulls.outputs.pulls }}
+          # `[]` rather than empty when the step above was skipped: the judge
+          # refuses an empty payload on purpose, because a lookup that did not
+          # happen and a commit with no checks are different facts.
+          MERGE_VERDICT_CHECKS: ${{ steps.checks.outputs.runs || '[]' }}
+        run: ./scripts/check-merge-verdict.sh
+
+  # Say so where somebody will see it. A red job on a workflow nobody watches is
+  # the state we already had.
+  report:
+    name: report
+    timeout-minutes: 10
+    needs: [verdict]
+    # A REASON, not just a failure. The judge exits 2 without one when its
+    # input is missing — an unset lookup is the alarm being broken rather than
+    # a finding — and an API step that fails leaves the same shape. Reporting
+    # on either would file the default merge-accusing issue with nothing behind
+    # it, which is how an alarm earns being ignored.
+    if: ${{ !cancelled() && needs.verdict.result == 'failure' && needs.verdict.outputs.why != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: File or update an issue for the merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MERGE_VERDICT_RESULT: ${{ needs.verdict.result }}
+          # Both are written by a step that then FAILS, which is how the run
+          # itself goes red. The reporter treats either arriving empty as a
+          # shape to survive rather than to trust — an issue naming no reason
+          # is still an issue naming the run, which beats no issue.
+          MERGE_VERDICT_PR: ${{ needs.verdict.outputs.pr }}
+          MERGE_VERDICT_WHY: ${{ needs.verdict.outputs.why }}
+        run: ./scripts/scheduled-report.sh

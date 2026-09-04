@@ -177,6 +177,25 @@ func (s *Sink) finishNewActivity(
 			return counterpartyDecision{}, err
 		}
 	}
+	// And a MESSAGE under the contacts who were on it beyond its counterparty —
+	// the cc'd contact the ladder never judged, whose own inbound mail is what
+	// makes writing back to them lawful (sinkmaillinks.go).
+	//
+	// A SUPPRESSED sender is filed under nobody: that judgement was about the
+	// message, and a newsletter naming a contact is not correspondence with them.
+	//
+	// It answers no count, and derivedLinks is deliberately not grown by it. The
+	// limiter below only ever NARROWS — its single write sets participants — so a
+	// count here could not widen a message a hold was placed on. What it WOULD do
+	// is skip that narrowing for a message filed under nobody but the people
+	// copied on it, leaving mail workspace-readable that the limiter exists to
+	// hold. The meeting arm feeds the count because an attendee link means a
+	// record stands behind the meeting; a cc'd contact is not that claim.
+	if fields.Kind != meetingKind && decision.traceOutcome != TraceSuppressed {
+		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links)); err != nil {
+			return counterpartyDecision{}, err
+		}
+	}
 	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}

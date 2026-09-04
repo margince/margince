@@ -1,0 +1,92 @@
+name: person_brief_reads_what_was_said
+task: summarize
+site: person_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  name: Anna Weber
+  title: Head of Operations
+  employer: Acme Logistik GmbH
+  buying_role: economic_buyer
+  strength: 64
+  deal:
+    name: Acme renewal 2027
+    stage: negotiation
+    amount_minor: 18000000
+    currency: EUR
+    close_date: "2026-11-30"
+  changes:
+    - kind: replied_after_gap
+      days: 34
+  # Three messages. The processor question is the one the renewal turns on and
+  # nobody answered it; the scheduling note is what a recency-ordered reader
+  # would have shown instead, and the holiday note is here so that reading the
+  # right one is a choice rather than the only option.
+  messages:
+    - label: scheduling
+      days_ago: 1
+      direction: inbound
+      subject: "Re: renewal call"
+      preview: >
+        Thursday at ten works for me, I have put it in. Sending a calendar
+        invite now.
+      move: none
+    - label: processor_question
+      days_ago: 6
+      direction: inbound
+      subject: "Sub-processor list before we sign"
+      preview: >
+        Before legal signs anything we need your current sub-processor list,
+        and we cannot go ahead while the analytics vendor is on it. That is
+        the one open item on our side.
+      move: needs_reply
+    - label: holiday_note
+      days_ago: 40
+      direction: outbound
+      subject: "Out of office next week"
+      preview: >
+        I am away until Monday, my colleague Jens is covering anything urgent.
+      move: none
+  claims:
+    - kind: objection
+      body: One listed sub-processor blocks legal sign-off.
+      quote: we cannot go ahead while the analytics vendor is on it
+      status: open
+      from_label: processor_question
+    - kind: commitment_ours
+      body: Send the current sub-processor list.
+      quote: we need your current sub-processor list
+      status: open
+      due_at: "2026-09-01T00:00:00Z"
+      from_label: processor_question
+expect:
+  outcome: accepted
+  # A right brief reads the message the renewal turns on, and says WHICH
+  # sub-processor — a thing only the message itself says. The deterministic
+  # floor cannot reach it: the floor restates the extracted objection, which
+  # names no vendor, and quotes the NEWEST message, which is the scheduling
+  # note. So a brief that skimmed recency, or that only restated the claim row,
+  # would be indistinguishable from writing nothing.
+  answer:
+    cites_label: processor_question
+    names_token: analytics
+  bands:
+    # The brief degrades to a deterministic floor whenever the model is
+    # unavailable or wrong, and the floor is useful on its own. So the bar is
+    # "reliably reads the consequential message", not "flawless": a model that
+    # finds it four times in five is worth the call, and one that finds it half
+    # the time is worse than the floor, because the reader cannot tell which
+    # half they are holding.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief is about the thing blocking this renewal — an
+    unanswered objection to a sub-processor, and the list we owe them — rather
+    than about the most recent message, which merely confirms a meeting time.
+    A brief that reads well and leads with the scheduling note has read the
+    newest thing rather than the consequential one. Score whether it says what
+    the objection IS in the contact's own terms; a brief that says only that
+    they wrote and are waiting for a reply would read identically about any
+    contact, and states nothing the timeline did not already show. Penalise any
+    invented date, amount or deadline the summary did not supply.

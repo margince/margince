@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -34,6 +35,22 @@ type attentionNames struct {
 }
 
 var _ attention.Names = attentionNames{}
+
+// newAttentionNames assembles the resolver over one installation's stores.
+//
+// Two surfaces read display names through it: the attention feed's cards and
+// the analytics drill-through's source rows. They share this constructor
+// because a name must resolve identically on both — a second assembly could
+// bind a different store set, and then the same record would be named on one
+// surface and withheld on the other for no reason a reader could see.
+func newAttentionNames(db *database.DB) attentionNames {
+	return attentionNames{
+		people:     people.NewStore(db),
+		deals:      deals.NewStore(db, DealsInstallation()),
+		activities: activities.NewStore(db),
+		projects:   projects.NewStore(db),
+	}
+}
 
 // Labels answers a set of one type's display names under the caller's scope.
 //

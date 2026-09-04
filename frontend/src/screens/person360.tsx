@@ -229,7 +229,7 @@ function RelationshipChanges({ view }: Readonly<{ view: Person360 }>) {
       }}
     >
       {changes.map((c) => (
-        <li key={c.kind} style={{ fontSize: "0.9rem", opacity: 0.85 }}>
+        <li key={c.kind} style={{ fontSize: "var(--fs-body)", opacity: 0.85 }}>
           {changeSentence(c, t)}
         </li>
       ))}
@@ -470,7 +470,7 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
           {colleagues.map((c) => (
             <li key={c.user_id} style={{ padding: "8px 0" }}>
               <strong>{c.display_name}</strong>
-              <div style={{ fontSize: 12, opacity: 0.75 }}>
+              <div style={{ fontSize: "var(--fs-meta)", opacity: 0.75 }}>
                 {proofLine(c, t, locale, recordZone)}
               </div>
             </li>

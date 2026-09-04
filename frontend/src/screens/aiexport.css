@@ -5,5 +5,5 @@
 
 .aiexport-error {
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }

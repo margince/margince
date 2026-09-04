@@ -54,9 +54,9 @@ type windows struct {
 // country stated should behave exactly as it did before jurisdiction packs
 // existed, rather than losing the ability to follow up because nobody has
 // filled in a setting.
-func (g *Gate) windowsFor(ctx context.Context, tx pgx.Tx) (windows, error) {
+func (s *Store) windowsFor(ctx context.Context, tx pgx.Tx) (windows, error) {
 	out := windows{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
-	rules, applicable, err := g.applicableRules(ctx, tx)
+	rules, applicable, err := s.applicableRules(ctx, tx)
 	if err != nil {
 		return windows{}, err
 	}

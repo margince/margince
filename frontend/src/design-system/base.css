@@ -44,7 +44,7 @@
   /* Medium, not semibold: a verb in a row of verbs is read, not shouted, and
      the head of a record carries four of them beside a 32px name. */
   font-weight: var(--fw-medium);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   /* Transparent rather than absent, so the ghost variant RECOLOURS a border
      every variant already reserves space for. When only the ghost declared one,
      border-box added its 2px to that variant alone and every [Cancel][Save] pair
@@ -254,7 +254,7 @@
 }
 .btn-sm {
   padding: 6px 11px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   min-block-size: var(--control-h-sm);
   min-inline-size: 0;
 }
@@ -619,7 +619,7 @@ a:not([class]):focus-visible {
   background: var(--bgCard);
   color: var(--textContent);
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

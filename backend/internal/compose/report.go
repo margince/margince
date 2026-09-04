@@ -18,8 +18,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -127,6 +125,8 @@ const (
 	// a reader comparing two reports should not have to notice a spelling
 	// difference that means nothing.
 	aliasDeals = "deals"
+	// aliasPricedDeals is how many of them the converted money covers.
+	aliasPricedDeals = "priced_deals"
 	// aliasCount is the ad-hoc plan's output column. Spelled apart from
 	// aggFnCount even though the two strings match: one names a FUNCTION the
 	// engine switches on, the other an output column a caller reads, and
@@ -272,14 +272,6 @@ type reportOutcome struct {
 	FiscalYearStartMonth int
 }
 
-type reportEngine struct {
-	pool *pgxpool.Pool
-}
-
-func newReportEngine(pool *pgxpool.Pool) *reportEngine {
-	return &reportEngine{pool: pool}
-}
-
 // runSpec executes one validated vocabulary; Run (prebuilt catalog) and
 // runAdHocPlan (schema-descriptor vocabulary) both land here.
 func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSpec, req reportRequest) (reportOutcome, error) {
@@ -388,7 +380,24 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 	}
 	switch agg.Fn {
 	case aggFnCount:
-		return name, fmt.Sprintf("count(*) AS %s", quoteIdent(name)), nil
+		// Bare count is ROWS. Count OF a measure is how many of them the
+		// measure could actually be computed for, which is a different and
+		// necessary question: BaseValueSQL answers NULL for a deal whose
+		// currency has no rate as of the report's date, `sum` skips it, and the
+		// total comes back short beside a complete-looking row count. Two deals
+		// and one figure, with nothing saying which.
+		//
+		// The field was previously ACCEPTED and ignored — a caller asking how
+		// many deals were priced was silently handed how many existed, which is
+		// the wrong number with no way to notice.
+		if agg.Field == "" {
+			return name, fmt.Sprintf("count(*) AS %s", quoteIdent(name)), nil
+		}
+		expr, ok := spec.measures[agg.Field]
+		if !ok {
+			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
+		}
+		return name, fmt.Sprintf("count(%s) AS %s", expr, quoteIdent(name)), nil
 	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax:
 		expr, ok := spec.measures[agg.Field]
 		if !ok {

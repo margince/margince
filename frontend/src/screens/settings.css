@@ -70,7 +70,7 @@
 p.settings-panel-sub {
   margin-bottom: var(--space-4);
   color: var(--textMeta);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 

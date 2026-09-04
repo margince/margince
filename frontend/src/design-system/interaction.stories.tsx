@@ -40,8 +40,8 @@ const column: CSSProperties = {
   minWidth: "320px",
 };
 const label: CSSProperties = {
-  fontSize: "11px",
-  letterSpacing: "0.08em",
+  fontSize: "var(--fs-eyebrow)",
+  letterSpacing: "var(--tracking-eyebrow)",
   textTransform: "uppercase",
   color: "var(--textMeta)",
 };

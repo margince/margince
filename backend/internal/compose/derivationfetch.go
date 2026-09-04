@@ -41,6 +41,12 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		if err != nil {
 			return err
 		}
+		// The headline's instant wins over this transaction's. Without it a
+		// converted report's detail looks up a rate the headline never used,
+		// and the two disagree by however much the sheet moved in between.
+		if !plan.asOf.IsZero() {
+			frame.AsOf = plan.asOf
+		}
 		maskClauses, masked, err := maskExclusionClauses(ctx, spec, arg)
 		if err != nil {
 			return err

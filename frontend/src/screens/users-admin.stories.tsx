@@ -38,9 +38,11 @@ const RETIRED = {
   roles: ["rep"],
 };
 
-// The organization's own agent identity, which bootstrap writes into every
-// installation. It owns records, so it is in the roster — and it has no role at
-// all, which is the one row whose answer is a sentence rather than a picker.
+// An agent identity. Bootstrap seeds none, so most installations have no such
+// row — but one exists wherever the retirement migration has not run, and a
+// resident runner will land under the same flag. It owns records, so the roster
+// lists it, and it has no role at all: the one row whose answer is a sentence
+// rather than a picker. That state is what this story exists to show.
 const AGENT = {
   id: "u-agent",
   email: "agent@brandt.gradion.local",

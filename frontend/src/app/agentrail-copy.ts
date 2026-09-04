@@ -4,17 +4,12 @@
 import type { MarginceCoreState } from "../design-system/margince-core";
 
 /**
- * The taskbar preview's own copy, and the one table of invented lines left on it.
+ * The agent section's own copy.
  *
- * Deliberately NOT in the i18n catalogs. Product copy is translated into every
- * locale a reader can pick; a design-review surface behind
- * `VITE_UI_PREVIEW_TASKBAR` is not, and putting it there would hand every future
- * translator strings no installation serves. Same class as `mefixture.ts`.
- *
- * Everything the bar reports about the installation is now read from the API
- * (`agentrail.tsx`): approvals waiting, which sources are unreachable, the
- * model the last call actually ran on, the account's own suggestions. What is
- * left here is labels — and REVIEW_ONLY below.
+ * Everything the section reports about the installation is read from the API
+ * (`agentrail.tsx`): approvals waiting, which sources are unreachable, the model
+ * the last call actually ran on, the account's own suggestions. What is left
+ * here is the words those readings are said in.
  */
 
 /**
@@ -101,11 +96,6 @@ export const LABELS = {
   devModel: "development (offline fake)",
   devLine: "Running on the offline model",
   duplicatesRow: "Duplicate pairs open",
-  states: "State (review only)",
-  /** The run control beside the state chips. It plays invented work: what it is
-   *  for is the MOTION between the states, which a held chip cannot show. */
-  runPlay: "Play a run",
-  runStop: "Stop",
   expand: "Expand the agent panel",
   collapse: "Collapse the agent panel",
   region: "Margince agent",
@@ -120,31 +110,11 @@ export const LABELS = {
 } as const;
 
 /**
- * The states no read can reach on this surface, and the sentence each carries.
+ * The whole vocabulary the Core is drawn in, in lifecycle order.
  *
- * Every state the section shows is now the AGENT's, read from `/me/ai-activity`:
- * a live run puts the orb in `ingest` or `working` by the kind of work it is, a
- * broken one in `error` or `warning`. What stays unreachable is narrower than it
- * was. There is no per-step progress stream, so a run is queued, running or
- * settled and never "40% through" — and the capture pipeline reading mail, which
- * is what the `ingest` sentence below describes, still files no occurrence of its
- * own.
- *
- * They are here so the vocabulary can be reviewed whole, reachable only from the
- * switcher in the panel under its own review-only heading. Nothing derives them.
- */
-export const REVIEW_ONLY: Readonly<Partial<Record<MarginceCoreState, string>>> =
-  {
-    ingest: "Reading captured mail",
-    working: "Checking 1,204 records",
-  };
-
-/**
- * The whole vocabulary, in lifecycle order, for the switcher.
- *
- * Written out rather than derived from `REVIEW_ONLY`: the section reaches most of
- * these on its own from what it read, and the switcher has to be able to put it
- * back into one of them after a reviewer has walked the invented ones.
+ * Written out rather than derived from what the section happens to reach today:
+ * it is the list a state has to be ADDED to, and `agentrail.test.tsx` reads it to
+ * hold every state to a tone rule of its own in the stylesheet.
  */
 export const VOCABULARY: readonly MarginceCoreState[] = [
   "idle",

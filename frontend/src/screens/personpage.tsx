@@ -22,6 +22,11 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { ContactLink } from "../design-system/contactlink";
 import { IconAction } from "../design-system/iconaction";
+import {
+  IdentityFact,
+  IdentityLine,
+  IdentityMeta,
+} from "../design-system/identityline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
@@ -703,8 +708,11 @@ function PersonIdentityLine({
   const phone = person.phones?.[0]?.phone;
   const role = view.commercial?.role;
   return (
-    <div className="pe-identity-meta">
-      <div className="pe-meta-line">
+    <IdentityMeta>
+      {/* Ways to REACH her, each one its own handle rather than clauses of one
+          sentence about her — so the facts stand apart on whitespace instead of
+          being strung together on dots. */}
+      <IdentityLine separator="space">
         {/* The address and the number are LINKS: a reader who sees an address
             expects to click it, and a header that showed one and did nothing
             taught them the record was a printout. The link hands the value to
@@ -715,7 +723,7 @@ function PersonIdentityLine({
             kind="email"
             value={email}
             className="pe-meta-link"
-            textClassName="pe-meta-fact"
+            textClassName="identity-fact"
           >
             <Mail size={13} aria-hidden="true" />
             {email}
@@ -726,17 +734,16 @@ function PersonIdentityLine({
             kind="phone"
             value={phone}
             className="pe-meta-link"
-            textClassName="pe-meta-fact"
+            textClassName="identity-fact"
           >
             <Phone size={13} aria-hidden="true" />
             {phone}
           </ContactLink>
         )}
         {person.address?.city && (
-          <span className="pe-meta-fact">
-            <MapPin size={13} aria-hidden="true" />
+          <IdentityFact icon={<MapPin size={13} aria-hidden="true" />}>
             {person.address.city}
-          </span>
+          </IdentityFact>
         )}
         {/* `social` is an open map on the wire, so its values are unknown to
             the type system. The fact renders only when there is a string to
@@ -749,20 +756,19 @@ function PersonIdentityLine({
             value is not a web address, so a malformed one degrades to what this
             row used to be rather than to a dead anchor. */}
         {typeof person.social?.linkedin === "string" && (
-          <span className="pe-meta-fact">
-            <LinkIcon size={13} aria-hidden="true" />
+          <IdentityFact icon={<LinkIcon size={13} aria-hidden="true" />}>
             <ProfileLink href={person.social.linkedin} />
-          </span>
+          </IdentityFact>
         )}
         {/* The role is what the relationship edge records — never inferred from
             a job title, which is why a person with a title can still have no
             buying role and the line simply omits it. */}
         {role && (
-          <span className="pe-meta-fact pe-meta-quiet">
+          <IdentityFact quiet>
             {t("person.page.buyingRole")}: {buyingRoleLabel(role, t)}
-          </span>
+          </IdentityFact>
         )}
-        <span className="pe-meta-fact pe-meta-quiet">
+        <IdentityFact quiet>
           {t("person.page.owner")}:{" "}
           {rosterOwnerName(
             view.person.owner_id,
@@ -771,9 +777,9 @@ function PersonIdentityLine({
             t,
             t("person.page.ownerUnassigned"),
           )}
-        </span>
-      </div>
-    </div>
+        </IdentityFact>
+      </IdentityLine>
+    </IdentityMeta>
   );
 }
 

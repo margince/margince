@@ -2,7 +2,7 @@
 
 `internal/modules/automation` lets a workspace turn on and parameterize a **fixed** set
 of "when X happens, do Y" templates. There is no rule builder, no expression language, and no
-user-defined trigger or action — the vocabulary is seven triggers × seven actions, closed, and adding
+user-defined trigger or action — the vocabulary is seven triggers and six actions, closed, and adding
 to it is a code-and-test change, never data. This document is the deep reference: the catalog, the one
 engine both trigger shapes run through, and the invariants that keep a firing honest.
 
@@ -37,7 +37,7 @@ paths meet, and neither entry can be governed differently by accident.
 
 ---
 
-## 1. The catalog — seven triggers, seven actions
+## 1. The catalog — seven triggers, six actions
 
 A workspace author picks one **trigger** and one or more **actions**; the pair is a catalog entry they
 enable and parameterize. Both sets are closed and pinned to the spec in both directions by
@@ -63,13 +63,12 @@ stages for a human approval, `dynamic` resolves 🟢/🟡 from the firing's own 
 |---|---|---|
 | `create_task` | 🟢 | mint a follow-up task on the record's timeline |
 | `set_field` | 🟢 | update a field on the record that fired |
-| `add_to_list` | 🟢 | add the record to a static list |
 | `draft_email` | 🟢 | compose a draft email (records the draft; **never sends**) |
 | `notify` | 🟢 | notify a user (no transport wired here → honest `skipped`, §9) |
 | `assign_owner` | `dynamic` | set/reassign the owner — 🟢 single-entity, 🟡 at scale |
 | `request_approval` | 🟡 | stage a human approval — confirm-first by its very nature |
 
-Adding an eighth member of either set moves three things together — a new constant, its `triggerDefs`
+Adding a new member of either set moves three things together — a new constant, its `triggerDefs`
 / `actionDefs` registry row, and the closure test's pinned list — so a silent addition or drop can't
 land. This is a deliberate rejection of a visual builder, not a deferred feature: a free
 predicate/action DSL would be a second evaluator to secure and audit independently of everything else
@@ -282,7 +281,7 @@ Documented honestly, not apologetically:
 
 | | |
 |---|---|
-| The registry (7×7 catalog + closure test) | `internal/modules/automation/catalog_triggers.go`, `catalog_actions.go`, `catalog_closure_test.go` |
+| The registry (the closed catalog + its closure test) | `internal/modules/automation/catalog_triggers.go`, `catalog_actions.go`, `catalog_closure_test.go` |
 | The instantiable catalog (seeded + authorable-only) + store | `internal/modules/automation/automations_catalog.go`, `automations.go` |
 | The engine + per-firing lifecycle | `internal/modules/automation/engine.go`, `engine_run.go`, `engine_blocked.go` |
 | The shipped handlers (event / clock) | `internal/modules/automation/handlers_event.go`, `handlers_clock.go` (+ `people`'s `assign_lead_owner`, `lead_score_recompute`) |
