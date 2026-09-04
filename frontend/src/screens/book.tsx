@@ -157,6 +157,17 @@ function SessionBookingScreen() {
             {book.data.occurred_at &&
               formatDateTime(book.data.occurred_at, locale, viewerZone())}
           </p>
+          {/* Only when an address was actually typed. This build sends no
+              invite — there is no outbound calendar or mail transport behind
+              the booking at all — and somebody who named an attendee will
+              otherwise assume the product told them. Saying nothing is how a
+              client never hears about a meeting and nobody finds out until
+              they do not turn up. */}
+          {attendee.trim() !== "" && (
+            <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
+              {t("book.tellThemYourself")}
+            </p>
+          )}
         </Card>
       ) : (
         <QueryGate

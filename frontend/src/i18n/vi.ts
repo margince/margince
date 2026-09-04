@@ -5315,7 +5315,9 @@ export const vi = {
   "book.attendee": "Email người tham dự",
   "book.welcomeBack": "Đã nhận ra: {name}",
   "book.subject": "Cuộc họp qua Margince",
-  "book.confirmed": "Đã đặt lịch. Thư mời đang trên đường tới.",
+  "book.confirmed": "Đã đặt lịch.",
+  "book.tellThemYourself":
+    "Margince không gửi thư mời — bạn hãy tự báo giờ hẹn cho người tham dự.",
   "book.failed": "Việc đặt lịch không thành — không có gì được lên lịch.",
   "book.publicSub": "chọn một khung giờ — không cần tài khoản",
   "book.name": "Tên của bạn",

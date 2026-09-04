@@ -3918,7 +3918,11 @@ export interface paths {
         put?: never;
         /**
          * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-         * @description Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+         * @description Records the meeting on the timeline. **No invite is sent — this build has no outbound
+         *     calendar or mail transport behind a booking**, so whoever books it has to tell the
+         *     attendee themselves. The calendar integrations are capture-only (inbound import).
+         *
+         *     It RUNS DIRECTLY (ADR-0055), on the
          *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
          *     the same check the app applies. An installation that wants bookings confirmed sets a
          *     tier floor on `book_meeting`. On success a
@@ -36208,6 +36212,12 @@ export interface operations {
                     /** Format: date-time */
                     end: string;
                     subject?: string;
+                    /**
+                     * @description Who the meeting is with. **Accepted and not delivered to**: nothing in this
+                     *     build emails these addresses or adds them to a calendar event, and the
+                     *     created activity does not carry them either. Supply them for the caller's
+                     *     own record of intent, and tell the attendee yourself.
+                     */
                     attendee_emails?: string[];
                     /**
                      * @description Entities to associate the resulting meeting activity with. Each one is
