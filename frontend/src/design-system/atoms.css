@@ -1280,11 +1280,12 @@
   border-radius: 0;
   height: auto;
   padding: 0 0 0 24px;
-  /* NO font-size. The flush variant strips the field's chrome — border, ground,
-     radius — and the type is not chrome. A size here also outranks the iOS
-     floor above by specificity while sitting outside its media query, so a
-     flush field was the one input on a phone that still zoomed the viewport on
-     focus. Inheriting is what keeps that floor reachable. */
+  /* NO font-size, and NOT the nearest rung either. The flush variant strips the
+     field's chrome — border, ground, radius — and the type is not chrome. A size
+     here, whatever its value, outranks the iOS floor above by specificity while
+     sitting outside that floor's media query, so a flush field was the one input
+     on a phone that still zoomed the viewport on focus. Inheriting is what keeps
+     the floor reachable; naming a rung passes the type gate and leaves the zoom. */
 }
 .input-icon-flush .input:focus,
 .input-icon-flush .input:focus-visible {
