@@ -1453,7 +1453,7 @@ export const en = {
   "co.ask.q.whats_changed": "What's changed recently?",
   "co.ask.nothing": "Nothing here that you can see would answer that.",
   "co.ask.failed": "That question could not be answered — try it again.",
-  "co.suggest.title": "Margince found this",
+  "co.suggest.title": "Margince suggests",
   "co.suggest.kind.no_reply": "No reply",
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "Nothing scheduled",
@@ -1461,7 +1461,7 @@ export const en = {
   "co.suggest.more": "{count} more not shown here.",
   "co.suggest.basedOn": "What this is based on",
   "co.suggest.dismiss": "Not now",
-  "co.suggest.found": "Margince found this",
+  "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":
     "That could not be dismissed — it is still showing for you",
   "co.suggest.viewTasks": "View tasks",
@@ -2939,7 +2939,6 @@ export const en = {
   "co.spine.singleThreaded": "One contact, and no reply from them",
   "co.spine.overdue": "Past its date",
   "co.spine.expectedClose": "Expected close",
-  "co.360.title": "Margince read this record",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "This account · 360",
   "today.title": "What needs you",
@@ -7366,7 +7365,6 @@ export const en = {
 
   "person.rail.reviewFirst": "Review first",
   "person.rail.blocked": "Blocked",
-  "person.rail.ready": "Ready",
   "person.rail.pulseTitle": "Relationship pulse",
   "person.rail.explain": "Explain",
   "person.rail.direction": "Direction",

@@ -1396,7 +1396,7 @@ export const vi = {
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing": "Không có gì bạn xem được ở đây trả lời được câu đó.",
   "co.ask.failed": "Không trả lời được câu hỏi đó — hãy thử lại.",
-  "co.suggest.title": "Margince tìm thấy điều này",
+  "co.suggest.title": "Margince đề xuất",
   "co.suggest.kind.no_reply": "Chưa có hồi đáp",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
@@ -1404,7 +1404,7 @@ export const vi = {
   "co.suggest.more": "Còn {count} mục không hiện ở đây.",
   "co.suggest.basedOn": "Dựa trên những gì",
   "co.suggest.dismiss": "Để sau",
-  "co.suggest.found": "Margince tìm thấy điều này",
+  "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed":
     "Không bỏ qua được mục này — mục đó vẫn hiển thị với bạn",
   "co.suggest.viewTasks": "Xem công việc",
@@ -2863,7 +2863,6 @@ export const vi = {
     "M\u1ed9t \u0111\u1ea7u m\u1ed1i, v\u00e0 kh\u00f4ng c\u00f3 h\u1ed3i \u00e2m",
   "co.spine.overdue": "\u0110\u00e3 qu\u00e1 h\u1ea1n",
   "co.spine.expectedClose": "D\u1ef1 ki\u1ebfn ch\u1ed1t",
-  "co.360.title": "Margince đã đọc hồ sơ này",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "Tài khoản này · 360",
   "today.title": "Việc cần bạn",
@@ -7220,7 +7219,6 @@ export const vi = {
 
   "person.rail.reviewFirst": "Xem lại trước",
   "person.rail.blocked": "Bị chặn",
-  "person.rail.ready": "Sẵn sàng",
   "person.rail.pulseTitle": "Nhịp quan hệ",
   "person.rail.explain": "Giải thích",
   "person.rail.direction": "Chiều",
