@@ -44,7 +44,7 @@ trap 'rm -rf "$workdir"' EXIT
 # A transport failure (refused, timeout) makes curl print status 000 and
 # exit non-zero; `|| true` keeps set -e from eating the fail() message,
 # and --max-time keeps a stalled API from hanging the proof.
-echo "== verify-boot 1/5: login as the seeded demo admin =="
+echo "== verify-boot 1/6: login as the seeded demo admin =="
 login_status="$(curl -sS --max-time 15 -o "$workdir/login.json" -D "$workdir/headers" -w '%{http_code}' \
   -X POST "$API_BASE/v1/auth/login" \
   -H 'Content-Type: application/json' \
@@ -63,7 +63,38 @@ session="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 [ -n "$session" ] || fail "login answered 200 but set no crm_session cookie"
 echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 
-echo "== verify-boot 2/5: seeded people are visible =="
+echo "== verify-boot 2/6: the installation describes itself =="
+# The app shell gates every screen on GET /company: a 404 means "this
+# installation has not described itself yet", and the shell redirects into
+# onboarding. That redirect is correct, so a seeded stack missing this row does
+# not fail here — it fails as nineteen browser specs that never render the nav
+# rail, looking exactly like a layout regression. This step is the one line
+# that says what actually happened.
+#
+# The expected name is read out of the seeder rather than repeated, so renaming
+# the company there cannot leave this asserting the old one. Scoped to
+# describe_company's own body: `display_name` is a field the seeder sends for
+# organizations too, and the first one in the file is only the right one until
+# somebody adds a record above it.
+seeded_company="$(awk '/^describe_company\(\) \{/,/^\}/' scripts/seed-dev.sh \
+  | sed -n 's/.*"display_name":"\([^"]*\)".*/\1/p' | head -1)"
+[ -n "$seeded_company" ] || fail "found no {\"display_name\":\"…\"} in scripts/seed-dev.sh — this step would pass by reading nothing"
+company_status="$(curl -sS --max-time 15 -o "$workdir/company.json" -w '%{http_code}' \
+  "$API_BASE/v1/company" --cookie "crm_session=$session" || true)"
+if [ "$company_status" = "404" ]; then
+  fail "GET /v1/company answers 404 — the installation has not described itself, so every login redirects into onboarding and no browser spec that signs in can render the shell (make seed-dev)"
+fi
+if [ "$company_status" != "200" ]; then
+  echo "  response body:" >&2
+  cat "$workdir/company.json" >&2
+  fail "GET /v1/company returned HTTP $company_status (expected 200)"
+fi
+company_name="$(jq -r '.display_name // empty' "$workdir/company.json")"
+[ "$company_name" = "$seeded_company" ] \
+  || fail "the installation calls itself '$company_name' where scripts/seed-dev.sh describes '$seeded_company' — the stack was seeded by something else, or the seed is stale (make seed-dev)"
+echo "  OK: the installation describes itself as $company_name"
+
+echo "== verify-boot 3/6: seeded people are visible =="
 # The rule the product reads an employment by, spelled the same way
 # scripts/seed-dev.sh writes it: primary, and not ended. `ended_at` is a date and
 # ISO dates compare as strings, so a future end is still current — the reading
@@ -196,7 +227,7 @@ while IFS= read -r body; do
   echo "  OK: '$org_name' stands at '$lifecycle'"
 done <<< "$seeded_org_bodies"
 
-echo "== verify-boot 3/5: the seeded conversations are conversations =="
+echo "== verify-boot 4/6: the seeded conversations are conversations =="
 # A LINK IS NOT A CONVERSATION. Everything network-shaped — the person graph's
 # direct and account arms, contact peers, who-knows-this-contact, the decay lane
 # — derives from activity_participant, and for a long time nothing in the seed
@@ -263,7 +294,7 @@ while IFS="$(printf '\t')" read -r slug subject; do
   esac
 done <<<"$seeded_conversations"
 
-echo "== verify-boot 4/5: every composed unit's transport is registered =="
+echo "== verify-boot 5/6: every composed unit's transport is registered =="
 # The boot proof for the channel registry, and it belongs HERE rather than in a
 # Go test: registering the vocabulary is a BOOT STEP the api runs, so the only
 # thing that can prove the api runs it is an api that booted. This lane boots
@@ -296,7 +327,7 @@ else
   done <<<"$expected_transports"
 fi
 
-echo "== verify-boot 5/5: frontend production build =="
+echo "== verify-boot 6/6: frontend production build =="
 # --ignore-scripts: no lifecycle scripts run at install; esbuild ships
 # prebuilt platform binaries as optional deps, so the build works without
 # its validating postinstall.
