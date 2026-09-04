@@ -908,10 +908,17 @@ describe("the draft_reply verb says what the click does", () => {
 // wrong, and a rep who answers the focus card then meets the same customer
 // twice on the way down.
 //
-// Asserted over the ROW IDENTITY rather than over visible text, because two
-// rows can honestly share a title — two tasks called "Follow up" are two
-// obligations — while `source-id` is what the page itself uses as a key and
-// what a duplicate would collide on.
+// Counted over every `.worklist-row-title` ON THE PAGE, not within its list
+// items. The duplication this guards against renders OUTSIDE the queue's <ol>
+// — a card above it drawing the top row again — so a walk over <li> elements
+// filters out the one shape of the defect the test is named for. It passed for
+// exactly that reason while the screen showed the duplication.
+//
+// Titles rather than identities, and the fixture is built so that is sound:
+// three rows, three distinct titles. Two rows may honestly share a title in
+// production — two tasks called "Follow up" are two obligations — so this
+// fixture must keep them distinct for the count to mean what it says, which is
+// what `seen.size` being asserted at 3 holds.
 describe("every obligation is drawn once", () => {
   it("renders no row twice, including the one at the top", async () => {
     stub(

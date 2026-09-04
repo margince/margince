@@ -8022,8 +8022,6 @@ export const en = {
   "worklist.pane.lastInbound": "They last wrote",
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
-  // Required by the template's key type, never produced: worthActingOn
-  // excludes primary_action "acknowledge" before this key is ever built.
   "worklist.band.now": "Now",
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
