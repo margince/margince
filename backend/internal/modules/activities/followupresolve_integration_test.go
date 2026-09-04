@@ -114,18 +114,23 @@ func (e *resolveEnv) seedPerson(t *testing.T) ids.UUID {
 // the lead id finds nothing.
 func (e *resolveEnv) seedTaskLinkedToPerson(t *testing.T, source, capturedBy string, person ids.UUID) ids.UUID {
 	t.Helper()
-	return e.seedTaskLinkedToPersonAt(t, source, capturedBy, person, time.Now())
+	return e.seedTaskLinkedToPersonAt(t, source, capturedBy, person, -time.Hour)
 }
 
-// seedTaskLinkedToPersonAt is seedTaskLinkedToPerson with an explicit
-// created_at, for proving the resolver bounds its completion to tasks that
-// existed by a given instant rather than every open task it can find.
-func (e *resolveEnv) seedTaskLinkedToPersonAt(t *testing.T, source, capturedBy string, person ids.UUID, createdAt time.Time) ids.UUID {
+// seedTaskLinkedToPersonAt is seedTaskLinkedToPerson with the task's created_at
+// placed explicitly relative to the PERSON's own, which is the offset the
+// resolver's bound actually reads. Expressed as an offset rather than an
+// absolute instant, and computed by Postgres from the person row, so the
+// fixture is written by the same clock the assertion is about — a test that
+// stamped these from the test host would be proving something about its own
+// machine.
+func (e *resolveEnv) seedTaskLinkedToPersonAt(t *testing.T, source, capturedBy string, person ids.UUID, fromPersonCreation time.Duration) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by, created_at)
-		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3, $4)`,
-		id, source, capturedBy, createdAt)
+		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3,
+			(SELECT p.created_at FROM person p WHERE p.id = $4) + make_interval(secs => $5))`,
+		id, source, capturedBy, person, fromPersonCreation.Seconds())
 	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, id, person)
 	return id
 }
@@ -135,10 +140,9 @@ func (e *resolveEnv) seedTaskLinkedToPersonAt(t *testing.T, source, capturedBy s
 // carryLeadActivities has run, that a caller can still learn where the lead's
 // tasks went. dedupeOutcome is "created" for a fresh person, "merged" for an
 // existing survivor — see decodeLeadPromoted's doc for why the resolver reads
-// it. OccurredAt is real "now", not a fixed date: the resolver bounds its
-// person-keyed completion to tasks that existed by this instant, and a
-// fixture date fixed in the past would exclude every task this same test run
-// just seeded.
+// it. OccurredAt is the API host's own stamp and the resolver's bound no
+// longer reads it — TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails
+// is the test that holds that, by moving this field and expecting no effect.
 func leadPromotedEvent(t *testing.T, lead, person ids.UUID, dedupeOutcome string) workflow.Event {
 	t.Helper()
 	payload, err := json.Marshal(map[string]string{
@@ -355,28 +359,57 @@ func TestAMergedPromotionDoesNotClaimThePersonsUnrelatedTasks(t *testing.T) {
 // a system task against the freshly-created person in the window between the
 // promotion committing and this handler actually running — no_activity_reminder,
 // check_in_cadence — is not the follow-up this promotion carried. Bounding
-// completion to tasks that existed by the event's own OccurredAt is what
-// keeps "a fresh person cannot yet carry anything else" true instead of
-// merely assumed.
-func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotionEvent(t *testing.T) {
+// completion to the tasks that existed when the person did is what keeps "a
+// fresh person cannot yet carry anything else" true instead of merely assumed.
+func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotion(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	person := e.seedPerson(t)
 	carried := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	// A task minted a second AFTER the person the promotion created — the
+	// exact shape of a sibling automation catching up before this handler runs.
+	lateTask := e.seedTaskLinkedToPersonAt(t, "system", "system", person, time.Second)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	ev := leadPromotedEvent(t, e.lead, person, "created")
-	// A task minted a second AFTER the promotion's own instant — the exact
-	// shape of a sibling automation catching up before this handler runs.
-	lateTask := e.seedTaskLinkedToPersonAt(t, "system", "system", person, ev.OccurredAt.Add(time.Second))
-	fire(ctx, t, h, ev)
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "created"))
 
 	if !e.isDone(t, carried) {
 		t.Error("the task actually carried by the promotion is still open")
 	}
 	if e.isDone(t, lateTask) {
-		t.Error("a task minted AFTER the promotion event was completed as if the promotion carried it")
+		t.Error("a task minted AFTER the promotion was completed as if the promotion carried it")
+	}
+}
+
+// The bound is read from Postgres on both sides, so the clock of the host
+// running the handler cannot move it. That is the whole point: the API and
+// worker hosts stamp workflow.Event.OccurredAt from their own time.Now(),
+// activity.created_at is defaulted by the database, and the two drift
+// independently.
+//
+// A host trailing the database by more than the gap between a follow-up
+// task's creation and the promotion used to put the carried task on the far
+// side of the bound. The resolver then completed nothing, returned no error
+// and logged no anomaly, and the follow-up loop the system opened stayed open
+// forever — the silent direction, which is why an hour of skew is asserted
+// here rather than left to a deployment's luck.
+func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	person := e.seedPerson(t)
+	// Carried by the promotion: minted against the lead a minute before the
+	// person existed, well inside an hour of skew.
+	carried := e.seedTaskLinkedToPersonAt(t, "system", "system", person, -time.Minute)
+
+	ev := leadPromotedEvent(t, e.lead, person, "created")
+	ev.OccurredAt = ev.OccurredAt.Add(-time.Hour)
+
+	ctx := e.systemCtx()
+	fire(ctx, t, handlerFor(t, store, "lead.promoted"), ev)
+
+	if !e.isDone(t, carried) {
+		t.Error("the carried follow-up is still open because the handler's host clock trails the database's — a loop the system opened and can no longer close")
 	}
 }
 
