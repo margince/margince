@@ -711,6 +711,12 @@ export interface components {
              * @description The inbound activity that evidenced the trigger (absent for a human_qualify with no linked activity).
              */
             evidence_ref?: string;
+            /**
+             * @description The activities whose link this promotion moved from the lead onto the person — what carryLeadActivities re-pointed, which is the lead's own timeline and nothing the survivor already had.
+             *     It names them because the person id cannot. A promotion that MERGES lands the lead's follow-up task on a person that may already carry its own unrelated reminders, so "the open system tasks on this person" is not the same set as "the tasks this promotion carried" — and a consumer completing the first would tick off work the promotion never touched.
+             *     Absent on an event written before this field existed, and a consumer replaying one has no worse an answer than it had then: for a freshly created person the two sets coincide, which is why that case worked without it.
+             */
+            carried_activity_ids?: string[];
         };
         /** @description Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the person-side lineage is nulled. Its own verb, because a lead.updated cannot say a person node lost its lineage. */
         PublicEventLeadDemoted: {

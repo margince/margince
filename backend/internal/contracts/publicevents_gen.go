@@ -1475,6 +1475,11 @@ type PublicEventLeadMerged struct {
 
 // PublicEventLeadPromoted Payload for lead.promoted — the lead's genuine-engagement promotion into the context graph (events.md §5.5); its own verb, never a lead.updated, since neither person.created nor person.updated on its own says a lead crossed this line.
 type PublicEventLeadPromoted struct {
+	// CarriedActivityIds The activities whose link this promotion moved from the lead onto the person — what carryLeadActivities re-pointed, which is the lead's own timeline and nothing the survivor already had.
+	// It names them because the person id cannot. A promotion that MERGES lands the lead's follow-up task on a person that may already carry its own unrelated reminders, so "the open system tasks on this person" is not the same set as "the tasks this promotion carried" — and a consumer completing the first would tick off work the promotion never touched.
+	// Absent on an event written before this field existed, and a consumer replaying one has no worse an answer than it had then: for a freshly created person the two sets coincide, which is why that case worked without it.
+	CarriedActivityIds *[]openapi_types.UUID `json:"carried_activity_ids,omitempty"`
+
 	// DedupeOutcome Whether promotion created a new person or merged into an existing one: created or merged.
 	DedupeOutcome string `json:"dedupe_outcome"`
 
