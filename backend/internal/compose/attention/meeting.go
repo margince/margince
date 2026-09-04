@@ -86,5 +86,12 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// as work due — unlike a proposal's expiry, which merely lapses.
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = reasons
-	return ranked{item: row, deadlineAt: deadlineOf(item.DueAt), occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		item:       row,
+		deadlineAt: deadlineOf(item.DueAt),
+		occurredAt: occurredOf(item, asOf),
+		// The reader's own calendar. The lane reads the meetings THIS person is
+		// on, so a colleague's meeting could not have come back.
+		ownerRef: ownedByWhoeverIsReading(),
+	}
 }

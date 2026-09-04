@@ -162,6 +162,7 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 		row.Because = append(row.Because, reason("overdue", nil))
 	}
 	return ranked{
+		ownerRef:   ownedByWhoeverIsReading(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -175,7 +176,8 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		ownerRef: ownedByWhoeverIsReading(), item: row, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifyIntroduction: a colleague is waiting on this reader to answer.
@@ -194,6 +196,7 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("blocks_customer_work", nil)}
 	return ranked{
+		ownerRef:   ownedByWhoeverIsReading(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -208,6 +211,7 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
+		ownerRef:   ownedByWhoeverIsReading(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -348,6 +352,11 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// without this it is a row the filters cannot place: a named owner's
 		// queue dropped every one of them.
 		owner: waiting.OwnerID,
+		// The same fact for the CLIENT, which needs the difference between "this
+		// customer is nobody's" and "no lane answered" that the id above cannot
+		// carry. A zero owner here is a real unowned customer, which is what the
+		// unassigned scope surfaces.
+		ownerRef: ownerFrom(waiting.OwnerID),
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.
@@ -423,6 +432,12 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
 		occurredAt: occurredOf(item, asOf),
+		// The assignee the lane read, which is the same fact the reason above
+		// states in words. Absent means nobody has taken it — the state the
+		// unassigned scope exists to surface — and the two must agree: a row
+		// saying "unassigned" in its reasons while naming an owner beside them
+		// is a row a reader cannot make sense of.
+		ownerRef: ownerFromAssignee(item.AssigneeId),
 	}
 }
 
@@ -432,7 +447,8 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "system", "customer_never_received")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		ownerRef: ownedByWhoeverIsReading(), item: row, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifyUndelivered: a message the rep believes they sent and which never
@@ -446,7 +462,8 @@ func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		ownerRef: ownedByWhoeverIsReading(), item: row, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifySystem: the pipes. A mailbox that stopped capturing makes every quiet
@@ -461,5 +478,6 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		consequence = valueNone
 	}
 	row := base(item, levelBlocking, "system", consequence)
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		ownerRef: ownedByWhoeverIsReading(), item: row, occurredAt: occurredOf(item, asOf)}
 }

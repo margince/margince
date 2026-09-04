@@ -36,7 +36,10 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// would put one decision in two groups across two reads.
 	facts := stagedFactsOf(item)
 	return ranked{
-		item:          row,
+		item: row,
+		// A decision the reader is being asked to make. The lane reads what THIS
+		// person may decide, so the row is theirs by construction of that read.
+		ownerRef:      ownedByWhoeverIsReading(),
 		occurredAt:    occurredOf(item, asOf),
 		machineSender: facts.MachineSender,
 		knownCompany:  facts.KnownCompany,

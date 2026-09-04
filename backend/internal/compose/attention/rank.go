@@ -137,6 +137,16 @@ type ranked struct {
 	// can judge it. Zero means the row names nobody, which for a wait is an
 	// unowned customer rather than a missing answer.
 	owner ids.UUID
+	// ownerRef is the same question answered for the CLIENT rather than for the
+	// scope filters, and it carries one thing `owner` cannot: whether the
+	// producer answered at all.
+	//
+	// A zero `owner` means two different things — nobody holds this row, and
+	// this lane never said — and the filters can live with that because a row
+	// they cannot judge simply stays. A reader cannot: told `unassigned`, they
+	// would read a confident claim that nobody owes it. So the producers state
+	// this one, and the census fails on a lane that does not.
+	ownerRef ownerRef
 	// person is WHO a waiting row is about, when it names one.
 	//
 	// The subject cannot answer this. A wait carrying both a deal and a person
@@ -184,7 +194,7 @@ func stampAsOf(rows []ranked, asOf time.Time) []ranked {
 // The explanation is produced HERE, during the sort, rather than by re-comparing
 // on the client: the tie-breaks depend on the base-currency conversion and the
 // material threshold, both of which the server holds and the browser does not.
-func rankAll(rows []ranked) []crmcontracts.WorklistItem {
+func rankAllFor(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 	sort.SliceStable(rows, func(i, j int) bool {
 		return less(rows[i], rows[j])
 	})
@@ -211,6 +221,11 @@ func rankAll(rows []ranked) []crmcontracts.WorklistItem {
 		// describes a row's place on the page it is actually on.
 		band := crmcontracts.WorklistItemBand(bandOfRow(row))
 		item.Band = &band
+		// Who answers for it, as the PRODUCER said. Stamped here beside the
+		// band and the primary action, and for the same reason those are: a
+		// source added later carries it by arriving in this loop rather than by
+		// its author remembering to.
+		item.Owner = ownerOnTheWire(row, reader)
 		// And which SCREEN it belongs on, from the one map that decides that.
 		// Stamped for the same reason as the two above: a source added later
 		// carries it by arriving here, not by its author remembering to.
