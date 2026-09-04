@@ -28,7 +28,7 @@ import (
 )
 
 // retireAgentSeatMigration is the file both tests below apply.
-const retireAgentSeatMigration = "core/1788502500_the_seeded_agent_seat_is_retired.up.sql"
+const retireAgentSeatMigration = "core/1788508281_the_seeded_agent_seat_is_retired.up.sql"
 
 // TestRetiringTheAgentSeatSurvivesAReferencingRow is the case a DELETE fails on.
 func TestRetiringTheAgentSeatSurvivesAReferencingRow(t *testing.T) {
