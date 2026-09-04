@@ -23686,8 +23686,8 @@ components:
             You are only ever sent a row you may already read, so this discloses nothing new;
             it says WHY you can see it, which is what lets a page tell "private to you" from
             "shared with everybody" instead of leaving the owner to guess. An `owner` row
-            reaches the workspace through a verdict or through the owner's own
-            `POST /people/{id}/publish`, and never travels back.
+            reaches the workspace through a sender verdict, and never travels back. There is no
+            owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
         writable:
           type: boolean
           readOnly: true

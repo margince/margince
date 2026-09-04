@@ -16511,7 +16511,7 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /**
-             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
              * @enum {string}
              */
             readonly visibility?: "workspace" | "owner";

@@ -24980,7 +24980,7 @@ type Organization struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
 	Visibility *OrganizationVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -25003,7 +25003,7 @@ type OrganizationRelationshipTypes string
 // OrganizationSizeBand defines model for Organization.SizeBand.
 type OrganizationSizeBand string
 
-// OrganizationVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+// OrganizationVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
 type OrganizationVisibility string
 
 // Organization360 The company record page in one payload. Every section except `organization` is
