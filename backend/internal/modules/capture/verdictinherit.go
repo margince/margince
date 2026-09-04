@@ -97,11 +97,31 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 // senderWasSeen answers whether this message's author is one of the addresses
 // the thread's verdict was given.
 //
-// The FROM address alone, not every party on the message. A cleared thread that
+// The counterparty alone, not every party on the message. A cleared thread that
 // a new recipient is copied on is still the conversation the classifier read;
-// a message WRITTEN by somebody it never saw is not.
+// a message whose OTHER PARTY it never saw is not.
+//
+// counterparty_email is the party across the exchange, so it is the author of
+// an inbound message and the recipient of an outbound one — and the rule is
+// deliberately the same for both. A verdict is about a CORRESPONDENCE with
+// somebody: the seat's own reply to a customer whose mail was just called
+// ordinary belongs to that same exchange, and holding it while publishing what
+// it answers would show a conversation with half its turns missing. A message
+// to or from a party the verdict never read is a different correspondence
+// whatever direction it travelled in, and is not admitted.
 func senderWasSeen(rec connector.NormalizedRecord, seen []string) bool {
-	from := strings.ToLower(strings.TrimSpace(rec.Counterparty.Email))
+	return addressWasSeen(rec.Counterparty.Email, seen)
+}
+
+// addressWasSeen is that rule with the message taken away, so the arriving
+// message and an already-stored sibling are admitted on identical terms.
+//
+// Spelled once on purpose: two copies of "was this sender part of what the
+// verdict read" drift, and the direction they drift in publishes mail.
+//
+// Held by: TestTheSeenSenderRuleIsSpelledOnce (backend/gates/seenaddressrule_test.go)
+func addressWasSeen(address string, seen []string) bool {
+	from := strings.ToLower(strings.TrimSpace(address))
 	if from == "" {
 		return false
 	}
@@ -135,9 +155,11 @@ func reopenClearedThreadTx(ctx context.Context, tx pgx.Tx, threadKey string) err
 	// triggered the re-ask. The unseen sender that caused the reopen would be
 	// judged by correspondence they were never part of.
 	//
-	// The next message on this thread supplies a new one: EnsureTx fills the
-	// column on the row it finds empty, and a claim skips a row that still has
-	// none rather than judging an empty prompt.
+	// The message that triggered this reopen supplies a new one: it inherits
+	// VerdictPending, and openConfidentialityQuestionTx fills the column with
+	// that message in this same transaction. A claim requires a readable
+	// activity, so a row that somehow reaches one without a pointer retires
+	// rather than being judged on an empty prompt.
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = 'pending', kind = NULL, confidence = NULL,

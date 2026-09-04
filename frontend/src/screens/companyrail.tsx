@@ -25,7 +25,12 @@ import { problemCodeOf, throwProblem } from "./common";
 import { NewDealAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
-import { SectionSummary, sectionAnswered } from "./companyrailshared";
+import {
+  peopleSlice,
+  SectionSummary,
+  sectionAnswered,
+  wholeCount,
+} from "./companyrailshared";
 import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { roleOf } from "./provider-status";
@@ -100,38 +105,54 @@ export function CompanyRail({
     return null;
   }
   return (
-    // A plain div: RecordView's own <aside> is the landmark around this, and a
+    // A plain div: the shell's own <aside> is the landmark around this, and a
     // second labelled region inside it would give a reader two names for one
-    // column.
+    // column. Inside it ONE pane of named sections (DESIGN.md §6): the
+    // account's fields, its deals, its people, the hold, its tags — each a
+    // disclosure with its own summary, so the column reads as one object with
+    // five slices rather than five cards a reader has to assemble.
     <div className="co-rail">
-      {/* Details lead the column: the account's own fields are the first
-          thing a reader orients by, and they draw from the page's already-
-          resolved record while the composite read below is still arriving. */}
-      <Panel
-        title={t("co.details.title")}
-        titleAction={
-          // "All fields", not "Profile": the Profile TAB carries that name a
-          // few pixels away, and two controls with one accessible name in one
-          // view is a dead end for anyone moving by name rather than by sight.
-          // It also reads as the sibling cards' "All N" does — this card shows
-          // a few of the account's fields, the tab shows every one.
-          <Button small variant="ghost" onClick={() => onTab("profile")}>
-            {t("co.rail.details.all")}
-          </Button>
-        }
-      >
-        <PanelBody>
-          <DetailsGrid organization={view?.organization ?? org} />
-        </PanelBody>
+      <Panel>
+        {/* Details lead the column: the account's own fields are the first
+            thing a reader orients by, and they draw from the page's already-
+            resolved record while the composite read below is still arriving. */}
+        <Disclosure
+          className="co-sect"
+          open
+          summary={<SectionSummary title={t("co.details.title")} />}
+        >
+          <PanelBody>
+            <DetailsGrid organization={view?.organization ?? org} />
+          </PanelBody>
+          <div className="co-card-actions">
+            {/* "All fields", not "Profile": the Profile TAB carries that name a
+                few pixels away, and two controls with one accessible name in
+                one view is a dead end for anyone moving by name rather than by
+                sight. */}
+            <Button small variant="ghost" onClick={() => onTab("profile")}>
+              {t("co.rail.details.all")}
+            </Button>
+          </div>
+        </Disclosure>
+        {/* Both summaries stand on EVERY tab, the open one included: the
+            column is the reader's anchor while they move between tabs, and
+            each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
+            tab is not a duplicate of it, a full copy would be. */}
+        <DealsSection view={view} loading={loading} onTab={onTab} />
+        <PeopleSection view={view} loading={loading} onTab={onTab} />
+        <CompanyHoldSection organization={view?.organization ?? org} />
+        <Disclosure
+          className="co-sect"
+          open
+          summary={<SectionSummary title={t("tags.panelTitle")} />}
+        >
+          <CompanyTagsSection
+            organization={view?.organization ?? org}
+            orgId={orgId}
+            bare
+          />
+        </Disclosure>
       </Panel>
-      {/* Both summaries stand on EVERY tab, the open one included: the rail
-          is the reader's anchor while they move between tabs, and each card
-          shows only the top RAIL_ROW_LIMIT rows — a summary beside a tab is
-          not a duplicate of it, a full copy would be. */}
-      <DealsSection view={view} loading={loading} onTab={onTab} />
-      <PeopleSection view={view} loading={loading} onTab={onTab} />
-      <CompanyHoldSection organization={view?.organization ?? org} />
-      <CompanyTagsSection organization={view?.organization} orgId={orgId} />
     </div>
   );
 }
@@ -157,7 +178,10 @@ function CompanyHoldSection({
     return null;
   }
   return (
-    <Panel title={t("hold.sectionTitle")}>
+    <Disclosure
+      className="co-sect"
+      summary={<SectionSummary title={t("hold.sectionTitle")} />}
+    >
       <PanelBody>
         {/* The row takes an ADDRESS and derives the domain from it, which is
             what every person page hands it. An account has only the domain, so
@@ -165,7 +189,7 @@ function CompanyHoldSection({
             row's own domain verb would compute. */}
         <CounterpartyHoldRow email={`x@${host}`} />
       </PanelBody>
-    </Panel>
+    </Disclosure>
   );
 }
 
@@ -209,6 +233,7 @@ function DealsSection({
   const { locale } = useLocale();
   const deals = view?.deals;
   const rows = rankedDeals(deals?.data ?? []);
+  const count = wholeCount(deals);
   const state = sectionState(
     view,
     "deals",
@@ -225,16 +250,14 @@ function DealsSection({
       ((deals.won_lifetime?.amount_minor ?? 0) > 0 || deals.lost_count > 0),
   );
   return (
-    <Panel
-      title={t("co.rail.deals.title")}
-      titleAction={
-        answered ? (
-          <Button small variant="ghost" onClick={() => onTab("deals")}>
-            {rows.length > 0
-              ? t("co.rail.all", { count: formatNumber(rows.length, locale) })
-              : t("co.rail.add")}
-          </Button>
-        ) : undefined
+    <Disclosure
+      className="co-sect"
+      open
+      summary={
+        <SectionSummary
+          title={t("co.rail.deals.title")}
+          count={answered ? count : undefined}
+        />
       }
     >
       {state === "ready" ? (
@@ -253,28 +276,58 @@ function DealsSection({
           >
             {null}
           </SurfaceState>
-          {state === "empty" && !hasClosedHistory && view?.organization && (
-            <DealsCreateVerb organization={view.organization} />
+          {state === "empty" && view?.organization && (
+            <DealsEmptyVerb
+              organization={view.organization}
+              betweenCycles={hasClosedHistory}
+              onTab={onTab}
+            />
           )}
         </PanelBody>
       )}
-    </Panel>
+      {state === "ready" && (
+        <div className="co-card-actions">
+          <Button small variant="ghost" onClick={() => onTab("deals")}>
+            {count != null
+              ? t("co.rail.all", { count: formatNumber(count, locale) })
+              : t("co.rail.allUncounted")}
+          </Button>
+        </div>
+      )}
+    </Disclosure>
   );
 }
 
-// The create-deal verb, gated on writability the same way TagsSection's own
-// add-tag verb is: `useCompanyReadOnlyReason` needs a resolved
-// Organization, so this is its own component mounted only once one exists,
-// rather than a conditional hook call inside DealsSection itself.
-function DealsCreateVerb({
+// The ONE verb an empty pipeline carries. An account that never started gets
+// the create verb when the reader may write; one between cycles, or a reader
+// who may not write, gets the way to the Deals tab instead. Never both — two
+// verbs under one empty state is a choice the reader has no basis to make.
+// Gated on writability the same way TagsSection's own add-tag verb is:
+// `useCompanyReadOnlyReason` needs a resolved Organization, so this is its
+// own component mounted only once one exists, rather than a conditional
+// hook call inside DealsSection itself.
+function DealsEmptyVerb({
   organization,
-}: Readonly<{ organization: Organization }>) {
+  betweenCycles,
+  onTab,
+}: Readonly<{
+  organization: Organization;
+  betweenCycles: boolean;
+  onTab: (tab: "deals") => void;
+}>) {
+  const t = useT();
   const readOnlyReason = useCompanyReadOnlyReason(organization);
-  if (readOnlyReason) {
-    return null;
+  if (betweenCycles || readOnlyReason) {
+    return (
+      <div className="co-card-actions">
+        <Button small variant="ghost" onClick={() => onTab("deals")}>
+          {t("co.rail.add")}
+        </Button>
+      </div>
+    );
   }
   return (
-    <div className="co-card-actions">
+    <div className="card-actions">
       <NewDealAction
         orgId={organization.id}
         orgName={organization.display_name}
@@ -387,28 +440,17 @@ function PeopleSection({
   // twenty-five, so re-sorting here would be a second spelling of that rule —
   // and the copy that drifts, since only one of the two is what chose which
   // twenty-five arrived.
-  const contacts = view?.people?.data ?? [];
-  const state = sectionState(
-    view,
-    "people",
-    Boolean(view?.people),
-    contacts.length,
-    loading,
-  );
+  const { contacts, count, state } = peopleSlice(view, loading);
   const answered = sectionAnswered(state);
   return (
-    <Panel
-      title={t("co.rail.people.title")}
-      titleAction={
-        answered ? (
-          <Button small variant="ghost" onClick={() => onTab("people")}>
-            {contacts.length > 0
-              ? t("co.rail.all", {
-                  count: formatNumber(contacts.length, locale),
-                })
-              : t("co.rail.add")}
-          </Button>
-        ) : undefined
+    <Disclosure
+      className="co-sect"
+      open
+      summary={
+        <SectionSummary
+          title={t("co.rail.people.title")}
+          count={answered ? count : undefined}
+        />
       }
     >
       {state === "ready" ? (
@@ -424,8 +466,11 @@ function PeopleSection({
           <SurfaceState state={state} emptyLabel={t("co.rail.people.empty")}>
             {null}
           </SurfaceState>
+          {/* The empty state's one verb; the foot below stands only once
+              there are rows, so an empty roster never offers the same
+              tab twice under two names. */}
           {state === "empty" && (
-            <div className="co-card-actions">
+            <div className="card-actions">
               <Button small variant="ghost" onClick={() => onTab("people")}>
                 {t("co.rail.people.add")}
               </Button>
@@ -433,7 +478,16 @@ function PeopleSection({
           )}
         </PanelBody>
       )}
-    </Panel>
+      {state === "ready" && (
+        <div className="co-card-actions">
+          <Button small variant="ghost" onClick={() => onTab("people")}>
+            {count != null
+              ? t("co.rail.all", { count: formatNumber(count, locale) })
+              : t("co.rail.allUncounted")}
+          </Button>
+        </div>
+      )}
+    </Disclosure>
   );
 }
 

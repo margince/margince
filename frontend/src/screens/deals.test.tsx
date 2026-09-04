@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
@@ -1925,19 +1925,18 @@ describe("DealScreen — the stage stepper advances the deal", () => {
   // The deal's tags ride in the CONTEXT rail, beside the seats, the deal room
   // and the mail card — the same column a person and a company draw theirs in.
   // They sat in the overview pane once, full-width between the readings and the
-  // stage stepper, on the belief that this page had no side column; it fills one
-  // through `PageAside`, which portals into the shell's rail.
+  // stage stepper, on the belief that this page had no side column; it has the
+  // details pane every record page draws.
   it("draws the deal's tags in the context rail", async () => {
     const d = deal({ id: "x" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
-    // The provider and the region together, because `PageAside` is a PORTAL:
-    // without a mounted host it renders null, and a bare screen would report
-    // the card missing whichever column it was written into.
+    // The shell's pane around the screen, open: without it the screen has no
+    // pane to draw, and a bare screen would report the card missing whichever
+    // column it was written into.
     render(
-      <PageAsideProvider>
+      <RecordShell>
         <DealScreen id="x" />
-        <PageAsideRegion />
-      </PageAsideProvider>,
+      </RecordShell>,
     );
 
     const tag = await screen.findByText("Renewal");

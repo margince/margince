@@ -37,8 +37,12 @@ func setupWeekly(t *testing.T) *weekEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	return &weekEnv{
-		Env:    e,
-		engine: NewEngine(e.Pool),
+		Env: e,
+		// No membership seam: this suite is about the PER-REP weekly, which is
+		// gated on being its own owner and never asks which team a reader is
+		// on. A seam bound here would be wiring the tests need and production
+		// does not exercise on this path.
+		engine: NewEngine(e.Pool, nil),
 		repCtx: e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
 	}
 }

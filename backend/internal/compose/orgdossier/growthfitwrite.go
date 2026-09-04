@@ -192,7 +192,10 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 func assessWithModel(ctx context.Context, lane Completer, in Input,
 	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, error) {
-	resp, err := lane.Complete(ctx, GrowthFitRequest(in, lang))
+	resp, err := ai.Ask(ctx, lane, GrowthFitRequest(in, lang), func(text string) error {
+		_, _, err := ParseGrowthFit(text, in)
+		return err
+	})
 	if err != nil {
 		return Assessment{}, err
 	}

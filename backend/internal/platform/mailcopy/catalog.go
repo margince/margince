@@ -97,8 +97,18 @@ func inviteLines(line writeLine) {
 		"Nếu bạn không mong đợi điều này, bạn có thể bỏ qua email này.")
 }
 
-// weeklyLines is the Monday retrospective.
+// weeklyLines is the Monday retrospective: what the week did, and then what a
+// reader does next with it. Split where the mail itself changes subject — the
+// counted figures above, the movement and the two links below — because the
+// list is one call per line and grows every time the mail says something new.
 func weeklyLines(line writeLine) {
+	weeklyFigureLines(line)
+	weeklyMovementLines(line)
+}
+
+// weeklyFigureLines are the counted outcomes: what was delivered, won, lost,
+// moved, decided, and how much of the morning queue was answered.
+func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklySubject },
 		"Your week: ",
 		"Deine Woche: ",
@@ -173,6 +183,11 @@ func weeklyQueueLines(line writeLine) {
 		"Carried over",
 		"Übernommen",
 		"Chuyển tiếp")
+}
+
+// weeklyMovementLines are what actually moved, the way on to the rest of it,
+// and the words a single row's outcome is written with.
+func weeklyMovementLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyWhatMoved },
 		"What moved:",
 		"Was sich bewegt hat:",

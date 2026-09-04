@@ -294,7 +294,7 @@ func (c *replyDraftCase) Run(ctx context.Context, completer aitasks.Completer) (
 
 // replyDraftRecorder is the brain the drafter drafts through: it records every
 // request the drafter issues and the replies it read back, and it deliberately
-// does NOT implement validatedBrain, so each call is sent bare. Production wraps
+// does NOT implement CompleteValidated, so each call is sent bare. Production wraps
 // the same request in the shape-retry when the brain supports one, and a case
 // that retried would certify the answer a model gives after being told to try
 // again rather than the answer it gives.

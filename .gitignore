@@ -16,10 +16,11 @@ coverage-extensions.out
 # an unrelated future /build asset is never silently hidden), and
 # extensions/ is the installation-owned enabled set. The vanilla tree
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
-# enabled by default (extensions/de, the German jurisdiction pack;
-# extensions/openchannel, the reference connector — presence under
-# extensions/ IS the enablement, so a unit missing from the un-ignore
-# list below is a unit no clone of this repository has).
+# enabled by default (extensions/de and extensions/vn, the German and
+# Vietnamese jurisdiction packs; extensions/openchannel, the reference
+# connector — presence under extensions/ IS the enablement, so a unit
+# missing from the un-ignore list below is a unit no clone of this
+# repository has).
 /build/composition/
 # The SECOND composition root, and it exists for a reason that is not tidiness:
 # gen-composition's -verify requires build/composition/ to hold EXACTLY the files
@@ -40,6 +41,7 @@ coverage-extensions.out
 !/extensions/approvals.lock
 !/extensions/de
 !/extensions/openchannel
+!/extensions/vn
 # A unit's installed frontend dependencies. Its package.json and the workspace
 # lockfile are what ship; node_modules is what pnpm makes from them, and it is
 # per-member now that a unit's frontend layer is a workspace package.
@@ -82,8 +84,11 @@ coverage-extensions.out
 /docs/explanation/company-record-page-v2-implementation-plan.md
 /docs/explanation/assets/company-record-page-v2/
 
-# Local secrets — never commit
-.env.local
+# Local secrets — never commit. Globbed rather than the bare name: a hand or
+# editor backup (.env.local.bak) is the same secrets file under a name the
+# exact rule never matched, and one was committed that way — where it then went
+# stale as a second copy of .env.example.
+.env.local*
 
 # A local routing file, if you keep one. Nothing seeds it any more — the
 # installation's binding is a stored setting, declared for a fresh stack under

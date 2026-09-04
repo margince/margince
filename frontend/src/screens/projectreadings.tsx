@@ -17,6 +17,24 @@ import { type Project360, stateOf } from "./projectsections";
 // line about how well its correspondence is filed. Apart from the section
 // cards because they are read ACROSS, once, rather than down a column.
 
+// Where a reading's own door leads. This page has no tabs — every section is
+// already on it — so the door is a scroll to the card the figure was computed
+// from rather than a route. Named here and consumed by `project360.tsx`, which
+// owns the layout, so the two cannot drift apart into an id nothing carries.
+export const PROJECT_DEALS_ANCHOR = "project-deals";
+export const PROJECT_COMMITMENTS_ANCHOR = "project-commitments";
+
+// A reading with a card behind it opens that card. `scrollIntoView` and not a
+// fragment href: this app routes on the hash, so `#project-deals` would be read
+// as an address and take the reader off the record.
+function reveal(anchor: string): () => void {
+  return () => {
+    document
+      .getElementById(anchor)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+}
+
 /**
  * The header figures: what the deals on this project are worth, what is
  * still owed, and how much has been filed. Present only when the server
@@ -47,6 +65,8 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
           locale,
         )}
         numeric
+        openLabel={t("project.rollups.openDeals")}
+        onOpen={reveal(PROJECT_DEALS_ANCHOR)}
       />
       <StatCard
         label={t("project.rollups.wonValue")}
@@ -56,11 +76,15 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
           locale,
         )}
         numeric
+        openLabel={t("project.rollups.openDeals")}
+        onOpen={reveal(PROJECT_DEALS_ANCHOR)}
       />
       <StatCard
         label={t("project.rollups.openCommitments")}
         value={formatNumber(rollups.open_commitments, locale)}
         numeric
+        openLabel={t("project.rollups.openCommitmentsList")}
+        onOpen={reveal(PROJECT_COMMITMENTS_ANCHOR)}
       />
       <StatCard
         label={t("project.rollups.lastActivity")}

@@ -122,6 +122,18 @@ type ranked struct {
 	// can judge it. Zero means the row names nobody, which for a wait is an
 	// unowned customer rather than a missing answer.
 	owner ids.UUID
+	// person is WHO a waiting row is about, when it names one.
+	//
+	// The subject cannot answer this. A wait carrying both a deal and a person
+	// takes the DEAL as its subject — the deal says more about what the reply
+	// is for — so the contact vanishes from the row even though the lane
+	// resolved them. The decay suppressor needs exactly that contact: without
+	// it a person appears twice, once as unanswered and once as gone quiet, and
+	// the pair reads as the page contradicting itself.
+	//
+	// Zero means the wait names no person, which is a real state: a thread can
+	// be filed under a company alone.
+	person ids.UUID
 	// foldedFrom names the sources of the rows this one stands for, once per
 	// member. A folded group is shown INSTEAD of its members, so a count of
 	// what the reader can see has to attribute it back to them — otherwise

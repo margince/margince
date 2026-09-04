@@ -100,7 +100,11 @@ export function VCardImport() {
 
   return (
     <>
-      <Button data-testid="vcard-import" onClick={() => setOpen(true)}>
+      {/* `small`, like every other verb in a list header: the two ways of
+          creating a contact beside it are `CreateAction`s, which are small, and
+          one control a rung taller in a row of three reads as a different kind
+          of thing. */}
+      <Button small data-testid="vcard-import" onClick={() => setOpen(true)}>
         {t("vcardImport.action")}
       </Button>
       <Modal open={open} onClose={close} labelledBy={titleId}>
@@ -137,7 +141,11 @@ export function VCardImport() {
         )}
         {importer.isSuccess && <ImportReport report={importer.data} />}
 
-        <div className="form-actions">
+        {/* card-actions for the reason the org history drawer takes it: the
+            import report above sets `margin: var(--space-4) 0 0` — a top margin
+            only — so a row bringing none of its own left Done touching the last
+            imported row. */}
+        <div className="card-actions">
           <Button variant="ghost" onClick={close}>
             {t("vcardImport.done")}
           </Button>

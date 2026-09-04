@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { navigate } from "../app/router";
 import { Button, StatCard } from "../design-system/atoms";
 import { FactList } from "../design-system/factlist";
 import { ReadingsGrid } from "../design-system/readingsgrid";
@@ -36,7 +37,17 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
     <ReadingsGrid label={t("lead.readings.title")} testId="lead-readings">
       <ScoreCard lead={lead} locale={locale} t={t} />
       <FirstResponseCard lead={lead} locale={locale} t={t} />
-      <StatCard label={t("lead.status")} value={statusReading(lead, t)} />
+      {/* The status names the set of leads in it, and `#/leads` declares
+          `status` as a filter chip — a chip's key IS its wire parameter, so
+          this reading was an address already. */}
+      <StatCard
+        label={t("lead.status")}
+        value={statusReading(lead, t)}
+        openLabel={t("lead.readings.openStatus")}
+        onOpen={() =>
+          navigate({ screen: "leads" }, new Map([["status", lead.status]]))
+        }
+      />
       <StatCard
         label={t("create.companyName")}
         value={lead.company_name ?? t("lead.detailsUnset")}

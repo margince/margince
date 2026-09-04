@@ -1890,7 +1890,7 @@ export async function mockApi(
         as_of: "2026-07-05T06:00:00Z",
         scope: "mine",
         scope_options: ["mine"],
-        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+        summary: { urgent: 0, due: 1, lower_priority: 1, total: 2 },
         sources_unavailable: [],
         // Both accountings, because the server sends both. A fixture that omits
         // them models a response the product never produces, and a spec driving
@@ -1902,6 +1902,7 @@ export async function mockApi(
             shown: 1,
             more_available: false,
           },
+          { source: "task", considered: 1, shown: 1, more_available: false },
         ],
         counts: [
           {
@@ -1910,6 +1911,7 @@ export async function mockApi(
             shown: 1,
             more_available: false,
           },
+          { category: "tasks", considered: 1, shown: 1, more_available: false },
         ],
         // The strip above the queue. This day is one routine decision and
         // nothing else, so three readings are honestly zero and the money is
@@ -1933,6 +1935,25 @@ export async function mockApi(
             title: approval.summary,
             because: [{ kind: "routine" }],
             actions: ["decide"],
+          },
+          // A task row, for the verbs the approval above does not draw.
+          //
+          // The mobile case measures every control a rep can press, and an
+          // approval offers one. Without this row the disposition verbs and the
+          // duration picker — the WIDEST thing the row puts on a line — are
+          // never on the page the sweep measures, so it would report a workable
+          // screen having looked at the narrowest row in the product.
+          {
+            id: "01a05500-0000-7000-8000-0000000000d1",
+            source: "task",
+            category: "tasks",
+            level: 3,
+            consequence: "task_slips",
+            title: "Send the retrofit quote to Turbinenbau",
+            due_at: "2026-07-06T13:00:00Z",
+            because: [{ kind: "due_today" }, { kind: "unassigned" }],
+            actions: [],
+            dispositions: ["snooze", "not_mine"],
           },
         ],
       });

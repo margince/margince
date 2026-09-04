@@ -687,6 +687,12 @@ export const Placeholders: Story = {
           tracked here after the pipeline has let go.
         </p>
       </EmptyState>
+      {/* The plate: an empty GROUP inside a pane, dashed because the space is
+          waiting rather than broken. Its verb lives in the group's head. */}
+      <EmptyState plate title="No open deals">
+        A deal is a sale in progress on this account, with its stage and its
+        expected close.
+      </EmptyState>
     </div>
   ),
 };

@@ -134,11 +134,17 @@ describe("splitEmailBody", () => {
   });
 
   it("returns empty parts for an empty body", () => {
-    expect(splitEmailBody("")).toEqual({ header: "", main: "", trimmed: "" });
+    expect(splitEmailBody("")).toEqual({
+      header: "",
+      main: "",
+      trimmed: "",
+      tail: "none",
+    });
     expect(splitEmailBody("   \n  ")).toEqual({
       header: "",
       main: "",
       trimmed: "",
+      tail: "none",
     });
   });
 
@@ -149,6 +155,38 @@ describe("splitEmailBody", () => {
     expect(parts.main).toBe("Kurz zur Rückfrage: ja.");
     expect(parts.trimmed).toContain("Viele Grüße");
     expect(parts.trimmed).toContain("> Passt Dienstag?");
+    // A signature comes FIRST here, so that is what the tail opens with. The
+    // quote under it travels along, which is why one label for both was wrong.
+    expect(parts.tail).toBe("signature");
+  });
+
+  // The case that shipped broken, taken verbatim from a captured message: a
+  // sign-off and no quoted history anywhere. The tail said "quote" by omission,
+  // so the drawer folded the sender's own name behind "show quoted history"
+  // and a reader had no reason to press it.
+  it("names a sign-off with no quoted history as a signature", () => {
+    const parts = splitEmailBody(
+      "Hallo zusammen,\n\nanbei die Zusammenfassung von gestern.\n\nIch schicke bis Ende der Woche eine Aufwandsschätzung.\n\nViele Grüße\nBảo",
+    );
+    expect(parts.main).toBe(
+      "Hallo zusammen,\n\nanbei die Zusammenfassung von gestern.\n\nIch schicke bis Ende der Woche eine Aufwandsschätzung.",
+    );
+    expect(parts.trimmed).toBe("Viele Grüße\nBảo");
+    expect(parts.tail).toBe("signature");
+  });
+
+  it("names a quoted reply with no sign-off as a quote", () => {
+    const parts = splitEmailBody(
+      "Ja, gerne.\n\nAm 1. September schrieb Ana:\n> Passt Dienstag?",
+    );
+    expect(parts.main).toBe("Ja, gerne.");
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("names a body that is all message as having no tail", () => {
+    const parts = splitEmailBody("Ja, Dienstag passt.");
+    expect(parts.trimmed).toBe("");
+    expect(parts.tail).toBe("none");
   });
 });
 
@@ -176,8 +214,8 @@ describe("boundaries that must not fire", () => {
   });
 
   it("still folds the real mobile-client footer", () => {
-    const parts = splitEmailBody("Passt so.\n\nSent from my iPhone");
-    expect(parts.main).toBe("Passt so.");
+    const parts = splitEmailBody("Passt.\n\nSent from my iPhone");
+    expect(parts.main).toBe("Passt.");
     expect(parts.trimmed).toBe("Sent from my iPhone");
   });
 
@@ -186,5 +224,105 @@ describe("boundaries that must not fire", () => {
     const parts = splitEmailBody(body);
     expect(parts.main).not.toBe("");
     expect(emailSummaryText(body)).not.toBe("");
+  });
+});
+
+// The cases the SERVER's table already held and this one did not.
+//
+// The Go table's header promised a gate holding both sides to one set of
+// bodies. That gate did not exist; when it was written it found the two tables
+// testing largely different rules — thirteen bodies here, fourteen there, and
+// almost no overlap. Each case below was run against the Go splitter before
+// being written down, so this closes a testing gap rather than a behavioural
+// disagreement: the two implementations already answer these the same way.
+//
+// backend/gates/frontendemailtext_test.go now fails if either side adds a body
+// the other does not have.
+describe("the bodies the server's table holds", () => {
+  it("reads a plain body as all message", () => {
+    const parts = splitEmailBody("Können wir Dienstag sprechen?");
+    expect(parts.main).toBe("Können wir Dienstag sprechen?");
+    expect(parts.tail).toBe("none");
+  });
+
+  it("opens the signature at the RFC 3676 delimiter", () => {
+    const parts = splitEmailBody(
+      "Passt bei mir.\n\n--\nAna Sommer\nGeschäftsführerin",
+    );
+    expect(parts.main).toBe("Passt bei mir.");
+    expect(parts.trimmed).toBe("--\nAna Sommer\nGeschäftsführerin");
+    expect(parts.tail).toBe("signature");
+  });
+
+  it("closes the message at a German sign-off near the end", () => {
+    const parts = splitEmailBody("Danke für das Angebot.\n\nViele Grüße\nAna");
+    expect(parts.main).toBe("Danke für das Angebot.");
+    expect(parts.trimmed).toBe("Viele Grüße\nAna");
+    expect(parts.tail).toBe("signature");
+  });
+
+  it("lets an attribution line travel with the quote it introduces", () => {
+    const parts = splitEmailBody(
+      "Ja, gerne.\n\nAm 1. September schrieb Ana:\n> Passt Dienstag?",
+    );
+    expect(parts.main).toBe("Ja, gerne.");
+    expect(parts.trimmed).toBe(
+      "Am 1. September schrieb Ana:\n> Passt Dienstag?",
+    );
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("needs the sent-date neighbour for an Outlook block", () => {
+    const parts = splitEmailBody(
+      "Siehe unten.\n\nVon: Ana Sommer\nGesendet: Montag, 1. September\nAn: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.main).toBe("Siehe unten.");
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("reads a Von: line without a sent-date as prose", () => {
+    const body = "Von: uns beiden kam bisher keine Antwort.";
+    expect(splitEmailBody(body).main).toBe(body);
+  });
+
+  it("matches mobile boilerplate as a whole line, not a prefix", () => {
+    const body = "Sent from my perspective the contract is not ready";
+    expect(splitEmailBody(body).main).toBe(body);
+  });
+
+  it("folds the mobile footer when it is the whole line", () => {
+    const parts = splitEmailBody("Passt.\n\nSent from my iPhone");
+    expect(parts.main).toBe("Passt.");
+    expect(parts.trimmed).toBe("Sent from my iPhone");
+    expect(parts.tail).toBe("signature");
+  });
+
+  it("keeps a greeting alone as a message", () => {
+    expect(splitEmailBody("Danke!").main).toBe("Danke!");
+  });
+
+  it("keeps a body that is only a quote as its own text", () => {
+    expect(splitEmailBody("> Passt Dienstag?").main).toBe("> Passt Dienstag?");
+  });
+
+  it("peels the capture preamble without folding the message", () => {
+    const parts = splitEmailBody(
+      "From: ana@example.test\nTo: lars@example.test\n\nPasst Dienstag?",
+    );
+    expect(parts.main).toBe("Passt Dienstag?");
+  });
+
+  it("collapses a multi-paragraph message without its sign-off", () => {
+    const parts = splitEmailBody(
+      "Passt Dienstag?\n\nOder Mittwoch?\n\nViele Grüße\nAna",
+    );
+    expect(parts.main).toBe("Passt Dienstag?\n\nOder Mittwoch?");
+    expect(parts.tail).toBe("signature");
+  });
+
+  it("leaves an all-whitespace body empty", () => {
+    const parts = splitEmailBody("   \n\n ");
+    expect(parts.main).toBe("");
+    expect(parts.tail).toBe("none");
   });
 });

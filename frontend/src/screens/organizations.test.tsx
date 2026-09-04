@@ -1393,15 +1393,11 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     );
     render(<CompanyScreen id="o-1" />);
 
-    // The way in, and that the relationship is live. WHICH side wrote last is
-    // the daily brief's to say — acting on whose move it is belongs with the
-    // moves, and the header states only that contact happened and when. It
-    // says "either way" out loud, because the health card beside it counts
-    // inbound alone and the two numbers otherwise read as contradicting each
-    // other when a rep wrote recently and has had nothing back.
+    // The way in. WHEN contact last happened is the readings row's (Last
+    // touch), not the header's: one fact, one home.
     await waitFor(() => expect(screen.getByText(/Way in/)).toBeTruthy());
     expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
-    expect(screen.getByText(/Last contact .*either way/)).toBeTruthy();
+    expect(screen.queryByText(/Last contact/)).toBeNull();
     // The composite is gone: it was PO-F-3's MAX over contacts, so one
     // talkative contact spoke for the account and "41/100" read as a verdict.
     expect(screen.queryByText(/41\/100/)).toBeNull();
@@ -1420,8 +1416,9 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
     // org360's backstop omits `strength` entirely, which is what an account
-    // with no readable contacts looks like: never contacted, no score.
-    expect(screen.getByText("Never contacted")).toBeTruthy();
+    // with no readable contacts looks like: no way in named, and no score
+    // standing in for one.
+    expect(screen.queryByText(/Way in/)).toBeNull();
     expect(screen.queryByText(/^0 ·/)).toBeNull();
   });
 });
@@ -1917,17 +1914,15 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await screen.findByText("Brandt Automotive GmbH");
 
     await waitFor(() =>
-      expect(container.querySelector(".co-panel-stack")).toBeTruthy(),
+      expect(container.querySelector(".co-overview-stack")).toBeTruthy(),
     );
-    // The context is the PAGE's column, not one of the record's own: it sits
-    // beside the work rather than inside it, which is what lets it run past
-    // the header and stay put when a tab changes. The record itself keeps no
-    // rail of its own — a second column inside one would be a third place to
-    // look.
-    expect(document.querySelector(".pageaside")).toBeTruthy();
-    expect(document.querySelector(".co-rail")).toBeTruthy();
+    // The context is the record's details pane, beside the work under the tab
+    // row, and nothing else: the record keeps no left rail — a second column
+    // would be a third place to look.
+    const pane = container.querySelector(".record-aside");
+    expect(pane).toBeTruthy();
+    expect(pane?.querySelector(".co-rail")).toBeTruthy();
     expect(container.querySelector(".record-rail")).toBeNull();
-    expect(container.querySelector(".record-aside")).toBeNull();
   });
 
   // Every card is still ON the page, wherever it sits. Named individually
@@ -1946,7 +1941,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // "Worth doing next" is not asserted here — it is advice, and this
     // fixture's account has none to give; the suggestions suite above
     // exercises its own presence.
-    const stack = container.querySelector(".co-panel-stack");
+    const stack = container.querySelector(".co-overview-stack");
     expect(stack).toBeTruthy();
     expect(stack?.textContent).toContain("Commercial");
     // The money is a TAB, so the overview column must not also carry it: a
@@ -1961,7 +1956,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // its place — whether to sell here at all is a different question from
     // what is running today.
     expect(stack?.textContent).toContain("What they are worth to you");
-    expect(stack?.textContent).toContain("What is in flight");
+    expect(stack?.textContent).toContain("No open deals");
 
     // What Margince spotted reads in the WORK column, beside the rest of what
     // wants a decision, rather than in the context column.
@@ -2035,10 +2030,13 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
 
-    const stack = container.querySelector(".co-panel-stack");
-    await waitFor(() =>
-      expect(stack?.textContent).toContain("What happened lately"),
-    );
+    // The thread is folded inside the 360 and names how much it holds: the
+    // one call counts, subject or not.
+    const fold = await screen.findByRole("button", {
+      name: "Read the thread · 1",
+    });
+    await userEvent.click(fold);
+    const stack = container.querySelector(".co-overview-stack");
     expect(stack?.textContent).not.toContain("Nothing logged with them yet");
   });
 

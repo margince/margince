@@ -119,11 +119,14 @@ export function RecordEmailVerb({
   entityType,
   entityId,
   personId,
+  recordAddress,
   disabledReasonId,
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  /** The record's own address, for a first message to it. See ComposeModal. */
+  recordAddress?: string;
   disabledReasonId?: string;
 }>) {
   const [composing, setComposing] = useState(false);
@@ -141,6 +144,7 @@ export function RecordEmailVerb({
           entityType={entityType}
           entityId={entityId}
           personId={personId}
+          recordAddress={recordAddress}
           kind="email"
           open={composing}
           onClose={() => setComposing(false)}
@@ -156,6 +160,7 @@ export function RecordEmailAside({
   replyTo,
   detectWaitingReply = false,
   personId,
+  recordAddress,
   strings,
 }: Readonly<{
   entityType: RelinkKind;
@@ -167,6 +172,8 @@ export function RecordEmailAside({
   // off and passes `replyTo` directly instead.
   detectWaitingReply?: boolean;
   personId?: string;
+  /** The record's own address, for a first message to it. See ComposeModal. */
+  recordAddress?: string;
   // Overrides for a caller that already has its own wording for these five
   // spots (dealemail.tsx keeps its `dealmail.*` copy this way). Absent falls
   // back to the generic `recordmail.*` catalog entries.
@@ -223,6 +230,7 @@ export function RecordEmailAside({
           entityType={entityType}
           entityId={entityId}
           personId={personId}
+          recordAddress={recordAddress}
           kind="email"
           open={composing}
           onClose={() => setComposing(false)}

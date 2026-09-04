@@ -10,10 +10,14 @@ import type { Translator } from "../i18n";
 import { translate } from "../i18n";
 import {
   comparisonText,
+  itemTitle,
+  KNOWN_SOURCES,
   moveHref,
   moveLabel,
   moveOpensComposer,
   reasonText,
+  sourceName,
+  sourceUnavailableText,
 } from "./worklist.copy";
 import type {
   WorklistComparison,
@@ -287,5 +291,120 @@ describe("reasonText — the lead's own deadline", () => {
   it("falls back to the plain phrase when no deadline travelled", () => {
     const reason: WorklistReason = { kind: "response_due_soon" };
     expect(reasonText(reason, t, "en", zone)).toBe("reply due soon");
+  });
+});
+
+describe("itemTitle — an incident names what broke, never an internal id", () => {
+  // `cause` and `label` are two halves of one contract and the fixture supplies
+  // both: `cause` is the identity the group was formed on, opaque and never
+  // rendered, and `label` is what it identifies in words. A fixture carrying
+  // only the field the code reads could not catch the code reading the other.
+  const incident = (batch: { cause?: string; label?: string }): WorklistItem =>
+    ({
+      id: "i-1",
+      source: "automation_run",
+      batch: { key: "system_incident", count: 8, ...batch },
+    }) as unknown as WorklistItem;
+
+  const REF = "automation_run:01a065e8-617c-74ec-a4da-b41010b2a5b0";
+
+  it("prints the label when the lane minted one", () => {
+    expect(
+      itemTitle(
+        incident({ cause: REF, label: "Post-meeting recap draft" }),
+        t,
+        "en",
+      ),
+    ).toBe("Post-meeting recap draft failed 8 times");
+  });
+
+  it("never renders the cause, which is an identity and reads like one", () => {
+    // What the Worklist's top row actually read against a seeded stack before
+    // the contract grew `label`: "automation_run:01a065e8-… failed 8 times".
+    // The contract now says `cause` is opaque, and that a client naming a group
+    // by it is worse than a vaguer sentence — the reader can neither act on an
+    // identity nor tell it from a bug. This is the client half of that promise,
+    // and it is the only thing holding it.
+    const title = itemTitle(incident({ cause: REF }), t, "en");
+    expect(title).not.toContain("automation_run");
+    expect(title).not.toContain("01a065e8");
+    expect(title).toBe(itemTitle(incident({}), t, "en"));
+  });
+
+  it("says the cause is unnamed rather than borrowing the row's own source", () => {
+    // The tempting fallback, and the wrong one: this item's `source` IS
+    // `automation_run`, so a client reaching for something to say could print
+    // the lane's key and look as though it had a name. A group whose lane
+    // minted no label is a group nobody named, and the sentence says that.
+    const title = itemTitle(incident({}), t, "en");
+    expect(title).not.toContain("automation_run");
+    expect(title).toContain("8 times");
+  });
+});
+
+describe("an unavailable source", () => {
+  // All three shipped locales, because the frame is a per-language decision and
+  // a check that reads only English proves the rule for the one translator who
+  // was in the room. The German and Vietnamese frames were rewritten in the
+  // same change; nothing but this would notice if one drifted back.
+  const LOCALES = ["en", "de", "vi"] as const;
+
+  // Derived from the owner rather than listed here: a hand-kept copy of this
+  // list goes short of the product the moment a source is added, and short is
+  // the direction that passes silently.
+  //
+  // `batch` is left out on purpose, and it is the one exclusion: it names a
+  // GROUP of decisions rather than a source the page reads, so it can never
+  // appear in `sources_unavailable`.
+  const SOURCES = Object.keys(KNOWN_SOURCES).filter(
+    (source) => source !== "batch",
+  );
+
+  it("covers every source the product can name", () => {
+    // The census, asserted. Without this the loop below could quietly narrow to
+    // one source and still report a green run.
+    expect(SOURCES.length).toBe(Object.keys(KNOWN_SOURCES).length - 1);
+    expect(SOURCES).toContain("capture_health");
+  });
+
+  it("never reads its own title as the sentence's subject", () => {
+    // What `sourceName` returns is a row TITLE, and most of them are whole
+    // clauses — "A mailbox connection needs attention". Framed as a subject,
+    // fourteen of these ran two sentences together, and each one read as a
+    // rendering fault rather than as a source the page could not reach.
+    //
+    // The check is positional rather than a list of the bad wordings: the fact
+    // comes first and the title follows it, so no title can be the subject
+    // whatever the copy says next.
+    for (const locale of LOCALES) {
+      const t: Translator = (key, vars) => translate(locale, key, vars);
+      for (const source of SOURCES) {
+        const name = sourceName(source, t);
+        for (const reason of ["withheld", "failed"] as const) {
+          const where = `${locale}/${source}/${reason}`;
+          const text = sourceUnavailableText({ source, reason }, t);
+          expect(text, where).toContain(name);
+          expect(text.startsWith(name), where).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("says which of the two reasons it is, because only one is anybody's to fix", () => {
+    // A withheld source is the reader's own grants; a failed one is an outage.
+    // One sentence for both would tell a reader to go asking for access to
+    // something that is simply down.
+    for (const locale of LOCALES) {
+      const t: Translator = (key, vars) => translate(locale, key, vars);
+      const withheld = sourceUnavailableText(
+        { source: "dsr", reason: "withheld" },
+        t,
+      );
+      const failed = sourceUnavailableText(
+        { source: "dsr", reason: "failed" },
+        t,
+      );
+      expect(withheld, locale).not.toBe(failed);
+    }
   });
 });

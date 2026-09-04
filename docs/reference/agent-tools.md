@@ -119,6 +119,7 @@ Columns:
 | `decide_approval` | 🟢 | `write` | — | Decides a row in Margince's own approvals queue; the incumbent holds none |
 | `decide_approval_bundle` | 🟢 | `write` | — | As `decide_approval`, for several at once |
 | `describe_query_vocabulary` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): it describes the native query surface, which is not what a mirrored read answers |
+| `describe_report_vocabulary` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): it describes what a `run_report` plan may say, and that verb is refused here |
 | `disqualify_lead` | 🟢 | `write` | — | `unsupported_by_sor`: a lead is mirrored and the provider cannot serve this write, so the native table is empty |
 | `draft_email` | 🟢 | `draft` | — | Activities seam; not mode-routed |
 | `draft_follow_ups_for` | 🟢 | `draft` | — | `unsupported_by_sor` (native-only guard) |

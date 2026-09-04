@@ -32,6 +32,7 @@ const PERSON = "018f3a1b-0000-7000-8000-000000000010";
 const SOFIA = "018f3a1b-0000-7000-8000-000000000021";
 const MARTIN = "018f3a1b-0000-7000-8000-000000000022";
 const PHILIPP = "018f3a1b-0000-7000-8000-000000000031";
+const RUI = "018f3a1b-0000-7000-8000-000000000041";
 
 // The anchor is the contact this graph is about, and the tab reads its label
 // for every sentence that names them.
@@ -81,6 +82,20 @@ const philipp: PersonGraph["nodes"][number] = {
   label: "Philipp Königs",
   sublabel: "Finance Director, Northgate",
   person_id: PHILIPP,
+};
+
+// Somebody the contact is observed corresponding with who is neither ours nor
+// at their company. `suggest_edge` is set on peer nodes and on no other kind:
+// the pair keeps appearing on the same threads and no `works_with` edge exists
+// yet, so the map's panel offers to record one.
+const rui: PersonGraph["nodes"][number] = {
+  id: `person:${RUI}`,
+  type: "contact",
+  group: "peer",
+  label: "Rui Almeida",
+  sublabel: "Programme Lead, Meridian",
+  person_id: RUI,
+  suggest_edge: true,
 };
 
 function directRoute(over: Partial<RouteCandidate> = {}): RouteCandidate {
@@ -137,9 +152,16 @@ function graph(over: Partial<PersonGraph> = {}): PersonGraph {
 
 // The tab reads two endpoints, and a story that routed only one would render
 // the other's loading state under a name claiming something else.
-function stub(payload: PersonGraph, asks: IntroRequest[] = []) {
+function stub(
+  payload: PersonGraph,
+  asks: IntroRequest[] = [],
+  allow: Parameters<typeof meRoute>[0] = {
+    person: ["read"],
+    introduction: ["read", "create"],
+  },
+) {
   installFetchStub({
-    "GET /me": meRoute({ person: ["read"], introduction: ["read", "create"] }),
+    "GET /me": meRoute(allow),
     "GET /people/{id}/graph": () => jsonResponse(payload),
     [`GET /people/${PERSON}/graph`]: () => jsonResponse(payload),
     [`GET /people/${PERSON}/intro-requests`]: () => jsonResponse(asks),
@@ -155,8 +177,9 @@ function render(
   payload: PersonGraph,
   asks: IntroRequest[] = [],
   view?: Moments,
+  allow?: Parameters<typeof stub>[2],
 ) {
-  stub(payload, asks);
+  stub(payload, asks, allow);
   return (
     <StoryProviders>
       <PersonNetworkTab personId={PERSON} view={view} />
@@ -409,4 +432,61 @@ export const WithMoments: Story = {
       ],
       sections_omitted: [],
     }),
+};
+
+// The peer lane. These are the only nodes the server flags `suggest_edge` on,
+// and recording the acquaintance is offered from the selected node's detail —
+// so a picture with no peer in it is a picture from which `works_with` cannot
+// be written at all.
+export const ObservedPeers: Story = {
+  render: () =>
+    render(
+      graph({
+        nodes: [anchor, sofia, rui],
+        edges: [
+          {
+            from: `user:${SOFIA}`,
+            to: `person:${PERSON}`,
+            strength_bucket: "strong",
+            interactions_90d: 14,
+            last_at: "2026-08-28T09:00:00Z",
+          },
+          {
+            from: `person:${PERSON}`,
+            to: `person:${RUI}`,
+            strength_bucket: "moderate",
+            interactions_90d: 6,
+            last_at: "2026-08-20T09:00:00Z",
+          },
+        ],
+      }),
+      [],
+      undefined,
+      {
+        person: ["read"],
+        introduction: ["read", "create"],
+        relationship: ["create"],
+      },
+    ),
+};
+
+// The same picture for a seat that may not write a relationship. The peer is
+// still placed and still readable — who a contact talks to is not the thing
+// being withheld — and the offer to record it is simply not made.
+export const ObservedPeersNoWrite: Story = {
+  render: () =>
+    render(
+      graph({
+        nodes: [anchor, sofia, rui],
+        edges: [
+          {
+            from: `person:${PERSON}`,
+            to: `person:${RUI}`,
+            strength_bucket: "moderate",
+            interactions_90d: 6,
+            last_at: "2026-08-20T09:00:00Z",
+          },
+        ],
+      }),
+    ),
 };

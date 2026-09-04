@@ -13,6 +13,7 @@ package people
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -467,9 +468,10 @@ func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID) 
 }
 
 // LogoURL renders where a client fetches an organization's logo bytes, or nil
-// when the organization has no logo stored. The storage key never reaches the
-// wire: it names a bucket path, and a client's business is the endpoint that
-// streams the object.
+// when the organization has no logo stored. Its query token changes with the
+// object key, so replacing a logo cannot leave a browser showing the previous
+// cached image at the same URL. The key itself never reaches the wire: it names
+// a bucket path, and only a short one-way digest is exposed.
 //
 // Exported because the account-graph assembly reads organization rows of its
 // own and must spell this URL exactly as this module's own reads do — one
@@ -478,6 +480,10 @@ func LogoURL(id ids.UUID, objectKey *string) *string {
 	if objectKey == nil || *objectKey == "" {
 		return nil
 	}
-	path := "/v1/organizations/" + id.String() + "/logo"
+	// The prefix versions the representation as well as the object. Version 2
+	// removes the transparent square canvas written by older logo uploads, so a
+	// browser that cached that letterboxed response must fetch the wide one.
+	digest := sha256.Sum256([]byte("logo-display-v2\x00" + *objectKey))
+	path := fmt.Sprintf("/v1/organizations/%s/logo?v=%x", id.String(), digest[:6])
 	return &path
 }

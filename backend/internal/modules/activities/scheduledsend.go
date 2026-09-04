@@ -26,7 +26,7 @@ const scheduleCeiling = 90 * 24 * time.Hour
 // payloadVersionCurrent is the frozen-payload schema this build writes. Rows
 // outlive the code that wrote them, so a reader checks this rather than
 // assuming the struct it compiled against is the one on disk.
-const payloadVersionCurrent = 1
+const payloadVersionCurrent = 2
 
 // The scheduling fields, named once. They are a wire contract, an audit key and
 // a refusal's field name at the same time, so a typo in any one spelling would
@@ -98,58 +98,6 @@ type SendSchedule struct {
 // Attachments are IDS, not bytes. The fire path re-resolves them so a document
 // archived or superseded between scheduling and sending is caught by the same
 // gate an immediate send passes through.
-type scheduledPayload struct {
-	Recipients     []string `json:"recipients"`
-	Cc             []string `json:"cc,omitempty"`
-	Bcc            []string `json:"bcc,omitempty"`
-	Subject        string   `json:"subject"`
-	Body           string   `json:"body"`
-	HTMLBody       string   `json:"html_body,omitempty"`
-	AttachmentIDs  []string `json:"attachment_ids,omitempty"`
-	ConsentPurpose string   `json:"consent_purpose"`
-	DraftRef       string   `json:"draft_ref,omitempty"`
-}
-
-func freezePayload(in SendEmailInput) scheduledPayload {
-	files := make([]string, 0, len(in.AttachmentIDs))
-	for _, id := range in.AttachmentIDs {
-		files = append(files, id.String())
-	}
-	return scheduledPayload{
-		Recipients:     in.Recipients,
-		Cc:             in.Cc,
-		Bcc:            in.Bcc,
-		Subject:        in.Subject,
-		Body:           in.Body,
-		HTMLBody:       in.HTMLBody,
-		AttachmentIDs:  files,
-		ConsentPurpose: in.ConsentPurpose,
-		DraftRef:       in.DraftRef,
-	}
-}
-
-func (p scheduledPayload) thaw() (SendEmailInput, error) {
-	files := make([]ids.UUID, 0, len(p.AttachmentIDs))
-	for _, raw := range p.AttachmentIDs {
-		id, err := ids.Parse(raw)
-		if err != nil {
-			return SendEmailInput{}, fmt.Errorf("scheduled send: attachment id %q: %w", raw, err)
-		}
-		files = append(files, id)
-	}
-	return SendEmailInput{
-		Recipients:     p.Recipients,
-		Cc:             p.Cc,
-		Bcc:            p.Bcc,
-		Subject:        p.Subject,
-		Body:           p.Body,
-		HTMLBody:       p.HTMLBody,
-		AttachmentIDs:  files,
-		ConsentPurpose: p.ConsentPurpose,
-		DraftRef:       p.DraftRef,
-	}, nil
-}
-
 // ScheduledSend is one message waiting for its moment.
 type ScheduledSend struct {
 	ID          ids.UUID

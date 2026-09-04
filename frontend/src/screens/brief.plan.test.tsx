@@ -1,10 +1,17 @@
 /** @vitest-environment jsdom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { en } from "../i18n/en";
 import { PlanSection } from "./brief.plan";
-import { jsonResponse, render, stubApi, writes } from "./home.testkit";
+import {
+  jsonResponse,
+  type Routes,
+  render,
+  stubApi,
+  writes,
+} from "./home.testkit";
 import type { WeeklyPlan, WeeklyPlanCommitment } from "./weeklyplan.queries";
 
 // The week ahead. Everything this panel writes is staged first, so the tests
@@ -43,12 +50,35 @@ function plan(over: Partial<WeeklyPlan> = {}): WeeklyPlan {
   } as WeeklyPlan;
 }
 
+/**
+ * The seat every case below is read as, and its grants.
+ *
+ * Named rather than assumed: `meFixture()` grants nothing at all, so a control
+ * drawn without consulting the reader's grants passes a file that leaves /me
+ * alone — while failing for the seat it was drawn for. Opening a week is
+ * `weekly_plan.create` and everything after it `update`, the same split the
+ * server makes.
+ */
+function planner(allow: readonly ("read" | "create" | "update")[]): Routes {
+  return {
+    "GET /me": () =>
+      jsonResponse(
+        meFixture({ roles: ["rep"], allow: { weekly_plan: [...allow] } }),
+      ),
+  };
+}
+
+const KEEPS_A_PLAN = planner(["read", "create", "update"]);
+const READS_ONLY = planner(["read"]);
+const OPENS_BUT_CANNOT_EDIT = planner(["read", "create"]);
+
 describe("the week ahead", () => {
   // The rep has not planned yet. A read that created a plan would put an empty
   // week in everyone's history the first time they opened the page, so the
   // server answers 404 and the panel offers rather than assumes.
   it("offers to open a plan when there is none, and opening one is the only write", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse({ title: "Not Found" }, 404),
       "POST /weekly-plans/current": () =>
@@ -71,6 +101,7 @@ describe("the week ahead", () => {
   // Checkbox. Ticking sends nothing.
   it("stages a tick and sends nothing until Save", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () => jsonResponse(plan()),
     });
     render(<PlanSection />);
@@ -94,6 +125,7 @@ describe("the week ahead", () => {
 
   it("settles the staged commitment on Save, and only that one", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(
           plan({
@@ -132,6 +164,7 @@ describe("the week ahead", () => {
   // have to stop being staged, and the one that failed has to still say so.
   it("keeps the unsaved rows staged when one write is refused", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(
           plan({
@@ -186,6 +219,7 @@ describe("the week ahead", () => {
   // would stop agreeing with the rows they were counted from.
   it("offers no checkbox on a commitment the close already settled", async () => {
     stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(plan({ commitments: [commitment({ state: "missed" })] })),
     });
@@ -198,6 +232,7 @@ describe("the week ahead", () => {
   // A closed week is history: the weekly job froze its outcome into the review.
   it("draws no controls at all on a closed week", async () => {
     stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(plan({ status: "closed" })),
     });
@@ -215,6 +250,7 @@ describe("the week ahead", () => {
   // on every row of a week where nobody needs anything, which is most weeks.
   it("keeps the help editor closed until asked, then sends what was typed", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () => jsonResponse(plan()),
       "PUT /weekly-plans/commitments/c1/help": () =>
         new Response(null, { status: 204 }),
@@ -245,6 +281,7 @@ describe("the week ahead", () => {
   // reads as an answer of "nothing", which is not what happened.
   it("shows a standing request as waiting until the lead answers", async () => {
     stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(
           plan({
@@ -259,10 +296,112 @@ describe("the week ahead", () => {
     expect(await screen.findByText(en["plan.help.waiting"])).toBeTruthy();
   });
 
+  // A control that exists in order to fail is worse than no control: the write
+  // it starts is refused, and a refusal that reaches nothing that draws leaves
+  // a reader concluding the app is broken rather than that this is not theirs.
+  it("offers a seat that may not plan no way to start one, and says why", async () => {
+    const calls = stubApi({
+      ...READS_ONLY,
+      "GET /weekly-plans/current": () =>
+        jsonResponse({ title: "Not Found" }, 404),
+    });
+    render(<PlanSection />);
+
+    // The week is still reported. It is a fact about the reader's week, and
+    // withholding it would say they had planned nothing when nobody asked.
+    expect(await screen.findByText(en["plan.none"])).toBeTruthy();
+    expect(screen.getByText(en["plan.readOnly"])).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en["plan.start"] })).toBeNull();
+    expect(writes(calls)).toHaveLength(0);
+  });
+
+  // The same seat, on a week it can read: every write verb the panel carries
+  // asks for `weekly_plan.update`, which this reader does not hold.
+  it("draws a readable plan for that seat with none of its write verbs", async () => {
+    stubApi({
+      ...READS_ONLY,
+      "GET /weekly-plans/current": () => jsonResponse(plan()),
+    });
+    render(<PlanSection />);
+
+    expect(await screen.findByText("Call the Aster buyer back")).toBeTruthy();
+    expect(screen.getByText(en["plan.readOnly"])).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: en["plan.add"] })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["plan.help.ask"] }),
+    ).toBeNull();
+  });
+
+  // The week can close under a reader who has already ticked a box: the weekly
+  // job settles it, and the next read says closed. The boxes go with it, so a
+  // Save left standing would send settlements the server refuses over ticks
+  // nobody can see any more.
+  it("takes Save away when the week closes under a staged tick", async () => {
+    let status: WeeklyPlan["status"] = "open";
+    const calls = stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () => jsonResponse(plan({ status })),
+    });
+    render(<PlanSection />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Call the Aster buyer back",
+      }),
+    );
+    const save = en["plan.save_one"].replace("{count}", "1");
+    expect(screen.getByRole("button", { name: save })).toBeTruthy();
+
+    // What the reader's own tab does when they come back to it: react-query
+    // refetches on focus, and this read answers with the closed week.
+    status = "closed";
+    act(() => {
+      window.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: save })).toBeNull(),
+    );
+    expect(writes(calls)).toHaveLength(0);
+  });
+
+  // A seat's posture is about the write THIS week needs, and the two are not
+  // one grant. This reader may open a week and may not edit one, so a week
+  // already open is read-only to them however freely they could have started it.
+  it("says so to a seat that may open a week but not edit the one it has", async () => {
+    stubApi({
+      ...OPENS_BUT_CANNOT_EDIT,
+      "GET /weekly-plans/current": () => jsonResponse(plan()),
+    });
+    render(<PlanSection />);
+
+    expect(await screen.findByText("Call the Aster buyer back")).toBeTruthy();
+    expect(screen.getByText(en["plan.readOnly"])).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: en["plan.add"] })).toBeNull();
+  });
+
+  // And the mirror of it: nothing to open the week with is the case the
+  // sentence was written for, and holding `update` does not answer it.
+  it("says so to a seat that may edit a week but not open one", async () => {
+    stubApi({
+      ...planner(["read", "update"]),
+      "GET /weekly-plans/current": () =>
+        jsonResponse({ title: "Not Found" }, 404),
+    });
+    render(<PlanSection />);
+
+    expect(await screen.findByText(en["plan.none"])).toBeTruthy();
+    expect(screen.getByText(en["plan.readOnly"])).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en["plan.start"] })).toBeNull();
+  });
+
   // An empty date is an absence, not an empty string: the contract types
   // due_on as nullable and "" is neither a date nor a null.
   it("adds a commitment with no date as a null date", async () => {
     const calls = stubApi({
+      ...KEEPS_A_PLAN,
       "GET /weekly-plans/current": () =>
         jsonResponse(plan({ commitments: [] })),
       "POST /weekly-plans/commitments": () => jsonResponse(commitment(), 201),

@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -197,10 +198,17 @@ func between(src, from, to string) string {
 	return rest
 }
 
+// sortedKeys is the set's keys in a stable order.
+//
+// It really does sort now. Both callers put the result in a FAILURE MESSAGE,
+// and map iteration order is randomised per run — so the same finding read
+// differently every time, which is how somebody comparing two runs concludes
+// the tree moved when only the map did.
 func sortedKeys(set map[string]bool) []string {
 	out := make([]string, 0, len(set))
 	for k := range set {
 		out = append(out, k)
 	}
+	sort.Strings(out)
 	return out
 }

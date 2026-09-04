@@ -33,6 +33,44 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// A record can reach capture wearing the meeting kind and NAMING a sender.
+//
+// The kind is reported per message: a connector supplies it alongside the raw
+// bytes, and the extension ingress copies Activity.Kind straight off a
+// third-party unit's record with no vocabulary check in front of it
+// (compose/extingress.go). activity has no CHECK constraint on the column
+// either. So "meeting" is a word a caller chooses, not a fact a calendar mapper
+// establishes.
+//
+// Capture no longer holds a work-calendar meeting. That rule is about a record
+// that named NOBODY — attendance is a list — and reaching it by spelling one
+// word over a suppressed sender's message would publish that message to the
+// whole workspace. The counterparty shape is what tells the two apart, because
+// nothing a caller writes can make a named sender unnamed.
+func TestTheLimiterStillHoldsAMeetingThatNamesAJudgedSender(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, syncAsKind := env.e, env.syncAsKind
+
+	// A sender the transactional gate judges, landed as a "meeting".
+	syncAsKind(t, map[string]string{"forged-kind@docusign.net": "meeting"},
+		email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "forged-kind@docusign.net", ""))
+
+	var activityID ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT id FROM activity WHERE kind = 'meeting'`).Scan(&activityID)
+	}); err != nil {
+		t.Fatalf("reading the captured row: %v", err)
+	}
+
+	audience, reason := audienceOf(t, e, activityID)
+	if audience != "participants" || reason != activities.ReasonNoRecord {
+		t.Fatalf("a meeting-kind record naming a judged sender was born audience=%q reason=%q, "+
+			"want participants/%s — the kind is a word the caller chose, and the ladder judged "+
+			"the person who sent it", audience, reason, activities.ReasonNoRecord)
+	}
+}
+
 // fileUnder plants an activity_link the way a repair pass does, so a test can
 // ask what the recompute makes of a row that has since been filed.
 func fileUnder(t *testing.T, e *integration.SearchEnv, activity ids.UUID, person ids.UUID) {
@@ -111,5 +149,53 @@ func TestAJudgedHoldSurvivesBeingFiledWhateverTheKind(t *testing.T) {
 	if got != "participants" || reason != activities.ReasonNoRecord {
 		t.Fatalf("a judged hold on a meeting-kind row opened when it was filed: audience %q reason %q — "+
 			"the kind says nothing about whether somebody was judged", got, reason)
+	}
+}
+
+// The calendar release is a SECOND door into the same row, and it reads the
+// judged reason by name.
+//
+// It is allowed to, because a calendar record is the only thing that reaches
+// that reason wearing this kind AND naming no counterparty. This drives the
+// release against a row that has the kind but names a sender — the state a
+// judgement leaves — and proves the second condition is what refuses it. With
+// the counterparty_email clause removed, this test opens a suppressed sender's
+// mail to the whole workspace.
+func TestTheCalendarReleaseRefusesARowThatNamesASender(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+
+	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "release-refuses@docusign.net", ""))
+	activityID := oneActivityID(t, e)
+	if _, reason := audienceOf(t, e, activityID); reason != activities.ReasonNoRecord {
+		t.Fatalf("the ladder did not hold the link-less message: reason %q", reason)
+	}
+	// The kind a calendar connector writes, on a row a judgement holds. The
+	// counterparty the mail carries is untouched, and it is what tells the two
+	// apart.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("restating the activity as a meeting: %v", err)
+	}
+
+	// The context a repair pass runs under, so the row is refused by the guard
+	// rather than by a caller that could not have written anyway. Removing the
+	// counterparty_email clause opens this row.
+	repair := systemRepairCtx(e)
+	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+		return activities.ReleaseCalendarMeetingHoldTx(repair, tx,
+			ids.From[ids.ActivityKind](activityID))
+	}); err != nil {
+		t.Fatalf("releasing: %v", err)
+	}
+
+	got, reason := audienceOf(t, e, activityID)
+	if got != "participants" || reason != activities.ReasonNoRecord {
+		t.Fatalf("the calendar release opened a judged sender's mail: audience %q reason %q — "+
+			"the row names a counterparty, so a judgement placed the hold and no calendar rule lifts it",
+			got, reason)
 	}
 }

@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { Avatar, Button } from "../../design-system/atoms";
 import { Logomark } from "../../design-system/logomark";
 import { formatNumber } from "../../format/format";
-import { type Translator, useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useMe } from "../common";
 import type {
@@ -199,6 +199,7 @@ export function ActivityGroup({
   entries,
 }: Readonly<{ entries: readonly NarrationEntry[] }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const latest = entries.at(-1);
@@ -217,7 +218,7 @@ export function ActivityGroup({
         <i aria-hidden />
         <span>{textOf(latest)}</span>
         <b>
-          {t("ob.conv.activity.steps", {
+          {plural("ob.conv.activity.steps", entries.length, {
             count: formatNumber(entries.length, locale),
           })}
         </b>

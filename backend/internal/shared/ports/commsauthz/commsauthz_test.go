@@ -29,6 +29,13 @@ func TestAnEmptySetIsNotAllowed(t *testing.T) {
 	}
 }
 
+// everywhere lifts one mode into the per-category resolver Effective takes, for
+// a test whose subject is the mode itself rather than which category carries
+// it. A test about two categories at once builds its own resolver instead.
+func everywhere(m Mode) func(Category) Mode {
+	return func(Category) Mode { return m }
+}
+
 // The whole point of observe mode is that it does not block. The whole point of
 // this table is the four things that block anyway.
 func TestAbsoluteDenialsSurviveEveryMode(t *testing.T) {
@@ -39,7 +46,7 @@ func TestAbsoluteDenialsSurviveEveryMode(t *testing.T) {
 		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
 		for _, mode := range []Mode{ModeObserve, ModeWarn, ModeEnforce} {
 			// legacyAllowed true is the hard case: the OLD gate would send.
-			if set.Effective(mode, true) {
+			if set.Effective(everywhere(mode), true) {
 				t.Errorf("%s in %s mode: sent anyway — a rollout mode must not reach past this", reason, mode)
 			}
 		}
@@ -49,10 +56,10 @@ func TestAbsoluteDenialsSurviveEveryMode(t *testing.T) {
 // And the converse, or the test above would pass with everything denied.
 func TestAnOrdinaryDenialDefersToTheModeWhileObserving(t *testing.T) {
 	set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: ReasonNoEvidence}}}
-	if !set.Effective(ModeObserve, true) {
+	if !set.Effective(everywhere(ModeObserve), true) {
 		t.Error("observe mode must let the old gate rule on a non-absolute disagreement")
 	}
-	if set.Effective(ModeEnforce, true) {
+	if set.Effective(everywhere(ModeEnforce), true) {
 		t.Error("enforce mode must apply the engine's own refusal")
 	}
 }
@@ -61,7 +68,7 @@ func TestAnOrdinaryDenialDefersToTheModeWhileObserving(t *testing.T) {
 // gate refused while both still run.
 func TestEnforceNeverOutranksTheOldGate(t *testing.T) {
 	set := DecisionSet{Decisions: []Decision{{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}}}
-	if set.Effective(ModeEnforce, false) {
+	if set.Effective(everywhere(ModeEnforce), false) {
 		t.Error("an engine allow must not send what the legacy gate refused")
 	}
 }
@@ -91,5 +98,41 @@ func TestNoGenericTransactionalCategoryExists(t *testing.T) {
 	}
 	if len(Categories()) != 14 {
 		t.Errorf("Categories() has %d members, want the 14 the vocabulary declares", len(Categories()))
+	}
+}
+
+// The mode is read per recipient, not once for the message. One send can carry
+// two categories — a reply to a thread that copies somebody the engine calls
+// marketing — and a single mode for the set would have to pick one of them,
+// which means either enforcing a category the installation has not enforced or
+// observing one it has.
+func TestEachRecipientIsJudgedUnderItsOwnCategorysMode(t *testing.T) {
+	set := DecisionSet{Decisions: []Decision{
+		{Verdict: VerdictAllow, ReasonCode: ReasonAllowed, Resolved: CategoryReplyToInbound},
+		{Verdict: VerdictDeny, ReasonCode: ReasonNoEvidence, Resolved: CategoryMarketing},
+	}}
+	// Replies enforce; marketing still observes, which is the state this
+	// product ships in until the jurisdiction packs land.
+	repliesOnly := func(c Category) Mode {
+		if c == CategoryReplyToInbound {
+			return ModeEnforce
+		}
+		return ModeObserve
+	}
+	if !set.Effective(repliesOnly, true) {
+		t.Error("a marketing refusal blocked the send while marketing was still observing")
+	}
+	// And the converse: enforce marketing and the same set refuses.
+	marketingToo := func(Category) Mode { return ModeEnforce }
+	if set.Effective(marketingToo, true) {
+		t.Error("marketing was enforced and its refusal did not bind")
+	}
+}
+
+// An empty set is not an allow. It means the engine was asked about nobody,
+// and a message with no authorized recipient is not one that may go out.
+func TestAnEmptySetPermitsNothing(t *testing.T) {
+	if (DecisionSet{}).Effective(everywhere(ModeObserve), true) {
+		t.Error("a set with no decisions permitted a send")
 	}
 }

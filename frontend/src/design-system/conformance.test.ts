@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
 // new file is enrolled the moment it exists:
-//  - exactly three type families (Bricolage Grotesque / Geist / Geist Mono, §2) — any
+//  - exactly three type families (Outfit / Geist / Geist Mono, §2) — any
 //    other font-family fails the build;
 //  - every colour reads from a token — literal colours live only in tokens.css.
 
@@ -52,7 +52,7 @@ const files = sourceFiles(join(frontendRoot, "src"))
   .concat(extensionFrontends());
 
 const allowedFamilies = new Set([
-  "Bricolage Grotesque",
+  "Outfit",
   "Geist",
   "Geist Mono",
   // stack fallbacks named in the §2 token definitions
@@ -967,6 +967,37 @@ describe("focus", () => {
       "src/screens/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
     ]);
   });
+
+  // The other half of the same promise, and the half that was unwatched. The
+  // rule above matches `outline:` only — and a FIELD's ring is drawn as a
+  // box-shadow, which is what --focus-glow is. So six rules across the
+  // onboarding sheets hand-spelled `0 0 0 3px var(--aiMed)` and walked past a
+  // gate whose message says one promise must not become ten rules.
+  //
+  // Only shadows on a FOCUS selector: a card's resting elevation is a
+  // box-shadow too and is nobody's ring.
+  it("draws every focus glow from the one token", () => {
+    const spelled = cssFiles.flatMap((file) => {
+      if (file.endsWith("tokens.css")) {
+        return [];
+      }
+      const text = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      return [...text.matchAll(/:focus[^{]*\{([^}]*)\}/g)].flatMap((rule) =>
+        [...rule[1].matchAll(/box-shadow:\s*([^;]+);/g)]
+          .map((match) => match[1].trim())
+          .filter((value) => !/^(none|0)$/.test(value))
+          .filter((value) => !/var\(--focus-glow(-danger|-ai)?\)/.test(value))
+          .map(
+            (value) => `${relative(frontendRoot, file)}: box-shadow: ${value}`,
+          ),
+      );
+    });
+    expect(
+      spelled,
+      "a focus glow reads `box-shadow: var(--focus-glow)`, or its " +
+        "`-danger` / `-ai` variant; these spell their own width and colour",
+    ).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1084,5 +1115,49 @@ describe("the phone nav's clearance", scanBudget, () => {
       "a sticky element that names --phoneNavClearance is a second opinion " +
         "about where the nav bar is; read var(--stickyBottomInset) instead",
     ).toEqual(["src/app/shell.css", "src/design-system/tokens.css"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The empty plate's own type. `EmptyState` draws the sentence a surface shows
+// instead of content, and `.empty` sizes it — 13px for the one-liner, 14px in
+// `.empty-body` for the instructional variant's measured paragraph. Thirty-one
+// call sites wrapped that sentence in `<p className="t-small">` and drew it at
+// 12px instead, which is the same sentence at two sizes depending on which
+// screen a reader is on.
+//
+// Nothing made them wrong at the time: the primitive took `children` and any
+// node was as valid as any other. So the rule is stated here rather than in the
+// prop type, because what is being forbidden is a CLASS on a child and not a
+// shape TypeScript can describe.
+// ---------------------------------------------------------------------------
+
+describe("the empty plate", () => {
+  it("sizes its own sentence, and no call site restates that", () => {
+    const overrides = files
+      .filter((file) => file.endsWith(".tsx"))
+      .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
+      .flatMap((file) => {
+        const source = readFileSync(file, "utf8");
+        // The child immediately inside the opening tag, whitespace and
+        // newlines crossed. A type class further down the tree may be a
+        // deliberate second line — the deck's cleared-at timestamp is one —
+        // and only the element that IS the sentence is in scope here.
+        const hits = source.matchAll(
+          /<EmptyState[^>]*>\s*<(?:p|span|div|blockquote)\s[^>]*className="[^"]*\bt-(?:small|caption|meta|body)\b/g,
+        );
+        return [...hits].map(
+          () =>
+            `${relative(frontendRoot, file)}: ${
+              source.slice(0, source.indexOf("<EmptyState")).split("\n").length
+            }`,
+        );
+      });
+    expect(
+      overrides,
+      "hand the sentence to EmptyState directly — `<EmptyState>{t(…)}` — " +
+        "rather than wrapping it in a type class, which draws one surface's " +
+        "empty state a step smaller than every other surface's",
+    ).toEqual([]);
   });
 });

@@ -96,13 +96,7 @@ func confidentialitySchema() json.RawMessage {
 func (e *ConfidentialityVerdictEngine) ask(ctx context.Context, row capture.PendingThread) ([]confidentialityResult, error) {
 	req := confidentialityRequest(row)
 	validate := confidentialityShapeValid(row)
-	var resp model.Response
-	var err error
-	if structured, ok := e.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		resp, err = e.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, e.brain, req, validate)
 	if err != nil {
 		return nil, err
 	}

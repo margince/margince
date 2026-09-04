@@ -31,6 +31,11 @@ func seedFiguresDeal(t *testing.T, owner ids.UUID, amount int64) ids.UUID {
 // seedFiguresDealClosing writes one deal with the given expected close date —
 // the workspace's own timezone setting is what Figures reads it against
 // (UTC, the fresh-installation default this harness never overrides).
+//
+// closes is bound as a plain calendar-date string, not the time.Time itself:
+// a date literal parses to the exact day named, with no session TimeZone GUC
+// in between, so a caller stating "today" in UTC gets that same day in the
+// column whatever the connection's zone happens to be.
 func seedFiguresDealClosing(t *testing.T, owner ids.UUID, amount int64, closes time.Time) ids.UUID {
 	t.Helper()
 	conn := OwnerConn(t)
@@ -41,8 +46,8 @@ func seedFiguresDealClosing(t *testing.T, owner ids.UUID, amount int64, closes t
 	return SeedIDRow(t, conn, `INSERT INTO deal
 		(id, owner_id, name, pipeline_id, stage_id, amount_minor, currency, expected_close_date,
 		 source, captured_by)
-		VALUES ($1, $2, 'Northstar renewal', $3, $4, $5, 'EUR', $6, 'manual', 'human:x')`,
-		owner, pipeline, stage, amount, closes)
+		VALUES ($1, $2, 'Northstar renewal', $3, $4, $5, 'EUR', $6::date, 'manual', 'human:x')`,
+		owner, pipeline, stage, amount, closes.Format(time.DateOnly))
 }
 
 // A deal the reader may see comes back with the figures a card states.
@@ -194,18 +199,17 @@ func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
 // A close date that has not yet arrived — today's or later — is not overdue.
 // Today itself is the boundary this asserts: CloseIsOverdue is a calendar-date
 // comparison, and a deal due today is due today, not late.
+//
+// The seed and Figures' own read of "now" must agree on what day it is: a
+// wall-clock instant seeded here and re-read by Figures moments later could
+// straddle UTC midnight between the two calls, which would make the seeded
+// date read as YESTERDAY and fail this test on a defect it does not have. One
+// pinned instant closes that gap.
 func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
 	e := Setup(t)
-	// The DB's own "today", not Go's: Figures compares against Postgres's
-	// now() in the installation's zone, and seeding from the wall clock this
-	// process reads would race a UTC-midnight rollover between the seed and
-	// the query.
-	var today time.Time
-	if err := OwnerConn(t).QueryRow(context.Background(),
-		`SELECT (timezone('UTC', now()))::date`).Scan(&today); err != nil {
-		t.Fatalf("reading the database's own today: %v", err)
-	}
-	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, today)
+	now := time.Now().UTC()
+	e.Deals.WithClock(func() time.Time { return now })
+	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, now)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
 	figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})

@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -17,6 +18,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
+import { primaryEmail } from "../format/primaryemail";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -394,6 +396,7 @@ function PersonAside({
 
 export function ContactsScreen() {
   const t = useT();
+  const pageName = usePageName("contacts");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   // Offered only once /me has answered: a chip whose value is still "" reads
@@ -415,6 +418,7 @@ export function ContactsScreen() {
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={state}
         unit="unit.contacts"
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
@@ -475,10 +479,12 @@ export function ContactsScreen() {
             key: "email",
             header: t("people.email"),
             cell: (person: Person) => (
+              // The shared rule, not a second spelling of it. This column
+              // used to take find(is_primary) ?? [0], which shows a RETIRED
+              // address whenever one sits first — the reader then writes to an
+              // address somebody deliberately took out of service.
               <span className="t-mono">
-                {person.emails?.find((email) => email.is_primary)?.email ??
-                  person.emails?.[0]?.email ??
-                  ""}
+                {primaryEmail(person.emails) ?? ""}
               </span>
             ),
           },
@@ -492,10 +498,7 @@ export function ContactsScreen() {
         rowRoute={(person) => ({ screen: "contacts", id: person.id })}
         dataChips={[...ownerChips, ...tagChips]}
         dataViews={savedViews}
-        views={[
-          ...standardViews(viewerId),
-          { label: "list.viewAZ", sort: "full_name" },
-        ]}
+        views={[...standardViews(viewerId)]}
       />
     </div>
   );

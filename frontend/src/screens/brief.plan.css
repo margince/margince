@@ -43,3 +43,11 @@
 .plan-help-waiting {
   color: var(--textMeta);
 }
+
+/* The seat's posture, stated once above the plan. `t-caption` carries the
+   size; the reset is here because a `p` in a `PanelBody` otherwise pays a
+   browser margin the panel's own gutter has already paid. */
+.plan-readonly {
+  margin: 0;
+  color: var(--textMeta);
+}

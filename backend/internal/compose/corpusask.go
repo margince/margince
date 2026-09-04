@@ -116,7 +116,14 @@ type askedClaim struct {
 }
 
 type askedAnswer struct {
-	Claims []askedClaim `json:"claims"`
+	// A POINTER so an absent key is distinguishable from an empty list. They
+	// mean opposite things here: `{"claims":[]}` is the answer this site asks
+	// for when the passages do not cover the question, while `{}` — or any
+	// reply carrying none of this site's keys, which decodes to exactly the
+	// same zero value — is a reply in a shape this site does not take. Reading
+	// the second as the first would report "not covered", a confident statement
+	// about the corpus, on a reply that never answered the question.
+	Claims *[]askedClaim `json:"claims"`
 }
 
 // CorpusAskRequest builds the ONE model call this site makes.
@@ -272,11 +279,27 @@ func AnswerCorpus(
 func askCorpusLane(
 	ctx context.Context, lane corpusAskLane, question string, passages []knowledge.Passage, lang string,
 ) ([]crmcontracts.KnowledgeClaim, error) {
-	resp, err := lane.Complete(ctx, CorpusAskRequest(question, passages, lang))
+	req := CorpusAskRequest(question, passages, lang)
+	resp, err := ai.Ask(ctx, lane, req, corpusReplyValid(passages))
 	if err != nil {
 		return nil, fmt.Errorf("the corpus ask lane: %w", err)
 	}
 	return GroundCorpusAnswer(resp.Text, passages)
+}
+
+// corpusReplyValid is the retry predicate, and it is the site's OWN read of the
+// reply rather than a looser shape check: the model is shown the refusal the
+// answer path would have raised, which is the only message that names the fault.
+//
+// It refuses exactly what GroundCorpusAnswer refuses, and no more. A reply whose
+// claims all fail the quote check is NOT refused: the prompt asks for no claims
+// when the passages do not cover the question, so a re-ask there would push a
+// model that answered correctly to answer again.
+func corpusReplyValid(passages []knowledge.Passage) ai.Validator {
+	return func(text string) error {
+		_, err := GroundCorpusAnswer(text, passages)
+		return err
+	}
 }
 
 // GroundCorpusAnswer parses a reply and keeps only the claims whose quote is
@@ -290,12 +313,16 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) ([]crmco
 	if err := json.Unmarshal([]byte(ai.Unfence(replyText)), &parsed); err != nil {
 		return nil, fmt.Errorf("the corpus ask reply is not the shape this site takes: %w", err)
 	}
+	if parsed.Claims == nil {
+		return nil, errors.New(`the corpus ask reply carries no "claims" key: an answer that cites nothing ` +
+			`is written as {"claims": []}`)
+	}
 	byID := make(map[string]knowledge.Passage, len(passages))
 	for _, p := range passages {
 		byID[p.ChunkID.String()] = p
 	}
 	var kept []crmcontracts.KnowledgeClaim
-	for _, c := range parsed.Claims {
+	for _, c := range *parsed.Claims {
 		p, ok := byID[c.ID]
 		if !ok {
 			// The schema's enum should make this unreachable; it is checked

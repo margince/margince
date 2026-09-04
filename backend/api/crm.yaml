@@ -2421,10 +2421,11 @@ paths:
       x-agent-access: human-only
       summary: Stream an organization's logo image.
       description: |
-        The bytes behind `Organization.logo_url` (A55): the company mark resolved from its
-        own website during enrichment, normalized once at store time to a square PNG. The
-        response is always `image/png` — whatever the source format was, what is served is
-        the server's own re-encode, so no third-party markup is ever served from this origin.
+        The bytes behind `Organization.logo_url` (A55): the company logo resolved from its
+        own website during enrichment or uploaded by a person, normalized once at store time
+        to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
+        The response is always `image/png` — whatever the source format was, what is served
+        is the server's own re-encode, so no third-party markup is ever served from this origin.
         404 when the organization has no resolved logo, is invisible to the caller, or does
         not exist — a client renders the deterministic monogram for all three alike. 501 when
         the deployment has no object store configured.
@@ -6963,6 +6964,67 @@ paths:
               schema: { $ref: '#/components/schemas/LeadScoreExplanation' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /leads/{id}/draft-email:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads, AI]
+      operationId: draftLeadEmail
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Draft an email to this lead, grounded in their record.
+      description: |
+        The lead-side mirror of `POST /people/{id}/draft-email`, and the same writer behind
+        both: the record IS the recipient, so the request carries nothing but optional
+        steering. A lead is the shape that endpoint's description already names — one
+        recipient, on the record itself — which is why this adds a fold and not a drafter.
+
+        **It changes no record.** No field on the lead, no activity, no voice-learning signal,
+        and nothing is sent. Sending stays `POST /emails`, with its own consent gate, approval
+        token and idempotency key. The two writes that do happen are about the CALL rather
+        than the lead: the workspace's AI usage meter and the model-call audit row.
+
+        **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
+        are, the company they wrote from, where the lead sits on its ladder, and the recent
+        correspondence filed against it. A lead has no deal, no project and no claims — those
+        belong to a contact that exists, and a lead is by definition the record before one
+        does — so the draft says less than a contact's would rather than inventing the
+        difference. Every input but the intent is untrusted text and is fenced.
+
+        A lead with no email address on record is `422`: a draft addressed to nobody is not a
+        message, and the composer can say so before spending a model call.
+
+        When no model lane is configured, or the workspace's AI budget is exhausted, the draft
+        degrades to a deterministic one rather than failing — `generated_by` says which wrote
+        it.
+
+        Human-only: drafting spends the workspace's model budget on prose for a person to send
+        under their own name.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                intent:
+                  type: [string, 'null']
+                  maxLength: 400
+                  description: >-
+                    Optional steering in the caller's own words ("shorter", "warmer", "ask for
+                    Tuesday"). The one input that is NOT untrusted — the caller typed it — and
+                    so the only one outside the fence.
+      responses:
+        '200':
+          description: The draft, and what it was written from.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /leads/{id}/manual-signals:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -8724,11 +8786,11 @@ paths:
       # A person choosing their own company's face. The agent path to this field is the
       # website read, which resolves a mark from the site rather than being handed one.
       x-agent-access: human-only
-      summary: Replace the installation's own company mark with an uploaded image.
+      summary: Replace the installation's own company logo with an uploaded image.
       description: |
-        Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
-        normalized to, so what is served from `logo_url` is always this origin's own bytes
-        and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+        Multipart upload. The image is re-encoded to an aspect-preserving PNG, so a wide
+        wordmark remains wide and what is served from `logo_url` is always this origin's own
+        bytes, never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
         anything that will not decode is refused as 415.
 
         The upload is a HUMAN write and takes precedence: while it stands, a website read
@@ -8773,7 +8835,7 @@ paths:
       operationId: deleteCompanyLogo
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Take the installation's own company mark off the record.
+      summary: Take the installation's own company logo off the record.
       description: |
         The record goes back to its deterministic monogram and the stored object is
         collected. It also gives the field back: a person's mark is what holds a website
@@ -10032,11 +10094,15 @@ paths:
         who to talk to, then opens that person's own day with `GET /worklist?owner=`,
         which is the drill-down this board exists to route to.
 
-        Every count is read under the CALLER's visibility, never the teammate's. A number
-        summing rows the reader may not open would publish a colleague's volume to
-        somebody with no access to any of it, so what this reports is "how much of their
-        load you can see" — the only honest answer available without giving one person a
-        licence to read another's records.
+        Every count is read under the CALLER's visibility, which in this product is nearly
+        everything: work is shared across the workspace, so a teammate's deals, companies
+        and tasks all count. What does NOT count is correspondence narrowed to an audience
+        the reader is not on, and mail captured into a colleague's mailbox that nobody has
+        promoted — the one boundary the access model keeps.
+
+        So a figure here is the teammate's real load minus any private mail the reader is
+        not party to. It is not a partial view of their work, and a reader may open every
+        record behind a count they can see.
 
         Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
         rather than shown a board of one. The teammates listed are the live human seats
@@ -16164,6 +16230,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/IssuedForecastShare' }
+        '400':
+          description: >-
+            The request is unanswerable as written: an expiry past the ceiling, a field
+            this caller cannot name, a measure that means nothing over that column, or a
+            filter separating out too few records to answer about. The body names what
+            would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -16187,6 +16262,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/shared/{token}:
     parameters:
       - name: token
@@ -16328,8 +16404,54 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
+        '400':
+          description: >-
+            The request is unanswerable as written: an expiry past the ceiling, a field
+            this caller cannot name, a measure that means nothing over that column, or a
+            filter separating out too few records to answer about. The body names what
+            would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/runs/{run_id}:
+    get:
+      tags: [Reports]
+      operationId: getReportRun
+      summary: The answer a report sentence points at.
+      description: |
+        A report block carries the id of a run and the coordinates of a cell inside it, not
+        a number. This is where that pointer is dereferenced.
+
+        THE STORED ROWS ARE NOT SERVED. They were narrowed and floored for whoever asked,
+        and a second reader's grants narrow a different population — so what comes back is
+        the stored QUESTION, re-asked under the caller's own authority through the same gate
+        a direct query goes through. Two readers dereferencing one cell can legitimately see
+        different numbers, and one of them can legitimately see a refusal.
+
+        That is what makes a citation stable without making it a permission. The saved run
+        fixes WHAT WAS ASKED; it grants nothing about who may see the answer.
+
+        `asked_by` names whose answer the run originally was, and `stored_floor` the group
+        floor that judged it — both so two answers to one citation can be compared rather
+        than silently differing.
+      x-agent-access: human-only
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The question re-asked, as this caller may read it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportRun' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/explain:
     post:
@@ -16362,6 +16484,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '400':
+          description: >-
+            The request is unanswerable as written: an expiry past the ceiling, a field
+            this caller cannot name, a measure that means nothing over that column, or a
+            filter separating out too few records to answer about. The body names what
+            would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -19774,6 +19905,13 @@ components:
             The label spells both calendar years a non-January year spans — `FY2026/27` — so
             a reader can tell which twelve months a bucket covers without knowing the
             convention. A January year is not a span and keeps the plain `2026`.
+
+            One thing it does NOT carry, and a client storing report filters should know it:
+            a SAVED report view holds the bucket's text, so a view saved under one fiscal
+            start names a different span after the start moves — or no span at all, since a
+            calendar year maps onto parts of two fiscal years. The report still runs and
+            still looks right. Whether such a view is re-pointed, invalidated or merely
+            warned about is undecided: margince/margince#2569.
         sign_in_providers:
           type: array
           description: |
@@ -19836,6 +19974,11 @@ components:
             The month the installation's business year begins, 1..12. Never frozen: it cuts
             reports on read and stores nothing, so moving it re-labels every period report at
             once and re-means no stored row.
+
+            It does not re-point a SAVED report view, which holds the bucket's TEXT and so
+            names a different span afterwards. Sending this field is enough to leave those
+            views filtering on a span nobody asked for; nothing here reports how many.
+            margince/margince#2569.
         enabled_oidc_providers:
           type: array
           maxItems: 32
@@ -20755,15 +20898,19 @@ components:
         has_message:
           type: boolean
           description: |
-            The message this thread began with is still readable by you. False where it was erased
-            while the verdict stood — which the ledger deliberately survives, because losing the
-            verdict would re-open a thread a classifier already held — and false where its content
-            is withheld from you.
+            The message this thread began with still EXISTS. False only where it was erased while
+            the verdict stood — which the ledger deliberately survives, because losing the verdict
+            would re-open a thread a classifier already held.
 
-            Separate from `subject` because absence has two causes that read differently: no
-            message to name, versus a message somebody sent with a blank subject line. It also
-            decides whether releasing is offered at all: the release works on your own messages on
-            the thread, so with none left there is nothing to share.
+            Existence, not readability: it stays true for a message whose content is withheld from
+            you, and that is the point. Read through the content gate it reported a withheld
+            message as erased, which told a holder their evidence had been destroyed while it was
+            sitting in the thread they are holding.
+
+            So `subject` absent with this true is a message you may not read, or one sent with a
+            blank subject line; this false is no message at all. It also decides whether releasing
+            is offered: the release works on your own messages on the thread, so with none left
+            there is nothing to share.
         subject:
           type: string
           description: |
@@ -23409,11 +23556,12 @@ components:
           type: [string, 'null']
           readOnly: true
           description: |
-            Where to fetch the company's resolved logo image (A55) — the `getOrganizationLogo`
-            path for this record, cookie-authenticated and same-origin. The key is ABSENT
-            entirely (not null) when no logo resolved, which is the common case and never an
-            error: a client renders the deterministic monogram then, so it never shows a
-            broken image or an empty slot.
+            Where to fetch the company's logo image (A55) — the `getOrganizationLogo`
+            path for this record, cookie-authenticated and same-origin. A revision query changes
+            with the stored image so a replacement cannot remain hidden behind an older cached
+            response. The key is ABSENT entirely (not null) when no logo is stored, which is the
+            common case and never an error: a client renders the deterministic monogram then,
+            so it never shows a broken image or an empty slot.
             The stored object key is deliberately not exposed; it names a bucket path, and a
             client's business is the endpoint that streams the bytes.
         strength: { allOf: [ { $ref: '#/components/schemas/RelationshipStrength' } ], readOnly: true, description: 'Deterministic org-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.' }
@@ -29189,6 +29337,42 @@ components:
         evidence_ref:
           $ref: '#/components/schemas/OrganizationBriefEvidence'
 
+    CommunicationEvidence:
+      type: object
+      description: |
+        Records the caller can name in support of a send, each by id. Evidence is
+        CHECKED, never trusted: the engine reads the named record and asks whether it
+        actually supports the category claimed — a deal id that is closed, an invoice
+        belonging to another organization, or a record the caller cannot see supports
+        nothing. Naming a record therefore never widens what a caller may do.
+
+        Every field is optional. A caller that can name nothing says nothing, and the
+        engine resolves the send from its origin instead.
+      properties:
+        activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The inbound message this send answers.
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          description: The live opportunity this send moves along.
+        invoice_id:
+          type: [string, 'null']
+          format: uuid
+          description: The invoice or payment event this send is about.
+        contract_id:
+          type: [string, 'null']
+          format: uuid
+          description: The live contract whose notice this send carries.
+        consent_event_id:
+          type: [string, 'null']
+          format: uuid
+          description: The recorded consent this send relies on.
+        basis_id:
+          type: [string, 'null']
+          format: uuid
+          description: A recorded communication basis this send relies on.
     SendEmailRequest:
       type: object
       required: [subject, body, to, consent_purpose]
@@ -29246,6 +29430,46 @@ components:
             edited-and-sent metadata. Only a guarded, human-authored final edit may become a
             `draft_signal` corpus source. Omit for independently composed mail; no voice-learning
             outcome is inferred without a valid reference.
+        communication_context:
+          type: [string, 'null']
+          enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                 customer_service, account_notice, contract_notice, invoice_or_payment,
+                 marketing, null]
+          description: |
+            What kind of communication this is. The caller CLAIMS a category; the engine
+            resolves the one the evidence actually supports and records both, so a claim
+            that the evidence does not carry is visible rather than silently honoured.
+
+            Omit it and the engine resolves the category from the send's origin — a reply
+            to an inbound message is a reply whether or not anybody said so. Omitting is
+            therefore honest and is the ordinary case for a reply; naming one matters when
+            there is no anchor to derive from.
+
+            Five categories are absent from this list on purpose — `security_notice`,
+            `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+            `record_confirmation`. They serve the recipient, which is why a hard
+            suppression does not stop them, and they are reserved for the installation's
+            own controller mail behind a registered template. A caller that could claim
+            one could dress marketing as a security warning and reach somebody who has
+            objected, so naming one here is refused (422 `invalid`).
+        marketing_purpose:
+          type: [string, 'null']
+          description: |
+            For a marketing send, the consent purpose key naming the topic it is for.
+            Marketing consent is purpose-specific: a grant for one topic authorizes that
+            topic and no other.
+        operator_reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: |
+            What a human typed when a first message was genuinely ambiguous. It is
+            RECORDED on the decision and grants nothing — a sentence a sender wrote about
+            their own send is not evidence about the recipient. It exists so a later
+            reader can see what the sender believed, not so the engine can be talked into
+            an allow.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
           description: |
@@ -29438,6 +29662,46 @@ components:
           description: |
             Opaque reference returned by the drafting operation, exactly as on `send_email`.
             Omit for independently composed mail.
+        communication_context:
+          type: [string, 'null']
+          enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                 customer_service, account_notice, contract_notice, invoice_or_payment,
+                 marketing, null]
+          description: |
+            What kind of communication this is. The caller CLAIMS a category; the engine
+            resolves the one the evidence actually supports and records both, so a claim
+            that the evidence does not carry is visible rather than silently honoured.
+
+            Omit it and the engine resolves the category from the send's origin — a reply
+            to an inbound message is a reply whether or not anybody said so. Omitting is
+            therefore honest and is the ordinary case for a reply; naming one matters when
+            there is no anchor to derive from.
+
+            Five categories are absent from this list on purpose — `security_notice`,
+            `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+            `record_confirmation`. They serve the recipient, which is why a hard
+            suppression does not stop them, and they are reserved for the installation's
+            own controller mail behind a registered template. A caller that could claim
+            one could dress marketing as a security warning and reach somebody who has
+            objected, so naming one here is refused (422 `invalid`).
+        marketing_purpose:
+          type: [string, 'null']
+          description: |
+            For a marketing send, the consent purpose key naming the topic it is for.
+            Marketing consent is purpose-specific: a grant for one topic authorizes that
+            topic and no other.
+        operator_reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: |
+            What a human typed when a first message was genuinely ambiguous. It is
+            RECORDED on the decision and grants nothing — a sentence a sender wrote about
+            their own send is not evidence about the recipient. It exists so a later
+            reader can see what the sender believed, not so the engine can be talked into
+            an allow.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
           description: |
@@ -29498,6 +29762,46 @@ components:
             The (possibly edited) final message text that is sent. A messaging provider rejects a
             text-less message, so an empty or whitespace-only body is refused at request time
             (422 `empty_message_body`) rather than staged for a delivery that could only park.
+        communication_context:
+          type: [string, 'null']
+          enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                 customer_service, account_notice, contract_notice, invoice_or_payment,
+                 marketing, null]
+          description: |
+            What kind of communication this is. The caller CLAIMS a category; the engine
+            resolves the one the evidence actually supports and records both, so a claim
+            that the evidence does not carry is visible rather than silently honoured.
+
+            Omit it and the engine resolves the category from the send's origin — a reply
+            to an inbound message is a reply whether or not anybody said so. Omitting is
+            therefore honest and is the ordinary case for a reply; naming one matters when
+            there is no anchor to derive from.
+
+            Five categories are absent from this list on purpose — `security_notice`,
+            `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+            `record_confirmation`. They serve the recipient, which is why a hard
+            suppression does not stop them, and they are reserved for the installation's
+            own controller mail behind a registered template. A caller that could claim
+            one could dress marketing as a security warning and reach somebody who has
+            objected, so naming one here is refused (422 `invalid`).
+        marketing_purpose:
+          type: [string, 'null']
+          description: |
+            For a marketing send, the consent purpose key naming the topic it is for.
+            Marketing consent is purpose-specific: a grant for one topic authorizes that
+            topic and no other.
+        operator_reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: |
+            What a human typed when a first message was genuinely ambiguous. It is
+            RECORDED on the decision and grants nothing — a sentence a sender wrote about
+            their own send is not evidence about the recipient. It exists so a later
+            reader can see what the sender believed, not so the engine can be talked into
+            an allow.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
           description: |
@@ -31486,6 +31790,15 @@ components:
           description: >-
             How many groups at most. Omitted takes the default; a grouping by a
             high-cardinality field would otherwise return a row per record.
+        save:
+          type: boolean
+          description: >-
+            Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in
+            rather than automatic: most queries are somebody exploring, and saving every
+            one would fill the table with results nothing will ever point at.
+
+            A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the
+            question under the reader's own authority.
       additionalProperties: false
     AnalyticsMeasure:
       type: object
@@ -31551,9 +31864,11 @@ components:
             type: object
             additionalProperties: true
           description: >-
-            One object per group. A row the floor withheld keeps its group keys, carries
-            null for every measure, and is marked `_withheld` — dropping it entirely would
-            make the answer's row count a signal of its own.
+            One object per group, marked `_withheld` when the floor kept it back. A
+            withheld row carries null for every column INCLUDING its group keys: keeping
+            the keys turned a grouping by identity into a paginated dump of every record's
+            identity with only the measures blanked. The row itself stays so the answer's
+            row count is not a signal of its own.
         withheld:
           type: boolean
           description: >-
@@ -31567,6 +31882,42 @@ components:
         schema_version:
           type: string
           description: The vocabulary this was asked in.
+        run_id:
+          type: string
+          format: uuid
+          description: >-
+            Where this answer was saved, present only when the query asked for it. A report
+            block cites this id plus a cell's coordinates instead of carrying the number.
+      additionalProperties: false
+    ReportRun:
+      type: object
+      description: >-
+        A saved question and the answer it gives THIS reader. The answer is recomputed on
+        every read rather than served from storage, so it reflects the reader's own
+        authority and the installation's current floor.
+      required: [id, query, answer, asked_by, stored_floor]
+      properties:
+        id: { type: string, format: uuid }
+        query:
+          allOf: [{ $ref: '#/components/schemas/AnalyticsQuery' }]
+          description: The question as it was saved, unchanged.
+        answer:
+          allOf: [{ $ref: '#/components/schemas/AnalyticsAnswer' }]
+          description: >-
+            The question re-asked under the reading caller's authority. NOT the rows the
+            asker saw: those were narrowed for them.
+        asked_by:
+          type: string
+          format: uuid
+          description: >-
+            Whose answer the run originally was. A reader comparing their own numbers to a
+            cited figure needs to know the citation was somebody else's view.
+        stored_floor:
+          type: integer
+          description: >-
+            The group floor that judged the ORIGINAL answer. Reported, never applied — this
+            read is floored by the installation's current setting. Two runs served under
+            different floors make different promises about what is missing.
       additionalProperties: false
     AnalyticsExplainRequest:
       type: object
@@ -33041,7 +33392,9 @@ components:
           description: |
             Where to fetch the installation's own company logo — the same `getOrganizationLogo`
             path `Organization.logo_url` carries for that record, cookie-authenticated and
-            same-origin. The mark is whichever one the company is wearing: the one a website
+            same-origin. A revision query changes whenever the stored image changes so a browser
+            never holds a replacement behind an older cached URL. The logo is whichever one the
+            company is wearing: the one a website
             read resolved from its own site, or the one a person uploaded through
             `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
             is never an error: a client draws the deterministic monogram then.
@@ -36165,13 +36518,26 @@ components:
     TeamWeeklyCounts:
       type: object
       additionalProperties: false
-      required: [reps_counted, deals_won, deals_lost, leads_routed, leads_answered_in_target,
+      required: [reps_counted, deals_won, deals_lost, deals_moved, leads_routed,
+                 leads_answered_in_target,
                  leads_breached, meetings_held, meetings_with_next_step,
                  commitments_due, commitments_kept]
       properties:
         reps_counted: { type: integer, minimum: 0, description: 'Members whose week was read and totalled.' }
         deals_won: { type: integer, minimum: 0 }
         deals_lost: { type: integer, minimum: 0 }
+        deals_moved:
+          type: integer
+          minimum: 0
+          description: |
+            Deals that changed stage in the week without closing — what the team ADVANCED.
+
+            A count and never an amount. Advancing is a stage fact: a deal moving from
+            Proposal to Negotiation did not change price, so a "value advanced" figure would
+            count the deal's whole worth a second time beside the pipeline it already sits in.
+
+            Snapshots written before this figure existed carry zero. A count of zero is a
+            count, unlike a money sum of zero over deals nobody could price.
         leads_routed: { type: integer, minimum: 0 }
         leads_answered_in_target: { type: integer, minimum: 0 }
         leads_breached: { type: integer, minimum: 0 }
@@ -37964,11 +38330,11 @@ components:
       description: |
         The deal behind an item, with the facts its card states. `expected_minor_base` is
         `amount_minor` converted to the installation's base currency — the only figure by
-        which two deals in different currencies may be compared. It does not yet weight by
-        `win_probability`: the pipeline this row comes from does not read a deal's stage
-        today, so the two fields are independent facts rather than one computed from the
-        other, and a reader must not multiply them together expecting the product to equal
-        a risk-adjusted figure the API does not compute.
+        which two deals in different currencies may be compared. It is not weighted by
+        `win_probability`: the pipeline this row comes from does not read a deal's stage,
+        so the two fields are independent facts rather than one computed from the other,
+        and a reader must not multiply them together expecting the product to equal a
+        risk-adjusted figure the API does not compute.
       properties:
         stage_id: { type: [string, 'null'], format: uuid }
         amount_minor: { type: [integer, 'null'], format: int64 }

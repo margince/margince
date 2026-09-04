@@ -43,11 +43,16 @@ type HeldThread struct {
 	// a reader can tell one held thread from another.
 	Subject    string
 	OccurredAt *time.Time
-	// HasActivity separates "no message to read a subject from" — erased while
-	// the verdict stood, which the ledger deliberately survives — from a
-	// message somebody sent with a blank subject line. Collapsing the two would
-	// tell a reader their evidence was destroyed when it is sitting there
-	// unnamed.
+	// HasActivity is whether the message this hold was raised about still
+	// exists — read WITHOUT the content clause, because existence and
+	// readability are different questions.
+	//
+	// It separates three states the screen draws differently: a message with a
+	// subject, a message whose subject this reader may not have (withheld, or
+	// sent blank), and no message at all — erased while the verdict stood,
+	// which the ledger deliberately survives. Deriving it from the gated
+	// subject collapsed the middle into the last and told a holder their
+	// evidence was destroyed while it sat in the thread.
 	HasActivity bool
 	// ActivityID is the message that opened the thread, for a reader who wants
 	// to read it rather than only be told it is held.
@@ -116,6 +121,17 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 		// The content clause rides the JOIN rather than the WHERE for the same
 		// reason: in the WHERE it would turn the outer join into an inner one
 		// and drop every row whose activity is absent or withheld.
+		//
+		// `present` is a SECOND join carrying no content clause, and that is
+		// deliberate. Whether the message still exists and whether this reader
+		// may read it are different questions; the gated join answers only the
+		// second, and its columns go null for an erased message and a withheld
+		// one alike. Deriving existence from them told a holder their evidence
+		// had been destroyed while it sat in the thread.
+		//
+		// It discloses nothing new: the reader is looking at their own verdict
+		// row, which names first_activity_id. Only the boolean crosses over —
+		// no subject, no id, no occurred_at.
 		rows, err := tx.Query(ctx, `
 			SELECT v.thread_key,
 			       v.status,
@@ -123,12 +139,16 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			       a.id                    AS activity_id,
 			       a.subject,
 			       a.occurred_at,
-			       v.attempts
+			       v.attempts,
+			       present.id IS NOT NULL  AS has_activity
 			  FROM capture_thread_verdict v
 			  LEFT JOIN activity a
 			    ON a.id = v.first_activity_id
 			   AND a.archived_at IS NULL
 			   AND `+content+`
+			  LEFT JOIN activity present
+			    ON present.id = v.first_activity_id
+			   AND present.archived_at IS NULL
 			 WHERE v.user_id = $1
 			   AND v.status NOT IN ('cleared', 'shared_by_owner')
 			 ORDER BY (v.status = 'pending') DESC,
@@ -142,13 +162,13 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			var t HeldThread
 			var subject *string
 			if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind, &t.ActivityID,
-				&subject, &t.OccurredAt, &t.Attempts); err != nil {
+				&subject, &t.OccurredAt, &t.Attempts, &t.HasActivity); err != nil {
 				return fmt.Errorf("capture: listing a seat's held threads: %w", err)
 			}
-			// NULL is "no message to read one from"; an empty string is a
-			// message somebody sent with a blank subject line. The two read
-			// differently on screen, so they stay different here.
-			t.HasActivity = subject != nil
+			// The subject stays gated, and its own NULL still means only "no
+			// subject reached this reader" — erased or withheld, the row does
+			// not say which and does not need to. Which of the two it is comes
+			// from HasActivity, off the ungated join.
 			if subject != nil {
 				t.Subject = *subject
 			}

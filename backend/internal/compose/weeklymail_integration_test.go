@@ -81,7 +81,7 @@ func setupWeeklyMail(t *testing.T) *mailEnv {
 		Env:   e,
 		relay: relay,
 		worker: &weeklyGenerateWorkspaceWorker{
-			engine: weekly.NewEngine(e.Pool),
+			engine: weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)),
 			pool:   e.Pool,
 			users:  identity.NewService(e.Pool),
 			now:    func() time.Time { return weeklyMailClock },

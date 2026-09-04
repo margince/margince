@@ -27,7 +27,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 |---|---|---|
 | `tokens.test.ts` | Pins ~40 token values (`canonical`), the surface-luminance ladders in both themes, AA contrast of six inks on five grounds, chip composites, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and absent from dark, the dark `@media` arm byte-equal to `[data-theme="dark"]`, `brand.css` derivation-only | Change `tokens.css` and the `canonical` table in one commit; keep both ladders monotone; re-run the contrast math on the new grounds; keep the two dark arms identical; keep `--bgRail` declared (the rail stops using it, the pin stays) |
 | `check-ds-purity.sh` + `conformance.test.ts` | No colour literal outside `tokens.css` (one exemption: `provider-mark.tsx`) | Every new colour is a token; glows and panes included |
-| `check-font-lock.sh` + `conformance.test.ts` | Exactly three families: Bricolage Grotesque, Geist, Geist Mono (before Step 1, the previous three) | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
+| `check-font-lock.sh` + `conformance.test.ts` | Exactly three families: Outfit, Geist, Geist Mono (Outfit kept by decision after the mock's display face was tried in Step 1) | Change the family in **four** places in one PR: the script's strip list, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), the Google Fonts link in `index.html` |
 | `check-ds-spacing.sh` | No new raw px in padding/margin/gap under `screens/` and `app/` | Screen sheets use `--space-*`; design-system sheets may keep optical px |
 | `check-space-tokens.sh` | Every `var(--x)` is declared somewhere | Rename a token only with all its consumers |
 | `onecard.test.ts` | No second rule declares `.card`'s full chrome | When `Panel` becomes the pane, `.card` must not end up identical to it |
@@ -68,9 +68,10 @@ least risky once the tokens hold.
 4. **Rail tokens.** The design has no dark rail. `--bgRail` and the
    `--rail*` family stay declared (pinned) and stop being consumed by
    `shell.css`; note in `tokens.css` that they are retired.
-5. **Fonts.** Bricolage Grotesque (display, 600), Geist (body, 400/500/600),
-   Geist Mono (figures, 400/500). Four places, one PR. Keep `--f-display`,
-   `--f-body`, `--f-mono` as the names.
+5. **Fonts.** Outfit (display, 600), Geist (body, 400/500/600), Geist Mono
+   (figures, 400/500). The mock's display face was tried in Step 1 and Outfit
+   kept by decision; a family change is four places in one PR. Keep
+   `--f-display`, `--f-body`, `--f-mono` as the names.
 6. **Type scale.** Make `base.css`'s `.t-*` classes read `--fs-*` instead of
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in
@@ -109,8 +110,8 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 | `Panel` / `PanelPlate` / `PanelBody` / `PanelRow` (`panel.css`) | The **zone pane**: `--pane` with `--paneEdge`, 18px radius, `backdrop-filter: blur(12px)`, padding `--space-5 --space-6`, a display-face 17px title with its count (`small`) and verb (`a`) on one line, rows at `--space-3` with hairlines. `PanelPlate` becomes a row on `--bg3`. |
 | `StatStrip` | Becomes the readings row: five `StatCard`s in a grid, 16px gap, no plate. Slots that cannot be read stay absent or say so (the strip's current rule). |
 | `RecordView` (`composed.tsx/.css`) | The head: 56px mark and 32px name **centred on one axis**; facts line 13px, wraps in rows, carries the live dot and the way in; verbs right-aligned, wrap under at narrow widths; the `more` icon button last. Remove `PageAsideToggle` from `actions`; render it at the right end of the tab strip. The `controls` slot (deal only) is dropped: the deal's worth/stage/owner move to the facts line. `nameBadge` stays on the name line. |
-| `RecordTabs` | Quiet: no rule under the strip, 13px, 2px `--accent` under the current tab, counts at 11px `--ink4`; a `trailing` slot for the Details control. |
-| `PageAside` | Right column, 300px, one pane, **closed by default**, remembers its state per reader (already does). The aside's own children decide their inner anatomy (§3.4: five subjects vs one story). |
+| `RecordTabs` | Quiet: no rule under the strip, 13px, 2px `--accent` under the current tab, counts at 11px `--ink4`; a `trailing` slot for the Details control. The strip runs the full width above the columns, so the details pane opens under it. |
+| `PageAside` | The details pane: `RecordView`'s aside slot, 300px, under the tab row beside the work, one pane, **closed by default**, remembers its state per reader. A screen claims it with `usePageAside` and hands `RecordView` its content only while open. The pane's own children decide their inner anatomy (§3.4: five subjects vs one story). |
 | `PageZones` | `.page-zones-aside` becomes `minmax(0,1fr) 300px`; `both` and `rail` shapes stay for pages that use them. |
 | `GroupedTimelineList` / `TimelineRow` (`composed.css .timeline`) | Already the rail. Restyle only: 76px mono date column, marks by kind (solid, hollow for `change`, indigo for an agent change, dashed indigo for staged, circled glyph for a thread group), kind eyebrow, direction words, title 13.5/600, text clamped to three lines, meta line; a thread group as a card on the body side. |
 | `record360/spine.css` | Keep the geometry (it is the product's); take the mock's sizes: gap day count 26px display amber, today bar 2×15px, dotted grey ahead. Nothing structural. |

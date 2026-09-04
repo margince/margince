@@ -33,6 +33,7 @@ import {
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRoleLabel } from "../record360";
+import { SeatPerson } from "./seatperson";
 
 type Deal = components["schemas"]["Deal"];
 type Offer = components["schemas"]["Offer"];
@@ -277,9 +278,10 @@ function PeopleStat({
         <FactList
           facts={seats.map((seat) => ({
             key: seat.person_id,
-            // Absent when the caller may not read that person: the seat still
-            // counts, and only the identity is withheld.
-            term: seat.person_name ?? t("coverage.seatWithheld"),
+            // The person, linked — or the withheld sentence when only the
+            // identity is hidden. SeatPerson owns both, because two other
+            // cards on this record ask the same question.
+            term: <SeatPerson seat={seat} />,
             value: dealRoleLabel(seat.role, t),
             note: seat.engaged ? t("coverage.engaged") : t("coverage.quiet"),
           }))}

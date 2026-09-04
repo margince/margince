@@ -24,11 +24,11 @@
 
 .pref-list {
   list-style: none;
-  margin: 20px 0 0;
+  margin: var(--space-5) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .pref-row {
@@ -56,14 +56,14 @@
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .pref-row-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .pref-label {
@@ -98,7 +98,7 @@
 .pref-save-bar {
   position: sticky;
   bottom: 16px;
-  margin-top: 24px;
+  margin-top: var(--space-6);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
@@ -111,19 +111,13 @@
   color: var(--textPrimary);
 }
 
-.pref-save-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
 .pref-partial-banner {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   color: var(--warn);
 }
 
 .pref-unsub {
-  margin-top: 20px;
+  margin-top: var(--space-5);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -135,7 +129,7 @@
 }
 
 .pref-unsub-banner {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   display: flex;
   flex-direction: column;
   align-items: flex-start;

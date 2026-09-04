@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
@@ -48,6 +49,7 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	var defs []settings.Definition
 	defs = append(defs, ai.Definitions()...)
 	defs = append(defs, capture.Definitions()...)
+	defs = append(defs, consent.Definitions()...)
 	defs = append(defs, identity.Definitions()...)
 	defs = append(defs, integrations.Definitions()...)
 	defs = append(defs, people.Definitions()...)

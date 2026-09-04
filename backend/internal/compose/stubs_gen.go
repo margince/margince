@@ -195,6 +195,10 @@ func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
 
+func (stubs) GetReportRun(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetReportRun")
+}
+
 func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
 }
@@ -1121,6 +1125,10 @@ func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 
 func (stubs) DemoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.DemoteLeadParams) {
 	httperr.NotImplemented(w, r, "DemoteLead")
+}
+
+func (stubs) DraftLeadEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftLeadEmail")
 }
 
 func (stubs) ListLeadManualSignals(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

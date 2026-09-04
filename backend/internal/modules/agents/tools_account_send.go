@@ -55,7 +55,7 @@ func (t sendAccountEmailTool) Spec() mcp.ToolSpec {
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},"maxItems":25,
 				"description":"The records this conversation is filed under; at least one. The send is refused without it."},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}` + sendContextProperties + `},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendEmailResult](),
 	}

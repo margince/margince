@@ -80,6 +80,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 // nameGrammar is the one spelling of the unit-name rule; the grammar in
@@ -229,6 +230,17 @@ type Extension struct {
 	// jurisdiction code across the composed set is a wiring defect and
 	// fails the boot.
 	Jurisdictions []jurisdiction.Pack
+
+	// Messaging are the unit's outbound-messaging rule sets — the country
+	// rules the core authorization engine consults before a message goes out.
+	// Policy suppliers like a jurisdiction pack, and never actors: a pack
+	// states what its jurisdiction requires and the engine decides, so there
+	// is one answer to "may we write to this person" rather than one per
+	// country.
+	//
+	// At most one rule set per jurisdiction code across the composed set; two
+	// would be two answers, and the boot refuses them.
+	Messaging []messaging.Rules
 
 	// Tools are the governed agent tools the unit contributes: named
 	// operations running at a requested risk tier. Their tiers

@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -151,12 +150,6 @@ var companyFactsSchema = schema.Must(schema.Object(
 	},
 	"fields",
 ))
-
-// validatedBrain is the optional structured-output capability of the injected
-// brain (routerBrain implements it; test fakes need not).
-type validatedBrain interface {
-	CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error)
-}
 
 // extractionShapeValid is the schema-validity check the retry pipeline
 // enforces: parseable JSON in the demanded envelope. A retry can fix malformed
@@ -379,13 +372,7 @@ func boundedExtractionText(sourceText string) string {
 func (x evidenceExtractor) extractFields(ctx context.Context, sourceLabel, sourceText, sourceURL string, accept func(string) bool) ([]evidencedField, error) {
 	sourceText = boundedExtractionText(sourceText)
 	req := companyFactsRequest(sourceLabel, sourceText, sourceURL)
-	var resp model.Response
-	var err error
-	if structured, ok := x.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, extractionShapeValid)
-	} else {
-		resp, err = x.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, x.brain, req, extractionShapeValid)
 	if err != nil {
 		return nil, err
 	}

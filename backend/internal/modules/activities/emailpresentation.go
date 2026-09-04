@@ -376,10 +376,39 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	if scope != "" {
 		personJoin += ` AND (` + scope + `)`
 	}
+	// Three sources for one name, in the order of how much this installation
+	// knows the person. The contact record first — it is ours and it is
+	// maintained. Then the SEAT, for a colleague. Then the name the sender typed
+	// into the header, which capture keeps and nothing here read: it is the
+	// weakest, because it is whatever the other side wrote, but it beats
+	// printing a bare address at a reader.
+	//
+	// A colleague's SEAT is named from app_user, not from person. A message to
+	// somebody in this workspace records their user_id and, for a seat capture
+	// resolved rather than read off a header, no address at all — so a party
+	// joined only against `person` came back with an empty address and no name,
+	// and the reader saw a bare comma where a colleague should be. That reader
+	// is usually the very person it stood for: this is how a rep could not tell
+	// why a message had reached them.
+	//
+	// A seat is not row-scoped the way a contact is. The workspace roster is
+	// readable to every member — it is who a reader shares an installation with
+	// — so naming one discloses nothing the roster does not already.
+	//
+	// And NO liveness filter on that join. Who a message went to in August is a
+	// fact about August: a colleague who has since left was still on it, and
+	// dropping their name would leave a gap in a header that is otherwise
+	// complete — the very defect this join fixes, reappearing for anybody who
+	// resigns. This is the case livemember_test names as outside its rule: a row
+	// resolved by id to render a name does not ask whether the person still
+	// works here.
 	rows, err := tx.Query(ctx, `
-		SELECT ap.role, coalesce(ap.address, ''), p.id, p.full_name, ap.user_id
+		SELECT ap.role, coalesce(ap.address, ''), p.id,
+		       coalesce(p.full_name, u.display_name, ap.display_name), ap.user_id,
+		       coalesce(u.email, '')
 		  FROM activity_participant ap
 		  `+personJoin+`
+		  LEFT JOIN app_user u ON u.id = ap.user_id
 		 WHERE ap.activity_id = $1
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc')
 		 ORDER BY CASE ap.role
@@ -390,13 +419,29 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	}
 	defer rows.Close()
 
-	var out emailParties
+	// Empty, not nil. Every one of these four is `required` in the contract, and
+	// a nil slice marshals to `null` rather than `[]` — so a message with
+	// nobody in copy served a null the viewer is entitled to treat as a list.
+	// It read `.length` off it and the drawer died where the message should be.
+	out := emailParties{
+		from: emptyParties(),
+		to:   emptyParties(),
+		cc:   emptyParties(),
+		bcc:  emptyParties(),
+	}
 	for rows.Next() {
-		var role, address string
+		var role, address, seatEmail string
 		var personID, userID *ids.UUID
 		var fullName *string
-		if err := rows.Scan(&role, &address, &personID, &fullName, &userID); err != nil {
+		if err := rows.Scan(&role, &address, &personID, &fullName, &userID, &seatEmail); err != nil {
 			return emailParties{}, err
+		}
+		// The seat's own address, when the participant row carries none. Capture
+		// writes an address for a party it read off a header and only a user_id
+		// for one it resolved to a seat, so this is the difference between a
+		// header line naming a colleague and one with a gap in it.
+		if address == "" {
+			address = seatEmail
 		}
 		party := crmcontracts.EmailParty{Address: address, DisplayName: fullName}
 		if personID != nil {

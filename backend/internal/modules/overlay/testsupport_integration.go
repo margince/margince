@@ -283,6 +283,24 @@ func seedArchivedUser(t *testing.T, ws ids.UUID, email string) ids.UserID {
 	return user
 }
 
+// seedDeactivatedUser is a seat that can no longer log in and is NOT archived —
+// the state deactivation actually leaves: `status` moves and `archived_at` stays
+// NULL. That combination is the whole of #2592: a predicate on archived_at alone
+// reads it as a live colleague.
+// It takes no workspace, unlike the two seeders above: ADR-0091 §8 phase D took
+// the tenant column off app_user, so there is nothing to bind. Those two still
+// take one they do not use, which is theirs to drop.
+func seedDeactivatedUser(t *testing.T, email string) ids.UserID {
+	t.Helper()
+	user := ids.New[ids.UserKind]()
+	if _, err := testOwnerConn(t).Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, status) VALUES ($1, $2, 'Overlay Deactivated User', 'deactivated')`,
+		user, email); err != nil {
+		t.Fatalf("seeding a deactivated app_user: %v", err)
+	}
+	return user
+}
+
 // archiveUser archives an app_user that already exists — the "archived while
 // still mapped" state, which no seeder can produce up front because the
 // mapping has to be written by a live seat first.

@@ -257,15 +257,10 @@ func activity(inbound bool, subject string, body *string) crmcontracts.Activity 
 }
 
 func foldedWith(acts ...crmcontracts.Activity) Input {
-	view := crmcontracts.Person360{}
-	view.Activities = &struct {
-		Data []crmcontracts.Activity `json:"data"`
-		Page crmcontracts.PageInfo   `json:"page"`
-	}{Data: acts}
-
-	in := Input{Envelope: envelopeAt(textlang.German, convstate.BandFresh)}
-	foldRecent(&in, view)
-	return in
+	return Input{
+		Envelope: envelopeAt(textlang.German, convstate.BandFresh),
+		Recent:   FoldRecent(acts),
+	}
 }
 
 // The snippet is the counterparty's own text, so it has to sit INSIDE the

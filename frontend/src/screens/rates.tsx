@@ -61,11 +61,7 @@ function WithheldRateCard({
     <Panel title={title}>
       <PanelBody>
         <QueryGate query={me}>
-          {() => (
-            <EmptyState>
-              <p className="t-small">{reason}</p>
-            </EmptyState>
-          )}
+          {() => <EmptyState>{reason}</EmptyState>}
         </QueryGate>
       </PanelBody>
     </Panel>

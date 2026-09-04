@@ -63,6 +63,10 @@ export const LABELS = {
   /** The month's estimated spend, and it says estimated by saying "so far":
    *  the server prices on read, so the figure moves as rates change. */
   spend: "Cost this month",
+  /** The same fact in the width a collapsed rail has: the figure leads and
+   *  this names it. One word rather than the panel's sentence, because the
+   *  rail is 235px wide and the figure must not be what gets shortened. */
+  spendScope: "this month",
   /** Under the figure in the panel head, where the label is the second line. */
   thisMonth: "this month",
   /** The panel's own name. It is portalled to the body, so it is not inside the

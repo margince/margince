@@ -177,7 +177,7 @@ func (s *Sink) finishNewActivity(
 			return counterpartyDecision{}, err
 		}
 	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, decision, derivedLinks); err != nil {
+	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the

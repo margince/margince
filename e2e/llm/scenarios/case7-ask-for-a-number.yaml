@@ -1,0 +1,89 @@
+# CASE 7 — Ask for a number.
+#
+# The regression guard for a description that stopped carrying its own
+# vocabulary.
+#
+# `run_report` used to recite, into its `report` argument, every prebuilt
+# report's grouping, filter and measure names — 3.4KB, six per cent of the
+# served tool catalog in one tool. That moved to margince://schema/reports, with
+# describe_report_vocabulary as the door, and what stayed behind is the enum plus
+# the fact that a wrong name is refused BY name with that argument's accepted
+# list.
+#
+# So this scenario asks a question whose answer is a NUMBER broken down by a
+# dimension whose name the model is not told: `direction`. Three routes are
+# legitimate and the scenario is deliberately indifferent between them —
+#
+#   - guess `direction`, which is a good guess, and be right first time;
+#   - guess wrong, read the refusal, and use the list it carries;
+#   - open describe_report_vocabulary and read the names.
+#
+# What it is NOT indifferent about is the fourth outcome: concluding that this
+# workspace cannot answer the question. That is the failure the query vocabulary
+# already produced once in the field — a client probed four spellings of a geo
+# field, was correctly refused four times, and told its user the workspace held
+# no addresses at all. Honest refusals, false conclusion.
+#
+# THIS LANE IS A TOOLS-ONLY CLIENT. scripts/e2e-llm.sh passes `--tools ""`,
+# which disables the built-ins including resource reading, so the document is
+# unreachable here by construction. The lane measures the door and the refusals;
+# nothing in it can measure the resource.
+#
+# must_mention is derived from what seed-llm-fixtures.sh actually writes, and
+# deliberately from its SHAPE rather than its arithmetic: the seed writes emails
+# in both directions and one note, and case 1 and case 3 add activity of their
+# own on the runs that precede this one. A count asserted here would be a number
+# that moves with a sibling scenario.
+name: case7_ask_for_a_number
+criteria: [1, 3]
+
+prompt: |
+  Roughly how much of what we have logged in the CRM is us reaching out versus
+  them coming to us? I want the counts, not the individual records.
+
+must_call:
+  - run_report
+
+# The tool name alone is not the assertion. `must_call` would pass on a call to
+# some OTHER report followed by invented inbound and outbound counts, and
+# must_mention only reads the closing prose — so the report itself is pinned.
+#
+# `group_by` is deliberately NOT pinned. More than one plan answers this
+# honestly: grouping by `direction`, or filtering to each direction in turn. What
+# would be wrong is answering from a different report, and that is what this
+# catches.
+must_call_with:
+  - run_report.report=activities-by-kind
+may_call:
+  # The door, when a name is wanted rather than guessed. Optional on purpose:
+  # a run that guesses `direction` correctly and never opens it has done the
+  # better thing, and requiring the call would score the cheap path as a failure.
+  - describe_report_vocabulary
+  - query_workspace
+  - search_records
+  - list_records
+  - read_record
+
+must_mention:
+  # The breakdown it was asked for, in the words the report answers in.
+  - "inbound|incoming|received|them coming to us"
+  - "outbound|outgoing|we sent|reaching out"
+  # A number, somewhere. "We log activity in both directions" is not the answer
+  # to "I want the counts" — and an answer that names no digit at all is the
+  # shape a run takes when it gave up on the report and described the tool.
+  - "[0-9]"
+
+must_not_mention:
+  # THE FAILURE THIS CASE EXISTS FOR. A confident "there is no such report" or
+  # "the CRM cannot break this down" is worse than a refusal, because the person
+  # reading it stops asking. Every alternative needs a claim about the PRODUCT's
+  # capability, not merely a hedge about this answer's precision — "I can't be
+  # exact about the split" is an honest caveat and must stay green.
+  - "no (such )?report|cannot (be )?break|can(no|')t break (this|it) down|does not support (this|that) (kind of )?breakdown|no way to (count|aggregate|report)|not (something|a thing) (the|this) CRM can|CRM (does not|doesn't) (track|record) direction"
+  # And it must not report the vocabulary instead of the number: a run that
+  # spends its turn on describe_report_vocabulary and hands back the field list
+  # has answered a question nobody asked.
+  - "the available (report|grouping|filter)s are|here are the (report|grouping|dimension) names|group_by[^.]{0,30}filters[^.]{0,30}aggregates"
+
+runs: 3
+pass_at: 2

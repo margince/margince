@@ -97,9 +97,12 @@ describe("the opening sentence", () => {
     expect(leadOf(rows)?.id).toBe("b");
     expect(waitingRows(rows)).toHaveLength(1);
     const sentence = briefSentence(rows, t, "en");
-    expect(t(sentence?.key ?? "brief.eyebrow", sentence?.values)).not.toContain(
-      "Confirm the close date",
-    );
+    expect(
+      // A key that renders no row title, for the case where no sentence was
+      // composed at all: the assertion is about what the sentence does NOT
+      // name, and a missing sentence names nothing either.
+      t(sentence?.key ?? "home.glance.intro", sentence?.values),
+    ).not.toContain("Confirm the close date");
   });
 
   // A day whose only row IS a decision reads as clear HERE, because the deck is

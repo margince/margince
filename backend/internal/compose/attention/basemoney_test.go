@@ -299,6 +299,44 @@ func TestTheDealFactsCarryTheConvertedExpectedRevenue(t *testing.T) {
 	}
 }
 
+// A converted figure with no base currency named states no base-currency
+// figure — the same guard dayMoney.value already holds for the reason
+// field, over a misbehaving FX seam that priced a deal without naming what
+// currency the price is in. A number is not a smaller error than none.
+func TestAConvertedDealWithNoNamedBaseCarriesNoExpectedMinorBase(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen))),
+	}
+	fx := stubFX{base: "", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	if deal := out.Queue[0].Deal; deal != nil && deal.ExpectedMinorBase != nil {
+		t.Fatalf("expected_minor_base = %v with no base currency named", *deal.ExpectedMinorBase)
+	}
+}
+
+// The same unnamed conversion must not drive a material verdict either: an
+// amount with no named currency is not a smaller error than none, whether it
+// reaches the reader as the row's ExpectedMinorBase or as the "material" /
+// "below_material" reason classifyRisk states over it.
+func TestAConvertedDealWithNoNamedBaseStatesNoMaterialVerdict(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen))),
+	}
+	fx := stubFX{base: "", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	for _, because := range out.Queue[0].Because {
+		if because.Kind == "material" || because.Kind == "below_material" {
+			t.Fatalf("stated %q over a figure converted with no base currency named", because.Kind)
+		}
+	}
+}
+
 // A deal the estate cannot price states no base-currency figure: null means
 // "could not be priced", the same null a client already reads for an unpriced
 // deal's other money fields, not a second and different meaning of null.

@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Hash } from "lucide-react";
 import { api } from "../api/client";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Chip } from "../design-system/readings";
@@ -165,6 +166,7 @@ const PHASE_CHIP_OPTIONS: { value: ProjectPhase; label: MessageKey }[] =
 
 export function ProjectsScreen() {
   const t = useT();
+  const pageName = usePageName("projects");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const me = useMe();
@@ -215,6 +217,7 @@ export function ProjectsScreen() {
   return (
     <div className="wrap">
       <ListTable
+        title={pageName}
         state={state}
         unit="unit.projects"
         action={createAction}
@@ -274,7 +277,6 @@ export function ProjectsScreen() {
             sort: "-last_activity_at",
             filters: { phase: "delivering" },
           },
-          { label: "list.viewAZ", sort: "name" },
         ]}
       />
     </div>

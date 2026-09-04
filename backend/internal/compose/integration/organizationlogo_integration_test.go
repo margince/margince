@@ -106,9 +106,44 @@ func TestOrganizationLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testin
 	if err != nil {
 		t.Fatalf("read the organization: %v", err)
 	}
-	wantURL := "/v1/organizations/" + orgID.String() + "/logo"
+	key, err := e.People.OrganizationLogoKey(ctx, orgID)
+	if err != nil {
+		t.Fatalf("read the stored logo key: %v", err)
+	}
+	wantURL := *people.LogoURL(orgID.UUID, &key)
 	if read.LogoUrl == nil || *read.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q", read.LogoUrl, wantURL)
+	}
+}
+
+func TestOrganizationLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *testing.T) {
+	e := Setup(t)
+	blob := blobstore.NewMemory()
+	ctx := e.Admin()
+	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
+	for y := range 8 {
+		for x := range 32 {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
+		}
+	}
+	legacy, err := imagenorm.SquarePNG(wide, 32)
+	if err != nil {
+		t.Fatalf("encoding a legacy square-canvas logo: %v", err)
+	}
+	orgID := seedLoggedOrg(ctx, t, e, blob, legacy)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/organizations/"+orgID.String()+"/logo", nil).WithContext(ctx)
+	people.NewHandlers(e.DB()).WithBlobstore(blob).GetOrganizationLogo(rec, req, crmcontracts.Id(orgID.UUID))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	displayed, err := png.Decode(rec.Body)
+	if err != nil {
+		t.Fatalf("display response is not a PNG: %v", err)
+	}
+	if bounds := displayed.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
+		t.Fatalf("displayed logo is %v, want the original 4:1 wordmark", bounds)
 	}
 }
 

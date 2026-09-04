@@ -2,8 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Badge, Button } from "./atoms";
-import { Panel, PanelBody, PanelPlate, PanelRow } from "./panel";
+import { Badge, Button, EmptyState } from "./atoms";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelPlate,
+  PanelRow,
+} from "./panel";
 
 // The titled-card shape: a fixed-height header, an optional footer band, and
 // two ways to fill the middle — padded prose in PanelBody, or full-bleed rows
@@ -225,6 +231,36 @@ export const WithPlate: Story = {
         </PanelPlate>
         <PanelRow>Send the revised quote.</PanelRow>
         <PanelRow>Book the technical review.</PanelRow>
+      </>
+    ),
+  },
+};
+
+// Two groups under one head: each named by a PanelGroupHead one level in from
+// the pane's title, its verb on the same line, and an empty group as a plate
+// rather than a sentence. The verb keeps its place whether the group has rows
+// or not.
+export const WithGroups: Story = {
+  args: {
+    title: "Commercial",
+    children: (
+      <>
+        <PanelGroupHead
+          title="Deals"
+          level="h3"
+          action={<Button variant="ghost">New deal</Button>}
+        />
+        <PanelRow>Fleet retrofit 2026 · €48,000 · Proposal</PanelRow>
+        <PanelGroupHead
+          title="Projects"
+          level="h3"
+          action={<Button variant="ghost">Attach project</Button>}
+        />
+        <PanelBody>
+          <EmptyState plate title="No projects yet">
+            A project is the body of work a deal is about.
+          </EmptyState>
+        </PanelBody>
       </>
     ),
   },

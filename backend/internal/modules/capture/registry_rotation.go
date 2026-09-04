@@ -150,9 +150,9 @@ func (s rotationSink) record(ctx context.Context, ref keyvault.Ref) (superseded 
 		// The secret is never a detail field. The refs are opaque addresses,
 		// and they are what a reader needs to follow the chain.
 		_, logErr := storekit.LogSystem(ctx, tx, "capture.credential_rotated", map[string]any{
-			"connection_id":  s.connectionID.String(),
-			"credential_ref": string(ref),
-			"replaced_ref":   previous,
+			detailConnectionID: s.connectionID.String(),
+			"credential_ref":   string(ref),
+			"replaced_ref":     previous,
 		})
 		return logErr
 	})

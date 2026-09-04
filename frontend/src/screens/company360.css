@@ -28,11 +28,13 @@
    spaces itself differently depending on what it is stacked with. The
    overview's column and the documents tab's agreements-then-library pair are
    the same shape, so the name is the shape rather than the overview. */
-.co-panel-stack {
+.co-overview-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  /* The mock's rhythm between the readings, the 360 and the columns: one
+     rung wider than inside a column, so the three bands read as bands. */
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 /* ONE READING, IN PARTS. The same reading in the same order as the single
@@ -67,6 +69,16 @@
    under the gradient's transparent end. */
 .co-reading-call {
   background-image: linear-gradient(180deg, var(--aiLight), transparent);
+}
+/* The 360's head is a LINE inside the pane, not a band across it (DESIGN.md
+   §7): the mark, the name, the claim — and the verdict under them on the same
+   ground. The tint is the pane's own gradient, so the head keeps no fill and
+   no rule of its own. */
+.co-reading-call > .panel-head {
+  background: none;
+  border-bottom: 0;
+  padding-top: var(--space-5);
+  padding-bottom: 0;
 }
 
 /* The reference sections, side by side. Half the measure each, because a
@@ -202,12 +214,6 @@
   gap: 8px;
   flex-wrap: wrap;
   margin: 8px 0;
-}
-
-/* The bar leads the column it governs, so it owns the interval between
-   itself and the first panel beneath it. */
-.co-tabs {
-  margin-bottom: var(--space-5);
 }
 
 /* A card holding two independently-governed sections labels each one, so a
@@ -550,15 +556,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Verbs under the section they change: spaced off the content above so they
-   read as an action strip rather than another row of the list. */
-.co-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
 /* The brief's two footers: what moved since the reader was last here (or that
    there is no "away" to compare against, plus the withheld-sections caveat),
    and who wrote the card and when. Both are runs of separate spans, so they
@@ -575,11 +572,24 @@
   display: none;
 }
 
+/* THE VALUE AND EVERYTHING THAT QUALIFIES IT, on one line.
+   The value, a warning about its shape, who vouched for it and the verbs that
+   change it are separate elements of unlike kinds — a mark, a badge, a chip, a
+   button — and inline with no rule between them they simply abutted: a fact
+   nobody has to confirm read as "1998Set by a person", because it is the one
+   row where no button follows the value to force a gap. The row owns the
+   spacing, so it holds for every combination of the four. */
+.co-fact-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 /* A fact whose value contradicts its field. It sits beside the value rather
    than replacing it: the reader needs to see what was extracted to judge it. */
 .co-fact-suspect {
   display: inline-block;
-  margin-inline-start: 0.4rem;
 }
 
 /* The strip itself withheld, rather than absent: one line where the readings
@@ -1155,6 +1165,12 @@
 
 /* The summary's own row: the section name, then whatever it carries (a count,
    Health's rating) pushed to the far end. */
+/* The slice's name inside the summary: a heading for the outline, set as the
+   summary's own text rather than as a title of its own. */
+.co-sect-title {
+  margin: 0;
+  font: inherit;
+}
 .co-sect-summary {
   display: flex;
   align-items: center;
@@ -1586,6 +1602,20 @@
   padding-top: var(--space-6);
   padding-bottom: var(--space-2);
 }
+/* The head's name and the count beside it, on one baseline. */
+.co-360-headtext {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* When the row was written and by whom, closing the facts line: the date
+   and the provenance mark beside it, in the line's own ink. */
+.co-record-provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
 
 /* Except the first, which follows the card's own band and would otherwise open
    the reading with an interval nothing sits in. */
@@ -1620,11 +1650,10 @@
    statement rather than as a caption: the mark on its own indigo tile, the
    claim above the subject, and the record's name at reading size. */
 .co-360-title {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--space-3);
-  row-gap: 0;
+  gap: var(--space-2) var(--space-3);
   min-inline-size: 0;
 }
 .co-360-subject {
@@ -1634,8 +1663,7 @@
   min-inline-size: 0;
 }
 
-/* The eyebrow is a ROW: the mark and the words it marks are one line, and left
-   to the default the icon took a line of its own above them. Indigo, because
+/* The claim of authorship, after the name it is about. Indigo, because
    `.t-eyebrow` sets the neutral meta tone for every other eyebrow in the
    product and this one names the machine that wrote the card under it. */
 .co-360-title .t-eyebrow {
@@ -1643,14 +1671,10 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--aiText);
-  grid-column: 2;
 }
 
-/* The mark, on a tile of its own. It spans both lines of the claim, so the
-   eyebrow and the name read as one block that the mark introduces rather than
-   as two rows with an icon stuck to the first. */
+/* The mark, on a tile of its own, leading the line. */
 .co-360-title .co-360-mark {
-  grid-row: span 2;
   display: grid;
   place-items: center;
   inline-size: 2rem;

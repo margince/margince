@@ -81,9 +81,16 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 // itself from, and it lets the lane be read as a chronology rather than only
 // as a list of numbers.
 //
-// It offers NO verb, exactly as the risk card does not. What to do about a
-// lapsed relationship is a judgement about that person, and a queue that
-// answered it here would be deciding rather than warning.
+// It offers no verb that DECIDES, exactly as the risk card does not: what to do
+// about a lapsed relationship is a judgement about that person, and a queue
+// answering it here would be deciding rather than warning.
+//
+// It does offer `open`, which decides nothing — the same verb the quiet deal
+// carries and for the same reason. Naming a contact as gone quiet and then
+// leaving the rep to go and find them by hand is a warning they cannot act on,
+// and the card had no way through to the one page where reaching that person is
+// possible. The subject is the PERSON, so the destination is their record and
+// the composer lives on it.
 func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 	name := quiet.Name
 	days := quiet.QuietDays
@@ -105,9 +112,9 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 			Strength:    relationshipBand(quiet.Strength.Bucket),
 			HasOpenDeal: &funded,
 		},
-		Subject:    subjectOf("person", quiet.PersonID),
+		Subject:    subjectOf(subjectPerson, quiet.PersonID),
 		OccurredAt: &lastAt,
-		Actions:    []crmcontracts.AttentionItemActions{},
+		Actions:    []crmcontracts.AttentionItemActions{actionOpen},
 	}
 }
 

@@ -9,9 +9,11 @@ import {
   Search,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useNarrowViewport } from "../app/viewport";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { OverflowMenu } from "./atoms";
 import "./listtable.css";
 
 // The value list's own search box debounces on the same rhythm as the list
@@ -132,6 +134,7 @@ export function nextSortValue(
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 export function ListSurface({
+  title,
   views = [],
   activeView = 0,
   onViewChange,
@@ -150,6 +153,20 @@ export function ListSurface({
   children,
   footer,
 }: Readonly<{
+  /**
+   * The page's own name, when this surface IS the page.
+   *
+   * A list screen is a header row, a toolbar and rows: the name printed above
+   * that card cost a whole band of a phone's screen to say one word the top
+   * bar's trail had already said, and pushed the dials below the fold. Given
+   * here it stands in the header it belongs to, on the line that already
+   * carries the tabs and the count.
+   *
+   * It renders an h1, so the shell must not print one too — a screen that
+   * passes this joins `SELF_HEADED_SCREENS` (app/pagemeta.ts) in the same
+   * change, or the page is named twice at heading level.
+   */
+  title?: ReactNode;
   views?: readonly ListView[];
   activeView?: number;
   onViewChange?: (index: number) => void;
@@ -200,6 +217,7 @@ export function ListSurface({
   return (
     <div className="lt">
       <div className="lt-head">
+        {title && <h1 className="lt-title t-display">{title}</h1>}
         {views.length > 0 && (
           <div className="lt-views">
             {views.map((view, index) => (
@@ -223,7 +241,7 @@ export function ListSurface({
             count that only arrives with the rows would otherwise let the action
             start at the left and jump across once they land. */}
         <span className="lt-count">{count}</span>
-        {action}
+        <HeadActions>{action}</HeadActions>
       </div>
 
       {caption && <p className="lt-caption">{caption}</p>}
@@ -246,6 +264,49 @@ export function ListSurface({
 
       {footer}
     </div>
+  );
+}
+
+/**
+ * A list header's verbs, folded into ONE menu once the row stops holding them.
+ *
+ * The header is view tabs, a count sentence and the verbs, and the sentence is
+ * the part that grows: "1–25 of 200 contacts loaded so far, sorted by Created"
+ * does not wrap and does not shrink, so below about a laptop's width it ran
+ * straight through the buttons and the three verbs on the contacts list drew on
+ * top of each other. Widths do not fix that — the sentence is a translated
+ * string and German runs a third longer again.
+ *
+ * The SAME nodes move into the menu; nothing is rendered twice. That is what
+ * `OverflowMenu` is for — it takes the caller's own controls as children and
+ * never unmounts them once they are up, so a verb that opens a dialog still has
+ * somewhere to hand focus back to. A second, hidden copy of every verb would
+ * give a screen reader two controls of one name and mount every dialog twice.
+ *
+ * `keepMounted`, and it is load-bearing rather than a hint: the menu otherwise
+ * defers its children to the first open, and a header verb that reads its
+ * opening state once at mount is then dead — `#/deals/new` opened no create
+ * dialog at all below this width, and pressing the menu opened one nobody had
+ * asked for. One menu per page and a handful of buttons in it, so there is
+ * nothing to defer here anyway.
+ *
+ * It reads the VIEWPORT rather than the header's own box: a container query
+ * cannot move an element into a menu, and measuring the row would mean laying
+ * it out overflowing first and then reflowing it, which a reader sees.
+ */
+function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  const narrow = useNarrowViewport();
+  if (!children) {
+    return null;
+  }
+  if (!narrow) {
+    return children;
+  }
+  return (
+    <OverflowMenu label={t("list.headActions")} keepMounted>
+      {children}
+    </OverflowMenu>
   );
 }
 
@@ -699,6 +760,13 @@ function SortMenu({
   onToggle: () => void;
 }>) {
   const t = useT();
+  // WHAT THE LIST IS ORDERED BY, on the control that changes it. A dial labelled
+  // only "Sort" leaves the reader to open it to find out — and a sort can arrive
+  // from three places they did not press: a saved view, a column header, the
+  // address they pasted. Naming it here is the one place all three are visible.
+  const active = options.find(
+    (option) => sortDirection(option.field, sort.value) !== null,
+  );
   return (
     <span className="lt-menu-wrap">
       <button
@@ -708,56 +776,92 @@ function SortMenu({
         onClick={onToggle}
       >
         <ArrowDownUp size={13} strokeWidth={1.5} aria-hidden="true" />
-        {t("table.sort")}
+        {active
+          ? t("table.sortNamed", { column: active.label })
+          : t("table.sort")}
       </button>
       <Menu open={open} head={t("table.sortMenu")} align="right">
         {options.map((option) => {
           const direction = sortDirection(option.field, sort.value);
           return (
-            <button
-              type="button"
+            <SortItem
               key={option.field}
-              className={`lt-mi${direction ? " on" : ""}`}
-              aria-pressed={direction !== null}
-              onClick={() => sort.onChange(nextSortValue(option, direction))}
-            >
-              <span className="lt-cb">
-                <Check size={10} strokeWidth={3} aria-hidden="true" />
-              </span>
-              {option.label}
-              {direction && (
-                <span className="lt-mi-dir">
-                  {direction === "asc" ? (
-                    <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
-                  ) : (
-                    <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
-                  )}
-                  {/* The arrow is the sighted reader's half of this. The
-                      direction has to be said as well, or a pressed entry
-                      announces only that it is the sort and not which way. */}
-                  <span className="sr-only">
-                    {direction === "asc"
-                      ? t("table.sortAscending")
-                      : t("table.sortDescending")}
-                  </span>
-                </span>
-              )}
-            </button>
+              label={option.label}
+              direction={direction}
+              onPick={() => sort.onChange(nextSortValue(option, direction))}
+            />
           );
         })}
-        <button
-          type="button"
-          className={`lt-mi${sort.value ? "" : " on"}`}
-          aria-pressed={!sort.value}
-          onClick={() => sort.onChange("")}
-        >
-          <span className="lt-cb">
-            <Check size={10} strokeWidth={3} aria-hidden="true" />
-          </span>
-          {t("table.sortDefault")}
-        </button>
+        {/* Offered because it is a state a reader can REACH — a saved view that
+            names no sort asks for the server's own order — and a state they can
+            reach is one they must be able to ask for. It has no direction to
+            flip, so it carries no arrow. */}
+        <SortItem
+          label={t("table.sortDefault")}
+          direction={sort.value ? null : "none"}
+          onPick={() => sort.onChange("")}
+        />
       </Menu>
     </span>
+  );
+}
+
+/**
+ * One attribute in the sort menu: its name, which way it is ordering, and
+ * whether it is the one in force.
+ *
+ * ONE ORDER AT A TIME, so the chosen entry wears a CHECKMARK rather than a tick
+ * box. A box is the shape of a set a reader adds to, and drawing five of them
+ * over five orderings promised a combination this list cannot be in — the
+ * server takes one field plus the house tie-breaker. The mark rides the right
+ * edge, where a reader checks which of the five it landed on; the direction
+ * arrow sits against the label, because it qualifies THAT name rather than
+ * being a second column of its own.
+ *
+ * The mark is always laid out and only its glyph appears, for the reason the
+ * tick box was: a checkmark that inserted itself would shift every label in the
+ * menu on selection.
+ */
+function SortItem({
+  label,
+  direction,
+  onPick,
+}: Readonly<{
+  label: string;
+  /** `"none"` is the server's own order: in force, with no direction to state. */
+  direction: "asc" | "desc" | "none" | null;
+  onPick: () => void;
+}>) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      className={`lt-mi${direction ? " on" : ""}`}
+      aria-pressed={direction !== null}
+      onClick={onPick}
+    >
+      {label}
+      {(direction === "asc" || direction === "desc") && (
+        <span className="lt-mi-dir">
+          {direction === "asc" ? (
+            <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
+          ) : (
+            <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
+          )}
+          {/* The arrow is the sighted reader's half of this. The direction has
+              to be said as well, or a pressed entry announces only that it is
+              the sort and not which way. */}
+          <span className="sr-only">
+            {direction === "asc"
+              ? t("table.sortAscending")
+              : t("table.sortDescending")}
+          </span>
+        </span>
+      )}
+      <span className="lt-mi-mark">
+        <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+      </span>
+    </button>
   );
 }
 

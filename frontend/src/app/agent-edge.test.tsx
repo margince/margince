@@ -36,21 +36,19 @@ describe("the agent edge signal", () => {
 
   it("keeps one object per reading, so a subscriber can compare by identity", () => {
     const first = currentAgentEdge();
-    publishAgentEdge({ reading: false, waiting: false });
+    publishAgentEdge({ reading: false });
 
     expect(currentAgentEdge()).toBe(first);
   });
 
-  it("carries both facts at once, because both can be true", () => {
-    // An agent reading right now while an approval from ten minutes ago still
-    // waits is an ordinary Tuesday, not an edge case.
-    publishAgentEdge({ reading: true, waiting: true });
+  it("carries the reading it was published with", () => {
+    publishAgentEdge({ reading: true });
 
-    expect(currentAgentEdge()).toEqual({ reading: true, waiting: true });
+    expect(currentAgentEdge()).toEqual({ reading: true });
   });
 
   it("goes still when cleared, so a reading cannot outlive its session", () => {
-    publishAgentEdge({ reading: true, waiting: true });
+    publishAgentEdge({ reading: true });
     clearAgentEdge();
 
     expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
@@ -60,11 +58,14 @@ describe("the agent edge signal", () => {
 describe("the agent edge", () => {
   it("draws nothing at all while nothing is happening", () => {
     const { container } = render(<AgentEdge />);
-    const mark = edge(container);
 
-    expect(mark).not.toBeNull();
+    expect(edge(container)).not.toBeNull();
     expect(container.querySelector("canvas")).toBeNull();
-    expect(mark?.hasAttribute("data-waiting")).toBe(false);
+    // Nothing but the canvas: an unanswered queue used to close the margin into
+    // a contour that stood for as long as the queue did, which on any real
+    // installation is a permanent ring around the window. The rail says it in
+    // words, with its count.
+    expect(edge(container)?.children).toHaveLength(0);
   });
 
   it("lights on reading, and goes dark again when the work stops", () => {
@@ -72,35 +73,23 @@ describe("the agent edge", () => {
     // an element that only exists while work is in flight cannot fall out of
     // step with the fact it reports.
     const { container } = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    act(() => publishAgentEdge({ reading: true }));
     expect(container.querySelector("canvas")).not.toBeNull();
 
-    act(() => publishAgentEdge({ reading: false, waiting: false }));
-    expect(container.querySelector("canvas")).toBeNull();
-  });
-
-  it("marks waiting without marking work, since nothing is in flight", () => {
-    // The two marks are read differently by the stylesheet: one moves, one holds
-    // perfectly still. A staged action that also lit the working mark would look
-    // busy while it was in fact waiting for the reader.
-    const { container } = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: false, waiting: true }));
-
-    expect(edge(container)?.hasAttribute("data-waiting")).toBe(true);
+    act(() => publishAgentEdge({ reading: false }));
     expect(container.querySelector("canvas")).toBeNull();
   });
 
   it("draws the lit edge only while the agent is reading", () => {
     // A full-window fragment shader: cheap per frame, not free to have. A dark
-    // edge has nothing to say, so an idle screen must not be paying for it, and
-    // neither must a screen that is only waiting on an approval.
+    // edge has nothing to say, so an idle screen must not be paying for it.
     const { container } = render(<AgentEdge />);
     expect(container.querySelector("canvas")).toBeNull();
 
-    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    act(() => publishAgentEdge({ reading: true }));
     expect(container.querySelector("canvas")).not.toBeNull();
 
-    act(() => publishAgentEdge({ reading: false, waiting: true }));
+    act(() => publishAgentEdge({ reading: false }));
     expect(container.querySelector("canvas")).toBeNull();
   });
 
@@ -110,7 +99,7 @@ describe("the agent edge", () => {
     // the agent is working, so the fallback is a plain lit rim rather than
     // nothing: a decoration that vanishes takes a reading with it.
     const { container } = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    act(() => publishAgentEdge({ reading: true }));
 
     expect(container.querySelector(".agentedge-still")).not.toBeNull();
   });
@@ -129,7 +118,7 @@ describe("the agent edge", () => {
     // here: it has to serve every subscriber, not the last one to arrive.
     const first = render(<AgentEdge />);
     const second = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    act(() => publishAgentEdge({ reading: true }));
 
     expect(first.container.querySelector("canvas")).not.toBeNull();
     expect(second.container.querySelector("canvas")).not.toBeNull();
@@ -142,7 +131,7 @@ describe("the agent edge", () => {
     const warn = vi.spyOn(console, "error").mockImplementation(() => {});
     const { unmount } = render(<AgentEdge />);
     unmount();
-    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    act(() => publishAgentEdge({ reading: true }));
 
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();

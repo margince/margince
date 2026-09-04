@@ -163,10 +163,13 @@
    button reads as a label, and four of them as a sentence. */
 .btn-ghost {
   background: var(--pane);
-  color: var(--textPrimary);
-  /* The control boundary, not the hairline: on the near-white pane the
-     hairline sits under the 3:1 floor a control's edge owes (tokens.css). */
-  border-color: var(--borderControl);
+  color: var(--textContent);
+  /* The hairline, not the control boundary: an outlined verb is a pane with
+     a word on it, and the darker edge drew a row of them as a strip of
+     cartoon buttons. The word is what identifies the control (WCAG 1.4.11
+     asks the boundary to clear 3:1 only where it is the sole cue), so the
+     edge can be as quiet as every other pane's. */
+  border-color: var(--borderSubtle);
 }
 .btn-ghost:hover {
   background: var(--bgHover);

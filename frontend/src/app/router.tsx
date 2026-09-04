@@ -1,5 +1,7 @@
 import { useState, useSyncExternalStore } from "react";
 
+import { hashWithParams, type UrlParams } from "./urlstate";
+
 // Hash routing: "#/deals/01J9ZK" → { screen: "deals", id: "01J9ZK" }.
 // Client routes live behind '#', so any static host serves index.html for
 // every entry point — no server-side SPA fallback needed.
@@ -47,16 +49,27 @@ export const SCREENS = [
   // type. Every tag pill in the product links here.
   "tags",
   "onboarding",
+  // reach:external the extension's own chrome, opened by the client rather than
+  // from anywhere in this app.
   "client",
   "book",
   "preferences",
+  // reach:external the address the visible unsubscribe footer of an outbound
+  // message carries; this app never links to it.
   "unsubscribe",
+  // reach:external a double opt-in link, followed out of the reader's mailbox.
   "confirm",
   "room",
+  // reach:external where a provider returns a human who has just lent an agent
+  // their authority; it is a redirect target, never a destination.
   "oauth-consent",
+  // reach:external the address a password-reset mail carries. A signed-out
+  // reader has no nav to reach it from.
   "reset-password",
   "ext",
   "x",
+  // reach:external what `parseRoute` answers for an address this app does not
+  // have; a link to it would be a link to the fact that a link was wrong.
   "not-found",
 ] as const;
 
@@ -232,8 +245,20 @@ export function routeIdentity(route: Route): string {
   });
 }
 
-export function navigate(route: Route): void {
-  globalThis.location.hash = routeHash(route);
+/**
+ * Go to an address.
+ *
+ * `dials` is the QUERY half — which view of the screen, not which screen. It is
+ * optional because most navigations name a page and nothing about how it is
+ * narrowed; it exists because some do, and there was no spelling for it:
+ * `useUrlParams` writes the query of the screen the reader is ALREADY on, so a
+ * figure on Home offering to open one lane of the Worklist had nowhere to say
+ * which lane. Serialised by `hashWithParams`, so an address written here and one
+ * written by a dial on the screen itself are the same address.
+ */
+export function navigate(route: Route, dials?: UrlParams): void {
+  const path = routeHash(route);
+  globalThis.location.hash = dials ? hashWithParams(path, dials) : path;
 }
 
 /**

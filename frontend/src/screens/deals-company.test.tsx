@@ -189,7 +189,7 @@ function stubBackend(opts: {
 
 /** The board card naming `name` — the whole card is one button. */
 async function boardCard(name: string): Promise<HTMLElement> {
-  const card = (await screen.findByText(name)).closest("button");
+  const card = (await screen.findByText(name)).closest("a");
   if (!card) {
     throw new Error(`no board card around "${name}"`);
   }

@@ -104,67 +104,104 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 	return `{"enum":[` + strings.Join(keys, ",") + `],` + described + `}`
 }
 
-// describeReportCatalog renders each report's three vocabularies, because the
-// enum alone answers only the first of a caller's two questions. Knowing that
-// `deals-by-stage` exists does not tell them it groups by stage_id and filters
-// by pipeline_id, and there is no other tool on this surface that would.
+// describeReportCatalog says what each report ANSWERS, and names where the
+// three plan vocabularies are rather than reciting them.
+//
+// Reciting all three vocabularies for every report cost 3.4KB here — 6% of the
+// served catalog in one tool, held by every client for a whole session and
+// re-sent by every Surface-B run on every step. They are the document's now.
+//
+// WHERE THE LINE FALLS is MEASURED rather than reasoned, and the measurement is
+// worth keeping: with the defaults deferred too, leaving an enum of bare keys,
+// the certification lane scored 0/3 on "how much open pipeline do we have in
+// each stage" and every run opened the vocabulary door instead of the report.
+// That was correct of it — `deals-by-stage` answers that goal with no plan at
+// all, and a bare key does not say so. The default line is the selection
+// signal, and nothing else on this surface carries one.
+//
+// So the split is by QUESTION, not by size:
+//
+//   - Which report answers my goal, and do I need a plan at all? Answered here,
+//     by each key and its default, at zero round trips. It is the cheap half —
+//     ~180 tokens for nine reports — and it is what a caller needs FIRST.
+//   - What may a plan SAY? The three closed name lists, which only a caller who
+//     is narrowing needs at all. That is the 3.4KB, and it is the document's.
+//
+// The sentence NAMES the document and does not order a read
+// (TestNoToolOrdersTheModelToReadADocument), and it says the document is NOT a
+// prerequisite: naming one beside an argument reads as an order even with no
+// imperative in it, so the default call is stated first and says outright that
+// it needs nothing read.
 func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	if len(catalog) == 0 {
 		return "No prebuilt report is available on this installation."
 	}
 	var b strings.Builder
-	b.WriteString("The prebuilt report to run. Send `report` alone to get its defaults; the three ")
-	b.WriteString("plan arguments accept ONLY the names listed for that report. ")
-	for i, entry := range catalog {
-		if i > 0 {
-			b.WriteString(" ")
-		}
-		b.WriteString(entry.Report)
-		b.WriteString(" — group_by: ")
-		b.WriteString(vocabulary(entry.GroupBy))
-		b.WriteString("; filters: ")
-		b.WriteString(vocabulary(entry.Filters))
-		b.WriteString("; aggregates: ")
-		b.WriteString(vocabulary(entry.Aggregates))
-		if entry.Defaults != "" {
-			b.WriteString("; default: ")
-			b.WriteString(entry.Defaults)
-		}
-		if entry.Notes != "" {
-			b.WriteString("; note: ")
-			b.WriteString(entry.Notes)
-		}
-		b.WriteString(".")
-	}
+	b.WriteString("The prebuilt report to run. Send `report` ALONE for the default answer listed ")
+	b.WriteString("below — that call takes no other argument and needs nothing read first. ")
+	writeReportDefaults(&b, catalog)
+	b.WriteString("To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY ")
+	b.WriteString("that report's own names, published at ")
+	b.WriteString(ReportVocabularyURI)
+	b.WriteString(" and answered by describe_report_vocabulary; a name outside them is refused by ")
+	b.WriteString("name, with that argument's accepted list.")
 	writePipelineSource(&b, catalog)
 	return b.String()
 }
 
-// writePipelineSource closes the obligation the vocabularies open: several
-// reports filter and group by `pipeline_id` and `stage_id`, and naming an id a
-// caller cannot obtain is a correct refusal that dead-ends. Keyed on the
-// vocabularies actually rendered, so a catalog without those keys does not carry
-// advice about them.
+// writePipelineSource closes the obligation the defaults above open: several
+// reports group by `pipeline_id` and `stage_id`, and naming an id a caller
+// cannot obtain is a correct refusal that dead-ends.
+//
+// It sits HERE as well as in the document because the obligation follows the
+// NAMES: TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines reads the
+// input schema, so this sentence is owed exactly while the defaults above name
+// those ids.
+//
+// The predicate and the sentence are SHARED with the document rather than
+// re-typed there: they were two copies of one obligation and had already
+// drifted by a word.
 func writePipelineSource(b *strings.Builder, catalog []ReportCatalogEntry) {
-	for _, entry := range catalog {
-		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
-			if slices.Contains(names, "pipeline_id") || slices.Contains(names, "stage_id") {
-				b.WriteString(" A `pipeline_id` or `stage_id` used here comes from list_pipelines — ")
-				b.WriteString("no other tool on this surface yields one.")
-				return
-			}
-		}
+	if catalogNamesAPipelineID(catalog) {
+		b.WriteString(" ")
+		b.WriteString(pipelineIDProvenance)
 	}
 }
 
-// vocabulary renders one closed list, saying so explicitly when it is empty.
-// An empty rendering would read as an omission, and a caller who reads it that
-// way sends a plausible name into an argument that accepts none.
-func vocabulary(names []string) string {
-	if len(names) == 0 {
-		return "(none)"
+// pipelineIDProvenance is the one sentence saying where those ids come from,
+// read by run_report's description and by the published document.
+const pipelineIDProvenance = "A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines."
+
+// catalogNamesAPipelineID reports whether any rendered vocabulary names an id a
+// caller has to obtain elsewhere. Keyed on what is actually rendered, so a
+// catalog without those keys carries no advice about them.
+func catalogNamesAPipelineID(catalog []ReportCatalogEntry) bool {
+	for _, entry := range catalog {
+		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
+			if slices.Contains(names, "pipeline_id") || slices.Contains(names, "stage_id") {
+				return true
+			}
+		}
 	}
-	return strings.Join(names, ", ")
+	return false
+}
+
+// writeReportDefaults renders what each report answers with no plan — the one
+// thing a caller cannot infer from a report's key.
+//
+// Keyed on the entries that HAVE a default, so a report with none stays silent
+// rather than rendering a key with an empty clause after it, which would read as
+// a report that answers nothing.
+func writeReportDefaults(b *strings.Builder, catalog []ReportCatalogEntry) {
+	for _, entry := range catalog {
+		if entry.Defaults == "" {
+			continue
+		}
+		b.WriteString(entry.Report)
+		b.WriteString(": ")
+		b.WriteString(entry.Defaults)
+		b.WriteString(". ")
+	}
 }
 
 func (t runReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
