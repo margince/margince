@@ -19,6 +19,7 @@ import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { problemCodeOf } from "./common";
 import { useDedupeDisposition } from "./dedupe.queries";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
@@ -29,6 +30,14 @@ import { type WorklistItem, worklistKey } from "./worklist.queries";
  * is one whose reader may not see both sides, and the lane already withheld the
  * `merge` verb for exactly that reason — so there is nothing here to draw and
  * no decision to offer.
+ *
+ * The verbs are drawn only where the server OFFERED them. Settling a pair
+ * archives one record and rewrites the other, so it belongs to whoever could
+ * change both — the owner, or a workspace-wide seat. A reader without that
+ * authority still sees the pair, because knowing a duplicate is waiting is not
+ * the same as being able to settle it, and is told who can. Rendering the
+ * buttons for everybody is what produced a control that refused every press a
+ * rep made on a colleague's records, then advised trying again.
  */
 export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
@@ -39,6 +48,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   if (!pair) {
     return null;
   }
+  const mayDecide = item.actions?.includes("merge") ?? false;
   const answer = (
     disposition: "merge" | "not_a_duplicate",
     winnerId?: string,
@@ -48,7 +58,21 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
       {
         // A refused decision leaves the row exactly as an unpressed one looks.
         // Without this the reader believes the pair is settled and it is not.
-        onError: () => toast.show(t("worklist.pair.failed"), { mark: false }),
+        //
+        // THREE outcomes, not one. A refusal will refuse again however many
+        // times it is pressed, so "try again" is the wrong instruction — the
+        // reader needs a steward. A conflict means somebody settled the pair
+        // first, and the row is already gone. Only the rest is worth a retry.
+        onError: (error) => {
+          const code = problemCodeOf(error);
+          const message =
+            code === "permission_denied"
+              ? "worklist.pair.refused"
+              : code === "conflict"
+                ? "worklist.pair.alreadySettled"
+                : "worklist.pair.failed";
+          toast.show(t(message), { mark: false });
+        },
       },
     );
   return (
@@ -77,24 +101,35 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                 a reader who is not looking at the layout — a screen reader,
                 a keyboard walking the controls — no way to tell which record
                 they are about to archive. */}
-            <Button
-              small
-              variant="primary"
-              pending={decide.isPending}
-              onClick={() => answer("merge", side.id)}
-            >
-              {t("worklist.pair.keep", { name: side.label })}
-            </Button>
+            {mayDecide && (
+              <Button
+                small
+                variant="primary"
+                pending={decide.isPending}
+                onClick={() => answer("merge", side.id)}
+              >
+                {t("worklist.pair.keep", { name: side.label })}
+              </Button>
+            )}
           </li>
         ))}
       </ul>
-      <Button
-        small
-        pending={decide.isPending}
-        onClick={() => answer("not_a_duplicate")}
-      >
-        {t("worklist.pair.notDuplicate")}
-      </Button>
+      {mayDecide ? (
+        <Button
+          small
+          pending={decide.isPending}
+          onClick={() => answer("not_a_duplicate")}
+        >
+          {t("worklist.pair.notDuplicate")}
+        </Button>
+      ) : (
+        // Said in words rather than shown as disabled buttons. A greyed-out
+        // control asks the reader to work out why it is grey; a sentence tells
+        // them the pair is real, that they cannot settle it, and who can.
+        <p className="t-caption worklist-pair-steward">
+          {t("worklist.pair.stewardOnly")}
+        </p>
+      )}
     </div>
   );
 }

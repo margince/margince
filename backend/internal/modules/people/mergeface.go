@@ -87,6 +87,46 @@ func (s *Store) DescribeForMerge(
 	return faces, nil
 }
 
+// DecidableForMerge answers which of these records the caller could CHANGE.
+//
+// The merge card asks it because settling a pair is not a read: the loser is
+// archived and the survivor is relinked and filled, so the verb needs write
+// authority over BOTH sides. Offering it on visibility alone is what produced a
+// button that refused every press — a rep sees every colleague's records here
+// and can change almost none of them.
+//
+// It answers with auth.WritableSubset, the same pair of questions
+// EnsureWritable asks at the write itself, so the card and the endpoint cannot
+// disagree about who may decide. A record the caller may not see is absent
+// exactly as it is from DescribeForMerge, and the two absences mean the same
+// thing.
+//
+// The OBJECT grant is deliberately NOT required here. A reader whose role lacks
+// the update verb is a legitimate caller asking a question whose answer is "no
+// verb for you", and WritableSubset already answers it that way — refusing the
+// whole read would cost them the card as well, which is the pair they are
+// entitled to see.
+func (s *Store) DecidableForMerge(
+	ctx context.Context, entityType string, rowIDs []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	if len(rowIDs) == 0 {
+		return map[ids.UUID]bool{}, nil
+	}
+	if !isMergeFaceEntity(entityType) {
+		return nil, fmt.Errorf("people: %q has no merge face: %w", entityType, apperrors.ErrNotFound)
+	}
+	var decidable map[ids.UUID]bool
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		decidable, err = auth.WritableSubset(ctx, tx, entityType, rowIDs)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return decidable, nil
+}
+
 // isMergeFaceEntity is the closed set this read serves. Named rather than left
 // to the switch below so an unknown type is refused before a transaction is
 // opened, and refused the same way whatever the caller asked for.

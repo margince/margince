@@ -7968,6 +7968,12 @@ export const en = {
   "worklist.pair.notDuplicate": "Not the same",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
+  "worklist.pair.refused":
+    "You cannot settle this pair. Both records have to be yours to change, so an admin or a sales lead can settle it.",
+  "worklist.pair.alreadySettled":
+    "Somebody settled this pair first. It is gone from the list.",
+  "worklist.pair.stewardOnly":
+    "Only somebody who can change both records can settle this — an admin or a sales lead.",
   "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "About this record",
   "worklist.pane.openRow": "Show what {position}, {title}, is about",

@@ -279,6 +279,13 @@
   font-weight: 600;
 }
 
+/* Where the verbs would have been, for a reader who may not settle the pair.
+   It stands in the buttons' own place so the card still reads as one thought:
+   here are two records, and here is why nothing is being asked of you. */
+.worklist-pair-steward {
+  margin: 0;
+}
+
 /* The snooze spans, stacked inside their popover: three short verbs read as a
    list of choices rather than as a sentence when they sit on one line. */
 .worklist-snooze-spans {

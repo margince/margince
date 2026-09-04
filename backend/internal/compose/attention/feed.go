@@ -374,9 +374,13 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, laneCount{}, err
 	}
+	decidable, err := s.decidablePairs(ctx, pairs)
+	if err != nil {
+		return nil, laneCount{}, err
+	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
-		duplicates = append(duplicates, s.duplicateItem(pair, named))
+		duplicates = append(duplicates, s.duplicateItem(pair, named, decidable))
 	}
 	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {

@@ -7794,6 +7794,12 @@ export const vi = {
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
+  "worklist.pair.refused":
+    "Bạn không thể xử lý cặp này. Bạn phải sửa được cả hai bản ghi, nên quản trị viên hoặc trưởng nhóm kinh doanh sẽ xử lý.",
+  "worklist.pair.alreadySettled":
+    "Người khác đã xử lý cặp này trước. Nó không còn trong danh sách.",
+  "worklist.pair.stewardOnly":
+    "Chỉ người sửa được cả hai bản ghi mới xử lý được — quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Chưa chuẩn bị",
   "worklist.pane.title": "Về bản ghi này",
   "worklist.pane.openRow": "Xem mục {position}, {title}, về ai",
