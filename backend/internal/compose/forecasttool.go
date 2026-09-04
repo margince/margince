@@ -69,7 +69,7 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			if err != nil {
 				return err
 			}
-			deals, limited, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
+			deals, resolved, limited, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
 			if err != nil {
 				return err
 			}
@@ -77,7 +77,9 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			if err != nil {
 				return err
 			}
-			out = forecastToolResult(period, scope, readings, baseCurrency, at, limited)
+			// The RESOLVED scope, so an agent is told which population the
+			// number covers rather than the blank it asked with.
+			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
 			call, err := store.CurrentCallTx(ctx, tx, period, scope)
 			switch {
 			case err == nil:

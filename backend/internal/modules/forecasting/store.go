@@ -33,6 +33,17 @@ const codeInvalid = "invalid"
 
 // The scopes a call or a snapshot can be about.
 const (
+	// ScopeUnset is what a caller who named no scope asked for, and it is NOT
+	// the workspace. Which population an unnamed request means depends on who
+	// is asking — a rep means their own — and this module cannot answer that:
+	// the lens lives in the principal, and resolving it needs a read the
+	// composition owns. So the omission is carried, not decided, and the seam
+	// that fetches the deals resolves it.
+	//
+	// Spelling it as the empty string is deliberate: a zero Scope is unset, so
+	// a caller who forgets to resolve gets the honest "which population?" from
+	// checkScope rather than silently measuring the installation.
+	ScopeUnset     = ""
 	ScopeWorkspace = "workspace"
 	ScopeTeam      = "team"
 	ScopeOwner     = "owner"

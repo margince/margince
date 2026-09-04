@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // DealsFunc reads the deals in scope for a period, already row-scoped.
@@ -27,7 +28,11 @@ import (
 // asOf and baseCurrency travel with the request because the conversion needs
 // both: a rate is looked up as of a DAY, and there is no base amount without a
 // currency to convert into.
-type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, bool, error)
+// The Scope it returns is the one it RESOLVED, which is not always the one it
+// was handed: an unset scope means the caller named nothing, and what that
+// means depends on their lens. The reading reports the resolved one, so an
+// answer always says which population it is about.
+type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, Scope, bool, error)
 
 // PeriodFunc resolves the installation's window for a day, and the currency its
 // money is counted in. Injected for the same reason: the fiscal settings belong
@@ -75,10 +80,11 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		deals, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
+		deals, resolved, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
+		scope = resolved
 		// The as-of DAY, not the instant. The slipped rule compares calendar
 		// days, and handing it a clock makes a deal due today read as slipped
 		// from noon onward — which the report engine, comparing dates, would
@@ -155,13 +161,25 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 func scopeFromParams(
 	kind *crmcontracts.GetForecastParamsScopeKind, id *openapi_types.UUID,
 ) (Scope, error) {
-	scope := Scope{Kind: ScopeWorkspace}
+	var scope Scope
 	if kind != nil {
 		scope.Kind = string(*kind)
 	}
 	if id != nil {
 		asID := ids.UUID(*id)
 		scope.ID = &asID
+	}
+	// An omission is carried through as unset for the seam to resolve against
+	// the caller's own lens. Naming an id without a kind is still malformed,
+	// and says so rather than being read as one of the named scopes.
+	if scope.Kind == ScopeUnset {
+		if scope.ID != nil {
+			return Scope{}, &values.ParseError{
+				Field: "scope_kind", Code: "required",
+				Message: "a scope_id names whose forecast, so it needs a scope_kind beside it",
+			}
+		}
+		return scope, nil
 	}
 	if err := checkScope(scope); err != nil {
 		return Scope{}, err
