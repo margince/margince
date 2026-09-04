@@ -287,6 +287,9 @@ func readVoiceEvalDraft(text string) (voiceEvalDraftReply, error) {
 // the median, and leaves the version as unevaluated as it was. What it is for
 // is the reader — a profile with not one line of its own writing on screen is
 // a profile nobody can judge, and the voice step exists to be judged.
+//
+//promptlang:exempt a draft reproducing one member's writing voice from their own profile; their exemplars decide the language, and a rule of ours would answer in the wrong one
+//promptvoice:exempt a draft reproducing one member's own writing voice; imposing our register is the one thing it must not do.
 func demonstrationDraft(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string) ([]map[string]any, error) {
 	fence := promptfence.New()
 	profileBlock := voiceDraftPromptBlock(personality, artifact.Markdown, artifact.Exemplars, artifact.Stats, fence)

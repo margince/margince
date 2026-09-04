@@ -174,6 +174,17 @@ func (h connectorHandlers) connectability(ctx context.Context, provider string) 
 	if !isOAuthProvider(provider) {
 		return connectAvailability{reason: connectUnsupported}
 	}
+	// Whether this DEPLOYMENT serves the provider at all, asked before anything
+	// is read. It is a different question from what the installation stored,
+	// and collapsing the two is how an admin who had just registered their app
+	// was told they had not: without the OAuth transport (no state key, no
+	// public base URL) a stored app cannot run its consent flow, so `oauthApp`
+	// answers "none" for an installation that plainly has one — and the card
+	// then sent them to Settings to register a second app against a gap no
+	// setting there can close.
+	if !h.providerWired(provider) {
+		return connectAvailability{reason: connectUnsupported}
+	}
 	app, ok, err := h.oauthApp(ctx, provider)
 	if err != nil {
 		return connectAvailability{reason: connectAppUnusable, err: err}

@@ -384,20 +384,20 @@ func TestCallbackDenialWithUntrustedStateKeepsTheDefaultSurface(t *testing.T) {
 	}
 }
 
-// A provider this installation never registered an app for must agree between
-// the two surfaces that both answer the question: the roster reports
-// app_missing, and clicking connect for the very same provider still answers
-// the declared 501, never a click that surprises a screen that just said
-// "connect would proceed" and never one that contradicts what it just listed.
-func TestConnectabilityAgreesWithConnectConnectorWhenNoAppIsRegistered(t *testing.T) {
+// A provider this deployment does not serve must agree between the two
+// surfaces that both answer the question: the roster reports unsupported, and
+// clicking connect for the very same provider still answers the declared 501,
+// never a click that surprises a screen that just said "connect would proceed"
+// and never one that contradicts what it just listed.
+func TestConnectabilityAgreesWithConnectConnectorWhenTheDeploymentDoesNotServeIt(t *testing.T) {
 	h := wiredHandlers() // gmail + gcal wired; graph is not.
 
 	avail := h.connectability(context.Background(), "graph")
-	if avail.reason != connectAppMissing {
-		t.Fatalf("connectability(graph) = %+v, want app_missing", avail)
+	if avail.reason != connectUnsupported {
+		t.Fatalf("connectability(graph) = %+v, want unsupported", avail)
 	}
 	if avail.err != nil {
-		t.Errorf("connectability(graph).err = %v, want nil for an unregistered app", avail.err)
+		t.Errorf("connectability(graph).err = %v, want nil for a provider nothing wired", avail.err)
 	}
 
 	rec := httptest.NewRecorder()
@@ -405,7 +405,31 @@ func TestConnectabilityAgreesWithConnectConnectorWhenNoAppIsRegistered(t *testin
 	h.ConnectConnector(rec, req, "graph")
 
 	if rec.Code != http.StatusNotImplemented {
-		t.Fatalf("ConnectConnector(graph) status = %d, want 501 to match the app_missing roster entry", rec.Code)
+		t.Fatalf("ConnectConnector(graph) status = %d, want 501 to match the roster entry", rec.Code)
+	}
+}
+
+// The defect that ordering exists to prevent. An installation that HAS
+// registered its app, on a deployment that cannot run the consent flow — no
+// state key, so no OAuth transport mounts — was told it had registered
+// nothing, and the card offered the one remedy that could not work: register
+// another app in Settings, against a gap only whoever runs the server can
+// close.
+func TestConnectabilityNeverReportsAStoredAppAsMissing(t *testing.T) {
+	h := wiredHandlers()
+	// No state key, so canRunConsent refuses and the stored app below can
+	// never be reached through the flow.
+	h.signer = stateSigner{}
+	h.microsoftCredentials = func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret"}, true, nil
+	}
+
+	avail := h.connectability(context.Background(), "graph")
+	if avail.reason == connectAppMissing {
+		t.Fatal("connectability(graph) = app_missing, but this installation registered an app")
+	}
+	if avail.reason != connectUnsupported {
+		t.Fatalf("connectability(graph) = %+v, want unsupported: the deployment cannot run the flow", avail)
 	}
 }
 
