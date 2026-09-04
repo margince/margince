@@ -808,6 +808,40 @@ describe("logging an activity", () => {
     });
   });
 
+  // Nobody suggested that nothing needs doing, and a verb a reader can press
+  // is the whole of "ready". Both were printed on this rung and both said
+  // something about the machine rather than about the record.
+  it("carries neither an agent byline nor a readiness word", async () => {
+    mount("overview", { ...view, moment: quietDayMoment });
+
+    const move = (await screen.findByText("Nothing needs you today")).closest(
+      ".co-move",
+    );
+    if (!(move instanceof HTMLElement)) {
+      throw new Error("the moment is not drawn as a move");
+    }
+    expect(
+      within(move).getByRole("button", { name: "Log an interaction" }),
+    ).toBeTruthy();
+    expect(within(move).queryByText("Margince suggests")).toBeNull();
+    expect(within(move).queryByText("Ready")).toBeNull();
+  });
+
+  // The contrast that makes the rule above a rule rather than a blanket
+  // deletion: a rung that really is an ask still says whose ask it is.
+  it("keeps the byline on a rung that does ask for something", async () => {
+    mount("overview", { ...view, moment: quietMoment });
+
+    const move = (await screen.findByText("Dana has gone quiet")).closest(
+      ".co-move",
+    );
+    if (!(move instanceof HTMLElement)) {
+      throw new Error("the moment is not drawn as a move");
+    }
+    expect(within(move).getByText("Margince suggests")).toBeTruthy();
+    expect(within(move).queryByText("Ready")).toBeNull();
+  });
+
   it("logs a meeting on this person from the moment card's action", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];

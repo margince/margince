@@ -267,7 +267,7 @@ scrolls inside itself.
 │  the   │       facts line                                               │
 │  glow) │ tabs ──────────────────────────────────────────── [Details] │
 │ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
-│ RECORDS│ │ ● Margince read this record · {name} ││ │ Ask               ││
+│ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
 │ WORK   │ │ readings ┊ readings ┊ readings        ││ │ People / Seats    ││
 │ …      │ │ spine · · · gap · today · ahead       ││ │ Tags / Room / Docs││
@@ -415,7 +415,7 @@ glance line for line; what changes is the content of each slot.
 | Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The people · Momentum | Company · Score · First response · Next · Your move |
 | 360 word | Good | Promise overdue | Live | In motion |
 | In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
-| Needs-list lead | Your move | The move the call names | Margince found this, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
+| Needs-list lead | Your move | The move the call names | Margince suggests, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
 | Second left pane | Deals | The deal she decides, with the room | The buying committee, with the cover gap | The score as factors |
 | Right column | Ask (prepared questions) · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
 | Tabs | Overview · History · People · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
@@ -430,7 +430,9 @@ the agent proposes. Whatever those ten seconds do not need goes to the depth.
 1. **Who.** Identity, the standing badges, one line of facts, the verbs.
 2. **The 360.** One element, and the one place the page is allowed to look
    like a feature: where the record stands and what happened, together. It
-   opens with the indigo tile and "Margince read this record · {name} · 360",
+   opens with the indigo tile and "{name} · 360" — the tile IS the claim of
+   authorship, and a sentence beside it repeating it read as a caption typed
+   onto the record's name —
    then the verdict word in the display face with its because-sentence and
    its sources, then the readings as cells, then the stage stepper or the
    ladder where the record has one, then the spine and the thread, newest
@@ -827,7 +829,7 @@ looks now.
 | `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
 | `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
-| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the "Margince read this record" label at 11.5px 500 in `--aiText`, the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
+| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
 | `RecordTimeline` | The rail: a 76px mono date column, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |
@@ -890,8 +892,10 @@ rest one screen at a time.
 - [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
       a shadow at rest.
 - [ ] One emerald-filled control in view.
-- [ ] Anything an agent wrote is a row on `--aiBg` labelled "Margince read
-      this record"; a staged change has a dashed edge until accepted.
+- [ ] Anything an agent wrote is a row on `--aiBg` carrying the indigo mark,
+      and a row that ASKS for something says "Margince suggests" — never over
+      the answer that nothing needs doing, which is nobody's suggestion; a
+      staged change has a dashed edge until accepted.
 - [ ] A withheld section says "Hidden from you"; an empty one says what to do.
 - [ ] Checked in both themes and with the sidebar and the details panel folded.
 - [ ] The page carries every section the current screen renders (§7), or says

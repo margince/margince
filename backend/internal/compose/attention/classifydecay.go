@@ -50,7 +50,11 @@ func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		row.Because = append(row.Because, reason("expected_revenue", nil))
 	}
 	return ranked{
-		item:        row,
+		item: row,
+		// A relationship going quiet, raised for the reader whose contacts they
+		// are. The lane is bound to them, and the dismissal beside it is
+		// per-reader for the same reason.
+		ownerRef:    ownedByWhoeverIsReading(),
 		waitingDays: quiet,
 		waitingRank: orderingAge(quiet),
 		occurredAt:  occurredOf(item, asOf),

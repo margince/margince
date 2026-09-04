@@ -473,3 +473,74 @@ func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 		t.Fatalf("audit/event counts = %d/%d, want 1/1", audits, events)
 	}
 }
+
+// TestASendWithNoPurposeKeyReachesTheEngine is what makes the legacy purposes
+// retireable.
+//
+// consent_purpose was a required field for as long as it was the authority.
+// The engine decides now, from the record — so a caller that omits the key is
+// not withholding an answer, it is declining to make a claim the engine was
+// going to check against the tables anyway.
+//
+// The assertion is that the request is JUDGED rather than rejected as
+// malformed: a 409 naming a consent code is the engine answering, and it is a
+// different outcome from the 422 the contract used to produce before consent
+// was asked at all. The person here has nothing on file, so the answer is a
+// refusal — which is the correct one, and the point is who gave it.
+//
+// This is the case that has to work before `transactional` and
+// `business_correspondence` are archived. While the key was required,
+// archiving them left every caller with nothing valid to name.
+//
+// Mutation: put consent_purpose back on the schema's `required` list and this
+// fails with 422 validation_error.
+func TestASendWithNoPurposeKeyReachesTheEngine(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"},
+	}, nil, &problem)
+	if status == http.StatusUnprocessableEntity {
+		t.Fatalf("a send with no consent_purpose → 422 %q; the contract still demands a key the engine no longer needs",
+			problem.Code)
+	}
+	if status != http.StatusConflict || problem.Code != "consent_not_granted" {
+		t.Fatalf("a send with no consent_purpose → %d %q, want 409 consent_not_granted — the engine judged it on the record",
+			status, problem.Code)
+	}
+}
+
+// TestOmittingThePurposeKeyIsNotAWayPastTheGate holds the direction the
+// relaxation must not break.
+//
+// Making the key optional must not turn omitting it into an allow. A message
+// with no thread, no deal and no evidence has nothing supporting it, and
+// dropping the claim does not supply one.
+//
+// It differs from the test above in the recipient: that one asks whether the
+// engine ANSWERED, this one asks whether a stranger is still refused. Both
+// currently refuse, and they would diverge the moment an empty claim started
+// resolving to something supported — which is the regression this pins.
+//
+// Mutation: make resolveFromClaimAndPurpose treat an empty key as supported
+// and this fails with a 202.
+func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := c.Call(t, "POST", "/v1/emails", AnyMap{
+		"subject": "Something unrelated", "body": "out of the blue",
+		"to":    []string{"subject@consent.test"},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": c.personID}},
+	}, nil, &problem)
+	if status != http.StatusConflict {
+		t.Fatalf("an unevidenced account send with no consent_purpose → %d %q, want 409 — omitting the claim is not evidence",
+			status, problem.Code)
+	}
+}

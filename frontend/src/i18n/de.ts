@@ -1406,7 +1406,7 @@ export const de = {
   "co.ask.nothing": "Dazu ist nichts sichtbar, was das beantworten würde.",
   "co.ask.failed":
     "Die Frage konnte nicht beantwortet werden — bitte erneut versuchen.",
-  "co.suggest.title": "Margince hat das gefunden",
+  "co.suggest.title": "Margince schlägt vor",
   "co.suggest.kind.no_reply": "Keine Antwort",
   "co.suggest.kind.stalled_deal": "Deal steht",
   "co.suggest.kind.no_next_step": "Nichts geplant",
@@ -1414,7 +1414,7 @@ export const de = {
   "co.suggest.more": "{count} weitere hier nicht gezeigt.",
   "co.suggest.basedOn": "Worauf das beruht",
   "co.suggest.dismiss": "Nicht jetzt",
-  "co.suggest.found": "Margince hat das gefunden",
+  "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":
     "Konnte nicht ausgeblendet werden — es wird weiter angezeigt",
   "co.suggest.viewTasks": "Aufgaben ansehen",
@@ -2895,7 +2895,6 @@ export const de = {
   "co.spine.singleThreaded": "Ein Kontakt, und keine Antwort von ihm",
   "co.spine.overdue": "\u00dcberf\u00e4llig",
   "co.spine.expectedClose": "Erwarteter Abschluss",
-  "co.360.title": "Margince hat diesen Datensatz gelesen",
   "co.360.subject": "{name} · 360",
   "co.360.subjectUnnamed": "Dieser Account · 360",
   "today.title": "Was dich jetzt braucht",
@@ -7320,7 +7319,6 @@ export const de = {
 
   "person.rail.reviewFirst": "Erst prüfen",
   "person.rail.blocked": "Gesperrt",
-  "person.rail.ready": "Bereit",
   "person.rail.pulseTitle": "Beziehungspuls",
   "person.rail.explain": "Erklären",
   "person.rail.direction": "Richtung",
