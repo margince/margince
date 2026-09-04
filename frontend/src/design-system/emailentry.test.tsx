@@ -213,6 +213,59 @@ describe("EmailDetail", () => {
     expect(screen.getByText(/Ana Sommer/)).toBeInTheDocument();
   });
 
+  // WHEN it was sent, in the header with the other envelope facts. It used to
+  // sit under the message, below the attachments, so on anything longer than a
+  // screen the reader scrolled past the whole body to learn the date.
+  it("says when the message was sent, beside who it was sent to", async () => {
+    vi.stubGlobal("fetch", jsonOnce(PRESENTATION));
+    wrap(
+      <EmailDetail
+        activityId={READABLE.activity_id}
+        onClose={() => {}}
+        formatWhen={() => "1 Sep 09:12"}
+      />,
+    );
+
+    const when = await screen.findByText("1 Sep 09:12");
+    // In the envelope block, not trailing the body: the assertion is WHERE, so
+    // finding the text anywhere on the page would pass over the bug.
+    expect(when.closest(".emaildetail__parties")).not.toBeNull();
+  });
+
+  // A party the response could not name is DROPPED, not joined in as an empty
+  // string. It used to render as a bare comma in the middle of the To line —
+  // `display_name ?? address` keeps an empty string, because ?? only catches
+  // null — which reads as a recipient whose name we lost.
+  it("leaves out a party it cannot name, rather than a gap in the line", async () => {
+    vi.stubGlobal(
+      "fetch",
+      jsonOnce({
+        ...PRESENTATION,
+        to: [
+          { address: "", display_name: "" },
+          { address: "andreas@buyer.test", display_name: null },
+        ],
+      }),
+    );
+    wrap(
+      <EmailDetail
+        activityId={READABLE.activity_id}
+        onClose={() => {}}
+        formatWhen={() => "1 Sep 09:12"}
+      />,
+    );
+
+    // The line is read WITHOUT its label, because the gap the bug leaves is
+    // between the label and the first name — an assertion over the whole
+    // element's text has the word "To" in front of the comma and never sees it.
+    const line = await screen.findByText(/andreas@buyer.test/);
+    const label = line.querySelector(".emaildetail__partyLabel");
+    const names = (line.textContent ?? "").slice(
+      (label?.textContent ?? "").length,
+    );
+    expect(names.trim()).toBe("andreas@buyer.test");
+  });
+
   it("folds an older message under this one, and says that is what it is", async () => {
     // The other side of the pair above. Without this case, deleting the fold
     // entirely would pass — a drawer that never folds anything satisfies "no

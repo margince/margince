@@ -1584,6 +1584,7 @@ export const en = {
   "email.detail.from": "From",
   "email.detail.to": "To",
   "email.detail.cc": "Cc",
+  "email.detail.when": "Sent",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the organization",

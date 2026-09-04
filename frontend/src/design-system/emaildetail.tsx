@@ -169,7 +169,7 @@ function EmailBody({
   const parts = splitEmailBody(presentation.body ?? "");
   return (
     <div className="emaildetail__body">
-      <Parties presentation={presentation} />
+      <Parties presentation={presentation} formatWhen={formatWhen} />
       <p className="emaildetail__main">{parts.main}</p>
       {/* A SIGN-OFF is the sender still speaking, and it is two lines. It is
           shown, quietly, under the message it belongs to.
@@ -192,9 +192,6 @@ function EmailBody({
         </details>
       )}
       <Attachments files={presentation.attachments} />
-      <p className="emaildetail__when">
-        {formatWhen(presentation.occurred_at)}
-      </p>
     </div>
   );
 }
@@ -250,30 +247,63 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   );
 }
 
+/**
+ * partyName is what one participant is called on a header line.
+ *
+ * The name, then the address, then nothing — and the LAST step is the one that
+ * matters. `display_name ?? address` renders an empty string as empty, because
+ * `??` only catches null: a party with neither produced a bare comma in the
+ * middle of the To line, which reads as a recipient whose name we lost rather
+ * than as a row the response never filled in.
+ */
+function partyName(party: EmailParty): string {
+  return party.display_name?.trim() || party.address.trim();
+}
+
 function PartyLine({
   label,
   parties,
 }: Readonly<{ label: string; parties: EmailParty[] }>) {
-  if (parties.length === 0) {
+  // Only the parties that can actually be named. A row carrying neither a name
+  // nor an address says nothing to a reader, and joining it in puts a gap in
+  // the list where a person should be — so it is dropped, and a line with
+  // nobody left to name does not draw at all.
+  const named = parties.map(partyName).filter(Boolean);
+  if (named.length === 0) {
     return null;
   }
   return (
     <p className="emaildetail__party">
       <span className="emaildetail__partyLabel">{label}</span>
-      {parties.map((p) => p.display_name ?? p.address).join(", ")}
+      {named.join(", ")}
     </p>
   );
 }
 
 function Parties({
   presentation,
-}: Readonly<{ presentation: EmailPresentation }>) {
+  formatWhen,
+}: Readonly<{
+  presentation: EmailPresentation;
+  formatWhen: (iso: string) => string;
+}>) {
   const t = useT();
   return (
     <div className="emaildetail__parties">
       <PartyLine label={t("email.detail.from")} parties={presentation.from} />
       <PartyLine label={t("email.detail.to")} parties={presentation.to} />
       <PartyLine label={t("email.detail.cc")} parties={presentation.cc} />
+      {/* WHEN it was sent, beside who it was sent to. It used to sit under the
+          message, below the attachments — so on anything longer than a screen
+          the reader had to scroll past the whole body to learn the date, which
+          is one of the first things they came for. It is an envelope fact and
+          it belongs with the others. */}
+      <p className="emaildetail__party">
+        <span className="emaildetail__partyLabel">
+          {t("email.detail.when")}
+        </span>
+        {formatWhen(presentation.occurred_at)}
+      </p>
       {/* Said rather than shown: an absent BCC list reads as "nobody was
           blind-copied", which is a different fact from "you may not see who
           was". Only the sending seat gets the names. */}
