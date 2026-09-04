@@ -243,7 +243,7 @@ describe("AnalyticsScreen", () => {
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
 
-  it("deals-by-stage requests and renders the server's weighted_minor, not a client re-derivation", async () => {
+  it("renders the server's weighted figure, never a client re-derivation", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -257,7 +257,6 @@ describe("AnalyticsScreen", () => {
             raw_minor: 24686,
             weighted_minor: 4938,
             deal_count: 2,
-            currency: "EUR",
           },
         ],
       }),
@@ -268,10 +267,10 @@ describe("AnalyticsScreen", () => {
     expect(
       bodies.some(
         (b) =>
-          b.key === "deals-by-stage" &&
+          b.key === "pipeline-current" &&
           Array.isArray(b.body.aggregates) &&
           (b.body.aggregates as { field?: string }[]).some(
-            (a) => a.field === "weighted_amount_minor",
+            (a) => a.field === "weighted_base_minor",
           ),
       ),
     ).toBe(true);
@@ -427,7 +426,7 @@ describe("reports never sum money across currencies", () => {
     stage("pl-s1", "Qualify", 1),
   ];
 
-  it("asks the server to group every money plan by currency", async () => {
+  it("asks the server for the CONVERTED measures, grouped by stage alone", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -436,49 +435,59 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
-    const stagePlan = bodies.find((sent) => sent.key === "deals-by-stage");
-    expect(stagePlan?.body).toMatchObject({
-      group_by: ["stage_id", "currency"],
-    });
+    const stagePlan = bodies.find((sent) => sent.key === "pipeline-current");
+    // No currency in the grouping: the server converted each deal before
+    // summing, so a stage is one row rather than one per currency it trades in.
+    expect(stagePlan?.body).toMatchObject({ group_by: ["stage_id"] });
+    expect(stagePlan?.body.aggregates).toEqual([
+      { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+      { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
+      { fn: "count", as: "deal_count" },
+    ]);
   });
 
-  it("renders a stage's two currencies as two rows and no combined figure", async () => {
+  // The money plans that are still NATIVE keep their currency grouping: the
+  // company table and the forecast strip sum amount_minor, and a total spanning
+  // currencies there would be a number with no unit.
+  it("still groups the native money plans by currency", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    for (const key of ["forecast", "open-deals-per-company"]) {
+      const plan = bodies.find((sent) => sent.key === key);
+      expect(plan?.body.group_by).toContain("currency");
+    }
+  });
+
+  it("draws one row per stage, in the installation's base currency", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        // What the converted report returns: one row for the stage, its money
+        // already added up across the currencies the deals were written in.
         stageRows: [
           {
             stage_id: "pl-s1",
-            raw_minor: 100_000,
-            weighted_minor: 20_000,
-            deal_count: 2,
-            currency: "EUR",
-          },
-          {
-            stage_id: "pl-s1",
-            raw_minor: 4_500_000_000,
-            weighted_minor: 900_000_000,
-            deal_count: 3,
-            currency: "VND",
+            raw_minor: 250_000,
+            weighted_minor: 50_000,
+            deal_count: 5,
           },
         ],
       }),
     );
     render(<AnalyticsScreen />);
     await openPipeline();
+
     expect(
-      await screen.findByText(formatMoney(100_000, "EUR", "en")),
+      await screen.findByText(formatMoney(250_000, "EUR", "en")),
     ).toBeTruthy();
-    expect(
-      screen.getByText(formatMoney(4_500_000_000, "VND", "en")),
-    ).toBeTruthy();
-    expect(screen.getAllByText("EUR").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("VND").length).toBeGreaterThan(0);
-    // The figure the old ungrouped plan printed: both currencies added and
-    // labelled with whichever one happened to arrive first.
-    expect(
-      screen.queryByText(formatMoney(4_500_100_000, "EUR", "en")),
-    ).toBeNull();
+    // One stage, one row: the count cell appears once.
+    expect(screen.getAllByText("Qualify")).toHaveLength(1);
   });
 
   it("renders an unpriced stage as absent rather than as zero euros", async () => {
@@ -491,7 +500,6 @@ describe("reports never sum money across currencies", () => {
             raw_minor: null,
             weighted_minor: null,
             deal_count: 4,
-            currency: null,
           },
         ],
       }),
@@ -515,24 +523,22 @@ describe("reports never sum money across currencies", () => {
     expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
   });
 
-  it("orders stage rows down the pipeline, then by currency code", () => {
+  // One stage is ONE row now: the server converts each deal before summing, so
+  // there is no per-currency split left to order within a stage.
+  it("orders stage rows down the pipeline", () => {
     const rows = [
-      { stage_id: "pl-s2", currency: "VND", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", currency: "VND", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s2", currency: "EUR", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", currency: "EUR", raw_minor: 1, deal_count: 1 },
+      { stage_id: "pl-s2", raw_minor: 1, deal_count: 1 },
+      { stage_id: "pl-s1", raw_minor: 1, deal_count: 1 },
     ];
     expect(
-      buildStageAggregates(rows, STAGES).map(
-        (row) => `${row.stageName}/${row.currency}`,
-      ),
-    ).toEqual(["Qualify/EUR", "Qualify/VND", "Propose/EUR", "Propose/VND"]);
+      buildStageAggregates(rows, STAGES).map((row) => row.stageName),
+    ).toEqual(["Qualify", "Propose"]);
   });
 
   it("sorts a row whose stage the pipeline no longer carries to the end", () => {
     const rows = [
-      { stage_id: "gone", currency: "EUR", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", currency: "EUR", raw_minor: 1, deal_count: 1 },
+      { stage_id: "gone", raw_minor: 1, deal_count: 1 },
+      { stage_id: "pl-s1", raw_minor: 1, deal_count: 1 },
     ];
     expect(
       buildStageAggregates(rows, STAGES).map((row) => row.stageId),
@@ -544,7 +550,6 @@ describe("reports never sum money across currencies", () => {
       [
         {
           stage_id: "pl-s1",
-          currency: null,
           raw_minor: null,
           weighted_minor: null,
           deal_count: 3,
@@ -554,7 +559,6 @@ describe("reports never sum money across currencies", () => {
     );
     expect(row.rawMinor).toBeNull();
     expect(row.weightedMinor).toBeNull();
-    expect(row.currency).toBeNull();
     // A count of zero would be a claim; the server did send this one.
     expect(row.count).toBe(3);
   });
@@ -685,19 +689,29 @@ describe("the report frame", () => {
   // converted into it. The figures on screen here are EUR and USD at once,
   // and a reader taking the old caption at its word read the USD total as
   // euros.
-  it("claims no currency for figures that are in several", async () => {
+  it("claims no currency in the frame, because the blocks under it differ", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
     await openPipeline();
 
+    // The frame sits under ALL THREE blocks, and they are not in one currency:
+    // the stage table is converted into the base currency, while the forecast
+    // strip and the company table are still per-currency native sums. A code in
+    // the frame would be the denomination of only one of the three.
     const captions = await screen.findAllByText(/Europe\/Berlin/);
     for (const caption of captions) {
       expect(caption.textContent).not.toMatch(/\b(EUR|USD|VND)\b/);
     }
-    // The currency is not LOST, it moved to where it is true: the forecast
-    // strip labels each band with its own code. Asserted here so this cannot
-    // pass by the screen having stopped saying which currency anything is in.
-    expect(screen.getAllByText("EUR").length).toBeGreaterThan(0);
+  });
+
+  // The converted table says its own currency, in the line under its title,
+  // where the statement is true of every figure beneath it.
+  it("names the base currency on the converted stage table", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await openPipeline();
+
+    expect(await screen.findByText(/each converted into EUR/)).toBeTruthy();
   });
 
   // A server mid-upgrade sends a partial frame. Naming one of the two would be

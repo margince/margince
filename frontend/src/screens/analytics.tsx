@@ -66,10 +66,9 @@ type StageAgg = {
   count: number;
   rawMinor: number | null;
   weightedMinor: number | null;
-  currency: string | null;
 };
 
-type ReportKey = "deals-by-stage" | "forecast" | "open-deals-per-company";
+type ReportKey = "pipeline-current" | "forecast" | "open-deals-per-company";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -89,7 +88,7 @@ const SECTION_REPORTS = {
   // is a real report and still the only place a reader sees how the pipeline
   // divides by category; what it is not is the forecast, which is now an
   // answer rather than a table.
-  pipeline: ["deals-by-stage", "forecast", "open-deals-per-company"],
+  pipeline: ["pipeline-current", "forecast", "open-deals-per-company"],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -101,11 +100,16 @@ function isSection(value: string | undefined): value is Section {
 
 // The old address named a report. Those links are in bookmarks and in sent
 // mail, so each one still answers, with the section that now holds it.
-const SECTION_OF_REPORT = {
+// Keyed by string rather than by ReportKey, because a RETIRED name is still an
+// address somebody saved. `deals-by-stage` names no report this screen draws
+// any more — the stage view reads pipeline-current — and the link in a
+// bookmark or a sent mail must still land on the section that answers it.
+const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   forecast: "pipeline",
+  "pipeline-current": "pipeline",
   "deals-by-stage": "pipeline",
   "open-deals-per-company": "pipeline",
-} as const satisfies Record<ReportKey, Section>;
+};
 
 export function sectionFromAddress(segment: string | undefined): Section {
   if (isSection(segment)) {
@@ -147,14 +151,16 @@ const FIELD_CURRENCY = "currency";
 // five named categories match none of it.
 const UNCATEGORISED = "";
 
-// Every plan here sums money, so every plan groups by currency as well as by its
-// own dimension. amount_minor is a minor-unit integer in the deal's own
-// currency, so a total spanning currencies is a number with no unit — the sum
-// data-semantics §1 r4 forbids and AC-DS-FX1 fails by construction. Grouping is
-// the honest answer available today; converting to one base currency is the
-// frozen-FX roll-up, a larger capability.
+// A plan that sums NATIVE money groups by currency as well as by its own
+// dimension: amount_minor is a minor-unit integer in the deal's own currency, so
+// a total spanning currencies is a number with no unit.
+//
+// pipeline-current does not, because the server converted each deal before
+// summing. One stage is one row, denominated in the installation's base
+// currency — which is the whole point of that report and why it exists beside
+// deals-by-stage rather than replacing it.
 const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
-  "deals-by-stage": ["stage_id", FIELD_CURRENCY],
+  "pipeline-current": ["stage_id"],
   forecast: ["forecast_category", FIELD_CURRENCY],
   "open-deals-per-company": ["organization_id", FIELD_CURRENCY],
 };
@@ -199,7 +205,7 @@ function byCurrency(
 // card that segment opens read the same key, so the tab and the surface behind
 // it cannot drift into two names for one report.
 const REPORT_LABEL_KEY = {
-  "deals-by-stage": "analytics.reportDeals",
+  "pipeline-current": "analytics.reportDeals",
   forecast: "analytics.reportForecast",
   "open-deals-per-company": "analytics.reportOpenByCompany",
 } as const satisfies Record<ReportKey, string>;
@@ -208,7 +214,7 @@ const REPORT_LABEL_KEY = {
 // the card's own title does not. A report absent from here gets no caption: an
 // explanation beside a report it does not describe is worse than none.
 const reportSub: Partial<Record<ReportKey, MessageKey>> = {
-  "deals-by-stage": "analytics.sub",
+  "pipeline-current": "analytics.sub",
 };
 
 type ReportAggregate = NonNullable<
@@ -220,9 +226,9 @@ type ReportAggregate = NonNullable<
 // join computes it (deals-by-stage, forecast); requesting it against
 // open-deals-per-company's narrower vocabulary would 422.
 const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
-  "deals-by-stage": [
-    { fn: "sum", field: "amount_minor", as: "raw_minor" },
-    { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
+  "pipeline-current": [
+    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
   ],
   forecast: [
@@ -514,47 +520,49 @@ export function buildStageAggregates(
   stages: readonly Stage[],
 ): StageAgg[] {
   const byId = new Map(stages.map((stage) => [stage.id, stage]));
-  return rows
-    .map((row) => {
-      const stageId = String(row.stage_id ?? "");
-      const stage = byId.get(stageId);
-      return {
-        stageId,
-        stageName: stage?.name ?? stageId,
-        // A stage the pipeline no longer carries sorts last rather than first:
-        // its rows are still real deals, but they are not part of the ladder the
-        // reader is reading down.
-        stagePosition: stage?.position ?? Number.MAX_SAFE_INTEGER,
-        count: rowCount(row, "deal_count"),
-        rawMinor: rowMoney(row, "raw_minor"),
-        // AC-F1: the server's own per-deal-rounded weighted sum
-        // (weighted_amount_minor), never round(rawMinor × p / 100)
-        // — that rounds the column sum once instead of every deal.
-        weightedMinor: rowMoney(row, "weighted_minor"),
-        currency: rowCurrency(row),
-      };
-    })
-    .sort(
-      (left, right) =>
-        left.stagePosition - right.stagePosition ||
-        stable(left.currency ?? "", right.currency ?? ""),
-    );
+  return (
+    rows
+      .map((row) => {
+        const stageId = String(row.stage_id ?? "");
+        const stage = byId.get(stageId);
+        return {
+          stageId,
+          stageName: stage?.name ?? stageId,
+          // A stage the pipeline no longer carries sorts last rather than first:
+          // its rows are still real deals, but they are not part of the ladder the
+          // reader is reading down.
+          stagePosition: stage?.position ?? Number.MAX_SAFE_INTEGER,
+          count: rowCount(row, "deal_count"),
+          rawMinor: rowMoney(row, "raw_minor"),
+          // AC-F1: the server's own per-deal-rounded weighted sum
+          // (weighted_amount_minor), never round(rawMinor × p / 100)
+          // — that rounds the column sum once instead of every deal.
+          weightedMinor: rowMoney(row, "weighted_minor"),
+        };
+      })
+      // Stage position alone orders the ladder now. The old tiebreak on currency
+      // existed because one stage could be several rows; converted, it is one.
+      .sort((left, right) => left.stagePosition - right.stagePosition)
+  );
 }
 
 function StageTable({
   rows,
   stages,
   locale,
+  baseCurrency,
 }: Readonly<{
   rows: ReportRow[];
   stages: readonly Stage[];
   locale: Locale;
+  // The currency every figure in this table is denominated in. One code for
+  // the whole table rather than a column, because the server converted each
+  // deal before summing — a column would repeat the same code down the page
+  // and imply it could differ per row.
+  baseCurrency: string | null;
 }>) {
   const t = useT();
   const aggregates = buildStageAggregates(rows, stages);
-  const addressable = singleCurrencyKeys(
-    aggregates.map((aggregate) => aggregate.stageId),
-  );
   return (
     <DataTable
       label={t("analytics.reportDeals")}
@@ -565,36 +573,33 @@ function StageTable({
           render: (row: StageAgg) => row.stageName,
         },
         {
-          key: FIELD_CURRENCY,
-          header: t("analytics.currency"),
-          render: (row: StageAgg) => (
-            <span className="t-mono">{row.currency ?? MONEY_ABSENT}</span>
-          ),
-        },
-        {
           key: "count",
           header: t("analytics.count"),
-          // No `status` dial here, unlike the company table: a won or lost
-          // deal keeps the stage_id it closed in, so this report's stage rows
-          // are not open deals by construction and narrowing to `open` would
-          // hand back a shorter list than the figure counted.
-          render: (row: StageAgg) =>
-            addressable.has(row.stageId) ? (
-              <CountLink
-                count={row.count}
-                href={dealsFilteredBy("stage_id", row.stageId)}
-                title={t("analytics.openStageDeals", { stage: row.stageName })}
-              />
-            ) : (
-              formatNumber(row.count, locale)
-            ),
+          // Every row addresses its deals now. The old table linked only the
+          // stages trading in ONE currency, because a stage split across two
+          // rows had no single set to open; converted, one stage is one row
+          // and one set again.
+          //
+          // The link asks for OPEN deals, which is what this report counts —
+          // deals-by-stage could not, because a won deal keeps the stage it
+          // closed in and narrowing there would have handed back a shorter
+          // list than the figure above it.
+          render: (row: StageAgg) => (
+            <CountLink
+              count={row.count}
+              href={dealsFilteredBy("stage_id", row.stageId, {
+                status: "open",
+              })}
+              title={t("analytics.openStageDeals", { stage: row.stageName })}
+            />
+          ),
         },
         {
           key: "raw",
           header: t("analytics.unweighted"),
           render: (row: StageAgg) => (
             <span className="t-mono">
-              {formatMoneyOrAbsent(row.rawMinor, row.currency, locale)}
+              {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
             </span>
           ),
         },
@@ -603,15 +608,13 @@ function StageTable({
           header: t("analytics.weighted"),
           render: (row: StageAgg) => (
             <span className="t-mono">
-              {formatMoneyOrAbsent(row.weightedMinor, row.currency, locale)}
+              {formatMoneyOrAbsent(row.weightedMinor, baseCurrency, locale)}
             </span>
           ),
         },
       ]}
       rows={aggregates}
-      // A stage holding deals in two currencies is two rows, so the stage id
-      // alone no longer identifies one.
-      rowKey={(row) => `${row.stageId}:${row.currency ?? ""}`}
+      rowKey={(row) => row.stageId}
     />
   );
 }
@@ -758,15 +761,24 @@ function ReportCard({
       {(run) => (
         <>
           <Card title={t(REPORT_LABEL_KEY[report])}>
-            {reportSub[report] && <p className="sub">{t(reportSub[report])}</p>}
+            {reportSub[report] && (
+              <p className="sub">
+                {t(reportSub[report], { currency: run.base_currency ?? "" })}
+              </p>
+            )}
             {report === "forecast" && (
               <ForecastStrip rows={run.rows} locale={locale} />
             )}
             {report === "open-deals-per-company" && (
               <CompanyTable rows={run.rows} locale={locale} />
             )}
-            {report === "deals-by-stage" && (
-              <StageTable rows={run.rows} stages={stages} locale={locale} />
+            {report === "pipeline-current" && (
+              <StageTable
+                rows={run.rows}
+                stages={stages}
+                locale={locale}
+                baseCurrency={run.base_currency ?? null}
+              />
             )}
             {/* The frame every figure above was cut in: the instant, and the
                 zone that instant is stated in. A total with no zone beside it

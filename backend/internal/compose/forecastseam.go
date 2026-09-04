@@ -63,7 +63,8 @@ func ForecastDeals(
 	// rather than in the module: the rate sheet is a table, and forecasting
 	// owns no tables. Without it every priced deal reaches the arithmetic with
 	// no base amount, counts as fx_missing, and every money headline is zero.
-	baseValue := BaseValueSQL(arg(asOf), arg(baseCurrency))
+	baseValue := BaseValueSQL(
+		fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d")
 
 	// A deal belongs to this read if it is EXPECTED in the period or CLOSED in
 	// it. Both, because the readings need both: open pipeline comes from the
