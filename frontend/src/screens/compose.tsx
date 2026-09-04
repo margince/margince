@@ -3243,7 +3243,15 @@ export function ChannelReplyAction({
       </Button>
       {reply && (
         <ComposeModal
-          activityId={activityId}
+          // No anchor when the content is withheld, which is what makes the
+          // dialog match the button. `Write email` is an ACCOUNT-STARTED send
+          // — ComposeModal's own word for one with no prior message to anchor
+          // to — and handing it the withheld activity made it behave like a
+          // reply that could not read what it was replying to: `THIS
+          // CONVERSATION` re-rendered the row the reader had just been told
+          // was not theirs, above a To field useReplyRecipient could resolve
+          // nobody into.
+          activityId={contentWithheld ? undefined : activityId}
           entityType={entityType}
           entityId={entityId}
           personId={personId}
