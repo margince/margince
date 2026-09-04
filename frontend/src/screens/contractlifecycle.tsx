@@ -190,7 +190,7 @@ export function ContractRenewModal({
         <Button
           variant="primary"
           reason={invalid ? t(invalid) : undefined}
-          disabled={renew.isPending || invalid !== null}
+          pending={renew.isPending}
           onClick={() =>
             renew.mutate({
               predecessor: contract,
@@ -304,7 +304,7 @@ export function ContractStatusModal({
               ? t("contracts.statusChange.errSame")
               : undefined
           }
-          disabled={assert.isPending || status === contract.status}
+          pending={assert.isPending}
           onClick={() => assert.mutate({ contract, status })}
         >
           {t("contracts.statusChange.submit")}
@@ -441,7 +441,7 @@ export function ContractCancelModal({
         <Button
           variant="danger"
           reason={invalid ? t(invalid) : undefined}
-          disabled={cancel.isPending || invalid !== null}
+          pending={cancel.isPending}
           onClick={() => cancel.mutate({ contract, noticeOn, effectiveOn })}
         >
           {t("contracts.cancel.submit")}

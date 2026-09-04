@@ -187,7 +187,7 @@ export function ContractForm({
         <Button
           variant="primary"
           reason={invalid ? t(invalid) : undefined}
-          disabled={save.isPending || invalid !== null}
+          pending={save.isPending}
           onClick={() =>
             save.mutate({ draft: pricedIn(draft, baseCurrency), file })
           }
