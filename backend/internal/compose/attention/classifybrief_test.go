@@ -23,7 +23,7 @@ func TestClassifyBriefItemStampsItsDeadline(t *testing.T) {
 		Overdue: &overdue,
 	}
 
-	got := classifyBriefItem(item, rankInstant)
+	got := classifyBriefItem(item, rankInstant, dayMoney{})
 
 	if got.deadlineAt.IsZero() {
 		t.Fatal("deadlineAt is zero; the ordering can never read the close date the row was given")
@@ -58,7 +58,7 @@ func TestClassifyBriefItemTrustsTheDealsCalendarOverdueVerdictOverAnInstantCompa
 		Overdue: &notOverdue,
 	}
 
-	got := classifyBriefItem(item, rankInstant)
+	got := classifyBriefItem(item, rankInstant, dayMoney{})
 
 	if got.overdue {
 		t.Fatal("a deal due TODAY was marked overdue — the brief row disagrees with the at-risk row for the identical deal")
@@ -82,7 +82,7 @@ func TestClassifyBriefItemNamesTheCloseDateLikeItsRiskLaneSibling(t *testing.T) 
 		DueAt:  &closes,
 	}
 
-	got := classifyBriefItem(item, rankInstant)
+	got := classifyBriefItem(item, rankInstant, dayMoney{})
 
 	if got.overdue {
 		t.Fatal("a close date three months out was marked overdue")

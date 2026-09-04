@@ -64,7 +64,9 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows := make([]ranked, 0, 64)
 	bar := materialBarOf(day, money)
 	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
-	rows = appendLane(rows, &day.ThisMorning, asOf, classifyBriefItem)
+	rows = appendLane(rows, &day.ThisMorning, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
+		return classifyBriefItem(item, at, money)
+	})
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
 	rows = appendLane(rows, day.DidNotRun, asOf, classifyFailedApproval)
 	rows = appendLane(rows, day.Dsr, asOf, classifyDSR)
