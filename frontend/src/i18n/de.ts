@@ -7889,7 +7889,7 @@ export const de = {
   "worklist.pair.failed":
     "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
   "worklist.pair.refused":
-    "Sie können dieses Paar nicht entscheiden. Beide Datensätze müssten Ihnen gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
+    "Du kannst dieses Paar nicht entscheiden. Beide Datensätze müssten dir gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
   "worklist.pair.alreadySettled":
     "Das Paar konnte so nicht entschieden werden — vielleicht war jemand schneller, vielleicht haben sich die Datensätze geändert. Bitte die Liste neu laden.",
   "worklist.pair.stewardOnly":
@@ -8006,9 +8006,9 @@ export const de = {
   "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
   "worklist.hidden.notSales.detail":
     "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
-  "worklist.hidden.setAside": "Von Ihnen zurückgestellt",
+  "worklist.hidden.setAside": "Von dir zurückgestellt",
   "worklist.hidden.setAside.detail":
-    "Zurückgestellt oder als nicht Ihre markiert. Eine Zurückstellung kommt von selbst zurück.",
+    "Zurückgestellt oder als nicht deine markiert. Eine Zurückstellung kommt von selbst zurück.",
   "worklist.hidden.shown": "Die Liste selbst führt {count}.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
