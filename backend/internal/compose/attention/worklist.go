@@ -180,23 +180,17 @@ func (s *Service) Worklist(
 	return out, nil
 }
 
-// worklistFrom projects an already-assembled day, so a test can drive the
-// ranking, the paging and the summary without standing up every lane's reader.
-func (s *Service) worklistFrom(
-	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting waitingRead, leads leadRead, cursor worklistCursor,
-	// The refusals from the two sources read BESIDE the assembled day. They
-	// arrive here rather than being appended to the finished page because the
-	// readings have to see them: a refused waiting or leads lane is exactly the
-	// case where a tally would otherwise print a confident zero.
-	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
-) crmcontracts.Worklist {
-	if limit <= 0 {
-		limit = worklistPage
-	}
-	if limit > worklistMaxPage {
-		limit = worklistMaxPage
-	}
+// candidateRows is every row the day could show, from the three sources that
+// feed it, each with the crowding mark it applies past its own lead.
+//
+// Lifted out of worklistFrom because it is the part with no page in view:
+// nothing here reads the filter, the limit or the cursor, and nothing after it
+// ADDS a row. Everything that follows narrows — dedupe, pins, scope, category,
+// the cut — over a set this decides once.
+func (s *Service) candidateRows(
+	ctx context.Context, day crmcontracts.Attention, scope string,
+	waiting waitingRead, leads leadRead,
+) []ranked {
 	rows := classifyDay(day, day.AsOf, s.money)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
@@ -248,6 +242,27 @@ func (s *Service) worklistFrom(
 		}
 		rows = append(rows, row)
 	}
+	return rows
+}
+
+// worklistFrom projects an already-assembled day, so a test can drive the
+// ranking, the paging and the summary without standing up every lane's reader.
+func (s *Service) worklistFrom(
+	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
+	waiting waitingRead, leads leadRead, cursor worklistCursor,
+	// The refusals from the two sources read BESIDE the assembled day. They
+	// arrive here rather than being appended to the finished page because the
+	// readings have to see them: a refused waiting or leads lane is exactly the
+	// case where a tally would otherwise print a confident zero.
+	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
+) crmcontracts.Worklist {
+	if limit <= 0 {
+		limit = worklistPage
+	}
+	if limit > worklistMaxPage {
+		limit = worklistMaxPage
+	}
+	rows := s.candidateRows(ctx, day, scope, waiting, leads)
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
