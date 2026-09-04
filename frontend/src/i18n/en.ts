@@ -4891,7 +4891,7 @@ export const en = {
   "ob.conv.connect.gmailBrings": "Mail read and sent via Google",
   "ob.conv.connect.microsoftBrings": "Mail read and sent via Microsoft",
   "ob.conv.connect.imapBrings":
-    "Mail from any host, with your email address and password",
+    "Mail from any host, with your email address and an app password",
   "ob.conv.connect.linkedinAuth": "Profile link, read only",
   "ob.conv.connect.scopeGoogle": "OAuth, read and send scopes",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",

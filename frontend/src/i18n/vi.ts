@@ -4776,7 +4776,7 @@ export const vi = {
   "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
   "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
   "ob.conv.connect.imapBrings":
-    "Email từ máy chủ bất kỳ, bằng địa chỉ email và mật khẩu",
+    "Email từ máy chủ bất kỳ, bằng địa chỉ email và mật khẩu ứng dụng",
   "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, chỉ đọc",
   "ob.conv.connect.scopeGoogle": "OAuth, phạm vi đọc và gửi",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",

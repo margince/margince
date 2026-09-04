@@ -4825,7 +4825,7 @@ export const de = {
   "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
   "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",
   "ob.conv.connect.imapBrings":
-    "Mail von jedem Host, mit E-Mail-Adresse und Passwort",
+    "Mail von jedem Host, mit E-Mail-Adresse und App-Passwort",
   "ob.conv.connect.linkedinAuth": "Profillink, nur lesend",
   "ob.conv.connect.scopeGoogle": "OAuth, Lese- und Sendeberechtigung",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
@@ -5009,7 +5009,7 @@ export const de = {
     "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
   "ob.conv.prefs.title": "Zum Schluss ein paar Einstellungen.",
   "ob.conv.prefs.body":
-    "Alles hier ist aus dem vorbelegt, was schon hinterlegt ist, und lässt sich später in den Einstellungen ändern. Drücke Fertig, wenn alles stimmt.",
+    "Alles hier ist mit bereits hinterlegten Angaben vorausgefüllt und lässt sich später in den Einstellungen ändern. Drücke Fertig, wenn alles stimmt.",
   "ob.conv.prefs.reportingTitle": "Wie die Zahlen berichtet werden",
   "ob.conv.prefs.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
   "ob.conv.prefs.autonomyTitle": "Was es eigenständig ändern darf",
@@ -6602,7 +6602,7 @@ export const de = {
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
-    "Margince hat keine eigene KI. Es denkt über Ihr Anbieterkonto, und alles davon lässt sich später unter Einstellungen → KI ändern.",
+    "Margince hat keine eigene KI. Das Denken läuft über Ihr Anbieterkonto, und alles davon lässt sich später unter Einstellungen → KI ändern.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
