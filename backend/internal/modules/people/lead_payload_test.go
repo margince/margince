@@ -32,7 +32,7 @@ func TestLeadPromotedPayload_WithEvidence(t *testing.T) {
 	personID := ids.From[ids.PersonKind](ids.NewV7())
 	evidenceID := ids.From[ids.ActivityKind](ids.NewV7())
 
-	payload := leadPromotedPayload(personID, "created", "inbound_reply", &evidenceID)
+	payload := leadPromotedPayload(personID, "created", "inbound_reply", &evidenceID, nil)
 
 	if payload.EventType() != "lead.promoted" {
 		t.Errorf("got %v, want %v", payload.EventType(), "lead.promoted")
@@ -69,10 +69,46 @@ func TestLeadPromotedPayload_WithEvidence(t *testing.T) {
 	}
 }
 
+// The carried ids ride the payload, and an empty carry is OMITTED rather than
+// sent as []. A lead with no timeline and a build that does not report one are
+// different facts, and a consumer reading [] as "nothing to do" would take the
+// second for the first — which is the fallback this field exists beside.
+func TestLeadPromotedPayload_CarriesTheActivitiesItMoved(t *testing.T) {
+	personID := ids.From[ids.PersonKind](ids.NewV7())
+	moved := []ids.UUID{ids.NewV7(), ids.NewV7()}
+
+	payload := leadPromotedPayload(personID, "merged", "human_qualify", nil, moved)
+
+	if payload.CarriedActivityIds == nil {
+		t.Fatal("a promotion that moved two activities named none of them, so a " +
+			"consumer has only the person id — which on a merge is the wrong set")
+	}
+	if got := len(*payload.CarriedActivityIds); got != len(moved) {
+		t.Fatalf("named %d carried activities, want %d", got, len(moved))
+	}
+	for i, want := range moved {
+		if (*payload.CarriedActivityIds)[i] != openapi_types.UUID(want) {
+			t.Errorf("carried id %d is %v, want %v",
+				i, (*payload.CarriedActivityIds)[i], openapi_types.UUID(want))
+		}
+	}
+}
+
+func TestLeadPromotedPayload_OmitsAnEmptyCarry(t *testing.T) {
+	personID := ids.From[ids.PersonKind](ids.NewV7())
+
+	payload := leadPromotedPayload(personID, "created", "human_qualify", nil, nil)
+
+	if payload.CarriedActivityIds != nil {
+		t.Errorf("a promotion that carried nothing sent %v — absent and empty say "+
+			"different things here", *payload.CarriedActivityIds)
+	}
+}
+
 func TestLeadPromotedPayload_MergedNoEvidence(t *testing.T) {
 	personID := ids.From[ids.PersonKind](ids.NewV7())
 
-	payload := leadPromotedPayload(personID, "merged", "human_qualify", nil)
+	payload := leadPromotedPayload(personID, "merged", "human_qualify", nil, nil)
 
 	if payload.DedupeOutcome != "merged" {
 		t.Errorf("got %v, want %v", payload.DedupeOutcome, "merged")
