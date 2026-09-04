@@ -45,9 +45,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// mailerPackage is the seam this gate polices.
-const mailerPackage = "github.com/margince/margince/backend/internal/platform/mailer"
-
 // directMailHolders ratifies each file that reaches the relay directly, keyed by
 // its path from the backend root, with what bypassing the delivery lane costs.
 var directMailHolders = gatekit.Waive(map[string]string{
