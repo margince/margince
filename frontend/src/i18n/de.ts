@@ -8106,6 +8106,31 @@ export const de = {
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
   "worklist.untitled.sync_health":
     "Die CRM-Synchronisierung braucht Aufmerksamkeit",
+  "worklist.sync.class.contacts": "Kontakte",
+  "worklist.sync.class.companies": "Firmen",
+  "worklist.sync.class.deals": "Deals",
+  "worklist.sync.class.leads": "Interessenten",
+  "worklist.sync.class.calls": "Anrufe",
+  "worklist.sync.class.meetings": "Termine",
+  "worklist.sync.class.emails": "E-Mails",
+  "worklist.sync.class.notes": "Notizen",
+  "worklist.sync.class.tasks": "Aufgaben",
+  "worklist.sync.error.rate_limited":
+    "das andere System begrenzt, wie oft wir fragen dürfen",
+  "worklist.sync.error.unreachable": "das andere System ist nicht erreichbar",
+  "worklist.sync.error.auth": "die Verbindung muss neu angemeldet werden",
+  "worklist.sync.error.history_gone":
+    "das andere System hat diesen Verlauf nicht mehr",
+  "worklist.sync.error.internal": "auf unserer Seite ist etwas schiefgelaufen",
+  "worklist.sync.band.warn":
+    "Nahe am Lesebudget – manche Abfragen kommen aus der Kopie.",
+  "worklist.sync.band.shed":
+    "Über dem Lesebudget: Abfragen kommen aus der Kopie statt live.",
+  "worklist.sync.failing": "Kein Abgleich – {reason}.",
+  "worklist.sync.objects_stale": "Hier nicht aktuell: {classes}.",
+  "worklist.sync.backfill_incomplete": "Wird noch importiert: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Hier geändert und vom anderen System überschrieben: {classes}.",
   "worklist.untitled.capture_health":
     "Eine Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",
