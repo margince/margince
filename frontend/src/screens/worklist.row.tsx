@@ -413,6 +413,11 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const toast = useToast();
   const update = useTaskUpdate([worklistKey]);
+  // mutateAsync, not mutate: it answers a promise this closure owns, so the
+  // rejection is still catchable after the row has gone. `mutate`'s per-call
+  // callbacks hang off the component's observer and are dropped with it.
+  const undo = (task: string) =>
+    update.mutateAsync({ id: task, body: { is_done: false } });
   return (
     <div className="worklist-row-verbs">
       <Button
@@ -423,6 +428,35 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
           update.mutate(
             { id, body: { is_done: true } },
             {
+              // Undoable from the confirmation, the way every disposition
+              // beside it is. Done REMOVES the row, so a misclick otherwise
+              // costs the reader the only address they had for the task —
+              // they must remember what it was to find it again.
+              onSuccess: () =>
+                toast.show(t("worklist.verb.completed"), {
+                  action: {
+                    label: t("worklist.verb.completeUndo"),
+                    // The toast dismisses itself the moment the action is
+                    // pressed, so a failed undo leaves the task done with the
+                    // only way back already off the screen.
+                    // The failure is reported from the mutationFn's own catch
+                    // rather than from a per-call onError, and that is the
+                    // whole reason this reads the way it does: the completion
+                    // REMOVES the row, so by the time the reader presses Undo
+                    // the component is unmounted and React Query has dropped
+                    // the observer that per-call callbacks hang off. A refused
+                    // undo then showed nothing at all — the reader pressed the
+                    // one control that could undo their misclick, it failed,
+                    // and the screen said nothing.
+                    onAct: () => {
+                      undo(id).catch(() =>
+                        toast.show(t("worklist.verb.completeUndoFailed"), {
+                          mark: false,
+                        }),
+                      );
+                    },
+                  },
+                }),
               // A rejected PATCH otherwise leaves the button idle with nothing
               // on screen to say so — the same rendering a click that did
               // nothing would leave, and the reader has no reason to try again.
