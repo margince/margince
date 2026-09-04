@@ -533,3 +533,39 @@ func (c *countingExchanger) Exchange(context.Context, string, string, string) (s
 	c.calls++
 	return "", errors.New("token endpoint must not have been reached")
 }
+
+// The other half of the client binding, and the half a refusal test cannot
+// prove: a callback whose state carries the SAME client the deployment now
+// serves is admitted, and the code reaches the token endpoint.
+//
+// Without this, a guard that refused EVERY callback would still look correct
+// here — which is not hypothetical. The integration round trip caught exactly
+// that shape when its fixture signed no client id at all, because only the
+// refusal was ever asserted.
+func TestOidcSignInCallbackAdmitsTheClientTheFlowStartedOn(t *testing.T) {
+	redeemed := &countingExchanger{}
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+			Config:    OIDCProviderConfig{Key: "google", ClientID: "the-same-app"},
+			Verifier:  fixedVerifier{email: "erin@example.com", sub: "sub-erin", emailVerified: true},
+			Exchanger: redeemed,
+		})},
+		fixedStateSigner{provider: "google", clientID: "the-same-app", nonce: "n", codeVerifier: "v"},
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=c&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
+		State: oidcStrPtr("n"), Code: oidcStrPtr("c"),
+	})
+
+	// The exchange itself fails here (there is no token endpoint), so this
+	// stops at "the code was sent" rather than at a minted session — which is
+	// the whole of what the binding decides.
+	if redeemed.calls != 1 {
+		t.Fatalf("the token endpoint was reached %d time(s), want exactly 1 — "+
+			"the state named the client this deployment serves", redeemed.calls)
+	}
+}
