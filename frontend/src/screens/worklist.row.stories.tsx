@@ -175,3 +175,194 @@ export const ATaskOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   play: undefined,
 };
+
+// The five sources the row could draw and no story showed.
+//
+// Each is drawn from the shape its own producer emits, so the story is a
+// picture of what a reader actually meets rather than of a fixture invented
+// here. Held by TestEverySourceHasARowStory in worklist.storycensus.test.ts,
+// which fails when a source the queue can draw has no story naming it.
+
+// A brief item: the overnight ranking's pick, with the three verbs it carries.
+// The row drew a Pin button and nothing else until #4230, which is the defect
+// this story would have made visible.
+export const ABriefItemToAdvance: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "bi1",
+      source: "brief_item",
+      category: "deals_at_risk",
+      level: 3,
+      consequence: "deal_slips_past_close",
+      title: "Advance the Northstar renewal",
+      because: [],
+      actions: ["act", "set_aside", "dismiss"],
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000bb",
+        label: "Northstar",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A promise the rep made, with the words they wrote under it. The quote is the
+// whole point: a commitment card has to show both when it is due and where it
+// was promised.
+export const APromiseWithItsEvidence: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "cc1",
+      source: "conversation_claim",
+      category: "tasks",
+      level: 2,
+      consequence: "promise_breaks",
+      title: "Send the retrofit quote",
+      detail: "“I’ll get the quote over to you by Thursday.”",
+      because: [],
+      actions: ["open"],
+      subject: {
+        type: "person",
+        id: "01a05500-0000-7000-8000-0000000000aa",
+        label: "Kirsten Vogel",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A contact who has gone quiet, and the verb that sets them aside for a month.
+export const AQuietContactToSetAside: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000aa",
+      source: "relationship_decay",
+      category: "customer_waiting",
+      level: 5,
+      consequence: "deal_drifts",
+      title: "Kirsten Vogel has gone quiet",
+      because: [],
+      actions: ["open", "dismiss"],
+      subject: {
+        type: "person",
+        id: "01a05500-0000-7000-8000-0000000000aa",
+        label: "Kirsten Vogel",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// Work a person approved that then did not run. It names what was released
+// rather than what was decided: the decision stands, the effect did not.
+export const AnApprovedThingThatDidNotRun: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "fa1",
+      source: "failed_approval",
+      category: "system",
+      level: 3,
+      consequence: "customer_never_received",
+      title: "This was approved, but the send did not run",
+      because: [],
+      actions: ["open"],
+      subject: {
+        type: "person",
+        id: "01a05500-0000-7000-8000-0000000000aa",
+        label: "Kirsten Vogel",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A source that stopped answering. No verb: restoring a mailbox is an
+// administrator's job on another screen, and a button here would promise a
+// repair this queue cannot make.
+export const AMailboxThatStopped: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "sh1",
+      source: "sync_health",
+      category: "system",
+      level: 6,
+      consequence: "data_drifts",
+      title: "A mailbox stopped syncing",
+      because: [],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A new lead waiting on a first reply, with the clock the SLA policy is
+// counting. `response_overdue` is the reason the row gives; the phrase is the
+// client's to write.
+export const ALeadWaitingOnAFirstReply: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "lr1",
+      source: "lead_response",
+      category: "leads",
+      level: 2,
+      consequence: "buyer_waits",
+      title: "Kirsten at LOXXESS asked about pricing",
+      because: [{ kind: "response_overdue" }],
+      actions: ["open"],
+      subject: {
+        type: "lead",
+        id: "01a05500-0000-7000-8000-0000000000dd",
+        label: "Kirsten at LOXXESS",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A privacy request, which is on this page only so a rep is not the last to
+// know it exists. It is answered in the privacy queue, and the row says so by
+// carrying a destination and no verb of its own.
+export const APrivacyRequestOnItsClock: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "dsr1",
+      source: "dsr",
+      category: "system",
+      level: 1,
+      consequence: "legal_deadline_missed",
+      title: "A subject access request is due",
+      because: [{ kind: "legal_deadline" }],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
