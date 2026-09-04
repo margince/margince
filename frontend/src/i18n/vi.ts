@@ -3197,14 +3197,14 @@ export const vi = {
   "tasks.isDone": "Đã hoàn thành",
   "tasks.logged": "Đã ghi nhận",
 
-  "analytics.sub": "deal theo giai đoạn — chưa trọng số cạnh có trọng số",
+  "analytics.sub": "chỉ deal đang mở, mỗi deal quy đổi riêng sang {currency} — chưa trọng số cạnh có trọng số",
   "analytics.currency": "Tiền tệ",
   "analytics.count": "Deal",
   "analytics.unweighted": "Chưa trọng số",
   "analytics.weighted": "Có trọng số",
   "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
-  "analytics.reportDeals": "Deal theo giai đoạn",
+  "analytics.reportDeals": "Pipeline đang mở theo giai đoạn",
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
