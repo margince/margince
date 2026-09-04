@@ -58,7 +58,25 @@ func asInt(t *testing.T, v any) int64 {
 	return i
 }
 
-func TestAMaskedAmountNeverReachesAReportAggregate(t *testing.T) {
+// A deal outside the reader's POPULATION is absent, and is not reported as
+// something permission withheld.
+//
+// Both exclusions make a total smaller and they mean opposite things.
+// `excluded_by_permission` says "these rows are yours to see and their number
+// is not" — a governed answer a reader can act on by asking for authority.
+// Population says the rows were never this reader's to measure, and counting
+// them there tells a rep that data was kept from them when their own pipeline
+// is simply their own pipeline. A caller cannot tell the two apart from a
+// smaller number.
+//
+// This case previously proved that `MaskOutsideWriteAuthority` kept a
+// colleague's amount out of the aggregate. It cannot any more, and that is the
+// point rather than a loss: a report's population is resolved from the same
+// row scope that decides writability, so every row a report measures is one
+// this reader could write, and that mask condition has nothing left to catch
+// inside one. The mask is still proved on the always-condition below, which
+// does not depend on authority over the row.
+func TestADealOutsideThePopulationIsNotAPermissionExclusion(t *testing.T) {
 	e := setupForecast(t)
 	own := int64(100_000)
 	other := int64(250_000)
@@ -73,8 +91,11 @@ func TestAMaskedAmountNeverReachesAReportAggregate(t *testing.T) {
 	if got := asInt(t, result.Rows[0]["total"]); got != own {
 		t.Errorf("masked rep's sum = %d, want only their own %d — the masked amount leaked into the aggregate", got, own)
 	}
-	if result.ExcludedByPermission == nil || *result.ExcludedByPermission != 1 {
-		t.Errorf("excluded_by_permission = %v, want 1 — the withheld row is counted, never silently dropped", result.ExcludedByPermission)
+	if result.ExcludedByPermission != nil && *result.ExcludedByPermission != 0 {
+		t.Errorf("excluded_by_permission = %d, want none — the colleague's deal was outside "+
+			"this reader's population, not withheld from it, and reporting it as withheld "+
+			"tells a rep data was kept from them when their own pipeline is their own",
+			*result.ExcludedByPermission)
 	}
 
 	// The drill-through explains the SAME row set: the masked deal is absent
@@ -83,12 +104,13 @@ func TestAMaskedAmountNeverReachesAReportAggregate(t *testing.T) {
 	if got := asInt(t, derivation.Aggregates["total"]); got != own {
 		t.Errorf("derivation total = %d, want %d — the explanation out-saw the report", got, own)
 	}
-	if derivation.ExcludedByPermission == nil || *derivation.ExcludedByPermission != 1 {
-		t.Errorf("derivation excluded_by_permission = %v, want 1", derivation.ExcludedByPermission)
+	if derivation.ExcludedByPermission != nil && *derivation.ExcludedByPermission != 0 {
+		t.Errorf("derivation excluded_by_permission = %d, want none — same reason as the "+
+			"headline, and the two must agree", *derivation.ExcludedByPermission)
 	}
 	for _, row := range derivation.Rows {
 		if row["id"] == theirs.String() {
-			t.Errorf("the drill-through printed the masked deal %s", theirs)
+			t.Errorf("the drill-through printed %s, which is outside this reader's population", theirs)
 		}
 	}
 	if len(derivation.Rows) != 1 || derivation.Rows[0]["id"] != mine.String() {
@@ -118,8 +140,8 @@ func TestAnAlwaysMaskEmptiesTheAggregateAndSaysSo(t *testing.T) {
 	if len(result.Rows) != 0 {
 		t.Errorf("rows = %v, want none — every row's amount is withheld", result.Rows)
 	}
-	if result.ExcludedByPermission == nil || *result.ExcludedByPermission != 2 {
-		t.Errorf("excluded_by_permission = %v, want 2 — both visible rows withheld", result.ExcludedByPermission)
+	if result.ExcludedByPermission == nil || *result.ExcludedByPermission != 1 {
+		t.Errorf("excluded_by_permission = %v, want the 1 row in this reader's population — the colleague's deal is outside it, so it is not a row permission withheld", result.ExcludedByPermission)
 	}
 }
 

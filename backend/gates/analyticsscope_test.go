@@ -46,15 +46,21 @@ var narrowingCalls = map[string]bool{
 	// first thing tried against this gate and it passed, because the waiver
 	// keyed on the callee's own name rather than on who called it.
 	"specScopeClauses": true,
+	// The POPULATION is a narrowing like the others, and the newest: a spec
+	// whose row scope renders TRUE — a deal is an identity table — is narrowed
+	// by nothing else, so a path that skipped this answered every caller the
+	// whole installation. That is how a rep's Pipeline disagreed with their own
+	// Forecast.
+	"AnalyticsPopulationClause": true,
 }
 
 // composesItsOwnNarrowing ratifies the spec-taking functions that legitimately
 // call a clause builder directly. Each says which different question it asks.
 var composesItsOwnNarrowing = gatekit.Waive(map[string]string{
-	"buildReportWhere": "the report engine's own WHERE builder: it takes the scope half " +
-		"here and the mask and reference halves in fetchRows beside it, because fetchRows " +
-		"also COUNTS the masked rows and needs those clauses separately. Between the two, " +
-		"all three are applied",
+	"buildReportWhere": "the report engine's own WHERE builder: it takes the scope and " +
+		"population halves here and the mask and reference halves in fetchRows beside it, " +
+		"because fetchRows also COUNTS the masked rows and needs those clauses separately. " +
+		"Between the two, all four are applied",
 	"fetchRows": "the report engine, which composes the three itself because it also " +
 		"COUNTS the rows the mask withheld for excluded_by_permission and so needs those " +
 		"clauses in hand rather than folded into a list. It applies all three",
@@ -62,7 +68,8 @@ var composesItsOwnNarrowing = gatekit.Waive(map[string]string{
 		"aggregate read — including the same mask exclusions — and composes them beside " +
 		"the group-key predicates that make it a drill-through",
 	"derivationWhere": "the drill-through's own predicate builder, the sibling of " +
-		"buildReportWhere for a bound group key",
+		"buildReportWhere for a bound group key — and it takes the SAME population, or " +
+		"the explanation opens records the number never counted",
 	"referenceScopeClauses": "a DIFFERENT question: the row scope over the records a " +
 		"population POINTS AT, asked per declared reference rather than over the " +
 		"population's own rows. It is called alongside specScopeClauses, never instead",

@@ -101,7 +101,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		where, err := buildReportWhere(ctx, spec, req, arg)
+		where, err := buildReportWhere(ctx, tx, spec, req, callersOwnPopulation(), arg)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,10 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 // buildReportWhere assembles the WHERE side — the spec's base predicate,
 // the validated caller filters (sorted for a deterministic plan echo), and
 // the caller's row-scope clause — binding every value through arg.
-func buildReportWhere(ctx context.Context, spec reportSpec, req reportRequest, arg func(any) int) ([]string, error) {
+func buildReportWhere(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, req reportRequest,
+	requested RequestedScope, arg func(any) int,
+) ([]string, error) {
 	where := []string{spec.baseWhere}
 	// Deterministic filter order — the plan echo and the SQL must not
 	// depend on map iteration.
@@ -191,6 +194,20 @@ func buildReportWhere(ctx context.Context, spec reportSpec, req reportRequest, a
 		return nil, err
 	}
 	where = append(where, scoped...)
+	// WHICH population, as against which rows the caller may read at all.
+	//
+	// Row scope does not answer it: a deal is an identity table read by every
+	// seat, so the clause above renders TRUE and a rep's Pipeline showed the
+	// whole installation while their Forecast — narrowed by this same resolver
+	// since #4077 — showed their own. Two Analytics tabs disagreeing about
+	// which records they cover, with nothing on screen saying so.
+	population, err := reportPopulationClause(ctx, tx, requested, arg)
+	if err != nil {
+		return nil, err
+	}
+	if population != "" {
+		where = append(where, population)
+	}
 	refs, err := referenceScopeClauses(ctx, spec, arg)
 	if err != nil {
 		return nil, err

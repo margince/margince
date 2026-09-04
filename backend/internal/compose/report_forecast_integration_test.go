@@ -441,44 +441,56 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 	}
 }
 
-// Deals are readable by every seat that holds the deal grant, whatever its
-// own/team/all tier, and the explanation rides the SAME read model as the
-// report: a team-scoped rep's forecast groups every owner's deals, the
-// drill-through returns them all, a handle pinned to the other rep's owner
-// resolves to that rep's deals, and the admin sees exactly the same set.
-func TestForecastDerivationReadsEveryDealWhateverTheTier(t *testing.T) {
+// The explanation rides the same POPULATION as the report it explains, and a
+// handle cannot widen it.
+//
+// Row scope still hides nothing: every seat holding the deal grant may read
+// every deal. What a report measures is the population, and a team-scoped rep
+// measures their team — so the drill-through opens their team's deals, a
+// handle pinned to a colleague outside it opens nothing, and an admin
+// measuring the workspace sees all three.
+//
+// The last two are the ones worth having. A handle is a URL a reader can edit,
+// and pinning somebody else's owner_id is the obvious thing to try; the
+// derivation resolves the population for whoever opens it, so editing the
+// handle changes which cell is explained and never which population it may be
+// explained from.
+func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Mine A", 20, &e.Rep1, int64p(10000), stringp("commit"))
 	e.seedOpenDeal(t, "Mine B", 60, &e.Rep1, int64p(20000), stringp("commit"))
 	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, int64p(40000), stringp("commit"))
 
 	rep := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
-	result := e.runReport(rep, t, "forecast", `{"group_by":["owner_id"]}`)
-	if len(result.Rows) != 2 {
-		t.Fatalf("team-scoped report rows = %+v, want both owners' groups", result.Rows)
+	result := e.runReport(rep, t, "forecast", `{"group_by":["owner_id","currency"]}`)
+	if len(result.Rows) != 1 {
+		t.Fatalf("team-scoped report rows = %+v, want the one owner group in their team", result.Rows)
 	}
 
 	derivation := e.explainReport(rep, t, "forecast", result.DerivationURL)
-	if derivation.TotalRows != 3 || len(derivation.Rows) != 3 {
-		t.Fatalf("team-scoped drill-through = %d rows (total %d), want all 3 deals",
+	if derivation.TotalRows != 2 || len(derivation.Rows) != 2 {
+		t.Fatalf("team-scoped drill-through = %d rows (total %d), want their team's 2 deals",
 			len(derivation.Rows), derivation.TotalRows)
 	}
 	var sum int64
 	for _, source := range derivation.Rows {
 		sum += wireInt(t, source, "amount_minor")
 	}
-	if sum != 70000 {
-		t.Errorf("team-scoped drill-through sum = %d, want 70000 (every deal, the other rep's included)", sum)
+	if sum != 30000 {
+		t.Errorf("team-scoped drill-through sum = %d, want 30000 — their team's two deals", sum)
 	}
 
-	// A handle pinned to the other rep's owner resolves to that rep's deal
-	// under team scope, the same way it does for the admin.
+	// A handle EDITED to pin a colleague outside this reader's population
+	// opens nothing. The cell it names exists; it is not theirs to measure.
 	foreign := e.explainReport(rep, t, "forecast", "/v1/reports/forecast/derivation?by=owner_id&agg=count%3A%3Adeals&owner_id="+e.Rep3.String())
-	if foreign.TotalRows != 1 || len(foreign.Rows) != 1 {
-		t.Errorf("other-owner drill-through = %d rows (total %d), want that rep's 1 deal", len(foreign.Rows), foreign.TotalRows)
+	if foreign.TotalRows != 0 || len(foreign.Rows) != 0 {
+		t.Errorf("a handle pinned to an owner outside the reader's population opened %d rows "+
+			"(total %d) — editing a URL is not a way to measure somebody else's work",
+			len(foreign.Rows), foreign.TotalRows)
 	}
 
-	// Admin (row_scope=all) sees the same three — the tier made no difference.
+	// An admin measuring the workspace opens all three from the SAME handle:
+	// the population is resolved for whoever opens it, not stored in it.
 	full := e.explainReport(e.Admin(), t, "forecast", result.DerivationURL)
 	if full.TotalRows != 3 {
 		t.Errorf("admin drill-through total = %d, want 3", full.TotalRows)
@@ -628,5 +640,57 @@ func TestForecastByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 	}
 	if !sawOpen {
 		t.Error("the partner this caller CAN open was dropped too — the clause blanked the dimension rather than narrowing it")
+	}
+}
+
+// A rep's REPORT is their own work, and so is the detail behind it.
+//
+// #4077 narrowed the forecast to the population a caller may measure and left
+// the generic report engine answering workspace-wide. So a rep's Forecast tab
+// showed their own deals and their Pipeline tab showed the whole
+// installation's, with nothing on screen saying the two covered different
+// records.
+//
+// Row scope does not close it and cannot: a deal is an identity table read by
+// every seat, so the scope clause renders TRUE and the population is the only
+// thing narrowing anything.
+func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
+	e := setupForecast(t)
+	mine := int64(100_000)
+	theirs := int64(250_000)
+	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, &mine, stringp("commit"))
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, &theirs, stringp("commit"))
+
+	rep := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn))
+	result := e.runReport(rep, t, "forecast",
+		`{"group_by":["forecast_category","currency"],`+
+			`"aggregates":[{"fn":"count","as":"deals"},`+
+			`{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
+	if len(result.Rows) != 1 {
+		t.Fatalf("rows = %d, want the rep's one commit group: %+v", len(result.Rows), result.Rows)
+	}
+	row := result.Rows[0]
+	if got := wireInt(t, row, "deals"); got != 1 {
+		t.Errorf("the rep's report counted %d deals of the 2 seeded — a count of 2 is the "+
+			"whole installation answered to somebody who may measure their own work", got)
+	}
+	if got := wireInt(t, row, "unweighted_minor"); got != mine {
+		t.Errorf("the rep's total is %d, want their own %d", got, mine)
+	}
+
+	// The DETAIL behind that figure is the same population. A drill-through
+	// narrowed differently from its headline opens records the number never
+	// counted — the reader checks the figure and is shown somebody else's deal.
+	handle, ok := row["derivation_url"].(string)
+	if !ok || handle == "" {
+		t.Fatalf("the rep's aggregate row minted no derivation handle: %+v", row)
+	}
+	derivation := e.explainReport(rep, t, "forecast", handle)
+	if len(derivation.Rows) != 1 {
+		t.Fatalf("the drill-through opened %d rows, want the rep's own 1: %+v",
+			len(derivation.Rows), derivation.Rows)
+	}
+	if got := derivation.Rows[0]["owner_id"]; got != e.Rep1.String() {
+		t.Errorf("the drill-through opened a deal owned by %v, not the reader", got)
 	}
 }

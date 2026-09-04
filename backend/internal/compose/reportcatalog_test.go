@@ -307,7 +307,11 @@ func TestAFilterRefusalNamesTheThresholdsToo(t *testing.T) {
 		}
 		thresholded++
 		req := reportRequest{Filters: map[string]any{"no_such_filter": "x"}}
-		_, err := buildReportWhere(t.Context(), spec, req, func(any) int { return 1 })
+		// nil tx: the filter refusal below happens in the loop over `filters`,
+		// before anything reads the database. A test opening a transaction to
+		// prove a message would be proving it about a different code path.
+		_, err := buildReportWhere(
+			t.Context(), nil, spec, req, callersOwnPopulation(), func(any) int { return 1 })
 		var refusal *FieldNotAllowedError
 		if !errors.As(err, &refusal) {
 			t.Fatalf("%s: err = %v, want a FieldNotAllowedError", report, err)
