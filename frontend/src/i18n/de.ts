@@ -7897,7 +7897,7 @@ export const de = {
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Dein Tag wird gelesen…",
-  "worklist.queue": "Was als Nächstes zu tun ist",
+  "worklist.queue": "Heute",
   "worklist.more": "Mehr anzeigen",
   "worklist.more.failed": "Konnte nicht mehr laden. Bitte erneut versuchen.",
   "worklist.summary":
@@ -7932,17 +7932,6 @@ export const de = {
   "worklist.pane.lastInbound": "Zuletzt geschrieben",
   "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
   "worklist.pane.never": "Nie",
-  "worklist.focus.title": "Das als Nächstes",
-  "worklist.nextup.title": "Und danach",
-  "worklist.focus.verb.decide": "Entscheiden",
-  "worklist.focus.verb.merge": "Paar prüfen",
-  "worklist.focus.verb.complete": "Erledigen",
-  "worklist.focus.verb.act": "Bearbeiten",
-  "worklist.focus.verb.acknowledge": "Zur Kenntnis nehmen",
-  "worklist.focus.verb.open": "Öffnen",
-  "worklist.focus.verb.snooze": "Öffnen",
-  "worklist.focus.verb.dismiss": "Öffnen",
-  "worklist.focus.verb.set_aside": "Öffnen",
   "worklist.band.now": "Jetzt",
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
@@ -8184,6 +8173,8 @@ export const de = {
   "worklist.verb.acknowledge": "Verstanden",
   "worklist.verb.acknowledgeFailed":
     "Das konnte nicht als gelesen markiert werden.",
+  "worklist.verb.completeFailed":
+    "Diese Aufgabe konnte nicht abgeschlossen werden.",
   "worklist.source.failed": "Eine Quelle konnte nicht gelesen werden: {source}",
   "worklist.source.withheld":
     "Eine Quelle ist für dein Konto nicht sichtbar: {source}",
