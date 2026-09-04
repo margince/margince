@@ -37,6 +37,22 @@ type livenessCase struct {
 	// not a subject is never asked the second.
 	subject bool
 	stated  bool
+	// answers is the per-TABLE verdict on the in-statement half: which tables
+	// this function refuses an archived row of in the text of the write itself.
+	// A Go marker covers the frame and appears here as nothing, which is what
+	// the two-writes case below is for.
+	answers map[string]bool
+}
+
+// allAnswered reports whether every table this function writes refuses an
+// archived row in its own statement.
+func allAnswered(written map[string]bool) bool {
+	for _, answered := range written {
+		if !answered {
+			return false
+		}
+	}
+	return len(written) > 0
 }
 
 var livenessCases = []livenessCase{
@@ -49,7 +65,7 @@ func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WH
 		name: "the same write, refusing an archived row in its own predicate",
 		source: `package p
 func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1 AND archived_at IS NULL`" + `) }`,
-		subject: true, stated: true,
+		subject: true, stated: true, answers: map[string]bool{"organization": true},
 	}, {
 		// The restore arm's predicate is the OPPOSITE claim, and crediting it
 		// would hand every un-archive path a free pass.
@@ -129,6 +145,19 @@ var held = map[string]string{"legal_name": ` + "`UPDATE organization SET legal_n
 func write(tx T, column string) { tx.Exec(ctx, held[column]) }`,
 		subject: true,
 	}, {
+		// CodeRabbit's case, and the reason the in-statement half is attributed
+		// per table: a function that guards one write and leaves its sibling
+		// bare answers for one table and not the other, and the bare one has to
+		// be reported anyway.
+		name: "one write guarded and its sibling in the same function bare",
+		source: `package p
+func write(tx T) {
+	tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1 AND archived_at IS NULL`" + `)
+	tx.Exec(ctx, ` + "`UPDATE activity SET subject = $2 WHERE id = $1`" + `)
+}`,
+		subject: true,
+		answers: map[string]bool{"organization": true, "activity": false},
+	}, {
 		// The marker must be a call site, not prose. A gate that read comments
 		// would let a sentence about liveness stand in for one.
 		name: "a marker named only in a comment",
@@ -169,8 +198,18 @@ func TestTheLivenessCensusJudgesAWriteAndCreditsOnlyAnAnswer(t *testing.T) {
 			if !tc.subject {
 				return
 			}
-			if stated := statesLiveness(fn, statements); stated != tc.stated {
-				t.Errorf("credited as answering for liveness = %t, want %t", stated, tc.stated)
+			stated := statesLivenessInGo(fn)
+			for table, answered := range written {
+				if answered != tc.answers[table] {
+					t.Errorf("%s credited as refused in its own statement = %t, want %t",
+						table, answered, tc.answers[table])
+				}
+			}
+			if !stated && !allAnswered(written) && tc.stated {
+				t.Errorf("credited as answering for liveness = false, want true")
+			}
+			if (stated || allAnswered(written)) && !tc.stated {
+				t.Errorf("credited as answering for liveness = true, want false")
 			}
 		})
 	}

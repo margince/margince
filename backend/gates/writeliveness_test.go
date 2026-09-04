@@ -247,37 +247,73 @@ func retirableTables(t *testing.T) map[string]bool {
 }
 
 // byIDWritesIn names the retirable tables these statements write one row of by
-// id. A table outside the set answers nothing about liveness because it cannot
-// hold an archived row.
+// id, and says of each whether some statement writing it REFUSES an archived row
+// in its own text. A table outside the set is absent: it cannot hold an archived
+// row, so it answers nothing.
+//
+// Per TABLE rather than per statement, twice over and deliberately.
+//
+// statementsJudged returns overlapping READINGS of one value — a concatenation
+// is recorded both folded and in parts — so a fragment carrying the SET without
+// the WHERE would read as an unguarded write of a statement that is guarded.
+//
+// And the refusal is credited from any statement NAMING the table, not only from
+// the write. The commonest correct shape resolves the row live in a SELECT and
+// pins the UPDATE to it with a version or an archive transition, so insisting the
+// predicate ride the write itself would ask thirteen correct functions to be
+// waived. What it still separates is the case that matters: a function that
+// guards its organization write and leaves an activity write bare names no
+// activity statement carrying the predicate, so the activity write is reported.
 func byIDWritesIn(statements []string, retirable map[string]bool) map[string]bool {
 	written := map[string]bool{}
+	refused := map[string]bool{}
 	for _, lit := range statements {
-		for _, m := range byIDWriteOf.FindAllStringSubmatch(lit, -1) {
-			if retirable[m[1]] {
-				written[m[1]] = true
+		if livePredicate.MatchString(lit) {
+			for _, table := range tablesUnderLivePredicate(lit) {
+				refused[table] = true
 			}
 		}
+		for _, m := range byIDWriteOf.FindAllStringSubmatch(lit, -1) {
+			if retirable[m[1]] {
+				written[m[1]] = false
+			}
+		}
+	}
+	for table := range written {
+		written[table] = refused[table]
 	}
 	return written
 }
 
-// statesLiveness reports whether this function answers the liveness question at
-// all, either way. It reads the function's own frame: the statements it runs
-// and the names it calls.
-//
-// The marker is deliberately NOT attributed to the table being written, which is
-// where updateguard's lock credit is stricter. It cannot be: the liveness that
-// governs a child write is frequently its ANCHOR's — a deal room's deal, a
-// contract's organization — so requiring the probe and the statement to name one
-// table would refuse the shape this rule is mostly about. What that costs is a
-// function whose marker belongs to some other row; what insisting would cost is
-// a waiver on every correct anchor-gated write in the tree.
-func statesLiveness(fn *ast.FuncDecl, statements []string) bool {
-	for _, lit := range statements {
-		if livePredicate.MatchString(lit) {
-			return true
-		}
+// statementTable follows every keyword that introduces one, so a live predicate
+// is credited to the tables its own statement reads or writes and to no others.
+var statementTable = regexp.MustCompile(`(?i)\b(?:UPDATE|FROM|JOIN|INTO)\s+(?:ONLY\s+)?([a-z_]+)`)
+
+// tablesUnderLivePredicate names the tables one statement touches, for a
+// statement that refuses an archived row.
+func tablesUnderLivePredicate(statement string) []string {
+	var named []string
+	for _, m := range statementTable.FindAllStringSubmatch(statement, -1) {
+		named = append(named, m[1])
 	}
+	return named
+}
+
+// statesLivenessInGo reports whether this function answers the liveness question
+// in its Go frame — a *Live probe or lock, or a declaration that it reaches an
+// archived row on purpose.
+//
+// A Go marker is NOT attributed to the table being written, which is where
+// updateguard's lock credit is stricter. It cannot be: the liveness that governs
+// a child write is frequently its ANCHOR's — a deal room's deal, a contract's
+// organization — so requiring the probe and the statement to name one table
+// would refuse the shape this rule is mostly about.
+//
+// The IN-STATEMENT half is attributed, in byIDWritesIn above, and that is the
+// half where it can be. A function that guards its organization write and
+// leaves its activity write bare answers for one table and not the other; the
+// two are asked separately, so the second is still reported.
+func statesLivenessInGo(fn *ast.FuncDecl) bool {
 	stated := false
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		switch node := n.(type) {
@@ -332,7 +368,16 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 					continue
 				}
 				judged++
-				if statesLiveness(fn, statements) {
+				if statesLivenessInGo(fn) {
+					continue
+				}
+				unanswered := map[string]bool{}
+				for table, answered := range written {
+					if !answered {
+						unanswered[table] = true
+					}
+				}
+				if len(unanswered) == 0 {
 					continue
 				}
 				key := filepath.ToSlash(filepath.Dir(path)) + ":" + fn.Name.Name
@@ -343,7 +388,7 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 					"refuse an archived row (an archived_at IS NULL predicate, a *Live probe, a LiveOnly lock "+
 					"or patch), DECLARE that this write reaches one on purpose (auth.EnsureRetractable, "+
 					"storekit.IncludeArchived), or ratify it in livenessUnstated with where the liveness is",
-					path, fn.Name.Name, strings.Join(sortedTables(written), ", "))
+					path, fn.Name.Name, strings.Join(sortedTables(unanswered), ", "))
 			}
 			return nil
 		})
