@@ -93,7 +93,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (94)
+## Census (96)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -121,7 +121,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
+| `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
+| `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has ONE reader. |
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
