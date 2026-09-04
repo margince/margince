@@ -23725,6 +23725,25 @@ export interface components {
         AnalyticsQuery: {
             /** @description The population, by name. */
             entity: string;
+            /**
+             * @description `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+             *     minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+             *     or names nothing and is given it). No enum here on purpose: the resolver is the
+             *     authority on what this seat may measure, and a second list would be a second answer to
+             *     that, refusing on shape what it should refuse on authority.
+             *
+             *     Which population to measure, resolved against the caller's own lens. Omitted asks for
+             *     their default — a rep's own records, a manager's teams — never the whole installation.
+             *
+             *     A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+             *     never quietly means something other than what was asked.
+             */
+            scope_kind?: string;
+            /**
+             * Format: uuid
+             * @description The team or seat to measure, for `scope_kind` `team` or `owner`.
+             */
+            scope_id?: string;
             /** @description The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one. */
             group_by?: string[];
             /** @description What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question. */
