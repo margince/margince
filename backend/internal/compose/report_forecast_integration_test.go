@@ -691,6 +691,19 @@ func TestAReportRefusesNativeMoneySummedAcrossCurrencies(t *testing.T) {
 	if ok != http.StatusOK {
 		t.Errorf("the same sum grouped by currency answered %d, want 200", ok)
 	}
+
+	// COUNT of the same measure is answered without the split. It reports how
+	// many rows could compute the amount — a dimensionless integer that means
+	// the same thing in every currency — where every other function combines
+	// the values. Refusing it would have made "how many deals are priced"
+	// unanswerable without a grouping the question does not need.
+	counted, _ := e.runReportStatus(e.Admin(), t, "forecast",
+		`{"group_by":["forecast_category"],`+
+			`"aggregates":[{"fn":"count","field":"amount_minor","as":"priced"}]}`)
+	if counted != http.StatusOK {
+		t.Errorf("counting amount_minor without a currency grouping answered %d, want 200 — "+
+			"a count of money is not money", counted)
+	}
 }
 
 // runReportStatus is runReport for a case about the ANSWER's status rather than

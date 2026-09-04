@@ -50,6 +50,14 @@ func refuseUngroupedNativeMoney(
 		return nil
 	}
 	for _, agg := range aggregates {
+		// count OF a measure is how many rows could compute it — a
+		// dimensionless integer, not money. Counting euros and dollars
+		// together answers "how many priced deals", which means the same thing
+		// in every currency, so it needs no split. Every other function
+		// COMBINES the values.
+		if agg.Fn == aggFnCount {
+			continue
+		}
 		if agg.Field != "" && spec.nativeMeasures[agg.Field] {
 			return &NativeMoneyNeedsCurrencyError{Field: agg.Field}
 		}
