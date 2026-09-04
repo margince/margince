@@ -5492,6 +5492,16 @@ public.workflow_run.workflow_run_unique UNIQUE (handler, idempotency_key)
 public.workflow_run_pkey CREATE UNIQUE INDEX workflow_run_pkey ON public.workflow_run USING btree (id)
 public.workflow_run_troubled CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]))
 public.workflow_run_unique CREATE UNIQUE INDEX workflow_run_unique ON public.workflow_run USING btree (handler, idempotency_key)
+public.worklist_pin acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.worklist_pin.pinned_at timestamp with time zone NOT NULL gen=- def=now()
+public.worklist_pin.reader_id uuid NOT NULL gen=- def=-
+public.worklist_pin.row_id text NOT NULL gen=- def=-
+public.worklist_pin.set_by text NOT NULL gen=- def=-
+public.worklist_pin.source text NOT NULL gen=- def=-
+public.worklist_pin.worklist_pin_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
+public.worklist_pin.worklist_pin_pkey PRIMARY KEY (reader_id, source, row_id)
+public.worklist_pin.worklist_pin_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_pin_pkey CREATE UNIQUE INDEX worklist_pin_pkey ON public.worklist_pin USING btree (reader_id, source, row_id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace.archived_at timestamp with time zone gen=- def=-
 public.workspace.created_at timestamp with time zone NOT NULL gen=- def=now()

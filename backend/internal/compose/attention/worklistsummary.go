@@ -35,14 +35,24 @@ func summarize(rows []ranked, bar materialBar) crmcontracts.WorklistSummary {
 	bar.stateOn(&summary)
 	for _, row := range rows {
 		item := row.item
+		// The row's OWN level, not the one a pin may have overwritten. These
+		// figures answer what the day holds — `urgent` means somebody is
+		// waiting or a promise is breaking — and a rep pinning a piece of
+		// hygiene to the top of their morning has made neither true. Counting
+		// the sort level here let one reader's ordering preference move a
+		// number their manager reads.
+		level := item.Level
+		if row.pinned {
+			level = row.semanticLevel
+		}
 		// Every level reaches one of the three arms, so no row is missing from
 		// the line. Without the default, levels 3 to 5 — material risk, agreed
 		// work, blocking decisions — fell between the two and a queue holding
 		// only at-risk deals reported three zeros over a page full of rows.
 		switch {
-		case item.Level <= levelPromise:
+		case level <= levelPromise:
 			summary.Urgent++
-		case item.Level >= levelRoutine:
+		case level >= levelRoutine:
 			summary.LowerPriority++
 		default:
 			inPlay++

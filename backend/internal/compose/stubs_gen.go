@@ -183,6 +183,10 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
+func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAnalyticsContext")
+}
+
 func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
@@ -2329,6 +2333,14 @@ func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 
 func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
+}
+
+func (stubs) UnpinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.UnpinWorklistRowParams) {
+	httperr.NotImplemented(w, r, "UnpinWorklistRow")
+}
+
+func (stubs) PinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PinWorklistRow")
 }
 
 func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetResponseMetricsParams) {

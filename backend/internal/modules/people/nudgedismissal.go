@@ -89,7 +89,17 @@ func (s *Store) DismissRelationshipNudge(
 		// time.Now() rather than an injected clock, matching every other write
 		// in this store. The tests below assert the SPAN the row carries rather
 		// than an instant, so nothing here needs a clock held still.
-		until := time.Now().UTC().AddDate(0, 0, days)
+		//
+		// TRUNCATED TO THE MICROSECOND, because that is all a timestamptz holds.
+		// This value goes into the audit row's after-image as well as into the
+		// column, and the NEXT dismissal images what it displaced by reading the
+		// column back — so an image carrying nanoseconds names an instant the
+		// row never held, and the two images of one deadline stop matching.
+		//
+		// The precision of time.Now() is the platform's: nanoseconds on Linux,
+		// microseconds on Darwin. Without this the trail is right on one
+		// developer's machine and wrong in CI, which is how it got here.
+		until := time.Now().UTC().Truncate(time.Microsecond).AddDate(0, 0, days)
 		// What deadline was already standing, read under the person lock taken
 		// above so the upsert below cannot race it. A re-dismissal REPLACES this
 		// value, and an audit row that named only the new one would leave

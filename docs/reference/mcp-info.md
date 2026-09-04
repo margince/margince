@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 11 |
 | Tool catalog | 199.6 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 52150 |
+| Approx. wire tokens | 52159 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Descriptions (incl. governance clause) | 48.7 KB | 24% | Yes, every step |
 | Input schemas | 40.3 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.2 KB | 7% | Partly |
-| **Description + input schema** | **89.0 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **89.1 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -5104,7 +5104,7 @@ What a period is expected to close, in four readings. `won` counts deals by the 
       "type": "string"
     },
     "scope_kind": {
-      "description": "Whose forecast. Defaults to the whole workspace.",
+      "description": "Whose forecast. Omit for this caller's own default population; a wider one is refused.",
       "enum": [
         "workspace",
         "team",

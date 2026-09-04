@@ -33,17 +33,30 @@ import (
 func ForecastDeals(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	asOf time.Time, baseCurrency string,
-) ([]forecasting.Deal, bool, error) {
+) ([]forecasting.Deal, forecasting.Scope, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
 	scopeClause, err := auth.ScopeClauseFor(ctx, tableDeal, "d", arg)
 	if err != nil {
-		return nil, false, err
+		return nil, forecasting.Scope{}, false, err
 	}
 	limited := scopeClause != ""
 	if scopeClause == "" {
 		scopeClause = sqlUnnarrowed
+	}
+
+	// What the caller ASKED to measure, resolved against their own lens. An
+	// unset scope means they named nothing, which is a rep's own records and a
+	// manager's teams — never the installation, which is what this read
+	// answered before and why a rep's forecast was somebody else's.
+	resolved, populationClause, err := AnalyticsPopulationClause(
+		ctx, tx, requestedFromForecastScope(scope), "d", arg)
+	if err != nil {
+		return nil, forecasting.Scope{}, false, err
+	}
+	if populationClause == "" {
+		populationClause = sqlUnnarrowed
 	}
 
 	// The deal's money in the installation's base currency, converted HERE
@@ -80,11 +93,11 @@ func ForecastDeals(
 		baseValue,
 		arg(period.StartDate), arg(period.EndDate),
 		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate),
-		scopeClause, forecastScopeClause(scope, arg))
+		scopeClause, "AND "+populationClause)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
-		return nil, false, fmt.Errorf("compose: reading the forecast's deals: %w", err)
+		return nil, forecasting.Scope{}, false, fmt.Errorf("compose: reading the forecast's deals: %w", err)
 	}
 	defer rows.Close()
 
@@ -107,27 +120,30 @@ func ForecastDeals(
 		return d, err
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("compose: collecting the forecast's deals: %w", err)
+		return nil, forecasting.Scope{}, false, fmt.Errorf("compose: collecting the forecast's deals: %w", err)
 	}
-	return out, limited, nil
+	return out, forecastScopeFromResolved(resolved), limited, nil
 }
 
-// forecastScopeClause narrows to one team's or one owner's deals.
+// requestedFromForecastScope carries the forecast module's scope vocabulary
+// across to the analytics resolver's.
 //
-// Separate from the row scope above and not a substitute for it: the row scope
-// is what the caller MAY see, this is what they ASKED to see. A read narrowed
-// only by the request would answer a manager's team query correctly and hand
-// them the whole pipeline by default.
-func forecastScopeClause(scope forecasting.Scope, arg func(any) int) string {
-	switch scope.Kind {
-	case forecasting.ScopeOwner:
-		return fmt.Sprintf("AND d.owner_id = $%d", arg(*scope.ID))
-	case forecasting.ScopeTeam:
-		return fmt.Sprintf(`AND d.owner_id IN (
-			SELECT tm.user_id FROM team_member tm WHERE tm.team_id = $%d)`, arg(*scope.ID))
-	default:
-		return ""
-	}
+// The two say the same three things; they are separate types because the module
+// owns no tables and cannot resolve a lens, so it names what was ASKED and the
+// composition decides what that means.
+func requestedFromForecastScope(scope forecasting.Scope) RequestedScope {
+	return RequestedScope{Kind: scope.Kind, ID: scope.ID}
+}
+
+// forecastScopeFromResolved carries the decision back, without flattening it.
+//
+// A manager's default covers their teams AND themselves, and the forecast
+// vocabulary now has its own word for that. Reporting it as the workspace
+// instead — which an earlier spelling of this did — makes the answer claim a
+// population it did not measure, and the standing call is looked up BY the
+// scope, so the manager would have been handed management's workspace call.
+func forecastScopeFromResolved(resolved ResolvedScope) forecasting.Scope {
+	return forecasting.Scope{Kind: resolved.Kind, ID: resolved.ID}
 }
 
 // ForecastPeriodAt resolves the window a day falls in for this installation,

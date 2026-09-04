@@ -63,6 +63,7 @@ type ReportsStubOpts = {
   companyRows?: Record<string, unknown>[];
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
+  context?: Record<string, unknown>;
 };
 
 function reportsStub(opts: ReportsStubOpts = {}) {
@@ -70,6 +71,25 @@ function reportsStub(opts: ReportsStubOpts = {}) {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    // Every Analytics surface reads its frame first: which population these
+    // numbers cover, and whether this reader may publish a forecast. A stub
+    // without it leaves the screen waiting and the assertions below looking
+    // like a rendering bug.
+    if (url.includes("/analytics/context")) {
+      return jsonResponse(
+        opts.context ?? {
+          default_scope: { kind: "workspace", label: "Whole workspace" },
+          allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+          capabilities: {
+            view_manager_forecast: true,
+            submit_manager_forecast: true,
+          },
+          as_of: "2026-09-04T00:00:00Z",
+          timezone: "Europe/Berlin",
+          base_currency: "EUR",
+        },
+      );
+    }
     if (method === "GET" && url.includes("/derivation")) {
       opts.onDerivation?.(url);
       return jsonResponse(opts.derivation ?? {});

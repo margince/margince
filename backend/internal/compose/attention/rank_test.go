@@ -709,3 +709,65 @@ func TestABandDifferenceOnTheSameLevelNamesNoLevelValues(t *testing.T) {
 			got[0].AboveNext.Mine, got[0].AboveNext.Theirs)
 	}
 }
+
+// A PINNED row heads the band it leads, even when it is also crowded.
+//
+// The two rules meet here and the order between them is the whole of it. The
+// pin step sorts before the crowding step, so a pinned row leads the page; the
+// band test asked about crowding first, so that same row was headed
+// `keep_momentum`. The page would then draw a Keep-momentum heading above its
+// own Now band — the reader's one override putting a row exactly where they
+// asked while telling them it was somewhere else.
+//
+// Unreachable until a pin could be written, which is why nothing held it: the
+// level had no producer outside tests. Writing the pin is what makes it real.
+func TestAPinnedRowHeadsTheBandItLeads(t *testing.T) {
+	t.Parallel()
+
+	pinned := candidate("pinned", levelPinned)
+	pinned.crowded = true
+
+	if got := bandOfRow(pinned); got != bandNow {
+		t.Fatalf("a pinned row is headed %q, want %q — it sorts first, so any other "+
+			"heading is drawn above the band it belongs to", got, bandNow)
+	}
+}
+
+// And crowding still demotes a row that is NOT pinned, without which the case
+// above would pass against a band function that had stopped reading `crowded`.
+func TestCrowdingStillDemotesAnUnpinnedRow(t *testing.T) {
+	t.Parallel()
+
+	crowded := candidate("crowded", levelWaiting)
+	crowded.crowded = true
+
+	if got := bandOfRow(crowded); got != bandKeepMomentum {
+		t.Fatalf("a crowded waiting row is headed %q, want %q", got, bandKeepMomentum)
+	}
+}
+
+// A pin raises the row it names, and only that row.
+//
+// applyPins runs over the whole day, so a match on the wrong key would put a
+// row the reader never touched at the top with nothing to explain it. The two
+// rows here share an id and differ only by source, which is the collision the
+// composite key exists for.
+func TestAPinRaisesTheRowItNamesAndNoOther(t *testing.T) {
+	t.Parallel()
+
+	shared := "same-id"
+	waiting := candidate(shared, levelWaiting)
+	waiting.item.Source = sourceWaiting
+	task := candidate(shared, levelAgreed)
+	task.item.Source = sourceTask
+
+	rows := applyPins([]ranked{waiting, task},
+		map[RowRef]bool{{Source: string(sourceWaiting), RowID: shared}: true})
+
+	if rows[0].item.Level != levelPinned {
+		t.Errorf("the pinned row is level %d, want the pin level", rows[0].item.Level)
+	}
+	if rows[1].item.Level == levelPinned {
+		t.Error("pinning a waiting message also raised the task sharing its id")
+	}
+}

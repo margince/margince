@@ -6,6 +6,7 @@ import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
+import { type AnalyticsScope, writableScope } from "./analytics.context";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Sharing a forecast view.
@@ -24,9 +25,13 @@ type IssuedShare = Readonly<{ token: string; expiresAt: string }>;
 
 export function ShareViewButton({
   target,
+  scope,
   snapshotId,
 }: Readonly<{
   target: string;
+  // The population the issuer is LOOKING at. A share carrying a different one
+  // would hand a recipient a set the issuer never saw.
+  scope: AnalyticsScope;
   // The frozen state a snapshot share would serve. Absent means there is none
   // to freeze yet, and the snapshot choice is unavailable rather than offered
   // and then refused by the server.
@@ -42,6 +47,7 @@ export function ShareViewButton({
       {open && (
         <ShareDialog
           target={target}
+          scope={scope}
           snapshotId={snapshotId}
           onClose={() => setOpen(false)}
         />
@@ -52,10 +58,12 @@ export function ShareViewButton({
 
 function ShareDialog({
   target,
+  scope,
   snapshotId,
   onClose,
 }: Readonly<{
   target: string;
+  scope: AnalyticsScope;
   snapshotId?: string;
   onClose: () => void;
 }>) {
@@ -65,14 +73,22 @@ function ShareDialog({
 
   const create = useMutation({
     mutationFn: async () => {
+      // Resolved INSIDE the mutation rather than closed over: a value read at
+      // render time is the one the last render saw, which is the wrong
+      // population exactly when a save races a scope change.
+      const named = writableScope(scope);
+      if (!named) {
+        throw new Error("a share names one population");
+      }
       const { data, error } = await api.POST("/forecast/shares", {
         body: {
           kind,
           target,
-          // The workspace scope names no subject, which is what the server
-          // refuses a scope_id alongside. Stated rather than left to a default
-          // so the request says which forecast it shares.
-          scope_kind: "workspace" as const,
+          // The population the issuer was reading, not the installation. Fixed
+          // to the workspace, this shared a wider set than the screen showed —
+          // and a share is exactly where that matters, because the recipient
+          // never sees the screen it was issued from.
+          ...named,
           ...(kind === "snapshot" && snapshotId
             ? { snapshot_id: snapshotId }
             : {}),

@@ -51,7 +51,13 @@ describe("sharing a forecast view", () => {
   it("distinguishes the live and frozen kinds in words", async () => {
     vi.stubGlobal("fetch", shareStub());
     // A frozen state EXISTS here, which is what makes both kinds offerable.
-    render(<ShareViewButton target="forecast" snapshotId="snap-1" />);
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole workspace" }}
+        snapshotId="snap-1"
+      />,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Share view" }));
 
@@ -66,7 +72,12 @@ describe("sharing a forecast view", () => {
 
   it("says the frozen kind is unavailable when nothing has been frozen", async () => {
     vi.stubGlobal("fetch", shareStub());
-    render(<ShareViewButton target="forecast" />);
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole workspace" }}
+      />,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Share view" }));
 
@@ -79,7 +90,12 @@ describe("sharing a forecast view", () => {
 
   it("shows the link once and says what leaving costs", async () => {
     vi.stubGlobal("fetch", shareStub("tok-xyz"));
-    render(<ShareViewButton target="forecast" />);
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole workspace" }}
+      />,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Share view" }));
     await userEvent.click(screen.getByRole("button", { name: "Create link" }));
@@ -97,7 +113,12 @@ describe("sharing a forecast view", () => {
     // No clipboard at all — an http origin, which is where this actually
     // happens. Silently doing nothing would leave the reader pressing Copy.
     vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
-    render(<ShareViewButton target="forecast" />);
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole workspace" }}
+      />,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Share view" }));
     await userEvent.click(screen.getByRole("button", { name: "Create link" }));

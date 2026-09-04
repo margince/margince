@@ -1374,10 +1374,40 @@ function isContrastReading(data: unknown): data is ContrastReading {
   );
 }
 
-async function expectNoAaViolations(page: Page, screen: string) {
-  const results = await new AxeBuilder({ page })
+// HEADING_RULES are run BESIDE the WCAG tags rather than inside them, because
+// axe tags both `best-practice` only. Neither carries a WCAG tag, so the tag
+// list below ran neither on any route: the sweep read a smaller rule set than
+// "the axe sweep is green" implies, with no failing assertion to say so.
+//
+// By id rather than by adding the `best-practice` tag, which would widen the
+// sweep well past headings in one step. These two are the measured gap;
+// adopting the rest of best-practice is a separate decision with its own tail.
+const HEADING_RULES = ["heading-order", "page-has-heading-one"];
+
+// TWO ANALYSES, and it has to be two.
+//
+// `AxeBuilder.withRules` does not ADD to `withTags` — it sets
+// `runOnly: {type: "rule"}`, replacing the tag selection outright, and the
+// library's own doc says the two cannot be combined. Chaining them narrows the
+// sweep from every WCAG rule to these two, which is a worse version of the
+// defect this exists to fix and would have reported PASS the whole way.
+//
+// So the tags run, the rules run, and the violations are read together.
+async function axeFindings(page: Page) {
+  const wcag = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();
+  const headings = await new AxeBuilder({ page })
+    .withRules(HEADING_RULES)
+    .analyze();
+  return {
+    violations: [...wcag.violations, ...headings.violations],
+    incomplete: [...wcag.incomplete, ...headings.incomplete],
+  };
+}
+
+async function expectNoAaViolations(page: Page, screen: string) {
+  const results = await axeFindings(page);
   const undecided = results.incomplete.flatMap((check) =>
     check.nodes.map(
       (node) =>
@@ -1485,6 +1515,30 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
       await expectSettingsViewLanded(page, screen);
       await settleAnimations(page);
       await expectNoAaViolations(page, `${screen} (dark)`);
+    });
+  }
+});
+
+// EXACTLY one h1 per route, which axe does not answer: `page-has-heading-one`
+// asks whether there is AT LEAST one, and two page titles in one document is
+// the failure a reader navigating by heading actually meets — they cannot tell
+// which is the page.
+//
+// Across both route lists rather than the three routes AC-shell-1k names, so a
+// new route inherits the check instead of needing somebody to remember it.
+// That test keeps its own cases: it asserts WHICH heading wins on a record,
+// which is a claim about the identity block rather than about the count.
+test.describe("one page heading per route", () => {
+  for (const screen of [...CORE_SCREENS, ...ADDRESSED_VIEWS]) {
+    test(`#/${screen} has exactly one h1`, async ({ page }) => {
+      await page.goto(`/#/${screen}`);
+      await page.waitForLoadState("networkidle");
+      // A page that threw during render has almost no accessibility tree, so
+      // "no h1" would read as a heading defect when it is a crash. Same guard,
+      // and the same reason, as the axe sweeps below.
+      await expectShellRendered(page);
+      await expectSettingsViewLanded(page, screen);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     });
   }
 });
