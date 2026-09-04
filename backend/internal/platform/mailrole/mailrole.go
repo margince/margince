@@ -189,3 +189,53 @@ func sortStrings(in []string) {
 		}
 	}
 }
+
+// GreetsNobody reports whether a display name and the address behind it,
+// together, name no natural person — so a greeting built from that name would
+// address somebody who does not exist.
+//
+// Three ways a mailbox can name nobody, and the third is why this is not just
+// Match:
+//
+//  1. The address is a role mailbox (Match).
+//  2. The display name is nothing but role words (DisplayName).
+//  3. The display name OPENS with the mailbox's own domain label. That token is
+//     the organization's name, so a greeting takes it for a first name and
+//     writes "steireif," to `partner@steireif.net` — a company greeted as a
+//     person, in the message a rep is about to send. `partner` is deliberately
+//     not in the role vocabulary, because it is ordinary business vocabulary a
+//     person's address may honestly contain, so rule 1 cannot reach this and
+//     widening the vocabulary would refuse real contacts.
+//
+// Rule 3 costs a greeting where a directory writes surname first and the
+// surname IS the company's — "Steireif Anna" at steireif.net. That draft opens
+// "Hallo," instead of "Hallo Anna,", which is the fallback the drafting floor
+// already renders for a contact it has no name for. Abstaining is the cheaper
+// error: a missing name reads as plain, an invented one reads as a mistake the
+// recipient can see.
+func GreetsNobody(displayName, address string) bool {
+	if _, role := Match(address); role {
+		return true
+	}
+	if DisplayName(displayName) {
+		return true
+	}
+	return opensWithDomainLabel(displayName, address)
+}
+
+// opensWithDomainLabel reports whether the display name's first word is the
+// address's own domain label.
+func opensWithDomainLabel(displayName, address string) bool {
+	_, domain, ok := split(address)
+	if !ok {
+		return false
+	}
+	label, _, found := strings.Cut(domain, ".")
+	if !found || label == "" {
+		return false
+	}
+	fields := strings.FieldsFunc(strings.ToLower(displayName), func(r rune) bool {
+		return !isNameRune(r)
+	})
+	return len(fields) > 0 && fields[0] == label
+}
