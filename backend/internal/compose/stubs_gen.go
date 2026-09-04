@@ -95,6 +95,10 @@ func (stubs) SendEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontr
 	httperr.NotImplemented(w, r, "SendEmail")
 }
 
+func (stubs) PreviewSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewSendAuthorization")
+}
+
 func (stubs) SendMessage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SendMessageParams) {
 	httperr.NotImplemented(w, r, "SendMessage")
 }
@@ -881,6 +885,10 @@ func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, para
 
 func (stubs) SendAccountEmail(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SendAccountEmailParams) {
 	httperr.NotImplemented(w, r, "SendAccountEmail")
+}
+
+func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }
 
 func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {

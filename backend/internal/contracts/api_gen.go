@@ -2797,6 +2797,45 @@ func (e CommissionStatus) Valid() bool {
 	}
 }
 
+// Defines values for CommunicationContext.
+const (
+	CommunicationContextAccountNotice      CommunicationContext = "account_notice"
+	CommunicationContextActiveDealFollowup CommunicationContext = "active_deal_followup"
+	CommunicationContextContractNotice     CommunicationContext = "contract_notice"
+	CommunicationContextCustomerService    CommunicationContext = "customer_service"
+	CommunicationContextInvoiceOrPayment   CommunicationContext = "invoice_or_payment"
+	CommunicationContextMarketing          CommunicationContext = "marketing"
+	CommunicationContextPrecontractQuote   CommunicationContext = "precontract_quote"
+	CommunicationContextReplyToInbound     CommunicationContext = "reply_to_inbound"
+	CommunicationContextRequestedFollowup  CommunicationContext = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationContext enum.
+func (e CommunicationContext) Valid() bool {
+	switch e {
+	case CommunicationContextAccountNotice:
+		return true
+	case CommunicationContextActiveDealFollowup:
+		return true
+	case CommunicationContextContractNotice:
+		return true
+	case CommunicationContextCustomerService:
+		return true
+	case CommunicationContextInvoiceOrPayment:
+		return true
+	case CommunicationContextMarketing:
+		return true
+	case CommunicationContextPrecontractQuote:
+		return true
+	case CommunicationContextReplyToInbound:
+		return true
+	case CommunicationContextRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyContextSchemaVersion.
 const (
 	N1 CompanyContextSchemaVersion = 1
@@ -10780,6 +10819,48 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for SendAuthorizationPreviewRecipientMode.
+const (
+	SendAuthorizationPreviewRecipientModeEnforce SendAuthorizationPreviewRecipientMode = "enforce"
+	SendAuthorizationPreviewRecipientModeObserve SendAuthorizationPreviewRecipientMode = "observe"
+	SendAuthorizationPreviewRecipientModeWarn    SendAuthorizationPreviewRecipientMode = "warn"
+)
+
+// Valid indicates whether the value is a known member of the SendAuthorizationPreviewRecipientMode enum.
+func (e SendAuthorizationPreviewRecipientMode) Valid() bool {
+	switch e {
+	case SendAuthorizationPreviewRecipientModeEnforce:
+		return true
+	case SendAuthorizationPreviewRecipientModeObserve:
+		return true
+	case SendAuthorizationPreviewRecipientModeWarn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendAuthorizationPreviewRecipientVerdict.
+const (
+	SendAuthorizationPreviewRecipientVerdictAllow  SendAuthorizationPreviewRecipientVerdict = "allow"
+	SendAuthorizationPreviewRecipientVerdictDeny   SendAuthorizationPreviewRecipientVerdict = "deny"
+	SendAuthorizationPreviewRecipientVerdictReview SendAuthorizationPreviewRecipientVerdict = "review"
+)
+
+// Valid indicates whether the value is a known member of the SendAuthorizationPreviewRecipientVerdict enum.
+func (e SendAuthorizationPreviewRecipientVerdict) Valid() bool {
+	switch e {
+	case SendAuthorizationPreviewRecipientVerdictAllow:
+		return true
+	case SendAuthorizationPreviewRecipientVerdictDeny:
+		return true
+	case SendAuthorizationPreviewRecipientVerdictReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SendEmailRequestCommunicationContext.
 const (
 	SendEmailRequestCommunicationContextAccountNotice      SendEmailRequestCommunicationContext = "account_notice"
@@ -10821,37 +10902,37 @@ func (e SendEmailRequestCommunicationContext) Valid() bool {
 
 // Defines values for SendMessageRequestCommunicationContext.
 const (
-	SendMessageRequestCommunicationContextAccountNotice      SendMessageRequestCommunicationContext = "account_notice"
-	SendMessageRequestCommunicationContextActiveDealFollowup SendMessageRequestCommunicationContext = "active_deal_followup"
-	SendMessageRequestCommunicationContextContractNotice     SendMessageRequestCommunicationContext = "contract_notice"
-	SendMessageRequestCommunicationContextCustomerService    SendMessageRequestCommunicationContext = "customer_service"
-	SendMessageRequestCommunicationContextInvoiceOrPayment   SendMessageRequestCommunicationContext = "invoice_or_payment"
-	SendMessageRequestCommunicationContextMarketing          SendMessageRequestCommunicationContext = "marketing"
-	SendMessageRequestCommunicationContextPrecontractQuote   SendMessageRequestCommunicationContext = "precontract_quote"
-	SendMessageRequestCommunicationContextReplyToInbound     SendMessageRequestCommunicationContext = "reply_to_inbound"
-	SendMessageRequestCommunicationContextRequestedFollowup  SendMessageRequestCommunicationContext = "requested_followup"
+	AccountNotice      SendMessageRequestCommunicationContext = "account_notice"
+	ActiveDealFollowup SendMessageRequestCommunicationContext = "active_deal_followup"
+	ContractNotice     SendMessageRequestCommunicationContext = "contract_notice"
+	CustomerService    SendMessageRequestCommunicationContext = "customer_service"
+	InvoiceOrPayment   SendMessageRequestCommunicationContext = "invoice_or_payment"
+	Marketing          SendMessageRequestCommunicationContext = "marketing"
+	PrecontractQuote   SendMessageRequestCommunicationContext = "precontract_quote"
+	ReplyToInbound     SendMessageRequestCommunicationContext = "reply_to_inbound"
+	RequestedFollowup  SendMessageRequestCommunicationContext = "requested_followup"
 )
 
 // Valid indicates whether the value is a known member of the SendMessageRequestCommunicationContext enum.
 func (e SendMessageRequestCommunicationContext) Valid() bool {
 	switch e {
-	case SendMessageRequestCommunicationContextAccountNotice:
+	case AccountNotice:
 		return true
-	case SendMessageRequestCommunicationContextActiveDealFollowup:
+	case ActiveDealFollowup:
 		return true
-	case SendMessageRequestCommunicationContextContractNotice:
+	case ContractNotice:
 		return true
-	case SendMessageRequestCommunicationContextCustomerService:
+	case CustomerService:
 		return true
-	case SendMessageRequestCommunicationContextInvoiceOrPayment:
+	case InvoiceOrPayment:
 		return true
-	case SendMessageRequestCommunicationContextMarketing:
+	case Marketing:
 		return true
-	case SendMessageRequestCommunicationContextPrecontractQuote:
+	case PrecontractQuote:
 		return true
-	case SendMessageRequestCommunicationContextReplyToInbound:
+	case ReplyToInbound:
 		return true
-	case SendMessageRequestCommunicationContextRequestedFollowup:
+	case RequestedFollowup:
 		return true
 	default:
 		return false
@@ -12117,19 +12198,19 @@ func (e UpdateOrganizationRequestSizeBand) Valid() bool {
 
 // Defines values for UpdateSignalRequestSeverity.
 const (
-	Info   UpdateSignalRequestSeverity = "info"
-	Urgent UpdateSignalRequestSeverity = "urgent"
-	Warn   UpdateSignalRequestSeverity = "warn"
+	UpdateSignalRequestSeverityInfo   UpdateSignalRequestSeverity = "info"
+	UpdateSignalRequestSeverityUrgent UpdateSignalRequestSeverity = "urgent"
+	UpdateSignalRequestSeverityWarn   UpdateSignalRequestSeverity = "warn"
 )
 
 // Valid indicates whether the value is a known member of the UpdateSignalRequestSeverity enum.
 func (e UpdateSignalRequestSeverity) Valid() bool {
 	switch e {
-	case Info:
+	case UpdateSignalRequestSeverityInfo:
 		return true
-	case Urgent:
+	case UpdateSignalRequestSeverityUrgent:
 		return true
-	case Warn:
+	case UpdateSignalRequestSeverityWarn:
 		return true
 	default:
 		return false
@@ -13293,22 +13374,22 @@ func (e WorklistItemActions) Valid() bool {
 
 // Defines values for WorklistItemBand.
 const (
-	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
-	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
-	WorklistItemBandNow           WorklistItemBand = "now"
-	WorklistItemBandReview        WorklistItemBand = "review"
+	BuildPipeline WorklistItemBand = "build_pipeline"
+	KeepMomentum  WorklistItemBand = "keep_momentum"
+	Now           WorklistItemBand = "now"
+	Review        WorklistItemBand = "review"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemBand enum.
 func (e WorklistItemBand) Valid() bool {
 	switch e {
-	case WorklistItemBandBuildPipeline:
+	case BuildPipeline:
 		return true
-	case WorklistItemBandKeepMomentum:
+	case KeepMomentum:
 		return true
-	case WorklistItemBandNow:
+	case Now:
 		return true
-	case WorklistItemBandReview:
+	case Review:
 		return true
 	default:
 		return false
@@ -19017,6 +19098,21 @@ type CommissionSummaryRow struct {
 	// Status accrued → approved → paid, with void as the exit at any point.
 	Status CommissionStatus `json:"status"`
 }
+
+// CommunicationContext What kind of communication a message is — the closed vocabulary the engine resolves
+// to. A caller CLAIMS one and the engine checks it against the record.
+//
+// NAMED rather than repeated inline, because an inline enum that collides with another
+// schema's silently renames that one's generated constants. The send requests still
+// spell theirs inline with a nullable variant; this is the non-null shape the preview
+// and its answer share.
+//
+// The five controller-only categories (`security_notice`, `privacy_notice`,
+// `record_confirmation`, `consent_confirmation`, `optout_confirmation`) are absent by
+// design: they serve the recipient, are reserved for the installation's own mail behind
+// a registered template, and a caller that could claim one could dress marketing as a
+// security warning.
+type CommunicationContext string
 
 // CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
 // CHECKED, never trusted: the engine reads the named record and asks whether it
@@ -28398,6 +28494,56 @@ type PreferenceCenterPurposesState string
 // PreferenceCenterRefusedReason cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
 type PreferenceCenterRefusedReason string
 
+// PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
+// records this new conversation would belong to.
+type PreviewAccountSendRequest struct {
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
+	// nothing on its own, and it is accepted here for one reason: the SEND still
+	// consults it where the record supports no category, so a preview that could not
+	// pass it would answer a different question than the send and disagree with it.
+	// Omit it and the answer is about the record alone.
+	ConsentPurpose *string                `json:"consent_purpose,omitempty"`
+	Evidence       *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// Links The records the message would be filed under. They are read through the caller's
+	// own row scope before the engine sees them, so naming a record the caller cannot
+	// open is refused here rather than answered about.
+	Links            []ActivityLinkInput   `json:"links"`
+	MarketingPurpose *string               `json:"marketing_purpose,omitempty"`
+	To               []openapi_types.Email `json:"to"`
+}
+
+// PreviewSendRequest What a composer is about to write, in the shape the engine judges. It carries no
+// `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
+// draft to the server to be told whether it may exist would be the wrong way round.
+type PreviewSendRequest struct {
+	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
+	// a claim the record does not bear out comes back as `review` naming what is
+	// missing, rather than a quiet downgrade to something weaker that happens to be
+	// allowed.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
+	// nothing on its own, and it is accepted here for one reason: the SEND still
+	// consults it where the record supports no category, so a preview that could not
+	// pass it would answer a different question than the send and disagree with it.
+	// Omit it and the answer is about the record alone.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
+
+	// Evidence Records the caller names in support of this message. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// To The addressees. Cc and Bcc join this list at send, and both are asked about
+	// exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
+	// engine — so a composer previewing a message with copies passes them all here.
+	To []openapi_types.Email `json:"to"`
+}
+
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
 	// Code Stable machine-readable error code (e.g. duplicate_email, validation_error).
@@ -30301,6 +30447,54 @@ type SendAccountEmailRequest struct {
 // one could dress marketing as a security warning and reach somebody who has
 // objected, so naming one here is refused (422 `invalid`).
 type SendAccountEmailRequestCommunicationContext string
+
+// SendAuthorizationPreview What the engine would decide, per recipient, for a message nobody has sent.
+//
+// ADVISORY AND NOT A PROMISE. The send re-asks at staging, and a withdrawal, an
+// objection or a bounce between the two refuses with the newer answer. Nothing here is
+// recorded: no decision rows, no lawful basis.
+type SendAuthorizationPreview struct {
+	// Allowed Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
+	// the message, because a rep who wrote to four people and reached three without
+	// being told which has been lied to about what happened.
+	Allowed    bool                                `json:"allowed"`
+	Recipients []SendAuthorizationPreviewRecipient `json:"recipients"`
+}
+
+// SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the person's file.
+type SendAuthorizationPreviewRecipient struct {
+	Address openapi_types.Email `json:"address"`
+
+	// Basis The lawful ground an allow would rest on.
+	Basis *string `json:"basis,omitempty"`
+
+	// Mode How much authority the engine's answer carries for this category on this
+	// installation. Under `observe` a `deny` here still sends, and a composer that
+	// showed it as a refusal would be describing a rollout position as a rule.
+	Mode *SendAuthorizationPreviewRecipientMode `json:"mode,omitempty"`
+
+	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
+	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
+	// the lawful next action it can offer; it is deliberately not a sentence about the
+	// recipient.
+	ReasonCode string `json:"reason_code"`
+
+	// ResolvedCategory What the engine worked out this message is, which may differ from the claim.
+	ResolvedCategory *CommunicationContext `json:"resolved_category,omitempty"`
+
+	// Verdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+	// the record does not carry this message on its own and names what is missing.
+	Verdict SendAuthorizationPreviewRecipientVerdict `json:"verdict"`
+}
+
+// SendAuthorizationPreviewRecipientMode How much authority the engine's answer carries for this category on this
+// installation. Under `observe` a `deny` here still sends, and a composer that
+// showed it as a refusal would be describing a rollout position as a rule.
+type SendAuthorizationPreviewRecipientMode string
+
+// SendAuthorizationPreviewRecipientVerdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+// the record does not carry this message on its own and names what is missing.
+type SendAuthorizationPreviewRecipientVerdict string
 
 // SendEmailRequest defines model for SendEmailRequest.
 type SendEmailRequest struct {
@@ -38463,6 +38657,9 @@ type RelinkActivityJSONRequestBody RelinkActivityJSONBody
 // SendEmailJSONRequestBody defines body for SendEmail for application/json ContentType.
 type SendEmailJSONRequestBody = SendEmailRequest
 
+// PreviewSendAuthorizationJSONRequestBody defines body for PreviewSendAuthorization for application/json ContentType.
+type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
+
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
 
@@ -38693,6 +38890,9 @@ type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
 
 // SendAccountEmailJSONRequestBody defines body for SendAccountEmail for application/json ContentType.
 type SendAccountEmailJSONRequestBody = SendAccountEmailRequest
+
+// PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
+type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
 // EmbedReindexStartJSONRequestBody defines body for EmbedReindexStart for application/json ContentType.
 type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
@@ -46955,6 +47155,9 @@ type ServerInterface interface {
 	// Send a (possibly edited) email draft — runs directly, consent-gated.
 	// (POST /activities/{id}/send-email)
 	SendEmail(w http.ResponseWriter, r *http.Request, id Id, params SendEmailParams)
+	// Would this reply be allowed, and on what ground — asked before a word is typed.
+	// (POST /activities/{id}/send-email:preview)
+	PreviewSendAuthorization(w http.ResponseWriter, r *http.Request, id Id)
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
@@ -47546,6 +47749,9 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams)
+	// Would this account-started message be allowed, and on what ground.
+	// (POST /emails:preview)
+	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
@@ -48767,6 +48973,12 @@ func (_ Unimplemented) SendEmail(w http.ResponseWriter, r *http.Request, id Id, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Would this reply be allowed, and on what ground — asked before a word is typed.
+// (POST /activities/{id}/send-email:preview)
+func (_ Unimplemented) PreviewSendAuthorization(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 // (POST /activities/{id}/send-message)
 func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams) {
@@ -49946,6 +50158,12 @@ func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, 
 // Start a new email conversation from a record — runs directly, consent-gated.
 // (POST /emails)
 func (_ Unimplemented) SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Would this account-started message be allowed, and on what ground.
+// (POST /emails:preview)
+func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53224,6 +53442,38 @@ func (siw *ServerInterfaceWrapper) SendEmail(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendEmail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewSendAuthorization operation middleware
+func (siw *ServerInterfaceWrapper) PreviewSendAuthorization(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewSendAuthorization(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -61042,6 +61292,26 @@ func (siw *ServerInterfaceWrapper) SendAccountEmail(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendAccountEmail(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAccountSendAuthorization operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAccountSendAuthorization(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77419,6 +77689,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/send-email", wrapper.SendEmail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/send-email:preview", wrapper.PreviewSendAuthorization)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/send-message", wrapper.SendMessage)
 	})
 	r.Group(func(r chi.Router) {
@@ -78008,6 +78281,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails", wrapper.SendAccountEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)
