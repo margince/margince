@@ -852,3 +852,38 @@ func TestApprovalDecidedCarriesTheExpiredVerdictWithNoDecider(t *testing.T) {
 		t.Errorf("decided_by = %v is on the wire for an expiry — it names a human who never decided", v)
 	}
 }
+
+// leadVocabularySnapshot* are fixed, memorable UUIDs so the two lead-vocabulary
+// snapshots stay stable across runs, for the reason the offer family's are.
+var (
+	leadVocabularySnapshotSourceID = openapi_types.UUID(ids.MustParse("77777777-7777-7777-7777-777777777777"))
+	leadVocabularySnapshotReasonID = openapi_types.UUID(ids.MustParse("88888888-8888-8888-8888-888888888888"))
+)
+
+// TestLeadSourceChangedWireSnapshot pins the lead_source.changed wire shape.
+//
+// `deleted` is the sample on purpose: it is the case that makes `key`
+// load-bearing rather than convenient. The entry is gone by the time a
+// subscriber reads this, so the key on the wire is the only thing naming what
+// went away — a shape change that dropped it would leave a deletion nobody can
+// act on, and this fixture is where that shows up.
+func TestLeadSourceChangedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventLeadSourceChanged{
+		SourceId: leadVocabularySnapshotSourceID,
+		Change:   crmcontracts.PublicEventLeadSourceChangedChangeDeleted,
+		Key:      "webinar",
+	}
+	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
+}
+
+// TestLeadDisqualifyReasonChangedWireSnapshot pins the
+// lead_disqualify_reason.changed wire shape. `deleted` for the reason its
+// source sibling gives, with label standing where the source carries a key.
+func TestLeadDisqualifyReasonChangedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventLeadDisqualifyReasonChanged{
+		ReasonId: leadVocabularySnapshotReasonID,
+		Change:   crmcontracts.PublicEventLeadDisqualifyReasonChangedChangeDeleted,
+		Label:    "No budget",
+	}
+	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
+}

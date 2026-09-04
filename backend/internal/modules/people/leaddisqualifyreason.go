@@ -159,10 +159,14 @@ func (s *Store) CreateLeadDisqualifyReason(ctx context.Context, in CreateLeadDis
 			id, label, in.SortOrder); err != nil {
 			return fmt.Errorf("insert lead disqualify reason: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", "lead_disqualify_reason", id, nil, map[string]any{"label": label}); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "create", "lead_disqualify_reason", id, nil, map[string]any{"label": label})
+		if err != nil {
 			return err
 		}
-		var err error
+		if err := emitLeadDisqualifyReasonChanged(ctx, tx, auditID, id, label,
+			crmcontracts.PublicEventLeadDisqualifyReasonChangedChangeCreated); err != nil {
+			return err
+		}
 		out, err = readLeadDisqualifyReason(ctx, tx, id, false)
 		return err
 	})
@@ -206,7 +210,19 @@ func (s *Store) UpdateLeadDisqualifyReason(ctx context.Context, id ids.UUID, in 
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "lead_disqualify_reason", id, p.Before(), p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "update", "lead_disqualify_reason", id, p.Before(), p.After())
+		if err != nil {
+			return err
+		}
+		// The label AFTER the patch: it is this reason's only identity, so an
+		// event carrying the old one would name something that no longer
+		// exists. readLeadDisqualifyReason below re-reads the row anyway.
+		label := before.Label
+		if in.Label != nil {
+			label = strings.TrimSpace(*in.Label)
+		}
+		if err := emitLeadDisqualifyReasonChanged(ctx, tx, auditID, id, label,
+			crmcontracts.PublicEventLeadDisqualifyReasonChangedChangeUpdated); err != nil {
 			return err
 		}
 		out, err = readLeadDisqualifyReason(ctx, tx, id, false)
@@ -235,7 +251,30 @@ func (s *Store) DeleteLeadDisqualifyReason(ctx context.Context, id ids.UUID) err
 			}
 			return fmt.Errorf("delete lead disqualify reason: %w", err)
 		}
-		_, err = storekit.Audit(ctx, tx, "erase", "lead_disqualify_reason", id, map[string]any{"label": current.Label}, nil)
-		return err
+		auditID, err := storekit.Audit(ctx, tx, "erase", "lead_disqualify_reason", id, map[string]any{"label": current.Label}, nil)
+		if err != nil {
+			return err
+		}
+		return emitLeadDisqualifyReasonChanged(ctx, tx, auditID, id, current.Label,
+			crmcontracts.PublicEventLeadDisqualifyReasonChangedChangeDeleted)
 	})
+}
+
+// emitLeadDisqualifyReasonChanged publishes one reason-catalog change, mapping
+// onto the published payload for the reason its source sibling states.
+func emitLeadDisqualifyReasonChanged(
+	ctx context.Context,
+	tx pgx.Tx,
+	auditID, id ids.UUID,
+	label string,
+	change crmcontracts.PublicEventLeadDisqualifyReasonChangedChange,
+) error {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLeadDisqualifyReasonChanged{
+		ReasonId: openapi_types.UUID(id),
+		Change:   change,
+		Label:    label,
+	}); err != nil {
+		return fmt.Errorf("emit lead_disqualify_reason.changed: %w", err)
+	}
+	return nil
 }
