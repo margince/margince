@@ -14,6 +14,7 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -124,11 +125,26 @@ func personBriefInput(f personBriefFixture) (personbrief.Input, map[string]strin
 // foldFixtureMessages mints one id per labelled message and folds the timeline
 // the way the 360 hands it over — newest first, and a withheld row carrying its
 // date alone.
+//
+// The ORDER is imposed here rather than asked of the corpus author. Production
+// reads `view.Activities.Data`, which arrives newest-first, and the floor takes
+// `Recent[0]` as the newest message; a scenario written the way people write
+// conversations — oldest first — would otherwise hand the floor its oldest
+// message as the newest, quote the wrong one, and shift what
+// refuseUnpreparableBrief believes the floor already says. Nothing about the
+// fixture would look wrong, which is the kind of trap a corpus must not carry.
 func foldFixtureMessages(
 	in *personbrief.Input, f personBriefFixture, now time.Time,
 ) map[string]string {
 	byLabel := map[string]string{}
-	for _, message := range f.Messages {
+	// A copy, stable: the fixture's own order is the author's and is left
+	// alone, and two messages the same age keep the order they were written in
+	// rather than depending on the sort.
+	ordered := slices.Clone(f.Messages)
+	slices.SortStableFunc(ordered, func(a, b personBriefMessage) int {
+		return a.DaysAgo - b.DaysAgo
+	})
+	for _, message := range ordered {
 		id := ids.NewV7().String()
 		byLabel[message.Label] = id
 		at := now.AddDate(0, 0, -message.DaysAgo)

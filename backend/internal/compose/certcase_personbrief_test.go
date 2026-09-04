@@ -169,6 +169,80 @@ func TestThePersonBriefCaseCatchesAPhraseTheReaderWasNotShown(t *testing.T) {
 	}
 }
 
+// A corpus author writes a conversation the way a conversation happens — oldest
+// first — and the floor reads Recent[0] as the newest message. The harness
+// imposes production's own order so that authoring choice cannot quietly hand
+// the floor the wrong message and shift what the scenario is measuring.
+func TestThePersonBriefCaseOrdersFixtureMessagesNewestFirst(t *testing.T) {
+	t.Parallel()
+	// Written oldest first, which is the order the same two messages carry in
+	// person_brief_reads_what_was_said_01.yaml reversed.
+	fixture, err := json.Marshal(personBriefFixture{
+		Name: "Anna Weber",
+		Messages: []personBriefMessage{
+			{Label: "objection", DaysAgo: 6, Direction: "inbound", Subject: "Sub-processor list",
+				Preview: "We cannot go ahead while the analytics vendor is on it."},
+			{Label: "scheduling", DaysAgo: 1, Direction: "inbound", Subject: "Re: renewal call",
+				Preview: "Thursday at ten works for me."},
+		},
+	})
+	if err != nil {
+		t.Fatalf("encoding the fixture: %v", err)
+	}
+	expected, err := json.Marshal(personBriefExpectation{
+		CitesLabel: "objection", NamesToken: "analytics",
+	})
+	if err != nil {
+		t.Fatalf("encoding the expectation: %v", err)
+	}
+	prepared, err := personBriefCases{}.Prepare(fixture, expected)
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	// The prompt is where the assembled order is observable, and it is the same
+	// JSON production sends.
+	stub := &personBriefStub{answer: func(prompt string) string {
+		return sentenceCiting("They are waiting.", activityIDFor(t, prompt, "Sub-processor list"))
+	}}
+	trace, err := prepared.Run(t.Context(), stub)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	newest, oldest := subjectPositions(t, trace.Requests[0].Messages[0].Content)
+	if newest > oldest {
+		t.Errorf("the fixture reached the model oldest-first, so the floor would quote %q as the newest message",
+			"Sub-processor list")
+	}
+}
+
+// subjectPositions reports where each of the two subjects sits in the assembled
+// timeline the prompt carries.
+func subjectPositions(t *testing.T, prompt string) (newest, oldest int) {
+	t.Helper()
+	var shown struct {
+		Recent []struct {
+			Subject string `json:"subject"`
+		} `json:"recent"`
+	}
+	fenced := prompt[strings.Index(prompt, "{") : strings.LastIndex(prompt, "}")+1]
+	if err := json.Unmarshal([]byte(fenced), &shown); err != nil {
+		t.Fatalf("the prompt is not readable JSON: %v", err)
+	}
+	newest, oldest = -1, -1
+	for i, row := range shown.Recent {
+		switch row.Subject {
+		case "Re: renewal call":
+			newest = i
+		case "Sub-processor list":
+			oldest = i
+		}
+	}
+	if newest < 0 || oldest < 0 {
+		t.Fatalf("the prompt carries %d timeline row(s); both fixture messages should be there", len(shown.Recent))
+	}
+	return newest, oldest
+}
+
 // A scenario that cannot fail is one that reports PASS forever while measuring
 // nothing, and there is no failing assertion to notice it.
 func TestThePersonBriefCaseRefusesAScenarioThatCouldNotFail(t *testing.T) {
