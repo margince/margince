@@ -2195,6 +2195,29 @@ export async function mockApi(
         ]),
       );
     }
+    // The frame every Analytics answer is placed in. Without it the screen's
+    // own context query throws and the whole route renders the error boundary
+    // — which is not "analytics has a defect" but "this mock does not serve an
+    // endpoint the screen now reads", and it takes the shell down with it, so
+    // every sweep over #/analytics fails on a missing nav rail rather than on
+    // anything it was measuring.
+    //
+    // One allowed scope, and it is the default: this fixture's reader measures
+    // the workspace. A second would put a population picker on screen that no
+    // AC below is about.
+    if (path === "/analytics/context") {
+      return json({
+        default_scope: { kind: "workspace", label: "Everyone" },
+        allowed_scopes: [{ kind: "workspace", label: "Everyone" }],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-03-04T09:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path.startsWith("/reports/")) {
       return json({
         report: "deals-by-stage",
