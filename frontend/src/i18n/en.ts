@@ -8067,6 +8067,13 @@ export const en = {
   "worklist.manager.reassign": "Reassign",
   "worklist.manager.reassignTo": "Hand it to",
   "worklist.manager.reassignConfirm": "Hand it over",
+  "worklist.manager.takeOwnership": "Take this on",
+  "worklist.manager.takeOwnershipAsk":
+    "This moves the record out of their queue and into yours.",
+  "worklist.manager.takeOwnershipConfirm": "Take it on",
+  "worklist.manager.tookOwnership": "It is yours now.",
+  "worklist.manager.takeOwnershipFailed":
+    "That could not be handed over. It is still theirs.",
   "worklist.manager.reassigned": "Handed over.",
   "worklist.manager.reassignFailed": "That could not be handed over.",
   "worklist.manager.coach": "Leave a note",
@@ -8103,6 +8110,7 @@ export const en = {
   "worklist.exceptions.subject": "About",
   "worklist.exceptions.owner": "Who answers",
   "worklist.exceptions.basis": "Judged against",
+  "worklist.exceptions.intervene": "Intervention",
   "worklist.exceptions.nobody": "Nobody yet",
   "worklist.exceptions.ownerWithheld": "Not shown to you",
   "worklist.exceptions.truncated":

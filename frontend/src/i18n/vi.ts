@@ -7888,6 +7888,13 @@ export const vi = {
   "worklist.manager.reassign": "Giao lại",
   "worklist.manager.reassignTo": "Giao cho",
   "worklist.manager.reassignConfirm": "Giao lại",
+  "worklist.manager.takeOwnership": "Nhận việc này",
+  "worklist.manager.takeOwnershipAsk":
+    "Thao tác này chuyển bản ghi khỏi danh sách của họ sang của bạn.",
+  "worklist.manager.takeOwnershipConfirm": "Nhận",
+  "worklist.manager.tookOwnership": "Bây giờ là của bạn.",
+  "worklist.manager.takeOwnershipFailed":
+    "Không thể chuyển giao. Bản ghi vẫn thuộc về họ.",
   "worklist.manager.reassigned": "Đã giao lại.",
   "worklist.manager.reassignFailed": "Không thể giao lại việc này.",
   "worklist.manager.coach": "Để lại ghi chú",
@@ -7924,6 +7931,7 @@ export const vi = {
   "worklist.exceptions.subject": "Về",
   "worklist.exceptions.owner": "Ai chịu trách nhiệm",
   "worklist.exceptions.basis": "Căn cứ theo",
+  "worklist.exceptions.intervene": "Can thiệp",
   "worklist.exceptions.nobody": "Chưa có ai",
   "worklist.exceptions.ownerWithheld": "Không hiển thị với bạn",
   "worklist.exceptions.truncated":
