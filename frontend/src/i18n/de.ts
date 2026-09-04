@@ -1156,6 +1156,28 @@ export const de = {
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",
   "contracts.rowMenu": "Vertragsaktionen",
+  "contracts.renew.title": "Diese Vereinbarung verlängern",
+  "contracts.renew.hint":
+    "Erstellt eine neue Vereinbarung und markiert diese als abgelöst. Eigene Bedingungen — nichts wird übernommen außer der Vertragspartei.",
+  "contracts.renew.submit": "Verlängern",
+  "contracts.statusChange.title": "Status ändern",
+  "contracts.statusChange.label": "Neuer Status",
+  "contracts.statusChange.submit": "Status ändern",
+  "contracts.statusChange.errSame": "Bereits in diesem Status.",
+  "contracts.cancel.title": "Kündigung erfassen",
+  "contracts.cancel.hint":
+    "Der Kunde bleibt bis zum Wirksamkeitsdatum unter Vertrag — dies erfasst die Kündigung, keine Statusänderung.",
+  "contracts.cancel.noticeOn": "Kündigung erklärt am",
+  "contracts.cancel.effectiveOn": "Wirksam ab",
+  "contracts.cancel.effectiveOnHint":
+    "Nicht nach Vertragsende und nicht vor dem Kündigungsdatum.",
+  "contracts.cancel.submit": "Kündigung erfassen",
+  "contracts.cancel.menuLabel": "Kündigen",
+  "contracts.cancel.errIncomplete": "Beide Daten werden benötigt.",
+  "contracts.cancel.errOrder":
+    "Eine Kündigung kann nicht vor ihrer Erklärung wirksam werden.",
+  "contracts.cancel.errTermEnd":
+    "Eine Kündigung kann nicht nach Vertragsende wirksam werden.",
   "contracts.value.perYear": "pro Jahr",
   "contracts.value.total": "für die gesamte Laufzeit",
   "contracts.files": "Dateien",

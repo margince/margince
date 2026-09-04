@@ -41,6 +41,33 @@ const unboundedScope = "TRUE"
 // grants, so without the filter an entry would stay readable — and payable —
 // through a deal whose own read already answers 404.
 func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	return entriesOfVisibleDeals(ctx, alias, arg, liveAnchor)
+}
+
+// RetractableClause is VisibleClause with the anchor-liveness arm dropped, and
+// nothing else changed: the same row scope, so a caller still reaches only
+// entries on deals they may see.
+//
+// It exists because that liveness is load-bearing for serving and paying an
+// entry and wrong for taking one back. An accrual on a deal that has since been
+// archived is exactly the one somebody needs to void, and a read that refuses it
+// makes the write gate moot — the void answers not-found before it ever reaches
+// a probe. Only the void path composes this; the list and the single read do
+// not, so an archived deal's entries stay out of every surface that pays.
+func RetractableClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	return entriesOfVisibleDeals(ctx, alias, arg, anyAnchor)
+}
+
+// The two anchor arms the pair above differs by, so the difference is a value
+// rather than a second copy of the statement.
+const (
+	liveAnchor = "d.archived_at IS NULL AND "
+	anyAnchor  = ""
+)
+
+// entriesOfVisibleDeals renders both clauses above: the entries whose deal this
+// caller may see, narrowed by whatever the anchor arm requires of that deal.
+func entriesOfVisibleDeals(ctx context.Context, alias string, arg func(any) int, anchor string) (string, error) {
 	// The ROW scope below narrows which deals admit their entries; it does not
 	// ask whether this caller may read a deal at all. Both are needed: an entry
 	// names its deal and prices it, so a caller holding commission:read without
@@ -58,15 +85,15 @@ func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string
 	if qualified != "" {
 		qualified += "."
 	}
-	// An unbounded caller still gets the live-deal requirement: the archived
-	// anchor rule is about what the row means, not about who is asking.
+	// An unbounded caller still gets whatever the anchor arm requires: the
+	// archived-anchor rule is about what the row means, not about who is asking.
 	scope := dealScope
 	if scope == "" {
 		scope = unboundedScope
 	}
 	return storekit.SQLf(`EXISTS (
-		SELECT 1 FROM deal d WHERE d.id = %[1]sdeal_id AND d.archived_at IS NULL AND %[2]s)`,
-		qualified, scope), nil
+		SELECT 1 FROM deal d WHERE d.id = %[1]sdeal_id AND %[2]s%[3]s)`,
+		qualified, anchor, scope), nil
 }
 
 // WritableEntriesForDeal narrows a CHANGE to the entries of one deal the caller
@@ -74,12 +101,27 @@ func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string
 //
 // Separate from VisibleClause because a manual share widens VISIBILITY at
 // either access level: a caller holding only a `read` share of the deal passes
-// the read clause, and voiding their partner's money is not something a read
-// share should buy. The write path asks EnsureWritable instead, which is the
-// probe that distinguishes the two.
+// the read clause, and moving their partner's money is not something a read
+// share should buy. The write path asks a row probe instead, which is what
+// distinguishes the two.
+//
+// LIVE, because what this gates COMMITS money: approving an accrual and paying
+// it are claims on a deal, and an archived deal admits no new ones.
 func WritableEntriesForDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID) error {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return err
 	}
-	return auth.EnsureWritable(ctx, tx, "deal", deal.UUID)
+	return auth.EnsureWritableLive(ctx, tx, "deal", deal.UUID)
+}
+
+// RetractableEntriesForDeal is its twin for taking money BACK — a void and the
+// reversal a reopen sweeps through. Same authority, no liveness: a partner's
+// accrual on a deal that has since been archived is exactly the one somebody
+// needs to reverse, and auth.EnsureRetractable states why refusing it would
+// protect nobody.
+func RetractableEntriesForDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID) error {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.EnsureRetractable(ctx, tx, "deal", deal.UUID)
 }

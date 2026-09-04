@@ -32990,13 +32990,14 @@ type WorklistReadings struct {
 	// the sum rather than counted as nothing, so a partly priced day reports what it
 	// could price and says so through `revenue_currency`.
 	//
-	// It is a FLOOR on what is drifting, never a total, and two things put work
-	// outside it. A deal nobody could price is one. The other is that only the
-	// at-risk lane goes through the currency conversion, so a deal reaching the page
-	// from the overnight brief draws an amount on its own card and adds nothing
-	// here. Both are why `more_available` matters: read this figure as "at least
-	// this much", and read the `deals_at_risk` entry in `counts` for how many deals
-	// stand behind it.
+	// It is a FLOOR on what is drifting, never a total: a deal nobody could price
+	// is left out, whichever lane surfaced it. A deal reaching the page from both
+	// the overnight brief and the at-risk lane at once is counted only ONCE — it
+	// is one deal's value, not one value per card it happens to appear on. This is
+	// why `more_available` matters: read this figure as "at least this much". The
+	// `deals_at_risk` entry in `counts` is a CARD count, not a deal count — the same
+	// deal reaching the page from both lanes is two cards there, so it can exceed
+	// the number of distinct deals this figure priced.
 	RevenueAtRiskMinor *int64 `json:"revenue_at_risk_minor"`
 
 	// RevenueCurrency The currency `revenue_at_risk_minor` is stated in — the installation's base
