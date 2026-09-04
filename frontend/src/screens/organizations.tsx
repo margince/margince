@@ -2541,7 +2541,11 @@ function CompanyDealsAndTasksTabs({
   return (
     <>
       {tab === "deals" && (
-        <>
+        // The record's own stack, which is what every tab body with more than
+        // one panel takes: the work column draws its children with no interval
+        // of its own, so two panels rendered as bare siblings meet at the
+        // border and read as one card with a rule through it.
+        <div className="record-stack">
           {/* Beside the deals card, not inside it. The card's `extra` slot only
               renders when the deals section itself is readable, so a reader
               holding the contract grant and not the deal grant would never see
@@ -2563,7 +2567,7 @@ function CompanyDealsAndTasksTabs({
             failed={failed}
             readOnly={readOnly}
           />
-        </>
+        </div>
       )}
       {tab === "tasks" && (
         <CompanyTasksTab

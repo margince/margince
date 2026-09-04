@@ -549,6 +549,11 @@
    the reference cards. A full step, because these are the breaks a scanning
    reader uses to find their place; the groups inside keep the tighter 16px,
    so the page reads as a few bodies rather than one long stack of cards. */
+/* The work column carries NO interval of its own — `.arrive-stack` is the
+   arrival, not a rhythm — so a tab body that draws more than one panel wraps
+   them in this. Two panels rendered as bare siblings meet at the border, and a
+   seam with no air on either side reads as one card with a rule through it
+   rather than as two sections of the record. */
 .record-stack {
   display: flex;
   flex-direction: column;
