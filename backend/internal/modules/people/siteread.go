@@ -66,13 +66,13 @@ type SiteRead struct {
 	// Phase and PagesRead are the worker's live-progress hints while
 	// Status is 'running' (crawling | extracting + committed page count);
 	// the terminal report is the authority once Status ends.
-	Phase           *string
-	PagesRead       int
+	Phase     *string
+	PagesRead int
 	// LogoObjectKey addresses the mark the read resolved from the company's
 	// own site, parked on the dossier until a confirmation binds it to the
 	// record (RecordSiteReadLogo). Nil while none was resolved.
-	LogoObjectKey *string
-	CreatedAt     time.Time
+	LogoObjectKey   *string
+	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	StartedAt       *time.Time
 	FirstGroundedAt *time.Time
