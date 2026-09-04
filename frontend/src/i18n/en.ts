@@ -817,7 +817,7 @@ export const en = {
   "org.name": "Company",
   "org.description": "What they do",
   "org.website": "Website",
-  "org.contactCount": "Contacts",
+  "org.contactCount": "People",
   "org.openDealCount": "Open deals",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -6280,7 +6280,7 @@ export const en = {
   "users.createTeam": "Create team",
   "users.access.title": "What this user sees",
   "users.access.identity":
-    "Reads every contact, company, lead and deal in the organization.",
+    "Reads every person, company, lead and deal in the organization.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",
@@ -7686,7 +7686,7 @@ export const en = {
   "filters.subtitle":
     "Build a filter, watch what it selects, and save it as a view.",
   "filters.objectLabel": "Which records to filter",
-  "filters.tab.contacts": "Contacts",
+  "filters.tab.contacts": "People",
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",

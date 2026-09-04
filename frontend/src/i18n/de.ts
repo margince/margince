@@ -773,7 +773,7 @@ export const de = {
   "org.name": "Firma",
   "org.description": "Was sie tun",
   "org.website": "Website",
-  "org.contactCount": "Kontakte",
+  "org.contactCount": "Personen",
   "org.openDealCount": "Offene Deals",
   // Nur dort angeboten, wo es noch kein Partnerprogramm gibt: der Tab mit dem
   // Formular erscheint erst, wenn eines besteht — so entsteht das erste.
@@ -6219,7 +6219,7 @@ export const de = {
   "users.createTeam": "Team anlegen",
   "users.access.title": "Das sieht dieser Benutzer",
   "users.access.identity":
-    "Liest alle Kontakte, Firmen, Leads und Deals der Organisation.",
+    "Liest alle Personen, Firmen, Leads und Deals der Organisation.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -7619,7 +7619,7 @@ export const de = {
   "filters.subtitle":
     "Filter erstellen, Treffer beobachten und als Ansicht speichern.",
   "filters.objectLabel": "Welche Datens\u00e4tze gefiltert werden",
-  "filters.tab.contacts": "Kontakte",
+  "filters.tab.contacts": "Personen",
   "filters.tab.companies": "Firmen",
   "filters.tab.deals": "Gesch\u00e4fte",
   "filters.builderTitle": "Filter",
