@@ -17674,6 +17674,21 @@ type AttentionItem struct {
 	// three languages, so a duplicate pair sends its `kind` and `confidence`
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
+
+	// WithPerson Whose record a `meeting` row's brief is read on. Sent only for
+	// `source: meeting`, and only where the meeting names a person this caller may
+	// see.
+	//
+	// It is not the row's SUBJECT, which is the meeting itself — the row is about
+	// the appointment, and the brief happens to be reached through somebody's page:
+	// it opens as `?prep=<activity>` on a person's record rather than as a page of
+	// its own. Both ids are needed to name it, and the row already carried only one.
+	//
+	// ABSENT rather than empty for an internal meeting, and for one whose only
+	// attendees are people the caller may not read — the two are indistinguishable
+	// here on purpose, since both mean the same thing to a client: there is no page
+	// to read this brief on, so offer no way in rather than one that opens nothing.
+	WithPerson *openapi_types.UUID `json:"with_person,omitempty"`
 }
 
 // AttentionItemActions defines model for AttentionItem.Actions.
@@ -33734,6 +33749,20 @@ type WorklistItem struct {
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
+
+	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
+	// `AttentionItem.with_person`.
+	//
+	// Sent only for `source: meeting`, and only where the meeting names a person
+	// this caller may see. It is not the row's SUBJECT — the row is about the
+	// appointment — and it exists because the brief is not a page of its own: it
+	// opens as `?prep=<activity>` on a person's record, so the address needs both
+	// ids and the subject carries only one.
+	//
+	// A client MUST NOT draw a way into the brief without it. Absent means there is
+	// no page to read this brief on, which an internal meeting and a meeting whose
+	// attendees are all withheld both produce, and both mean the same thing here.
+	WithPerson *openapi_types.UUID `json:"with_person,omitempty"`
 }
 
 // WorklistItemActions defines model for WorklistItem.Actions.
