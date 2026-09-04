@@ -956,3 +956,6 @@ describe("every obligation is drawn once", () => {
     expect(seen.size).toBe(3);
   });
 });
+
+// Done, and the way back from it.
+//
