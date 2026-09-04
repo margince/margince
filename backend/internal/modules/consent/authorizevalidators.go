@@ -24,7 +24,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -42,6 +45,17 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		// lead holds none of those. A lead's own answers come from the legacy
 		// verdict path, which decideLead reaches without passing through here.
 		return unsupported, nil
+	}
+	// THE NAMED RECORD MUST BE ONE THE CALLER MAY SEE, before it is read.
+	//
+	// Evidence ids arrive on the request body and — unlike Links, which
+	// SendOrigin.resolve puts through auth.EnsureLinkTarget before the consent
+	// gate — nothing probes them upstream. Without this a seat with no finance
+	// or contract grant could name any invoice id in the installation and have
+	// the engine answer about it, which is both an unauthorized read and an
+	// existence oracle for records they may not open.
+	if err := refuseUnreadableEvidence(ctx, tx, req); err != nil {
+		return resolution{}, err
 	}
 	switch category {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
@@ -72,25 +86,21 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 // time in a different table would be asking them to restate what the CRM
 // already knows.
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w windows, category commsauthz.Category) (resolution, error) {
-	var found bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM activity a
-			  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1::uuid
-			 WHERE a.direction = 'inbound'
-			   AND a.archived_at IS NULL
-			   AND a.occurred_at >= $2
-		) OR EXISTS (
-			SELECT 1 FROM person_acquisition_evidence e
-			 WHERE e.person_id = $1::uuid
-			   -- The two kinds that ARE a request to be contacted. The others
-			   -- record where a contact came from, which is provenance and
-			   -- never permission: a purchased list and a public source say
-			   -- nothing about what this person asked for.
-			   AND e.kind IN ('requested_quote_or_meeting', 'in_person_permission')
-			   AND coalesce(e.occurred_at, e.captured_at) >= $2
-		)`, subject.ID, time.Now().Add(-w.reply)).Scan(&found); err != nil {
-		return resolution{}, wrapEvidenceRead("the follow-up this person asked for", err)
+	// AUTHORSHIP, through the shared reader. An earlier version asked
+	// activity_link — a FILING link with no author concept — which read "some
+	// inbound activity is filed under this person". A caller may post an
+	// activity with direction=inbound and a link to any contact they can read,
+	// so that let anybody manufacture their own evidence.
+	found, err := wroteToUsWithin(ctx, tx, subject, time.Now().Add(-w.reply))
+	if err != nil {
+		return resolution{}, err
+	}
+	if !found {
+		asked, err := askedToBeContacted(ctx, tx, subject, time.Now().Add(-w.reply))
+		if err != nil {
+			return resolution{}, err
+		}
+		found = asked
 	}
 	if !found {
 		return resolution{
@@ -120,6 +130,12 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 			SELECT 1 FROM finance_invoice i
 			  JOIN relationship r ON r.organization_id = i.organization_id
 			 WHERE i.id = $1::uuid
+			   -- A deleted or voided invoice is not a financial event anybody
+			   -- is owed a message about. The contract validator beside this
+			   -- already excludes its archived rows; this one did not, so a
+			   -- voided invoice authorized a send forever.
+			   AND i.archived_at IS NULL
+			   AND i.void_at IS NULL
 			   AND r.kind = 'employment'
 			   AND r.person_id = $2::uuid
 			   -- A DATE comparison, not a null check: somebody serving three
@@ -170,8 +186,20 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 		commsauthz.BasisPrecontractRequest, `
 		SELECT EXISTS (
 			SELECT 1 FROM offer o
+			  JOIN deal d ON d.id = o.deal_id
 			  JOIN relationship r ON r.deal_id = o.deal_id
 			 WHERE o.deal_id = $1::uuid
+			   AND o.archived_at IS NULL
+			   -- A quote that was REACHED the buyer. A draft was never sent, and
+			   -- a rejected, expired or superseded one is a conversation that
+			   -- ended — none of the three is a precontract request anybody is
+			   -- still waiting on.
+			   AND o.status IN ('sent', 'accepted')
+			   -- And the opportunity has to be live, the same test
+			   -- liveDealInLinks applies: a closed-lost deal from three years
+			   -- ago is not a quote in progress.
+			   AND d.status = 'open'
+			   AND d.archived_at IS NULL
 			   AND r.kind = 'deal_stakeholder'
 			   AND r.person_id = $2::uuid
 			   AND r.ended_at IS NULL
@@ -207,4 +235,40 @@ func validateOrgDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, cat
 		return unsupported, nil
 	}
 	return resolution{Category: category, Basis: basis, Supported: true}, nil
+}
+
+// refuseUnreadableEvidence checks the caller may see every record they named.
+//
+// Refused as NOT FOUND rather than forbidden, matching auth.EnsureVisible: a
+// caller who may not read a record must not learn it exists, and a 403 on a
+// guessed id answers exactly that question.
+//
+// Two shapes, because the tree gates these tables two ways. A deal is
+// row-scoped, so the probe is the same one the link path uses. An invoice and a
+// contract are governed by object grants — neither is in auth's row-scoped set
+// — so the check is the grant their own read handlers ask for.
+func refuseUnreadableEvidence(ctx context.Context, tx pgx.Tx, req commsauthz.Request) error {
+	if req.Evidence.DealID != (ids.UUID{}) {
+		if err := auth.EnsureLinkTarget(ctx, tx, "deal", req.Evidence.DealID); err != nil {
+			return err
+		}
+	}
+	for _, named := range []struct {
+		id     ids.UUID
+		object string
+	}{
+		{req.Evidence.InvoiceID, "finance"},
+		{req.Evidence.ContractID, "contract"},
+	} {
+		if named.id == (ids.UUID{}) {
+			continue
+		}
+		if err := auth.Require(ctx, named.object, principal.ActionRead); err != nil {
+			// The grant refusal becomes a not-found, so naming an id the
+			// caller may not read discloses nothing about whether it exists.
+			return fmt.Errorf("consent: this message names a record that is not available: %w",
+				apperrors.ErrNotFound)
+		}
+	}
+	return nil
 }

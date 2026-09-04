@@ -80,7 +80,37 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 		sourceActivity, validUntil, by); err != nil {
 		return fmt.Errorf("consent: record the ground this message relied on: %w", err)
 	}
+	// AUDITED, like every other consent-basis write beside it
+	// (RecordQualifyingEvent). The row is served to a data subject as "the
+	// ground we relied on", so a trail saying when it was written and who
+	// caused it is part of the same obligation. Against the PERSON, because
+	// that is the record a later reader asks about.
+	//
+	// Audit without an event: there is no public event type for a lawful basis,
+	// and inventing one would publish a legal conclusion about somebody to
+	// every subscriber. Ratified in the write-shape gate's auditOnlyWrites for
+	// that reason, the same way its sibling is.
+	subjectID, err := ids.Parse(subject.ID)
+	if err != nil {
+		return fmt.Errorf("consent: the subject a ground was recorded for is not an id: %w", err)
+	}
+	if _, err := storekit.AuditEvent(ctx, tx, "update", subjectAuditEntity(subject), subjectID, map[string]any{
+		"communication_basis": string(res.Basis),
+		"resolved_category":   string(res.Category),
+	}); err != nil {
+		return err
+	}
 	return nil
+}
+
+// subjectAuditEntity names the table an audit row hangs off. A lead and a
+// person are different records, and an entry pointing at the wrong one is a
+// trail nobody finds.
+func subjectAuditEntity(subject subjectRef) string {
+	if subject.Kind == entityLead {
+		return entityLead
+	}
+	return entityPerson
 }
 
 // basisLifetime is how long the ground a category rests on stays good.

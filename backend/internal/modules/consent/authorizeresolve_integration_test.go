@@ -116,7 +116,15 @@ func setupResolve(t *testing.T) *resolveEnv {
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+			// The grants a rep who sends about a document actually holds. The
+			// engine now probes a named invoice or contract for readability
+			// before it reads one, so a fixture without these is testing the
+			// refusal rather than the validator.
+			Objects: map[string]principal.ObjectGrant{
+				"person":   {Read: true},
+				"finance":  {Read: true},
+				"contract": {Read: true},
+			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -225,7 +233,7 @@ func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Dec
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = e.gate.decideOne(e.ctx, tx,
-			connector.Recipient{Email: e.address}, req)
+			connector.Recipient{Email: e.address}, req, commsauthz.PhaseStaging)
 		return err
 	}); err != nil {
 		t.Fatalf("deciding: %v", err)
@@ -630,7 +638,7 @@ func TestEachRecipientsStagedClaimIsRecoveredSeparately(t *testing.T) {
 	e.plantStagingDecision(t, delivery, "first@corp.test", commsauthz.CategoryInvoiceOrPayment)
 	e.plantStagingDecision(t, delivery, "second@corp.test", commsauthz.CategoryMarketing)
 
-	var claims map[string]commsauthz.Category
+	var claims map[string]stagedClaim
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		claims, err = stagedClaims(context.Background(), tx, delivery)
@@ -639,10 +647,10 @@ func TestEachRecipientsStagedClaimIsRecoveredSeparately(t *testing.T) {
 		t.Fatalf("reading the staged claims: %v", err)
 	}
 
-	if got := claims["first@corp.test"]; got != commsauthz.CategoryInvoiceOrPayment {
+	if got := claims["first@corp.test"].category; got != commsauthz.CategoryInvoiceOrPayment {
 		t.Errorf("first recipient's claim = %q, want invoice_or_payment", got)
 	}
-	if got := claims["second@corp.test"]; got != commsauthz.CategoryMarketing {
+	if got := claims["second@corp.test"].category; got != commsauthz.CategoryMarketing {
 		t.Errorf("second recipient's claim = %q, want marketing — not the other recipient's", got)
 	}
 }
@@ -655,7 +663,7 @@ func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
 	delivery := e.plantDelivery(t)
 	e.plantStagingDecision(t, delivery, "first@corp.test", commsauthz.CategoryInvoiceOrPayment)
 
-	var claims map[string]commsauthz.Category
+	var claims map[string]stagedClaim
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		claims, err = stagedClaims(context.Background(), tx, delivery)

@@ -16,11 +16,17 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // SCENARIO 1: a reply to an inbound older than the window.
@@ -403,4 +409,179 @@ func (e *resolveEnv) acquisition(t *testing.T, kind string, when time.Time) {
 		VALUES ($1, $2, $3, 'human:x')`, e.person, kind, when); err != nil {
 		t.Fatalf("planting the acquisition evidence: %v", err)
 	}
+}
+
+// A FILED ACTIVITY IS NOT SOMETHING THE PERSON WROTE.
+//
+// activity_link is a FILING link with no author concept, and a caller may post
+// an activity with direction=inbound and a link to any contact they can read
+// (CreateActivityRequest passes direction, occurred_at and links through). So a
+// follow-up arm that asked activity_link would let anybody manufacture their own
+// evidence for writing to anybody.
+//
+// Mutation: ask activity_link instead of activity_participant with role 'from'
+// — the shape this shipped as — and this passes with forged evidence.
+func TestAFiledActivityIsNotSomethingThePersonWrote(t *testing.T) {
+	e := setupResolve(t)
+	ctx := context.Background()
+	// An inbound activity FILED under the person, which they did not write:
+	// no participant row names them as the author.
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, direction, source, occurred_at, captured_by)
+		VALUES ($1, 'note', 'inbound', 'manual', now(), 'human:x')`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, id, e.person); err != nil {
+		t.Fatal(err)
+	}
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup})
+
+	if got.Supported {
+		t.Fatal("an activity merely filed under somebody supported writing to them")
+	}
+}
+
+// AN EVIDENCE ID THE CALLER MAY NOT READ IS REFUSED, and refused as NOT FOUND
+// so naming a guessed id discloses nothing about whether it exists.
+//
+// Evidence ids arrive on the request body and nothing upstream probes them —
+// unlike Links, which SendOrigin.resolve puts through auth.EnsureLinkTarget.
+// Without this a seat with no finance grant could name any invoice in the
+// installation and have the engine answer about it.
+//
+// Mutation: drop the refuseUnreadableEvidence call and this passes.
+func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
+	e := setupResolve(t)
+	org := e.organization(t)
+	invoice := e.invoice(t, org, false)
+	e.employ(t, org)
+	e.dropGrant(t, "finance")
+
+	var err error
+	if txErr := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, err = e.gate.resolveCategory(e.ctx, tx, commsauthz.Request{
+			Context:  commsauthz.CategoryInvoiceOrPayment,
+			Evidence: commsauthz.Evidence{InvoiceID: invoice},
+		}, subjectRef{Kind: entityPerson, ID: e.person.String(), Address: e.address})
+		return nil
+	}); txErr != nil {
+		t.Fatalf("running the resolution: %v", txErr)
+	}
+	if err == nil {
+		t.Fatal("a seat with no finance grant had the engine read their invoice")
+	}
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("refused with %v, want a not-found so existence stays hidden", err)
+	}
+}
+
+// A VOIDED INVOICE AUTHORIZES NOTHING. Neither does an archived one, an
+// archived offer, a draft one, or a quote on a deal that closed.
+//
+// Mutation: drop any one of the added clauses and its own row here fails.
+func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		spoil func(t *testing.T, e *resolveEnv, org, invoice ids.UUID)
+	}{
+		{"voided invoice", func(t *testing.T, e *resolveEnv, _, invoice ids.UUID) {
+			if _, err := e.owner.Exec(context.Background(),
+				`UPDATE finance_invoice SET status = 'void', void_at = now() WHERE id = $1`, invoice); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"archived invoice", func(t *testing.T, e *resolveEnv, _, invoice ids.UUID) {
+			if _, err := e.owner.Exec(context.Background(),
+				`UPDATE finance_invoice SET archived_at = now() WHERE id = $1`, invoice); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupResolve(t)
+			org := e.organization(t)
+			invoice := e.invoice(t, org, false)
+			e.employ(t, org)
+			tc.spoil(t, e, org, invoice)
+
+			got := e.resolve(t, commsauthz.Request{
+				Context:  commsauthz.CategoryInvoiceOrPayment,
+				Evidence: commsauthz.Evidence{InvoiceID: invoice},
+			})
+
+			if got.Supported {
+				t.Fatalf("a %s still authorized a message about it", tc.name)
+			}
+		})
+	}
+}
+
+// THE GROUND IS RECORDED ONCE, AT STAGING. The transmit phase re-checks the
+// evidence but writes nothing: communication_decision stores no anchor, so a
+// transmit-phase basis would be UNSCOPED and would match every other unscoped
+// row, collapsing the thread separation staging established.
+//
+// Mutation: drop the phase guard in decideResolved and this fails.
+func TestTheGroundIsRecordedAtStagingAndNotAgainAtTransmit(t *testing.T) {
+	e := setupResolve(t)
+	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
+	req := commsauthz.Request{AnchorActivityID: anchor}
+
+	e.decide(t, req)
+	// The same recipient decided again at TRANSMIT. The request carries a
+	// recent inbound to reach a SUPPORTED resolution — otherwise nothing would
+	// try to record a ground and the phase guard would go untested — but no
+	// anchor, which is what the transmit phase really has.
+	var out commsauthz.Decision
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = e.gate.decideOne(e.ctx, tx, connector.Recipient{Email: e.address},
+			commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup},
+			commsauthz.PhaseTransmit)
+		return err
+	}); err != nil {
+		t.Fatalf("deciding at transmit: %v", err)
+	}
+	if out.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("the transmit decision was %q, want a supported allow so the phase guard is what is under test", out.Verdict)
+	}
+
+	var rows int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Fatalf("staging and transmit wrote %d basis rows, want the staging one alone", rows)
+	}
+	var threadKey *string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT thread_key FROM communication_basis WHERE person_id = $1`, e.person).Scan(&threadKey); err != nil {
+		t.Fatal(err)
+	}
+	if threadKey == nil || *threadKey != "thread-1" {
+		t.Fatal("the recorded ground lost the conversation it was earned on")
+	}
+}
+
+// dropGrant removes one object grant from the env's principal, so a test can
+// ask what a seat WITHOUT it sees.
+func (e *resolveEnv) dropGrant(t *testing.T, object string) {
+	t.Helper()
+	actor, ok := principal.Actor(e.ctx)
+	if !ok {
+		t.Fatal("the env has no actor to narrow")
+	}
+	narrowed := map[string]principal.ObjectGrant{}
+	for name, grant := range actor.Permissions.Objects {
+		if name != object {
+			narrowed[name] = grant
+		}
+	}
+	actor.Permissions.Objects = narrowed
+	e.ctx = principal.WithActor(e.ctx, actor)
 }
