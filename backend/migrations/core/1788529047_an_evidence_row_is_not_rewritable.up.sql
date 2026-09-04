@@ -30,8 +30,23 @@
 -- been the alternative and is not needed: no legitimate writer touches a
 -- finding column, so there is nothing to define around.
 
-REVOKE UPDATE, DELETE ON TABLE communication_decision FROM margince_app;
-REVOKE UPDATE, DELETE ON TABLE consent_event FROM margince_app;
+-- UPDATE only. DELETE stays granted, and that is a limit of what a permission
+-- can express here rather than an oversight.
+--
+-- The admin data reset (compose/datasweep.go) clears the tenant by deleting
+-- from EVERY table the catalog lists, in one transaction, through the app role.
+-- It is a deliberate deployment opt-in (operations.allow_data_reset) that
+-- purges tenant data on purpose, and a table it could not clear would leave a
+-- reset that half-worked. Revoking DELETE broke it, and only the compose
+-- integration lane caught that.
+--
+-- So the obligation splits. The permission holds what a permission can hold: no
+-- statement anywhere rewrites a finding. The rest — no DOMAIN code deletes an
+-- evidence row — is held by TestNoDomainCodeDeletesAnEvidenceRow
+-- (backend/gates/evidencedeletes_test.go), which reads the tree and ratifies
+-- the sweep by name.
+REVOKE UPDATE ON TABLE communication_decision FROM margince_app;
+REVOKE UPDATE ON TABLE consent_event FROM margince_app;
 
 -- Exactly what erasure and the lead carry need, and nothing else.
 GRANT UPDATE (recipient_address, subject_id, subject_kind)

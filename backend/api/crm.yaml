@@ -5539,6 +5539,91 @@ paths:
               schema: { $ref: '#/components/schemas/ReplyRecipient' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /activities/{id}/send-email:preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: previewSendAuthorization
+      # HUMAN-ONLY, and that is a rollout position rather than a rule about
+      # previews. A preview writes nothing and grants nothing, so there is no
+      # governance reason an agent must not ask it — and an agent that could ask
+      # would propose better sends than one that only learns at staging. What
+      # stops it today is that the MCP send tools do not yet carry
+      # communication_context, so a tool asking this could not act on the answer.
+      # It becomes an x-mcp-tool read when they do.
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Would this reply be allowed, and on what ground — asked before a word is typed.
+      description: |
+        The message-level twin of `GET /people/{id}/consent/guard`. That one answers about a
+        PERSON per purpose; this one answers about the message a composer is about to write —
+        its recipients, the thread it answers and the records it names — because those are what
+        the engine actually reads.
+
+        **The same code answers twice.** It runs the per-recipient decision the staging gate
+        runs, from the same resolver, so a preview and the refusal that follows cannot disagree
+        about an unchanged record.
+
+        **It authorizes nothing and records nothing.** No decision rows, no lawful basis: a
+        basis is the ground a SEND relies on, and nothing has been sent. The send re-asks, and
+        state that changed in between refuses with the newer answer.
+
+        Answers only about recipients on records the caller may read, and never returns another
+        subject's consent history — the reason a message is refused, not the person's file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PreviewSendRequest' }
+      responses:
+        '200':
+          description: What the engine would decide, per recipient.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SendAuthorizationPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /emails:preview:
+    post:
+      tags: [Activities]
+      operationId: previewAccountSendAuthorization
+      # HUMAN-ONLY, and that is a rollout position rather than a rule about
+      # previews. A preview writes nothing and grants nothing, so there is no
+      # governance reason an agent must not ask it — and an agent that could ask
+      # would propose better sends than one that only learns at staging. What
+      # stops it today is that the MCP send tools do not yet carry
+      # communication_context, so a tool asking this could not act on the answer.
+      # It becomes an x-mcp-tool read when they do.
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Would this account-started message be allowed, and on what ground.
+      description: |
+        The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
+        with no anchor to derive a category from. It names its own `links`, exactly as the send
+        it previews does.
+
+        Everything the anchored preview says applies here: it runs the staging decision's own
+        code, authorizes nothing and records nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PreviewAccountSendRequest' }
+      responses:
+        '200':
+          description: What the engine would decide, per recipient.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SendAuthorizationPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/{id}/send-email:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -30173,6 +30258,152 @@ components:
       properties:
         scheduled_at: { type: string, format: date-time }
         scheduled_tz: { type: string }
+
+    CommunicationContext:
+      type: string
+      enum: [reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+             customer_service, account_notice, contract_notice, invoice_or_payment,
+             marketing]
+      description: |
+        What kind of communication a message is — the closed vocabulary the engine resolves
+        to. A caller CLAIMS one and the engine checks it against the record.
+
+        NAMED rather than repeated inline, because an inline enum that collides with another
+        schema's silently renames that one's generated constants. The send requests still
+        spell theirs inline with a nullable variant; this is the non-null shape the preview
+        and its answer share.
+
+        The five controller-only categories (`security_notice`, `privacy_notice`,
+        `record_confirmation`, `consent_confirmation`, `optout_confirmation`) are absent by
+        design: they serve the recipient, are reserved for the installation's own mail behind
+        a registered template, and a caller that could claim one could dress marketing as a
+        security warning.
+
+    PreviewSendRequest:
+      type: object
+      required: [to]
+      description: |
+        What a composer is about to write, in the shape the engine judges. It carries no
+        `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
+        draft to the server to be told whether it may exist would be the wrong way round.
+      properties:
+        to:
+          type: array
+          minItems: 1
+          items: { type: string, format: email }
+          description: |
+            The addressees. Cc and Bcc join this list at send, and both are asked about
+            exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
+            engine — so a composer previewing a message with copies passes them all here.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: |
+            What the sender says this message is. Checked against the record, never believed:
+            a claim the record does not bear out comes back as `review` naming what is
+            missing, rather than a quiet downgrade to something weaker that happens to be
+            allowed.
+        marketing_purpose:
+          type: string
+          description: Which marketing purpose, when the context is `marketing`.
+        consent_purpose:
+          type: string
+          description: |
+            The deprecated purpose key, when the composer still has one. It authorizes
+            nothing on its own, and it is accepted here for one reason: the SEND still
+            consults it where the record supports no category, so a preview that could not
+            pass it would answer a different question than the send and disagree with it.
+            Omit it and the answer is about the record alone.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          description: Records the caller names in support of this message. Checked, never trusted.
+
+    PreviewAccountSendRequest:
+      type: object
+      required: [to, links]
+      description: |
+        PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
+        records this new conversation would belong to.
+      properties:
+        to:
+          type: array
+          minItems: 1
+          items: { type: string, format: email }
+        links:
+          type: array
+          minItems: 1
+          maxItems: 25
+          items: { $ref: '#/components/schemas/ActivityLinkInput' }
+          description: |
+            The records the message would be filed under. They are read through the caller's
+            own row scope before the engine sees them, so naming a record the caller cannot
+            open is refused here rather than answered about.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+        marketing_purpose:
+          type: string
+        consent_purpose:
+          type: string
+          description: |
+            The deprecated purpose key, when the composer still has one. It authorizes
+            nothing on its own, and it is accepted here for one reason: the SEND still
+            consults it where the record supports no category, so a preview that could not
+            pass it would answer a different question than the send and disagree with it.
+            Omit it and the answer is about the record alone.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+
+    SendAuthorizationPreview:
+      type: object
+      required: [allowed, recipients]
+      description: |
+        What the engine would decide, per recipient, for a message nobody has sent.
+
+        ADVISORY AND NOT A PROMISE. The send re-asks at staging, and a withdrawal, an
+        objection or a bounce between the two refuses with the newer answer. Nothing here is
+        recorded: no decision rows, no lawful basis.
+      properties:
+        allowed:
+          type: boolean
+          description: |
+            Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
+            the message, because a rep who wrote to four people and reached three without
+            being told which has been lied to about what happened.
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/SendAuthorizationPreviewRecipient' }
+
+    SendAuthorizationPreviewRecipient:
+      type: object
+      required: [address, verdict, reason_code]
+      description: One recipient's answer. It describes the MESSAGE, never the person's file.
+      properties:
+        address: { type: string, format: email }
+        verdict:
+          type: string
+          enum: [allow, deny, review]
+          description: |
+            `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+            the record does not carry this message on its own and names what is missing.
+        reason_code:
+          type: string
+          description: |
+            Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
+            `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
+            the lawful next action it can offer; it is deliberately not a sentence about the
+            recipient.
+        resolved_category:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: What the engine worked out this message is, which may differ from the claim.
+        basis:
+          type: string
+          description: The lawful ground an allow would rest on.
+        mode:
+          type: string
+          enum: [observe, warn, enforce]
+          description: |
+            How much authority the engine's answer carries for this category on this
+            installation. Under `observe` a `deny` here still sends, and a composer that
+            showed it as a refusal would be describing a rollout position as a rule.
 
     SendAccountEmailRequest:
       type: object
