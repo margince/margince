@@ -2329,6 +2329,8 @@ export const de = {
   "deals.filterOwnerMe": "Meine Deals",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Alle Partner",
+  "deals.filterForecast": "Forecast",
+  "deals.filterForecastAll": "Jede Forecast-Kategorie",
   "deals.filterPartnerSourced": "Über Partner",
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterOrgAll": "Alle Firmen",

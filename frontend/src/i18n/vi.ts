@@ -2308,6 +2308,8 @@ export const vi = {
   "deals.filterOwnerMe": "Deal của tôi",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
+  "deals.filterForecast": "Dự báo",
+  "deals.filterForecastAll": "Mọi hạng mục dự báo",
   "deals.filterPartnerSourced": "Do đối tác mang về",
   "deals.filterStageAll": "Mọi giai đoạn",
   "deals.filterOrgAll": "Mọi công ty",

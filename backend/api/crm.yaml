@@ -3914,6 +3914,16 @@ paths:
         - name: status
           in: query
           schema: { type: string, enum: [open, won, lost] }
+        - name: forecast_category
+          in: query
+          schema: { type: string, enum: [commit, best_case, pipeline, omitted] }
+          description: |
+            One of the forecast's named buckets. The same `deal.forecast_category` the forecast
+            reads, so a tile's figure and the list behind it are one answer rather than two
+            derivations that can disagree.
+
+            A deal carrying no category is in no bucket and is returned by none of the four —
+            the buckets partition the CATEGORISED pipeline, not the pipeline.
         - name: stalled
           in: query
           schema: { type: boolean }
