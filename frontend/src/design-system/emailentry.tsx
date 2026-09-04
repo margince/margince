@@ -50,6 +50,41 @@ function statusTone(status: EmailAccessStatus): "warn" | undefined {
   return status === "withheld" ? "warn" : undefined;
 }
 
+// The row's direction line, as one whole sentence.
+//
+// Each direction has a form WITH a name and a form without, and the STRING
+// owns the sentence rather than being glued to a name in the browser. Gluing
+// is what produced "Received from" with nothing after it on every row whose
+// counterparty is absent — which is every withheld row, and every row the
+// summary carries no counterparty for. A preposition with no object reads as
+// an unfinished render rather than as a deliberate absence.
+//
+// It also does not translate: German and Vietnamese put the name somewhere a
+// `${direction} ${name}` template cannot.
+//
+// Direction is nullable, and an unknown one is not an outbound one — saying
+// "Sent to" about a message nobody recorded a direction for is a claim the row
+// does not have, so it answers null and the caller says "A message".
+function directionLine(
+  direction: EmailSummary["direction"],
+  counterparty: string | null | undefined,
+  t: ReturnType<typeof useT>,
+): string | null {
+  // TRIMMED, and blank counts as absent: the server sends "" for a
+  // counterparty it could not resolve, and "" is not null — so a bare presence
+  // check picked the named form and rendered "Received from " with a trailing
+  // space. That is the same dangling preposition this function exists to
+  // remove, one character longer.
+  const name = counterparty?.trim() ?? "";
+  if (direction === "inbound") {
+    return name ? t("email.receivedFrom", { who: name }) : t("email.received");
+  }
+  if (direction === "outbound") {
+    return name ? t("email.sentTo", { who: name }) : t("email.sent");
+  }
+  return null;
+}
+
 // What the row draws, decided in one place.
 //
 // Every field the withheld status governs is settled here TOGETHER, from the
@@ -59,16 +94,8 @@ function statusTone(status: EmailAccessStatus): "warn" | undefined {
 // print a counterparty's name beside a message the reader may not open.
 function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
   const withheld = summary.display_status === "withheld";
-  // Direction is nullable, and an unknown one is not an outbound one: saying
-  // "Sent to" about a message nobody recorded a direction for is a claim the
-  // row does not have.
-  const direction =
-    summary.direction === "inbound"
-      ? t("email.receivedFrom")
-      : summary.direction === "outbound"
-        ? t("email.sentTo")
-        : null;
   const counterparty = withheld ? null : summary.counterparty;
+  const direction = directionLine(summary.direction, counterparty, t);
   return {
     withheld,
     // A withheld row keeps its shape and loses its words. Drawing it as absent
@@ -78,10 +105,7 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
     subject: withheld
       ? t("email.withheldSubject")
       : summary.subject?.trim() || t("email.noSubject"),
-    who:
-      counterparty && direction
-        ? `${direction} ${counterparty}`
-        : (direction ?? t("email.aMessage")),
+    who: direction ?? t("email.aMessage"),
     preview: withheld ? null : summary.preview,
     move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
     attachments: withheld ? 0 : summary.attachment_count,
@@ -112,6 +136,11 @@ export function EmailEntry({
     <>
       <span className="emailentry__lead">
         <Mail aria-hidden="true" />
+        {/* The row's KIND, for a reader who cannot see the envelope. Every
+            other timeline kind announces itself through a Badge; this one
+            said "email" in an icon and nothing else, so a screen reader was
+            told what happened without being told what kind of thing it was. */}
+        <span className="sr-only">{t("timeline.kind.email")}</span>
         <span className="emailentry__who">{row.who}</span>
         <span className="emailentry__when">{timestamp}</span>
       </span>

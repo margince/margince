@@ -1221,17 +1221,21 @@ test.describe("§3.8: 390px mobile", () => {
   // page is not scrolled first: this asserts the arriving screen.
   // FAILS TODAY, and is left failing on purpose.
   //
-  // The queue's first seeded row is an approval that draws its whole decision
-  // inline — evidence, draft and three answers — so its primary verb ends at
-  // 864px on an 844px screen. Nothing above the queue is the cause any more:
-  // the readings moved below it and the header is down to 174px. The remaining
-  // 20px is the row's own height.
+  // MEASURED 2026-09-05, after the Review split (#4182) moved `approval` to
+  // destinationReview: "Übernehmen" ends at 921px on an 844px screen. The
+  // first seeded row is still an approval drawing its whole decision inline —
+  // evidence, draft and three answers — at 657px against its own 208px
+  // ceiling. Moving the SOURCE to another destination did not move the seeded
+  // row off this queue, so the drawer this note has always pointed at is still
+  // the fix and is still unbuilt.
   //
-  // The fix is to take long decisions out of the row and into the shared
-  // drawer, which is the Review work rather than this screen's. Marked `fixme`
-  // rather than relaxed to 900px: a ceiling tuned to today's failure is a test
-  // that agrees with the defect, and this one has to go GREEN when the drawer
-  // lands rather than have to be tightened by somebody who remembers to.
+  // An earlier version of this comment said 864px and blamed the last 20px on
+  // the row alone. Both numbers were stale; the row is the whole of it.
+  //
+  // Marked `fixme` rather than relaxed to 950px: a ceiling tuned to today's
+  // failure is a test that agrees with the defect, and this one has to go
+  // GREEN when the drawer lands rather than be tightened by somebody who
+  // remembers to.
   test.fixme("AC-WORKLIST-SDR-01: the first primary action is above the fold at 390x844", async ({
     page,
   }) => {
@@ -1302,8 +1306,23 @@ test.describe("§3.8: 390px mobile", () => {
   //
   // 208px for a row carrying an inline decision, 176px for one that does not:
   // the two ceilings the product's own row anatomy sets.
-  // FAILS TODAY for the same one cause, and left failing for the same reason.
-  // An approval row draws 601px against a 208px ceiling.
+  //
+  // FAILS TODAY on TWO rows, and they have different causes — which is why
+  // this note no longer says "the same one cause" as it once did.
+  //
+  // The approval draws 657px against 208px, and the drawer AC-01 waits for
+  // fixes that one.
+  //
+  // The second is an ORDINARY TASK at 284px against 176px, and no drawer
+  // touches it. Measured 2026-09-05, its parts are: rank 19, title 49 (it
+  // wraps to two lines at 390px), when/because/consequence 57, dispositions
+  // 44, verbs 44, and ~71 of gap and padding. Every one of those was added
+  // deliberately and the 44px floor is the touch target the row owes a thumb,
+  // so there is no slack to reclaim by tightening. A 176px row cannot hold
+  // this anatomy on a phone: something has to be dropped or folded, and which
+  // is a product decision rather than a fix. Left failing rather than
+  // relaxed, so the decision is made by someone rather than by a number
+  // quietly rising.
   test.fixme("AC-WORKLIST-SDR-07: no row outgrows its ceiling at 390x844", async ({
     page,
   }) => {

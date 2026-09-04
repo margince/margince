@@ -1568,8 +1568,10 @@ export const de = {
   "email.aMessage": "Eine Nachricht",
   "email.noSubject": "Kein Betreff",
   "email.withheldSubject": "Nicht für Sie freigegeben",
-  "email.receivedFrom": "Erhalten von",
-  "email.sentTo": "Gesendet an",
+  "email.receivedFrom": "Erhalten von {who}",
+  "email.received": "Erhalten",
+  "email.sentTo": "Gesendet an {who}",
+  "email.sent": "Gesendet",
   "email.access.team": "Team",
   "email.access.participants": "Beteiligte",
   "email.access.selected": "Ausgewählte",
@@ -8216,6 +8218,13 @@ export const de = {
   "worklist.verb.pinFailed": "Diese Zeile konnte nicht angeheftet werden.",
   "worklist.verb.unpinFailed": "Diese Zeile konnte nicht gelöst werden.",
   "worklist.verb.completed": "Aufgabe erledigt.",
+  "worklist.verb.dismiss": "Nicht jetzt",
+  "worklist.verb.dismissed": "Für einen Monat zurückgestellt.",
+  "worklist.verb.dismissUndo": "Rückgängig",
+  "worklist.verb.dismissFailed":
+    "Dieser Kontakt konnte nicht zurückgestellt werden.",
+  "worklist.verb.dismissUndoFailed":
+    "Dieser Kontakt konnte nicht zurückgeholt werden.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Diese Aufgabe konnte nicht wieder geöffnet werden.",

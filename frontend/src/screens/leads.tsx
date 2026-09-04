@@ -1012,10 +1012,15 @@ function LeadCall({
   lead,
   thread,
   overlay,
+  onOpenEmail,
 }: Readonly<{
   lead: Lead;
   thread: RecordTimeline;
   overlay: boolean;
+  // The page's one drawer, handed down to the thread. A conversation the
+  // thread names and cannot open is the one place in the product that does
+  // that.
+  onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1031,7 +1036,11 @@ function LeadCall({
           never runs and its page is empty — which the thread would draw as a
           lead nobody has written to. The call stands; under it the reader is
           told the history lives in the incumbent. */}
-      {overlay ? <OverlayUnavailable /> : <TimelineThread thread={thread} />}
+      {overlay ? (
+        <OverlayUnavailable />
+      ) : (
+        <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
+      )}
     </CallCard>
   );
 }
@@ -1409,6 +1418,7 @@ function LeadOverviewPane({
   onQualify,
   onDisqualify,
   onTouchLogged,
+  onOpenEmail,
 }: Readonly<{
   lead: Lead;
   id: string;
@@ -1425,6 +1435,8 @@ function LeadOverviewPane({
   // schedules must survive this pane unmounting when the reader flips to
   // History mid-climb.
   onTouchLogged: () => void;
+  // The page's one email drawer, for the thread under the call.
+  onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1467,7 +1479,12 @@ function LeadOverviewPane({
           under them the two sections a reader consults rather than reads —
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
-        <LeadCall lead={lead} thread={thread} overlay={overlay} />
+        <LeadCall
+          lead={lead}
+          thread={thread}
+          overlay={overlay}
+          onOpenEmail={onOpenEmail}
+        />
         <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
           {leadTodoRows(lead, t, locale)}
         </TodayPanel>
@@ -1930,6 +1947,7 @@ function LeadRecord({
           overlay={overlay}
           terminalReasonId={terminalReasonId}
           thread={threadQuery}
+          onOpenEmail={setOpenEmail}
           onQualify={() => setDialog("qualify")}
           onDisqualify={() => setDialog("disqualify")}
           onTouchLogged={refreshAfterTouch}
