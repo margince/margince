@@ -13513,6 +13513,7 @@ func (e WorklistReachSource) Valid() bool {
 // Defines values for WorklistReasonKind.
 const (
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
+	WorklistReasonKindAsksNothing        WorklistReasonKind = "asks_nothing"
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
@@ -13542,6 +13543,8 @@ const (
 func (e WorklistReasonKind) Valid() bool {
 	switch e {
 	case WorklistReasonKindApprovedAndFailed:
+		return true
+	case WorklistReasonKindAsksNothing:
 		return true
 	case WorklistReasonKindBelowMaterial:
 		return true

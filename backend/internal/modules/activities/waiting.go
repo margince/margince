@@ -60,6 +60,15 @@ type WaitingReply struct {
 	// exists". The looser reading would let somebody learn a deal is there by
 	// watching a row they can see decline to go stale.
 	HasOpenDeal bool
+	// OwedVerdict is the classifier's judgement of whether this message asks
+	// its recipient side for something: OwedVerdictAsksUs, OwedVerdictInformsUs
+	// or empty for unjudged.
+	//
+	// Empty is not a third verdict. An unjudged message ranks exactly as it did
+	// before the column existed, because a classifier that has not run, has run
+	// out of budget or answered below its confidence floor must not change what
+	// a rep sees.
+	OwedVerdict string
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -258,7 +267,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal, &row.Engaged, &row.OwnerID); err != nil {
+				&row.HasOpenDeal, &row.OwedVerdict, &row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
