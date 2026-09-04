@@ -5366,7 +5366,7 @@ export const de = {
   "book.subject": "Termin über Margince",
   "book.confirmed": "Gebucht.",
   "book.tellThemYourself":
-    "Margince verschickt die Einladung nicht — sagen Sie Ihrem Teilnehmer den Termin selbst.",
+    "Margince verschickt die Einladung nicht — informiere die teilnehmende Person bitte selbst über den Termin.",
   "book.failed": "Die Buchung ging nicht durch — es wurde nichts eingetragen.",
   "book.publicSub": "Slot auswählen — ganz ohne Konto",
   "book.name": "Dein Name",

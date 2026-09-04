@@ -33,23 +33,52 @@ package gates
 // list to maintain.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// bookingClaim is the sentence that says an invite goes out. Matched on the
-// verb rather than the whole phrase, so a reworded promise is still caught.
-const bookingClaim = "sends an invite"
+// noSendStatement is the contract's own sentence saying no invite goes out.
+//
+// The CLAIM side is held by requiring this rather than by hunting for promises,
+// because the promises are open-ended: "sends an invite" was the one that
+// shipped, and "emails an invitation" or "notifies the attendee" would have
+// passed a gate that only knew the first. A disclaimer that must be PRESENT is
+// closed — there is one sentence to keep, and deleting it is what fails.
+const noSendStatement = "No invite is sent"
 
-// attendeeField is the parsed request value. A file that names it and is not
-// the decoder is a file doing something with the addresses.
+// deliveryClaims are promises that contradict it. A short list and the weaker
+// half of this gate: it catches prose that says both things at once, which the
+// disclaimer requirement alone cannot. It does not pretend to be exhaustive,
+// which is why it is not the thing the gate rests on.
+var deliveryClaims = []string{
+	"sends an invite", "sends the invite", "sends an invitation",
+	"emails an invitation", "emails the attendee", "notifies the attendee",
+	"invites the attendee",
+}
+
+// attendeeField is the parsed request value.
 const attendeeField = "AttendeeEmails"
 
-// attendeeDecoder is where the addresses are parsed and held. Reading them here
-// is not a transport; it is the four lines the defect was about.
-const attendeeDecoder = "internal/modules/activities/scheduling.go"
+// attendeeDecoder is the function that legitimately names the addresses without
+// doing anything with them: the HTTP handler that decodes the request.
+//
+// That it is the only such function is not asserted here, it is what the test
+// below MEASURES — every other function naming the field is reported, so a
+// second decoder appearing is a finding rather than a silent exemption.
+//
+// Held by: TestTheBookingContractDoesNotPromiseAnInviteItCannotSend
+// (this file)
+//
+// A function rather than a file. `scheduling.go` holds both that decoder and
+// `Store.BookMeeting`, which is the most likely place a transport would be
+// wired — so excluding the file excluded the very function whose change this
+// gate exists to notice.
+const attendeeDecoder = "method Handlers.BookMeeting"
 
 func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
 	t.Parallel()
@@ -58,43 +87,66 @@ func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	claimsDelivery := strings.Contains(bookMeetingDescription(t, string(contract)), bookingClaim)
+	described := bookMeetingDescription(t, string(contract))
+	disclaims := strings.Contains(described, noSendStatement)
 	consumers := attendeeConsumers(t)
 
 	switch {
-	case claimsDelivery && len(consumers) == 0:
-		t.Errorf("crm.yaml says %q and nothing outside %s reads the attendee addresses — "+
-			"a booking accepts them, holds them for four lines and drops them, so the "+
-			"contract is describing a feature this build does not have. It is also the "+
-			"tool description an agent reads before telling somebody the invite went out.",
-			bookingClaim, attendeeDecoder)
-	case !claimsDelivery && len(consumers) > 0:
-		t.Errorf("%v now read the attendee addresses, so something is being done with "+
-			"them, but crm.yaml no longer says a booking sends an invite — it was removed "+
-			"because it was false. Say what the operation does now: an agent reading the "+
-			"old wording will tell a user no invite was sent.", consumers)
+	case len(consumers) == 0 && !disclaims:
+		t.Errorf("nothing outside %s does anything with the attendee addresses, and "+
+			"crm.yaml no longer says %q. A booking accepts them, holds them for four "+
+			"lines and drops them — so the contract is describing a feature this build "+
+			"does not have, and it is the tool description an agent reads before telling "+
+			"somebody the invite went out.", attendeeDecoder, noSendStatement)
+	case len(consumers) > 0 && disclaims:
+		t.Errorf("%v now do something with the attendee addresses, but crm.yaml still "+
+			"says %q. Whoever wired the transport has left the operation denying it, and "+
+			"an agent reading that will tell a user nothing was sent.",
+			consumers, noSendStatement)
+	}
+
+	// The weaker half: prose that promises delivery alongside the disclaimer.
+	if len(consumers) == 0 {
+		for _, claim := range deliveryClaims {
+			if strings.Contains(described, claim) {
+				t.Errorf("crm.yaml says %q while nothing reads the attendee addresses — "+
+					"the disclaimer and this promise cannot both be true, and a reader "+
+					"believes whichever they meet first", claim)
+			}
+		}
 	}
 }
 
-// attendeeConsumers answers the non-test files that do something with the
-// booking's attendee addresses, other than parsing them.
+// attendeeConsumers answers the FUNCTIONS that do something with the booking's
+// attendee addresses, other than the one that decodes them.
+//
+// Per function, not per file. The decoder and `Store.BookMeeting` live in one
+// file, and a transport would most naturally be wired in the second — so a
+// file-level exclusion blinded this gate to the exact change it exists to
+// notice.
 func attendeeConsumers(t *testing.T) []string {
 	t.Helper()
+	fset := token.NewFileSet()
 	var found []string
 	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 			return err
 		}
-		if filepath.ToSlash(path) == attendeeDecoder {
-			return nil
+		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
 		}
-		src, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
-		}
-		if strings.Contains(string(src), attendeeField) {
-			found = append(found, filepath.ToSlash(path))
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			name := funcLabel(fn)
+			if name == attendeeDecoder || !namesAttendees(fn.Body) {
+				continue
+			}
+			found = append(found, filepath.ToSlash(path)+":"+name)
 		}
 		return nil
 	})
@@ -104,10 +156,22 @@ func attendeeConsumers(t *testing.T) []string {
 	return found
 }
 
+// namesAttendees reports whether a body mentions the parsed attendee field.
+func namesAttendees(body *ast.BlockStmt) bool {
+	mentioned := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == attendeeField {
+			mentioned = true
+		}
+		return !mentioned
+	})
+	return mentioned
+}
+
 // bookMeetingDescription cuts the one operation's prose out of the contract.
 //
-// Scoped rather than searched whole, because the phrase is ordinary English and
-// the file is thirty thousand lines: an unrelated operation that legitimately
+// Scoped rather than searched whole, because these phrases are ordinary English
+// and the file is thirty thousand lines: an unrelated operation that legitimately
 // does send an invite would hold this gate red for ever, and — as the first
 // draft proved — so would a sentence explaining that booking does not.
 func bookMeetingDescription(t *testing.T, contract string) string {
