@@ -104,11 +104,11 @@ export const Folded: Story = {
     const user = userEvent.setup();
     await expect(canvasElement.querySelector("aside")).toBeNull();
     await user.click(
-      canvas.getByRole("button", { name: en["record.panel.show"] }),
+      canvas.getByRole("button", { name: en["record.panel.details"] }),
     );
     await expect(canvasElement.querySelector("aside")).not.toBeNull();
     await expect(
-      canvas.getByRole("button", { name: en["record.panel.hide"] }),
+      canvas.getByRole("button", { name: en["record.panel.details"] }),
     ).toHaveAttribute("aria-pressed", "true");
   },
 };

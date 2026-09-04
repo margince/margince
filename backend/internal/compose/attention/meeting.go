@@ -86,5 +86,19 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// as work due — unlike a proposal's expiry, which merely lapses.
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = reasons
-	return ranked{item: row, deadlineAt: deadlineOf(item.DueAt), occurredAt: occurredOf(item, asOf)}
+	return ranked{
+		item:       row,
+		deadlineAt: deadlineOf(item.DueAt),
+		occurredAt: occurredOf(item, asOf),
+		// NOT the reader's, and the obvious claim here is false. The lane lists
+		// meeting activities under the caller's ROW SCOPE — no owner or attendee
+		// predicate — so a team-scoped reader receives their team's meetings and
+		// naming the reader would make every one of them look like the reader's
+		// own appointment.
+		//
+		// The activity carries no owner this lane reads, so nobody is named. A
+		// meeting's real owner is its organiser, which arrives with the attendee
+		// read that does not exist yet.
+		ownerRef: unassigned(),
+	}
 }

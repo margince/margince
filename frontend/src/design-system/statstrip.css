@@ -12,6 +12,15 @@
   --stat-strip-tail: var(--stat-strip-tail-6, 1);
 }
 
+/* The wrapper the fold measures. A grid cannot query its own width, and every
+   ancestor of this row is wider than the room the readings have: the window
+   most of all, which is what the fold used to read. A 1440px window with the
+   nav open and the details pane open leaves the readings barely half of it,
+   and the row stayed six across a column that could carry three. */
+.stat-strip-wrap {
+  container-type: inline-size;
+}
+
 /* `1fr` rather than a min width: slots at a readable minimum wrap to two rows
    on a laptop, and a readings row that wraps stops being one comparison.
    Below the width where the full row is legible it folds to three and then to
@@ -21,15 +30,19 @@
    are the actual slot count capped by the component, which already knows how
    many it drew. `repeat()` takes only an integer, so the cap has to arrive
    pre-computed: a strip with fewer slots than a breakpoint's column count
-   folds to its own slot count instead of a template with an empty cell. */
-@media (max-width: 68rem) {
+   folds to its own slot count instead of a template with an empty cell.
+
+   The widths are the ROW's own, not the window's: 66rem is where six slots
+   stop clearing 200px each, which is the width a figure and its clause need
+   before the clause starts wrapping to three lines. */
+@container (max-width: 66rem) {
   .stat-strip {
     grid-template-columns: repeat(var(--stat-strip-slots-3, 3), 1fr);
     --stat-strip-tail: var(--stat-strip-tail-3, 1);
   }
 }
 
-@media (max-width: 40rem) {
+@container (max-width: 40rem) {
   .stat-strip {
     grid-template-columns: repeat(var(--stat-strip-slots-2, 2), 1fr);
     --stat-strip-tail: var(--stat-strip-tail-2, 1);
@@ -82,7 +95,7 @@
    sentence rather than a figure, so the figure sits where the sentence still
    holds one line in the narrowest slot. */
 .stat-strip .stat-card-value {
-  font-size: clamp(17px, 1.5vw, 22px);
+  font-size: clamp(var(--fs-h3), 1.5vw, var(--fs-h2));
   line-height: 1.2;
 }
 

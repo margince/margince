@@ -450,38 +450,6 @@ type PassthroughEntityResult struct {
 	ID ids.UUID `json:"id"`
 }
 
-// RunReportResult is the envelope every report answers with.
-//
-// Only the ROWS are dynamic. A report's columns come from the plan the caller
-// sent, so `rows` is declared as objects and nothing is said about their
-// members — but the envelope around them is the same for every report, and
-// declaring it is what lets a caller find the columns, read the row count, and
-// follow the drill-through handle without calling once to find out.
-//
-// The engine owns this shape; the members here are the ones its contract makes
-// required, so this is a guaranteed subset like the passthroughs and the
-// conformance suite holds it to a real report.
-type RunReportResult struct {
-	Report  string   `json:"report"`
-	Columns []string `json:"columns"`
-	// Plan is the validated query plan that ran — the caller's own request, back
-	// in the words the engine accepted, so a model can see what its arguments
-	// were understood to mean.
-	Plan json.RawMessage `json:"plan"`
-	// Rows are aggregate rows whose members ARE the columns above. Their shape
-	// is the plan's, which is why nothing is declared about them here.
-	Rows []json.RawMessage `json:"rows"`
-	// TotalRows and DerivationURL are absent on a report that carries neither;
-	// the handle is what "explain this number" follows.
-	TotalRows     *int    `json:"total_rows,omitempty"`
-	DerivationURL *string `json:"derivation_url,omitempty"`
-	GeneratedAt   *string `json:"generated_at,omitempty"`
-	// ExcludedByPermission is present when a field mask withheld rows from
-	// this run — the count of visible rows excluded from every aggregate, so
-	// a smaller total reads as governed rather than as missing data.
-	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
-}
-
 // marshalResult encodes a typed seam answer for the wire, carrying the seam's
 // own failure through untouched.
 //

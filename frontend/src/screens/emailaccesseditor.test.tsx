@@ -19,7 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { EmailAccessEditor } from "./emailaccesseditor";
+import { EmailAccessEditor, EmailAccessMarkers } from "./emailaccesseditor";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailAccess = components["schemas"]["EmailAccess"];
@@ -130,7 +130,10 @@ describe("what the drawer says about who reads a message", () => {
 
     // Who reads a message is a fact about it, like its date. A reader without
     // standing to widen it is still told what it is.
-    expect(screen.getByText("Participants")).toBeTruthy();
+    //
+    // The one-word badge is NOT here: it is a marker and lives in the header,
+    // beside the subject, so a reader meets it before the message rather than
+    // under it. This half is the sentence that explains it.
     expect(
       screen.getByText("Only the people on this message can read it."),
     ).toBeTruthy();
@@ -302,5 +305,87 @@ describe("what the drawer says about who reads a message", () => {
     // what this reader changes is their own contribution to the thread.
     expect(screen.getByRole("button", { name: /Share/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+  });
+});
+
+// The header's own half: what a reader meets BEFORE the message.
+describe("the access markers beside the subject", () => {
+  it("names the audience and the reason that decided it", () => {
+    draw(
+      <EmailAccessMarkers
+        access={
+          presentation({
+            display_status: "participants",
+            audience: "participants",
+            explanation: "explicitly_confidential",
+          }).access
+        }
+      />,
+    );
+
+    // Two facts, two badges: what the limit IS, and what decided it. The
+    // reason arrives as a token and is translated — a header reading
+    // `explicitly_confidential` would be worse than one reading nothing.
+    expect(screen.getByText("Participants")).toBeTruthy();
+    expect(screen.getByText("Marked confidential")).toBeTruthy();
+    expect(screen.queryByText("explicitly_confidential")).toBeNull();
+  });
+
+  it("draws no reason badge when the server gave none", () => {
+    draw(
+      <EmailAccessMarkers
+        access={
+          presentation({
+            display_status: "team",
+            audience: "workspace",
+          }).access
+        }
+      />,
+    );
+
+    // A message nothing held has nothing to explain, and an empty second badge
+    // beside the first would read as a fact the response failed to fill in.
+    expect(screen.getByText("Team")).toBeTruthy();
+    expect(screen.queryByText("Marked confidential")).toBeNull();
+  });
+
+  it("draws no reason badge for a token it cannot name", () => {
+    draw(
+      <EmailAccessMarkers
+        access={
+          presentation({
+            display_status: "participants",
+            audience: "participants",
+            explanation: "a_reason_shipped_after_this_build",
+          }).access
+        }
+      />,
+    );
+
+    // A reason the server learned to give and the map has not renders nothing
+    // rather than the raw token. The gate holds the two sides together; this
+    // is what the screen does while they are apart.
+    expect(screen.getByText("Participants")).toBeTruthy();
+    expect(screen.queryByText("a_reason_shipped_after_this_build")).toBeNull();
+  });
+
+  it("draws the withheld state as a caution, not as a quiet marker", () => {
+    const { container } = draw(
+      <EmailAccessMarkers
+        access={
+          presentation({
+            display_status: "withheld",
+            content_state: "withheld",
+          }).access
+        }
+      />,
+    );
+
+    // `withheld` is the one state about the READER rather than the message,
+    // and it is why the body below it is empty. Every other state is a message
+    // working as intended and takes the quiet form.
+    const badge = container.querySelector(".badge");
+    expect(badge?.className).toContain("badge-warn");
+    expect(badge?.className).not.toContain("badge-quiet");
   });
 });

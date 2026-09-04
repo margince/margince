@@ -431,7 +431,6 @@ internal/modules/deals/store.go#const block at const listCreatedAtColumn
 internal/modules/finance/audit.go#const block at const entityInvoice
 internal/modules/identity/authority.go#func RBACObjectGrantable
 internal/modules/identity/handlers_roster.go#func rosterUserMapping
-internal/modules/identity/installation.go#func slugify
 internal/modules/identity/installationsettings.go#method InstallationSettingsStore.UpdateInstallation
 internal/modules/identity/internal/policy/composable_test.go#func reset
 internal/modules/identity/nonproduction.go#method Handlers.WithDataResetAvailable

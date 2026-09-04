@@ -141,7 +141,6 @@ function MoveCard({
     />
   );
   const basisProps = {
-    basisLabel: t("co.strip.basis.reading"),
     basis,
   };
   if (!inbound && !outbound) {
@@ -287,7 +286,6 @@ function PromisesCard({
       }
       tone={overdue ? "danger" : undefined}
       dot={overdue}
-      basisLabel={t("co.strip.basis.reading")}
       basis={
         <FactList
           facts={ours.map((claim) => ({
@@ -355,9 +353,6 @@ function DealCard({
       }
       numeric={priced !== undefined}
       detail={priced ? [deal.title, ...parts].join(" · ") : parts.join(" · ")}
-      basisLabel={
-        view.commercial?.role ? t("co.strip.basis.reading") : undefined
-      }
       basis={
         view.commercial?.role ? (
           <FactList

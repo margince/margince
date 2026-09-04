@@ -74,14 +74,20 @@ const (
 	eventKeyDelta     = "delta"
 )
 
-// companyField is one field of the company form: its name, and — when the
-// field also lives on an organization column — the statement that writes it
-// there. The column is the canonical value; the profile-field row carries the
-// provenance either way, exactly as the read-back writes it. The column is
-// never a bind parameter: the statement is fixed here, only values bind.
+// companyField is one field of the company form: its name, and — when the field
+// also lives on an organization column — which column and what this form may do
+// to a value already there. The column is the canonical value; the profile-field
+// row carries the provenance either way, exactly as the read-back writes it.
+//
+// The statement itself is orgColumnWrites', not this table's: the form and the
+// two read-back arms write the same four columns, and the only thing that
+// honestly differs between them is the authority named here.
 type companyField struct {
-	name   string
-	update string
+	name string
+	// column is the organization column this field writes, or "" for a field
+	// the table has no column for — the profile-field row IS the record of it.
+	column    string
+	authority orgWriteAuthority
 }
 
 // companyFields is the form's vocabulary — the contract's ColdStartField enum,
@@ -89,33 +95,25 @@ type companyField struct {
 // reads the way the form does.
 var companyFields = []companyField{
 	{name: fieldDisplayName},
-	// offer_summary fills description (the header's one-line answer) only while
-	// the column is empty. The read-back's apply now REPLACES a description no
-	// person authored, and this arm deliberately does not follow it there: the
-	// form re-sends an unchanged summary on every save, so an overwrite here
-	// would clobber a newer description typed into the header's inline edit
-	// (UpdateOrganization), which stays the one editor of a standing value.
-	// The read-back has no such re-send, which is why the same column takes
-	// different rules from the two paths.
-	// The length guard mirrors organization_description_length (0203) so an
-	// overlong summary keeps its profile-field row without aborting the save.
-	{name: fieldOfferSummary, update: `UPDATE organization SET description = $2 WHERE id = $1
-		AND description IS NULL AND $2::text IS NOT NULL AND length($2) <= 500`},
-	{name: fieldLegalName, update: `UPDATE organization SET legal_name = $2 WHERE id = $1 AND legal_name IS DISTINCT FROM $2`},
-	// Nothing about geocoding here: a trigger marks the coordinates stale on
-	// any address column that changes (the organization_geocode migration), so
-	// this writer neither can nor has to remember. An earlier version did it in
-	// this statement — correct, and something the next address writer would not
-	// have known to copy.
-	{name: fieldRegisteredAddress, update: `UPDATE organization SET address_line1 = $2 WHERE id = $1 AND address_line1 IS DISTINCT FROM $2`},
+	// offer_summary FILLS description (the header's one-line answer) and does
+	// not replace it. The read-back's apply REPLACES a description no person
+	// authored, and this arm deliberately does not follow it there: the form
+	// re-sends an unchanged summary on every save, so an overwrite here would
+	// clobber a newer description typed into the header's inline edit
+	// (UpdateOrganization), which stays the one editor of a standing value. The
+	// read-back has no such re-send, which is why one column takes different
+	// authority from the two paths.
+	{name: fieldOfferSummary, column: columnDescription, authority: fillUnclaimed},
+	{name: fieldLegalName, column: columnLegalName, authority: replaceStanding},
+	{name: fieldRegisteredAddress, column: columnAddress, authority: replaceStanding},
 	{name: fieldRegisterVat},
-	// The rest of the §5 DDG block. No `update` arm: the organization table
-	// carries no column for a legal form, a register court or a register
-	// entry, so the profile-field row IS the record of them.
+	// The rest of the §5 DDG block. No column: the organization table carries
+	// none for a legal form, a register court or a register entry, so the
+	// profile-field row IS the record of them.
 	{name: fieldLegalForm},
 	{name: fieldRegisterCourt},
 	{name: fieldRegisterNumber},
-	{name: fieldIndustry, update: `UPDATE organization SET industry = $2 WHERE id = $1 AND industry IS DISTINCT FROM $2`},
+	{name: fieldIndustry, column: columnIndustry, authority: replaceStanding},
 	{name: fieldICP},
 	{name: fieldValueProposition},
 	{name: fieldUSP},

@@ -240,8 +240,16 @@ it("opens on the READER's month and steps from it, not from UTC's", async () => 
     );
 
     // Having stepped off the reader's month, Next is a real destination again.
-    expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
-      false,
+    //
+    // Waited for, not read straight after the assertion above: that one settles
+    // as soon as the August URL has been REQUESTED, and the card is pending
+    // until it comes back — a pending card draws a skeleton where the stepper
+    // goes, so the control genuinely is not there yet. The state under test is
+    // the settled month, so that is what this waits on.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
+        false,
+      ),
     );
   } finally {
     vi.useRealTimers();

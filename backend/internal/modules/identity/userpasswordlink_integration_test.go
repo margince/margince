@@ -303,14 +303,9 @@ func TestPasswordLinkHandlerRefusesTheAgentSeat(t *testing.T) {
 	e := setupRevocationEnv(t, "link-http-agent")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 
-	// The seat bootstrap wrote for this workspace, read back rather than
-	// inserted: a hand-made row would prove only that the handler refuses a row
-	// this test invented, which is not the row an admin can reach.
-	var seat ids.UserID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM app_user WHERE is_agent`).Scan(&seat); err != nil {
-		t.Fatalf("reading the workspace's agent seat: %v", err)
-	}
+	// The refusal has to hold for ANY agent identity: the roster lists them, and
+	// this endpoint serves every member action an admin can reach from there.
+	seat, _ := seedAgentSeatIn(t, e)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/users/"+seat.String()+"/password-link", nil)

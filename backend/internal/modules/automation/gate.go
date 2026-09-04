@@ -71,10 +71,11 @@ func checkOwnerPermission(ctx context.Context, resolver authz.Resolver, ev workf
 	// The seat ceiling is a HARD cap, checked ahead of RBAC — the identical
 	// order admit.go's Admit runs for an agent principal (A62/ADR-0047): a
 	// read seat may never mutate, whatever its role grants still say.
-	// Every action this engine ever plans mutates a record (the closed
-	// RC-11 catalog, catalog_actions.go: create_task, notify, assign_owner,
-	// add_to_list, set_field, draft_email, request_approval all write), so
-	// there is no read-only branch to spare here.
+	// Every action this engine ever plans mutates a record — the closed
+	// catalog is AllActionTypes() in catalog_actions.go, and every member of
+	// it writes — so there is no read-only branch to spare here. The set is
+	// named rather than spelled out: an enumeration copied into a comment is
+	// a second catalog, and this one had gone stale by an action already.
 	seat, err := resolver.SeatType(ctx, ev.WorkspaceID, ev.OwnerID)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {

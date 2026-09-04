@@ -9,7 +9,7 @@
 //
 // Tables owned: activity, activity_link, activity_audience_member,
 // activity_retention_evidence, transcript_read, attachment_extraction,
-// deal_document_hide, activity_sales_state, activity_reader_state.
+// deal_document_hide, activity_sales_state, activity_reader_state, worklist_pin.
 //
 // activity_sales_state and activity_reader_state hold what somebody decided
 // ABOUT a waiting message, and they are two tables because the decisions bind

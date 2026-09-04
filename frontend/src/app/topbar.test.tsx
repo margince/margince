@@ -158,7 +158,7 @@ describe("Top bar search (AC-shell-7)", () => {
 });
 
 // The sidebar's own control, moved out of the sidebar: a panel that can collapse
-// to 64px cannot hold the affordance that brings it back at a width where its
+// to 56px cannot hold the affordance that brings it back at a width where its
 // labels are gone.
 describe("Top bar sidebar toggle", () => {
   it("reports the sidebar expanded and calls the handler on click", async () => {

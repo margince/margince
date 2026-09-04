@@ -15,7 +15,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
-import { useNoticeRead } from "./taskactions";
+import { useNoticeRead, useTaskUpdate } from "./taskactions";
 import {
   comparisonText,
   consequenceText,
@@ -38,6 +38,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { syncHealthDetail } from "./worklist.synchealth";
 
 /**
  * A grouped row's named members, each ONCE.
@@ -99,6 +100,13 @@ export function WorklistRow({
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, new Date());
+  // The supporting line. Every source but one sends a sentence already;
+  // sync_health sends its condition's facts in its own vocabulary, so its line
+  // is written from `kind` and `detail` together.
+  const detail =
+    item.source === "sync_health"
+      ? syncHealthDetail(item.kind, item.detail, t)
+      : item.detail;
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
   const because = phrasedReasons(item)
@@ -158,20 +166,12 @@ export function WorklistRow({
             which rule failed and how. That is the decisive line on most of these
             rows, and a reader was reading around it.
 
-            `sync_health` is the one still held back, and deliberately. Its own
-            renderer says it carries "that condition's facts in the producer's
-            own vocabulary — the affected object classes, the failure class, or
-            the budget band — and the client writes the sentence": internal words
-            like `shed` or `deal, person`. The client never wrote that sentence,
-            so drawing the field raw would put the vocabulary on screen. Writing
-            it is real work on a lane this change is not about; until then the
-            row says its title, which is what it said before.
-
-            Held by: "draws no supporting line for a source that sends its own
-            vocabulary" (worklist.detail.test.tsx). */}
-        {item.detail && item.source !== "sync_health" && (
-          <p className="t-caption worklist-row-detail">{item.detail}</p>
-        )}
+            `sync_health` sends its facts in the producer's own vocabulary —
+            `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
+            from that pair rather than drawn, by worklist.synchealth.ts. A value
+            that build does not recognise draws nothing, which is what this row
+            did for every sync value before. */}
+        {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
         {sample.length > 0 && (
           // A group nobody can see into is a group nobody trusts, and an
           // untrusted group is worse than the pile it replaced.
@@ -227,6 +227,15 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   }
   if (item.source === "notice" && item.actions.includes("acknowledge")) {
     return <NoticeAcknowledge id={item.id} />;
+  }
+  // A task the server says can be finished, finished HERE. Not a batch: a group
+  // row stands for a pile and names no single activity to complete.
+  if (
+    item.source === "task" &&
+    !item.batch &&
+    item.actions.includes("complete")
+  ) {
+    return <TaskComplete id={item.id} />;
   }
   return null;
 }
@@ -388,6 +397,76 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
         }
       >
         {t("worklist.verb.acknowledge")}
+      </Button>
+    </div>
+  );
+}
+
+// Finishing a task where the reader is standing.
+//
+// The verb ACTS, it does not navigate. `VERB_DESTINATION` routes `complete` to
+// the task's own record, which is a reasonable address and the wrong promise: a
+// control labelled "Done" that opens a page leaves the task open, and the reader
+// believes otherwise. The mutation exists and every other surface already uses
+// it, so the row completes the task rather than renaming the promise down.
+function TaskComplete({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const update = useTaskUpdate([worklistKey]);
+  // mutateAsync, not mutate: it answers a promise this closure owns, so the
+  // rejection is still catchable after the row has gone. `mutate`'s per-call
+  // callbacks hang off the component's observer and are dropped with it.
+  const undo = (task: string) =>
+    update.mutateAsync({ id: task, body: { is_done: false } });
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        variant="primary"
+        pending={update.isPending}
+        onClick={() =>
+          update.mutate(
+            { id, body: { is_done: true } },
+            {
+              // Undoable from the confirmation, the way every disposition
+              // beside it is. Done REMOVES the row, so a misclick otherwise
+              // costs the reader the only address they had for the task —
+              // they must remember what it was to find it again.
+              onSuccess: () =>
+                toast.show(t("worklist.verb.completed"), {
+                  action: {
+                    label: t("worklist.verb.completeUndo"),
+                    // The toast dismisses itself the moment the action is
+                    // pressed, so a failed undo leaves the task done with the
+                    // only way back already off the screen.
+                    // The failure is reported from the mutationFn's own catch
+                    // rather than from a per-call onError, and that is the
+                    // whole reason this reads the way it does: the completion
+                    // REMOVES the row, so by the time the reader presses Undo
+                    // the component is unmounted and React Query has dropped
+                    // the observer that per-call callbacks hang off. A refused
+                    // undo then showed nothing at all — the reader pressed the
+                    // one control that could undo their misclick, it failed,
+                    // and the screen said nothing.
+                    onAct: () => {
+                      undo(id).catch(() =>
+                        toast.show(t("worklist.verb.completeUndoFailed"), {
+                          mark: false,
+                        }),
+                      );
+                    },
+                  },
+                }),
+              // A rejected PATCH otherwise leaves the button idle with nothing
+              // on screen to say so — the same rendering a click that did
+              // nothing would leave, and the reader has no reason to try again.
+              onError: () =>
+                toast.show(t("worklist.verb.completeFailed"), { mark: false }),
+            },
+          )
+        }
+      >
+        {t("tasks.complete")}
       </Button>
     </div>
   );

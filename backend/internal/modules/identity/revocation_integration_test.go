@@ -116,7 +116,10 @@ type revocationEnv struct {
 	// ws is the workspace this env bootstrapped, for the fixtures that build a
 	// second service of their own — a pinned handle is what they need, since
 	// the suite seeds one workspace per env and there is no singleton.
-	ws     ids.WorkspaceID
+	ws ids.WorkspaceID
+	// slug is the label this env's addresses derive from, so a fixture adding
+	// another row can name the installation it belongs to.
+	slug   string
 	admin  Identity
 	member Identity
 }
@@ -132,12 +135,11 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	t.Helper()
 	owner, pool := setupIdentityDB(t)
 	ctx := context.Background()
-	// The database persists across binary runs; key the slug (and the
-	// emails derived from it) uniquely so reruns never collide. The suffix is
-	// the id's RANDOM tail, not its leading bytes: those are a millisecond
-	// timestamp whose first 8 hex digits only change about once a minute, so
-	// two runs inside the same minute produced the same slug and the second
-	// one failed on the admin's unique email.
+	// Unique per ENV, not per run: setupIdentityDB resets the database once per
+	// test, but a test that bootstraps twice on purpose gets one reset and two
+	// installations, and the second would fail on the admin's unique email. The
+	// suffix is the id's RANDOM tail, not its leading bytes: those are a
+	// millisecond timestamp whose first 8 hex digits change about once a minute.
 	slug += "-" + ids.NewV7().String()[24:]
 
 	// createInstallation directly: the test database persists across
@@ -180,7 +182,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	}
 
 	return &revocationEnv{
-		owner: owner, svc: svc, ws: wsID, admin: admin,
+		owner: owner, svc: svc, ws: wsID, slug: slug, admin: admin,
 		member: Identity{UserID: memberID, WorkspaceID: admin.WorkspaceID, Email: memberEmail},
 	}
 }

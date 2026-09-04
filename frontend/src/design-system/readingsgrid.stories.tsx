@@ -41,7 +41,6 @@ export const FourReadings: Story = {
         value="€185,000"
         detail="Offer 1042 · sent"
         numeric
-        basisLabel="What this rests on"
         basis={basis}
       />
       <StatCard

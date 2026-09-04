@@ -269,8 +269,8 @@ The house shape for a reuse gate, learned from `agenttoolparity_test.go` and
 `tableownership_test.go`:
 
 - **Derive the expectation from the tree, never from a list in the test.** A
-  hardcoded coverage set is a list to maintain, and `CLAUDE.md` rule #2 says
-  prefer the fitness function. `draftrulesparity_test.go` hardcodes four
+  hardcoded coverage set is a list to maintain, and the rulebook's *Rules
+  learned from the review loop* #2 says prefer the fitness function. `draftrulesparity_test.go` hardcodes four
   drafting surfaces; a sweep found at least one more that carries none of the
   shared rules and is invisible to it. The exact count is not the point and I am
   deliberately not quoting one — the failure mode is that a hardcoded census

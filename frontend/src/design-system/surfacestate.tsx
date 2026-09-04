@@ -97,6 +97,24 @@ export function omitted<Section extends string>(
  * not have, and would be indistinguishable from a real answer one refactor
  * later.
  */
+/**
+ * What sectionState can actually answer.
+ *
+ * `failed`, `unsupported`, `stale` and `partial` are not derivable from a
+ * withholding view and a row count — each needs something only the caller
+ * knows: a retry, a mode limitation, an as-of, a remainder. So each is the
+ * caller's to pass, and this function never returns one.
+ *
+ * Stated in the signature rather than left to `SectionState`, because a return
+ * type wider than the behaviour pushes callers into handling states that cannot
+ * arrive, or — as it did here — into passing an over-wide value to a component
+ * that only supports part of it.
+ */
+export type DerivedSectionState = Extract<
+  SectionState,
+  "ready" | "empty" | "withheld" | "unavailable" | "loading"
+>;
+
 export function sectionState<Section extends string>(
   view: Withholding<Section> | undefined,
   section: Section,
@@ -109,7 +127,7 @@ export function sectionState<Section extends string>(
   // caller reading straight off a composite `view` MUST pass its query's own
   // `isPending`.
   loading = false,
-): SectionState {
+): DerivedSectionState {
   if (!view) {
     return loading ? "loading" : "unavailable";
   }

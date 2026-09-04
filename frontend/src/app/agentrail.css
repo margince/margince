@@ -69,25 +69,45 @@
 .arhit {
   position: relative;
   display: flex;
-  /* A CARD, the mock's shape: the ball at the rail's row scale beside two
-     lines of text, on the pane with the agent's own indigo washed over it and
-     its own edge. The ball led the rail at hero size once; it read as an
-     object placed on the sidebar rather than as one of its rows. */
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  /* No gap. The ball's own box already carries the air around it (the halo is
+     drawn inside it), so a gap here is a second helping of the same space and it
+     read as the caption belonging to something else. */
+  gap: 0;
   width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--aiMed);
+  /* Tight. The ball is the biggest thing in the chrome and it needs room to be
+     read, not room around the room: with no card to hold, air above and below it
+     is just rail nobody uses. */
+  padding: 0 0 var(--space-1);
+  border: 0;
+  /* Nothing draws this corner. It is here for the focus ring, which is the one
+     time this control does take an outline and needs it to follow the shape a
+     reader expects. */
   border-radius: var(--r-md);
-  background:
-    linear-gradient(160deg, var(--aiLight), transparent 80%), var(--pane);
+  /* The light the orb spills, and nothing under it. No panel fill, because a
+     fill needs an edge to end at, an edge needs a corner, and a corner around a
+     centred figure with a caption under it is a playing card. This wash fades
+     out before it reaches anything, so a reader sees the rail lit from within
+     rather than a lit object placed on the rail. */
+  background: radial-gradient(
+    88% 58% at 50% 32%,
+    color-mix(in srgb, var(--arTone) 6%, transparent),
+    transparent 62%
+  );
   color: var(--textPrimary);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
+/* Hover raises the light rather than filling a shape: a tinted rectangle
+   appearing under the pointer would put the card back for as long as the pointer
+   was there. */
 .arhit:hover {
-  border-color: var(--aiText);
+  background: radial-gradient(
+    88% 58% at 50% 32%,
+    color-mix(in srgb, var(--arTone) 12%, transparent),
+    transparent 62%
+  );
 }
 .arhit:focus-visible {
   outline: var(--focus-ring);
@@ -121,13 +141,14 @@
      different diameters. 172px is a step under the width the card could give
      it — the ball leads the rail without crowding the destinations above it —
      and 18vh is what a short window can, whichever is smaller. */
-  --coreSize: 34px;
-  --coreGlass: 30px;
+  --coreSize: min(172px, 18vh);
+  --coreGlass: calc(var(--coreSize) - 6px);
   /* The viewport cap is for a hero standing in a content column; the rail's own
      width and height are the only caps this one needs. */
   --coreCap: 100%;
-  /* Nearly all of the halo off: in a card this small the ball IS the signal,
-     and a bloom would cross the words beside it. */
+  /* Nearly all of the halo off. At this size the ball IS the signal: a bloom
+     wide enough to suit a hero reaches the destinations above it, and with no
+     card edge to contain it there is nothing to stop it either. */
   --coreHalo: 0.08;
   flex: none;
 }
@@ -137,15 +158,17 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1px; /* ds:ignore two lines of one reading, not spaced content */
   width: 100%;
   min-width: 0;
-  padding: 0;
+  /* The ball takes the rail's full width; the words take a margin back, or a
+     long line runs into the edge of the rail. */
+  padding: 0 var(--space-2);
 }
 .arline {
   max-width: 100%;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body);
   line-height: 1.3;
   color: var(--textPrimary);
   /* Two lines, always. Not "up to two": the line changes several times a second
@@ -161,7 +184,6 @@
   min-height: 2.6em;
   overflow: hidden;
   align-content: start;
-  font-weight: var(--fw-medium);
 }
 /* What the TOOL is fetching, under the agent's line and plainly subordinate to
    it. The two are different subjects and both can be true at once, so the
@@ -175,7 +197,7 @@
    move the figure under it every time a record has a long name. */
 .artool {
   max-width: 100%;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   line-height: 1.3;
   color: var(--textMeta);
   white-space: nowrap;
@@ -216,13 +238,13 @@
 .arspend {
   display: flex;
   align-items: baseline;
-  justify-content: flex-start;
+  justify-content: center;
   gap: var(--space-1);
   width: 100%;
   min-width: 0;
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
   white-space: nowrap;
 }
@@ -237,8 +259,8 @@
    column this narrow is three frames deep. */
 .arscope {
   max-width: 100%;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
   color: var(--textMeta);
   white-space: nowrap;
   overflow: hidden;
@@ -246,11 +268,10 @@
 }
 
 .archev {
-  /* At the card's right edge, in the row: the card is one line of things
-     beside each other, and the chevron is the last of them. */
-  position: static;
+  position: absolute;
   z-index: 1;
-  margin-left: auto;
+  bottom: var(--space-2);
+  right: var(--space-2);
   color: var(--textMeta);
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -268,7 +289,7 @@
   border-radius: var(--r-sm);
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
   text-align: center;
   text-decoration: none;
@@ -289,6 +310,41 @@
  * the same object. Last the words go and the orb reports alone, exactly as it
  * does on the collapsed rail.
  */
+@media (max-height: 860px) {
+  .arblock {
+    margin-top: var(--space-1);
+  }
+  .arhit {
+    gap: 2px; /* ds:ignore the last of the air between the ball and its line */
+    padding: 0 0 var(--space-1);
+  }
+}
+@media (max-height: 780px) {
+  .arhit {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    text-align: left;
+  }
+  .arorb {
+    --coreSize: 56px;
+    --coreGlass: 50px;
+  }
+  .arwords {
+    align-items: flex-start;
+    padding: 0;
+  }
+  .arspend {
+    justify-content: flex-start;
+  }
+  /* The corner belongs to a column. On a row the chevron sits in the flow, or
+     it lands on top of the words. */
+  .archev {
+    position: static;
+    margin-left: auto;
+  }
+}
 @media (max-height: 620px) {
   .arwords {
     display: none;
@@ -300,7 +356,7 @@
 
 /* ===== The collapsed rail =====
  *
- * At 64px the orb IS the report, and it keeps as much of that width as the rail
+ * At 56px the orb IS the report, and it keeps as much of that width as the rail
  * will give it. The words, the chevron and the CTA go; the count stays, because a
  * number waiting for a person is the one thing that still has to get through at
  * this width. The button keeps its accessible name, so nothing is lost to a
@@ -311,12 +367,12 @@
   display: none;
 }
 .rail.collapsed .arhit {
-  /* Collapsed, the card goes and the ball stands alone in the column, centred
-     on the rows' glyph axis like every other mark in the rail. */
-  justify-content: center;
   padding: var(--space-2) 0;
-  border-color: transparent;
-  background: none;
+}
+.rail.collapsed .arorb {
+  --coreSize: 56px;
+  --coreGlass: 48px;
+  --coreHalo: 0.5;
 }
 
 /* ===== The phone bar's centre cell =====
@@ -359,6 +415,7 @@
     padding: 0;
     border: 1px solid var(--borderSubtle);
     border-radius: 50%;
+    corner-shape: round;
     /* The bar's ground, not the page's: the well is the bar rising, and a
        different fill would read as an object resting on it. Solid where the bar
        is glass, because a translucent circle over the content it floats above
@@ -505,7 +562,7 @@
     rotate: 45deg;
     border-right: 1px solid var(--borderSubtle);
     border-bottom: 1px solid var(--borderSubtle);
-    border-bottom-right-radius: 3px; /* ds:ignore the notch's own tip */
+    border-bottom-right-radius: var(--r-xs); /* the notch's own tip */
     background: var(--bgElevated);
     z-index: 28;
     /* Opacity alone. The notch already carries `rotate` and `translate` of its
@@ -602,8 +659,8 @@
   align-items: center;
   gap: 5px; /* ds:ignore pip-to-word optics inside one label */
   font-family: var(--f-body);
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }
@@ -611,12 +668,13 @@
   width: 5px;
   height: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
 .arptitle {
   grid-column: 1;
-  font-size: 15.5px;
+  font-size: var(--fs-lead);
   font-weight: var(--fw-semibold);
   line-height: 1.25;
   color: var(--textPrimary);
@@ -632,7 +690,7 @@
   align-items: flex-end;
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   white-space: nowrap;
 }
 .arpmoney b {
@@ -641,7 +699,7 @@
 }
 .arpmoney i {
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 
@@ -655,14 +713,23 @@
 .arsect + .arsect {
   margin-top: var(--space-3);
 }
-.arsect h4 {
+/* The panel is a labelled region with no heading of its own, so its sections
+   sit directly under the PAGE's h1. They were h4, which skipped two levels and
+   made every route carrying an open panel fail `heading-order` — invisibly,
+   because axe tags that rule best-practice and the sweep ran WCAG tags only.
+
+   h2 rather than a new panel title: the head already restates what the panel is
+   about in `.arptitle`, and promoting a sentence that changes with the agent's
+   state to a heading would name the region differently every time it opened.
+   The size below is unchanged, so nothing moves on screen. */
+.arsect h2 {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
-  font-size: 9.5px;
+  font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }
@@ -670,9 +737,9 @@
 .arplain {
   margin-left: auto;
   color: var(--accentText);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: var(--fw-medium);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
   text-decoration: none;
 }
@@ -705,7 +772,7 @@
   gap: var(--space-2);
   min-width: 0;
   color: var(--textMeta);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.15;
   text-decoration: none;
   transition:
@@ -718,9 +785,9 @@
 }
 .artile b {
   flex: none;
-  font-size: 26px;
+  font-size: var(--fs-h1);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-display);
   line-height: 1;
   color: var(--accentText);
 }
@@ -731,7 +798,7 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-md);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 
@@ -756,7 +823,7 @@
   padding: var(--space-1) var(--space-2);
   margin: 0 calc(-1 * var(--space-2));
   border-radius: var(--r-sm);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
   transition: background 0.16s ease-out;
 }
@@ -774,6 +841,7 @@
   height: 5px;
   margin-top: 5px; /* ds:ignore drops the 5px mark onto the first line's baseline */
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--arTone);
   /* The mark is a light rather than a dot: the same tone the orb is running,
      with its own small halo, so the panel and the ball are visibly one
@@ -806,7 +874,7 @@
   display: inline-block;
   margin-top: var(--space-1);
   color: var(--accentText);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   text-decoration: none;
 }
 .armore:hover {
@@ -830,7 +898,7 @@
      the strip fits more of the sentence in the same rail. */
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
   white-space: nowrap;
 }
@@ -844,7 +912,7 @@
      `<i>` inside it. Same reason as `.armuted` above. */
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 /* The licence, and any other standing fault, as a pill in the strip: it is the
@@ -871,6 +939,7 @@
   width: 5px;
   height: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--success);
 }
 /* A source it cannot reach is `error`, so the dot beside it is the error tone.
@@ -878,63 +947,6 @@
    the same fact is. */
 .arconn.down i {
   background: var(--orbRed);
-}
-
-/* The state switcher: review scaffolding, and dressed as scaffolding. It sits
-   last, under its own rule, so nobody mistakes it for something the product
-   offers. */
-/* The run control. Dressed as the scaffolding it is: it sits with the chips,
-   under the review-only heading, and it does not borrow the accent a real action
-   would wear. */
-.arplay {
-  padding: 7px 13px; /* ds:ignore the chips' own pill optics, so the row is one scale */
-  border: 1px solid var(--arTone);
-  border-radius: var(--r-full);
-  background: color-mix(in srgb, var(--arTone) 10%, transparent);
-  color: var(--accentText);
-  /* A button's label is a word the reader presses, so it is set in the face
-     the rest of the product's buttons use. Nothing here is a figure or a
-     payload, which is the only thing mono is for. */
-  font-family: var(--f-body);
-  font-size: 12px;
-  cursor: pointer;
-}
-.arplay:hover {
-  background: color-mix(in srgb, var(--arTone) 18%, transparent);
-}
-.arplay[aria-pressed="true"] {
-  background: var(--arTone);
-  color: var(--textOnAccentControl);
-}
-.arplay:focus-visible {
-  outline: var(--focus-ring-forced);
-  box-shadow: var(--focus-glow);
-}
-
-.archips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-.archip {
-  padding: 7px 13px; /* ds:ignore pill optics on a 12px label */
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  background: transparent;
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: 12px;
-  cursor: pointer;
-}
-.archip[aria-pressed="true"] {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-}
-.archip:focus-visible {
-  outline: var(--focus-ring-forced);
-  box-shadow: var(--focus-glow);
 }
 
 /* ── Running now ─────────────────────────────────────────────────────────────
@@ -958,6 +970,6 @@
 }
 .arrunline {
   color: var(--textPrimary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.35;
 }

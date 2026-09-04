@@ -223,6 +223,7 @@ func seamTypeNames(files map[string]*ast.File) []string {
 func wiredSeamNames(t *testing.T, files map[string]*ast.File) map[string]bool {
 	t.Helper()
 	wired := map[string]bool{}
+	returns := constructorReturns(files)
 	found := false
 	for _, file := range files {
 		ast.Inspect(file, func(n ast.Node) bool {
@@ -237,12 +238,8 @@ func wiredSeamNames(t *testing.T, files map[string]*ast.File) map[string]bool {
 					return true
 				}
 				for _, arg := range call.Args {
-					lit, ok := arg.(*ast.CompositeLit)
-					if !ok {
-						continue
-					}
-					if name, ok := lit.Type.(*ast.Ident); ok {
-						wired[name.Name] = true
+					if name, ok := seamNameOf(arg, returns); ok {
+						wired[name] = true
 					}
 				}
 				return true
@@ -258,6 +255,59 @@ func wiredSeamNames(t *testing.T, files map[string]*ast.File) map[string]bool {
 			"or reshaped, and this scan would report every lane unwired")
 	}
 	return wired
+}
+
+// seamNameOf reads the seam type out of one argument of a binding call.
+//
+// Two spellings reach the feed, and the scan has to see both. A struct
+// literal (`attentionNotices{…}`) names its type outright. A constructor
+// (`newAttentionNames(db)`) names it in the function, and a seam assembled
+// by one used to be invisible here — the scan read PASS while the lane was
+// as unwired as any nil, which is the under-recognition this whole file
+// exists to prevent.
+func seamNameOf(arg ast.Expr, returns map[string]string) (string, bool) {
+	switch a := arg.(type) {
+	case *ast.CompositeLit:
+		if name, ok := a.Type.(*ast.Ident); ok {
+			return name.Name, true
+		}
+	case *ast.CallExpr:
+		fn, ok := a.Fun.(*ast.Ident)
+		if !ok {
+			return "", false
+		}
+		// What the constructor RETURNS, read off its declaration — not what
+		// its name suggests. A `newAttentionNames` retargeted to return some
+		// other Names implementation would still be named for the seam it no
+		// longer builds, and crediting it by name would report the lane wired
+		// to a seam production had stopped using.
+		seam, declared := returns[fn.Name]
+		return seam, declared
+	}
+	return "", false
+}
+
+// constructorReturns maps each package-local constructor to the bare type
+// name it returns, for the one-result functions a lane can be built by. A
+// constructor returning anything else — a pointer, an interface, two values —
+// is deliberately absent, so the scan credits nothing it cannot read plainly.
+func constructorReturns(files map[string]*ast.File) map[string]string {
+	out := map[string]string{}
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || fn.Type.Results == nil {
+				continue
+			}
+			if len(fn.Type.Results.List) != 1 {
+				continue
+			}
+			if name, ok := fn.Type.Results.List[0].Type.(*ast.Ident); ok {
+				out[fn.Name.Name] = name.Name
+			}
+		}
+	}
+	return out
 }
 
 // bindsALane recognises the two calls that hand a seam to the feed:

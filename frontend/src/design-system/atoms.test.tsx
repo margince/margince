@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -11,6 +11,7 @@ import {
   DataTable,
   Field,
   OverflowMenu,
+  PendingBody,
   Radio,
   SegmentedControl,
   Textarea,
@@ -478,4 +479,97 @@ it("draws no mark when no option carries one", () => {
     />,
   );
   expect(container.querySelectorAll(".segmented-mark").length).toBe(0);
+});
+
+// `delayMs` is for a surface that re-reads as a reader types. Without it a
+// placeholder flashes on every keystroke, reporting work that was already done
+// — and it flashes in the accessibility tree too, which is why the spoken line
+// is held back with the bars rather than announced early.
+//
+// Fake timers throughout: a real 300ms wait in a unit test is a test whose
+// verdict depends on how busy the machine is.
+it("holds a delayed pending body back until the wait is real", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container } = render(
+      <PendingBody label="Searching…" lines={1} delayMs={300} />,
+    );
+    expect(container.querySelector(".pending")).toBeNull();
+    expect(screen.queryByText("Searching…")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(299);
+    });
+    expect(container.querySelector(".pending")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+    expect(screen.getByText("Searching…")).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// Unset, the pending state is immediate — right for a surface a reader opened
+// rather than one they are typing into. The default must not become "delayed by
+// zero", which renders a frame late and makes every existing caller flicker.
+it("shows an undelayed pending body on the first render", () => {
+  const { container } = render(<PendingBody label="Loading…" lines={2} />);
+  expect(container.querySelector(".pending")).not.toBeNull();
+  expect(container.querySelectorAll(".pending-line").length).toBe(2);
+});
+
+// A caller that drops the delay wants the pending state now. The effect used to
+// return early on `undefined` without releasing `waited`, so a body that had
+// been delayed stayed hidden for the rest of its life — no timer left to fire
+// and nothing else to set it.
+it("shows a delayed pending body at once when the delay is dropped", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container, rerender } = render(
+      <PendingBody label="Searching…" lines={1} delayMs={300} />,
+    );
+    expect(container.querySelector(".pending")).toBeNull();
+
+    await act(async () => {
+      rerender(<PendingBody label="Searching…" lines={1} />);
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// The clock is per mount and per delay, not per read: a pending body that stays
+// mounted while one query replaces another keeps the time it has already
+// served. Re-arming there is what makes a bar blink out on every keystroke of a
+// slow search, which is the flicker the delay exists to prevent.
+it("keeps a delayed pending body up while it stays mounted", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container, rerender } = render(
+      <PendingBody label="Searching…" lines={1} delayMs={300} />,
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+
+    // A new read under the same bar — same delay, same mount. The label moves
+    // with it, and that is asserted rather than assumed: a body that ignored
+    // the rerender would keep the bar up too, and this case would pass while
+    // proving nothing about it.
+    await act(async () => {
+      rerender(
+        <PendingBody label="Still searching…" lines={1} delayMs={300} />,
+      );
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+    expect(screen.getByText("Still searching…")).toBeTruthy();
+    expect(screen.queryByText("Searching…")).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -11,13 +11,20 @@
 // person_profile_field, organization, organization_domain, relationship,
 // partner, lead, lead_score_history, lead_manual_signal, lead_source,
 // lead_disqualify_reason, person_signature_enrich_state,
-// person_provider_claim, provider_applied_field, organization_vat_check.
+// person_provider_claim, provider_applied_field, organization_vat_check,
+// relationship_nudge_dismissal.
 // organization_vat_check is what the EU register answered about a company's
 // VAT ID and the consultation number proving we asked: the profile field
 // holds the number a page stated, this holds whether it is real.
 // lead_source and lead_disqualify_reason are the two administered lead
 // vocabularies: the pick lists behind "where did this come from" and "why
 // was it dropped", and the weighting the scorer reads.
+// relationship_nudge_dismissal is a lapsed contact ONE reader has set aside,
+// and it is its own table rather than a disposition because a nudge is not an
+// activity: the decay lane's row carries the person's id, so there is no
+// activity to hang the judgement on. Never permanent — the moment it lifts is
+// NOT NULL, so a dismissal that silently deleted somebody from a rep's
+// attention has no value to store.
 // lead_score_history is the retained series behind "Explain This Score"
 // (ADR-0105): the breakdown is written with the score and read back
 // verbatim, because a decomposition recomputed at read time explains a

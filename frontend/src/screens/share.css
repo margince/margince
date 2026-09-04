@@ -25,7 +25,7 @@
   background: var(--bgCard);
   border-radius: var(--r-sm);
   padding: var(--space-3);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textSecondary);
   line-height: 1.5;
   margin-top: var(--space-4);
@@ -85,7 +85,7 @@
 }
 
 .share-subject-note {
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--textTertiary);
   font-family: var(--f-mono);
 }
@@ -109,11 +109,12 @@
 }
 
 .share-expiry-badge {
-  font-size: 10.5px;
+  font-size: var(--fs-eyebrow);
   font-family: var(--f-mono);
   color: var(--warn);
   background: var(--warnBg);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: 2px 8px; /* ds:ignore the Badge atom's own box, which it stands beside */
 }
 

@@ -8,7 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { DealFacts } from "./dealfacts";
+import { DealIdentityLine } from "../deals";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
 import { DealStrip } from "./dealstrip";
@@ -327,12 +327,13 @@ describe("the rail says who is on the deal", () => {
   });
 });
 
-// The three facts a rep checks first: value, stage, owner.
+// The facts a rep checks first, on the record's identity line: value, stage,
+// owner.
 //
-// Before this box the owner was on no part of the page — not the header, not
-// the rail, not the readings — so "whose deal is this" could only be answered
-// by opening Edit. The amount was rendered twice in one header instead.
-describe("the header says what it is worth, where it is, and whose it is", () => {
+// The owner was once on no part of the page — not the header, not the rail,
+// not the readings — so "whose deal is this" could only be answered by opening
+// Edit.
+describe("the identity line says what it is worth, where it is, and whose it is", () => {
   const stages = [
     { id: "st-1", name: "Qualified" },
     { id: "st-2", name: "Proposal" },
@@ -340,7 +341,7 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
 
   it("names the stage rather than showing its id", () => {
     show(
-      <DealFacts
+      <DealIdentityLine
         deal={{ amount_minor: 6_400_000, currency: "EUR", stage_id: "st-1" }}
         stages={stages}
         locale="en"
@@ -352,7 +353,7 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
 
   it("says a deal is unassigned rather than leaving the owner blank", () => {
     show(
-      <DealFacts
+      <DealIdentityLine
         deal={{ amount_minor: 1000, currency: "EUR", stage_id: "st-1" }}
         stages={stages}
         locale="en"
@@ -360,14 +361,15 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
     );
     // An empty value here reads as a rendering fault. "Unassigned" is a fact
     // about the deal, and it is the one a rep acts on.
-    expect(screen.getByText("Unassigned")).toBeInTheDocument();
+    expect(screen.getByText(/Unassigned/)).toBeInTheDocument();
   });
 
   it("names the field it may not show rather than printing a dash", () => {
     // A rep who may read the deal but not its amount. A bare "—" would read
-    // as "this deal has no value", which is a different and wrong statement.
+    // as "this deal has no value", which is a different and wrong statement —
+    // and a lone mask among joined facts says only that something is hidden.
     show(
-      <DealFacts
+      <DealIdentityLine
         deal={{
           amount_minor: null,
           currency: "EUR",
@@ -390,13 +392,13 @@ describe("the header says what it is worth, where it is, and whose it is", () =>
     // machine identifier where a reader expects "Qualified".
     const foreign = "01a02be8-c8d5-7d9b-bb60-a5e1ad68533c";
     show(
-      <DealFacts
+      <DealIdentityLine
         deal={{ amount_minor: 1000, currency: "EUR", stage_id: foreign }}
         stages={stages}
         locale="en"
       />,
     );
-    expect(screen.getByText("Stage")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText(foreign)).not.toBeInTheDocument();
   });
 });

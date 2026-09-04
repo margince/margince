@@ -7,12 +7,11 @@ import { useSyncExternalStore } from "react";
  * What the screen's own margins are saying about the agent, ONE signal, for the
  * whole document.
  *
- * The agent's state is derived in the rail (`agentrail.tsx`), from a stack that
- * only that component has: the reviewer's state switcher, the scripted run, and
- * the reads it makes itself. A second consumer cannot re-derive it, calling
- * those hooks again produces a SEPARATE run and a separate override, so the
- * panel's switcher would drive the rail and leave the margins dead. So the rail
- * publishes here and everything else reads.
+ * The agent's state is derived in the rail (`agentrail.tsx`), from the reads it
+ * makes itself. A second consumer cannot re-derive it: calling those hooks again
+ * makes a SEPARATE set of reads, so the margins would report on a second agent
+ * whose answers arrive at their own times. So the rail publishes here and
+ * everything else reads.
  *
  * The same shape as `window-focus.ts`, deliberately: one module-level state, a
  * publish that only notifies on a real change, and a subscribe that hands over

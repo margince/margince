@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // SendEmail runs the governed send: origin resolution → the guard sequence
@@ -69,6 +70,21 @@ type PreparedSend struct {
 	in        SendEmailInput
 	message   outboundMessage
 	messageID string
+	// origin is kept so a caller can ask what this send would be authorized as
+	// WITHOUT staging it. The whole request the engine judges is derivable from
+	// the prepared message plus the origin, and rebuilding it anywhere else
+	// would be a second reading of one message.
+	origin SendOrigin
+}
+
+// Authorization is the question the engine will be asked about this send.
+//
+// Exposed so a pre-flight can ask it early — a held draft waits in an approval
+// inbox, and a refusal only helps while the approver can still act on it. It is
+// the SAME value the delivery carries at staging, from the same builder, so an
+// early answer and the real one cannot be about different messages.
+func (p PreparedSend) Authorization() commsauthz.Request {
+	return p.message.authorization(p.origin)
 }
 
 // PrepareSend runs everything an outbound send needs BEFORE it writes: origin
@@ -153,6 +169,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	return PreparedSend{
 		in:        in,
 		messageID: messageID,
+		origin:    origin,
 		message: outboundMessage{
 			in:              in,
 			messageID:       messageID,

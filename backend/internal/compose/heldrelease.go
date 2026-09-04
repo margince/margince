@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -178,7 +179,7 @@ func releaseHeldDraft(
 // snapshots, and writes nothing.
 func heldDraftPrecheck(
 	store *activities.Store,
-	gate activities.ConsentGate,
+	gate *consent.Gate,
 	stager activities.DeliveryStager,
 ) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
@@ -197,8 +198,27 @@ func heldDraftPrecheck(
 			proposal = corrected
 		}
 		origin, in := sendFromHeldDraft(proposal)
-		_, err = store.PrepareSend(ctx, origin, in, gate, stager)
-		return err
+		prepared, err := store.PrepareSend(ctx, origin, in, gate, stager)
+		if err != nil {
+			return err
+		}
+		// AND THE ENGINE, which PrepareSend no longer asks.
+		//
+		// The consent answer moved into staging when the engine took over the
+		// send decision, and staging is inside the release's transaction — so
+		// without this the preparation succeeds, the approval commits, and the
+		// refusal arrives from a release that can no longer be taken back. The
+		// message becomes unreleasable and the approver has nothing to act on,
+		// which is the exact failure this precheck exists to prevent.
+		//
+		// Preview and the staging decision run the same decideOne over the same
+		// request, so an approver who is told this will send is not told
+		// something the release will contradict about an unchanged record.
+		set, err := gate.Preview(ctx, prepared.Authorization())
+		if err != nil {
+			return err
+		}
+		return refuseAtStaging(set)
 	}
 }
 

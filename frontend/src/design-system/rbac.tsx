@@ -43,7 +43,7 @@ export function FieldGuard({
         role="img"
         aria-label={t("rbac.masked")}
         className="t-mono"
-        style={{ userSelect: "none", letterSpacing: "0.2em" }}
+        style={{ userSelect: "none", letterSpacing: "0.2em" }} // ds:ignore the dot gap is the glyph, not a label's tracking
       >
         ••••
       </span>

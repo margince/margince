@@ -79,6 +79,12 @@ var quotedEnvVarName = regexp.MustCompile(`"(MARGINCE_[A-Z0-9_]+)"`)
 const (
 	configurationDoc = "../docs/reference/configuration.md"
 	envExample       = "../.env.example"
+	// deploymentDoc is where a var read only by the deploy surface is
+	// documented. This file's own opening already names it as their home —
+	// "a var read solely by deploy shell or a workflow is documented in
+	// docs/deployment.md by hand" — and obligation 5 below is what turns "by
+	// hand" into an obligation.
+	deploymentDoc = "../docs/deployment.md"
 )
 
 // deploySurfaceRoots are the non-Go trees that configure a deployment: the
@@ -253,6 +259,60 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 	if len(missing) > 0 {
 		t.Errorf("%d var(s) a deploy entrypoint refuses to boot without, absent from %s — add them, commented, with the value shape an operator must replace:\n\t%s",
 			len(missing), envExample, strings.Join(missing, "\n\t"))
+	}
+}
+
+// TestEntrypointRequiredVarsAreDocumented is obligation 1 for the half it never
+// reached: a var the deploy surface refuses to boot without has to be written
+// down somewhere an operator reads.
+//
+// Obligation 1 covers Go readers only, and says so. Obligations 2 and 3 already
+// count the deploy surface, but only in the permissive direction — they ask
+// whether a name a document mentions is still real, never whether a real name is
+// mentioned. So a var an entrypoint hard-requires was documented if the author
+// remembered, which is the failure mode obligation 1 removed for Go.
+// margince/margince#566.
+//
+// DEPLOYMENT.MD, not configuration.md, and the choice is this file's already
+// rather than one made here: configuration.md is "the table of record for the
+// binaries", and these vars are read by no binary. Splitting them across two
+// documents by which process happens to read them is how an operator ends up
+// checking the wrong one.
+//
+// It reuses obligation 4's `${VAR:?}` set rather than sweeping for mentions,
+// and inherits that set's stated limits exactly — the `:-default` form is not a
+// requirement, and an explicit guard or `set -u` is invisible to both. A var
+// with a fallback is not one an operator must supply; requiring those would
+// admit most of the deploy surface and leave the label meaningless.
+func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
+	t.Parallel()
+	documented := namesIn(t, deploymentDoc)
+
+	required := map[string]string{}
+	walkTextFiles(t, "../scripts/deploy", func(path, text string) {
+		for _, m := range entrypointRequired.FindAllStringSubmatch(text, -1) {
+			if _, seen := required[m[1]]; !seen {
+				required[m[1]] = path
+			}
+		}
+	})
+	// The same floor obligation 4 carries, for the same reason: a sweep that
+	// scans nothing passes exactly like a clean one, and this walk depends on
+	// the scripts staying where they are and on the `:?` form staying in use.
+	if len(required) == 0 {
+		t.Fatal("no `${MARGINCE_…:?}` requirement found under ../scripts/deploy — a sweep that scans nothing passes exactly like a clean one")
+	}
+
+	var missing []string
+	for _, name := range slices.Sorted(maps.Keys(required)) {
+		if !documented[name] {
+			missing = append(missing, name+" (required by "+required[name]+")")
+		}
+	}
+	if len(missing) > 0 {
+		t.Errorf("%d var(s) a deploy entrypoint refuses to boot without, absent from %s — an operator "+
+			"provisioning this deployment has no way to learn they must supply them:\n\t%s",
+			len(missing), deploymentDoc, strings.Join(missing, "\n\t"))
 	}
 }
 
