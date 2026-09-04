@@ -101,10 +101,10 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 	// which no status or header check can see — so the two responses are
 	// compared against each other rather than merely inspected.
 	serve := people.NewHandlers(e.DB()).WithBlobstore(blob)
-	badge := streamedMark(t, ctx, func(recorder *httptest.ResponseRecorder, request *http.Request) {
+	badge := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
 		serve.GetOrganizationLogoIcon(recorder, request, crmcontracts.Id(company.OrganizationID.UUID))
 	}, "/v1/organizations/"+company.OrganizationID.String()+"/logo/icon")
-	wordmark := streamedMark(t, ctx, func(recorder *httptest.ResponseRecorder, request *http.Request) {
+	wordmark := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
 		serve.GetOrganizationLogo(recorder, request, crmcontracts.Id(company.OrganizationID.UUID))
 	}, "/v1/organizations/"+company.OrganizationID.String()+"/logo")
 	if bytes.Equal(badge, wordmark) {
@@ -113,7 +113,7 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 }
 
 // streamedMark runs one logo endpoint and answers the bytes it wrote.
-func streamedMark(t *testing.T, ctx context.Context, serve func(*httptest.ResponseRecorder, *http.Request), path string) []byte {
+func streamedMark(ctx context.Context, t *testing.T, serve func(*httptest.ResponseRecorder, *http.Request), path string) []byte {
 	t.Helper()
 	recorder := httptest.NewRecorder()
 	serve(recorder, httptest.NewRequest(http.MethodGet, path, nil).WithContext(ctx))

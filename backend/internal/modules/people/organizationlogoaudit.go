@@ -56,7 +56,7 @@ func resolvedLogoWrite(previousOrigin *string, originURL, by string) logoWrite {
 func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, slot LogoSlot, write logoWrite) error {
 	// The SLOT names the field, so the two marks keep two histories: a reader
 	// looking at why the sidebar changed can see which picture moved.
-	field := slot.spec().field
+	field := slot.field()
 	if err := storekit.StampFields(ctx, tx, "organization", id.UUID, write.source, write.by,
 		[]storekit.FieldStamp{{Field: field, EvidenceRef: write.origin}}); err != nil {
 		return err

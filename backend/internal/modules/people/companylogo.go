@@ -65,8 +65,8 @@ func (s *Store) SetCompanyLogo(ctx context.Context, slot LogoSlot, objectKey, na
 		// it read: the column records where a mark came from, and it is the
 		// value the NEXT write's before-image carries. Written empty here, that
 		// before-image would say the record wore nothing.
-		if err := tx.QueryRow(ctx, slot.spec().write,
-			orgID, objectKey, named).Scan(&previous, &previousOrigin); err != nil {
+		if err := tx.QueryRow(ctx, orgLogoWrite,
+			orgID, objectKey, named, slot.wide()).Scan(&previous, &previousOrigin); err != nil {
 			return fmt.Errorf("set the company logo: %w", err)
 		}
 		supersededKey = supersededObject(previous, objectKey)
@@ -102,10 +102,10 @@ func (s *Store) ClearCompanyLogo(ctx context.Context, slot LogoSlot) (superseded
 			return err
 		}
 		var previous, previousOrigin *string
-		if err := tx.QueryRow(ctx, slot.spec().write,
+		if err := tx.QueryRow(ctx, orgLogoWrite,
 			// Clearing IS setting the mark to nothing: same statement, no key
 			// and no origin. orglogowrite.go says why that is one write and not two.
-			orgID, nil, nil).Scan(&previous, &previousOrigin); err != nil {
+			orgID, nil, nil, slot.wide()).Scan(&previous, &previousOrigin); err != nil {
 			return fmt.Errorf("clear the company logo: %w", err)
 		}
 		if previous == nil || *previous == "" {
