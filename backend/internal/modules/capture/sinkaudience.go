@@ -26,7 +26,31 @@ import (
 // links written rather than attempted, because this write is deterministic: a
 // row claimed to be linked and left unlinked would be workspace-readable with
 // nothing filing it anywhere.
-func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, decision counterpartyDecision, derivedLinks int) error {
+//
+// A connected calendar is a WORK calendar, so every event on it is workspace
+// business and none of them is this function's to hold. kind says what the
+// record is; the counterparty shape says whether anybody was judged.
+func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, kind string, decision counterpartyDecision, derivedLinks int) error {
+	if kind == meetingKind && counterpartyShapeOf(rec.Counterparty) == shapeNone {
+		// A meeting reached the no-record arm only because the calendar mapper
+		// leaves the counterparty unset — attendance is a list, so there is no
+		// single party to create a record for. That is a modelling fact about
+		// calendars, never a judgement about anybody, and holding a work meeting
+		// to its attendees while the invitation MAIL beside it stayed
+		// workspace-readable told the workspace two different things about one
+		// appointment.
+		//
+		// BOTH conditions, because the kind alone is not the calendar's to claim.
+		// A connector reports the kind per message (the batch connectors take a
+		// kind map) and the extension ingress copies it straight off a
+		// third-party unit's record with no vocabulary check in front of it
+		// (compose/extingress.go), so "meeting" is a word a caller chooses. The
+		// counterparty shape is the fact no caller forges by choosing a string:
+		// shapeNone means the record named nobody, which is the only reason this
+		// arm is reachable with no judgement behind it. A meeting-shaped record
+		// that DOES name somebody keeps the hold their judgement earned.
+		return nil
+	}
 	if decision.create || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}

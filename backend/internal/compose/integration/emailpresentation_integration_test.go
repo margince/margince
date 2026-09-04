@@ -14,8 +14,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -425,4 +428,163 @@ func requiredListFields(t *testing.T, schema string) []string {
 			"changed shape or this parse no longer reads it", schema)
 	}
 	return out
+}
+
+// A party the reader is entitled to see must be NAMED, whichever record knows
+// the name.
+//
+// Three sources, and the query read only one. A colleague copied on a message
+// is recorded as a SEAT — capture writes their user_id and, having resolved
+// them rather than read them off a header, no address at all — so the party
+// came back with an empty address and no name. The viewer rendered it as a bare
+// comma in the middle of the To line, and the reader who saw that gap was
+// usually the very person it stood for: a rep could not tell why the message
+// had reached them.
+func TestAColleaguesSeatIsNamedOnTheHeader(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Outstanding invoices", "Hallo,\n\nanbei.")
+
+	// The row capture writes when it resolves our own side: a user_id, and no
+	// address, exactly as insertParticipant's NULLIF($4, '') leaves it.
+	seatParticipant(t, e, id.UUID, e.Rep2)
+
+	got, err := e.Activities.GetEmailPresentation(author, id, nil)
+	if err != nil {
+		t.Fatalf("presentation: %v", err)
+	}
+	seat := partyForUser(got.To, e.Rep2)
+	if seat == nil {
+		t.Fatal("the colleague's seat is not on the To line at all")
+	}
+	// A name, from app_user. Without it the viewer prints an empty string
+	// between two commas and the reader learns nothing.
+	if seat.DisplayName == nil || strings.TrimSpace(*seat.DisplayName) == "" {
+		t.Error("a colleague's seat reaches the header with no name; app_user knows it")
+	}
+	// And an address, so a reader can see WHICH mailbox of theirs it went to —
+	// which is the fact that answers "why did I get this?".
+	if strings.TrimSpace(seat.Address) == "" {
+		t.Error("a colleague's seat reaches the header with no address; app_user knows it")
+	}
+}
+
+// A colleague who has since LEFT was still on the message. Who it went to in
+// August is a fact about August, and dropping their name because they resigned
+// leaves exactly the gap this join was added to close.
+func TestADepartedColleagueStaysNamedOnAnOldMessage(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Outstanding invoices", "Hallo,\n\nanbei.")
+	seatParticipant(t, e, id.UUID, e.Rep2)
+
+	deactivateSeat(t, e, e.Rep2)
+
+	got, err := e.Activities.GetEmailPresentation(author, id, nil)
+	if err != nil {
+		t.Fatalf("presentation: %v", err)
+	}
+	seat := partyForUser(got.To, e.Rep2)
+	if seat == nil {
+		t.Fatal("a departed colleague fell off the To line entirely")
+	}
+	if seat.DisplayName == nil || strings.TrimSpace(*seat.DisplayName) == "" {
+		t.Error("a departed colleague lost their name on a message they were on")
+	}
+}
+
+// deactivateSeat is what happens when somebody leaves: status changes and
+// archived_at stays null, which is the pair livemember_test exists to keep
+// callers honest about.
+func deactivateSeat(t *testing.T, e *Env, user ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, user)
+		return err
+	}); err != nil {
+		t.Fatalf("deactivating a seat: %v", err)
+	}
+}
+
+// The weakest of the three sources, and the one nothing read: the name the
+// SENDER typed into the header. Capture keeps it in activity_participant.
+// display_name for a party that resolves to no record of ours, and printing a
+// bare address at a reader when we were told a name is a worse answer.
+func TestAnUnknownSenderIsNamedAsTheyWroteThemselves(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Outstanding invoices", "Hallo,\n\nanbei.")
+
+	// Nobody we hold: no contact, no seat — only what the header said.
+	headerParticipant(t, e, id.UUID, "cc", "aussen@stehend.example", "Andreas Eschbach")
+
+	got, err := e.Activities.GetEmailPresentation(author, id, nil)
+	if err != nil {
+		t.Fatalf("presentation: %v", err)
+	}
+	var found *crmcontracts.EmailParty
+	for i, party := range got.Cc {
+		if party.Address == "aussen@stehend.example" {
+			found = &got.Cc[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("the copied address is not on the Cc line")
+	}
+	if found.DisplayName == nil || *found.DisplayName != "Andreas Eschbach" {
+		t.Errorf("display name = %v, want the name the sender wrote", found.DisplayName)
+	}
+}
+
+// partyForUser finds the party standing for one seat.
+func partyForUser(parties []crmcontracts.EmailParty, user ids.UUID) *crmcontracts.EmailParty {
+	for i, party := range parties {
+		if party.UserId != nil && ids.UUID(*party.UserId) == user {
+			return &parties[i]
+		}
+	}
+	return nil
+}
+
+// seatParticipant records our own side the way capture does when the provider
+// attests it: the seat's id, and NO address.
+//
+// The statement is capture.insertParticipant's, column for column, because the
+// defect under test IS that shape — a row identified only by user_id. That
+// writer is capture-internal and takes a connector message this test has no
+// business assembling, so the shape is reproduced rather than the call; a
+// fixture that wrote an address here would describe a row capture never
+// produces and prove nothing about the one it does.
+func seatParticipant(t *testing.T, e *Env, activityID ids.UUID, user ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, user_id, person_id, address, role)
+			SELECT $1, $2, NULL, NULLIF('', ''), 'to'
+			 WHERE EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
+			ON CONFLICT DO NOTHING`, activityID, user)
+		return err
+	}); err != nil {
+		t.Fatalf("stamping our own side: %v", err)
+	}
+}
+
+// headerParticipant records a party read off the header and resolved to nothing
+// we hold — an address and the name the sender typed, which is what
+// capture.StampFurtherParticipants leaves when no seat and no contact match.
+func headerParticipant(t *testing.T, e *Env, activityID ids.UUID, role, address, name string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, user_id, person_id, address, role, display_name)
+			VALUES ($1, NULL, NULL, $2, $3, $4)
+			ON CONFLICT DO NOTHING`, activityID, address, role, name)
+		return err
+	}); err != nil {
+		t.Fatalf("stamping a header participant: %v", err)
+	}
 }

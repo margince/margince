@@ -342,10 +342,18 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			err = r.joinJobsToContract(served(declared), r.jobs)
 		}
-	case "Jurisdictions":
-		// Recognized and deliberately skipped: a jurisdiction pack is
-		// passive policy the core consults, never a governed operation an
-		// operator resolves, so it contributes no manifest entry.
+	case "Jurisdictions", "Messaging":
+		// Recognized and deliberately skipped: both are passive policy the
+		// core consults — a jurisdiction pack's retention floors and a rule
+		// set's messaging obligations — never a governed operation an operator
+		// resolves, so neither contributes a manifest entry.
+		//
+		// SKIPPED HERE IS NOT UNCHECKED. Messaging rules decide whether a
+		// message may go out, so what holds them is nearer the use and sees
+		// the VALUES a static reader cannot: messaging.Rules.Validate refuses
+		// a malformed set, compose's preflightMessagingRules refuses a
+		// duplicate jurisdiction before any is registered, and the registry's
+		// own Register panics on either as the wiring-defect backstop.
 	case "FailureClasses":
 		// Recognized and deliberately skipped, for the reason a jurisdiction
 		// pack is: a failure vocabulary is inert operator-facing text — the

@@ -29,10 +29,10 @@ package extension
 //   - saying nothing is what shipped.
 //
 // WHAT CROSSES HERE IS A REQUEST TO SCHEDULE, never an authority to ingest. The
-// tick it asks for runs exactly as the clock's does: unattended, under the
-// workspace's own agent seat, with the same grants. So ErrAttendedIngest is
-// untouched — a unit still cannot ingest on a caller's authority, it can only
-// ask for the unattended run sooner.
+// tick it asks for runs exactly as the clock's does: unattended, answering as
+// the job and carrying no user, with the same grants — which is to say none. So
+// ErrAttendedIngest is untouched — a unit still cannot ingest on a caller's
+// authority, it can only ask for the unattended run sooner.
 //
 // WHAT IT PROMISES is that the job is QUEUED, and nothing about when it runs.
 // That is the honest contract and it is also the useful one: a screen can then
@@ -68,12 +68,3 @@ type JobName string
 // one for it would silently sync the wrong thing on a screen that said it
 // synced the right one.
 var ErrNoSuchJob = errors.New("extension: this unit declares no job by that name")
-
-// ErrNoUnattendedSeat reports a workspace with no agent seat, for which no
-// unattended tick can run at all.
-//
-// It is the same state the scheduled fan-out skips a workspace for, said out
-// loud here because a caller ASKED. A screen reporting "checking now" over a
-// tick that will never run is the failure this capability was added to end,
-// reappearing one layer along.
-var ErrNoUnattendedSeat = errors.New("extension: this workspace has no agent seat, so no unattended tick can run for it")

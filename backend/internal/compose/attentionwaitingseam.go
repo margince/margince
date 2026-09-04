@@ -68,6 +68,7 @@ func (w attentionWaiting) Hidden(
 		NotSales:    got.NotSales,
 		PastHorizon: got.PastHorizon,
 		Unlinked:    got.Unlinked,
+		Colleagues:  got.Colleagues,
 		Truncated:   got.Truncated,
 	}, nil
 }
@@ -110,7 +111,13 @@ func (w attentionWaiting) Unanswered(
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
 			HasOpenDeal:    row.HasOpenDeal,
-			OwnerID:        row.OwnerID,
+			Engaged:        row.Engaged,
+			// Translated here, at the one boundary that already crosses from
+			// the module's vocabulary to the queue's. Only "informs us" changes
+			// a ranking; unjudged and "asks us" both leave it alone, so the
+			// queue never needs the word.
+			AsksNothing: row.OwedVerdict == activities.OwedVerdictInformsUs,
+			OwnerID:     row.OwnerID,
 		})
 	}
 	return out, cut, nil

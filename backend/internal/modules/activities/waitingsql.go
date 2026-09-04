@@ -109,6 +109,28 @@ const waitingRepliesSQL = `
 	       -- Every arm reads through wl, the VISIBILITY-GATED link join. An
 	       -- owner off an ungated join would name who owns a record this reader
 	       -- may not open.
+	       -- Whether this workspace has ever written on this thread before the
+	       -- message arrived. It is REPORTED, never used to exclude: a client
+	       -- that strips References gives each message its own thread key, and
+	       -- an exclusion would then hard-drop a live customer with nothing on
+	       -- screen to say so. The caller demotes what it cannot prove instead,
+	       -- so the cost of being wrong is a scroll rather than a lost sale.
+	       --
+	       -- Ungated on purpose, like the sales-link arm it sits beside:
+	       -- eligibility that depended on the reader would make the same message
+	       -- engaged for one colleague and cold for another.
+	       -- The classifier's answer, or empty when nobody has judged this
+	       -- message. Absence is never evidence: an unjudged row ranks exactly
+	       -- as it did before the column existed.
+	       coalesce(a.owed_verdict, ''),
+	       EXISTS (
+	         SELECT 1 FROM activity ours
+	          WHERE ours.thread_key = a.thread_key
+	            AND ours.kind = a.kind
+	            AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
+	            AND ours.direction = 'outbound'
+	            AND ours.archived_at IS NULL
+	            AND (ours.occurred_at, ours.id) < (a.occurred_at, a.id)),
 	       COALESCE(
 	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.id::text)
 	          FILTER (WHERE ownerDeal.owner_id IS NOT NULL))[1],
@@ -180,6 +202,23 @@ const waitingRepliesSQL = `
 	                          WHERE d.id = sales.deal_id AND %[6]s)
 	              OR EXISTS (SELECT 1 FROM lead ld
 	                          WHERE ld.id = sales.lead_id AND %[7]s))))
+	   -- A COLLEAGUE is not a customer waiting.
+	   --
+	   -- Our own domains are read through the seam that owns them and passed in
+	   -- as a list, so the test runs here rather than over the rows that came
+	   -- back: after the cap, two hundred internal threads fill the scan and
+	   -- push a real customer past it — the same reason every rule above is
+	   -- ordered where it is.
+	   --
+	   -- An EMPTY list admits everyone. A deployment that cannot say which
+	   -- domains are its own must not guess: a queue with colleagues in it is a
+	   -- visible annoyance, and a queue that dropped a customer whose domain
+	   -- merely resembles ours is the silent failure this file exists to avoid.
+	   --
+	   -- Matched on the address's domain, and on a subdomain of one of ours, the
+	   -- way the seam's own set does — mail from a departmental host is still
+	   -- from a colleague.
+	   AND (%[14]s OR NOT %[15]s)
 	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
 	   -- LIMIT lets two hundred notification threads fill the scan and push a
 	   -- real customer past it, and the page then says nobody is waiting —

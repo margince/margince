@@ -24,6 +24,9 @@
 // seat keeps out of the shared timeline) and capture_thread_verdict (what a
 // classifier concluded about one thread, for one seat) and
 // capture_sender_override (what a person decided about a sender, which the
-// machine consults first and never writes over).
+// machine consults first and never writes over) and
+// capture_pending_counterparty (the open question about whose record an
+// address is — raised at capture, re-raised by the sweep for a contact the
+// ceiling refused, and resolved by the verdict engine).
 // Imports shared + platform only; never a sibling module.
 package capture

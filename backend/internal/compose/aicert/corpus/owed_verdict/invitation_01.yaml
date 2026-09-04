@@ -1,0 +1,41 @@
+name: an_invitation_asks_nothing_a_calendar_reply_cannot_settle
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A calendar invitation is not a question, and one that also asks something is.
+# The distinction matters because an invite arrives on a real thread with a real
+# sender and looks, to the waiting queue, exactly like an unanswered message.
+fixture:
+  - subject: 'coffee @1500'
+    body: |
+      When: Thursday 15:00-15:30
+      Where: the cafe on the corner
+    to: ['j.weber@nordwind.test']
+    has_calendar_part: true
+  - subject: 'workshop Tuesday — agenda?'
+    body: |
+      I have put a hold in the diary for Tuesday. Before then, could you send
+      over the three topics you want covered so I can brief the team?
+    to: ['j.weber@nordwind.test']
+    has_calendar_part: true
+expect:
+  outcome: accepted
+  answer: [informs_us, asks_us]
+  rubric: >
+    Both carry a calendar invitation, and the verdicts differ. The first proposes
+    a time and nothing else — accepting or declining is a calendar action, not a
+    reply — so it is informs_us. The second holds a time AND asks for three
+    topics to be sent before it, which no calendar response can settle: asks_us.
+    Score high only if both are right. A model that answers informs_us to both is
+    treating the calendar part as the whole answer and should score at the floor:
+    it would demote every invitation that carries a real request, which is a
+    common shape.
+    A model that answers asks_us to both is treating an invitation as a question
+    and should score in the middle — it errs toward keeping work visible, which
+    is the cheaper direction here, but it makes the verdict useless for the case
+    that opened this work.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

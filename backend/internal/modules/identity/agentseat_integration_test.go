@@ -6,7 +6,12 @@
 package identity
 
 // The first-party Agent Runner identity bootstrap writes (seed-and-fixtures
-// §1.5) — the seat that work nobody requested answers as.
+// §1.5) — the app_user a resident runner will answer as when it lands.
+//
+// Nothing in the running product acts on it today: scheduled extension ticks
+// used to, and now answer as the job they are. What these still hold is the
+// SHAPE of the row bootstrap writes, because it is a full seat an operator sees
+// in the roster and can act on.
 //
 // What the row must NOT carry matters as much as what it must, so both halves
 // are asserted: a seat that acquired a password would be a login with no person
@@ -96,9 +101,9 @@ func theAgentSeat(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) agentSeat
 	t.Helper()
 	seats := readAgentSeats(t, owner, wsID)
 	if len(seats) != 1 {
-		t.Fatalf("the workspace holds %d agent seat(s), want exactly 1 — with none, every actor-less "+
-			"job has no initiator to name and is skipped; with more, which one initiates them is "+
-			"arbitrary", len(seats))
+		t.Fatalf("the workspace holds %d agent seat(s), want exactly 1 — bootstrap writes one, and a "+
+			"second is a second full seat on the licence with nothing to distinguish which is the "+
+			"installation's own", len(seats))
 	}
 	return seats[0]
 }
@@ -116,9 +121,9 @@ func TestBootstrapMintsAnAgentSeatThatCarriesNoAuthorityOfItsOwn(t *testing.T) {
 			"runner owns", seat.displayName, "Margince Agent")
 	}
 	if seat.status != "active" || seat.archived {
-		t.Errorf("seat status = %q, archived = %v; the dispatcher resolves an initiator by "+
-			"`is_agent AND status = 'active' AND archived_at IS NULL`, so anything else leaves the "+
-			"installation seatless with a seat sitting in the table", seat.status, seat.archived)
+		t.Errorf("seat status = %q, archived = %v; bootstrap must write a LIVE identity — every "+
+			"reader treats deactivated-or-archived as absent (LiveMemberSQL), so either would ship "+
+			"a seat that is in the table and nowhere else", seat.status, seat.archived)
 	}
 	if seat.seatType != "full" {
 		t.Errorf("seat type = %q, want \"full\" — the schema admits no other value for an agent "+

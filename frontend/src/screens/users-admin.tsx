@@ -749,9 +749,10 @@ function MemberRow({
         returnFocusTo={() => row.current}
       >
         {/* Deactivating the agent seat is a posture an operator is entitled to
-            take, so it stays offered — but what stops when they take it is
-            invisible from this screen, and the generic body (signed out, sessions
-            revoked) describes a person rather than what actually happens. */}
+            take, so it stays offered — and the generic body (signed out, sessions
+            revoked) describes a person rather than an identity that signs in
+            nowhere. The agent body's job is to say what does NOT stop: scheduled
+            extension jobs keep running, because a tick acts as the job it is. */}
         <p className="t-small">
           {t(
             member.is_agent

@@ -86,6 +86,11 @@ var erasureColumnBaseline = map[string][]string{
 		"audience",
 		"audience_reason",
 		"capture_label",
+		// One of two words this repository defines, saying whether the message
+		// asked its recipient side for something. Neither is anything the
+		// subject wrote nor anything written about them — it is a reading OF the
+		// text, and the text itself is cleared on its own terms.
+		"owed_verdict",
 		"captured_by",
 		"channel_provider",
 		"direction",

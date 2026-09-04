@@ -95,3 +95,83 @@ export const ANoticeSettling: Story = {
     );
   },
 };
+
+// A meeting, drawn with the clock a rep is racing.
+//
+// The state this row could not reach before: it said "starting shortly" whether
+// the meeting began in four minutes or in fifty, so the one row that has to be
+// opened BEFORE a wall-clock time was the row that would not say the time.
+//
+// Dated deliberately far enough out that the story is stable whenever it is
+// looked at — a fixture pinned to "today" renders differently every day and the
+// snapshot argues with itself.
+export const AMeetingWithItsStartTime: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "m1",
+      source: "meeting",
+      category: "meetings",
+      level: 1,
+      consequence: "meeting_unprepared",
+      title: "Quarterly review with Turbinenbau",
+      kind: "unprepared",
+      due_at: "2026-09-02T13:00:00Z",
+      because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A task nobody has taken, with the date it is due and how it is put down.
+//
+// Three states the row gained at once: the due moment drawn, "nobody owns it"
+// said out loud, and the spans behind "For how long" — opened here, because a
+// popover closed is a story that shows nothing about what it holds.
+export const ATaskNobodyOwnsBeingPutDown: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "01a05500-0000-7000-8000-0000000000a1",
+      source: "task",
+      category: "tasks",
+      level: 3,
+      consequence: "task_slips",
+      title: "Send the retrofit quote",
+      due_at: "2026-09-02T15:00:00Z",
+      because: [{ kind: "due_today" }, { kind: "unassigned" }],
+      actions: [],
+      dispositions: ["snooze", "not_mine"],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "For how long" }),
+    );
+  },
+};
+
+// The same row on a phone.
+//
+// The state the old mobile test could not see: above this breakpoint the row is
+// rank, text and verbs on one line, and the verbs never yield width — so at
+// 390px the title column was squeezed to a few characters while three buttons
+// held their full size beside it. Here the text takes the line and the verbs
+// drop below it at a real target height.
+//
+// Worth a story of its own rather than a note on the desktop one: this is a
+// different layout, and the two are checked by looking at both.
+export const ATaskOnAPhone: Story = {
+  ...ATaskNobodyOwnsBeingPutDown,
+  globals: { viewport: { value: "phone" } },
+  play: undefined,
+};

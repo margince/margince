@@ -11,14 +11,14 @@ import {
 } from "../story-utils";
 import { CompanyPeopleList } from "./contacts";
 
-// The company's people as the rep meets them: ranked, so whoever answered is
-// the first row rather than whoever the database happened to return first.
+// The company's people as the rep meets them: ranked, so whoever is waiting on
+// a reply comes first rather than whoever the database happened to return first.
 //
-// The three engagement states are the reason this gallery exists. They look
-// alike in a payload and must not look alike on screen — "they replied",
-// "we wrote and heard nothing" and "nobody has tried" are three different next
-// moves, and a reader who cannot tell them apart at a glance is back to reading
-// the roster line by line.
+// The four engagement states are the reason this gallery exists. They look
+// alike in a payload and must not look alike on screen — "their mail sits
+// unanswered", "we replied", "we wrote and heard nothing" and "nobody has
+// tried" are four different next moves, and a reader who cannot tell them
+// apart at a glance is back to reading the roster line by line.
 
 type OrganizationContact = components["schemas"]["OrganizationContact"];
 
@@ -44,10 +44,19 @@ function contact(
 
 /** The account as a rep usually finds it: one way in, and a long tail. */
 const MIXED: OrganizationContact[] = [
+  contact("Sabine Vogel", "waiting", {
+    title: "Head of Partnerships",
+    last_inbound_at: "2026-08-30T09:00:00Z",
+    strength: {
+      score: 24,
+      bucket: "weak",
+      factors: { recency: 0.8, frequency: 0.1, reciprocity: 0, direction: 0 },
+    },
+  } as Partial<OrganizationContact>),
   contact("Dietmar Rietsch", "answered", {
     title: "Managing Director",
-    last_inbound_at: "2026-08-28T09:00:00Z",
-    last_outbound_at: "2026-08-22T09:00:00Z",
+    last_inbound_at: "2026-08-22T09:00:00Z",
+    last_outbound_at: "2026-08-28T09:00:00Z",
     strength: {
       score: 71,
       bucket: "strong",
@@ -83,7 +92,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** All three states at once, which is the comparison the design has to survive. */
+/** All four states at once, which is the comparison the design has to survive. */
 export const Mixed: Story = {
   args: { orgId: "o-1" },
   decorators: [

@@ -178,6 +178,75 @@ func TestSquarePNGPadsToASquareWithoutStretchingTheMark(t *testing.T) {
 	}
 }
 
+func TestFitPNGPreservesAWordmarksAspectWithoutPadding(t *testing.T) {
+	img, err := Decode(solidPNG(t, 800, 240, color.NRGBA{R: 255, G: 90, A: 255}))
+	if err != nil {
+		t.Fatalf("decoding the fixture: %v", err)
+	}
+	out, err := FitPNG(img, 400)
+	if err != nil {
+		t.Fatalf("FitPNG: %v", err)
+	}
+	fitted, err := png.Decode(bytes.NewReader(out))
+	if err != nil {
+		t.Fatalf("the output is not a PNG: %v", err)
+	}
+	if bounds := fitted.Bounds(); bounds.Dx() != 400 || bounds.Dy() != 120 {
+		t.Fatalf("output is %v, want the source's 10:3 aspect at 400x120", bounds)
+	}
+}
+
+func TestFitPNGNeverInventsResolutionASourceDoesNotHave(t *testing.T) {
+	img, err := Decode(solidPNG(t, 120, 40, color.NRGBA{B: 255, A: 255}))
+	if err != nil {
+		t.Fatalf("decoding the fixture: %v", err)
+	}
+	out, err := FitPNG(img, 512)
+	if err != nil {
+		t.Fatalf("FitPNG: %v", err)
+	}
+	fitted, err := png.Decode(bytes.NewReader(out))
+	if err != nil {
+		t.Fatalf("the output is not a PNG: %v", err)
+	}
+	if bounds := fitted.Bounds(); bounds.Dx() != 120 || bounds.Dy() != 40 {
+		t.Fatalf("output is %v, want the source's own 120x40 resolution", bounds)
+	}
+}
+
+func TestTrimTransparentPNGRestoresALetterboxedWordmark(t *testing.T) {
+	wide, err := Decode(solidPNG(t, 200, 50, color.NRGBA{R: 255, G: 90, A: 255}))
+	if err != nil {
+		t.Fatalf("decoding the fixture: %v", err)
+	}
+	letterboxed, err := SquarePNG(wide, 100)
+	if err != nil {
+		t.Fatalf("letterboxing the fixture: %v", err)
+	}
+	trimmed, err := TrimTransparentPNG(letterboxed)
+	if err != nil {
+		t.Fatalf("trimming the old storage canvas: %v", err)
+	}
+	img, err := png.Decode(bytes.NewReader(trimmed))
+	if err != nil {
+		t.Fatalf("the trimmed output is not a PNG: %v", err)
+	}
+	if bounds := img.Bounds(); bounds.Dx() != 100 || bounds.Dy() != 25 {
+		t.Fatalf("trimmed output is %v, want the wordmark's 4:1 aspect", bounds)
+	}
+}
+
+func TestTrimTransparentPNGLeavesAPaintedCanvasByteForByte(t *testing.T) {
+	square := solidPNG(t, 48, 48, color.NRGBA{B: 255, A: 255})
+	trimmed, err := TrimTransparentPNG(square)
+	if err != nil {
+		t.Fatalf("checking a painted square: %v", err)
+	}
+	if !bytes.Equal(trimmed, square) {
+		t.Fatal("a logo with no transparent canvas was unnecessarily re-encoded")
+	}
+}
+
 func TestSquarePNGNeverInventsResolutionASourceDoesNotHave(t *testing.T) {
 	img, err := Decode(solidPNG(t, 48, 48, color.NRGBA{B: 255, A: 255}))
 	if err != nil {

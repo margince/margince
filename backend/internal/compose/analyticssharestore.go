@@ -256,7 +256,16 @@ func (s *AnalyticsShareStore) Resolve(
 // Revoke closes a share before its expiry. Idempotent: revoking a revoked
 // share is the outcome the caller asked for.
 func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := auth.Require(ctx, objectForecast, principal.ActionDelete); err != nil {
+	// CREATE, not delete. No role holds forecast:delete — a forecast reading is
+	// derived and a call supersedes rather than being rewritten, so the object
+	// is seeded create+read and nothing grants the verb (policy/defaults.go).
+	// Gating revocation on it made every share permanent: the issuer could mint
+	// a link and no seat in the installation could close it.
+	//
+	// Create is the right verb rather than a workaround. Revoking is not
+	// deleting a forecast; it is withdrawing a link the same seat was allowed
+	// to issue, and whoever may issue one may close one.
+	if err := auth.Require(ctx, objectForecast, principal.ActionCreate); err != nil {
 		return err
 	}
 	// The row is locked before it is read-modified-written. Idempotence here

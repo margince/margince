@@ -26,6 +26,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
+import { primaryEmail } from "../format/primaryemail";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -64,6 +65,7 @@ import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
 import { RecordReading, RecordReadingPair } from "./record360";
 import { EmailVerb, RecordEmailAside } from "./recordemail";
+import { ShareAction } from "./share";
 import "./person360.css";
 import { buyingRoleLabel } from "./companypeople/summary";
 
@@ -390,6 +392,7 @@ export function PersonPageV2({
               />
               <PersonEmailPanel
                 personId={id}
+                recordAddress={primaryEmail(person.emails)}
                 overlay={overlay}
                 archived={Boolean(person.archived_at)}
               />
@@ -473,6 +476,7 @@ export function PersonPageV2({
                 view={view.data}
                 onAction={runAction}
                 onOpenTasks={() => navigate({ screen: "worklist" })}
+                onOpenEmail={setOpenEmail}
               />
               <RecordReadingPair>
                 <PersonMemory view={view.data} onOpenEmail={setOpenEmail} />
@@ -486,6 +490,7 @@ export function PersonPageV2({
               brief={brief.data}
               loading={brief.isLoading}
               view={view.data}
+              onOpenEmail={setOpenEmail}
             />
             {(hasCommercial(view.data) || hasMatters(view.data)) && (
               <RecordReadingPair>
@@ -500,7 +505,7 @@ export function PersonPageV2({
             {/* What this person has agreed to, and the one way to ask them
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
-            <ConsentSection personId={id} />
+            <ConsentSection personId={id} person={view.data.person} />
             {/* The fields Margince read off a signature or a card, and the
                 one place a reader can confirm or correct them. */}
             <EnrichedFields personId={id} view={view.data} />
@@ -532,6 +537,7 @@ export function PersonPageV2({
         />
         <PersonMailDrawer
           personId={id}
+          recordAddress={primaryEmail(person.emails)}
           open={drawer === "mail"}
           onClose={() => setDrawer(null)}
         />
@@ -807,9 +813,15 @@ function writeRefusal(
 // page offers no writes.
 function PersonEmailPanel({
   personId,
+  recordAddress,
   overlay,
   archived,
-}: Readonly<{ personId: string; overlay: boolean; archived: boolean }>) {
+}: Readonly<{
+  personId: string;
+  recordAddress?: string;
+  overlay: boolean;
+  archived: boolean;
+}>) {
   if (overlay || archived) {
     return null;
   }
@@ -818,6 +830,7 @@ function PersonEmailPanel({
       entityType="person"
       entityId={personId}
       personId={personId}
+      recordAddress={recordAddress}
       detectWaitingReply
     />
   );
@@ -832,9 +845,18 @@ function PersonEmailPanel({
 // another.
 function PersonMailDrawer({
   personId,
+  recordAddress,
   open,
   onClose,
-}: Readonly<{ personId: string; open: boolean; onClose: () => void }>) {
+}: Readonly<{
+  personId: string;
+  // Which of the contact's addresses a FIRST message goes to. A person carries
+  // a list, so this is the shared decision rather than a field — see
+  // format/primaryemail.ts, mirrored by the drafter.
+  recordAddress?: string;
+  open: boolean;
+  onClose: () => void;
+}>) {
   if (!open) {
     return null;
   }
@@ -844,6 +866,7 @@ function PersonMailDrawer({
       entityType="person"
       entityId={personId}
       personId={personId}
+      recordAddress={recordAddress}
       open
       onClose={onClose}
     />
@@ -1018,6 +1041,10 @@ function PersonActions({
         >
           {t("record.fullHistory")}
         </Button>
+        {/* Companies, deals, leads and projects all carry this. A contact did
+            not, so the one record type most likely to be private to one seat
+            was the one with no way to hand it to a colleague. */}
+        <ShareAction recordType="person" recordId={personId} />
       </OverflowMenu>
     </>
   );

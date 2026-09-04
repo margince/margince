@@ -169,6 +169,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// rather than a waiver: the census does not accept "registered and
 		// unproven" for a tool this sweep can simply invoke.
 		{"describe_query_vocabulary", `{}`},
+		// The vocabulary run_report's own plan is written against, for the same
+		// reason: no arguments, no seam this lane is missing, so the census gets
+		// a call rather than a waiver.
+		{"describe_report_vocabulary", `{}`},
 		{"read_record", `{"record_type":"deal","id":"` + deal.String() + `"}`},
 		// A ranked sweep that finds rows and one that finds none. The empty page
 		// is the one worth pinning: it still carries `coverage` and `notes`, and
@@ -278,6 +282,14 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"forecast_input_checks", `{}`},
 		{"list_input_checks", `{}`},
 		{"data_coverage", `{}`},
+		// The report surface: the block grammar a document is written in, and
+		// a document composed through it. Invoked with a text-only block on
+		// purpose — the figure-bearing kinds resolve against a run, and what
+		// this lane holds is the ENVELOPE the composer answers in, which is
+		// the same for a document whose blocks carry figures and one whose do
+		// not. Both tools take the read scope and neither stages anything.
+		{"describe_report_blocks", `{}`},
+		{"compose_analytics_report", `{"blocks":[{"kind":"title","text":"Pipeline this quarter"}]}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},

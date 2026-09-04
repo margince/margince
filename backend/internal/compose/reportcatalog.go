@@ -40,11 +40,11 @@ func reportToolCatalog() []agents.ReportCatalogEntry {
 	for report, spec := range prebuiltReports {
 		catalog = append(catalog, agents.ReportCatalogEntry{
 			Report:  report,
-			GroupBy: slices.Sorted(maps.Keys(spec.dimensions)),
+			GroupBy: allowedReportNames(spec.dimensions),
 			// A threshold is a filter to the caller — one key in the same
 			// object — so it is listed with them.
 			Filters:    catalogFilterNames(spec),
-			Aggregates: slices.Sorted(maps.Keys(spec.measures)),
+			Aggregates: allowedReportNames(spec.measures),
 			Defaults:   describeReportDefaults(spec),
 			Notes:      spec.notes,
 		})

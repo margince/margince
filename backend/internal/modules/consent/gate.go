@@ -20,6 +20,10 @@ import (
 // different purpose authorizes nothing.
 type Gate struct {
 	store *Store
+	// country selects which jurisdiction's messaging rules a decision is taken
+	// under. Injected by compose because the setting lives in identity
+	// (installationcountry.go).
+	country InstallationCountryReader
 }
 
 func NewGate(store *Store) *Gate {

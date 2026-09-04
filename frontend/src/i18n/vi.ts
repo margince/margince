@@ -110,6 +110,8 @@ export const vi = {
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
+  "history.field.emails": "Địa chỉ email",
+  "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_org_key": "Công ty khớp",
   "history.field.company_name": "Tên công ty",
   "history.field.currency": "Tiền tệ",
@@ -185,6 +187,7 @@ export const vi = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
   "shell.poweredBy": "Vận hành bởi Margince",
+  "shell.poweredByPrefix": "Vận hành bởi",
   "shell.searchEverything": "Tìm kiếm mọi thứ…",
   "shell.breadcrumbAria": "Đường dẫn",
   "shell.license.none": "Chưa có giấy phép",
@@ -326,7 +329,7 @@ export const vi = {
   "share.downgradeConfirm": "Giảm xuống {to}",
   "share.seatCeiling":
     "Chỗ ngồi này chỉ đọc nên không thể nhận quyền ghi trên một bản ghi. Hãy nâng cấp chỗ ngồi trước, hoặc chỉ cấp quyền đọc.",
-  "share.whoHasAccess": "Ai có quyền truy cập",
+  "share.whoHasAccess": "Chia sẻ cụ thể",
   "share.grantedBy": "cấp bởi",
   "share.revoke": "Thu hồi",
   "share.revokeConfirm":
@@ -1504,6 +1507,10 @@ export const vi = {
   "compose.reason.noRecord": "Giữ lại, chưa có hồ sơ",
   "compose.reason.pendingVerdict": "Giữ lại đến khi phân loại",
   "compose.reason.manual": "Được giữ riêng tư",
+  "compose.reason.verdict": "Được giữ do một phân loại",
+  "compose.reason.counterparty": "Được giữ, thư với bên này",
+  "compose.reason.explicitlyConfidential": "Được đánh dấu bảo mật",
+  "compose.reason.noCounterparty": "Được giữ, không có hồ sơ để lưu",
   "compose.audience": "Hiển thị",
   "compose.audienceTitle": "Ai được đọc tin nhắn này?",
   "compose.audienceLegend": "Hiển thị của riêng tin nhắn này",
@@ -1516,6 +1523,13 @@ export const vi = {
   "email.access.participants": "Người tham gia",
   "email.access.selected": "Được chọn",
   "email.access.withheld": "Bị giữ lại",
+  "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
+  "email.access.sentence.participants":
+    "Chỉ những người có trong thư này mới đọc được.",
+  "email.access.sentence.selected":
+    "Chỉ những người được nêu bên dưới mới đọc được thư này.",
+  "email.access.sentence.withheld": "Thư này không được chia sẻ với bạn.",
+  "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ",
   "email.detail.loading": "Đang mở thư",
@@ -1528,6 +1542,7 @@ export const vi = {
   "email.detail.from": "Từ",
   "email.detail.to": "Tới",
   "email.detail.cc": "Cc",
+  "email.detail.when": "Đã gửi",
   "email.detail.bccWithheld":
     "Một số người nhận ở dạng ẩn và không hiển thị với bạn",
   "compose.audienceWorkspace": "Mọi người trong tổ chức",
@@ -1583,6 +1598,7 @@ export const vi = {
   "co.people.band.noWayIn": "Chưa ai trả lời",
   "co.people.band.noWayInWhy": "Đã viết cho tất cả nhưng không ai trả lời",
   "co.people.band.showAnswered": "Xem ai đã trả lời",
+  "co.people.band.showWaiting": "Xem ai đang chờ trả lời",
   "co.people.band.committee": "Nhóm mua hàng",
   "co.people.band.missing": "Không có {role}",
   "co.people.band.committeeComplete": "Đã có champion và economic buyer",
@@ -1621,6 +1637,7 @@ export const vi = {
   "co.people.map.account": "Tài khoản",
   "co.people.map.missing": "Thiếu {role}",
   "co.people.map.awaiting": "đang chờ trả lời",
+  "co.people.map.owed": "còn nợ hồi âm",
   "co.people.map.replied": "họ đã trả lời",
   "co.people.map.never": "chưa từng viết",
   "co.people.map.onDeal": "trong deal",
@@ -1659,7 +1676,8 @@ export const vi = {
   "co.people.board.confirm": "Xác nhận",
   "co.people.board.confirming": "Đang xác nhận",
   "co.people.board.change": "Đổi vai trò",
-  "co.reach.answered": "Đã hồi đáp",
+  "co.reach.waiting": "Cần trả lời",
+  "co.reach.answered": "Đã trả lời",
   "co.reach.silent": "Chưa có hồi đáp",
   "co.reach.untried": "Chưa tiếp cận",
   "co.role.champion": "người ủng hộ",
@@ -2471,6 +2489,7 @@ export const vi = {
   "teamweekly.movement.title": "Tuần đã làm được gì",
   "teamweekly.movement.won": "Thắng",
   "teamweekly.movement.lost": "Thua",
+  "teamweekly.movement.moved": "Đã tiến triển",
   "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
   "teamweekly.movement.leads": "Lead được phân",
   "teamweekly.coach.title": "Đồng hành tuần này",
@@ -2533,6 +2552,7 @@ export const vi = {
   "home.weekly.queueWorked": "Danh sách buổi sáng",
   "home.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "home.weekly.sincePrior": "{delta} so với tuần trước",
+  "home.weekly.wonVsPrior": "{value} · {delta} so với tuần trước",
   "home.weekly.leadsAnswered": "Lead được trả lời đúng hạn",
   "home.weekly.ofRouted": "{answered} trên {routed}",
   "home.weekly.planCommitmentsKept": "Cam kết kế hoạch đã giữ",
@@ -3017,7 +3037,15 @@ export const vi = {
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
+  "personAccess.title": "Ai xem được liên hệ này",
+  "personAccess.privateToYou":
+    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
+  "personAccess.organization":
+    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "personAccess.share": "Chia sẻ với tổ chức",
+  "personAccess.published": "Tổ chức đã xem được liên hệ này.",
   "compose.reply": "Trả lời",
+  "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
   "compose.draftWithAi": "Soạn bằng AI",
   "compose.drafting": "Đang soạn…",
@@ -3028,6 +3056,8 @@ export const vi = {
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI tạo. Hãy đọc và sửa trước khi gửi.",
   "compose.voiceVersion": "Dựng từ kho văn bản của bạn · v{n}",
+  "compose.voiceDegraded":
+    "Không tải được hồ sơ giọng văn của bạn, nên bản nháp này không viết theo giọng của bạn. Hãy soạn lại bản nháp hoặc chỉnh sửa trước khi gửi.",
   "compose.provisional": "Giọng tạm thời",
   "compose.provisionalHint":
     "Voice DNA của bạn vẫn đang được dựng. Giọng đó đã định hình bản nháp này y như một bản đã hoàn thiện — không giữ lại gì cả.",
@@ -3191,6 +3221,8 @@ export const vi = {
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
+  "review.notCheckedYet":
+    "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
   "review.closePast": "Ngày chốt đã qua",
@@ -6161,7 +6193,7 @@ export const vi = {
   "users.deactivateConfirmBody":
     "Người đó sẽ bị đăng xuất ở mọi nơi và mọi passport Agent của họ bị thu hồi ngay. Bạn có thể kích hoạt lại sau, nhưng họ sẽ phải đăng nhập lại.",
   "users.deactivateAgentConfirmBody":
-    "Đây là danh tính Agent của tổ chức. Vô hiệu hoá nó sẽ dừng mọi tác vụ chạy mà không có người đứng sau, kể cả tiện ích mở rộng, cho đến khi bạn kích hoạt lại. Không ai mất quyền truy cập — nó không đăng nhập ở đâu cả.",
+    "Đây là danh tính Agent của tổ chức. Nó không đăng nhập ở đâu cả và không ai mất quyền truy cập. Các tác vụ định kỳ của tiện ích mở rộng vẫn chạy: mỗi tác vụ hành động với tư cách chính nó, và thu thập dữ liệu theo quyền của thành viên có kết nối tạo ra bản ghi đó.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Hành động theo passport, không theo vai trò",
   "users.roleLabel": "Vai trò cho người dùng mới",
@@ -6203,18 +6235,18 @@ export const vi = {
   "settings.companyTrust":
     "Chỉ tri thức đã xác nhận — văn bản website không bao giờ trở thành chỉ dẫn.",
   "settings.companyConfirmed": "nhận định đã xác nhận",
-  "settings.companyMark": "Biểu trưng công ty",
+  "settings.companyMark": "Logo công ty",
   "settings.companyMarkPresent":
-    "Hiện ở mọi nơi công ty này xuất hiện, kể cả đầu thanh bên.",
+    "Hiển thị tại đây và là thương hiệu chính ở đầu thanh bên.",
   "settings.companyMarkNone":
-    "Chưa có biểu trưng nên chữ viết tắt đứng thay. Một lượt đọc website sẽ điền vào, hoặc bạn thêm ở đây.",
-  "settings.companyMarkAdd": "Thêm biểu trưng",
+    "Chưa có logo nên chữ viết tắt đứng thay. Một lượt đọc website có thể bổ sung, hoặc bạn thêm tại đây.",
+  "settings.companyMarkAdd": "Thêm logo",
   "settings.companyMarkReplace": "Thay",
   "settings.companyMarkRemove": "Gỡ",
-  "settings.companyMarkPick": "Biểu trưng công ty",
+  "settings.companyMarkPick": "Logo công ty",
   "settings.companyMarkHint":
-    "PNG, JPEG, GIF, WebP, ICO hoặc SVG. Ảnh được cắt vuông và thu nhỏ khi tải lên; biểu trưng bạn chọn giữ nguyên cho tới khi bạn gỡ.",
-  "settings.companyMarkEmpty": "Kéo ảnh vào đây, hoặc chọn tệp",
+    "Tốt nhất: SVG hoặc PNG nền trong suốt khoảng 800 × 240 px (tối đa 4:1), dưới 5 MB. JPEG, GIF, WebP và ICO cũng dùng được. Logo giữ nguyên tỷ lệ.",
+  "settings.companyMarkEmpty": "Kéo logo vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Website công khai của công ty",
   "settings.companyWebsiteHint":
     "Website công khai mà mỗi lần đọc website đều bắt đầu từ đó.",
@@ -7765,10 +7797,23 @@ export const vi = {
   "worklist.band.build_pipeline": "Xây dựng pipeline",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Rà soát",
+  "worklist.bandClear.now": "Hôm nay không có gì cần bạn.",
+  "worklist.bandClear.build_pipeline":
+    "Không có việc xây dựng pipeline nào đang chờ.",
+  "worklist.bandClear.keep_momentum":
+    "Không có việc đã thống nhất nào bị đình trệ.",
+  "worklist.bandClear.review": "Không có gì để rà soát.",
   "worklist.disposition.verb.snooze": "Để sau",
+  "worklist.disposition.snoozeFor": "Trong bao lâu",
+  "worklist.disposition.snoozeDays_one": "{value} ngày",
+  "worklist.disposition.snoozeDays_other": "{value} ngày",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
   "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.doneSnooze_one":
+    "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.doneSnooze_other":
+    "Sẽ trở lại danh sách của bạn sau {value} ngày.",
   "worklist.disposition.done.not_mine":
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
@@ -7839,6 +7884,9 @@ export const vi = {
   "worklist.hidden.unlinked": "Không gắn với hồ sơ nào",
   "worklist.hidden.unlinked.detail":
     "Thường không phải bán hàng. Đôi khi là khách hàng không ai kịp lưu hồ sơ.",
+  "worklist.hidden.colleagues": "Từ tên miền của chính chúng ta",
+  "worklist.hidden.colleagues.detail":
+    "Đồng nghiệp, không phải khách hàng. Một tên miền nhập sai sẽ giấu đi thư thật.",
   "worklist.hidden.notSales": "Được đánh giá không phải việc bán hàng",
   "worklist.hidden.notSales.detail": "Ẩn với toàn bộ tổ chức, và không tự bỏ.",
   "worklist.hidden.setAside": "Bạn đã gác lại",
@@ -7894,6 +7942,8 @@ export const vi = {
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
+  "worklist.because.no_reply_history": "chưa từng trao đổi",
+  "worklist.because.asks_nothing": "không yêu cầu gì ở ta",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",
@@ -7971,6 +8021,8 @@ export const vi = {
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
   "worklist.deal.closes": "chốt {date}",
+  "worklist.when.starts": "bắt đầu {when}",
+  "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",
   "person.readings.title": "Vị thế của liên hệ này",

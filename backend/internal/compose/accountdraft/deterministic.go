@@ -17,36 +17,28 @@ package accountdraft
 import (
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
-// Draft is the written message plus what it was written from, before the wire
-// shape. Shared by both writers so the floor cannot drift into a different
-// answer than the lane's.
-type Draft struct {
-	Subject   string
-	Body      string
-	To        []string
-	Reasoning []Reason
-}
+// Draft and Reason are draftcore's. They were declared here and in persondraft
+// and were identical field for field, so they were one type written twice — and
+// a field added to one would have been silently missing from the other's
+// contract mapping.
+type Draft = draftcore.Draft
 
-// Reason is one grounding input, named for the reader.
-type Reason struct {
-	Kind  crmcontracts.AccountDraftReasonKind
-	Label string
-	// EntityType and EntityID are both set or both empty: a citation is a pair,
-	// and half of one points at nothing.
-	EntityType string
-	EntityID   string
-}
+// Reason is one input the draft used, as the composer's "Based on" chip
+// renders it. Shared with the other grounded surface for the same reason Draft
+// is: the two were identical, so they were one type written twice.
+type Reason = draftcore.Reason
 
 // Deterministic writes the floor draft.
 func Deterministic(in Input) Draft {
 	return Draft{
 		Subject:   deterministicSubject(in),
 		Body:      deterministicBody(in),
-		To:        toAddresses(in),
+		To:        in.Addresses(),
 		Reasoning: deterministicReasons(in),
 	}
 }

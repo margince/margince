@@ -161,11 +161,12 @@ func (s *Service) Draft(
 	in.Dossier = s.facts(ctx, orgID)
 	// Loaded after the 360 read, so a caller who may not read this account is
 	// refused before their voice profile is touched at all.
-	draft, by, err := Write(ctx, s.lane, in, draftvoice.Load(ctx, s.voice, s.log))
+	voice := draftvoice.Load(ctx, s.voice, s.log)
+	draft, by, err := Write(ctx, s.lane, in, voice)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
-	out := wire(draft, by)
+	out := wire(draft, by, voice.Degraded)
 	// The scoped read's own report of what the narrowing kept, so the
 	// composer's scope line counts what the draft was actually written from.
 	out.Scope = view.Scope
@@ -177,14 +178,15 @@ func (s *Service) Draft(
 // draft_ref is deliberately absent. The reply drafter returns one so the voice
 // model can learn from what the rep changed — and recording a served draft is
 // a WRITE, which this operation does not perform.
-func wire(draft Draft, by crmcontracts.WrittenBy) crmcontracts.AccountEmailDraft {
+func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool) crmcontracts.AccountEmailDraft {
 	aiWritten := by == crmcontracts.Model
 	out := crmcontracts.AccountEmailDraft{
-		Subject:     draft.Subject,
-		Body:        draft.Body,
-		GeneratedBy: by,
-		AiGenerated: &aiWritten,
-		Reasoning:   wireReasons(draft.Reasoning),
+		Subject:       draft.Subject,
+		Body:          draft.Body,
+		GeneratedBy:   by,
+		AiGenerated:   &aiWritten,
+		Reasoning:     wireReasons(draft.Reasoning),
+		VoiceDegraded: &voiceDegraded,
 	}
 	if len(draft.To) > 0 {
 		to := make([]openapi_types.Email, 0, len(draft.To))

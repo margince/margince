@@ -132,7 +132,33 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 	// Last, because it reads what the two passes above write: an attendee row
 	// that does not exist yet cannot be given the name its invitation used.
 	named, err := w.recoverNamesWorkspace(wsCtx)
-	return total + replayed + named, err
+	if err != nil {
+		return total + replayed + named, err
+	}
+	// And after that, because the names it recovers are what a stale display
+	// name is refreshed from.
+	shown, err := w.refreshDisplayNamesWorkspace(wsCtx)
+	return total + replayed + named + shown, err
+}
+
+// refreshDisplayNamesWorkspace puts the learned name on the page for contacts
+// whose split columns were filled before the display followed them.
+//
+// Same drain shape as the passes above: it stops the moment a batch finds
+// nothing, so a workspace with no stale display names costs one probe a tick.
+func (w *participantBackfillWorker) refreshDisplayNamesWorkspace(wsCtx context.Context) (int, error) {
+	total := 0
+	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+		n, err := repairStaleDisplayNamesBatch(wsCtx, w.pool, participantReplayBatch, w.log)
+		if err != nil {
+			return total, err
+		}
+		if n == 0 {
+			return total, nil
+		}
+		total += n
+	}
+	return total, nil
 }
 
 // recoverNamesWorkspace fills in the names calendar invitations gave, on the

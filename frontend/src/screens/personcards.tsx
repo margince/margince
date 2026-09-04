@@ -4,6 +4,7 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
+import { EmailReference } from "../design-system/emailreference";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
   formatDate,
@@ -33,10 +34,17 @@ export function PersonBriefCard({
   brief,
   loading,
   view,
+  onOpenEmail,
 }: Readonly<{
   brief: PersonBrief | undefined;
   loading: boolean;
   view: Person360;
+  /**
+   * Opens a cited message in the record's email drawer. The page owns the
+   * drawer, so it owns the opener; a card that mounted its own would put a
+   * second one behind the first.
+   */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const viewerId = useViewerId();
@@ -110,6 +118,7 @@ export function PersonBriefCard({
                   key={key}
                   cited={cited}
                   activity={citedActivities.get(cited.entity_id)}
+                  onOpenEmail={onOpenEmail}
                 />
               ))}
             </div>
@@ -198,10 +207,39 @@ function commercialLine(
 function SourceChip({
   cited,
   activity,
-}: Readonly<{ cited: BriefEvidence; activity: Activity | undefined }>) {
+  onOpenEmail,
+}: Readonly<{
+  cited: BriefEvidence;
+  activity: Activity | undefined;
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const interactionLabel = useInteractionLabel();
   if (cited.entity_type === "activity") {
+    // A cited EMAIL is named by its subject and openable, like every other
+    // citation of a message in the product. A chip reading "Email" tells a
+    // reader which transport carried the sentence and nothing about which
+    // message — and the one they want is the one the sentence rests on.
+    //
+    // `email_summary` is the server's own answer to "is this an email", set
+    // only for kind=email, so nothing here decides it from the kind string. A
+    // withheld message carries the summary with its subject nulled, and the
+    // reference draws the withheld wording and opens nothing.
+    const summary = activity?.email_summary;
+    if (summary) {
+      return (
+        <EmailReference
+          subject={summary.subject}
+          occurredAt={formatDate(summary.occurred_at, locale, recordZone)}
+          withheld={summary.display_status === "withheld"}
+          onOpen={
+            onOpenEmail ? () => onOpenEmail(summary.activity_id) : undefined
+          }
+        />
+      );
+    }
     return (
       <span className="pe-memory-channel">
         {interactionIcon(activity?.kind)}

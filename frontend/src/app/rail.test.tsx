@@ -572,7 +572,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // live installation is in this case — the cases above are the pre-onboarding
   // one — so the heading is the company they work for and the product is the
   // line beneath it.
-  it("heads the rail with the company and puts the product under it", () => {
+  it("heads the rail with the full company logo and puts the product under it", () => {
     const client = newClient();
     client.setQueryData(["company"], {
       organization_id: "11111111-1111-4111-8111-111111111111",
@@ -583,8 +583,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
     const home = screen.getByRole("link", {
       name: "Demo GmbH home, powered by Margince",
     });
-    expect(within(home).getByText("Demo GmbH")).toBeTruthy();
-    expect(within(home).getByText("Powered by Margince")).toBeTruthy();
+    const logo = within(home).getByRole("img", { name: "Demo GmbH" });
+    const image = logo.querySelector("img");
+    if (!image) throw new Error("the company logo image was not rendered");
+    fireEvent.load(image);
+    expect(logo.classList.contains("company-logo")).toBe(true);
+    expect(within(home).getByText("Powered by")).toBeTruthy();
+    expect(within(home).getByText("Margince")).toBeTruthy();
     expect(home.getAttribute("href")).toBe("#/home");
   });
 
@@ -603,7 +608,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelector(".ws-chip img")).toBeNull();
+    expect(container.querySelector(".company-logo img")).toBeNull();
 
     act(() => {
       client.setQueryData(["company"], {
@@ -612,9 +617,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       });
     });
     await waitFor(() =>
-      expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
-        "/v1/organizations/44444444-4444-4444-8444-444444444444/logo",
-      ),
+      expect(
+        container.querySelector(".company-logo img")?.getAttribute("src"),
+      ).toBe("/v1/organizations/44444444-4444-4444-8444-444444444444/logo"),
     );
   });
 
@@ -632,9 +637,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
-      "/v1/organizations/22222222-2222-4222-8222-222222222222/logo",
-    );
+    expect(
+      container.querySelector(".company-logo img")?.getAttribute("src"),
+    ).toBe("/v1/organizations/22222222-2222-4222-8222-222222222222/logo");
   });
 
   // A company whose site declared no icon has a face rather than a gap: the

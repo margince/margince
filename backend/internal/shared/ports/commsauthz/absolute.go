@@ -30,6 +30,11 @@ const (
 	// Distinct from an objection because they are different legal facts, and a
 	// proof row that called one the other would misstate what somebody did.
 	ReasonConsentWithdrawn = "consent_withdrawn"
+	// ReasonFrequencyCapReached is a jurisdiction's ceiling on how many
+	// advertising messages one address may receive in a window. A fact about
+	// VOLUME rather than about the person: nothing they did refuses this
+	// message, and the same message is lawful again once the window rolls.
+	ReasonFrequencyCapReached = "frequency_cap_reached"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 )
@@ -62,6 +67,15 @@ var absoluteDenials = map[string]bool{
 	// objection and gets its own code, but it binds exactly as hard: no
 	// rollout mode may send to somebody who took their consent back.
 	ReasonConsentWithdrawn: true,
+	// A jurisdiction's ceiling on advertising is decided by that jurisdiction,
+	// not by how far along a rollout is. It is here for the same reason as the
+	// rest and one of its own: an installation that declares a country is
+	// asserting which law it sends under, so a mode setting that let it exceed
+	// that country's statutory limit would make the declaration false. It is
+	// also the one denial a sender can clear by waiting — the window rolls and
+	// the same message becomes lawful — so refusing costs a delay rather than
+	// the message.
+	ReasonFrequencyCapReached: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

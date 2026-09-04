@@ -25,7 +25,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -123,18 +122,11 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, rdb, boot)...))
 	// nil backlog: the outbox backlog is a fleet-wide read the api already
 	// serves. nil jobStats and nil overlay for the same reason — both are
-	// projections of shared tables, not of this process.
-	//
-	// The seatless-workspace gauge is the exception, and it rides `extra`
-	// precisely because it is NOT a projection of a shared table: it is this
-	// process's own record of what its last extension-job dispatch skipped, and
-	// the worker is the only role that dispatches. Served from the api instead
-	// it would be permanently absent.
-	mux.HandleFunc("/metrics", httpserver.Metrics(pool, nil, events.PublishedTotal,
-		func(w io.Writer) {
-			//craft:ignore swallowed-errors a metrics section cannot report a write failure to a response already streaming
-			_ = compose.WriteSeatlessWorkspacesGauge(w)
-		}, nil, nil))
+	// projections of shared tables, not of this process. nil `extra` because
+	// this process now keeps no metric of its own: the extension-job dispatcher
+	// enqueues every live workspace unconditionally, so there is no per-tenant
+	// precondition left for it to count.
+	mux.HandleFunc("/metrics", httpserver.Metrics(pool, nil, events.PublishedTotal, nil, nil, nil))
 
 	srv := &http.Server{
 		Addr: cfg.observeAddr,

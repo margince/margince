@@ -70,6 +70,11 @@ func TestTheStaleBoundaryIsWhereItSaysItIs(t *testing.T) {
 		return classifyWaiting(WaitingCustomer{
 			ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000c3"),
 			Since:      rankInstant.Add(-time.Duration(days) * 24 * time.Hour),
+			// Engaged, so the ONE thing varying across this boundary is age.
+			// The unproven-engagement rule demotes to the same level, and a
+			// fixture leaving it false would measure both rules at once and
+			// report the boundary as wherever the other one fired.
+			Engaged: true,
 		}, rankInstant)
 	}
 
@@ -221,5 +226,113 @@ func TestADayWithNoPricedDealsStatesNoBar(t *testing.T) {
 
 	if out.Summary.MaterialThresholdMinor != nil {
 		t.Fatalf("a pipeline with no prices stated a bar of %d", *out.Summary.MaterialThresholdMinor)
+	}
+}
+
+// A wait nobody here ever answered on is demoted, not dropped.
+//
+// The evidence behind Engaged is thread identity, and thread identity comes
+// from headers the SENDER chose to send. A client that strips References gives
+// every message its own thread, so a live conversation can arrive looking like
+// a stranger's first mail. Hiding on that would lose a customer with nothing on
+// the page to say so; demoting costs a scroll.
+func TestAWaitWithNoReplyHistoryIsDemotedRatherThanDropped(t *testing.T) {
+	cold := classifyWaiting(WaitingCustomer{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000d1"),
+		Subject:    "Cold approach",
+		Since:      rankInstant.Add(-2 * 24 * time.Hour),
+	}, rankInstant)
+
+	if cold.item.Level == levelWaiting {
+		t.Error("a thread with no reply history led the day")
+	}
+	if cold.item.Id == "" {
+		t.Fatal("the row was dropped — this rule may only demote")
+	}
+	if !hasReason(cold.item, "no_reply_history") {
+		t.Error("the row does not say why it was demoted")
+	}
+}
+
+// Money outranks the missing history, exactly as it does staleness.
+//
+// An open deal on the thread is a stronger claim than any header a sender chose
+// to send, so a funded wait keeps the top band even with nothing written back.
+func TestAnOpenDealKeepsAnUnengagedWaitInTheTopBand(t *testing.T) {
+	funded := classifyWaiting(WaitingCustomer{
+		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000d2"),
+		Subject:     "Re: the contract",
+		Since:       rankInstant.Add(-2 * 24 * time.Hour),
+		HasOpenDeal: true,
+	}, rankInstant)
+
+	if funded.item.Level != levelWaiting {
+		t.Errorf("a funded wait was demoted to level %d for want of reply history",
+			funded.item.Level)
+	}
+}
+
+// The admit case: an engaged wait keeps the band and says nothing about history.
+func TestAnEngagedWaitLeadsAndClaimsNoMissingHistory(t *testing.T) {
+	engaged := classifyWaiting(WaitingCustomer{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000d3"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-2 * 24 * time.Hour),
+		Engaged:    true,
+	}, rankInstant)
+
+	if engaged.item.Level != levelWaiting {
+		t.Errorf("an engaged wait was demoted to level %d", engaged.item.Level)
+	}
+	if hasReason(engaged.item, "no_reply_history") {
+		t.Error("an engaged wait claimed it had no reply history")
+	}
+}
+
+// A message that asks us nothing is demoted, and an unjudged one is not.
+//
+// The two cases that must NOT move are the point. A classifier that never ran,
+// ran out of budget, or answered below its confidence floor leaves the queue
+// exactly as it found it — absence of a verdict is not evidence, and a queue
+// that quietly reordered itself when a model failed would be worse than one
+// with no classifier at all.
+func TestOnlyAJudgementOfAsksNothingDemotesAWait(t *testing.T) {
+	at := func(asksNothing bool) ranked {
+		return classifyWaiting(WaitingCustomer{
+			ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000e1"),
+			Subject:     "Monthly reporting",
+			Since:       rankInstant.Add(-2 * 24 * time.Hour),
+			Engaged:     true,
+			AsksNothing: asksNothing,
+		}, rankInstant)
+	}
+
+	if judged := at(true); judged.item.Level == levelWaiting {
+		t.Error("a message judged to ask nothing still led the day")
+	} else if !hasReason(judged.item, "asks_nothing") {
+		t.Error("the demoted row does not say why")
+	}
+	if unjudged := at(false); unjudged.item.Level != levelWaiting {
+		t.Errorf("an unjudged wait was demoted to level %d — absence of a "+
+			"verdict must change nothing", unjudged.item.Level)
+	}
+}
+
+// Money outranks the verdict, as it outranks every other demotion here.
+//
+// A statement on a thread with an open deal is still worth a rep's eye: the
+// classifier judges the message, and the deal is a fact about the relationship.
+func TestAnOpenDealKeepsAnInformationalWaitInTheTopBand(t *testing.T) {
+	funded := classifyWaiting(WaitingCustomer{
+		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000e2"),
+		Subject:     "Statement of account",
+		Since:       rankInstant.Add(-2 * 24 * time.Hour),
+		Engaged:     true,
+		AsksNothing: true,
+		HasOpenDeal: true,
+	}, rankInstant)
+
+	if funded.item.Level != levelWaiting {
+		t.Errorf("a funded wait was demoted to level %d by a verdict", funded.item.Level)
 	}
 }

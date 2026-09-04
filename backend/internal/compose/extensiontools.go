@@ -404,9 +404,9 @@ func (t extensionTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	// without passing through here at all. For notes that tick writes into
 	// ext_notes_note — the very object the human path gates `create` on. The
 	// reason a check there would be wrong is not that a tick is harmless: it is
-	// that extjobsrun.go's deriveAuthority mints a principal carrying scopes and
-	// no permissions document, so auth.Require would deny EVERY tick
-	// unconditionally. A job's bound is its declared scope and the fact that its
+	// that extjobsrun.go's extensionJobPrincipal mints a principal carrying
+	// scopes and no permissions document, so auth.Require would deny EVERY tick
+	// unconditionally — which extjobprincipal_test.go holds. A job's bound is its declared scope and the fact that its
 	// SQL is its own; the object grant is a caller's question, and a tick has no
 	// caller.
 	//

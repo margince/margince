@@ -74,21 +74,7 @@ func personCreateInput(req crmcontracts.CreatePersonRequest) (CreatePersonInput,
 		in.Social = *req.Social
 	}
 	in.Address = req.Address
-	if req.Emails != nil {
-		for i, e := range *req.Emails {
-			email := PersonEmailInput{Email: string(e.Email), EmailType: "work", Position: i}
-			if e.EmailType != nil {
-				email.EmailType = string(*e.EmailType)
-			}
-			if e.IsPrimary != nil {
-				email.IsPrimary = *e.IsPrimary
-			}
-			if e.Position != nil {
-				email.Position = *e.Position
-			}
-			in.Emails = append(in.Emails, email)
-		}
-	}
+	in.Emails = personEmailInputs(req.Emails)
 	if req.Phones != nil {
 		for i, p := range *req.Phones {
 			phone := PersonPhoneInput{Phone: p.Phone, PhoneType: "work", Position: i}
@@ -107,6 +93,45 @@ func personCreateInput(req crmcontracts.CreatePersonRequest) (CreatePersonInput,
 	return in, nil
 }
 
+// personEmailInputs maps the contract's addresses onto the store's, for both
+// transports that carry them.
+//
+// One function because create and update mean the same thing by an address, and
+// the store replaces the whole set either way. Two loops would be two answers to
+// "what does position default to" that nothing would notice disagreeing.
+func personEmailInputs(emails *[]crmcontracts.PersonEmailInput) []PersonEmailInput {
+	if emails == nil {
+		return nil
+	}
+	// Non-nil and empty is a real answer — remove every address — and it must
+	// stay distinguishable from absent, which is "leave them alone".
+	out := make([]PersonEmailInput, 0, len(*emails))
+	for i, e := range *emails {
+		email := PersonEmailInput{Email: string(e.Email), EmailType: "work", Position: i}
+		if e.EmailType != nil {
+			email.EmailType = string(*e.EmailType)
+		}
+		if e.IsPrimary != nil {
+			email.IsPrimary = *e.IsPrimary
+		}
+		if e.Position != nil {
+			email.Position = *e.Position
+		}
+		out = append(out, email)
+	}
+	return out
+}
+
+// manualSource is this schema's word for "a person did this", as against an
+// import or a capture run.
+//
+// It is what a patch's own children are stamped with: `source` is required on
+// every PersonEmail the response carries, and UpdatePersonRequest has no field
+// to carry one, so a child written through the patch needs an origin from
+// somewhere. The create path takes the caller's `source` because its request
+// has one; if the patch ever gains the field, read it instead of this.
+const manualSource = "manual"
+
 func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) UpdatePersonInput {
 	in := UpdatePersonInput{
 		FullName:     req.FullName,
@@ -121,6 +146,8 @@ func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) U
 		in.Social = *req.Social
 	}
 	in.Address = req.Address
+	in.Emails = personEmailInputs(req.Emails)
+	in.Source = manualSource
 	return in
 }
 

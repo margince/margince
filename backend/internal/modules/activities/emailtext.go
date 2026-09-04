@@ -19,11 +19,12 @@ import (
 // drawer still folds the tail in the browser, and a preview that disagreed
 // with the message it opens would be a row lying about its own mail.
 //
-// Nothing yet FAILS when they drift: emailtext_test.go's table was checked by
-// hand against the TypeScript on the same twelve bodies, which proves they
-// agree today and not that they will tomorrow. The gate that reads both
-// tables and fails in either direction is owed (margince#3782), and until it
-// exists a change to either side has to be made to both by whoever makes it.
+// backend/gates/emailsplitterparity_test.go is what makes "mirror" true. It
+// reads both files and compares the five vocabularies and the four single
+// patterns below, in BOTH directions, so a sign-off added here and not there is
+// a red build rather than a preview that ends mid-sentence. The scan window is
+// compared too: fifteen lines on one side and ten on the other folds a message
+// on one surface and prints the sign-off on the other.
 //
 // Why not textlang.NewTextOnly, which also finds where a message ends: it
 // answers a different question and its answer is wrong for a row. Asked for
@@ -108,6 +109,26 @@ var signOffExact = map[string]bool{
 // folds the message away on the strength of one line.
 const trailingScanLines = 15
 
+// EmailBodyTail says what the trimmed part of a body starts with.
+//
+// A signature and a quoted reply are trimmed for different reasons and read
+// differently to a person: the sign-off is the sender still speaking, and the
+// quote is an older message. One label for both hid a sender's own name behind
+// "show quoted history" on every message that had no history.
+type EmailBodyTail string
+
+// The three tails a body can have. Mirrored in frontend/src/format/emailtext.ts
+// and held to one table of cases by gates/frontendemailtext_test.go.
+const (
+	// TailNone: the whole body is the message, with nothing trimmed.
+	TailNone EmailBodyTail = "none"
+	// TailSignature: a sign-off. The sender still speaking, so the viewer shows
+	// it under the message rather than folding it away.
+	TailSignature EmailBodyTail = "signature"
+	// TailQuote: an older message underneath this one, which the viewer folds.
+	TailQuote EmailBodyTail = "quote"
+)
+
 // EmailBodyParts is a mail body read for display.
 type EmailBodyParts struct {
 	// Header is the From:/To: preamble capture folds into the body, when present.
@@ -116,6 +137,9 @@ type EmailBodyParts struct {
 	Main string
 	// Trimmed is the signature and quoted history, kept but not shown.
 	Trimmed string
+	// Tail is what Trimmed starts with, so a caller can label the control it
+	// folds it behind for what is actually under it.
+	Tail EmailBodyTail
 }
 
 func isSignOff(line string) bool {
@@ -164,27 +188,27 @@ func isQuoteStart(lines []string, index int) bool {
 }
 
 // boundaryIndex is the first line belonging to the tail rather than the
-// message: a quote marker anywhere, or a sign-off near the end. Returns -1
-// when the whole body is the message.
-func boundaryIndex(lines []string) int {
+// message, and WHICH KIND of tail it opens. The index is -1 when the whole
+// body is the message.
+func boundaryIndex(lines []string) (int, EmailBodyTail) {
 	signOffFloor := max(0, len(lines)-trailingScanLines)
 	for i, line := range lines {
 		if signatureDelimiter.MatchString(line) {
-			return i
+			return i, TailSignature
 		}
 		if isQuoteStart(lines, i) {
 			// The attribution line directly above a quoted block introduces it,
 			// so it travels with the quote rather than trailing the message.
 			if strings.HasPrefix(line, ">") && i > 0 && strings.HasSuffix(strings.TrimSpace(lines[i-1]), ":") {
-				return i - 1
+				return i - 1, TailQuote
 			}
-			return i
+			return i, TailQuote
 		}
 		if i >= signOffFloor && isSignOff(line) {
-			return i
+			return i, TailSignature
 		}
 	}
-	return -1
+	return -1, TailNone
 }
 
 // SplitEmailBody separates a stored mail body into the part worth reading on a
@@ -195,7 +219,7 @@ func boundaryIndex(lines []string) int {
 // mail rather than tidied it.
 func SplitEmailBody(body string) EmailBodyParts {
 	if strings.TrimSpace(body) == "" {
-		return EmailBodyParts{}
+		return EmailBodyParts{Tail: TailNone}
 	}
 	var header, rest string
 	if loc := preamblePattern.FindString(body); loc != "" {
@@ -209,22 +233,23 @@ func SplitEmailBody(body string) EmailBodyParts {
 	// whole of what was captured, so it IS the message: the invariant is that a
 	// non-empty body never renders as nothing.
 	if strings.TrimSpace(rest) == "" {
-		return EmailBodyParts{Main: strings.TrimSpace(body)}
+		return EmailBodyParts{Main: strings.TrimSpace(body), Tail: TailNone}
 	}
 
 	lines := strings.Split(rest, "\n")
-	cut := boundaryIndex(lines)
+	cut, tail := boundaryIndex(lines)
 	if cut < 0 {
-		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest)}
+		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest), Tail: TailNone}
 	}
 	main := strings.TrimSpace(strings.Join(lines[:cut], "\n"))
 	if main == "" {
-		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest)}
+		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest), Tail: TailNone}
 	}
 	return EmailBodyParts{
 		Header:  header,
 		Main:    main,
 		Trimmed: strings.TrimSpace(strings.Join(lines[cut:], "\n")),
+		Tail:    tail,
 	}
 }
 

@@ -50,6 +50,7 @@ function review(
       reps_counted: 2,
       deals_won: 3,
       deals_lost: 1,
+      deals_moved: 5,
       leads_routed: 10,
       leads_answered_in_target: 10,
       leads_breached: 0,
@@ -114,6 +115,71 @@ describe("the headline states the bar it measured against", () => {
     expect(
       await screen.findByText(en["teamweekly.headline.plain"]),
     ).toBeTruthy();
+  });
+});
+
+describe("the week's movement counts what advanced", () => {
+  // A team that moved eleven deals and closed none read as a team where nothing
+  // happened. Every member's weekly has counted deals_moved since the review
+  // shipped; the team total dropped it on the way up, so the panel could not
+  // draw the row at all.
+  //
+  // Asserted through the METER ROLE rather than by text: the bar carries its
+  // label as `aria-label`, which is how a screen reader gets it and the only
+  // place it exists. A getByText here finds nothing however right the code is.
+  it("draws the advanced row beside won and lost", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(review({ deals_won: 0, deals_lost: 0, deals_moved: 11 })),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+
+    await screen.findByText(en["teamweekly.movement.title"]);
+    const advanced = screen.getByRole("meter", {
+      name: en["teamweekly.movement.moved"],
+    });
+    expect(advanced.getAttribute("aria-valuenow")).toBe("11");
+  });
+
+  // ONE BASELINE for every bar, and the advanced count must be part of what
+  // sets it. A week whose largest fact is what moved would otherwise draw that
+  // row against a scale taken from the closed deals alone — the biggest number
+  // on the panel rendering as the shortest bar.
+  it("lets the advanced count set the scale when it is the week's largest", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(review({ deals_won: 2, deals_lost: 1, deals_moved: 20 })),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+    await screen.findByText(en["teamweekly.movement.title"]);
+
+    const advanced = screen.getByRole("meter", {
+      name: en["teamweekly.movement.moved"],
+    });
+    const won = screen.getByRole("meter", {
+      name: en["teamweekly.movement.won"],
+    });
+    // Every bar shares the maximum, and it is the advanced figure.
+    expect(advanced.getAttribute("aria-valuemax")).toBe("20");
+    expect(won.getAttribute("aria-valuemax")).toBe("20");
+  });
+
+  // A snapshot written before the column existed carries zero, and zero is a
+  // COUNT rather than an absence — the row still draws, saying the team
+  // advanced nothing that week.
+  it("draws the row at zero rather than dropping it", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(review({ deals_moved: 0 })),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+    await screen.findByText(en["teamweekly.movement.title"]);
+
+    expect(
+      screen
+        .getByRole("meter", { name: en["teamweekly.movement.moved"] })
+        .getAttribute("aria-valuenow"),
+    ).toBe("0");
   });
 });
 

@@ -5,23 +5,19 @@ package compose
 
 // The running half of the extension job seam: the two args types every composed
 // job shares, the dispatcher that fans out over the fleet, and the workspace
-// child that re-derives its authority and then runs the unit's tick.
+// child that mints the tick's authority and then runs the unit's tick.
 //
 // extjobs.go is the other half — what gets registered, and the two shapes that
 // are refused before anything is.
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -51,29 +47,25 @@ func (extJobDispatcherArgs) FleetWide() {}
 
 // extJobWorkspaceArgs is one workspace's tick of one composed job.
 //
-// The `river:"unique"` tag on Workspace is what makes the overlap bound mean
-// what it says. ByArgs uniqueness hashes the WHOLE encoded args unless some
-// field is tagged, and River adds the kind to that hash itself — so untagged,
-// the key would be (kind, workspace, principal), and a workspace whose agent
-// seat changed between ticks would get a SECOND concurrent child. That is
-// exactly the deactivate-and-reseat case this seam is otherwise careful about,
-// so the one field that identifies the unit of work is tagged and the two that
-// do not are left out: JobKind because River already keys on the kind, and
-// Principal because it is provenance the tick re-derives anyway. Same shape and
-// same reason as FxRateRefreshArgs, where RequestedBy is outside the hash.
+// The row carries NO principal. What acts is the job, not a person: the tick's
+// authority is a pure function of the declaration (extensionJobPrincipal), so
+// there is nothing about it a queued row could carry stale.
+//
+// The `river:"unique"` tag on Workspace changes NOTHING today, and is kept
+// deliberately. ByArgs hashes the whole encoded args unless a field is tagged,
+// and River adds the kind to that hash itself — so with these two fields the
+// tagged and untagged keys partition identically, because JobKind is constant
+// for a given kind. It stays because it DECLARES which field is the unit of
+// work: the day a second varying field lands here, an untagged hash would
+// silently widen the key and hand one workspace a second concurrent child while
+// its first was still in flight. That is what the tag prevents, and it prevents
+// it by being here before the field arrives rather than after.
 type extJobWorkspaceArgs struct {
 	JobKind string `json:"job_kind"`
 	// Workspace is the tenant this tick is for, and the ONLY thing the
 	// uniqueness hash reads out of these args. The runner binds it before the
 	// handler is entered, so a unit's tick can never see a global scope.
 	Workspace ids.UUID `json:"workspace_id" river:"unique"`
-	// Principal is a REFERENCE to the app_user the dispatcher recorded as this
-	// tick's initiator — an id and nothing else. What that principal may do is
-	// deliberately NOT in the row: it is re-derived at execution (see
-	// deriveAuthority), because a row can sit in the queue across a
-	// deactivation, and authority copied at enqueue time would outlive the
-	// revocation that was supposed to end it.
-	Principal ids.UUID `json:"principal_id"`
 }
 
 // Kind is the composed child kind, ext_<unit>_<job>_ws.
@@ -99,67 +91,15 @@ func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDi
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	// The actor is resolved BEFORE the insert, per workspace, inside that
-	// workspace's own GUC. ADR-0091 §8 phase D took the tenant column off
-	// app_user, so the read is the installation's and every iteration now
-	// resolves the SAME seat — an installation serves one organization
-	// (ADR-0061), so there is one iteration in practice. The per-workspace
-	// shape stays until the fan-out itself is collapsed, because moving the
-	// resolution out is that change, not this one.
+	// Every live workspace is enqueued, unconditionally. The dispatcher reads
+	// no identity at all: what a tick acts as is decided from the declaration
+	// at execution, so there is no per-workspace precondition left for this
+	// loop to consult and no tenant it can be right to skip.
 	//
-	// It costs one round trip per live workspace, serially, inside the
-	// dispatcher's DECLARED wall clock — so that number is a fleet-size
-	// decision the unit makes in its fragment, not a default it inherits. Said
-	// here rather than hidden because it is the one part of this fan-out whose
-	// cost grows with the installation.
-	//
-	// A read that FAILS aborts the whole dispatch. "No seat" is a FACT about
-	// the tenant and is handled below; a failed read is not a fact about the
-	// tenant at all, it is a database fault, and continuing past it would
-	// enqueue that workspace with a zero principal — indistinguishable in the
-	// row from a tenant that genuinely has no seat. Aborting hands the
-	// dispatcher's own retry a clean slate, which is the same argument
-	// dispatchWith makes for its atomic insert.
-	//
-	// A SEATLESS workspace is SKIPPED, and counted, rather than enqueued to fail
-	// at the authority derivation. Bootstrap now writes a workspace its agent
-	// seat, so this is no longer the state every fresh installation is in — it
-	// is reached when an operator archives or deactivates that seat, which is a
-	// posture they are entitled to hold. A unit ships enabled at whatever
-	// cadence it declares (notes's is 60s), so enqueueing would answer that
-	// choice with three discarded rows a minute per workspace, forever.
-	//
-	// The argument against skipping — that silence leaves the capability just as
-	// dead — is right about silence and wrong about skipping. It is answered by
-	// the GAUGE rather than by an error storm: a known-absent precondition is
-	// its own class, reported as a number an operator can alert on, not as a
-	// failure that says the tick broke. Same posture the mixed-build gauge takes
-	// for a condition an installation is allowed to be in.
-	seated := make([]ids.UUID, 0, len(workspaces))
-	actors := make(map[ids.UUID]ids.UUID, len(workspaces))
-	seatless := 0
-	for _, ws := range workspaces {
-		actor, err := extensionJobActor(ctx, w.pool, ws)
-		if err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
-		if actor.IsZero() {
-			seatless++
-			continue
-		}
-		seated = append(seated, ws)
-		actors[ws] = actor
-	}
-	recordSeatlessWorkspaces(seatless)
-	if seatless > 0 {
-		// DEBUG, not Warn: at a 60s cadence a Warn here is the same log storm
-		// in a quieter costume. The gauge is the durable signal; this line
-		// exists for the operator who has already read the gauge and turned the
-		// level up to find out which dispatch it came from.
-		slog.DebugContext(ctx, "extensions: skipping workspaces with no agent seat",
-			"kind", w.decl.ChildKind(), "seatless", seatless, "seated", len(seated))
-	}
-	workspaces = seated
+	// The enumeration is therefore the dispatcher's ONLY read, which is what
+	// keeps its declared wall clock independent of fleet size. It used to
+	// resolve one agent seat per workspace here, serially, and that round trip
+	// per tenant is what came out.
 	child := w.decl.ChildKind()
 	// workspaceSweepOpts and not sweepInsertOpts. The difference is the whole
 	// fan-out: sweepInsertOpts' uniqueness window is ByState ONLY, so N children
@@ -172,43 +112,44 @@ func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDi
 	// for kind-verification would be asking about a value that cannot arrive.
 	return jobs.FaultContext(ctx, dispatchWith(ctx, workspaces, clientInsertMany(ctx), workspaceSweepOpts(child),
 		func(ws ids.UUID) river.JobArgs {
-			return extJobWorkspaceArgs{JobKind: child, Workspace: ws, Principal: actors[ws]}
+			return extJobWorkspaceArgs{JobKind: child, Workspace: ws}
 		}))
 }
 
-// extensionJobActor answers the app_user one workspace's extension ticks are
-// initiated by: its agent seat, which is the actor the product already has for
-// work nobody asked for.
+// extensionJobPrincipal is the authority a scheduled tick answers as: the JOB,
+// named by its dispatcher kind, and no user at all.
 //
-// A workspace with no live agent seat answers the ZERO id, which the caller
-// reads as "skip and count" rather than as an actor to enqueue under. Bootstrap
-// writes every new installation its seat, so that answer means an operator has
-// since archived or deactivated it — see Work for why that is a gauge and not
-// an error storm.
+// WHAT IS ABSENT IS THE POINT. A tick is work nobody requested, so there is no
+// person to name — and naming one anyway is what this used to do, by resolving a
+// seeded `is_agent` row that authorized nothing and cost a licence seat. The
+// units that ship scheduled work do not act on this authority: each lands its
+// records through Runtime.Ingest, which resolves the MEMBER's live grants and
+// discards whatever the tick was carrying. So the honest answer here is a job.
 //
-// The zero id is returned rather than an error because a seatless tenant is not
-// a fault: the read succeeded and the answer is "none". An error here would put
-// a database fault and a known-absent precondition in the same channel, which
-// is the distinction the dispatcher needs to keep.
-func extensionJobActor(ctx context.Context, pool *pgxpool.Pool, ws ids.UUID) (ids.UUID, error) {
-	var actor ids.UUID
-	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, ws), pool, func(tx pgx.Tx) error {
-		// The installation's agent seat, not a workspace's: ADR-0091 §8 phase D
-		// took the tenant column off app_user. Zero rows still means the same
-		// thing the skip is built on — bootstrap writes every installation its
-		// seat, so an empty answer says an operator archived or deactivated it.
-		return tx.QueryRow(ctx,
-			`SELECT id FROM app_user
-			  WHERE is_agent AND `+identity.LiveMemberSQL("")+`
-			  ORDER BY created_at LIMIT 1`).Scan(&actor)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, nil
+// THE EMPTY Permissions IS LOAD-BEARING, not an omission. There are two
+// independent locks on the governed core-write door: extcore.go refuses an
+// unattended write outright, and auth.Require denies every object to a principal
+// holding no grants. This is the second one, and extjobprincipal_test.go is what
+// holds it — nothing else does.
+//
+// PrincipalAgent, NOT PrincipalSystem. System looks like the tidier word for
+// "no user" and it would delete that second lock: auth.Require returns nil for
+// PrincipalSystem before Permissions is consulted, and auth.Unbounded hands it
+// RowScopeAll. It also keeps audit_log.actor_type = 'agent', which is what the
+// captured_by_kind=agent lane reads. PrincipalHuman would break both at once.
+//
+// No error to return: every field is a pure function of the declaration, which
+// is why the row this runs for carries no principal to go stale.
+func extensionJobPrincipal(decl extension.JobDeclaration) principal.Principal {
+	return principal.Principal{
+		Type: principal.PrincipalAgent,
+		ID:   "agent:" + decl.DispatcherKind(),
+		// The declared scope and nothing wider. It is a REQUEST an operator
+		// resolves, so it bounds the tick rather than granting it anything: the
+		// capability surface the handler holds is the Runtime's, and this is
+		// what the audit rows record the tick as having asked for.
+		Scopes: principal.NewScopeSet(principal.Scope(decl.RequestedScope)),
 	}
-	if err != nil {
-		return ids.UUID{}, fmt.Errorf("compose: resolving the extension job actor for workspace %s: %w", ws, err)
-	}
-	return actor, nil
 }
 
 // extJobWorkspaceWorker runs ONE workspace's tick of one composed job.
@@ -218,12 +159,6 @@ type extJobWorkspaceWorker struct {
 	handle extension.JobHandler
 	log    *slog.Logger
 }
-
-// errStaleJobPrincipal is what a tick meets when the principal its row names is
-// no longer one this workspace has. It is a failure and not a skip: a pass that
-// quietly did nothing because its actor was deactivated is indistinguishable,
-// in River and in every gauge, from one that ran and found nothing to do.
-var errStaleJobPrincipal = errors.New("compose: the principal this extension job was enqueued under is no longer live in this workspace")
 
 func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobWorkspaceArgs]) error {
 	// FIRST, and before anything reads a row: the workspace this tick is for.
@@ -235,11 +170,7 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	actor, err := w.deriveAuthority(wsCtx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	wsCtx = principal.WithActor(wsCtx, actor)
+	wsCtx = principal.WithActor(wsCtx, extensionJobPrincipal(w.decl))
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	// FaultForKind, on the CHILD's kind, because w.tick is the one call here that
 	// runs the UNIT's code and so the one that can return a declared failure
@@ -250,54 +181,6 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 	// On wsCtx: the log line is written from this context, and jobs.FaultForKind
 	// reads the correlation id and the workspace off it. ctx carries neither.
 	return jobs.FaultForKind(wsCtx, w.decl.ChildKind(), w.tick(wsCtx))
-}
-
-// deriveAuthority re-reads the recorded principal AT EXECUTION and refuses when
-// it is not a live seat of this workspace.
-//
-// This is the whole reason the row carries an id rather than a principal. River
-// is a queue: a child can be enqueued minutes or hours before it runs, can be
-// retried after a backoff, and can be rescued after a crash — and across any of
-// those windows the person or seat behind it can be deactivated, suspended or
-// archived. A principal serialised at enqueue time would keep working through
-// all three, which is precisely the authority somebody revoked.
-//
-// The read is workspace-pinned, so a principal id from another tenant does not
-// resolve here at all — the RLS policy is what makes the workspace part of the
-// question rather than a column this query has to remember to compare.
-func (w *extJobWorkspaceWorker) deriveAuthority(ctx context.Context, args extJobWorkspaceArgs) (principal.Principal, error) {
-	if args.Principal == (ids.UUID{}) {
-		return principal.Principal{}, fmt.Errorf("%w: the dispatcher recorded no actor for this workspace", errStaleJobPrincipal)
-	}
-	var seat string
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// is_agent is re-checked, not assumed. Only the dispatcher writes this
-		// field today, so nothing live can reach here with a human's id — but
-		// the whole premise of this function is that the enqueue-time record is
-		// not trusted, and "the only writer is careful" is a property of today's
-		// callers rather than of the row. A human seat minted as
-		// PrincipalAgent below would be an agent principal nobody granted.
-		return tx.QueryRow(ctx,
-			`SELECT seat_type FROM app_user
-			  WHERE id = $1 AND is_agent AND `+identity.LiveMemberSQL("")+``, args.Principal).Scan(&seat)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return principal.Principal{}, fmt.Errorf("%w (principal %s)", errStaleJobPrincipal, args.Principal)
-	}
-	if err != nil {
-		return principal.Principal{}, fmt.Errorf("compose: deriving extension job authority: %w", err)
-	}
-	return principal.Principal{
-		Type:     principal.PrincipalAgent,
-		ID:       "agent:" + w.decl.DispatcherKind(),
-		UserID:   args.Principal,
-		SeatType: principal.SeatType(seat),
-		// The declared scope and nothing wider. It is a REQUEST an operator
-		// resolves, so it bounds the tick rather than granting it anything: the
-		// capability surface the handler holds is the Runtime's, and this is
-		// what the audit rows record the tick as having asked for.
-		Scopes: principal.NewScopeSet(principal.Scope(w.decl.RequestedScope)),
-	}, nil
 }
 
 // tick mints the call-scoped Runtime, runs the unit's handler with it, and

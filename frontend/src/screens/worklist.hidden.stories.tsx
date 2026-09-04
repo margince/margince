@@ -34,6 +34,7 @@ const base = {
   not_sales: 0,
   past_horizon: 0,
   unlinked: 0,
+  colleagues: 0,
   truncated: false,
   clear: false,
 };
@@ -42,6 +43,13 @@ const base = {
 // wrote months ago and was never answered is what this reading exists to find.
 export const NobodyChoseThis: Story = {
   args: { backlog: { ...base, past_horizon: 4, unlinked: 2 } },
+};
+
+// The colleague rule is only as good as the domain list behind it. A figure
+// this large says somebody's own-domain entry is swallowing real mail, which is
+// the failure it exists to make visible.
+export const OurOwnDomainsHideTooMuch: Story = {
+  args: { backlog: { ...base, colleagues: 9 } },
 };
 
 // Every rule holding something, which is what a queue in trouble looks like.

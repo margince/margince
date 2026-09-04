@@ -123,30 +123,37 @@ func (s *Service) Draft(
 	}
 	// Loaded after the 360 read, so a caller who may not read this person is
 	// refused before their voice profile is touched at all.
-	draft, by, err := Write(ctx, s.lane, in, draftvoice.Load(ctx, s.voice, s.log))
+	voice := draftvoice.Load(ctx, s.voice, s.log)
+	draft, by, err := Write(ctx, s.lane, in, voice)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
-	out := wire(draft, by)
+	out := Wire(draft, by, voice.Degraded)
 	// The scoped read's own report of what the narrowing kept, so the
 	// composer's scope line counts what the draft was actually written from.
 	out.Scope = view.Scope
 	return out, nil
 }
 
-// wire maps the written draft onto the contract.
+// Wire maps the written draft onto the contract.
 //
 // draft_ref is deliberately absent. The reply drafter returns one so the voice
 // model can learn from what the rep changed — and recording a served draft is a
 // WRITE, which this operation does not perform.
-func wire(draft Draft, by crmcontracts.WrittenBy) crmcontracts.AccountEmailDraft {
+//
+// Exported because the LEAD drafter answers the same contract type from the
+// same writer, and a second mapping of one Draft onto one AccountEmailDraft is
+// two answers to one question — including which of them stamps the Art. 50
+// disclosure, which is the half a reader would notice missing.
+func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool) crmcontracts.AccountEmailDraft {
 	aiWritten := by == crmcontracts.Model
 	out := crmcontracts.AccountEmailDraft{
-		Subject:     draft.Subject,
-		Body:        draft.Body,
-		GeneratedBy: by,
-		AiGenerated: &aiWritten,
-		Reasoning:   wireReasons(draft.Reasoning),
+		Subject:       draft.Subject,
+		Body:          draft.Body,
+		GeneratedBy:   by,
+		AiGenerated:   &aiWritten,
+		Reasoning:     wireReasons(draft.Reasoning),
+		VoiceDegraded: &voiceDegraded,
 	}
 	if len(draft.To) > 0 {
 		to := make([]openapi_types.Email, 0, len(draft.To))

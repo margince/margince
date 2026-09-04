@@ -103,10 +103,15 @@ func TestDescriptionsCarryNoControlCharacters(t *testing.T) {
 	}
 }
 
-// The two writes real sessions lost data to. Both returned 200 with the value
-// discarded: organization_id is not a person field at all, and emails is a
+// The writes real sessions lost data to. Each returned 200 with the value
+// discarded: organization_id is not a person field at all, and phones is a
 // person field on CREATE and no field at all on UPDATE — the shape a caller is
 // most likely to get wrong, because it exists next door.
+//
+// `emails` was the original second case and is not one any more: it was added
+// to the person update so a bounced address could be corrected, which is the
+// honest way for a case here to stop being real. `phones` is the same asymmetry
+// still standing, and it is what this now watches.
 func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -116,7 +121,7 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 		wantNamed  string
 	}{
 		{"organization_id on a person create", createShapes, "person", `{"full_name":"A","organization_id":"x"}`, "organization_id"},
-		{"emails on a person update", updateShapes, "person", `{"emails":["a@b.c"]}`, "emails"},
+		{"phones on a person update", updateShapes, "person", `{"phones":["+49 30 1234"]}`, "phones"},
 		{"a typo next to a real field", createShapes, "organization", `{"displayname":"Firecrawl"}`, "displayname"},
 	}
 	for _, tc := range cases {

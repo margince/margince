@@ -115,19 +115,25 @@
   padding: 0;
 }
 
-/* The band heading, above the first row of its run.
-   Inside the list item rather than between them, because an <ol> may hold only
-   <li> children — a heading placed as a sibling would be invalid structure that
-   the browser silently reparents. The margin collapses to nothing on the first
-   heading, which needs no gap above it. */
+/* The band heading, above its own <ol>. The page draws one list per band, so
+   the heading is a sibling of the list rather than a child of its first item —
+   which is what lets a band with no rows draw a heading and a line saying so.
+   The first heading needs no gap above it. */
 .worklist-band {
   color: var(--textSecondary);
   display: block;
   margin: var(--space-5) 0 var(--space-2);
 }
 
-.worklist-list > li:first-child .worklist-band {
+.worklist-queue-band:first-child .worklist-band {
   margin-top: 0;
+}
+
+/* What an empty band says. Set in the secondary colour so a clear band reads as
+   a quiet answer rather than as the same weight as work. */
+.worklist-band-clear {
+  color: var(--textSecondary);
+  margin: 0;
 }
 
 .worklist-row {
@@ -166,6 +172,7 @@
 }
 
 .worklist-row-detail,
+.worklist-row-when,
 .worklist-row-facts,
 .worklist-row-sample,
 .worklist-row-because,
@@ -270,4 +277,67 @@
 }
 .worklist-pair-name {
   font-weight: 600;
+}
+
+/* The snooze spans, stacked inside their popover: three short verbs read as a
+   list of choices rather than as a sentence when they sit on one line. */
+.worklist-snooze-spans {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+/* The queue on a phone.
+ *
+ * The row is a three-column line — rank, text, verbs — and the verbs are
+ * `flex: 0 0 auto`, so they never yield width. On a 390px screen that leaves
+ * the title column squeezed to a few characters per line while three buttons
+ * hold their full width beside it: the rep is reading a column of broken words
+ * next to controls they cannot comfortably hit.
+ *
+ * The fix is to stop competing for one line. The text takes the width, and the
+ * verbs move below it where they can wrap and take a real target height.
+ *
+ * 720px is the tree's own breakpoint, not a number chosen here — the modal, the
+ * record head and the page zones all turn at it.
+ */
+@media (max-width: 720px) {
+  .worklist-row {
+    flex-wrap: wrap;
+  }
+
+  /* The text takes what is left of the first line, beside the rank. Wrapping
+     rather than a column direction so the RANK stays on the title's line: a
+     rank stacked above its own row is a number belonging to nothing. */
+  .worklist-row-text {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Every group of verbs below the text, at full width and free to wrap. They
+     are separate elements — the row's own, the ways to put it down, the
+     hand-off — and each has to yield, or the one that does not squeezes the
+     others back onto a sliver. */
+  .worklist-row-verbs,
+  .worklist-row-dispositions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  /* The touch floor. `--control-h-sm` rises only to 36px for a coarse pointer,
+     which is the size these verbs take — short of the 44px the sign-in door
+     and the list rows already keep. A queue worked with a thumb owes the same
+     target: a mis-hit here files somebody else's judgement on a customer's
+     message.
+     Every pressable thing INSIDE a row, not a list of the verb groups: a row
+     also carries the approval's own three decisions, and those were the
+     smallest targets on the page at 32px. A selector naming today's groups is
+     a claim about which controls exist, and it goes stale the day a row grows
+     another one. */
+  .worklist-row button,
+  .worklist-row a.btn,
+  .worklist-row .link-button {
+    min-block-size: 44px;
+  }
 }

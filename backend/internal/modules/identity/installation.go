@@ -305,8 +305,14 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 }
 
 // seedAgentSeat writes the installation's first-party Agent Runner identity:
-// the app_user that work nobody requested answers as — a scheduled extension
-// tick today, the resident runner when it lands (seed-and-fixtures §1.5).
+// the app_user a resident runner will answer as when it lands
+// (seed-and-fixtures §1.5).
+//
+// It has NO consumer today. Scheduled extension ticks used to be one — the
+// dispatcher resolved this row to name a tick's initiator — but a tick now
+// answers as the job it is and reads no identity at all, so nothing in the
+// running product acts on this seat. It still costs a full licence seat, which
+// is why retiring the row is a change of its own.
 //
 // It is an IDENTITY and not an authority, which is why it receives no
 // role_assignment and no password_hash. What an agent may do is the passport

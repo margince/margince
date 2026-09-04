@@ -92,7 +92,7 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 // output on this surface, whatever the human then does to the words.
 type DraftProvenance = Pick<
   EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version"
+  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
 >;
 
 // The link targets a relink can point at (relinkActivity's entity_type enum,
@@ -377,6 +377,7 @@ function fillFromDraft(
       ai_generated: drafted.ai_generated ?? false,
       ai_disclosure: drafted.ai_disclosure,
       voice_profile_version: drafted.voice_profile_version,
+      voice_degraded: drafted.voice_degraded ?? false,
     });
     form.setReasoning(result.reasoning ?? []);
     form.setScope(result.scope);
@@ -686,6 +687,38 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
   );
 }
 
+// The lead-started draft. One path parameter and optional steering: a lead
+// carries its own address, so unlike the account path there is no recipient to
+// name and no deal or project to pick.
+//
+// It answers the same `{available, draft}` shape as the other two, so the fill
+// below cannot tell the three origins apart and they cannot drift into
+// different clobber rules.
+async function draftFromLead({
+  entityId,
+  intent,
+  t,
+}: Readonly<{
+  entityId: string;
+  intent: string;
+  t: ReturnType<typeof useT>;
+}>): Promise<DraftResult> {
+  const { data, error, response } = await api.POST("/leads/{id}/draft-email", {
+    params: { path: { id: entityId } },
+    body: intent.trim() ? { intent: intent.trim() } : {},
+  });
+  if (response.status === 501) return { available: false as const };
+  if (!response.ok || !data) {
+    throwProblem(error || { title: t("compose.actionFailed") });
+  }
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
+}
+
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
 // rather than in a message, so it needs the recipient named before it can say
 // anything — that is the one thing this path knows that an empty compose box
@@ -711,9 +744,16 @@ async function draftFromAccount({
   intent: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
-  // Only a company page can ground one: a person or a deal has no 360 to
-  // write from, and grounding a message to a contact in some nearby account
-  // would be a conversation the rep never chose.
+  // A LEAD grounds its own. The record IS the recipient — the address is on it
+  // rather than on a contact behind it — so there is nobody to name and nothing
+  // to pick, which is the shape /people/{id}/draft-email describes and the same
+  // writer answers.
+  if (entityType === "lead") {
+    return draftFromLead({ entityId, intent, t });
+  }
+  // A company page has to be told which contact, because an account has many.
+  // A person or a deal grounds nothing here: writing to a contact from whatever
+  // account sits nearby would be a conversation the rep never chose.
   if (entityType !== "organization" || !recipientId) {
     return { available: false as const };
   }
@@ -763,6 +803,7 @@ type DraftResult =
             | "ai_generated"
             | "ai_disclosure"
             | "voice_profile_version"
+            | "voice_degraded"
           >
         >;
       // Present only on the account-started path; a reply explains itself by
@@ -1489,6 +1530,13 @@ function DraftBand({
         {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
       </p>
       <DraftReasons reasons={reasons} onOpenRecord={openCited} />
+      {provenance.voice_degraded && (
+        // The one loss a sender cannot see in the text: their own voice is
+        // the register nobody proofreads for.
+        <Callout tone="warn" live="status">
+          {t("compose.voiceDegraded")}
+        </Callout>
+      )}
       {provenance.voice_profile_version != null && (
         <>
           <p className="t-caption">
@@ -2181,6 +2229,7 @@ export function ComposeModal({
   entityType,
   entityId,
   personId,
+  recordAddress,
   kind,
   open,
   onClose,
@@ -2196,6 +2245,18 @@ export function ComposeModal({
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  /**
+   * The record's own email address, for a FIRST message to it — a lead or a
+   * contact nobody has written to yet, where there is no thread to resolve a
+   * counterparty from.
+   *
+   * The caller's, because the record is already on screen behind this drawer
+   * and its address came with it: a lookup here would ask the server for a
+   * field the page is holding. Offered only when nothing is being answered,
+   * and offered the same way a thread's address is — into an empty field,
+   * once, and never over what the reader typed.
+   */
+  recordAddress?: string;
   // Undefined (or any non-channel kind) keeps the mail behaviour this modal
   // already had before a channel existed — every mail test renders this
   // component without ever naming a kind.
@@ -2300,9 +2361,21 @@ export function ComposeModal({
     activityId ?? (offeringThreads ? chosen : latest.activity?.id);
   // Addressing the reply before a draft is asked for. A channel reply resolves
   // its recipient server-side and shows no To field, so it asks nothing.
-  const threadRecipient = useReplyRecipient(
+  const replyRecipient = useReplyRecipient(
     open && !isChannelReply ? answering : undefined,
   );
+  // What the composer offers as the recipient: the thread's counterparty where
+  // there is a thread, and otherwise the record's own address.
+  //
+  // The fallback is what a FRESH mail needs. Every path into this field ran
+  // through an activity, so a first message to a record — a lead nobody has
+  // written to yet — opened with To empty over a record whose address was on
+  // screen behind the drawer. The thread still wins where both exist: an
+  // address recorded on the message being answered is who that conversation is
+  // with, which the record's primary address is not.
+  const threadRecipient =
+    replyRecipient ??
+    (open && !isChannelReply && !answering ? recordAddress : undefined);
   // Offered ONCE, when the lookup first answers, and never again.
   //
   // Keyed on the recipient rather than on the field being empty, because an
@@ -3140,6 +3213,7 @@ export function ChannelReplyAction({
   entityType,
   entityId,
   personId,
+  contentWithheld,
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
@@ -3147,6 +3221,10 @@ export function ChannelReplyAction({
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  // The row's content is not this reader's to see. The verb still works —
+  // writing to the contact is not reading their mail — but it is not a REPLY,
+  // and calling it one claims access to the message being answered.
+  contentWithheld?: boolean;
 }>) {
   const t = useT();
   const [reply, setReply] = useState(false);
@@ -3161,7 +3239,7 @@ export function ChannelReplyAction({
   return (
     <>
       <Button small onClick={() => setReply(true)}>
-        {t("compose.reply")}
+        {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
       </Button>
       {reply && (
         <ComposeModal

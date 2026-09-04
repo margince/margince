@@ -11,6 +11,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
@@ -35,7 +36,12 @@ type UpdateActivityInput struct {
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	IsDone     *bool
-	IfVersion  *int64
+	// MeetingStatus is how the meeting went, and it is meaningful only on a
+	// meeting. The pairing is refused in the mapping against the kind the ROW
+	// carries — a patch cannot change a kind, so the stored one is the only
+	// honest thing to hold it against.
+	MeetingStatus *string
+	IfVersion     *int64
 }
 
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
@@ -72,26 +78,50 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		if err := renormalizeTranscriptPatch(current, &in); err != nil {
 			return err
 		}
+		// The kind the ROW carries, not one the patch names — a patch cannot
+		// change a kind. Without this a note could be given `held` and read back
+		// afterwards as a meeting-shaped fact about something that was not one,
+		// which is the pairing create already refuses; the database CHECK
+		// constrains the vocabulary and not this.
+		//
+		// `held` skips it for the reason the version compare above skips it: a
+		// row under retention hold owes 423 whatever else is wrong with the
+		// request, and answering 422 first would invite the caller to fix the
+		// field and try again against a row that will refuse them either way.
+		if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
+			return &MeetingStatusKindError{Kind: string(current.Kind)}
+		}
 		if err := ensureAssigneeExists(ctx, tx, in.AssigneeID); err != nil {
 			return err
 		}
+		// Every placeholder is derived from the argument slice rather than
+		// typed. Nothing checks that a hand-written $N still names the value a
+		// caller appends, and this statement's list has grown twice.
+		args := []any{}
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		row := arg(id)
 		// done_at travels WITH is_done (the activity_done_at CHECK):
-		// completion stamps the moment, reopening clears it.
-		if _, err := tx.Exec(ctx, `
+		// completion stamps the moment, reopening clears it — so the flag is
+		// named once and read three times.
+		done := arg(in.IsDone)
+		if _, err := tx.Exec(ctx, fmt.Sprintf(`
 			UPDATE activity SET
-			  subject = coalesce($2, subject),
-			  body = coalesce($3, body),
-			  occurred_at = coalesce($4, occurred_at),
-			  due_at = coalesce($5, due_at),
-			  remind_at = coalesce($6, remind_at),
-			  assignee_id = coalesce($7, assignee_id),
-			  is_done = coalesce($8, is_done),
+			  subject = coalesce($%[2]d, subject),
+			  body = coalesce($%[3]d, body),
+			  occurred_at = coalesce($%[4]d, occurred_at),
+			  due_at = coalesce($%[5]d, due_at),
+			  remind_at = coalesce($%[6]d, remind_at),
+			  assignee_id = coalesce($%[7]d, assignee_id),
+			  is_done = coalesce($%[8]d, is_done),
+			  meeting_status = coalesce($%[9]d, meeting_status),
 			  done_at = CASE
-			    WHEN $8 IS TRUE AND NOT is_done THEN now()
-			    WHEN $8 IS FALSE THEN NULL
+			    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
+			    WHEN $%[8]d IS FALSE THEN NULL
 			    ELSE done_at END
-			WHERE id = $1`,
-			id, in.Subject, in.Body, in.OccurredAt, in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone); err != nil {
+			WHERE id = $%[1]d`,
+			row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
+			arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus)),
+			args...); err != nil {
 			return err
 		}
 		// Read back BEFORE auditing: done_at is stamped by the statement above
@@ -442,6 +472,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEve
 	}
 	if in.IsDone != nil {
 		fields.IsDone = in.IsDone
+	}
+	if in.MeetingStatus != nil {
+		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
+		fields.MeetingStatus = &status
 	}
 	return fields
 }

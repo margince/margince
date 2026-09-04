@@ -15,6 +15,7 @@ package mailmap
 // three, and each has its own answer below — a cap, a cap, and a sniff.
 
 import (
+	"bytes"
 	"io"
 	"strings"
 
@@ -86,6 +87,13 @@ type collector struct {
 	dropped map[string]int
 	budget  int
 	ordinal int
+	// calendar is an unnamed calendar payload held back until the walk is over.
+	//
+	// It is a file like any other, but it is OURS to name and the sender did not
+	// choose to send it as an attachment — so it takes what is left of the cap
+	// rather than competing for it. A message carrying twenty attachments and an
+	// invitation keeps all twenty attachments.
+	calendar []byte
 }
 
 func newCollector() *collector {
@@ -109,6 +117,26 @@ func (c *collector) drops() []PartDrop {
 		}
 	}
 	return out
+}
+
+// holdCalendar keeps an unnamed calendar payload aside for settle to admit.
+//
+// Only the FIRST is held: a message carries one invitation, and a sender
+// offering thousands of calendar parts must not buy unbounded memory with them.
+func (c *collector) holdCalendar(content []byte) {
+	if c.calendar == nil {
+		c.calendar = content
+	}
+}
+
+// settle admits whatever was held back, after every part the sender named has
+// had its claim on the bounds.
+func (c *collector) settle() {
+	if c.calendar == nil {
+		return
+	}
+	c.admit(unnamedCalendarFilename, calendarContentType, bytes.NewReader(c.calendar))
+	c.calendar = nil
 }
 
 // exhausted reports that the walk has seen more parts than any real message
