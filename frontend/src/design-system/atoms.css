@@ -201,6 +201,7 @@
    is square already, so the rule that has to be stated is the round one. */
 .avatar-xl:not(.avatar-org) {
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
@@ -1637,9 +1638,9 @@
 }
 
 /* The label is the reading's eyebrow (`.t-eyebrow` sets its type) and owns
- * the row; the source badge sits at its far end — beside the name of the
- * reading rather than under the figure, so it qualifies the label without
- * competing with the number. */
+ * the row; what QUALIFIES the reading — where it came from, what it rests on —
+ * sits at its far end, beside the name of the reading rather than under the
+ * figure, so neither competes with the number. */
 .stat-card-label {
   display: flex;
   align-items: baseline;
@@ -1710,42 +1711,43 @@
   border-radius: var(--r-sm);
 }
 
-/* The card's foot: the receipt at one end, the way out at the other. Pushed to
-   the BOTTOM of the card (margin-top: auto) so a row of readings of different
-   heights lines its feet up — the alternative was each card's last line
-   floating wherever its own content ended. */
+/* The card's foot: the way out. Pushed to the BOTTOM of the card
+   (margin-top: auto) so a row of readings of different heights lines its feet
+   up — the alternative was each card's last line floating wherever its own
+   content ended. */
 .stat-card-foot {
   display: flex;
-  /* Two whole items that may go onto two lines, never two items broken
-     mid-phrase: in a four-across row the receipt and the door do not always
-     share a line, and a receipt shrunk to one word per line reads as damage. */
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  justify-content: flex-end;
   margin-top: auto;
   padding-top: var(--space-2);
-}
-
-.stat-card-foot > * {
   white-space: nowrap;
 }
-/* Only the door: with no receipt beside it, it still sits at the card's end
-   rather than under the figure. */
-.stat-card-foot:has(> .stat-card-open:only-child) {
-  justify-content: flex-end;
-}
 
-/* The receipt reads as the quiet line it is: meta-sized, in the meta colour,
-   and marked pressable only by its caret and its hover — the card's figure is
-   what a reader compares across the row, and a receipt set to compete with it
-   is the wrong thing catching the eye. */
+/* The receipt is a CHIP on the reading's name line, not a line of text: what
+   it offers is a door to the working rather than a fact to read, and the one
+   thing on this card meant to be read across a row is the figure. Outlined
+   rather than filled, and at the meta size the eyebrow beside it already uses,
+   so it is legible as pressable without becoming the first thing seen.
+
+   `align-self: center` because the row is baseline-aligned for the label's
+   own sake, and a bordered box hung from a text baseline sits low against the
+   word beside it. */
 .popover-trigger.stat-card-basis {
+  align-self: center;
+  flex-shrink: 0;
   font-size: var(--fs-meta);
+  font-weight: var(--fw-regular);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--textMeta);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  padding: 1px var(--space-1);
+  background: var(--bgCard);
 }
 .popover-trigger.stat-card-basis:hover {
   color: var(--textPrimary);
+  border-color: var(--borderStrong);
 }
 
 /* Inside the panel: the reading's own name over the working, then the door

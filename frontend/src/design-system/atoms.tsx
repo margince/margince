@@ -21,7 +21,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
-import { useLocale } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
 import { Popover } from "./popover";
@@ -789,6 +789,17 @@ export function Field({
  * half the readers do not have. It sits OVER the card rather than expanding
  * it, so opening one does not move the readings beside it.
  *
+ * The receipt is marked on the reading's NAME line rather than in the card's
+ * foot. What it says is "this figure has a source", which qualifies the
+ * reading the way its label does; in the foot it sat beside the door to the
+ * tab, and two controls a card's width apart both reading as quiet grey text
+ * are two things a reader has to tell apart before either is useful.
+ *
+ * Its word is the component's, not the caller's. Every one of the six callers
+ * passed the same string through a `basisLabel` prop, which made a shared
+ * spelling look like a per-reading decision and gave a seventh caller a place
+ * to invent a different word for the same control.
+ *
  * `detail` still carries the one-line basis either way: a reader who never
  * opens this must not meet a number with nothing behind it.
  */
@@ -846,7 +857,6 @@ export function StatCard({
   value,
   detail,
   basis,
-  basisLabel,
   tone,
   source,
   alert,
@@ -883,7 +893,6 @@ export function StatCard({
   // wanted it. The copy belongs to the caller, because no copy lives in a
   // primitive.
   basis?: ReactNode;
-  basisLabel?: string;
   // `good` is not "no tone": a slot whose reading is a VERDICT says so in both
   // directions, and a verdict that is fine reads as fine rather than as one
   // nobody has judged yet.
@@ -913,6 +922,7 @@ export function StatCard({
   // colour gates read as a string.
   numeric?: boolean;
 }>) {
+  const t = useT();
   // No `t-h3`: the card owns the figure's face and size (atoms.css), because
   // a reading is compared across a row and the row is the thing that has to
   // agree. Sharing the page's heading class made the figure change size with a
@@ -929,6 +939,29 @@ export function StatCard({
       <span className="stat-card-label t-eyebrow">
         {label}
         {source && <span className="stat-card-source">{source}</span>}
+        {basis && (
+          // The panel is READ, never operated: it holds the working and
+          // nothing to press. That is what lets it open on hover — a panel
+          // carrying a control could not, because `onHover` closes it as the
+          // pointer leaves and keyboard focus never enters it, which is how
+          // the door repeated inside here became a control no keyboard reader
+          // could reach. The door lives once, in the card's foot, where a
+          // reader who has just read the working finds it directly below.
+          <Popover
+            className="stat-card-basis"
+            onHover
+            label={t("stat.evidence")}
+          >
+            {/* The receipt names the QUESTION it answers, not itself: the
+                trigger is gone from under the reader's eye the moment the
+                panel is over it, and an unnamed list of facts beside a figure
+                is a reader guessing what they are looking at. */}
+            <span className="stat-card-basis-head t-eyebrow">
+              {t("stat.evidence.rests")}
+            </span>
+            {basis}
+          </Popover>
+        )}
       </span>
       <span className={valueClass}>
         {dot && tone && (
@@ -947,48 +980,17 @@ export function StatCard({
           line already say it in words, and a bar announced as well is the
           same fact twice. */}
       {meter && meter.total > 0 && <Meter {...meter} />}
-      {/* THE CARD'S FOOT: the receipt on the left, the way out on the right.
-          Both are places to GO rather than parts of the reading, which is why
-          they share a row under it — and why the door is at the end of the
-          card a reader finishes on rather than up beside the reading's name,
-          where it competed with the label for the first glance. */}
-      <span className="stat-card-foot">
-        {basis && basisLabel && (
-          <Popover
-            className="stat-card-basis"
-            onHover
-            label={
-              <>
-                <ChevronRight aria-hidden="true" size={14} />
-                {basisLabel}
-              </>
-            }
-          >
-            {/* The receipt names itself inside the panel, because the trigger is
-              gone from under the reader's eye the moment the panel is over it
-              — and an unnamed list of facts beside a figure is a reader
-              guessing which question it answers. */}
-            <span className="stat-card-basis-head t-eyebrow">{basisLabel}</span>
-            {basis}
-            {/* The same door as the reading's own, repeated where the reader has
-              just finished reading the working. Going to the tab is what most
-              readers do next, and sending them back up to the card's name line
-              to find it is a trip the panel can save. */}
-            {onOpen && openLabel && (
-              <button type="button" className="stat-card-open" onClick={onOpen}>
-                {openLabel}
-                <span aria-hidden="true">{" \u2192"}</span>
-              </button>
-            )}
-          </Popover>
-        )}
-        {onOpen && openLabel && (
+      {/* THE CARD'S FOOT: the way out, at the end of the card a reader
+          finishes on rather than up beside the reading's name, where it
+          competed with the label for the first glance. */}
+      {onOpen && openLabel && (
+        <span className="stat-card-foot">
           <button type="button" className="stat-card-open" onClick={onOpen}>
             {openLabel}
             <span aria-hidden="true">{" \u2192"}</span>
           </button>
-        )}
-      </span>
+        </span>
+      )}
     </section>
   );
 }

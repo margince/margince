@@ -20,38 +20,11 @@
    nothing about it is styled here.
 
    ---------------------------------------------------------------------------
-   The identity line under the name: how to reach this person, and who holds the
-   relationship. ONE wrapping line — the facts are a few words each, and split
-   across rows they made the header three deep for no gain.
+   The identity line under the name — how to reach this person, and who holds
+   the relationship — is the design system's `IdentityLine`, which every record
+   now draws. Only the LINK inside it is this page's: the address, the number
+   and the profile are each a way to act, and a link is what says so.
    --------------------------------------------------------------------------- */
-.pe-identity-meta {
-  min-width: 0;
-}
-
-.pe-meta-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-4);
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--textContent);
-}
-
-/* Standing — the buying role, who owns the record — sits in the same line as
-   the contact methods but quieter within it: it qualifies the record rather
-   than being a way to act on it. */
-.pe-meta-quiet {
-  color: var(--textMeta);
-}
-
-.pe-meta-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
 /* A company is a record of its own, so its name in the header is a link and
    reads as one: no button chrome, the page's own link colour. */
 .pe-meta-link {
