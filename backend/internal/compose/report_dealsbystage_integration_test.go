@@ -95,12 +95,18 @@ func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 	}
 }
 
-// Deals are readable by every seat that holds the deal grant, whatever the
-// seat's own/team/all tier: a own-scoped rep's deals-by-stage counts another
-// rep's deal in the same stage, and the drill-through returns the SAME set the
-// aggregate counted — the same read model the forecast suite proves in
-// TestForecastDerivationReadsEveryDealWhateverTheTier.
-func TestDealsByStageCountsEveryDealWhateverTheTier(t *testing.T) {
+// A report measures the reader's own population, and the drill-through returns
+// the SAME set the aggregate counted.
+//
+// The read model is unchanged and still worth stating: deals are readable by
+// every seat holding the deal grant, whatever the tier — row scope hides
+// nothing here. What narrows a REPORT is the population, which is a different
+// question and the one an own-scoped rep's Pipeline was not asking. It counted
+// the whole installation while their Forecast counted their own.
+//
+// The half that must not drift is the second: whatever the aggregate measured,
+// the drill-through opens exactly that.
+func TestDealsByStageMeasuresTheReadersOwnPopulation(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, int64p(10000), stringp("commit"))
 	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
@@ -109,11 +115,13 @@ func TestDealsByStageCountsEveryDealWhateverTheTier(t *testing.T) {
 	result := e.runReport(rep, t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
-	if got := wireInt(t, row, "deals"); got != 2 {
-		t.Fatalf("deals = %d, want 2 — a deal is readable by every seat, the other rep's included", got)
+	if got := wireInt(t, row, "deals"); got != 1 {
+		t.Fatalf("deals = %d, want the rep's own 1 — a count of 2 is the whole "+
+			"installation answered to a seat measuring their own work", got)
 	}
-	if want := weightedMinor(10000, 60) + weightedMinor(20000, 60); wireInt(t, row, "weighted_minor") != want {
-		t.Errorf("weighted_minor = %d, want %d (both deals in the stage)", wireInt(t, row, "weighted_minor"), want)
+	if want := weightedMinor(10000, 60); wireInt(t, row, "weighted_minor") != want {
+		t.Errorf("weighted_minor = %d, want %d (their own deal in the stage)",
+			wireInt(t, row, "weighted_minor"), want)
 	}
 
 	handle, ok := row["derivation_url"].(string)
@@ -121,8 +129,8 @@ func TestDealsByStageCountsEveryDealWhateverTheTier(t *testing.T) {
 		t.Fatalf("aggregate row has no derivation_url: %+v", row)
 	}
 	derivation := e.explainReport(rep, t, "deals-by-stage", handle)
-	if derivation.TotalRows != 2 {
-		t.Errorf("own-scope drill-through total = %d, want the 2 deals the aggregate counted", derivation.TotalRows)
+	if derivation.TotalRows != 1 {
+		t.Errorf("own-scope drill-through total = %d, want the 1 deal the aggregate counted", derivation.TotalRows)
 	}
 }
 

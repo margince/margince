@@ -30,7 +30,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		where, err := derivationWhere(ctx, spec, plan, arg)
+		where, err := derivationWhere(ctx, tx, spec, plan, callersOwnPopulation(), arg)
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,10 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 // rides on activities). The identical clause backs both the rows query
 // and the aggregate recompute, so the explanation can never out-see the
 // number it explains.
-func derivationWhere(ctx context.Context, spec reportSpec, plan derivationPlan, arg func(any) int) ([]string, error) {
+func derivationWhere(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, plan derivationPlan,
+	requested RequestedScope, arg func(any) int,
+) ([]string, error) {
 	where := []string{spec.baseWhere}
 	for _, p := range plan.preds {
 		switch {
@@ -145,6 +148,18 @@ func derivationWhere(ctx context.Context, spec reportSpec, plan derivationPlan, 
 	}
 	if scope != "" {
 		where = append(where, scope)
+	}
+	// And the same POPULATION the aggregate was taken over. A drill-through
+	// narrowed differently from its own headline opens records the number
+	// never counted, which is the one thing an explanation must not do.
+	if spec.population == measureCallersOwn {
+		population, err := reportPopulationClause(ctx, tx, requested, arg)
+		if err != nil {
+			return nil, err
+		}
+		if population != "" {
+			where = append(where, population)
+		}
 	}
 	// The drill-through puts every dimension on its rows, so every reference
 	// the spec carries takes its row scope here too — the explanation must
