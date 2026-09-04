@@ -167,6 +167,7 @@
   inline-size: 5px;
   block-size: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--accent);
 }
 

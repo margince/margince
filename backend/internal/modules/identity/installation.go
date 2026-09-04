@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -201,7 +200,6 @@ const (
 func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
 	boot := BootstrapInput{
 		WorkspaceName: in.OrganizationName,
-		Slug:          slugify(in.OrganizationName),
 		AdminEmail:    in.AdminEmail,
 		AdminName:     in.AdminName,
 		AdminPassword: in.AdminPassword,
@@ -222,8 +220,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	var wsID ids.WorkspaceID
 	// The row is identity and lifecycle now, nothing else: ADR-0090 moved the
 	// installation's configuration into `setting`, and ADR-0091 retired the
-	// slug it used to carry. boot.Slug survives as a DERIVED string — the agent
-	// seat's local address below is built from it — but nothing stores it.
+	// slug it used to carry.
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&wsID); err != nil {
 		return ids.WorkspaceID{}, err
@@ -252,9 +249,6 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		return ids.WorkspaceID{}, err
 	}
 	if err := seedSystemRoles(ctx, tx, userID); err != nil {
-		return ids.WorkspaceID{}, err
-	}
-	if err := seedAgentSeat(ctx, tx, wsID, boot); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// Any outstanding claim credential is retired here, on BOTH paths. The
@@ -302,58 +296,6 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		}
 	}
 	return wsID, nil
-}
-
-// seedAgentSeat writes the installation's first-party Agent Runner identity:
-// the app_user a resident runner will answer as when it lands
-// (seed-and-fixtures §1.5).
-//
-// It has NO consumer today. Scheduled extension ticks used to be one — the
-// dispatcher resolved this row to name a tick's initiator — but a tick now
-// answers as the job it is and reads no identity at all, so nothing in the
-// running product acts on this seat. It still costs a full licence seat, which
-// is why retiring the row is a change of its own.
-//
-// It is an IDENTITY and not an authority, which is why it receives no
-// role_assignment and no password_hash. What an agent may do is the passport
-// granting it intersected with the human that passport names (agent ≤ human,
-// P12); a role here would be a standing grant nobody asked for, and a password
-// would make a seat with no person behind it a login.
-//
-// 'full' is spelled out rather than left to the column default because the
-// schema admits no other value for an agent (app_user_agent_is_full): the row
-// states the constraint it is subject to instead of satisfying it by accident.
-func seedAgentSeat(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, boot BootstrapInput) error {
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO app_user (email, display_name, timezone, is_agent, seat_type, status)
-		 VALUES ($1, 'Margince Agent', $2, true, 'full', 'active')`,
-		agentSeatEmail(boot.Slug), boot.Timezone); err != nil {
-		return fmt.Errorf("identity: seeding the agent seat: %w", err)
-	}
-	return nil
-}
-
-// agentSeatEmail is the seat's address in the uniqueness index and nothing
-// more: the row carries no password, so the address is not a login, and the
-// domain is the reserved one the spec pins, so nothing can be delivered to it.
-func agentSeatEmail(slug string) string { return "agent@" + slug + ".gradion.local" }
-
-// slugify derives a stable label from the organization name, for the one
-// caller left: the agent seat's local email address. It is subdomain-safe
-// because that shape makes a valid address label, not because anything
-// resolves a subdomain — nothing has since ADR-0061, and ADR-0091 dropped the
-// column that used to persist it.
-func slugify(name string) string {
-	var b strings.Builder
-	for _, r := range strings.ToLower(strings.TrimSpace(name)) {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
-			b.WriteRune(r)
-		case r == ' ' || r == '-' || r == '_':
-			b.WriteByte('-')
-		}
-	}
-	return strings.Trim(b.String(), "-")
 }
 
 // resolveBasis settles what the installation is measured in — the currency

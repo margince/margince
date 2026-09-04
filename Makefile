@@ -17,7 +17,7 @@ GO ?= go
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
   test-dev-cleanup \
-  test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco \
+  test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-check-dco \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
@@ -99,7 +99,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -228,13 +228,13 @@ infra-down:
 ## dev — the full local COLD-START stack in a real browser: Postgres + Redis, the api, the
 ## background worker (cmd/worker — outbox relay + Surface-B runner, always on),
 ## and the Vite dev server, so the SPA runs against a live api on http://localhost:8080
-## (the app on :8080, api behind it on :18080). Bare `make dev` uses the shared
-## `margince` database; `make dev
-## DEV_SLUG=<slug>` gives an isolated margince_dev_<slug> on slug-derived ports,
-## so two worktrees run concurrently without colliding. A bare `make dev` first
-## SWEEPS: every margince api/worker/vite on the machine is killed, whatever
-## holds :8080 is evicted, and stray margince_dev_* databases are dropped,
-## so exactly one stack runs and the app is ALWAYS on :8080. Boots COLD: the
+## (the app on :8080, api behind it on :18080). Starts THIS worktree's stack and
+## touches nobody else's: a linked worktree claims its own database, Redis
+## logical database, port pair and object bucket, while the primary worktree
+## keeps the shared `margince` database on :8080. `DEV_SLUG=<slug>` overrides
+## the derived slug for a second stack inside one worktree. A bound port stops
+## the boot loudly rather than letting you poll a server from an older branch;
+## `make dev-sweep` is the machine-wide clear. Boots COLD: the
 ## organization + admin the api bootstraps from config/margince.yaml and no
 ## other data, so onboarding and empty states are the default view — run
 ## `make seed-dev` on top when you want the demo records. Reads an optional
@@ -250,9 +250,10 @@ dev:
 dev-fresh:
 	@bash scripts/dev.sh up "$(DEV_SLUG)" --fresh
 
-## dev-stop — stop dev stacks and free their ports. Bare: stops EVERY stack on
-## the machine (the mirror of what `make dev` sweeps). With DEV_SLUG=<slug>:
-## just that one. DROP=1 also drops the per-slug databases (never `margince`).
+## dev-stop — stop THIS worktree's dev stack and free its ports, the mirror of
+## `make dev`. DEV_SLUG=<slug> names another stack in this worktree; DROP=1 also
+## drops its per-slug database (never the shared `margince`). To clear every
+## stack on the machine, including other worktrees', use `make dev-sweep`.
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
 
@@ -717,6 +718,10 @@ e2e-company:
 ## Runs on the LIVE stack (make dev, then make seed-dev) and skips loudly
 ## without one. Its screenshot lands OUTSIDE the repo, for a human to compare.
 E2E_BRIEF_SHOT_DIR ?= /tmp/e2e-brief
+# The spec is named by PATH, not by basename: playwright's filter is a
+# substring match, and `brief.spec.ts` also selects e2e/meeting-brief.spec.ts —
+# a mocked spec that has no business on a live stack and fails eighteen cases
+# there. The `e2e/` in front is what tells the two apart.
 e2e-brief: SHELL := /bin/bash
 e2e-brief:
 	@mkdir -p "$(E2E_BRIEF_SHOT_DIR)"
@@ -724,7 +729,7 @@ e2e-brief:
 	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
 	cd frontend && BASE_URL="$$app" \
 		E2E_BRIEF_SHOT_DIR="$(E2E_BRIEF_SHOT_DIR)" \
-		pnpm exec playwright test brief.spec.ts
+		pnpm exec playwright test e2e/brief.spec.ts
 	@echo "screenshots: $(E2E_BRIEF_SHOT_DIR)"
 
 ## storybook — the component workbench on :6006 (the design-system catalog +
@@ -861,6 +866,14 @@ test-scheduled-report:
 ## the real thing on every dashboard.
 test-ci-verdict:
 	@./scripts/test-ci-verdict.sh
+
+## test-merge-verdict — prove the push-time alarm still tells an ABSENT verdict
+## from a green one. The alarm is silent when it is working, so "it did not go
+## off" is precisely the signal that was already untrustworthy; and the case it
+## exists for is a required check that never reported, which anything asking
+## "was it green?" reads the same as a pass.
+test-merge-verdict:
+	@./scripts/test-check-merge-verdict.sh
 
 ## test-check-dco — prove the DCO gate still catches, and that an author's
 ## retroactive attestation excuses exactly the commit it names. Remediation is

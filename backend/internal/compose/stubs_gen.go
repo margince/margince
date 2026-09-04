@@ -95,6 +95,10 @@ func (stubs) SendEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontr
 	httperr.NotImplemented(w, r, "SendEmail")
 }
 
+func (stubs) PreviewSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewSendAuthorization")
+}
+
 func (stubs) SendMessage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SendMessageParams) {
 	httperr.NotImplemented(w, r, "SendMessage")
 }
@@ -879,6 +883,10 @@ func (stubs) SendAccountEmail(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "SendAccountEmail")
 }
 
+func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
+}
+
 func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStart")
 }
@@ -925,6 +933,10 @@ func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
+}
+
+func (stubs) ListForecastCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListForecastCallsParams) {
+	httperr.NotImplemented(w, r, "ListForecastCalls")
 }
 
 func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {

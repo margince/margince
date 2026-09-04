@@ -17,11 +17,11 @@
 
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { PanelBody } from "../../design-system/panel";
+import { PanelBody, RailPanel } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { dealRoleLabel, RailPanel } from "../record360";
+import { dealRoleLabel } from "../record360";
 import "../network.css";
 import { SeatPerson } from "./seatperson";
 

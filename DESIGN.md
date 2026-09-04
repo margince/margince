@@ -64,8 +64,11 @@ checked against it. The sources are listed at the end of the section.
    1px inset white highlight on their top edge; nothing else does.
 4. **Nested radii obey one law.** Mismatched corners on a control inside a
    card is the most common single reason an interface reads as "off":
-   inner radius = outer radius − padding. **Rule:** an 18px pane with an 8px
-   inset holds 10px controls; `--r-lg` 18, `--r-control` 10, and a keycap 4.
+   inner radius = outer radius − padding. **Rule:** a 20px pane with an 8px
+   inset holds 12px controls; `--r-lg` 20, `--r-control` 12, and a keycap 4.
+   The ladder runs in fours — 4 / 8 / 12 / 16 / 20 and the pill — and doubles
+   under `corner-shape: squircle`, where a superellipse of radius R reads about
+   as round as a circular corner of R/2.
 5. **Text is near-black slate, never pure black; grays carry the brand hue.**
    Stripe sets text in deep slate on near-white; Refactoring UI's rule is that
    a gray far from mid-lightness needs saturation or it looks washed out.
@@ -124,7 +127,7 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 1. **A lit ground, and one pane per zone.** The page is a pale green paper lit
    from two corners, an emerald glow behind the sidebar and an indigo one
    behind the far edge. Each zone of a record is one white pane on it, with a
-   hairline edge and an 18px corner, and inside a pane there is only ever a
+   hairline edge and a 20px corner, and inside a pane there is only ever a
    title, a rule and rows. Dark is the same room with the lights down.
 2. **Everything is a list.** A record's attributes are a list of label and
    value in a panel on the left that folds. What happened is a list. What
@@ -145,10 +148,17 @@ Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
 ## 3. Colour
 
-The semantic split is unchanged and remains pinned by `tokens.test.ts`:
-`--accent` (emerald) is brand and primary action, `--ai*` (indigo) is agent
-provenance, `--success` / `--warn` / `--danger` are status. What changes is the
-ground, which is lit, and the surface, which is one translucent pane per zone.
+The semantic split is unchanged: `--accent` (emerald) is brand and primary
+action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
+`--danger` are status. Those names are the ones `tokens.test.ts` pins, together
+with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
+which is lit, and the surface, which is one translucent pane per zone.
+
+The tables below are the design TARGET, and they name some rungs the tree does
+not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
+does not appear in `frontend/src` as a value still to be introduced, not as one
+to reach for today: the shipped spelling of the agent tint is `--aiLight`, its
+edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 
 ### Light (the default)
 
@@ -216,9 +226,26 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
-- **Radii by role**: 18px for a pane, the details panel and a reading card;
-  14px for a board card and the agent's row; 10px for a control; full for a
-  pill and a monogram.
+- **Sizes by role, and there are nine.** `--fs-eyebrow` 10.5 (uppercase
+  kickers, monograms), `--fs-meta` 12 (counts, timestamps, provenance),
+  `--fs-sm` 13 (chips, table cells, helper text), `--fs-body` 13.5 (the
+  default), `--fs-lead` 15 (the paragraph under a heading, and inputs),
+  `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title), `--fs-h1` 24 (a
+  step title, a record's head), `--fs-display` 32 (a full-viewport moment),
+  plus the two fluid rungs `--fs-display-fluid` and `--fs-hero-fluid` for the
+  first-run surfaces. Nothing in the tree names a length instead — a size half
+  a pixel off a rung is a decision nobody made, and the tree carried 25 of
+  them. `design-system/type.test.ts` fails a tenth value, and a genuine
+  platform floor (iOS zooms a field under 16px) is waived in line with its
+  reason.
+- **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
+  uppercase label, `--tracking-display` -0.03em on the display face,
+  `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
+  eighteen sheets while the token said 0.08em, which is a label that looks
+  different depending on which screen drew it.
+- **Radii by role**: 20px for a pane, the details panel and a reading card;
+  16px for a board card and the agent's row; 12px for a control; 8px for a chip
+  and 4px for a keycap; full for a pill and a monogram.
 - **Depth is light, not shadow.** A pane is translucent over the lit ground
   with a hairline edge; that is its whole elevation. Nothing at rest casts a
   shadow, glows or has a gradient. A popover, menu or drawer takes the one
@@ -264,7 +291,7 @@ scrolls inside itself.
 │  the   │       facts line                                               │
 │  glow) │ tabs ──────────────────────────────────────────── [Details] │
 │ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
-│ RECORDS│ │ ● Margince read this record · {name} ││ │ Ask               ││
+│ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
 │ WORK   │ │ readings ┊ readings ┊ readings        ││ │ People / Seats    ││
 │ …      │ │ spine · · · gap · today · ahead       ││ │ Tags / Room / Docs││
@@ -412,7 +439,7 @@ glance line for line; what changes is the content of each slot.
 | Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The people · Momentum | Company · Score · First response · Next · Your move |
 | 360 word | Good | Promise overdue | Live | In motion |
 | In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
-| Needs-list lead | Your move | The move the call names | Margince found this, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
+| Needs-list lead | Your move | The move the call names | Margince suggests, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
 | Second left pane | Deals | The deal she decides, with the room | The buying committee, with the cover gap | The score as factors |
 | Right column | Ask (prepared questions) · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
 | Tabs | Overview · History · People · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
@@ -427,7 +454,9 @@ the agent proposes. Whatever those ten seconds do not need goes to the depth.
 1. **Who.** Identity, the standing badges, one line of facts, the verbs.
 2. **The 360.** One element, and the one place the page is allowed to look
    like a feature: where the record stands and what happened, together. It
-   opens with the indigo tile and "Margince read this record · {name} · 360",
+   opens with the indigo tile and "{name} · 360" — the tile IS the claim of
+   authorship, and a sentence beside it repeating it read as a caption typed
+   onto the record's name —
    then the verdict word in the display face with its because-sentence and
    its sources, then the readings as cells, then the stage stepper or the
    ladder where the record has one, then the spine and the thread, newest
@@ -815,8 +844,8 @@ looks now.
 | `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
 | `Badge` | `quiet` by default: a 6px dot and a word. The pill (`--bg3`, 20px, 11.5px 500) is for the one status that must not be missed and for the record's standing badges beside its name. |
 | `Chip` | The same pill. There is one pill. |
-| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and an 18px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | The **reading card**: `--pane` with the hairline and an 18px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
+| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
+| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |
@@ -824,7 +853,7 @@ looks now.
 | `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
 | `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
-| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the "Margince read this record" label at 11.5px 500 in `--aiText`, the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
+| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
 | `RecordTimeline` | The rail: a 76px mono date column, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |
@@ -887,8 +916,10 @@ rest one screen at a time.
 - [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
       a shadow at rest.
 - [ ] One emerald-filled control in view.
-- [ ] Anything an agent wrote is a row on `--aiBg` labelled "Margince read
-      this record"; a staged change has a dashed edge until accepted.
+- [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark,
+      and a row that ASKS for something says "Margince suggests" — never over
+      the answer that nothing needs doing, which is nobody's suggestion; a
+      staged change carries a `--aiMed` dashed edge until accepted.
 - [ ] A withheld section says "Hidden from you"; an empty one says what to do.
 - [ ] Checked in both themes and with the sidebar and the details panel folded.
 - [ ] The page carries every section the current screen renders (§7), or says

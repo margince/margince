@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -73,13 +74,50 @@ func assertStaged(t *testing.T, stager *recordingStager, want int, when string) 
 	}
 }
 
+// assertDelivered is assertStaged for a suite running the REAL delivery
+// machinery, counting the rows it wrote rather than a double's slice.
+//
+// Two spellings of one count, and the difference is which of them can prove a
+// refusal. A suite asserting that an unconsented send is REFUSED cannot use a
+// double: the engine decides at staging, inside commsStager, so a stand-in for
+// commsStager is a stand-in for the thing that refuses. That is how three
+// suites here went green watching unconsented sends succeed when the engine
+// took over the send decision.
+//
+// A suite that only asks what reaches the wire keeps the double, which is
+// cheaper and needs no job runner.
+func assertDelivered(t *testing.T, e *integration.Env, want int, when string) {
+	t.Helper()
+	if n := e.WsCount(t, `SELECT count(*) FROM comms_outbound`); n != want {
+		t.Fatalf("%s left %d deliveries, want %d", when, n, want)
+	}
+}
+
+// realDeliveryStager builds the delivery machinery production wires, for the
+// suites that assert a refusal.
+//
+// It needs the river schema and a job inserter because staging enqueues the
+// dispatch in the same transaction — one commit, one fact. That cost is the
+// reason the double still exists for everything else.
+func realDeliveryStager(t *testing.T, e *integration.Env) DeliveryMachinery {
+	t.Helper()
+	integration.ApplyRiverSchema(t)
+	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	return NewDeliveryStager(e.Pool, inserter)
+}
+
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	e := integration.Setup(t)
-	stager := &recordingStager{}
+	// The REAL delivery machinery, because this suite asserts that an
+	// unconsented send is refused and the engine refuses at staging — inside
+	// commsStager, which a double replaces.
 	adapter := commsAdapter{
 		store:  activities.NewStore(e.DB()),
 		gate:   consent.NewGate(consent.NewStore(InstallationDB(e.Pool))),
-		stager: stager,
+		stager: realDeliveryStager(t, e),
 	}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
@@ -118,7 +156,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Fatalf("unconsented MCP send → %v, want ErrConsentNotGranted", err)
 	}
-	assertStaged(t, stager, 0, "the suppressed MCP send")
+	assertDelivered(t, e, 0, "the suppressed MCP send")
 
 	from := time.Date(2026, 7, 7, 8, 0, 0, 0, time.UTC)
 	avail, err := adapter.Availability(ctx, nil, from, from.Add(10*time.Hour), 60)

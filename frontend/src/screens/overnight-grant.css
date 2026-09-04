@@ -16,6 +16,6 @@
   margin: 0;
   padding-left: var(--space-6);
   color: var(--textMeta);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }

@@ -64,8 +64,14 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
+	// ONE gate serving both seams. The composer's preview and the send's
+	// default-deny door are two questions of the same authority, and two gates
+	// here would be two answers about one message — the drift this whole
+	// subsystem is shaped to prevent.
+	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
-		WithConsent(consent.NewGate(consent.NewStore(InstallationDB(pool)))).
+		WithConsent(gate).
+		WithSendPreview(gate).
 		// The public booking capture seams (feedback/14): people is the
 		// idempotent-on-email person path, consent records the
 		// passthrough — both injected here, never sibling imports.

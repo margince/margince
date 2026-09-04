@@ -117,7 +117,15 @@ type PurposeRow struct {
 // direct marketing Art 21(2)–(3) is absolute — there is no balancing and no
 // override toggle, so there is no branch here that can reach past a
 // suppression.
-func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow) (Verdict, error) {
+//
+// `since` is how far back a qualifying event still supports an UNPROMPTED
+// message — the reply window, resolved by Store.windowsFor so the send path and
+// the guard endpoint answer on the same span. It is passed rather than computed
+// here because computing it needs the installation's country, and this function
+// is deliberately free of settings reads: a rep holds no settings-read grant
+// and a gated read inside the verdict would fail a send with a 500 rather than
+// an answer about consent.
+func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, since time.Time) (Verdict, error) {
 	suppressed, at, err := objectionStands(ctx, tx, personID, purpose.ID)
 	if err != nil {
 		return Verdict{}, err
@@ -132,7 +140,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 		return Verdict{State: VerdictAllowed, Reason: "account and contract notices need no consent"}, nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, personID, purpose)
+		return correspondenceVerdict(ctx, tx, personID, purpose, since)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
@@ -161,7 +169,7 @@ func VerdictForPerson(ctx context.Context, tx pgx.Tx, personID string, purpose P
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
 // overwhelming majority of people, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow) (Verdict, error) {
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purpose PurposeRow, since time.Time) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
@@ -183,7 +191,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purp
 			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, personID)
+	event, source, err := latestQualifyingEvent(ctx, tx, personID, since)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -192,7 +200,13 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, personID string, purp
 		// exchange. There is nothing here to balance, so this is not the easy
 		// Art 6(1)(f) case and the honest answer is that nobody has decided.
 		return Verdict{
-			State:  VerdictUnknown,
+			State: VerdictUnknown,
+			// The reason does not distinguish "never" from "not lately", and
+			// deliberately: both mean the same thing to the rep reading it —
+			// nothing on file supports writing to this person out of the blue
+			// right now — and a message that said "their last contact has
+			// lapsed" would invite hunting for an expiry to override rather
+			// than recording why this send is lawful.
 			Reason: "they have never written to you and no deal or inquiry connects you",
 		}, nil
 	}
@@ -261,6 +275,12 @@ func qualifyingReason(event QualifyingEvent) string {
 		return fmt.Sprintf("they made an inquiry on %s", when)
 	case "active_deal":
 		return "an open deal connects you"
+	case KindMeeting:
+		// Tenseless on purpose: this arm admits a meeting in the diary as
+		// readily as one that has happened, and a reason claiming the wrong
+		// side of today reads as a bug to the rep who is looking at the
+		// calendar entry.
+		return fmt.Sprintf("a meeting on %s connects you", when)
 	default:
 		return fmt.Sprintf("a recorded exchange on %s: %s", when, event.Note)
 	}

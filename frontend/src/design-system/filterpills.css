@@ -22,6 +22,7 @@
   padding-inline: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   font-family: var(--f-body);
   font-size: var(--fs-meta);

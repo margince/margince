@@ -27,17 +27,22 @@ func NewEmbedGen(store *Store, embedder Embedder) *EmbedGen {
 	return &EmbedGen{store: store, embedder: embedder}
 }
 
-// The five embeddable entity types, named once so embedText and
-// binding.go's pendingSources (the per-id and set-form views of the same
-// source columns) key off the same identifiers rather than each
-// repeating the literal.
+// The embeddable entity types, named once so embedText and binding.go's
+// pendingSources (the per-id and set-form views of the same source columns)
+// key off the same identifiers rather than each repeating the literal.
 const (
-	entityPerson       = "person"
-	entityOrganization = "organization"
-	entityDeal         = "deal"
-	entityLead         = "lead"
-	entityActivity     = "activity"
-	entityProject      = "project"
+	entityPerson        = "person"
+	entityOrganization  = "organization"
+	entityDeal          = "deal"
+	entityLead          = "lead"
+	entityActivity      = "activity"
+	entityProject       = "project"
+	entityProduct       = "product"
+	entityOfferTemplate = "offer_template"
+	// Not embeddable — a word has no prose to embed — but named here with the
+	// rest because branches.go keys its table off the same identifiers, and one
+	// vocabulary is what stops a branch and its index describing two tables.
+	entityTag = "tag"
 )
 
 // embedText mirrors each entity's search_tsv source columns — the
@@ -57,6 +62,12 @@ var embedText = map[string]string{
 	// at all, and audiencerescope drops the vector when a row narrows.
 	entityActivity: `SELECT concat_ws(' ', subject, body) FROM activity WHERE id = $1 AND archived_at IS NULL AND audience = 'workspace'`,
 	entityProject:  `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
+	// Not narrowed on `active`: the lexical branch indexes a discontinued
+	// product too, and a vector lane that dropped it would answer the same
+	// question two different ways depending on which lane ranked first.
+	entityProduct: `SELECT concat_ws(' ', name, sku, description) FROM product WHERE id = $1 AND archived_at IS NULL`,
+	// One column, because one column is all this table holds as prose.
+	entityOfferTemplate: `SELECT name FROM offer_template WHERE id = $1 AND archived_at IS NULL`,
 }
 
 // HandleEvent maintains embeddings for created/updated/captured

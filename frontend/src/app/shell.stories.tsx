@@ -179,7 +179,7 @@ export const CompanyWordmark: Story = {
 /**
  * One sidebar state, in the frame it really sits in.
  *
- * The `.app` grid is what gives the sidebar its width (64px collapsed, 252px
+ * The `.app` grid is what gives the sidebar its width (56px collapsed, 252px
  * labeled) and the content column its edge, so the example renders the grid
  * rather than a hand-set width — otherwise the story would be showing geometry
  * the product does not use. The content column is present and empty on purpose:
@@ -217,7 +217,7 @@ function SidebarExample({
 }
 
 // Both sidebar states, side by side. Expanded is 252px of 34px rows on a 4px
-// gutter; collapsed is the canonical 64px geometry, where a row IS its target and
+// gutter; collapsed is the canonical 56px geometry, where a row IS its target and
 // keeps 44px, the logomark stands alone in the head, and the group headings go
 // transparent and draw a 22px hairline inside the box they kept — so nothing
 // below them re-spaces across the collapse.
@@ -317,7 +317,7 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * ONE half of that is not what this frame photographs, and the reason is worth
  * more than the frame. The collapsed panel's rows are 44px, so its intrinsic
  * height is 774px — and `.rail.collapsed` sets `overflow: visible` so the
- * collapsed tooltips can escape its 64px box, which means it neither scrolls nor
+ * collapsed tooltips can escape its 56px box, which means it neither scrolls nor
  * clips. In a window shorter than that the foot is simply BELOW the bottom of the
  * viewport with nothing to scroll, and `fe-uat` captures at 720px. So the right
  * half of this frame shows the destinations and no foot at all. The expanded
@@ -520,7 +520,7 @@ export const SectionLevel: Story = {
   ),
 };
 
-// The same level at 64px: icons, the collapsed rail's tooltip on hover or
+// The same level at 56px: icons, the collapsed rail's tooltip on hover or
 // keyboard focus, group headings reduced to hairlines, and the section's own
 // name clipped for the eye while a screen reader still reads it.
 export const SectionLevelCollapsed: Story = {

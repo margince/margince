@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { DealIdentityLine } from "../deals";
 import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
-import { DealFacts } from "./dealfacts";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
 import { DealStrip } from "./dealstrip";
@@ -224,7 +224,7 @@ export const Facts: Story = {
     });
     return (
       <StoryProviders>
-        <DealFacts
+        <DealIdentityLine
           deal={{
             amount_minor: 6_400_000,
             currency: "EUR",
@@ -250,7 +250,7 @@ export const Facts: Story = {
 export const FactsWithheldAndUnassigned: Story = {
   render: () => (
     <StoryProviders>
-      <DealFacts
+      <DealIdentityLine
         deal={{
           amount_minor: null,
           currency: "EUR",

@@ -89,17 +89,7 @@ func (s *Store) DismissRelationshipNudge(
 		// time.Now() rather than an injected clock, matching every other write
 		// in this store. The tests below assert the SPAN the row carries rather
 		// than an instant, so nothing here needs a clock held still.
-		//
-		// TRUNCATED TO THE MICROSECOND, because that is all a timestamptz holds.
-		// This value goes into the audit row's after-image as well as into the
-		// column, and the NEXT dismissal images what it displaced by reading the
-		// column back — so an image carrying nanoseconds names an instant the
-		// row never held, and the two images of one deadline stop matching.
-		//
-		// The precision of time.Now() is the platform's: nanoseconds on Linux,
-		// microseconds on Darwin. Without this the trail is right on one
-		// developer's machine and wrong in CI, which is how it got here.
-		until := time.Now().UTC().Truncate(time.Microsecond).AddDate(0, 0, days)
+		until := dismissalDeadline(time.Now(), days)
 		// What deadline was already standing, read under the person lock taken
 		// above so the upsert below cannot race it. A re-dismissal REPLACES this
 		// value, and an audit row that named only the new one would leave
@@ -192,6 +182,26 @@ const (
 )
 
 // recordNudgeDismissal is the write shape's second half: the audit row and the
+// dismissalDeadline is when a dismissal lapses, at the precision the column
+// can actually hold.
+//
+// TRUNCATED TO MICROSECONDS, which is what makes the audit trail honest rather
+// than merely tidy. `timestamptz` stores microseconds, so a Go instant carries
+// more precision than the row ever will — and the two images of one deadline
+// are read back from different places: a dismissal audits the value it just
+// computed, while a RE-dismissal images the deadline it displaced by reading
+// the column. Untruncated, the second audit's before-image and the first
+// audit's after-image describe one instant in two precisions, and a reader
+// diffing the trail sees a change that never happened.
+//
+// Invisible on a host whose clock is already microsecond-granular, which is
+// why it survived: the same sequence agrees on macOS and disagrees on the
+// Linux runners, so it read as a flaky test rather than as a trail that does
+// not join up.
+func dismissalDeadline(now time.Time, days int) time.Time {
+	return now.UTC().AddDate(0, 0, days).Truncate(time.Microsecond)
+}
+
 // announcement, in the same transaction as the judgement itself.
 func recordNudgeDismissal(
 	ctx context.Context, tx pgx.Tx, personID ids.PersonID,

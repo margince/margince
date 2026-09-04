@@ -113,7 +113,7 @@ export const ScoreReceipt: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "How it stands",
+        name: "Evidence",
       }),
     );
   },

@@ -12,11 +12,9 @@ import {
   StatCard,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Eyebrow } from "../design-system/eyebrow";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import { stable } from "../format/collate";
 import {
   formatDateTime,
   formatMoneyOrAbsent,
@@ -161,7 +159,7 @@ const UNCATEGORISED = "";
 // deals-by-stage rather than replacing it.
 const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "pipeline-current": ["stage_id"],
-  forecast: ["forecast_category", FIELD_CURRENCY],
+  forecast: ["forecast_category"],
   "open-deals-per-company": ["organization_id", FIELD_CURRENCY],
 };
 
@@ -184,21 +182,6 @@ function rowMoney(row: ReportRow, key: string): number | null {
 
 function rowCount(row: ReportRow, key: string): number {
   return Number(row[key] ?? 0);
-}
-
-// Rows gathered by the currency they are denominated in, in code order so two
-// bands do not swap places between runs on the server's row order.
-function byCurrency(
-  rows: readonly ReportRow[],
-): [string | null, ReportRow[]][] {
-  const bands = new Map<string | null, ReportRow[]>();
-  for (const row of rows) {
-    const currency = rowCurrency(row);
-    bands.set(currency, [...(bands.get(currency) ?? []), row]);
-  }
-  return [...bands.entries()].sort(([left], [right]) =>
-    stable(left ?? "", right ?? ""),
-  );
 }
 
 // A report's own name, spelled once: the segment picker and the heading of the
@@ -232,8 +215,8 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
     { fn: "count", as: "deal_count" },
   ],
   forecast: [
-    { fn: "sum", field: "amount_minor", as: "raw_minor" },
-    { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
+    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
   ],
   "open-deals-per-company": [
@@ -287,6 +270,7 @@ export function ForecastTile({
   label,
   amountMinor,
   weightedMinor,
+  dealCount,
   currency,
   locale,
 }: Readonly<{
@@ -297,6 +281,13 @@ export function ForecastTile({
   // currency cannot be rendered as money at all.
   amountMinor: number | null;
   weightedMinor?: number | null;
+  // How many deals the category holds, which is NOT how many the money above
+  // covers. A deal in a currency the rate sheet cannot price is counted here
+  // and contributes nothing to the total — the sum skips it rather than
+  // guessing a rate — so a tile printing only money would say a category is
+  // worth less than it is, with nothing on screen to suggest otherwise.
+  // Optional: a caller with no count to hand shows none rather than a zero.
+  dealCount?: number | null;
   currency: string | null;
   locale: Locale;
 }>) {
@@ -306,13 +297,41 @@ export function ForecastTile({
       label={label}
       numeric
       value={formatMoneyOrAbsent(amountMinor, currency, locale)}
-      detail={
-        weightedMinor == null
-          ? undefined
-          : `${t("analytics.weighted")}: ${formatMoneyOrAbsent(weightedMinor, currency, locale)}`
-      }
+      detail={forecastTileDetail(
+        { weightedMinor, dealCount, currency, locale },
+        t,
+      )}
     />
   );
+}
+
+// The second line of a tile: the weighted total, and how many deals the
+// category holds. Both are optional and each stands without the other, so a
+// caller with one figure to give is not made to invent the other.
+function forecastTileDetail(
+  {
+    weightedMinor,
+    dealCount,
+    currency,
+    locale,
+  }: Readonly<{
+    weightedMinor?: number | null;
+    dealCount?: number | null;
+    currency: string | null;
+    locale: Locale;
+  }>,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  const parts: string[] = [];
+  if (weightedMinor != null) {
+    parts.push(
+      `${t("analytics.weighted")}: ${formatMoneyOrAbsent(weightedMinor, currency, locale)}`,
+    );
+  }
+  if (dealCount != null) {
+    parts.push(`${t("analytics.count")}: ${formatNumber(dealCount, locale)}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
 // Five money figures read across as one comparison, so they are ONE plate of
@@ -335,58 +354,55 @@ function uncategorisedSlot(
 
 function ForecastStrip({
   rows,
+  baseCurrency,
   locale,
-}: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
+}: Readonly<{
+  rows: ReportRow[];
+  baseCurrency: string | null;
+  locale: Locale;
+}>) {
   const t = useT();
   return (
     <>
       <Callout tone="info">{t("analytics.forecastBanner")}</Callout>
-      {/* ONE STRIP PER CURRENCY. A slot carries a single figure, so a category
-          holding euros and dong cannot state one — and adding them would be the
-          unit-less total data-semantics §1 r4 forbids. Banding by currency keeps
-          the five categories reading across as one comparison, which is what the
-          strip is for, and makes every figure in a band mean the same thing.
+      {/* ONE strip, because there is now one denomination.
+          
+          This drew one strip PER CURRENCY until the server learned to convert.
+          A slot carries a single figure and adding euros to dong is the
+          unit-less total data-semantics §1 r4 forbids, so banding was the only
+          honest way to show native sums — and it defeated the thing a strip is
+          for. A plate of ruled slots claims its figures are ONE comparison;
+          split across bands, a manager compared commit against best case
+          inside each currency and never across the business, which is the
+          question they actually have.
 
-          The band is labelled with the currency code itself rather than a
-          translated name: it is what the figures beneath it are denominated in,
-          and it is already the word every one of them carries. */}
-      {/* No rows at all is not "nothing to draw": it means no open deal reached
-          any category, and five slots each saying so is the honest report. A
-          blank area under the banner would read as a screen that failed to
-          load. The band carries no currency because there are no figures for one
-          to belong to. */}
-      {(byCurrency(rows).length > 0
-        ? byCurrency(rows)
-        : ([[null, []]] as [string | null, ReportRow[]][])
-      ).map(([currency, band]) => (
-        <div
-          key={currency ?? UNCATEGORISED}
-          style={{ marginTop: "var(--space-4)" }}
-        >
-          <Eyebrow as="h3">{currency ?? MONEY_ABSENT}</Eyebrow>
-          <StatStrip>
-            {[...FORECAST_CATEGORIES, ...uncategorisedSlot(band)].map(
-              (category) => {
-                const row = band.find(
-                  (candidate) =>
-                    String(candidate.forecast_category ?? UNCATEGORISED) ===
-                    category.key,
-                );
-                return (
-                  <ForecastTile
-                    key={category.key}
-                    label={t(category.labelKey)}
-                    amountMinor={row ? rowMoney(row, "raw_minor") : null}
-                    weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
-                    currency={currency}
-                    locale={locale}
-                  />
-                );
-              },
-            )}
-          </StatStrip>
-        </div>
-      ))}
+          The slots stay slots rather than becoming a bar list: every category
+          carries TWO figures, the raw total and the probability-weighted one
+          beneath it, and a ranked bar carries a single amount per row. */}
+      <div style={{ marginTop: "var(--space-4)" }}>
+        <StatStrip>
+          {[...FORECAST_CATEGORIES, ...uncategorisedSlot(rows)].map(
+            (category) => {
+              const row = rows.find(
+                (candidate) =>
+                  String(candidate.forecast_category ?? UNCATEGORISED) ===
+                  category.key,
+              );
+              return (
+                <ForecastTile
+                  key={category.key}
+                  label={t(category.labelKey)}
+                  amountMinor={row ? rowMoney(row, "raw_minor") : null}
+                  weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
+                  dealCount={row ? rowCount(row, "deal_count") : null}
+                  currency={baseCurrency}
+                  locale={locale}
+                />
+              );
+            },
+          )}
+        </StatStrip>
+      </div>
     </>
   );
 }
@@ -619,11 +635,98 @@ function StageTable({
   );
 }
 
+// The vocabulary's own words for the columns a drill-through can carry.
+// A column outside it keeps its wire name, which is honest: the reader sees
+// what the plan selected rather than a guess at what it meant.
+const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
+  label: "explain.col.record",
+  amount_base_minor: "analytics.unweighted",
+  weighted_base_minor: "analytics.weighted",
+  amount_minor: "analytics.unweighted",
+  currency: "analytics.currency",
+  stage_id: "explain.col.stage",
+  owner_id: "explain.col.owner",
+  pipeline_id: "explain.col.pipeline",
+  organization_id: "analytics.company",
+};
+
+// A column the vocabulary knows gets its word; anything else keeps the wire
+// name the plan selected it under.
+function derivationHeader(col: string, t: (key: MessageKey) => string): string {
+  const key = DERIVATION_HEADERS[col];
+  return key ? t(key) : col;
+}
+
+// The server names the row and the reader reads the name, so the raw id
+// becomes noise beside it — but only once EVERY row has a name.
+//
+// Labelling is per row: the seam withholds a name for a record this reader
+// may not read, and the label column appears as soon as one row was named.
+// Dropping the id on that alone would leave the withheld rows showing a blank
+// where their only identifier used to be, so the rows a reader can least
+// account for become the ones they cannot identify at all.
+export function derivationColumns(derivation: Derivation): string[] {
+  const rows = derivation.rows ?? [];
+  const everyRowNamed =
+    derivation.columns.includes("label") &&
+    rows.length > 0 &&
+    rows.every((row) => typeof row.label === "string" && row.label !== "");
+  return derivation.columns.filter((col) => !everyRowNamed || col !== "id");
+}
+
+// Which money a row's minor-unit figure is written in.
+//
+// The two are not the same column. A `_base_minor` measure was converted by
+// the server, so it is in the installation's base currency. A plain `_minor`
+// measure is the deal's OWN amount, and the forecast's rows carry the
+// currency it was written in beside it — reading the base currency there
+// would put a euro sign on a dollar deal, which is the exact misreading this
+// renderer exists to prevent.
+export function derivationCellCurrency(
+  col: string,
+  row: Record<string, unknown>,
+  baseCurrency: string | null,
+): string | null {
+  if (col.endsWith("_base_minor")) {
+    return baseCurrency;
+  }
+  const own = row.currency;
+  return typeof own === "string" && own !== "" ? own : null;
+}
+
+// Money on these rows is stored in minor units, and a minor-unit integer
+// printed raw is the single most misread thing on this screen: 500000 next
+// to €5,000.00 are the same number wearing different clothes.
+function renderDerivationCell(
+  col: string,
+  row: Record<string, unknown>,
+  baseCurrency: string | null,
+  locale: Locale,
+): string {
+  const value = row[col];
+  if (value == null) {
+    return "";
+  }
+  if (col.endsWith("_minor") && typeof value === "number") {
+    return formatMoneyOrAbsent(
+      value,
+      derivationCellCurrency(col, row, baseCurrency),
+      locale,
+    );
+  }
+  return String(value);
+}
+
 // The source rows the explained figure reconciles to. A section INSIDE the
 // explain card's own section, so its heading steps down with the outline
 // rather than reading as a peer of the card's title.
-function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
+function DerivationRows({
+  derivation,
+  baseCurrency,
+}: Readonly<{ derivation: Derivation; baseCurrency: string | null }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const columns = derivationColumns(derivation);
   return (
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
@@ -634,10 +737,11 @@ function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
       ) : (
         <DataTable
           label={t("explain.sources")}
-          columns={derivation.columns.map((col) => ({
+          columns={columns.map((col) => ({
             key: col,
-            header: col,
-            render: (row: Record<string, unknown>) => String(row[col] ?? ""),
+            header: derivationHeader(col, t),
+            render: (row: Record<string, unknown>) =>
+              renderDerivationCell(col, row, baseCurrency, locale),
           }))}
           rows={derivation.rows}
           rowKey={(row) => derivation.rows.indexOf(row).toString()}
@@ -653,12 +757,16 @@ function ExplainCard({
   id,
   url,
   query,
+  baseCurrency,
 }: Readonly<{
   // The toggle above points `aria-controls` here, so the card has to carry the
   // id the toggle was given rather than mint one of its own.
   id: string;
   url: string | null;
   query: UseQueryResult<Derivation>;
+  // The currency the report converted into, so the source rows behind a
+  // converted total are written in the same money as the total.
+  baseCurrency: string | null;
 }>) {
   const t = useT();
   return (
@@ -691,7 +799,9 @@ function ExplainCard({
           </div>
         </>
       )}
-      {query.data && <DerivationRows derivation={query.data} />}
+      {query.data && (
+        <DerivationRows derivation={query.data} baseCurrency={baseCurrency} />
+      )}
     </Card>
   );
 }
@@ -767,7 +877,11 @@ function ReportCard({
               </p>
             )}
             {report === "forecast" && (
-              <ForecastStrip rows={run.rows} locale={locale} />
+              <ForecastStrip
+                rows={run.rows}
+                baseCurrency={run.base_currency ?? null}
+                locale={locale}
+              />
             )}
             {report === "open-deals-per-company" && (
               <CompanyTable rows={run.rows} locale={locale} />
@@ -785,20 +899,22 @@ function ReportCard({
                 is a number a reader places by assumption, and the assumption
                 is usually their own.
 
-                It does NOT state a currency, and that is the point. Every
-                report on this tab is denominated PER CURRENCY — the stage
-                table prints a row per stage per currency, the forecast strip
-                bands its tiles by currency and labels each band with the code
-                — so the figures above are in several currencies at once and
-                none of them is the installation's base.
+                It does NOT state a currency, and that is still the point,
+                though for a narrower reason than it once was. The stage table
+                and the forecast strip are both converted now and both name
+                their base currency themselves; open-deals-per-company is not,
+                and prints a currency COLUMN because its rows are native. So
+                the figures above are no longer all in several currencies at
+                once — but they are not all in one either, and a single line
+                over the card cannot say something true of every block beneath
+                it.
 
                 The frame used to end in `run.base_currency`, which read as the
                 denomination of numbers that were never converted into it: a
                 reader taking it at its word read ₫367,620,000,000 as a euro
-                figure. Whether this tab should convert instead is a product
-                question and is open; until it is answered, saying nothing
-                about currency here is the only honest option, because each
-                block already says its own.
+                figure. That is the failure this omission exists to prevent,
+                and it stays available for exactly as long as one block on the
+                tab is unconverted.
 
                 Drawn only when the server sent both halves: a caption naming
                 one of the two would be worse than none, and a server
@@ -830,6 +946,7 @@ function ReportCard({
               id={explainId}
               url={derivationUrl}
               query={derivationQuery}
+              baseCurrency={run.base_currency ?? null}
             />
           )}
         </>

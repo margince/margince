@@ -78,7 +78,7 @@ state row in §3.2 (this is where "empty", "withheld", "never read", "stale",
 
 ## 4. Contact
 
-Files: `personpage.tsx`, `person360.tsx`, `personrail.tsx`, `personstrip.tsx`,
+Files: `personpage.tsx`, `person360.tsx`, `personrail.tsx`,
 `persontoday.tsx`, `personcards.tsx`, `personmemory.tsx`,
 `personcorrections.tsx`, `personnetwork/`.
 

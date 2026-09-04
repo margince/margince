@@ -13,6 +13,7 @@ package consent
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,7 +46,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		// separation staging established. Transmit still re-checks the
 		// evidence; what it does not do is write a second, weaker record of it.
 		if phase == commsauthz.PhaseStaging {
-			w, err := g.windowsFor(ctx, tx)
+			w, err := g.store.windowsFor(ctx, tx)
 			if err != nil {
 				return commsauthz.Decision{}, err
 			}
@@ -86,7 +87,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -97,7 +98,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // answering with one body of code about one person. A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
-func legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision) (commsauthz.Decision, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision) (commsauthz.Decision, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -117,12 +118,23 @@ func legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey strin
 	// (the supported arm) is covered only by the first.
 	d.Resolved = resolutionForClass(purpose.Class).Category
 
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose)
+	w, err := g.store.windowsFor(ctx, tx)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, time.Now().Add(-w.reply))
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
 	switch verdict.State {
 	case VerdictAllowed:
+		// A basis this call DERIVED is written down before the send relies on
+		// it (Art. 5(2)). The engine is the only authority now, so it is the
+		// only thing left that can make that record: grantedForRecipient used
+		// to stamp here, and nothing calls it on the send path any more.
+		if err := stampDerivedBasis(ctx, tx, personID, verdict); err != nil {
+			return commsauthz.Decision{}, err
+		}
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
 		d.Basis = basisForClass(purpose.Class)

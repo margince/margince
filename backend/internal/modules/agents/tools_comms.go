@@ -237,12 +237,16 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	})
 }
 
-// --- send_email (🟡: outbound + irreversible) ---
+// --- send_email (🟢: the `send` scope a human granted IS the approval) ---
 
-// sendEmailTool carries a record reader for the same reason its channel twin
-// does: a 🟡 tool stages through StageInfo, and staging has to pin the version
-// of the row the effect anchors on and refuse one whose authority lives in
-// another system.
+// sendEmailTool carries a record reader that BOTH paths need, and the executing
+// one needs it more. On the default auto-execute path Handle calls
+// anchoredRecord.refuse before the mail leaves, because a send anchored to a row
+// whose authority lives in another system must be refused rather than reconciled
+// afterwards. On the floored path — an installation may declare the verb
+// confirm-first per record type — StageInfo additionally pins the row's version.
+// Neither is optional: removing the reader would let an agent holding `send`
+// transmit against a foreign system of record, unattended.
 type sendEmailTool struct {
 	comms Comms
 	p     datasource.SystemOfRecordProvider
@@ -348,11 +352,12 @@ func (t sendEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	return marshalResult(t.comms.SendEmail(ctx, args.ActivityID, args.SendEmailArgs))
 }
 
-// --- send_message (🟡: outbound + irreversible, the channel twin of send_email) ---
+// --- send_message (🟢: the channel twin of send_email, same reasoning) ---
 
-// sendMessageTool carries a record reader its mail twin does not: a 🟡 tool
-// stages through StageInfo, and staging has to know the version of the row the
-// effect targets and refuse one whose authority lives in another system.
+// sendMessageTool carries a record reader on the same terms as its mail twin:
+// Handle refuses a foreign-system-of-record anchor before the message leaves,
+// and StageInfo pins the target row's version when the verb is floored to
+// confirm-first. The executing path is the one that cannot do without it.
 type sendMessageTool struct {
 	comms Comms
 	p     datasource.SystemOfRecordProvider
