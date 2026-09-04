@@ -107,12 +107,12 @@ export function ContractForm({
   // background refetch while this form is open — another tab editing the same
   // agreement, a window-focus refetch — would otherwise re-seed mid-edit and
   // discard whatever the reader had already typed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   useEffect(() => {
     if (open) {
       setDraft(draftOf(contract));
       setFile(undefined);
     }
-    // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   }, [open, contract?.id]);
 
   // The draft is a VARIABLE, never a closure over render state: a click that
