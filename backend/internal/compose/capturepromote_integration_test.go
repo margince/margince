@@ -26,9 +26,11 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -826,4 +828,61 @@ func seatCtx(e *integration.Env, user ids.UUID) context.Context {
 			RowScope: principal.RowScopeAll,
 		},
 	})
+}
+
+// TestARecordSaysWhoItIsFor puts capture privacy on the wire.
+//
+// A client could see that it may not WRITE a row and not that the row it is
+// reading is private to the person reading it. Without the field a page cannot
+// tell "private to you" from "shared with everybody", which is the question the
+// owner of a captured contact is actually asking.
+//
+// It discloses nothing: a caller is only ever sent a row they may already read.
+func TestARecordSaysWhoItIsFor(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "sicht@partner.example"
+
+	seedAttestedOutbound(t, e, "vis-out-1", sender, "vis-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "vis-in-1", sender, "vis-t1")
+	personID := personIDFor(t, e, sender)
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	owner := seatCtx(e, e.Rep1)
+
+	got, err := store.GetPerson(owner, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("the owner reading their own captured contact: %v", err)
+	}
+	if got.Visibility == nil || *got.Visibility != crmcontracts.PersonVisibilityOwner {
+		t.Fatalf("a fresh capture reads %v, want owner — a page cannot say \"private to you\" "+
+			"about a field the server never sends", got.Visibility)
+	}
+
+	// And it follows the record when the owner publishes it.
+	if err := store.PromoteOwnCapturedPerson(owner, personID); err != nil {
+		t.Fatalf("publishing: %v", err)
+	}
+	after, err := store.GetPerson(owner, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading it back: %v", err)
+	}
+	if after.Visibility == nil || *after.Visibility != crmcontracts.PersonVisibilityWorkspace {
+		t.Fatalf("after publishing it reads %v, want workspace", after.Visibility)
+	}
+
+	// The list carries it too: the two paths share one scanner, and a field on
+	// only one of them is how a page shows a badge that vanishes on refresh.
+	listed, _, err := store.ListPeople(owner, people.ListPeopleInput{})
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	for _, p := range listed {
+		if ids.UUID(p.Id) == personID.UUID {
+			if p.Visibility == nil || *p.Visibility != crmcontracts.PersonVisibilityWorkspace {
+				t.Fatalf("the listed row reads %v, want workspace", p.Visibility)
+			}
+			return
+		}
+	}
+	t.Fatal("the published contact is missing from the owner's own list")
 }

@@ -50,6 +50,23 @@ export const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
   selected: "compose.audienceSelectedHint",
 };
 
+// Why a captured message is held, in the reader's words. A reason the server
+// learned to give and this map has not falls back to nothing rather than to the
+// raw token: a badge reading `financial_corporate` beside a customer's mail is
+// worse than no badge at all.
+//
+// The server sends this token two ways — as `audience_reason` on an Activity
+// and as `explanation` on an EmailAccess, which `readEmailAccess` fills from
+// the same column. One map, so the row and the drawer name a held message the
+// same way.
+export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
+  posture: "compose.reason.posture",
+  workspace_floor: "compose.reason.workspaceFloor",
+  no_record: "compose.reason.noRecord",
+  pending_verdict: "compose.reason.pendingVerdict",
+  manual: "compose.reason.manual",
+};
+
 /** One pickable seat or team, flattened out of the two rosters. */
 type Candidate = {
   kind: RosterKind;

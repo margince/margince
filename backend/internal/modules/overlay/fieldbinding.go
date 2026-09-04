@@ -154,6 +154,10 @@ var personBindings = EntityBinding{
 			WireSlot: "writable", Disposition: DispositionNativeOnly,
 			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",
 		},
+		{
+			WireSlot: "visibility", Disposition: DispositionNativeOnly,
+			Reason: "Capture privacy: whether a connector made this record from a message nothing had judged yet, so it belongs to the mailbox owner alone until something does. It is a fact about THIS installation's own ingestion, and an incumbent CRM that never held the mailbox has no answer to mirror — a row read through an overlay is the incumbent's, which is to say already shared with whoever the incumbent shares it with.",
+		},
 		{WireSlot: "first_name", CanonicalKey: "first_name", Incumbent: []string{"firstname"}, Disposition: DispositionMapped},
 		{WireSlot: "last_name", CanonicalKey: "last_name", Incumbent: []string{"lastname"}, Disposition: DispositionMapped},
 		{WireSlot: "full_name", CanonicalKey: "full_name", Incumbent: []string{"firstname", "lastname", "email"}, Transform: "full_name", Disposition: DispositionMapped},
@@ -212,6 +216,10 @@ var organizationBindings = EntityBinding{
 		{
 			WireSlot: "writable", Disposition: DispositionNativeOnly,
 			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",
+		},
+		{
+			WireSlot: "visibility", Disposition: DispositionNativeOnly,
+			Reason: "Capture privacy: whether a connector made this record from a message nothing had judged yet, so it belongs to the mailbox owner alone until something does. It is a fact about THIS installation's own ingestion, and an incumbent CRM that never held the mailbox has no answer to mirror — a row read through an overlay is the incumbent's, which is to say already shared with whoever the incumbent shares it with.",
 		},
 		{WireSlot: "display_name", CanonicalKey: "display_name", Incumbent: []string{"name"}, Disposition: DispositionMapped},
 		{WireSlot: "industry", CanonicalKey: "industry", Incumbent: []string{"industry"}, Disposition: DispositionMapped},
