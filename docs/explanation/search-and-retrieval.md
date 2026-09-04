@@ -354,7 +354,8 @@ mechanism with its own maintenance rules — see
 
 | | |
 |---|---|
-| Lexical query + keyset cursor | `internal/modules/search/store.go` (`Search`, `searchBranches`, `branchScope`) |
+| Lexical query + keyset cursor | `internal/modules/search/store.go` (`Search`) |
+| What a searchable entity is, and who may see one | `internal/modules/search/branches.go` (`searchBranches`, `branchScope`, `SearchedTables`) |
 | Vector write + similarity read | `internal/modules/search/embedding.go` (`UpsertEmbedding`, `SimilarEntities`) |
 | RRF fusion | `internal/modules/search/fuse.go` (`HybridSearch`, `fuseRankedResults`, `rrfK`) |
 | Event-driven indexer | `internal/modules/search/embedgen.go` (`EmbedGen`, `embedText`) |
