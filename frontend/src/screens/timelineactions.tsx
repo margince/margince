@@ -16,7 +16,13 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
-import { AudienceMembers, useAudienceCandidates } from "./audiencemembers";
+import {
+  AUDIENCE_CHOICES,
+  AUDIENCE_HINT,
+  AUDIENCE_LABEL,
+  AudienceMembers,
+  useAudienceCandidates,
+} from "./audiencemembers";
 import { useMessageAudience, useThreadAudience } from "./audienceservice";
 import { problemMessageOf } from "./common";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
@@ -127,29 +133,6 @@ export function TimelineActions({
     </>
   );
 }
-
-// The audiences the dialog offers — all three the API takes. `selected` waited
-// for a member picker, because offering it without one would be a choice the
-// reader cannot complete; AudienceMembers is that picker.
-const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
-  "workspace",
-  "participants",
-  "selected",
-];
-
-// What each audience is called and what it means, in one place: the label and
-// the hint were a pair of ternaries that a third value would have made a pair
-// of nested ones.
-const AUDIENCE_LABEL: Record<ActivityAudience, MessageKey> = {
-  workspace: "compose.audienceWorkspace",
-  participants: "compose.audienceParticipants",
-  selected: "compose.audienceSelected",
-};
-const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
-  workspace: "compose.audienceWorkspaceHint",
-  participants: "compose.audienceParticipantsHint",
-  selected: "compose.audienceSelectedHint",
-};
 
 // Why a captured message is held, in the reader's words. A reason the server
 // learned to give and this map has not falls back to nothing rather than to the

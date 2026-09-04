@@ -1512,6 +1512,13 @@ export const vi = {
   "email.access.participants": "Người tham gia",
   "email.access.selected": "Được chọn",
   "email.access.withheld": "Bị giữ lại",
+  "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
+  "email.access.sentence.participants":
+    "Chỉ những người có trong thư này mới đọc được.",
+  "email.access.sentence.selected":
+    "Chỉ những người được nêu bên dưới mới đọc được thư này.",
+  "email.access.sentence.withheld": "Thư này không được chia sẻ với bạn.",
+  "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ",
   "email.detail.loading": "Đang mở thư",

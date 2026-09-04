@@ -1572,6 +1572,13 @@ export const en = {
   "email.access.participants": "Participants",
   "email.access.selected": "Selected",
   "email.access.withheld": "Withheld",
+  "email.access.sentence.team": "Everyone in the organization can read this.",
+  "email.access.sentence.participants":
+    "Only the people on this message can read it.",
+  "email.access.sentence.selected":
+    "Only the people named below can read this.",
+  "email.access.sentence.withheld": "This message is not shared with you.",
+  "email.access.unnamedMember": "Someone no longer here",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Waiting for them",
   "email.detail.loading": "Opening the message",
