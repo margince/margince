@@ -161,7 +161,7 @@ export const en = {
   "autonomy.confirm": "confirm-first",
 
   "nav.home": "Brief",
-  "nav.contacts": "Contacts",
+  "nav.contacts": "People",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
@@ -603,7 +603,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first}–{last} of {count} {unit} loaded so far",
-  "unit.contacts": "contacts",
+  "unit.contacts": "people",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
@@ -3584,7 +3584,7 @@ export const en = {
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
   "import.object.organization": "Companies",
-  "import.object.person": "Contacts",
+  "import.object.person": "People",
   "import.objectHint.lead":
     "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
   "import.objectHint.organization":
@@ -6291,7 +6291,7 @@ export const en = {
   "users.access.read": "read",
   "users.access.write": "write",
   "users.access.delete": "delete",
-  "users.access.object.person": "Contacts",
+  "users.access.object.person": "People",
   "users.access.object.organization": "Companies",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",

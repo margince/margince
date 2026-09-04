@@ -165,7 +165,7 @@ export const vi = {
   "autonomy.confirm": "xác nhận trước",
 
   "nav.home": "Bản tóm tắt",
-  "nav.contacts": "Contact",
+  "nav.contacts": "Người",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
   "nav.deals": "Pipeline",
@@ -550,7 +550,7 @@ export const vi = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "{first}–{last} trong {count} {unit} đã tải",
-  "unit.contacts": "liên hệ",
+  "unit.contacts": "người",
   "unit.companies": "công ty",
   "unit.deals": "thương vụ",
   "unit.leads": "khách hàng tiềm năng",
@@ -3494,7 +3494,7 @@ export const vi = {
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.organization": "Công ty",
-  "import.object.person": "Liên hệ",
+  "import.object.person": "Người",
   "import.objectHint.lead":
     "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là liên hệ.",
   "import.objectHint.organization":
@@ -6163,7 +6163,7 @@ export const vi = {
   "users.access.read": "đọc",
   "users.access.write": "ghi",
   "users.access.delete": "xóa",
-  "users.access.object.person": "Liên hệ",
+  "users.access.object.person": "Người",
   "users.access.object.organization": "Công ty",
   "users.access.object.lead": "Lead",
   "users.access.object.deal": "Deal",

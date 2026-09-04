@@ -159,7 +159,7 @@ export const de = {
   "autonomy.confirm": "erst bestätigen",
 
   "nav.home": "Briefing",
-  "nav.contacts": "Kontakte",
+  "nav.contacts": "Personen",
   "nav.companies": "Firmen",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
@@ -556,7 +556,7 @@ export const de = {
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "{first}–{last} von bisher {count} geladenen {unit}",
-  "unit.contacts": "Kontakte",
+  "unit.contacts": "Personen",
   "unit.companies": "Firmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
@@ -3534,7 +3534,7 @@ export const de = {
   "import.objectLabel": "Was die Zeilen sind",
   "import.object.lead": "Interessenten",
   "import.object.organization": "Firmen",
-  "import.object.person": "Kontakte",
+  "import.object.person": "Personen",
   "import.objectHint.lead":
     "Eine unbearbeitete Liste landet als Leads zur Qualifizierung, bevor sie jemand als Kontakte behandelt.",
   "import.objectHint.organization":
@@ -6230,7 +6230,7 @@ export const de = {
   "users.access.read": "lesen",
   "users.access.write": "schreiben",
   "users.access.delete": "löschen",
-  "users.access.object.person": "Kontakte",
+  "users.access.object.person": "Personen",
   "users.access.object.organization": "Firmen",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",

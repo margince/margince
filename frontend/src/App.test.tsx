@@ -158,7 +158,7 @@ describe("locale switch", () => {
       </QueryClientProvider>,
     );
     // English default: once the session resolves, the rail carries English labels
-    expect(await screen.findByRole("link", { name: "Contacts" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "People" })).toBeTruthy();
     // The language is a preference of this person rather than a destination, so
     // it lives on Settings → Account and reaching it is a navigation. Which is
     // also what makes this an app-level claim: the choice is made on one route
@@ -172,9 +172,9 @@ describe("locale switch", () => {
 
     window.location.hash = "#/home";
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Kontakte" })).toBeTruthy(),
+      expect(screen.getByRole("link", { name: "Personen" })).toBeTruthy(),
     );
-    expect(screen.queryByRole("link", { name: "Contacts" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "People" })).toBeNull();
   });
 });
 
