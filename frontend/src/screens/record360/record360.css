@@ -24,7 +24,6 @@
 .r360-verdict-body {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: var(--space-3);
   min-width: 0;
 }
@@ -94,6 +93,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  /* The one item in the column that is a CONTROL and takes its own width: the
+     sentence and the working below it fill the column, and a button stretched
+     to the measure of a paragraph is a target the size of the paragraph. */
+  align-self: flex-start;
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
   /* A bordered control, not a link: it is the one thing in the head a reader
@@ -130,7 +133,6 @@
    quotes down a full-width card is mostly empty page, and the reader is
    comparing them against each other rather than reading them in order. */
 .r360-rests {
-  flex-basis: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: var(--space-3) var(--space-6);
