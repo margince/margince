@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -443,15 +444,30 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 // somebody removed is not evidence of anything, and the activity kind index is
 // partial on archived_at IS NULL, so naming it here is also what lets this
 // query use one — it runs per captured address.
-func metInPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+// TWO ANSWERS, because the meeting has to carry different weight depending on
+// what is being asked, and one bool cannot say both.
+//
+// `met` counts every qualifying meeting, the row being captured included. That
+// is what creates the contact: a calendar record names a guest, and the guest
+// is the point of it.
+//
+// `elsewhere` counts only meetings OTHER than the row being decided about, and
+// it is what may outrank a settled judgement about the sender. `kind` is a word
+// the CALLER supplies — a connector reports it beside the raw bytes, the
+// extension ingress copies Activity.Kind off a third-party record with no
+// vocabulary check, and the column carries no CHECK constraint. A message that
+// calls itself a meeting must not therefore be the evidence that lifts the
+// suppression standing against its own sender: that is a caller writing one
+// word to publish judged mail to the whole workspace.
+func metInPersonTx(
+	ctx context.Context, tx pgx.Tx, email string, capturing ids.UUID,
+) (met, elsewhere bool, err error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
-		return false, nil
+		return false, false, nil
 	}
-	var met bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1
+		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $3) > 0
 		    FROM activity a
 		    JOIN activity_participant p ON p.activity_id = a.id
 		   WHERE a.kind = 'meeting'
@@ -465,11 +481,11 @@ func metInPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 		             WHERE pe.person_id = p.person_id
 		               AND lower(pe.email) = $1
 		               AND pe.archived_at IS NULL))
-		     AND `+auth.ActivityAvailableClause("a")+`)`,
-		normalized, meetingHorizonInterval).Scan(&met); err != nil {
-		return false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
+		     AND `+auth.ActivityAvailableClause("a"),
+		normalized, meetingHorizonInterval, capturing).Scan(&met, &elsewhere); err != nil {
+		return false, false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
 	}
-	return met, nil
+	return met, elsewhere, nil
 }
 
 // meetingHorizonInterval bounds how far into the diary a meeting still says a
