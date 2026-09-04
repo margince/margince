@@ -21191,6 +21191,8 @@ export interface components {
             readonly voice_profile_version?: number | null;
             /** @description Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it. */
             readonly draft_ref: string | null;
+            /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
+            readonly voice_degraded?: boolean;
         };
         /**
          * @description Who a reply to a message is addressed to: one person, resolved from the
@@ -21243,6 +21245,8 @@ export interface components {
             readonly voice_profile_version?: number | null;
             /** @description Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none. */
             readonly draft_ref?: string | null;
+            /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
+            readonly voice_degraded?: boolean;
         };
         /**
          * @description One thing the draft was written from, named so the reader can check it rather than

@@ -3069,6 +3069,8 @@ export const de = {
   "compose.aiDisclosureFallback":
     "Dieser Entwurf stammt von einer KI. Lesen und überarbeiten Sie ihn, bevor Sie senden.",
   "compose.voiceVersion": "Aus Ihrem Korpus gebaut · v{n}",
+  "compose.voiceDegraded":
+    "Ihr Stimmprofil konnte nicht geladen werden – dieser Entwurf ist nicht in Ihrer Stimme geschrieben. Erstellen Sie den Entwurf neu oder überarbeiten Sie ihn vor dem Senden.",
   "compose.provisional": "Vorläufige Stimme",
   "compose.provisionalHint":
     "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",

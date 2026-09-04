@@ -3112,6 +3112,8 @@ export const en = {
   "compose.aiDisclosureFallback":
     "This draft was produced by AI. Read it and edit it before you send.",
   "compose.voiceVersion": "Built from your corpus · v{n}",
+  "compose.voiceDegraded":
+    "Your voice profile couldn't be loaded, so this draft is not written in your voice. Draft again, or edit before sending.",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",

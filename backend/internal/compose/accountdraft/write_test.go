@@ -220,7 +220,7 @@ func TestTheCallersOwnIntentIsOutsideTheFence(t *testing.T) {
 func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 	// draft_ref exists so a served draft can be scored later, which is a
 	// write. This operation performs none, so the field stays null.
-	out := wire(Deterministic(sampleInput()), crmcontracts.Deterministic)
+	out := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false)
 	if out.DraftRef != nil {
 		t.Fatalf("draft_ref = %v, want null: recording a served draft is a write", out.DraftRef)
 	}

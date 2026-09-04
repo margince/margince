@@ -29421,6 +29421,7 @@ components:
         ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.' }
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
+        voice_degraded: { type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.' }
 
     ReplyRecipient:
       type: object
@@ -29504,6 +29505,14 @@ components:
           description: >-
             Opaque reference identifying this served draft. Null here: recording a draft for
             voice learning is a WRITE, and this operation performs none.
+        voice_degraded:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when the sender's voice could not even be looked up, so this draft may be
+            missing a voice its sender built. Distinct from voice_profile_version being null,
+            which also covers the ordinary no-profile case. A client should say so: the sender
+            cannot detect a missing voice by reading the text. Absent reads as false.
 
     AccountDraftReason:
       type: object
