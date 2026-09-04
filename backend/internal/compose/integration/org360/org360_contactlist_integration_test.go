@@ -22,8 +22,8 @@ import (
 //
 // This is the read the 25-row section could not give: an account with more
 // contacts than a summary carries, walked end to end without losing anybody or
-// naming anybody twice. The contact who answered is seeded LAST so that a read
-// which paged in id order would bury them on the final page.
+// naming anybody twice. The contact waiting on a reply is seeded LAST so that a
+// read which paged in id order would bury them on the final page.
 func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
@@ -32,15 +32,15 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 
 	org := e.SeedOrg(t, "Brandt GmbH", nil)
 	const contacts = 30
-	var answered ids.UUID
+	var waiting ids.UUID
 	for i := range contacts {
 		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
 		employ(t, e, person, org, "Fleet")
-		answered = person
+		waiting = person
 	}
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal",
 		"inbound", org360Clock.AddDate(0, 0, -3))
-	integration.LinkActivity(t, owner, mail, "person", answered)
+	integration.LinkActivity(t, owner, mail, "person", waiting)
 
 	limit := 10
 	seen := map[ids.UUID]bool{}
@@ -73,13 +73,15 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 	if len(seen) != contacts {
 		t.Fatalf("walked %d contacts of %d — the pages do not cover the account", len(seen), contacts)
 	}
-	if first != answered {
-		t.Fatalf("the first page opens on %s; the contact who answered is %s and the ranking must lead with them",
-			first, answered)
+	if first != waiting {
+		t.Fatalf("the first page opens on %s; the contact waiting on a reply is %s and the ranking must lead with them",
+			first, waiting)
 	}
 }
 
-// Each engagement state is its own filter, and the three partition the account.
+// Each engagement state is its own filter, and the four partition the account.
+// Answered needs BOTH directions with ours last: an inbound alone is the
+// waiting case, and a fixture that stopped there would prove the old rule.
 func TestContactPageNarrowsByEngagement(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
@@ -87,15 +89,22 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 	svc := org360Service(e)
 
 	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	waiting := e.SeedPerson(t, "Sabine Vogel", nil)
 	answered := e.SeedPerson(t, "Dietmar Rietsch", nil)
 	silent := e.SeedPerson(t, "Philipp Koenigs", nil)
 	untried := e.SeedPerson(t, "Ute Sommer", nil)
-	for _, p := range []ids.UUID{answered, silent, untried} {
+	for _, p := range []ids.UUID{waiting, answered, silent, untried} {
 		employ(t, e, p, org, "Fleet")
 	}
+	unanswered := integration.AccountMailDirectedAt(t, owner, e.WS, "Question", "inbound",
+		org360Clock.AddDate(0, 0, -4))
+	integration.LinkActivity(t, owner, unanswered, "person", waiting)
 	in := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: proposal", "inbound",
 		org360Clock.AddDate(0, 0, -3))
 	integration.LinkActivity(t, owner, in, "person", answered)
+	reply := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: Re: proposal", "outbound",
+		org360Clock.AddDate(0, 0, -2))
+	integration.LinkActivity(t, owner, reply, "person", answered)
 	out := integration.AccountMailDirectedAt(t, owner, e.WS, "Introduction", "outbound",
 		org360Clock.AddDate(0, 0, -10))
 	integration.LinkActivity(t, owner, out, "person", silent)
@@ -104,6 +113,7 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 		state people.Engagement
 		want  ids.UUID
 	}{
+		{people.EngagementWaiting, waiting},
 		{people.EngagementAnswered, answered},
 		{people.EngagementNoReply, silent},
 		{people.EngagementUntried, untried},

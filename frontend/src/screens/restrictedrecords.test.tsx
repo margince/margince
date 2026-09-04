@@ -122,6 +122,17 @@ describe("RestrictedRecordsCard", () => {
     expect(screen.queryByText(/Angebot/)).not.toBeInTheDocument();
   });
 
+  // The count decided a wording, in a single key with the number poured into
+  // it, so one removed field read "1 fields removed". Only zero was guarded.
+  it("says one removed field in the singular", async () => {
+    backend({ retention_policy: ["read"] }, [
+      { ...HELD_ANGEBOT, redacted_fields: ["raw"] },
+    ]);
+    render(<RestrictedRecordsCard />);
+
+    expect(await screen.findByText("1 field removed")).toBeVisible();
+  });
+
   // A project link qualifies correspondence on its own — the screen used to
   // check only `deals` and print "No deal on record" over a project name the
   // server had already sent it.

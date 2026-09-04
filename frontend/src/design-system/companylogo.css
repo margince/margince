@@ -1,0 +1,26 @@
+/* The caller owns the slot's dimensions; this component owns how an arbitrary
+   logo uses them. A wide wordmark stays wide and a tall mark stays tall. */
+.company-logo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.company-logo-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.company-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+}

@@ -52,7 +52,14 @@ type agentToolBudget struct {
 }
 
 type catalogTotals struct {
-	Tools  int `json:"tools"`
+	Tools int `json:"tools"`
+	// Frame is what the system prompt costs before any tool is listed. It is
+	// here because a sentence moved OUT of the per-tool schemas and into the
+	// frame is a saving of (tools x sentence) against a cost of (1 x sentence),
+	// and only the first half used to be measured: the catalog floor holds the
+	// LISTING alone, so a frame that grew a paragraph spent it on every run of
+	// every agent with nothing published and no assertion anywhere.
+	Frame  int `json:"system_frame_tokens"`
 	Tokens int `json:"tokens"`
 	Median int `json:"median_tool_tokens"`
 	Mean   int `json:"mean_tool_tokens"`
@@ -163,6 +170,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 		CatalogFloor:  runner.PromptTokenCeiling * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator,
 		Catalog: catalogTotals{
 			Tools:  len(specs),
+			Frame:  runner.SystemFrameTokens(),
 			Tokens: len(runner.ToolListing(specs)) / 4,
 			Median: medianTokens(ordered),
 			Mean:   sum / len(ordered),

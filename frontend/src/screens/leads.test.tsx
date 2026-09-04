@@ -16,6 +16,7 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   LeadScreen,
   LeadsScreen,
@@ -1383,6 +1384,99 @@ describe("LeadScreen — disqualify (P-3)", () => {
   });
 });
 
+// The address may name the verb the reader arrived to perform. A rep sent here
+// to log a call attempt lands on the composer already set to one; a rep who
+// simply opened the lead gets the ordinary note.
+describe("LeadScreen — arriving to log a call", () => {
+  it("opens the composer on a call when the address asks for one", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1?action=call";
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Call"),
+    );
+  });
+
+  it("opens on a note for a reader who only opened the lead", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
+    );
+  });
+
+  // A link pressed on the record the reader is ALREADY on changes the address
+  // and nothing else — no remount, so a kind read once at mount stays put and
+  // the reader is handed the composer they asked for set to the wrong verb.
+  it("follows a call the address asks for after the composer is already open", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
+    );
+
+    // What a second link does: the hash moves under a mounted screen. The
+    // event is dispatched rather than waited for, because jsdom delivers its
+    // own a task later and the assertion is about the render, not the delay.
+    act(() => {
+      window.location.hash = "#/leads/l-1?action=call";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Call"),
+    );
+  });
+
+  // The composer is absent in overlay for every reader, because every write it
+  // makes answers unsupported_by_sor. For a reader who followed a link TO it
+  // that absence reads as a broken page, so the address is answered instead.
+  it("says why in overlay, rather than dropping the reader on a page with nothing", async () => {
+    stubFetch(async (url) => {
+      if (url.includes("/me")) {
+        return jsonResponse({
+          user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
+          roles: ["admin"],
+          teams: [],
+          system_of_record: { mode: "overlay" },
+        });
+      }
+      return jsonResponse(lead);
+    });
+    window.location.hash = "#/leads/l-1?action=call";
+    render(<LeadScreen id="l-1" />);
+
+    expect(await screen.findByText(en["lead.callNotInOverlay"])).toBeTruthy();
+    expect(screen.queryByLabelText("Type")).toBeNull();
+  });
+
+  // And it stays quiet for a reader who did not ask: a mirrored lead is not
+  // broken, and a refusal on every overlay lead is noise.
+  it("says nothing about a verb nobody asked for", async () => {
+    stubFetch(async (url) => {
+      if (url.includes("/me")) {
+        return jsonResponse({
+          user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
+          roles: ["admin"],
+          teams: [],
+          system_of_record: { mode: "overlay" },
+        });
+      }
+      return jsonResponse(lead);
+    });
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
+    expect(screen.queryByText(en["lead.callNotInOverlay"])).toBeNull();
+  });
+});
+
 describe("LeadScreen — overlay mode write affordances", () => {
   // The mirror's own write-back seam serves update for a lead
   // (overlay/provider_writes.go SupportsWrite), so Edit renders here.
@@ -1993,11 +2087,16 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
       "How it stands",
+      // The status reading's own door: it opens the LEADS LIST narrowed to this
+      // status. Another screen, a read, and nothing on this record — the same
+      // species as "View tasks" above. A terminal lead is read-only rather than
+      // unreadable, and this is one of the reads.
+      "Open leads in this status →",
     ]);
-    // The column's OWN fold is skipped structurally rather than by its label:
-    // it belongs to the shell's chrome, not to this record, and "Hide" is too
+    // The pane's own controls are skipped structurally rather than by label:
+    // what folds a disclosure in it is a view control, and "Hide" is too
     // ordinary a word to exempt everywhere it might appear.
-    const contextColumn = document.querySelector(".pageaside");
+    const contextColumn = document.querySelector(".page-zones-aside-column");
     for (const button of screen.getAllByRole("button")) {
       // The ACCESSIBLE name, not the text: the panel switch is icon-only, so
       // its text is empty and a set keyed on text would have exempted every

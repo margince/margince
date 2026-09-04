@@ -274,6 +274,38 @@ func (s *Service) SharesLiveTeamWithCaller(ctx context.Context, other ids.UserID
 	return shares, err
 }
 
+// CallerLeadsLiveTeam reports whether the caller is a live member of a live
+// team, by the team's id.
+//
+// The team-id counterpart to SharesLiveTeamWithCaller, and it holds the same
+// posture for the same reasons: humans only, live team, live seat, and no walk
+// up parent_team_id. What differs is only which end of the membership edge the
+// caller names — a user there, a team here — so the two ask one question of one
+// table rather than disagreeing about who is on a team.
+//
+// A caller asking about a team that does not exist gets false, not an error:
+// the answer to "may I read this team" is no either way, and distinguishing the
+// two would tell an outsider which team ids are real.
+func (s *Service) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return false, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+		return false, apperrors.ErrPermissionDenied
+	}
+	me := ids.From[ids.UserKind](actor.UserID)
+	var member bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS (
+		         SELECT 1 FROM team_membership m
+		           JOIN team t ON t.id = m.team_id AND t.archived_at IS NULL
+		           JOIN app_user u ON u.id = m.user_id AND `+LiveMemberSQL("u")+`
+		          WHERE m.team_id = $1 AND m.user_id = $2)`, team, me).Scan(&member)
+	})
+	return member, err
+}
+
 // validTeamName trims and bounds a team name.
 func validTeamName(raw string) (string, error) {
 	name := strings.TrimSpace(raw)

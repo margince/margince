@@ -1,0 +1,173 @@
+/* ===== The company glance =====
+ *
+ * The overview a rep reads in ten seconds (DESIGN.md §7, "Glance, then
+ * depth"): the readings row, the 360 as the first pane at the full measure,
+ * then two columns — what needs a person and the money on the left; Ask,
+ * About and People on the right. Two column STACKS rather than one grid, so
+ * each column packs its own panes and a tall needs list never opens a gap
+ * beside a short one. */
+.co-glance-cols {
+  display: grid;
+  /* 3:2, the mock's split: the left column carries the work, the right the
+     account's own description, and equal halves gave the description more
+     room than it fills. */
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.co-glance-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+/* A glance pane's head is its first line, not a band: the title in the
+   display face with the pane's own link at the row's end, and the body
+   following on the same ground with no rule between (DESIGN.md §7). */
+.co-glance-cols .panel > .panel-head {
+  min-height: 0;
+  padding-top: var(--space-5);
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+/* The needs list heads itself the same way, at the same size: it is a glance
+   pane like the ones beside it, and an eyebrow over a display-face title on
+   the next pane read as two kinds of pane. */
+.co-glance-cols .co-360-head {
+  padding-top: var(--space-5);
+  padding-bottom: 0;
+}
+.co-glance-cols .co-360-head .co-360-title-text {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  color: var(--textPrimary);
+}
+/* One column as soon as two would squeeze a list to nothing. Measured against
+   the WORK column (the `work` container, app/shell.css), not the window: with
+   the details column open a 1440px window leaves the record less room than a
+   1200px one with it closed. */
+@container work (max-width: 60rem) {
+  .co-glance-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The three rated dimensions under the verdict: a dot in the dimension's
+   tone, the dimension, its rating. Inline, because they qualify the word
+   above them rather than standing as readings of their own. */
+.co-360-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding-top: 0;
+}
+.co-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textSecondary);
+}
+.co-dim::before {
+  content: "";
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-full);
+  background: var(--textTertiary);
+}
+.co-dim-calm::before {
+  background: var(--success);
+}
+.co-dim-warn::before {
+  background: var(--warn);
+}
+.co-dim-danger::before {
+  background: var(--danger);
+}
+
+/* The 360's foot: the fold that opens the thread, and the way to the whole
+   history. A row of two quiet verbs, under the spine. */
+.co-360-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The lead row of the needs list: the moment, at the weight of a headline.
+   The eyebrow names the rule, the headline is set in the display face because
+   it is the one sentence about the reader on the page, and the verb under it
+   is the page's one filled control (DESIGN.md §6). */
+.co-move-lead .co-move-headline {
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
+  line-height: 1.3;
+}
+.co-move-lead .co-move-by {
+  color: var(--textSecondary);
+}
+/* The lead's evidence and its one verb on one line, from the left: the row
+   reads top to bottom as a claim, why, what it rests on, what to do, and a
+   verb pushed to the far edge broke that line into two corners. */
+.co-move-lead .co-move-do {
+  justify-content: flex-start;
+  margin-top: var(--space-2);
+}
+.co-move-lead .co-move-actions {
+  margin-left: 0;
+}
+
+/* People as chips: a face and a name, wrapping, with the remainder as one
+   more chip. A chip is a pill on the card ground, not a row — three names
+   are a glance, not a roster. */
+.co-people-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 30px;
+  padding: 0 var(--space-3) 0 var(--space-1);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-full);
+  background: var(--bgCard);
+  color: var(--textPrimary);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+a.co-person-chip:hover {
+  background: var(--bgHover);
+}
+.co-person-more {
+  padding-inline-start: var(--space-3);
+  color: var(--textMeta);
+}
+
+/* Ask as prepared questions: each one a full-width row on the recessed
+   ground that tints indigo under the pointer (DESIGN.md §7). The buttons are
+   the assistant's own; only their arrangement is this pane's. */
+.co-glance-ask .co-ask-questions {
+  flex-direction: column;
+  align-items: stretch;
+}
+.co-glance-ask .co-ask-questions .btn {
+  justify-content: flex-start;
+  text-align: left;
+  background: var(--bgCard);
+  border-color: transparent;
+}
+.co-glance-ask .co-ask-questions .btn:hover {
+  background: var(--aiLight);
+  color: var(--aiText);
+}

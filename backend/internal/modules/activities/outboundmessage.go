@@ -99,7 +99,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 }
 
 // delivery is the same message as the delivery machinery receives it.
-func (m outboundMessage) delivery(activityID ids.UUID, chain threading) DeliveryRequest {
+func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin SendOrigin) DeliveryRequest {
 	return DeliveryRequest{
 		ActivityID:      ids.From[ids.ActivityKind](activityID),
 		Provider:        m.provider,
@@ -113,7 +113,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading) Delivery
 		FromName:        m.fromName,
 		Attachments:     m.files,
 		ConsentPurpose:  m.in.ConsentPurpose,
-		Authorization:   m.authorization(),
+		Authorization:   m.authorization(origin),
 		InReplyTo:       chain.inReplyTo,
 		References:      chain.references,
 		ThreadKey:       chain.threadKey,
@@ -130,11 +130,46 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading) Delivery
 //
 // Recipients is the MERGED list, not the To: line. A blind copy is blind to the
 // other recipients and never to the engine.
-func (m outboundMessage) authorization() commsauthz.Request {
+func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 	return commsauthz.Request{
 		Recipients:       connector.EmailRecipients(m.in.Recipients),
+		Context:          m.in.Context,
 		LegacyPurposeKey: m.in.ConsentPurpose,
+		MarketingPurpose: m.in.MarketingPurpose,
+		OperatorReason:   m.in.OperatorReason,
+		Evidence:         m.evidence(origin),
+		// The anchor is where a reply's own answer comes from: a message
+		// continuing a thread the subject started is a reply whether or not the
+		// caller thought to say so. Zero on an account-started send, which is
+		// exactly what tells the engine there is no thread to lean on.
+		AnchorActivityID: origin.anchor.UUID,
+		Links:            linkedRecordIDs(m.links),
 		Subject:          m.in.Subject,
 		Body:             m.body,
 	}
+}
+
+// evidence is what the caller offered, with the anchor filled in from the
+// origin when they named no activity themselves.
+//
+// Derived rather than demanded: a rep replying in the compose window names
+// nothing, and asking them to would be asking them to restate what the send
+// already knows. A caller that DID name an activity keeps theirs — they may be
+// pointing at an earlier message in the thread than the one being answered.
+func (m outboundMessage) evidence(origin SendOrigin) commsauthz.Evidence {
+	e := m.in.Evidence
+	if e.ActivityID == (ids.UUID{}) {
+		e.ActivityID = origin.anchor.UUID
+	}
+	return e
+}
+
+// linkedRecordIDs names the records this message is filed under, which is where
+// a deal, an invoice or a contract validator looks when the caller named none.
+func linkedRecordIDs(links []ActivityLinkInput) []ids.UUID {
+	out := make([]ids.UUID, 0, len(links))
+	for _, l := range links {
+		out = append(out, l.EntityID)
+	}
+	return out
 }

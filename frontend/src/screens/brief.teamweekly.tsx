@@ -9,8 +9,8 @@ import { Meter } from "../design-system/readings";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDate, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { formatDate, formatMoney, formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EntityRef } from "./entityref";
 import {
@@ -245,6 +245,30 @@ function Coverage({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   );
 }
 
+/**
+ * What the team's wins were worth, or nothing.
+ *
+ * NOTHING, not a zero, when the snapshot carries no pipeline block. That block
+ * is absent whenever any member's week could not be converted — the schema says
+ * so — because summing only the reps who DID convert would be a confident
+ * number quietly missing one. "€0 won" over a team that won deals is the
+ * opposite of what happened.
+ *
+ * The currency is the SNAPSHOT's, never the installation's current setting:
+ * base currency is operator-mutable, and re-reading it would re-label a closed
+ * week with a currency its numbers were never in.
+ */
+function wonValue(
+  review: TeamWeeklyReview,
+  locale: Locale,
+): string | undefined {
+  const pipeline = review.pipeline;
+  if (pipeline === undefined) {
+    return undefined;
+  }
+  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+}
+
 function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -252,6 +276,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const n = (value: number) => formatNumber(value, locale);
   const ofTotal = (part: number, whole: number) =>
     t("teamweekly.ofTotal", { part: n(part), whole: n(whole) });
+  const won = wonValue(review, locale);
 
   return (
     <StatStrip testId="teamweekly-strip">
@@ -275,7 +300,22 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       <StatCard
         label={t("teamweekly.card.won")}
         value={n(counts.deals_won)}
-        detail={t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })}
+        // What the wins were WORTH, beside how many were lost. The count alone
+        // says a week of five small renewals and a week of one company-making
+        // deal are the same week — and the money was computed, FX-converted and
+        // stored when the snapshot was written, then read by nothing.
+        //
+        // It rides the won slot rather than taking a sixth: five is what a
+        // strip can be read across as one comparison. The lost count stays,
+        // because it is a different fact rather than a delta the money replaces.
+        detail={
+          won === undefined
+            ? t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })
+            : t("teamweekly.card.wonBasisValue", {
+                value: won,
+                lost: n(counts.deals_lost),
+              })
+        }
       />
       <StatCard
         label={t("teamweekly.card.reps")}
@@ -299,6 +339,12 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const rows = [
     { key: "teamweekly.movement.won" as const, value: counts.deals_won },
     { key: "teamweekly.movement.lost" as const, value: counts.deals_lost },
+    // ADVANCED sits with the two outcomes above it rather than with the
+    // activity rows below, because it is the same kind of fact: what happened
+    // to the team's deals. Without it a week that moved eleven deals and closed
+    // none read as a week where nothing happened, which is the week most teams
+    // have and the one a lead most needs to see.
+    { key: "teamweekly.movement.moved" as const, value: counts.deals_moved },
     {
       key: "teamweekly.movement.meetings" as const,
       value: counts.meetings_held,

@@ -37,14 +37,18 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// The reserved member names, spelled once. Both the pop below and the schema
-// splice that advertises them read these, so a rename cannot leave the surface
-// accepting one spelling and advertising another.
+// The reserved member names, spelled once — in the PORT, because the runner's
+// listing renderer reads them too: it omits `idempotency_key`'s description and
+// lets the frame state the rule once, which it can only do by knowing the name
+// the splice below writes. Both the pop here and that omission read the same
+// constants, so a rename cannot leave the surface accepting one spelling,
+// advertising another and describing a third.
 const (
-	approvalIDArg     = "approval_id"
-	idempotencyKeyArg = "idempotency_key"
+	approvalIDArg     = mcp.ReservedApprovalIDArg
+	idempotencyKeyArg = mcp.ReservedIdempotencyKeyArg
 )
 
 var (

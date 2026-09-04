@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
@@ -223,6 +224,7 @@ function LeadsWorkbench({
   opensOnAll,
 }: Readonly<{ viewerId: string; opensOnAll: boolean }>) {
   const ownerChips = useOwnerChips();
+  const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
   const roster = useRoster("user", true);
   const t = useT();
@@ -313,6 +315,7 @@ function LeadsWorkbench({
         </Callout>
       )}
       <ListTable
+        title={pageName}
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })}
         // The board renders INSIDE the surface, so the search, the chips and
         // the saved views stay above it. A board that replaced the surface
@@ -379,8 +382,9 @@ function LeadsWorkbench({
               );
             },
             // `full_name` is in the server's lead sort vocabulary, so the
-            // header is live and the attribute joins the sort menu — the same
-            // A–Z route the contacts list offers.
+            // header is live and the attribute joins the sort menu — which is
+            // the only place an alphabetical order is offered now that no view
+            // tab spells one.
             sort: "full_name",
             fixed: true,
           },
@@ -585,7 +589,6 @@ function LeadsWorkbench({
                 },
               ]
             : []),
-          { label: "list.viewAZ", sort: "full_name" },
         ]}
         // The reader's own saved narrowings, beside the presets above. Leads
         // was the one record list without them, while the contract has

@@ -93,14 +93,14 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 
 	uploaded := uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
 
-	wantURL := "/v1/organizations/" + company.OrganizationID.String() + "/logo"
-	if uploaded.LogoUrl == nil || *uploaded.LogoUrl != wantURL {
-		t.Fatalf("logo_url = %v, want %q — the face the shell and the record both render",
-			uploaded.LogoUrl, wantURL)
-	}
 	key, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.OrganizationID)
 	if err != nil {
 		t.Fatalf("the company wears no mark after its own upload: %v", err)
+	}
+	wantURL := *people.LogoURL(company.OrganizationID.UUID, &key)
+	if uploaded.LogoUrl == nil || *uploaded.LogoUrl != wantURL {
+		t.Fatalf("logo_url = %v, want %q — the face the shell and the record both render",
+			uploaded.LogoUrl, wantURL)
 	}
 	stored, object, err := blob.Get(context.Background(), key)
 	if err != nil {
@@ -124,8 +124,8 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the stored mark does not decode: %v", err)
 	}
-	if bounds := decoded.Bounds(); bounds.Dx() != bounds.Dy() {
-		t.Fatalf("the stored mark is %dx%d, want a square", bounds.Dx(), bounds.Dy())
+	if bounds := decoded.Bounds(); bounds.Dx() != 400 || bounds.Dy() != 400 {
+		t.Fatalf("the stored logo is %dx%d, want the 400px source preserved without upscaling", bounds.Dx(), bounds.Dy())
 	}
 }
 

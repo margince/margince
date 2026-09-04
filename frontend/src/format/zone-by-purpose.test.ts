@@ -148,6 +148,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/worklist.when.test.tsx",
+    why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking viewerZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
+  },
+  {
     file: "screens/home.weekly.test.tsx",
     why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through RecordZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_RECORD_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
   },
@@ -170,6 +174,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "screens/historyreversalrow.stories.tsx",
     why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
+  },
+  {
+    file: "app/pageaside.stories.tsx",
+    why: "The story hand-renders a RecordView around the details pane and passes the view's required zone; nothing in it renders a date, so the zone is the shape being satisfied, not a rendering under review.",
   },
   {
     file: "screens/recordconversations.stories.tsx",

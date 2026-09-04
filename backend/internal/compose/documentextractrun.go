@@ -288,13 +288,7 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extraction.ExtractedField, error) {
 	req := documentExtractRequest(src)
 	validate := documentShapeValid(src)
-	var resp model.Response
-	var err error
-	if structured, ok := d.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, validate)
-	} else {
-		resp, err = d.brain.Complete(ctx, req)
-	}
+	resp, err := ai.Ask(ctx, d.brain, req, validate)
 	if err != nil {
 		if errors.Is(err, model.ErrAttachmentUnsupported) {
 			// The binding declared it carries this type and then refused it on

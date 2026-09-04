@@ -222,7 +222,7 @@ function ExclusionRows({
     // left-aligns it already (settingrow.css), so there is nothing to undo here.
     return (
       <EmptyState>
-        <p className="t-small" data-testid="capture-exclusions-empty">
+        <p data-testid="capture-exclusions-empty">
           {t("captureExclusions.empty")}
         </p>
       </EmptyState>

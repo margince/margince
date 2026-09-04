@@ -273,9 +273,7 @@ export function ConsumerMailDomainsCard() {
                     // `empty`, and only `empty`: nothing has been added, so the
                     // shipped list decides every domain. The row caps and
                     // left-aligns it already (settingrow.css).
-                    <EmptyState>
-                      <p className="t-small">{t("consumerMail.none")}</p>
-                    </EmptyState>
+                    <EmptyState>{t("consumerMail.none")}</EmptyState>
                   ) : (
                     // One entry per row, in the row language the rest of this
                     // tab speaks: the domain names itself on the left, what it

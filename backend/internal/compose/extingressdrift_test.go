@@ -92,12 +92,16 @@ func TestThePublishedRecordMirrorsTheCaptureEnvelope(t *testing.T) {
 // stores — so the reason has to say why that zero value is the right answer, not
 // merely why the unit is not asked.
 //
-// It is EMPTY, and that is the state this arc arrived at rather than a gap:
 // ChannelProvider was waived here while a unit supplied no transport, and the
 // waiver said what would retire it — "a unit that does supply one publishes this
 // alongside the declaration that makes it true". A unit does, so it is published
 // and bounded at the write door instead (refuseUndeclaredTransport).
-var waivedActivityFields = gatekit.Waive(map[string]string{})
+var waivedActivityFields = gatekit.Waive(map[string]string{
+	"HasCalendarPart": "false is the right answer for a unit, not a missing one. It records what the " +
+		"core's MIME walk saw in a raw RFC822 message; a unit hands over an already-normalized " +
+		"record with no parts to walk, so it carried no calendar payload for anyone to have read. " +
+		"Publishing it would let a unit assert a parse it never performed",
+})
 
 // TestThePublishedActivityMirrorsTheCoreOne is the same rule one level in. The
 // activity shape is the payload the sink switches on, and a field added there

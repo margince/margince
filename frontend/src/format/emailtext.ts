@@ -11,8 +11,24 @@ export type EmailBodyParts = {
   header: string;
   /** What the sender actually wrote. Never empty when the body was not. */
   main: string;
-  /** Signature and quoted history, collapsed behind a control. */
+  /**
+   * Signature and quoted history, collapsed behind a control.
+   *
+   * Kept as one string because callers that only need "is there a tail" ask
+   * this. What the tail IS — a sign-off, a quoted reply, or a sign-off with a
+   * reply under it — is `tail`, and a caller labelling the control must read
+   * that instead: folding a sender's own name behind "show quoted history"
+   * hides it under a promise of history that is not there.
+   */
   trimmed: string;
+  /**
+   * What the trimmed part starts with. "none" when there is no tail at all.
+   *
+   * A signature and a quote are trimmed for different reasons and read
+   * differently to a person: the sign-off is the sender still speaking, and
+   * the quote is an older message. One label for both was the defect.
+   */
+  tail: "none" | "signature" | "quote";
 };
 
 // The preamble capture's mail mapper prepends verbatim. Peeled before any
@@ -131,31 +147,38 @@ function isQuoteStart(lines: readonly string[], index: number): boolean {
 
 /**
  * boundaryIndex is the first line that belongs to the tail rather than the
- * message: a quote marker anywhere, or a sign-off near the end.
+ * message, and WHICH KIND of tail it opens.
  *
- * Returns -1 when the whole body is the message.
+ * The kind is not decoration. A sign-off and a quoted reply are both trimmed,
+ * and a caller that folds them behind one control saying "show quoted history"
+ * hides a sender's own name under a promise of history that is not there.
+ *
+ * `at` is -1 when the whole body is the message.
  */
-function boundaryIndex(lines: readonly string[]): number {
+function boundaryIndex(lines: readonly string[]): {
+  at: number;
+  kind: "signature" | "quote";
+} {
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i] ?? "";
     if (SIGNATURE_DELIMITER.test(line)) {
-      return i;
+      return { at: i, kind: "signature" };
     }
     if (isQuoteStart(lines, i)) {
       // The attribution line directly above a quoted block introduces it, so it
       // travels with the quote rather than trailing the message.
       const above = lines[i - 1]?.trim() ?? "";
       if (line.startsWith(">") && i > 0 && above.endsWith(":")) {
-        return i - 1;
+        return { at: i - 1, kind: "quote" };
       }
-      return i;
+      return { at: i, kind: "quote" };
     }
     if (i >= signOffFloor && isSignOff(line)) {
-      return i;
+      return { at: i, kind: "signature" };
     }
   }
-  return -1;
+  return { at: -1, kind: "quote" };
 }
 
 /**
@@ -168,7 +191,7 @@ function boundaryIndex(lines: readonly string[]): number {
  */
 export function splitEmailBody(body: string): EmailBodyParts {
   if (!body.trim()) {
-    return { header: "", main: "", trimmed: "" };
+    return { header: "", main: "", trimmed: "", tail: "none" };
   }
   const preamble = PREAMBLE.exec(body);
   const header = preamble ? preamble[0].trim() : "";
@@ -178,19 +201,24 @@ export function splitEmailBody(body: string): EmailBodyParts {
   // whole of what was captured, so it IS the message: the invariant is that a
   // non-empty body never renders as nothing.
   if (!rest.trim()) {
-    return { header: "", main: body.trim(), trimmed: "" };
+    return { header: "", main: body.trim(), trimmed: "", tail: "none" };
   }
 
   const lines = rest.split("\n");
   const cut = boundaryIndex(lines);
-  if (cut < 0) {
-    return { header, main: rest.trim(), trimmed: "" };
+  if (cut.at < 0) {
+    return { header, main: rest.trim(), trimmed: "", tail: "none" };
   }
-  const main = lines.slice(0, cut).join("\n").trim();
+  const main = lines.slice(0, cut.at).join("\n").trim();
   if (!main) {
-    return { header, main: rest.trim(), trimmed: "" };
+    return { header, main: rest.trim(), trimmed: "", tail: "none" };
   }
-  return { header, main, trimmed: lines.slice(cut).join("\n").trim() };
+  return {
+    header,
+    main,
+    trimmed: lines.slice(cut.at).join("\n").trim(),
+    tail: cut.kind,
+  };
 }
 
 /**

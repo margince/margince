@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -119,7 +120,8 @@ func (s *Service) FlipChecks(ctx context.Context) (FlipChecks, error) {
 
 		var pending, stale int
 		var lastSynced *time.Time
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			SELECT count(*) FILTER (WHERE sync_state = $1),
 			       count(*) FILTER (WHERE sync_state = $2 OR `+staleProjectionSQL+`),
 			       count(*), max(last_synced_at)
@@ -193,7 +195,8 @@ func (s *Service) SealFlipSnapshot(ctx context.Context) (FlipSnapshot, error) {
 	// against a DIFFERENT freeze would skip rows it never imported.
 	candidate := "snap-" + time.Now().UTC().Format("2006-01-02T15:04:05Z") + "-" + ids.NewV7().String()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			INSERT INTO overlay_sync_state (next_sweep_at, flip_snapshot_id, mirror_frozen_at, updated_at)
 			VALUES (now(), $1, now(), now())
 			ON CONFLICT ((true)) DO UPDATE SET
@@ -268,7 +271,8 @@ func (s *Service) UnsealFlipSnapshot(ctx context.Context) error {
 		// pre-update snapshot the CTE holds.
 		var priorID string
 		var priorFrozen time.Time
-		err := tx.QueryRow(ctx, `
+		err := tx.QueryRow(
+			ctx, `
 			WITH prior AS (
 			  SELECT flip_snapshot_id, mirror_frozen_at FROM overlay_sync_state
 			  WHERE mirror_frozen_at IS NOT NULL
@@ -369,4 +373,29 @@ func (s *Service) CompleteFlip(ctx context.Context, runID ids.UUID, mode string)
 	}
 	s.notifyModeFlip(ws)
 	return nil
+}
+
+// On is this Service over a DIFFERENT workspace binding, every option kept.
+//
+// It exists for the flip lane and says so, because the alternative is what the
+// lane was doing: the import and the reconstruction ran on the handle bound to
+// the workspace the operator is acting in, while the mode flip ran on a Service
+// built over the installation's singleton. Two handles for one operation, and
+// if they ever named different workspaces the flip would import an estate into
+// one and flip the other out of overlay mode (margince/margince#2561).
+//
+// No live path reaches that divergence today — every caller is HTTP-driven and
+// identity's middleware binds the request context from the same resolver the
+// installation handle uses — which is why this is a composition fix rather than
+// an incident. What it removes is the possibility, not a symptom.
+//
+// A SHALLOW copy is correct here and would not be if this struct cached
+// anything per handle: it holds injected collaborators and option functions,
+// and the one piece of state that IS per-workspace — the mirror store — is
+// itself handle-bound and shared deliberately, because the mirror the flip
+// imports is the mirror the preflight sealed.
+func (s *Service) On(db *database.DB) *Service {
+	rebound := *s
+	rebound.db = db
+	return &rebound
 }

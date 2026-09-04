@@ -291,9 +291,7 @@ export function ExtensionAccessCard() {
               isAdmin ? (
                 <InventoryLead query={query} />
               ) : (
-                <EmptyState>
-                  <p className="t-small">{t("extAccess.adminOnly")}</p>
-                </EmptyState>
+                <EmptyState>{t("extAccess.adminOnly")}</EmptyState>
               )
             }
           </QueryGate>
@@ -334,9 +332,7 @@ function InventoryLead({
   return (
     <QueryStates query={query}>
       {units?.length === 0 ? (
-        <EmptyState>
-          <p className="t-small">{t("extAccess.empty")}</p>
-        </EmptyState>
+        <EmptyState>{t("extAccess.empty")}</EmptyState>
       ) : null}
     </QueryStates>
   );

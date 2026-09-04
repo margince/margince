@@ -33,12 +33,28 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
+/* THE PAGE'S NAME, in the header of the card that is the page.
+   `flex: none` and no wrap: it is one translated word or two, and the tabs and
+   the count are what the row gives its space to. It keeps the display face the
+   standalone heading had, so a reader who knew where the name was still finds
+   the same word in the same type — one line higher. */
+.lt-title {
+  flex: none;
+  margin: 0;
+  font-family: var(--f-display);
+  line-height: 1.15;
+}
+
 .lt-views {
   display: flex;
   gap: var(--space-1);
 }
 
 .lt-vtab {
+  /* A saved view's name is what a reader identifies it by, so the tab keeps its
+     width: squeezed by the header's other content it lost the end of every
+     name, and two views truncated to the same prefix are one tab drawn twice. */
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: var(--textSecondary);
@@ -386,13 +402,30 @@
   background: var(--bgHover);
 }
 
-/* The sort direction rides the right edge of its entry, so the arrows line up
- * in a column of their own instead of trailing labels of different lengths. */
+/* The sort direction sits AGAINST its label: it qualifies that name — "Owner,
+ * ascending" — rather than being a column of its own. It used to ride the right
+ * edge, which read as a second attribute of the row and left the arrow a long
+ * way from the word it describes. */
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
-  margin-inline-start: auto;
   color: var(--textSecondary);
+}
+
+/* WHICH ORDER IS IN FORCE, on the right edge where a reader checks it. Always
+ * laid out and only its glyph appears, for the reason the tick box beside it
+ * carries: a mark that inserted itself would shift every label in the menu on
+ * selection. */
+.lt-mi-mark {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  flex: none;
+  color: var(--accentText);
+  visibility: hidden;
+}
+.lt-mi.on .lt-mi-mark {
+  visibility: visible;
 }
 
 /* The tick box is always laid out, and only its glyph appears when selected —
@@ -417,6 +450,53 @@
 }
 .lt-mi.on .lt-cb > svg {
   visibility: visible;
+}
+
+/* WHAT THIS LIST IS SHOWING, where its picker would stand — the pipeline on the
+ * deals board when an installation has only one of them. A control offering one
+ * option refuses every press, so it is not drawn; the name it carried still is,
+ * because losing the dial is not a reason to lose the fact. Sits on the tools
+ * row's own line, in the surrounding type, so it reads as the answer a picker
+ * would have given rather than as a label of its own. */
+/* WHAT the rows are drawn FROM, where a picker would stand if there were more
+   than one to pick. Meta type, and quieter than any control beside it: at the
+   size of the dials it read as a third segment of the Board/Table switch —
+   a tab that refused every press, which is the defect the picker was removed
+   for in the first place. */
+.lt-scope {
+  align-self: center;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+
+/* THE VIEW RAIL SCROLLS from the width the header stops holding its row — the
+   same 1100px at which the verbs fold into one menu (app/viewport.ts
+   NARROW_MAX_WIDTH), not the phone breakpoint. It used to be the phone block's
+   alone, so between the two the rail kept its full intrinsic width on a row
+   that does not wrap: the lead queue's eight tabs pushed the count and the
+   actions menu off the line, and there was nothing to scroll them back.
+
+   One row that continues sideways, never two rows that wrap — the same rule
+   the record page's tab strip keeps, and for the same reason: wrapped tabs read
+   as two rows of navigation rather than one row with more in it. `min-width: 0`
+   is what lets it shrink below its content; without it a flex item refuses to.
+   The scrollbar is hidden because the row is short and a bar under it would
+   read as a rule. */
+@media (max-width: 1100px) {
+  .lt-views {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lt-views::-webkit-scrollbar {
+    display: none;
+  }
+  .lt-vtab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }
 
 /* ---- the table ---- */
@@ -1008,6 +1088,14 @@
     flex-wrap: wrap;
   }
 
+  /* At phone width the name takes the whole first line: sharing it with a rail
+     of eight view tabs left both truncated, and the name is what says which
+     page this is. */
+  .lt-title {
+    width: 100%;
+    font-size: var(--fs-h2);
+  }
+
   /* The count stops competing with the tabs for the same line. */
   .lt-count {
     order: 9;
@@ -1026,24 +1114,11 @@
 
      It takes the room LEFT on its line rather than a line of its own: the
      primary action stays beside it, which is what keeps a three-view list
-     (contacts, deals) at the height it already had. `min-width: 0` is what
-     lets it shrink below its content — without it a flex item refuses to, and
-     the rail pushes the action off the line instead of scrolling. The
-     scrollbar is hidden because the row is short and a bar under it would
-     read as a rule. */
-  .lt-views {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .lt-views::-webkit-scrollbar {
-    display: none;
-  }
-  .lt-vtab {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
+     (contacts, deals) at the height it already had.
+
+     The rules that do it are in the 1100px block above, which covers this
+     width too — they were spelled here first, and a second copy at the phone
+     breakpoint is two authors of one behaviour. */
 
   .lt-search {
     flex: 1 1 100%;
@@ -1074,6 +1149,11 @@
 .lt > .board {
   flex: 1;
   min-height: 0;
+  /* The board SCROLLS sideways; it never widens the page to fit its stages. A
+     flex item's floor is its min-content width unless it is told otherwise, so
+     without this the columns' own content decided how wide the surface was and
+     the shell scrolled horizontally at phone width. */
+  min-width: 0;
   align-items: stretch;
   /* The stages sit inside the surface rather than against its edges, on the
    * same rhythm the toolbar above them uses. */

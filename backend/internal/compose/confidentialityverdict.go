@@ -236,10 +236,30 @@ func (e *ConfidentialityVerdictEngine) apply(
 		if err := e.threads.RecordOutcomeTx(ctx, tx, row, status, kind); err != nil {
 			return err
 		}
+		// The same answer, applied to the messages of this thread this seat had
+		// already imported when it came back. A message that arrives AFTER a
+		// verdict inherits it; one that arrived before it used to keep its
+		// import posture for good, because the thread's question is answered
+		// and the unique ledger row stops a second one being opened. Import
+		// order is the accident; the admission rule is unchanged.
+		outcome, err := e.threads.RecordOutcomeOnThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
+		if err != nil {
+			return err
+		}
 		if err := e.retractPrivateContactsTx(ctx, tx, row, kind); err != nil {
 			return err
 		}
-		return recomputeJudgedMessageTx(ctx, tx, row)
+		if err := recomputeJudgedMessageTx(ctx, tx, row); err != nil {
+			return err
+		}
+		// Each stamped sibling re-derived over every seat's contribution, so a
+		// colleague's mailbox still holding this message keeps holding it.
+		for _, id := range outcome.Stamped {
+			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's
@@ -341,4 +361,78 @@ func (e *ConfidentialityVerdictEngine) RetireExhausted(ctx context.Context) (int
 	}
 	return e.threads.RetireExhausted(e.workspaceCtx(ctx),
 		"no confidentiality answer was reached before the attempts ran out")
+}
+
+// confidentialityStragglerBatch bounds one sweep pass, and capture's own
+// threadSiblingBatch bounds each thread within it — the two together are what
+// keep a tick's cost proportional to the bound rather than to the largest
+// thread in the workspace. What a pass leaves behind the next one picks up: the
+// backlog is a query, and a thread stays in it while any of its messages is
+// undecided, so the bound limits the work per tick rather than the coverage.
+const confidentialityStragglerBatch = 200
+
+// FinishSettledThreads applies each settled question's answer to the messages
+// of that thread that never took it.
+//
+// The verdict path does this as it commits, so this reaches only what that path
+// could not: a thread retired without an apply, a thread judged before that
+// pass existed, and an apply that lost the claim race after the ledger was
+// written. Its subject is a query, so a workspace with none does nothing.
+func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (int, error) {
+	// The pass's own provenance, taken once for the listing and again per
+	// thread below, so each repair's stamps and audience events trace together
+	// under a correlation id of their own.
+	settled, err := e.threads.ThreadsWithUndecidedMessages(
+		e.workspaceCtx(ctx), confidentialityStragglerBatch)
+	if err != nil {
+		return 0, fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
+	}
+	finished := 0
+	for _, t := range settled {
+		done, err := e.finishOneSettledThread(ctx, t)
+		if err != nil {
+			return finished, err
+		}
+		if done {
+			finished++
+		}
+	}
+	return finished, nil
+}
+
+// finishOneSettledThread is one thread's repair, in one transaction.
+func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
+	ctx context.Context, t capture.SettledThread,
+) (bool, error) {
+	done := false
+	// The pass's own provenance, and every write inside the transaction runs
+	// under it: an audit row is written from the actor on the context, so a
+	// stage that opened its transaction with one context and wrote with another
+	// fails at the first audited write.
+	wsCtx := e.workspaceCtx(ctx)
+	err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		// Re-read under the lock: the sweep has no claim, so the answer this
+		// pass applies must be the one the row still holds rather than the one
+		// the listing read.
+		locked, ok, err := e.threads.LockSettledThreadTx(wsCtx, tx, t.ThreadKey, t.UserID)
+		if err != nil || !ok {
+			return err
+		}
+		outcome, err := e.threads.RecordOutcomeOnThreadTx(
+			wsCtx, tx, locked.ThreadKey, locked.UserID, locked.Status, locked.Kind, locked.Seen)
+		if err != nil {
+			return err
+		}
+		for _, id := range outcome.Stamped {
+			if err := activities.RecomputeAudienceTx(wsCtx, tx, ids.From[ids.ActivityKind](id)); err != nil {
+				return err
+			}
+		}
+		done = len(outcome.Stamped) > 0 || outcome.Reopened != ids.Nil
+		return nil
+	})
+	if err != nil {
+		return false, fmt.Errorf("confidentiality: finishing a settled thread: %w", err)
+	}
+	return done, nil
 }

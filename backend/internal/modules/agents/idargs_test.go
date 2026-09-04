@@ -164,6 +164,12 @@ func (seamProbeVocabulary) VocabularyDocument(context.Context) (json.RawMessage,
 	return nil, errSeamReached
 }
 
+type seamProbeReportVocabulary struct{}
+
+func (seamProbeReportVocabulary) ReportVocabularyDocument(context.Context) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 type seamProbeRetriever struct{}
 
 func (seamProbeRetriever) Search(context.Context, retrieval.Query) (retrieval.Result, error) {
@@ -235,6 +241,10 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	}, probeReportCatalog)
+	RegisterAnalyticsReportTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
+	RegisterReportBlocksTool(r, NewReportBlocksResource(BlockGrammar{}))
 	RegisterForecastTool(r, func(context.Context, ForecastRequest) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
@@ -285,6 +295,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return QueryAnswer{}, errSeamReached
 	}, nil)
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
+	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, errSeamReached

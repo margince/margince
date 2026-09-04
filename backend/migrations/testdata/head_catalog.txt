@@ -43,6 +43,7 @@ public.activity.direction text gen=- def=-
 public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
+public.activity.has_calendar_part boolean gen=- def=-
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
 public.activity.is_done boolean NOT NULL gen=- def=false
@@ -2661,6 +2662,7 @@ public.idx_rel_traverse_person CREATE INDEX idx_rel_traverse_person ON public.re
 public.idx_rel_traverse_project CREATE INDEX idx_rel_traverse_project ON public.relationship USING btree (project_id) WHERE (archived_at IS NULL)
 public.idx_rel_works_with_counterparty CREATE INDEX idx_rel_works_with_counterparty ON public.relationship USING btree (counterparty_person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
 public.idx_rel_works_with_person CREATE INDEX idx_rel_works_with_person ON public.relationship USING btree (person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
+public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC)
 public.idx_role_assignment_user CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id)
 public.idx_runner_job_due CREATE INDEX idx_runner_job_due ON public.runner_job USING btree (status, due_at)
 public.idx_saved_view_owner CREATE INDEX idx_saved_view_owner ON public.saved_view USING btree (owner_id, resource) WHERE (archived_at IS NULL)
@@ -4419,6 +4421,24 @@ public.relationship.trg_relationship_updated CREATE TRIGGER trg_relationship_upd
 public.relationship.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.version bigint NOT NULL gen=- def=1
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
+public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_run.asked_by uuid NOT NULL gen=- def=-
+public.report_run.captured_by text NOT NULL gen=- def=-
+public.report_run.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.report_run.group_floor integer NOT NULL gen=- def=-
+public.report_run.id uuid NOT NULL gen=- def=uuidv7()
+public.report_run.query jsonb NOT NULL gen=- def=-
+public.report_run.report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES app_user(id) ON DELETE CASCADE
+public.report_run.report_run_floor_is_not_negative CHECK ((group_floor >= 0))
+public.report_run.report_run_pkey PRIMARY KEY (id)
+public.report_run.report_run_result_columns_is_a_list CHECK ((jsonb_typeof(result_columns) = 'array'::text))
+public.report_run.report_run_result_rows_is_a_list CHECK ((jsonb_typeof(result_rows) = 'array'::text))
+public.report_run.result_columns jsonb NOT NULL gen=- def=-
+public.report_run.result_rows jsonb NOT NULL gen=- def=-
+public.report_run.schema_version text NOT NULL gen=- def=-
+public.report_run.total_safe boolean NOT NULL gen=- def=-
+public.report_run.withheld boolean NOT NULL gen=- def=-
+public.report_run_pkey CREATE UNIQUE INDEX report_run_pkey ON public.report_run USING btree (id)
 public.retention_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.retention_policy.action text NOT NULL gen=- def=-
 public.retention_policy.category text gen=- def=-
@@ -4826,6 +4846,7 @@ public.team_weekly_review.base_currency text gen=- def=-
 public.team_weekly_review.commitments_due integer NOT NULL gen=- def=0
 public.team_weekly_review.commitments_kept integer NOT NULL gen=- def=0
 public.team_weekly_review.deals_lost integer NOT NULL gen=- def=0
+public.team_weekly_review.deals_moved integer NOT NULL gen=- def=0
 public.team_weekly_review.deals_won integer NOT NULL gen=- def=0
 public.team_weekly_review.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.team_weekly_review.id uuid NOT NULL gen=- def=uuidv7()
@@ -4842,7 +4863,7 @@ public.team_weekly_review.reps_counted integer NOT NULL gen=- def=0
 public.team_weekly_review.reps_unread integer NOT NULL gen=- def=0
 public.team_weekly_review.team_id uuid NOT NULL gen=- def=-
 public.team_weekly_review.team_name text NOT NULL gen=- def=-
-public.team_weekly_review.team_weekly_review_counts_are_tallies CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))
+public.team_weekly_review.team_weekly_review_counts_are_tallies CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (deals_moved >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))
 public.team_weekly_review.team_weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
 public.team_weekly_review.team_weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))
 public.team_weekly_review.team_weekly_review_name_present CHECK ((btrim(team_name) <> ''::text))

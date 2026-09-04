@@ -92,6 +92,12 @@ const CORE_SCREENS = [
   // second level of nesting indents it again.
   "filters",
   "worklist",
+  // Projects and Partners. Both are rail-or-off-rail list screens that now
+  // print the page's name inside their table header, and both were in neither
+  // sweep — so the two screens where that header is NOT measured were the two
+  // whose header this change rewrote. The sweep follows the surface.
+  "projects",
+  "partners",
   "analytics",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
@@ -481,23 +487,33 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   page,
 }) => {
   await page.goto("/#/deals");
-  // A record's name is asserted by ROLE, on both sides of the swap: the board
-  // draws a deal as a button wrapping the name, the table as a link, and each
-  // view is asked for what it actually draws. Text alone says nothing about
-  // which element it found, and it goes ambiguous the moment anything else on
-  // the page legitimately repeats the name — the table's visually-hidden
-  // "<name> auswählen" bulk-select label does, and so does the agent panel's
-  // spoken status line ("Reading the <name> deal").
+  // Both views draw a deal as a LINK now — a card that opens a record is an
+  // anchor, so middle-click and open-in-new-tab work on it — which is why the
+  // board side is identified by the card's own `data-deal` and not by its role.
+  // Role used to tell the two views apart, and it cannot any more; asserting it
+  // alone would pass on either view and stop testing the swap at all.
   //
-  // The card is matched by substring on purpose, and the headings elsewhere in
-  // this file are `exact` for the same reason: a board card's accessible name is
-  // the whole card read out — name, company, value, age, badges — so the deal's
-  // name is a fragment of it by construction and the assertion here is "a card
-  // for this deal is on the board", not "this text is the card".
-  await expect(
-    page.getByRole("button", { name: "Fleet retrofit" }),
-  ).toBeVisible();
+  // Neither side is asserted on text alone: text says nothing about which
+  // element it found, and it goes ambiguous the moment anything else on the page
+  // legitimately repeats the name — the table's visually-hidden "<name>
+  // auswählen" bulk-select label does, and so does the agent panel's spoken
+  // status line ("Reading the <name> deal").
+  //
+  // The card is matched by substring on purpose: a board card's accessible name
+  // is the whole card read out — name, company, value, age, badges — so the
+  // deal's name is a fragment of it by construction, and the assertion is "a
+  // card for this deal is on the board", not "this text is the card".
+  const boardCard = page.locator('[data-deal="d-fleet"]');
+  await expect(boardCard).toBeVisible();
+  // The card IS the link — `data-deal` sits on the anchor — and the role is
+  // asserted rather than assumed, because that is the behaviour the change
+  // bought: a middle-click and an open-in-new-tab on a deal card.
+  await expect(boardCard).toHaveRole("link");
+  await expect(boardCard).toContainText("Fleet retrofit");
   await page.getByRole("button", { name: "Tabelle" }).click();
+  // The board is gone, so its card locator is the proof the view swapped
+  // rather than drew both at once.
+  await expect(boardCard).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Fleet retrofit" }),
   ).toBeVisible();
@@ -510,10 +526,10 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   page,
 }) => {
   await page.goto("/#/deals");
-  await expect(
-    page.getByRole("button", { name: "Fleet retrofit" }),
-  ).toBeVisible();
+  // Waited for by the locator the drag actually uses, so the wait and the
+  // action cannot disagree about which element the test is about.
   const card = page.locator('[data-deal="d-fleet"]');
+  await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
   await card.dragTo(won);
   await expect(page.getByText("Nach Won verschieben?")).toBeVisible();
@@ -935,9 +951,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     // invalidate, so only the SERVER side (this mock's route table) has
     // flipped — the mounted screen's own state has not.
     await page.goto("/#/deals");
-    await expect(
-      page.getByRole("button", { name: "Fleet retrofit" }),
-    ).toBeVisible();
+    await expect(page.locator('[data-deal="d-fleet"]')).toBeVisible();
     await mockApi(page, { sor: "overlay" });
 
     // d-fleet (stage s2, "Proposal") → s3 ("Negotiation"), both open-semantic
@@ -982,7 +996,12 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(
       page.getByText("Sortierung und Filter laufen über HubSpot"),
     ).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Sortieren" })).toHaveCount(
+    // A PREFIX, because the dial has two names: it reads "Sortieren" with no
+    // order in force and "Sortierung: <Spalte>" with one. An assertion that no
+    // dial is offered has to be unable to miss either, or it passes by failing
+    // to look — which is what an equality test on the bare verb started doing
+    // the day the dial began naming the order it holds.
+    await expect(page.getByRole("combobox", { name: /^Sortier/ })).toHaveCount(
       0,
     );
     await expect(page.getByRole("searchbox")).toBeVisible();
@@ -1126,6 +1145,10 @@ test.describe("B-EP09.23: overlay mode", () => {
         exact: true,
       }),
     ).toBeVisible();
+    // The stakeholder card is in the record's collapsible context panel. Open
+    // that panel before counting it alongside the four overview refusals; a
+    // closed panel is intentionally absent from the accessibility tree.
+    await page.getByRole("button", { name: "Panel zeigen" }).click();
     await expect(page.getByText(unavailable)).toHaveCount(5);
     await expect(page.getByText(errorBox)).toHaveCount(0);
   });
@@ -1152,13 +1175,74 @@ test.describe("§3.8: 390px mobile", () => {
     });
   }
 
-  test("S-E11.2: the day's queue is readable on mobile at 390px", async ({
+  // The queue is WORKABLE with a thumb, not merely present.
+  //
+  // What stood here asserted that one text node was visible at 390px, and it
+  // passed for as long as the screen was unusable: the row is a three-column
+  // line whose verbs never yield width, so the title column was squeezed to a
+  // few characters while three buttons held their full size beside it. A test
+  // that cannot tell that from a working screen is part of the defect.
+  //
+  // So this measures the row itself — every row, not the first — and the
+  // targets a rep presses.
+  test("S-E11.2: the day's queue is workable with a thumb at 390px", async ({
     page,
   }) => {
     await page.goto("/#/worklist");
+    await page.waitForLoadState("networkidle");
     await expect(
       page.getByText(/Send the follow-up to Anna Weber/).first(),
     ).toBeVisible();
+
+    // Nothing runs off the side. The row wraps instead of pushing the page
+    // wider, which is the difference between a stacked layout and a squeezed
+    // one.
+    expect(await pageOverflow(page)).toEqual([]);
+
+    // The text column is wide enough to read a sentence in. Half the viewport
+    // is a low bar deliberately: it is the one this layout FAILED, at roughly a
+    // quarter, and a ceiling tuned to today's rows would break on tomorrow's
+    // longer verb.
+    const narrow = await page.evaluate(() => {
+      const floor = 390 / 2;
+      return Array.from(document.querySelectorAll(".worklist-row-text"))
+        .map((element) => ({
+          width: element.getBoundingClientRect().width,
+          text: (element.textContent ?? "").slice(0, 40),
+        }))
+        .filter(({ width }) => width < floor)
+        .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
+    });
+    expect(narrow).toEqual([]);
+
+    // Every verb in the QUEUE is a real target — the rows and the focus card
+    // above them, which is the work this screen exists for. The focus CTA is a
+    // full-size `.btn` and already clears the floor through `--control-h`; it
+    // is measured anyway, because a rule that holds only where somebody
+    // remembered to look is not a floor.
+    //
+    // The readings strip above is deliberately NOT measured. Its "open this
+    // lane" link is a 24px target on a phone and genuinely too small, but it
+    // belongs to the design system's StatCard rather than to this screen —
+    // fixing it here would size every reading card in the product from the
+    // worklist's stylesheet. Filed as #3961.
+    //
+    // Visible controls only: the page carries collapsed panels whose buttons
+    // lay out at zero height, and those are not targets a thumb can miss.
+    const small = await page.evaluate(() => {
+      const controls = document.querySelectorAll(
+        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button, .worklist-focus button, .worklist-focus a.btn",
+      );
+      return Array.from(controls)
+        .filter((element) => element.getBoundingClientRect().height > 0)
+        .map((element) => ({
+          height: element.getBoundingClientRect().height,
+          label: (element.textContent ?? "").trim(),
+        }))
+        .filter(({ height }) => height < 44)
+        .map(({ height, label }) => `${label}: ${Math.round(height)}px`);
+    });
+    expect(small).toEqual([]);
   });
 
   // The bar's centre cell and the panel it opens, neither of which exists above
@@ -1420,6 +1504,56 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await expectNoAaViolations(page, screen);
     });
   }
+
+  // A list header FOLDS its verbs into one overflow menu below 1100px
+  // (design-system/listsurface.tsx), which is a different arrangement rather
+  // than the same one narrower: the buttons are inside a disclosure, so the
+  // trigger owes a name and the panel owes a relationship to it. The wide sweep
+  // above cannot see any of that.
+  test("no AA violations on a list header folded into its menu", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/#/contacts");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await settleAnimations(page);
+    // Opened, because a closed disclosure hides the controls this exists to
+    // check — `OverflowMenu` keeps them mounted and `hidden`, and axe skips a
+    // hidden subtree exactly as a reader does.
+    //
+    // German, like every other name this suite reaches for: the app under test
+    // runs in it.
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    await expect(
+      page.getByRole("button", { name: "Neuer Kontakt" }),
+    ).toBeVisible();
+    await expectNoAaViolations(page, "contacts (folded header)");
+  });
+
+  // An address whose whole meaning is "the create form is open", at the width
+  // where the verb that opens it has folded into a menu.
+  //
+  // Not an axe case — a FUNCTIONAL one, and it sits here because this is the
+  // only block that drives the folded arrangement. `CreateAction` reads its
+  // opening state once, at mount, and the menu used to defer its children to
+  // the first press: so this route opened nothing at all below 1100px, and
+  // pressing the menu then opened a form nobody had asked for. Invisible in a
+  // screenshot and green in every other lane.
+  test("#/deals/new opens the create form with the verbs folded", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/#/deals/new");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    // The dialog, without anything being pressed. The heading rather than the
+    // button: the button is what the ROUTE stands in for, and asserting on it
+    // would pass over a form that never opened.
+    await expect(
+      page.getByRole("dialog").getByRole("heading", { name: "Neuer Deal" }),
+    ).toBeVisible();
+  });
 
   for (const view of ADDRESSED_VIEWS) {
     test(`no AA violations on #/${view}`, async ({ page }) => {

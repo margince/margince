@@ -97,8 +97,10 @@ async function readings() {
   const region = await screen.findByRole("region", {
     name: "Where this account stands",
   });
-  const plate = within(region).getByTestId("company-strip");
-  return { region, plate };
+  // The row IS the region: the shared strip carries the name and the test id
+  // on one element, so its children are the doors.
+  expect(region.dataset.testid).toBe("company-strip");
+  return { region, plate: region };
 }
 
 const prospect: StateStripSection = {
@@ -135,14 +137,14 @@ describe("the company readings row is the shared strip, not a copy of it", () =>
 
   // Four on every account: the verdict card, the pipeline card, the money
   // card and the relationship card, none of them conditional on the lifecycle.
-  it("carries four cards for a prospect and four for a customer", async () => {
+  it("carries five doors for a prospect and five for a customer", async () => {
     stubFinance(NO_CONNECTION);
     renderStrip(view({ state_strip: prospect }));
-    expect((await readings()).plate.childElementCount).toBe(4);
+    expect((await readings()).plate.childElementCount).toBe(5);
 
     cleanup();
     renderStrip(view({ state_strip: customer }));
-    expect((await readings()).plate.childElementCount).toBe(4);
+    expect((await readings()).plate.childElementCount).toBe(5);
   });
 
   // The money card is on every account now, not only a customer's — what
@@ -182,13 +184,13 @@ describe("a slot with no reading says which absence it is", () => {
     },
   };
 
-  it("still draws four cards when nothing has a figure", async () => {
+  it("still draws five doors when nothing has a figure", async () => {
     stubFinance(NO_CONNECTION);
     renderStrip(view({ state_strip: bare }));
     const { plate } = await readings();
 
-    expect(plate.childElementCount).toBe(4);
-    // Every card, labelled and answered. A blank card in the row reads as a
+    expect(plate.childElementCount).toBe(5);
+    // Every door, labelled and answered. A blank card in the row reads as a
     // reading that failed to load rather than one the account does not have.
     for (const slot of plate.children) {
       expect(slot.querySelector(".stat-card-label")?.textContent).toBeTruthy();
@@ -196,19 +198,20 @@ describe("a slot with no reading says which absence it is", () => {
     }
   });
 
-  it("names an unrated health reading rather than dropping the card", async () => {
+  it("names each reading it has none of, and states no verdict", async () => {
     stubFinance(NO_CONNECTION);
     renderStrip(view({ state_strip: bare }));
     const { plate } = await readings();
 
-    // Two different absences and two different words. Nothing rated is a
-    // denominator ("0 of 3 rated"), and no open deal is an answer.
-    expect(within(plate).getByText("Health")).toBeTruthy();
-    expect(within(plate).getByText("0 of 3 rated")).toBeTruthy();
+    // Four different absences and four different words: no open deal, no
+    // conversation rated, no word exchanged, nothing on the calendar.
     expect(within(plate).getByText("No open deals")).toBeTruthy();
-    // And no verdict borrowed from nowhere: "at risk" is a rating, and the
-    // account has none.
-    expect(plate.textContent).not.toMatch(/At risk|Good|Strong/);
+    expect(within(plate).getByText("Not assessed")).toBeTruthy();
+    expect(within(plate).getByText("No exchange yet")).toBeTruthy();
+    expect(within(plate).getByText("Nothing scheduled")).toBeTruthy();
+    // And no verdict borrowed from nowhere: the account's standing is the
+    // 360's word under this row, never a sixth door here.
+    expect(plate.textContent).not.toMatch(/At risk|Good|Strong|Health/);
   });
 
   // The half that must never be confused with the half above: a withheld
@@ -227,36 +230,48 @@ describe("a slot with no reading says which absence it is", () => {
     );
     const { plate } = await readings();
 
-    expect(plate.childElementCount).toBe(4);
-    // Three of the four read from a section this caller may not see — the
-    // pipeline card from the deal grant, the verdict and relationship cards
-    // from the health grant — so all three say so, and none of them says the
-    // account has no deals, no correspondence or no verdict. The money card
-    // does not read from the health grant at all: on a non-customer it still
-    // gives its own ordinary answer.
-    expect(within(plate).getAllByText("Not shown").length).toBe(3);
+    expect(plate.childElementCount).toBe(5);
+    // Two of the five read from a section this caller may not see — the
+    // pipeline from the deal grant, the conversation from the health grant —
+    // so both say so, and neither says the account has no deals or no
+    // correspondence. The last touch and the calendar do not read from those
+    // grants at all and give their own ordinary answers, as does the money on
+    // a non-customer.
+    expect(within(plate).getAllByText("Not shown").length).toBe(2);
     expect(within(plate).getByText("Not a customer yet")).toBeTruthy();
+    expect(within(plate).getByText("No exchange yet")).toBeTruthy();
+    expect(within(plate).getByText("Nothing scheduled")).toBeTruthy();
     expect(within(plate).queryByText("No open deals")).toBeNull();
     expect(plate.textContent).not.toMatch(/never written/i);
-    // A withheld health section has no denominator either: "0 of 3 rated" would
-    // be a count of what this reader is allowed to see, dressed as a count of
-    // what has been judged.
-    expect(within(plate).queryByText("0 of 3 rated")).toBeNull();
+    expect(within(plate).queryByText("Not assessed")).toBeNull();
   });
 });
 
 describe("a reading offers the tab it is a reading of", () => {
-  it("sends the reader to deals, finance and people from their own cards", async () => {
+  it("sends the reader to deals, finance, history and tasks from their own doors", async () => {
     stubFinance(NO_CONNECTION);
     const opened: string[] = [];
     renderStrip(view({ state_strip: customer }), (tab) => opened.push(tab));
     await readings();
 
-    for (const name of ["Open deals", "Open finance", "Open people"]) {
+    for (const name of ["Open deals", "Open finance", "Open tasks"]) {
       await userEvent.click(screen.getByRole("button", { name }));
     }
+    // Two readings open the same page: the conversation and the last touch
+    // are both read off the exchanges, and both lead to them.
+    for (const door of screen.getAllByRole("button", {
+      name: "Open history",
+    })) {
+      await userEvent.click(door);
+    }
 
-    expect(opened).toEqual(["deals", "finance", "people"]);
+    expect(opened).toEqual([
+      "deals",
+      "finance",
+      "tasks",
+      "timeline",
+      "timeline",
+    ]);
   });
 
   // A strip drawn where there is no tab strip to send anybody to — the

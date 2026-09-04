@@ -72,14 +72,13 @@ func TestABriefRowGainsItsDealsFigures(t *testing.T) {
 	}
 }
 
-// A deal Figures cannot answer for — gone (archived, deleted) or no longer
-// visible to this reader — drops the row entirely, rather than
-// leaving an unidentifiable one on the page: no amount, no close date, no
-// reason, yet still offering act/set_aside/dismiss over a deal that no longer
-// resolves. A row that can name nothing is not a suggestion, and the refusal
-// is an absent answer rather than an error, so one unresolved deal cannot take
-// the whole read down.
-func TestABriefRowWhoseDealCannotBeResolvedIsDropped(t *testing.T) {
+// A deal Figures cannot answer for — withheld from this reader, or gone
+// entirely — leaves the row as it was: named, and saying no more. Whether
+// such a row belongs on the day at all is attentionBriefing.Queue's own
+// question, asked at its source over the SAME DealFacts reader; a second
+// answer here would be a second place the same invariant could drift from
+// the first.
+func TestAnUnresolvedDealLeavesTheRowUnchanged(t *testing.T) {
 	dealID := ids.NewV7()
 	svc := (&Service{}).WithDealFacts(&stubDealFacts{figures: map[ids.UUID]DealFigures{}})
 	day := crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{briefRow(dealID)}}
@@ -88,32 +87,11 @@ func TestABriefRowWhoseDealCannotBeResolvedIsDropped(t *testing.T) {
 		t.Fatalf("an unresolved deal failed the whole read: %v", err)
 	}
 
-	if len(day.ThisMorning) != 0 {
-		t.Fatalf("ThisMorning still carries %d row(s); an unresolved deal's row should have been dropped", len(day.ThisMorning))
-	}
-}
-
-// A row beside an unresolved one is untouched: dropping one deal's row is not
-// a reason to drop, reorder or otherwise disturb its neighbours.
-func TestABriefRowBesideAnUnresolvedOneIsUntouched(t *testing.T) {
-	resolved, unresolved := ids.NewV7(), ids.NewV7()
-	amount := int64(50_00)
-	svc := (&Service{}).WithDealFacts(&stubDealFacts{figures: map[ids.UUID]DealFigures{
-		resolved: {AmountMinor: &amount, Currency: "EUR"},
-	}})
-	day := crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{
-		briefRow(unresolved), briefRow(resolved),
-	}}
-
-	if err := svc.nameTheMoney(context.Background(), &day); err != nil {
-		t.Fatalf("naming the money: %v", err)
-	}
-
 	if len(day.ThisMorning) != 1 {
-		t.Fatalf("ThisMorning carries %d row(s), wanted exactly the resolved one", len(day.ThisMorning))
+		t.Fatalf("ThisMorning carries %d row(s), wanted the row left in place", len(day.ThisMorning))
 	}
-	if day.ThisMorning[0].Id != resolved.String() {
-		t.Fatalf("the surviving row is %q, wanted the resolved deal %q", day.ThisMorning[0].Id, resolved.String())
+	if day.ThisMorning[0].Deal != nil {
+		t.Fatal("an unresolved deal put figures on the row anyway")
 	}
 }
 

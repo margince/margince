@@ -44,7 +44,7 @@ func TestTheWindowAskedForIsTheWindowRead(t *testing.T) {
 	svc := unboundService()
 	svc.waiting = seam
 
-	got, err := svc.ResponseMetrics(context.Background(), 30)
+	got, err := svc.ResponseMetrics(aLead(), 30)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestNoWindowAskedForReadsTheDefaultFortnight(t *testing.T) {
 	svc := unboundService()
 	svc.waiting = seam
 
-	if _, err := svc.ResponseMetrics(context.Background(), 0); err != nil {
+	if _, err := svc.ResponseMetrics(aLead(), 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -104,7 +104,7 @@ func TestTheServiceHoldsTheWindowBoundOnItsOwn(t *testing.T) {
 	svc := unboundService()
 	svc.waiting = seam
 
-	if _, err := svc.ResponseMetrics(context.Background(), 100_000); err != nil {
+	if _, err := svc.ResponseMetrics(aLead(), 100_000); err != nil {
 		t.Fatal(err)
 	}
 
@@ -128,7 +128,7 @@ func TestEveryResponseFigureReachesTheWire(t *testing.T) {
 		Answered: 40, MedianMinutes: 95, Disposed: 12, DisposedNotSales: 3,
 	}}
 
-	got, err := svc.ResponseMetrics(context.Background(), 14)
+	got, err := svc.ResponseMetrics(aLead(), 14)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestEveryResponseFigureReachesTheWire(t *testing.T) {
 func TestAnUnboundWaitingLaneAnswersAnEmptyWindow(t *testing.T) {
 	t.Parallel()
 
-	got, err := unboundService().ResponseMetrics(context.Background(), 14)
+	got, err := unboundService().ResponseMetrics(aLead(), 14)
 	if err != nil {
 		t.Fatalf("an unbound lane should answer, not refuse: %v", err)
 	}

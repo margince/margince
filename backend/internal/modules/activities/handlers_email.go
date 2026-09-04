@@ -356,10 +356,13 @@ func (h Handlers) SendAccountEmail(w http.ResponseWriter, r *http.Request, _ crm
 		writeStoreErr(w, r, err)
 		return
 	}
-	out, err := h.store.SendOrSchedule(r.Context(), FromAccount(links), sendInputFrom(
-		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
-		req.ConsentPurpose, req.DraftRef,
-	), sched, h.consent, h.delivery, h.timer)
+	in, err := accountSendInput(req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out, err := h.store.SendOrSchedule(r.Context(), FromAccount(links), in,
+		sched, h.consent, h.delivery, h.timer)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -450,10 +453,13 @@ func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontra
 	// reply with none of its own is unchanged, which is every reply that was
 	// sent before this field existed.
 	origin := FromActivity(pathID[ids.ActivityKind](id)).AlsoFiledUnder(linkInputsOf(req.AlsoLinks))
-	out, err := h.store.SendOrSchedule(r.Context(), origin, sendInputFrom(
-		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
-		req.ConsentPurpose, req.DraftRef,
-	), sched, h.consent, h.delivery, h.timer)
+	in, err := replySendInput(req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out, err := h.store.SendOrSchedule(r.Context(), origin, in,
+		sched, h.consent, h.delivery, h.timer)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -174,6 +174,13 @@ type waitingRead struct {
 // that does not read the mail stream has no waiting queue to hide work from, so
 // "nothing is held back" is the true answer rather than a degraded one.
 func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog, error) {
+	// Refused BEFORE the unbound-seam answer below, so a reader without the tier
+	// is told they may not ask rather than told the backlog is clear. Those are
+	// different answers and the second is the one this endpoint must never give
+	// wrongly.
+	if err := requireLeadTier(ctx); err != nil {
+		return crmcontracts.HiddenBacklog{}, err
+	}
 	asOf := s.now()
 	if s.waiting == nil {
 		return crmcontracts.HiddenBacklog{AsOf: asOf, Clear: true}, nil
@@ -229,6 +236,11 @@ const responseWindowMaxDays = 90
 func (s *Service) ResponseMetrics(
 	ctx context.Context, days int,
 ) (crmcontracts.ResponseMetrics, error) {
+	// Before the window is even resolved: a refused reader learns nothing about
+	// what this endpoint would have measured.
+	if err := requireLeadTier(ctx); err != nil {
+		return crmcontracts.ResponseMetrics{}, err
+	}
 	if days <= 0 {
 		days = responseWindowDays
 	}

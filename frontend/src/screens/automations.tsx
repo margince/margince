@@ -939,11 +939,7 @@ function ConfiguredAutomationsRow({
           </QueryGate>
         ) : (
           <QueryGate query={me}>
-            {() => (
-              <EmptyState>
-                <p className="t-small">{t("auto.withheld")}</p>
-              </EmptyState>
-            )}
+            {() => <EmptyState>{t("auto.withheld")}</EmptyState>}
           </QueryGate>
         )
       }

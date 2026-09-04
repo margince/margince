@@ -78,6 +78,21 @@ type SendEmailArgs struct {
 	ScheduledAt string `json:"scheduled_at,omitempty"`
 	// ScheduledTZ is the IANA zone the moment was chosen in, required with it.
 	ScheduledTZ string `json:"scheduled_tz,omitempty"`
+	SendContextArgs
+}
+
+// SendContextArgs is what a caller says about WHY it is writing, shared by the
+// three send tools so the surface asks one question one way.
+//
+// An agent may PROPOSE a category; it cannot set a basis, an exception, or one
+// of the five categories reserved for the installation's own notices — the send
+// door refuses those from any caller, agent or human. Nothing here authorizes:
+// the claim is recorded beside the category the engine resolved, so a claim the
+// engine disagrees with is visible rather than honoured.
+type SendContextArgs struct {
+	CommunicationContext string `json:"communication_context,omitempty"`
+	MarketingPurpose     string `json:"marketing_purpose,omitempty"`
+	OperatorReason       string `json:"operator_reason,omitempty"`
 }
 
 // SendMessageArgs is one channel reply. It carries no subject and no
@@ -86,6 +101,7 @@ type SendEmailArgs struct {
 type SendMessageArgs struct {
 	Body           string `json:"body"`
 	ConsentPurpose string `json:"consent_purpose"`
+	SendContextArgs
 }
 
 type BookMeetingArgs struct {
@@ -232,6 +248,34 @@ type sendEmailTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
+// sendContextProperties is the context arguments, spelled once for the three
+// send tools. One question asked one way, and one place to change it.
+//
+// There is deliberately no `evidence` here. The HTTP contract has one, and
+// nothing in the engine reads it yet — the validators that will resolve a
+// category FROM the named records land with the jurisdiction packs. A tool
+// description is text a model reads and reasons about, so advertising a check
+// the system does not perform teaches it something false, and the next author
+// to wire evidence up would read it and skip writing the validation. It also
+// costs the catalog budget on every step of every run that carries one of
+// these tools.
+//
+// Held by: TestTheToolSurfaceSpellsTheSendContextOnce
+// (backend/gates/sendcontextvalidation_test.go)
+//
+// Deliberately terse: every byte here is written into the system prompt of
+// every step of every run that carries one of these tools, so the catalog
+// budget (docs/reference/agent-tool-budget.md) is spent on it whether or not a
+// caller ever sets the field. The refusals it names are enforced by the send
+// door, not by this text.
+const sendContextProperties = `,
+	"communication_context":{"type":"string","enum":["reply_to_inbound","requested_followup",` +
+	`"precontract_quote","active_deal_followup","customer_service","account_notice",` +
+	`"contract_notice","invoice_or_payment","marketing"],` +
+	`"description":"What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing."},
+	"marketing_purpose":{"type":"string","description":"For marketing, the purpose key naming the topic"},
+	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."}`
+
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
@@ -247,7 +291,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 			"consent_purpose":{"type":"string","description":"Purpose key the recipients must have granted"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}` + sendContextProperties + `},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendEmailResult](),
 	}
@@ -324,7 +368,7 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 			"activity_id":{"type":"string","format":"uuid","description":"The captured conversation being replied to"},
 			"body":{"type":"string","minLength":1},
 			"consent_purpose":{"type":"string","description":"Purpose key the recipient must have granted"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}` + sendContextProperties + `},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendMessageResult](),
 	}

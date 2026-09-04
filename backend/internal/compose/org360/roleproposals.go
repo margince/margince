@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -141,7 +142,10 @@ func emptyProposalResult() crmcontracts.DealRoleProposalResult {
 func readProposals(
 	ctx context.Context, lane Completer, dealName string, candidates []proposeroles.Candidate,
 ) ([]proposeroles.Proposal, error) {
-	res, err := lane.Complete(ctx, proposeroles.Request(dealName, candidates))
+	res, err := ai.Ask(ctx, lane, proposeroles.Request(dealName, candidates), func(text string) error {
+		_, err := proposeroles.Parse(text)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("org360: reading buying roles: %w", err)
 	}

@@ -162,9 +162,7 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
               ]}
             />
           ) : (
-            <EmptyState>
-              <p className="t-small">{t("extOpenchannel.inbound.empty")}</p>
-            </EmptyState>
+            <EmptyState>{t("extOpenchannel.inbound.empty")}</EmptyState>
           )}
         </QueryStates>
       ) : (
@@ -247,11 +245,7 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
               ]}
             />
           ) : (
-            <EmptyState>
-              <p className="t-small">
-                {t("extOpenchannel.outboundList.empty")}
-              </p>
-            </EmptyState>
+            <EmptyState>{t("extOpenchannel.outboundList.empty")}</EmptyState>
           )}
         </QueryStates>
       ) : (

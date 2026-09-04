@@ -11,7 +11,7 @@ import {
   relativeDays,
 } from "../format/format";
 import { daysPast } from "../format/lateness";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { buyingRoleLabel } from "./companypeople/summary";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import type { PersonTab } from "./persontab";
@@ -240,6 +240,11 @@ function PromisesCard({
   locale: Locale;
   t: Translate;
 }>) {
+  // The rest of this card's words arrive as props, the way every card in this
+  // file takes them. The plural rule cannot: which form a count takes is the
+  // READER's locale's answer, so it is read here rather than threaded through
+  // a parent that would have to hand it to one of six siblings.
+  const plural = usePlural();
   const label = t("person.readings.promises");
   if (withheld) {
     return withheldCard(label, t);
@@ -274,7 +279,9 @@ function PromisesCard({
       detail={
         overdue
           ? worst > 0
-            ? t("person.loops.overdue", { count: formatNumber(worst, locale) })
+            ? plural("person.loops.overdue", worst, {
+                count: formatNumber(worst, locale),
+              })
             : t("person.loops.overdueUnderDay")
           : t("person.readings.onTime")
       }

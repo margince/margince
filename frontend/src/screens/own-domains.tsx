@@ -231,9 +231,7 @@ function CuratedDomains({
     // and left-aligns it already (settingrow.css).
     return (
       <EmptyState>
-        <p className="t-small" data-testid="own-domains-empty">
-          {t("ownDomains.empty")}
-        </p>
+        <p data-testid="own-domains-empty">{t("ownDomains.empty")}</p>
       </EmptyState>
     );
   }

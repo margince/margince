@@ -1465,6 +1465,86 @@ const emptyMemory: View = {
   activities: { data: [], page },
 };
 
+// The OTHER path through the card, and the one the thread fixtures above
+// cannot reach. With no conversation_memory the card folds the captured
+// activities instead, and a retained email there draws the canonical row —
+// mail icon, access badge, the server's preview, openable.
+//
+// Both access states, because one component draws them and a story showing
+// only the readable one would not say what a limited message looks like: the
+// second row keeps its shape and loses its words. The note is the control —
+// every other kind still reads as the card's own two lines.
+const foldedActivities: View = {
+  ...populated,
+  conversation_memory: [],
+  activities: {
+    data: [
+      {
+        id: "a-40",
+        kind: "email",
+        occurred_at: "2026-08-29T09:15:00Z",
+        subject: "Re: the renewal quote",
+        body: "Can you hold the price until Friday? I have to take it past procurement first.",
+        direction: "inbound",
+        content_state: "available",
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-29T09:15:00Z",
+        updated_at: "2026-08-29T09:15:00Z",
+        version: 4,
+        is_done: false,
+        email_summary: {
+          activity_id: "a-40",
+          occurred_at: "2026-08-29T09:15:00Z",
+          version: 4,
+          subject: "Re: the renewal quote",
+          preview: "Can you hold the price until Friday?",
+          counterparty: "Dana Buyer",
+          direction: "inbound",
+          display_status: "team",
+          move: "needs_reply",
+          attachment_count: 2,
+        },
+      },
+      {
+        id: "a-41",
+        kind: "email",
+        occurred_at: "2026-08-27T16:40:00Z",
+        content_state: "withheld",
+        source: "manual",
+        captured_by: "human:u-2",
+        created_at: "2026-08-27T16:40:00Z",
+        updated_at: "2026-08-27T16:40:00Z",
+        version: 2,
+        is_done: false,
+        email_summary: {
+          activity_id: "a-41",
+          occurred_at: "2026-08-27T16:40:00Z",
+          version: 2,
+          display_status: "withheld",
+          move: "none",
+          attachment_count: 0,
+        },
+      },
+      {
+        id: "a-42",
+        kind: "note",
+        occurred_at: "2026-08-26T11:00:00Z",
+        subject: "Call prep",
+        body: "Wants the fleet numbers before we talk pricing.",
+        content_state: "available",
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-26T11:00:00Z",
+        updated_at: "2026-08-26T11:00:00Z",
+        version: 1,
+        is_done: false,
+      },
+    ],
+    page,
+  },
+};
+
 // The gaps `OverviewPanels` above leaves: the withheld commercial card, the
 // populated one with a deal and a committee, every commitments loop kind
 // including a done row, the brief's loading and undefined-brief readings,
@@ -1485,6 +1565,7 @@ export const OverviewGaps: Story = {
           <PersonCommercialCard view={dealWithCommittee} />
           <PersonCommitmentsCard view={richLoops} firstName="Dana" />
           <PersonMemory view={richMemory} />
+          <PersonMemory view={foldedActivities} onOpenEmail={() => {}} />
           <PersonMemory view={emptyMemory} />
         </div>
       </StoryProviders>

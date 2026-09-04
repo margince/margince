@@ -21,6 +21,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { dealRoleLabel } from "../record360";
 import "./dealcommittee.css";
+import { SeatPerson } from "./seatperson";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 type DealCoverageSeat = components["schemas"]["DealCoverageSeat"];
@@ -141,7 +142,7 @@ export function DealCommitteeMap({
           {seats.map((seat) => (
             <li key={seat.person_id} className="dc-seat-row">
               <span className="dc-seat-name">
-                {seat.person_name ?? t("deal.committee.unnamedSeat")}
+                <SeatPerson seat={seat} />
               </span>
               <span className="dc-role">{dealRoleLabel(seat.role, t)}</span>
               <Badge tone={seat.engaged ? "success" : undefined}>

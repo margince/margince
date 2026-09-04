@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { primaryEmail } from "../format/primaryemail";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
 
@@ -117,6 +118,114 @@ describe("ComposeModal recipient", () => {
     // No click first: the address stands there before any drafting, which is
     // the whole difference from filling it out of the draft response.
     expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
+  });
+
+  // A FIRST message to a record. Every path into the To field ran through an
+  // activity, so a lead nobody has written to yet opened its composer empty
+  // over a record whose address was on screen behind the drawer.
+  it("addresses a first message to the record's own address", async () => {
+    stubRoutes();
+    render(
+      <ComposeModal
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@example.test"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("dung.ly@example.test")).toBeTruthy();
+  });
+
+  // The thread outranks the record. An address recorded on the message being
+  // answered is who THAT conversation is with; the record's primary address is
+  // not, and a reply sent to it would leave the thread it answers.
+  it("prefers the thread's counterparty over the record's own address", async () => {
+    stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@example.test"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
+    expect(screen.queryByText("dung.ly@example.test")).toBeNull();
+  });
+
+  // A CONTACT's address, picked by the shared rule rather than by this test.
+  // A person carries a list, so the page decides which one; what must not
+  // happen is a retired address being offered, and the rule that prevents it
+  // is format/primaryEmail — mirrored by the drafter and held by
+  // backend/gates/frontendprimaryemail_test.go.
+  it("addresses a first message to the contact's live primary address", async () => {
+    stubRoutes();
+    render(
+      <ComposeModal
+        entityType="person"
+        entityId="p-1"
+        personId="p-1"
+        recordAddress={primaryEmail([
+          {
+            id: "e-1",
+            email: "left@buyer.test",
+            email_type: "work",
+            is_primary: true,
+            position: 0,
+            source: "manual",
+            captured_by: "human:u-1",
+            archived_at: "2026-01-01T00:00:00Z",
+          },
+          {
+            id: "e-2",
+            email: "anna@buyer.test",
+            email_type: "work",
+            is_primary: false,
+            position: 1,
+            source: "manual",
+            captured_by: "human:u-1",
+          },
+        ])}
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("anna@buyer.test")).toBeTruthy();
+    // The retired one is never offered: mail sent there either bounces or
+    // reaches somebody who asked us to stop using it.
+    expect(screen.queryByText("left@buyer.test")).toBeNull();
+  });
+
+  // A record with no address on file offers nothing, rather than an empty chip
+  // the reader has to notice and delete.
+  it("offers nothing when the record has no address", async () => {
+    stubRoutes();
+    render(
+      <ComposeModal
+        entityType="lead"
+        entityId="l-1"
+        recordAddress={undefined}
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("To");
+    // The committed recipients are the chips in the To row. Read as elements
+    // rather than as text: an assertion on the absence of one particular
+    // address would pass over a chip carrying any other.
+    expect(
+      document.querySelectorAll(".recipient-field .chips li"),
+    ).toHaveLength(0);
   });
 
   // The offer follows the conversation. A reader who picks a different one is

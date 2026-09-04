@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { EmailReference } from "../design-system/emailreference";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
@@ -64,9 +65,7 @@ export function HeldThreadsCard() {
               // Nothing held is a READING, not an absent list: "my mailbox is
               // withholding nothing right now" is exactly what an owner opens
               // this card to confirm.
-              <EmptyState>
-                <p className="t-small">{t("heldThreads.empty")}</p>
-              </EmptyState>
+              <EmptyState>{t("heldThreads.empty")}</EmptyState>
             ) : (
               <>
                 <BacklogCallout rows={list.data} />
@@ -140,7 +139,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.has_message ? (
                 <ThreadSubject row={row} onOpen={setOpenEmail} />
               ) : (
-                <span className="t-meta">{t("heldThreads.noSubject")}</span>
+                <span className="t-caption">{t("heldThreads.noSubject")}</span>
               ),
           },
           {
@@ -155,7 +154,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.occurred_at ? (
                 formatDateTime(row.occurred_at, locale, zone)
               ) : (
-                <span className="t-meta">—</span>
+                <span className="t-caption">—</span>
               ),
           },
           {
@@ -264,7 +263,7 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
     return (
       <span className="cell-stack">
         <Badge tone="warn">{t("heldThreads.pending")}</Badge>
-        <span className="t-meta">
+        <span className="t-caption">
           {t("heldThreads.attempts", {
             count: formatNumber(row.attempts, locale),
           })}
@@ -281,38 +280,38 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
 }
 
 /**
- * A held thread's subject, openable where the reader may read the message.
+ * A held thread's subject, as a citation of the message it was raised about.
  *
- * Three states, unchanged from before plus one: a subject, a message carrying
- * none, and — new — whether either is a control. `activity_id` is present only
- * when the server's own content gate admitted the message, so a thread held
- * because it is somebody else's personnel mail names itself and does not offer
- * to open. A button that opened nothing would be worse than the plain text it
- * replaced.
+ * EmailReference rather than this file's own button: naming a message and
+ * offering to open it is exactly what a citation is, and the hand-rolled
+ * version here had grown its own copies of the blank-subject fallback, the
+ * withheld reading and the not-openable branch — three rules that must agree
+ * with every other citation in the product and had no way of doing so.
+ *
+ * No date, because the table has a When column of its own. A reference that
+ * printed one would put the same timestamp twice in one row.
+ *
+ * Two flags, because there are three states and the caller must not collapse
+ * them. `has_message` is whether the message still EXISTS, read without the
+ * content gate; `activity_id` is read from the gated join, so the presence of
+ * that field IS the permission. A message that exists and carries no id is one
+ * this reader may not read — withheld — and one that carries an id but no
+ * subject was simply sent with a blank subject line, which reads as "No
+ * subject" and still opens.
+ *
+ * Only a thread whose message still exists reaches here; the caller draws the
+ * erased case, which is a statement about the ledger rather than a citation.
  */
 function ThreadSubject({
   row,
   onOpen,
 }: Readonly<{ row: HeldThread; onOpen: (activityId: string) => void }>) {
-  const t = useT();
-  const label = row.subject ?? t("heldThreads.blankSubject");
-  const plain = row.subject ? (
-    <>{label}</>
-  ) : (
-    <span className="t-meta">{label}</span>
-  );
-  if (!row.activity_id) {
-    return plain;
-  }
   const activityId = row.activity_id;
   return (
-    <button
-      type="button"
-      className="entity-link"
-      aria-haspopup="dialog"
-      onClick={() => onOpen(activityId)}
-    >
-      {label}
-    </button>
+    <EmailReference
+      subject={row.subject}
+      withheld={!activityId}
+      onOpen={activityId ? () => onOpen(activityId) : undefined}
+    />
   );
 }

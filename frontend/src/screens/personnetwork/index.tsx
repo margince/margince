@@ -63,6 +63,7 @@ export function PersonNetworkTab({
     () => ({
       ourTeam: t("person.intro.laneOurs"),
       theirCompany: t("person.intro.laneTheirs"),
+      peers: t("person.intro.lanePeers"),
       target: t("person.intro.laneTarget"),
       useThisRoute: t("person.intro.useThisRoute"),
       withheldDirect: t("person.graph.withheldDirect"),
@@ -159,7 +160,10 @@ export function PersonNetworkTab({
           ) : null}
         </div>
 
-        <aside className="pn-side-column">
+        <aside
+          className="pn-side-column"
+          aria-label={t("person.graph.sideColumn")}
+        >
           <RelayPanel ask={read.open} />
           <IntroAsksCard personId={personId} personName={read.targetName} />
           {view && <MomentsCard view={view} />}

@@ -135,7 +135,10 @@ export function AddProjectStakeholder({
         open={open}
         onClose={close}
         title={t("project.stakeholders.add")}
-        confirmLabel={t("record.save")}
+        // "Add", not "Save": nothing here is being edited, and a reader who
+        // pressed "Add stakeholder" should not have to work out whether "Save"
+        // means the same thing.
+        confirmLabel={t("project.stakeholders.addConfirm")}
         confirmDisabled={person === null}
         onConfirm={() => {
           if (person) {

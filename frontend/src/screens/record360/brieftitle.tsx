@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The head of the card a machine wrote: WHO produced this reading, then WHAT
-// it is a reading of.
+// The head of the card a machine wrote: the mark that says WHO produced this
+// reading, WHAT it is a reading of, and the claim of authorship in words.
 //
-// Two lines, in that order, because they answer different questions and the
-// first is the one a reader needs before they weigh a word of it — a machine
-// read this record, and here is the record it read. The eyebrow carries the
-// authorship and the name carries the subject; folded into one line, the
-// authorship reads as part of the record's name.
+// One line (DESIGN.md §7): the mark leads it, so a reader has the authorship
+// before they weigh a word of it; the name follows as the subject; the words
+// close it at the eyebrow's weight, set apart from the name so the authorship
+// does not read as part of the record's name.
 //
 // In the kit rather than on the account page, because every record that gets
 // a written reading owes the same claim in the same words. Two records
@@ -19,7 +18,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { useT } from "../../i18n";
 import "../company360.css";
 
-/** BriefTitle is the head band's two lines, over whichever record it reads. */
+/** BriefTitle is the head's one line, over whichever record it reads. */
 export function BriefTitle({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   return (
@@ -33,10 +32,10 @@ export function BriefTitle({ name }: Readonly<{ name?: string }>) {
       <span className="co-360-mark" aria-hidden="true">
         <Sparkles />
       </span>
-      <Eyebrow as="span">{t("co.360.title")}</Eyebrow>
       <span className="co-360-subject">
         {name ? t("co.360.subject", { name }) : t("co.360.subjectUnnamed")}
       </span>
+      <Eyebrow as="span">{t("co.360.title")}</Eyebrow>
     </span>
   );
 }

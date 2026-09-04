@@ -3666,6 +3666,7 @@ const (
 	ContactEngagementAnswered ContactEngagement = "answered"
 	ContactEngagementNoReply  ContactEngagement = "no_reply"
 	ContactEngagementUntried  ContactEngagement = "untried"
+	ContactEngagementWaiting  ContactEngagement = "waiting"
 )
 
 // Valid indicates whether the value is a known member of the ContactEngagement enum.
@@ -3676,6 +3677,8 @@ func (e ContactEngagement) Valid() bool {
 	case ContactEngagementNoReply:
 		return true
 	case ContactEngagementUntried:
+		return true
+	case ContactEngagementWaiting:
 		return true
 	default:
 		return false
@@ -8610,22 +8613,22 @@ func (e PersonConsentGuardEntryChannel) Valid() bool {
 
 // Defines values for PersonConsentGuardEntryPurposeClass.
 const (
-	BusinessCorrespondence PersonConsentGuardEntryPurposeClass = "business_correspondence"
-	Marketing              PersonConsentGuardEntryPurposeClass = "marketing"
-	PhoneOutreach          PersonConsentGuardEntryPurposeClass = "phone_outreach"
-	Transactional          PersonConsentGuardEntryPurposeClass = "transactional"
+	PersonConsentGuardEntryPurposeClassBusinessCorrespondence PersonConsentGuardEntryPurposeClass = "business_correspondence"
+	PersonConsentGuardEntryPurposeClassMarketing              PersonConsentGuardEntryPurposeClass = "marketing"
+	PersonConsentGuardEntryPurposeClassPhoneOutreach          PersonConsentGuardEntryPurposeClass = "phone_outreach"
+	PersonConsentGuardEntryPurposeClassTransactional          PersonConsentGuardEntryPurposeClass = "transactional"
 )
 
 // Valid indicates whether the value is a known member of the PersonConsentGuardEntryPurposeClass enum.
 func (e PersonConsentGuardEntryPurposeClass) Valid() bool {
 	switch e {
-	case BusinessCorrespondence:
+	case PersonConsentGuardEntryPurposeClassBusinessCorrespondence:
 		return true
-	case Marketing:
+	case PersonConsentGuardEntryPurposeClassMarketing:
 		return true
-	case PhoneOutreach:
+	case PersonConsentGuardEntryPurposeClassPhoneOutreach:
 		return true
-	case Transactional:
+	case PersonConsentGuardEntryPurposeClassTransactional:
 		return true
 	default:
 		return false
@@ -10141,6 +10144,87 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for ReportBlockKind.
+const (
+	ReportBlockKindBar            ReportBlockKind = "bar"
+	ReportBlockKindCallout        ReportBlockKind = "callout"
+	ReportBlockKindEvidenceDrawer ReportBlockKind = "evidence_drawer"
+	ReportBlockKindFollowUps      ReportBlockKind = "follow_ups"
+	ReportBlockKindGeneratedAt    ReportBlockKind = "generated_at"
+	ReportBlockKindMethodology    ReportBlockKind = "methodology"
+	ReportBlockKindRankedList     ReportBlockKind = "ranked_list"
+	ReportBlockKindRecordTable    ReportBlockKind = "record_table"
+	ReportBlockKindScope          ReportBlockKind = "scope"
+	ReportBlockKindStatStrip      ReportBlockKind = "stat_strip"
+	ReportBlockKindSubtitle       ReportBlockKind = "subtitle"
+	ReportBlockKindSummary        ReportBlockKind = "summary"
+	ReportBlockKindTitle          ReportBlockKind = "title"
+	ReportBlockKindWaterfall      ReportBlockKind = "waterfall"
+)
+
+// Valid indicates whether the value is a known member of the ReportBlockKind enum.
+func (e ReportBlockKind) Valid() bool {
+	switch e {
+	case ReportBlockKindBar:
+		return true
+	case ReportBlockKindCallout:
+		return true
+	case ReportBlockKindEvidenceDrawer:
+		return true
+	case ReportBlockKindFollowUps:
+		return true
+	case ReportBlockKindGeneratedAt:
+		return true
+	case ReportBlockKindMethodology:
+		return true
+	case ReportBlockKindRankedList:
+		return true
+	case ReportBlockKindRecordTable:
+		return true
+	case ReportBlockKindScope:
+		return true
+	case ReportBlockKindStatStrip:
+		return true
+	case ReportBlockKindSubtitle:
+		return true
+	case ReportBlockKindSummary:
+		return true
+	case ReportBlockKindTitle:
+		return true
+	case ReportBlockKindWaterfall:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportBlockSeverity.
+const (
+	ReportBlockSeverityNote        ReportBlockSeverity = "note"
+	ReportBlockSeverityPartial     ReportBlockSeverity = "partial"
+	ReportBlockSeverityUnknown     ReportBlockSeverity = "unknown"
+	ReportBlockSeverityUnsupported ReportBlockSeverity = "unsupported"
+	ReportBlockSeverityWarning     ReportBlockSeverity = "warning"
+)
+
+// Valid indicates whether the value is a known member of the ReportBlockSeverity enum.
+func (e ReportBlockSeverity) Valid() bool {
+	switch e {
+	case ReportBlockSeverityNote:
+		return true
+	case ReportBlockSeverityPartial:
+		return true
+	case ReportBlockSeverityUnknown:
+		return true
+	case ReportBlockSeverityUnsupported:
+		return true
+	case ReportBlockSeverityWarning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	AddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -10510,6 +10594,123 @@ func (e SearchResultType) Valid() bool {
 	case SearchResultTypeProject:
 		return true
 	case SearchResultTypeTag:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendAccountEmailRequestCommunicationContext.
+const (
+	SendAccountEmailRequestCommunicationContextAccountNotice      SendAccountEmailRequestCommunicationContext = "account_notice"
+	SendAccountEmailRequestCommunicationContextActiveDealFollowup SendAccountEmailRequestCommunicationContext = "active_deal_followup"
+	SendAccountEmailRequestCommunicationContextContractNotice     SendAccountEmailRequestCommunicationContext = "contract_notice"
+	SendAccountEmailRequestCommunicationContextCustomerService    SendAccountEmailRequestCommunicationContext = "customer_service"
+	SendAccountEmailRequestCommunicationContextInvoiceOrPayment   SendAccountEmailRequestCommunicationContext = "invoice_or_payment"
+	SendAccountEmailRequestCommunicationContextMarketing          SendAccountEmailRequestCommunicationContext = "marketing"
+	SendAccountEmailRequestCommunicationContextPrecontractQuote   SendAccountEmailRequestCommunicationContext = "precontract_quote"
+	SendAccountEmailRequestCommunicationContextReplyToInbound     SendAccountEmailRequestCommunicationContext = "reply_to_inbound"
+	SendAccountEmailRequestCommunicationContextRequestedFollowup  SendAccountEmailRequestCommunicationContext = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the SendAccountEmailRequestCommunicationContext enum.
+func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendAccountEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendAccountEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendAccountEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendAccountEmailRequestCommunicationContextMarketing:
+		return true
+	case SendAccountEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendAccountEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendAccountEmailRequestCommunicationContextRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendEmailRequestCommunicationContext.
+const (
+	SendEmailRequestCommunicationContextAccountNotice      SendEmailRequestCommunicationContext = "account_notice"
+	SendEmailRequestCommunicationContextActiveDealFollowup SendEmailRequestCommunicationContext = "active_deal_followup"
+	SendEmailRequestCommunicationContextContractNotice     SendEmailRequestCommunicationContext = "contract_notice"
+	SendEmailRequestCommunicationContextCustomerService    SendEmailRequestCommunicationContext = "customer_service"
+	SendEmailRequestCommunicationContextInvoiceOrPayment   SendEmailRequestCommunicationContext = "invoice_or_payment"
+	SendEmailRequestCommunicationContextMarketing          SendEmailRequestCommunicationContext = "marketing"
+	SendEmailRequestCommunicationContextPrecontractQuote   SendEmailRequestCommunicationContext = "precontract_quote"
+	SendEmailRequestCommunicationContextReplyToInbound     SendEmailRequestCommunicationContext = "reply_to_inbound"
+	SendEmailRequestCommunicationContextRequestedFollowup  SendEmailRequestCommunicationContext = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the SendEmailRequestCommunicationContext enum.
+func (e SendEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendEmailRequestCommunicationContextMarketing:
+		return true
+	case SendEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendEmailRequestCommunicationContextRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendMessageRequestCommunicationContext.
+const (
+	SendMessageRequestCommunicationContextAccountNotice      SendMessageRequestCommunicationContext = "account_notice"
+	SendMessageRequestCommunicationContextActiveDealFollowup SendMessageRequestCommunicationContext = "active_deal_followup"
+	SendMessageRequestCommunicationContextContractNotice     SendMessageRequestCommunicationContext = "contract_notice"
+	SendMessageRequestCommunicationContextCustomerService    SendMessageRequestCommunicationContext = "customer_service"
+	SendMessageRequestCommunicationContextInvoiceOrPayment   SendMessageRequestCommunicationContext = "invoice_or_payment"
+	SendMessageRequestCommunicationContextMarketing          SendMessageRequestCommunicationContext = "marketing"
+	SendMessageRequestCommunicationContextPrecontractQuote   SendMessageRequestCommunicationContext = "precontract_quote"
+	SendMessageRequestCommunicationContextReplyToInbound     SendMessageRequestCommunicationContext = "reply_to_inbound"
+	SendMessageRequestCommunicationContextRequestedFollowup  SendMessageRequestCommunicationContext = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the SendMessageRequestCommunicationContext enum.
+func (e SendMessageRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendMessageRequestCommunicationContextAccountNotice:
+		return true
+	case SendMessageRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendMessageRequestCommunicationContextContractNotice:
+		return true
+	case SendMessageRequestCommunicationContextCustomerService:
+		return true
+	case SendMessageRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendMessageRequestCommunicationContextMarketing:
+		return true
+	case SendMessageRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendMessageRequestCommunicationContextReplyToInbound:
+		return true
+	case SendMessageRequestCommunicationContextRequestedFollowup:
 		return true
 	default:
 		return false
@@ -13809,25 +14010,25 @@ func (e StartOidcSignInParamsProvider) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	Blocked           ListAutomationRunsParamsOutcome = "blocked"
-	Failed            ListAutomationRunsParamsOutcome = "failed"
-	Fired             ListAutomationRunsParamsOutcome = "fired"
-	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	Skipped           ListAutomationRunsParamsOutcome = "skipped"
+	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
+	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
+	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
+	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case Blocked:
+	case ListAutomationRunsParamsOutcomeBlocked:
 		return true
-	case Failed:
+	case ListAutomationRunsParamsOutcomeFailed:
 		return true
-	case Fired:
+	case ListAutomationRunsParamsOutcomeFired:
 		return true
-	case QueuedForApproval:
+	case ListAutomationRunsParamsOutcomeQueuedForApproval:
 		return true
-	case Skipped:
+	case ListAutomationRunsParamsOutcomeSkipped:
 		return true
 	default:
 		return false
@@ -16051,8 +16252,11 @@ type AnalyticsAnswer struct {
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
 
-	// Rows One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own.
+	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
+
+	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
+	RunId *openapi_types.UUID `json:"run_id,omitempty"`
 
 	// SchemaVersion The vocabulary this was asked in.
 	SchemaVersion string `json:"schema_version"`
@@ -16140,6 +16344,10 @@ type AnalyticsQuery struct {
 
 	// Measures What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question.
 	Measures []AnalyticsMeasure `json:"measures"`
+
+	// Save Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
+	// A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
+	Save *bool `json:"save,omitempty"`
 }
 
 // AnalyticsSchema The populations and fields one caller may ask about.
@@ -18432,6 +18640,34 @@ type CommissionSummaryRow struct {
 	Status CommissionStatus `json:"status"`
 }
 
+// CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
+// CHECKED, never trusted: the engine reads the named record and asks whether it
+// actually supports the category claimed — a deal id that is closed, an invoice
+// belonging to another organization, or a record the caller cannot see supports
+// nothing. Naming a record therefore never widens what a caller may do.
+//
+// Every field is optional. A caller that can name nothing says nothing, and the
+// engine resolves the send from its origin instead.
+type CommunicationEvidence struct {
+	// ActivityId The inbound message this send answers.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// BasisId A recorded communication basis this send relies on.
+	BasisId *openapi_types.UUID `json:"basis_id,omitempty"`
+
+	// ConsentEventId The recorded consent this send relies on.
+	ConsentEventId *openapi_types.UUID `json:"consent_event_id,omitempty"`
+
+	// ContractId The live contract whose notice this send carries.
+	ContractId *openapi_types.UUID `json:"contract_id,omitempty"`
+
+	// DealId The live opportunity this send moves along.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// InvoiceId The invoice or payment event this send is about.
+	InvoiceId *openapi_types.UUID `json:"invoice_id,omitempty"`
+}
+
 // CompanyContext defines model for CompanyContext.
 type CompanyContext struct {
 	// Fingerprint Deterministic SHA-256 digest of the selected confirmed values and accepted facts.
@@ -18514,7 +18750,9 @@ type CompanyProfile struct {
 
 	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
 	// path `Organization.logo_url` carries for that record, cookie-authenticated and
-	// same-origin. The mark is whichever one the company is wearing: the one a website
+	// same-origin. A revision query changes whenever the stored image changes so a browser
+	// never holds a replacement behind an older cached URL. The logo is whichever one the
+	// company is wearing: the one a website
 	// read resolved from its own site, or the one a person uploaded through
 	// `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
 	// is never an error: a client draws the deterministic monogram then.
@@ -19180,14 +19418,21 @@ type ConsumerMailDomainListResponse struct {
 }
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
-// score uses.
+// score uses. What decides between the two conversational states is who wrote
+// LAST, not whether both directions have traffic.
 //
-// `answered` — they have written back inside the window. The way in.
+// `waiting` — their latest message has no reply from us. They are waiting on us,
+// and answering is the obvious next move.
+// `answered` — we replied to their latest message. The conversation is current
+// from our side; the ball is with them.
 // `no_reply` — we have written and had nothing back. Writing again is a decision.
 // `untried` — nobody has written to them at all. Free to approach.
 //
-// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-// ignored" look identical in a roster and call for opposite next actions.
+// Waiting is deliberately not folded into answered: one inbound mail nobody has
+// replied to is not a success, and showing it as one hides the account's most
+// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+// "asked and ignored" look identical in a roster and call for opposite next
+// actions.
 type ContactEngagement string
 
 // ContextEntityRef defines model for ContextEntityRef.
@@ -21819,15 +22064,19 @@ type HeldThread struct {
 	// whose attempts stop climbing is a model that stopped answering.
 	Attempts int `json:"attempts"`
 
-	// HasMessage The message this thread began with is still readable by you. False where it was erased
-	// while the verdict stood — which the ledger deliberately survives, because losing the
-	// verdict would re-open a thread a classifier already held — and false where its content
-	// is withheld from you.
+	// HasMessage The message this thread began with still EXISTS. False only where it was erased while
+	// the verdict stood — which the ledger deliberately survives, because losing the verdict
+	// would re-open a thread a classifier already held.
 	//
-	// Separate from `subject` because absence has two causes that read differently: no
-	// message to name, versus a message somebody sent with a blank subject line. It also
-	// decides whether releasing is offered at all: the release works on your own messages on
-	// the thread, so with none left there is nothing to share.
+	// Existence, not readability: it stays true for a message whose content is withheld from
+	// you, and that is the point. Read through the content gate it reported a withheld
+	// message as erased, which told a holder their evidence had been destroyed while it was
+	// sitting in the thread they are holding.
+	//
+	// So `subject` absent with this true is a message you may not read, or one sent with a
+	// blank subject line; this false is no message at all. It also decides whether releasing
+	// is offered: the release works on your own messages on the thread, so with none left
+	// there is nothing to share.
 	HasMessage bool `json:"has_message"`
 
 	// Kind What the classifier concluded the thread is ABOUT — legal, personnel,
@@ -21896,9 +22145,26 @@ type HiddenBacklog struct {
 	// lift at all.
 	SetAside int `json:"set_aside"`
 
-	// Shown What the queue itself would carry. Here so the others read as a proportion
-	// rather than as bare volumes — three hidden against four shown is a broken
-	// queue, and three against three hundred is a rep tidying up.
+	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
+	// others read as a proportion rather than as bare volumes — three hidden against
+	// four found is a broken queue, and three against three hundred is a rep tidying
+	// up.
+	//
+	// Not quite what the queue draws, and the difference is stated rather than
+	// glossed. Machine senders are filtered TWICE, deliberately: the query removes
+	// the obvious ones before its scan cap, because two hundred notification threads
+	// would otherwise fill the scan and push a real customer past it, and the queue
+	// then applies a fuller address rule over the survivors — a baseline of
+	// transactional relay domains no pattern list could stand in for. A repeat thread
+	// from one sender is folded there too, statefully across rows.
+	//
+	// So a mail relayed by one of those domains is counted here and absent from the
+	// page. Measuring it here would mean a second copy of that baseline inside the
+	// database, drifting from the first.
+	//
+	// The four hidden figures are differences between runs of THIS query, so they
+	// are counted the same way and the proportions hold. It is the absolute figure
+	// that is a near neighbour of the page's own count rather than equal to it.
 	Shown int `json:"shown"`
 
 	// Truncated True when a read stopped at its own scan bound, which makes every figure above
@@ -22426,6 +22692,13 @@ type InstallationSettings struct {
 	// The label spells both calendar years a non-January year spans — `FY2026/27` — so
 	// a reader can tell which twelve months a bucket covers without knowing the
 	// convention. A January year is not a span and keeps the plain `2026`.
+	//
+	// One thing it does NOT carry, and a client storing report filters should know it:
+	// a SAVED report view holds the bucket's text, so a view saved under one fiscal
+	// start names a different span after the start moves — or no span at all, since a
+	// calendar year maps onto parts of two fiscal years. The report still runs and
+	// still looks right. Whether such a view is re-pointed, invalidated or merely
+	// warned about is undecided: margince/margince#2569.
 	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
@@ -24608,11 +24881,12 @@ type Organization struct {
 	// LinkedinUrl Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
-	// LogoUrl Where to fetch the company's resolved logo image (A55) — the `getOrganizationLogo`
-	// path for this record, cookie-authenticated and same-origin. The key is ABSENT
-	// entirely (not null) when no logo resolved, which is the common case and never an
-	// error: a client renders the deterministic monogram then, so it never shows a
-	// broken image or an empty slot.
+	// LogoUrl Where to fetch the company's logo image (A55) — the `getOrganizationLogo`
+	// path for this record, cookie-authenticated and same-origin. A revision query changes
+	// with the stored image so a replacement cannot remain hidden behind an older cached
+	// response. The key is ABSENT entirely (not null) when no logo is stored, which is the
+	// common case and never an error: a client renders the deterministic monogram then,
+	// so it never shows a broken image or an empty slot.
 	// The stored object key is deliberately not exposed; it names a bucket path, and a
 	// client's business is the endpoint that streams the bytes.
 	LogoUrl      *string             `json:"logo_url,omitempty"`
@@ -25416,14 +25690,21 @@ type OrganizationBriefSentenceNature string
 // OrganizationContact defines model for OrganizationContact.
 type OrganizationContact struct {
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement ContactEngagement `json:"engagement"`
 	FullName   string            `json:"full_name"`
 
@@ -25502,14 +25783,21 @@ type OrganizationCoverageDeal struct {
 // ranking the contact list opens on.
 type OrganizationCoverageRoute struct {
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement    ContactEngagement  `json:"engagement"`
 	FullName      string             `json:"full_name"`
 	LastInboundAt *time.Time         `json:"last_inbound_at,omitempty"`
@@ -25535,14 +25823,21 @@ type OrganizationCoverageSeat struct {
 	AiSuggested *bool `json:"ai_suggested,omitempty"`
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
-	// score uses.
+	// score uses. What decides between the two conversational states is who wrote
+	// LAST, not whether both directions have traffic.
 	//
-	// `answered` — they have written back inside the window. The way in.
+	// `waiting` — their latest message has no reply from us. They are waiting on us,
+	// and answering is the obvious next move.
+	// `answered` — we replied to their latest message. The conversation is current
+	// from our side; the ball is with them.
 	// `no_reply` — we have written and had nothing back. Writing again is a decision.
 	// `untried` — nobody has written to them at all. Free to approach.
 	//
-	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
-	// ignored" look identical in a roster and call for opposite next actions.
+	// Waiting is deliberately not folded into answered: one inbound mail nobody has
+	// replied to is not a success, and showing it as one hides the account's most
+	// urgent row. Untried is likewise not folded into no-reply: "never asked" and
+	// "asked and ignored" look identical in a roster and call for opposite next
+	// actions.
 	Engagement *ContactEngagement `json:"engagement,omitempty"`
 	FullName   string             `json:"full_name"`
 	PersonId   openapi_types.UUID `json:"person_id"`
@@ -25584,7 +25879,7 @@ type OrganizationCoverageSeat struct {
 
 // OrganizationCoverageSummary defines model for OrganizationCoverageSummary.
 type OrganizationCoverageSummary struct {
-	// Answered Contacts who have written back inside the 90-day window.
+	// Answered Contacts whose latest message we replied to inside the 90-day window.
 	Answered int `json:"answered"`
 
 	// ContactsTotal Every contact the caller may see at this account, not a page of them.
@@ -25595,6 +25890,9 @@ type OrganizationCoverageSummary struct {
 
 	// Untried Contacts nobody has written to at all.
 	Untried int `json:"untried"`
+
+	// Waiting Contacts whose latest message we have not replied to.
+	Waiting int `json:"waiting"`
 }
 
 // OrganizationDomain defines model for OrganizationDomain.
@@ -28773,6 +29071,30 @@ type RenameCustomFieldRequest struct {
 	Label *string `json:"label,omitempty"`
 }
 
+// RenderedBlock defines model for RenderedBlock.
+type RenderedBlock struct {
+	Kind     string  `json:"kind"`
+	Severity *string `json:"severity,omitempty"`
+	Text     *string `json:"text,omitempty"`
+
+	// Values One entry per cell the block named, in the same order.
+	Values []RenderedValue `json:"values"`
+}
+
+// RenderedReport The composed document with every figure resolved for this reader.
+type RenderedReport struct {
+	Blocks []RenderedBlock `json:"blocks"`
+}
+
+// RenderedValue defines model for RenderedValue.
+type RenderedValue struct {
+	// Value The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back.
+	Value interface{} `json:"value,omitempty"`
+
+	// Withheld The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less.
+	Withheld bool `json:"withheld"`
+}
+
 // RenewContractRequest The successor's terms. It freezes its own rate and inherits none — the counterparty
 // excepted, which comes from the predecessor because a renewal that changed companies would
 // be a different agreement wearing this one's history.
@@ -28824,6 +29146,42 @@ type ReplyRecipient struct {
 	FullName string `json:"full_name"`
 }
 
+// ReportBlock One element of a report. What fields are legal is decided by `kind`.
+type ReportBlock struct {
+	// Cells The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown.
+	Cells *[]ReportCell `json:"cells,omitempty"`
+
+	// Kind The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+	Kind ReportBlockKind `json:"kind"`
+
+	// Severity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+	Severity *ReportBlockSeverity `json:"severity,omitempty"`
+
+	// Text The composer's own words. Prose, never a figure.
+	Text *string `json:"text,omitempty"`
+
+	// Value ALWAYS REFUSED, and the field exists so the refusal can name what it found. A composer that puts a number here is asking the renderer to draw a figure the database never computed. Carrying one beside a valid handle is refused too, and that case is worse: the literal is what renders, the two can disagree, and nothing downstream can tell.
+	Value *float64 `json:"value,omitempty"`
+}
+
+// ReportBlockKind The closed set a renderer knows how to draw. An unknown kind is refused rather than dropped: a report missing a block it was composed with says something different from the one composed.
+type ReportBlockKind string
+
+// ReportBlockSeverity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
+type ReportBlockSeverity string
+
+// ReportCell One figure, named by the run it lives in and the cell within it.
+type ReportCell struct {
+	// Column Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick.
+	Column string `json:"column"`
+
+	// Group The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell.
+	Group *[]interface{} `json:"group,omitempty"`
+
+	// RunId The saved run. Resolved under the reading caller's own authority.
+	RunId openapi_types.UUID `json:"run_id"`
+}
+
 // ReportDerivation The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
@@ -28848,6 +29206,11 @@ type ReportDerivation struct {
 
 	// TotalRows Source rows matched (rows is capped at the report row limit).
 	TotalRows *int `json:"total_rows,omitempty"`
+}
+
+// ReportDocument A report as composed: structure and words, with every figure named by a handle.
+type ReportDocument struct {
+	Blocks []ReportBlock `json:"blocks"`
 }
 
 // ReportResult defines model for ReportResult.
@@ -28879,6 +29242,28 @@ type ReportResult struct {
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
 	Timezone  string `json:"timezone"`
 	TotalRows *int   `json:"total_rows,omitempty"`
+}
+
+// ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
+type ReportRun struct {
+	// Answer The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them.
+	Answer AnalyticsAnswer `json:"answer"`
+
+	// AskedBy Whose answer the run originally was. A reader comparing their own numbers to a cited figure needs to know the citation was somebody else's view.
+	AskedBy openapi_types.UUID `json:"asked_by"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// Query The question as it was saved, unchanged.
+	Query AnalyticsQuery `json:"query"`
+
+	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.
+	StoredFloor int `json:"stored_floor"`
+}
+
+// ReportRunCell One cell of a saved run, named by its group keys.
+type ReportRunCell struct {
+	// Group The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -28930,6 +29315,10 @@ type ResponseMetrics struct {
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
 	// state, so a figure read from there would FALL as readers tidied up — reporting
 	// less judgement the more of it happened.
+	//
+	// Over the conversations THIS caller may open, like every figure beside it. Two
+	// readers of the same workspace can therefore see different totals here, and each
+	// is answering "how much of the work I can see is being put down".
 	Disposed int `json:"disposed"`
 
 	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
@@ -29341,6 +29730,24 @@ type SendAccountEmailRequest struct {
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories are absent from this list on purpose — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
+	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
 	// suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
 	// `person_consent` for THIS purpose.
@@ -29349,6 +29756,9 @@ type SendAccountEmailRequest struct {
 	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
 	// Omit for independently composed mail.
 	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
@@ -29364,6 +29774,18 @@ type SendAccountEmailRequest struct {
 	// cannot see is refused 404 — and each probe is its own query, so the list is bounded
 	// at 25 (a message about more records than that is about none of them).
 	Links []ActivityLinkInput `json:"links"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
@@ -29392,6 +29814,24 @@ type SendAccountEmailRequest struct {
 	// anything is staged — `cc` alone does not make a message addressed to anyone.
 	To []openapi_types.Email `json:"to"`
 }
+
+// SendAccountEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories are absent from this list on purpose — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
+type SendAccountEmailRequestCommunicationContext string
 
 // SendEmailRequest defines model for SendEmailRequest.
 type SendEmailRequest struct {
@@ -29455,6 +29895,24 @@ type SendEmailRequest struct {
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories are absent from this list on purpose — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
+	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
 	// The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
 	// `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
@@ -29467,12 +29925,27 @@ type SendEmailRequest struct {
 	// outcome is inferred without a valid reference.
 	DraftRef *string `json:"draft_ref,omitempty"`
 
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
 	// with the plain part first, so a client that cannot render HTML still
 	// receives the words. The sender's signature and the unsubscribe footer are
 	// appended to BOTH parts by the server, in each part's own syntax.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
@@ -29498,6 +29971,24 @@ type SendEmailRequest struct {
 	Subject     string                `json:"subject"`
 	To          []openapi_types.Email `json:"to"`
 }
+
+// SendEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories are absent from this list on purpose — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
+type SendEmailRequestCommunicationContext string
 
 // SendMessageRequest One channel reply. It carries no subject and no addressee list, and that absence is the
 // shape of the transport rather than an omission: a messaging channel has no subject line
@@ -29530,11 +30021,62 @@ type SendMessageRequest struct {
 	// (422 `empty_message_body`) rather than staged for a delivery that could only park.
 	Body string `json:"body"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories are absent from this list on purpose — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
+	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
 	// suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
 	// `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
 	ConsentPurpose string `json:"consent_purpose"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 }
+
+// SendMessageRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories are absent from this list on purpose — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
+type SendMessageRequestCommunicationContext string
 
 // SetActivityAudienceRequest defines model for SetActivityAudienceRequest.
 type SetActivityAudienceRequest struct {
@@ -30183,9 +30725,19 @@ type TeamListResponse struct {
 
 // TeamWeeklyCounts defines model for TeamWeeklyCounts.
 type TeamWeeklyCounts struct {
-	CommitmentsDue        int `json:"commitments_due"`
-	CommitmentsKept       int `json:"commitments_kept"`
-	DealsLost             int `json:"deals_lost"`
+	CommitmentsDue  int `json:"commitments_due"`
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsLost       int `json:"deals_lost"`
+
+	// DealsMoved Deals that changed stage in the week without closing — what the team ADVANCED.
+	//
+	// A count and never an amount. Advancing is a stage fact: a deal moving from
+	// Proposal to Negotiation did not change price, so a "value advanced" figure would
+	// count the deal's whole worth a second time beside the pipeline it already sits in.
+	//
+	// Snapshots written before this figure existed carry zero. A count of zero is a
+	// count, unlike a money sum of zero over deals nobody could price.
+	DealsMoved            int `json:"deals_moved"`
 	DealsWon              int `json:"deals_won"`
 	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
 	LeadsBreached         int `json:"leads_breached"`
@@ -30618,6 +31170,11 @@ type UpdateInstallationSettingsRequest struct {
 	// FiscalYearStartMonth The month the installation's business year begins, 1..12. Never frozen: it cuts
 	// reports on read and stores nothing, so moving it re-labels every period report at
 	// once and re-means no stored row.
+	//
+	// It does not re-point a SAVED report view, which holds the bucket's TEXT and so
+	// names a different span afterwards. Sending this field is enough to leave those
+	// views filtering on a span nobody asked for; nothing here reports how many.
+	// margince/margince#2569.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
 	// Name Rename the organization.
@@ -31892,11 +32449,11 @@ type WorklistCountCategory string
 
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
 // `amount_minor` converted to the installation's base currency — the only figure by
-// which two deals in different currencies may be compared. It does not yet weight by
-// `win_probability`: the pipeline this row comes from does not read a deal's stage
-// today, so the two fields are independent facts rather than one computed from the
-// other, and a reader must not multiply them together expecting the product to equal
-// a risk-adjusted figure the API does not compute.
+// which two deals in different currencies may be compared. It is not weighted by
+// `win_probability`: the pipeline this row comes from does not read a deal's stage,
+// so the two fields are independent facts rather than one computed from the other,
+// and a reader must not multiply them together expecting the product to equal a
+// risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor       *int64              `json:"amount_minor,omitempty"`
 	Currency          *string             `json:"currency,omitempty"`
@@ -31975,11 +32532,11 @@ type WorklistItem struct {
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by
-	// which two deals in different currencies may be compared. It does not yet weight by
-	// `win_probability`: the pipeline this row comes from does not read a deal's stage
-	// today, so the two fields are independent facts rather than one computed from the
-	// other, and a reader must not multiply them together expecting the product to equal
-	// a risk-adjusted figure the API does not compute.
+	// which two deals in different currencies may be compared. It is not weighted by
+	// `win_probability`: the pipeline this row comes from does not read a deal's stage,
+	// so the two fields are independent facts rather than one computed from the other,
+	// and a reader must not multiply them together expecting the product to equal a
+	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
 	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
@@ -34327,6 +34884,12 @@ type DemoteLeadParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// DraftLeadEmailJSONBody defines parameters for DraftLeadEmail.
+type DraftLeadEmailJSONBody struct {
+	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
+	Intent *string `json:"intent,omitempty"`
 }
 
 // PromoteLeadParams defines parameters for PromoteLead.
@@ -37126,6 +37689,12 @@ type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
 
+// RenderAnalyticsReportJSONRequestBody defines body for RenderAnalyticsReport for application/json ContentType.
+type RenderAnalyticsReportJSONRequestBody = ReportDocument
+
+// ExplainReportRunCellJSONRequestBody defines body for ExplainReportRunCell for application/json ContentType.
+type ExplainReportRunCellJSONRequestBody = ReportRunCell
+
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
 
@@ -37410,6 +37979,9 @@ type UpdateLeadJSONRequestBody = UpdateLeadRequest
 
 // DemoteLeadJSONRequestBody defines body for DemoteLead for application/json ContentType.
 type DemoteLeadJSONRequestBody = DemoteLeadRequest
+
+// DraftLeadEmailJSONRequestBody defines body for DraftLeadEmail for application/json ContentType.
+type DraftLeadEmailJSONRequestBody DraftLeadEmailJSONBody
 
 // SetLeadManualSignalJSONRequestBody defines body for SetLeadManualSignal for application/json ContentType.
 type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
@@ -45594,6 +46166,15 @@ type ServerInterface interface {
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// Resolve a report document's figures for this reader.
+	// (POST /analytics/reports/render)
+	RenderAnalyticsReport(w http.ResponseWriter, r *http.Request)
+	// The answer a report sentence points at.
+	// (GET /analytics/runs/{run_id})
+	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// The records behind one cell of a saved run.
+	// (POST /analytics/runs/{run_id}/cells/explain)
+	ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
@@ -45861,10 +46442,10 @@ type ServerInterface interface {
 	// Get the effective server-side company-context rollout capability.
 	// (GET /company/context/capabilities)
 	GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request)
-	// Take the installation's own company mark off the record.
+	// Take the installation's own company logo off the record.
 	// (DELETE /company/logo)
 	DeleteCompanyLogo(w http.ResponseWriter, r *http.Request)
-	// Replace the installation's own company mark with an uploaded image.
+	// Replace the installation's own company logo with an uploaded image.
 	// (POST /company/logo)
 	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
@@ -46290,6 +46871,9 @@ type ServerInterface interface {
 	// Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
 	// (POST /leads/{id}/demote)
 	DemoteLead(w http.ResponseWriter, r *http.Request, id Id, params DemoteLeadParams)
+	// Draft an email to this lead, grounded in their record.
+	// (POST /leads/{id}/draft-email)
+	DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id)
 	// List current and superseded human-provided qualification signals.
 	// (GET /leads/{id}/manual-signals)
 	ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id)
@@ -47445,6 +48029,24 @@ func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Resolve a report document's figures for this reader.
+// (POST /analytics/reports/render)
+func (_ Unimplemented) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The answer a report sentence points at.
+// (GET /analytics/runs/{run_id})
+func (_ Unimplemented) GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records behind one cell of a saved run.
+// (POST /analytics/runs/{run_id}/cells/explain)
+func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What questions this caller may ask, and in what words.
 // (GET /analytics/schema)
 func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
@@ -47979,13 +48581,13 @@ func (_ Unimplemented) GetCompanyContextCapabilities(w http.ResponseWriter, r *h
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Take the installation's own company mark off the record.
+// Take the installation's own company logo off the record.
 // (DELETE /company/logo)
 func (_ Unimplemented) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Replace the installation's own company mark with an uploaded image.
+// Replace the installation's own company logo with an uploaded image.
 // (POST /company/logo)
 func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -48834,6 +49436,12 @@ func (_ Unimplemented) UpdateLead(w http.ResponseWriter, r *http.Request, id Id,
 // Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
 // (POST /leads/{id}/demote)
 func (_ Unimplemented) DemoteLead(w http.ResponseWriter, r *http.Request, id Id, params DemoteLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Draft an email to this lead, grounded in their record.
+// (POST /leads/{id}/draft-email)
+func (_ Unimplemented) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52467,6 +53075,96 @@ func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RunAnalyticsQuery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenderAnalyticsReport operation middleware
+func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenderAnalyticsReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportRun operation middleware
+func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "run_id" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "run_id", chi.URLParam(r, "run_id"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "run_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportRun(w, r, runId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainReportRunCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "run_id" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "run_id", chi.URLParam(r, "run_id"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "run_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainReportRunCell(w, r, runId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -61647,6 +62345,38 @@ func (siw *ServerInterfaceWrapper) DemoteLead(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DemoteLead(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DraftLeadEmail operation middleware
+func (siw *ServerInterfaceWrapper) DraftLeadEmail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftLeadEmail(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75500,6 +76230,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/render", wrapper.RenderAnalyticsReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/runs/{run_id}/cells/explain", wrapper.ExplainReportRunCell)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
 	})
 	r.Group(func(r chi.Router) {
@@ -76194,6 +76933,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/demote", wrapper.DemoteLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/draft-email", wrapper.DraftLeadEmail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/manual-signals", wrapper.ListLeadManualSignals)

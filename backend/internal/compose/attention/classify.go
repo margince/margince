@@ -49,6 +49,13 @@ const sourceAtRisk = "deal_at_risk"
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 
+// subjectPerson is the subject type a person-shaped row names.
+//
+// A constant for the reason sourceDecay is one: the suppressor pairing the
+// decay lane against a waiting row matches on it, and a misspelt literal there
+// fails silently — it matches nothing, drops nothing, and reads green.
+const subjectPerson = "person"
+
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
@@ -218,20 +225,6 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // because there the silence is the problem rather than a closed chapter.
 const waitingStaleDays = 14
 
-// waitingDaysCeiling bounds what age contributes to the ORDER.
-//
-// Age breaks ties between rows the bands could not separate; it does not earn
-// precedence on its own. Uncapped it does exactly that — every additional day
-// of silence outranks every newer wait forever, so the oldest thread in the
-// workspace leads the page permanently and the queue becomes an archive sorted
-// by how long it has been ignored. That is the live page's own defect: eight
-// half-year-old threads holding the top of a working rep's day.
-//
-// Past the ceiling all waits tie on age and the next tie-break decides, which
-// is the honest answer — at six months versus seven, age has stopped saying
-// anything about what to do first.
-const waitingDaysCeiling = 30
-
 // classifyWaiting: somebody wrote and nobody answered.
 //
 // Level 1, the top band below a pin, and the reason is the concept's own: a
@@ -308,20 +301,20 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// bounded one for the order. A rep reading "waiting 180 days" is being told
 	// something true; the queue placing that row above everything for the rest
 	// of its life is not.
-	ordering := days
-	if ordering > waitingDaysCeiling {
-		ordering = waitingDaysCeiling
-	}
 	return ranked{
 		item:        row,
 		waitingDays: days,
-		waitingRank: ordering,
+		waitingRank: orderingAge(days),
 		occurredAt:  waiting.Since,
 		// Who owes the reply, so the scope filters can judge this row the way
 		// they judge a deal-bearing one. A wait carries no deal on the wire, and
 		// without this it is a row the filters cannot place: a named owner's
 		// queue dropped every one of them.
 		owner: waiting.OwnerID,
+		// And WHO it is about, which the subject above may have given to a deal.
+		// The decay suppressor reads this rather than the subject, so a contact
+		// whose wait is filed under a deal is still recognised as answered.
+		person: waiting.PersonID,
 	}
 }
 

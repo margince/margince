@@ -4,7 +4,7 @@ import { useEntityName } from "../screens/entityref";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { NAV, type NavLevelEntry, type NavSection } from "./nav";
-import type { Route } from "./router";
+import type { Route, Screen } from "./router";
 
 // What the chrome knows about a page before the page renders: its name, its
 // one-line description, and which entry of a section it is. The top bar's trail
@@ -34,9 +34,22 @@ import type { Route } from "./router";
 // TAG'S NAME, which the shell cannot know: "Tag" above a pill spelling
 // "Automation World 2026" names the page twice and names it worse both times —
 // a reader arriving from a search hit wants the word they searched at the top.
+//
+// The list screens head themselves in the header of the table that IS the page
+// (`ListSurface`'s `title`): a name printed above that card said one word the
+// trail had already said, and spent a whole band of a phone's screen doing it —
+// on a 390px viewport the search box and the filter row started below the fold.
+// A screen here is a screen that passes `title`, and the two must move together
+// or the page is named twice at heading level.
 export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
   "home",
   "tags",
+  "contacts",
+  "companies",
+  "leads",
+  "deals",
+  "projects",
+  "partners",
 ]);
 
 // Only a subtitle true of the WHOLE page qualifies. Copy that describes the
@@ -89,6 +102,28 @@ export function resolveTitle(
   // words; the heading must not print the slug the reader typed as though the
   // product had a page by that name.
   return offRailKey ? t(offRailKey) : t("shell.unknownPage");
+}
+
+/**
+ * The name of a page, in the words the sidebar uses for it.
+ *
+ * For a screen that heads ITSELF. The shell's `PageTitle` resolves the same
+ * fact the same way for every other route, and a list screen printing its own
+ * name in its table header must print the name the rail and the trail say —
+ * spelling `t("nav.contacts")` at the call site instead would put a second
+ * copy of the mapping in a screen file, where a rename of the rail's label
+ * leaves the page heading behind.
+ *
+ * The screen is a parameter rather than read from the route, so a story that
+ * renders the surface outside the router still names it correctly.
+ */
+export function usePageName(screen: Screen): string {
+  const t = useT();
+  return resolveTitle(
+    screen,
+    NAV.find((item) => item.screen === screen)?.labelKey,
+    t,
+  );
 }
 
 // What a section contributes to the chrome: the entry the reader opened. The

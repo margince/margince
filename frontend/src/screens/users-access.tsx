@@ -241,9 +241,7 @@ export function TeamsCard() {
               "name" in entry ? [entry] : [],
             );
             return rows.length === 0 && !teamsPartial ? (
-              <EmptyState>
-                <p className="t-small">{t("users.noTeamsYet")}</p>
-              </EmptyState>
+              <EmptyState>{t("users.noTeamsYet")}</EmptyState>
             ) : (
               // One team per row, and the row OPENS: the name and how many
               // people are in it on the summary line, who those people are
@@ -413,9 +411,7 @@ function TeamMembers({
               </Callout>
             )}
             {people.length === 0 ? (
-              <EmptyState>
-                <p className="t-small">{t("users.teamNobodyToAdd")}</p>
-              </EmptyState>
+              <EmptyState>{t("users.teamNobodyToAdd")}</EmptyState>
             ) : (
               <fieldset className="users-team-members">
                 <legend className="t-caption">

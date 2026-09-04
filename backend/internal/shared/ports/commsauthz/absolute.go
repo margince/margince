@@ -30,6 +30,11 @@ const (
 	// Distinct from an objection because they are different legal facts, and a
 	// proof row that called one the other would misstate what somebody did.
 	ReasonConsentWithdrawn = "consent_withdrawn"
+	// ReasonFrequencyCapReached is a jurisdiction's ceiling on how many
+	// advertising messages one address may receive in a window. A fact about
+	// VOLUME rather than about the person: nothing they did refuses this
+	// message, and the same message is lawful again once the window rolls.
+	ReasonFrequencyCapReached = "frequency_cap_reached"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 )
@@ -62,6 +67,15 @@ var absoluteDenials = map[string]bool{
 	// objection and gets its own code, but it binds exactly as hard: no
 	// rollout mode may send to somebody who took their consent back.
 	ReasonConsentWithdrawn: true,
+	// A jurisdiction's ceiling on advertising is decided by that jurisdiction,
+	// not by how far along a rollout is. It is here for the same reason as the
+	// rest and one of its own: an installation that declares a country is
+	// asserting which law it sends under, so a mode setting that let it exceed
+	// that country's statutory limit would make the declaration false. It is
+	// also the one denial a sender can clear by waiting — the window rolls and
+	// the same message becomes lawful — so refusing costs a delay rather than
+	// the message.
+	ReasonFrequencyCapReached: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.
@@ -79,16 +93,37 @@ func (s DecisionSet) HasAbsoluteDenial() bool {
 	return false
 }
 
-// Effective folds the mode in: what this set actually permits right now.
+// Effective folds the modes in: what this set actually permits right now.
 //
-// In enforce the engine rules. In observe and warn the old gate rules, EXCEPT
-// for an absolute denial, which rules in every mode.
-func (s DecisionSet) Effective(mode Mode, legacyAllowed bool) bool {
+// The mode is read per DECISION rather than once for the set, because the
+// recipients of one message need not resolve to one category — a reply to a
+// thread that copies somebody the engine calls marketing is two categories in
+// one send, and a single mode would have to pick one of them. Each recipient
+// is judged under the authority its own category carries.
+//
+// In enforce the engine rules that recipient. In observe and warn the old gate
+// does. An absolute denial rules in every mode, whatever any category's mode
+// says — that is what "absolute" means here.
+//
+// Whole-message refusal is preserved: one recipient the engine refuses under
+// enforce refuses the send, exactly as one recipient the old gate refuses does.
+func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) bool {
 	if s.HasAbsoluteDenial() {
 		return false
 	}
-	if mode == ModeEnforce {
-		return legacyAllowed && s.Allowed()
+	if len(s.Decisions) == 0 {
+		// No decision is not an allow. An empty set reaching here means the
+		// engine was asked about nobody, and a message with no authorized
+		// recipient is not a message that may go out.
+		return false
+	}
+	for _, d := range s.Decisions {
+		if modeFor(d.Resolved) != ModeEnforce {
+			continue
+		}
+		if d.Verdict != VerdictAllow {
+			return false
+		}
 	}
 	return legacyAllowed
 }

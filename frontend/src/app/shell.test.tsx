@@ -81,23 +81,26 @@ afterEach(() => {
 // chip and the agent moved out of it: a heading, the one line under it that some
 // screens need, and whatever the screen itself asked to put beside them.
 describe("PageTitle", () => {
+  // A screen the SHELL still names. The record lists name themselves in the
+  // header of the table that is the page (SELF_HEADED_SCREENS), so a list route
+  // would exercise the yield below rather than the heading this asserts.
   it("names the screen in a level-1 heading", () => {
-    render(<PageTitle route={{ screen: "deals" }} />);
+    render(<PageTitle route={{ screen: "analytics" }} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Pipeline" }),
+      screen.getByRole("heading", { level: 1, name: "Analytics" }),
     ).toBeTruthy();
     // The name, not a way anywhere: the trail is the top bar's and is the only
     // thing here that links.
-    expect(screen.queryByRole("link", { name: "Pipeline" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Analytics" })).toBeNull();
   });
 
   // AC-shell-1k: every authenticated route resolves to real copy. This bites on
   // a new off-rail route landing in the router without a title key — the old
   // fallback rendered the raw screen slug.
   it("resolves a title for off-rail routes instead of the raw slug", () => {
-    render(<PageTitle route={{ screen: "partners" }} />);
+    render(<PageTitle route={{ screen: "share" }} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Partners" }),
+      screen.getByRole("heading", { level: 1, name: "Sharing" }),
     ).toBeTruthy();
   });
 
@@ -151,9 +154,9 @@ describe("PageTitle", () => {
   // Only the screens PAGE_SUB_KEYS names. Most headings say what the page is for
   // on their own, and a subtitle there is a line of copy nobody needed to read.
   it("prints no subtitle on a screen the map does not name", () => {
-    const { container } = render(<PageTitle route={{ screen: "deals" }} />);
+    const { container } = render(<PageTitle route={{ screen: "analytics" }} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Pipeline" }),
+      screen.getByRole("heading", { level: 1, name: "Analytics" }),
     ).toBeTruthy();
     expect(container.querySelector(".pagesub")).toBeNull();
   });
@@ -334,12 +337,12 @@ describe("Section switcher (the page title at phone width)", () => {
     stubPhoneViewport();
     render(
       <PageTitle
-        route={{ screen: "deals" }}
+        route={{ screen: "analytics" }}
         section={fixtureSection("deep")}
       />,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: "Pipeline" }),
+      screen.getByRole("heading", { level: 1, name: "Analytics" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
@@ -455,11 +458,11 @@ describe("Shell", () => {
   });
 
   it("mints the page-level heading on a route that names no record", () => {
-    window.location.hash = "#/contacts";
+    window.location.hash = "#/analytics";
     render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
-    expect(headings[0].textContent).toBe("Contacts");
+    expect(headings[0].textContent).toBe("Analytics");
   });
 
   // The same rule for the line under that heading: the screens whose subtitle
@@ -507,7 +510,7 @@ describe("Shell", () => {
   // page. A title that drifted into the bar would scroll away with nothing; a
   // bar inside the scroller would take the trail off screen on a long page.
   it("mounts the top bar above the scroller and the page's name inside it", () => {
-    window.location.hash = "#/contacts";
+    window.location.hash = "#/analytics";
     const { container } = render(
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
     );

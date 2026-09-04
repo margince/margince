@@ -27,8 +27,8 @@ knowing how the automatic filing decides.
 **Projects** in the left navigation lists every live project: name and key,
 company, phase, owner, last activity.
 
-- **All / In delivery / A–Z** at the top switch between every project, the ones
-  in the **Delivering** phase, and an alphabetical listing.
+- **All / In delivery** at the top switch between every project and the ones
+  in the **Delivering** phase. An alphabetical listing is **Sort → Project**.
 - **Filter** opens the filter bar; its **Phase** chip narrows to one phase
   (**All phases** or one of the four).
 - **Search** matches names and keys.

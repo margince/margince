@@ -9,18 +9,12 @@ package persondraft
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
-	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -94,233 +88,6 @@ const draftSchema = `{
   }
 }`
 
-// modelDraft is what the lane answers, before grounding.
-type modelDraft struct {
-	Subject   string        `json:"subject"`
-	Body      string        `json:"body"`
-	Reasoning []modelReason `json:"reasoning"`
-}
-
-type modelReason struct {
-	Kind       string `json:"kind"`
-	Label      string `json:"label"`
-	EntityType string `json:"entity_type"`
-	EntityID   string `json:"entity_id"`
-}
-
-// Write produces the draft. lane may be nil, which is not an error state: it is
-// the deployment saying this role runs no model, and the deterministic floor is
-// the answer.
-func Write(
-	ctx context.Context, lane Completer, in Input, voice draftvoice.Context,
-) (Draft, crmcontracts.WrittenBy, error) {
-	floor := Deterministic(in)
-	if lane == nil {
-		return floor, crmcontracts.Deterministic, nil
-	}
-	written, err := writeChecked(ctx, lane, in, voice)
-	if err != nil {
-		// A model that is down, over budget or answering nonsense must not cost
-		// the rep their draft: the floor is a real message they can edit, and
-		// generated_by tells the reader which writer produced it. The error is
-		// deliberately swallowed rather than returned — it is a fact about the
-		// lane, not about this person, and there is nothing the caller could do
-		// with it.
-		//nolint:nilerr // degrading to the floor IS the answer; see the doc comment
-		return floor, crmcontracts.Deterministic, nil
-	}
-	return written, crmcontracts.Model, nil
-}
-
-// writeChecked drafts through the shared correct-and-retry loop, so this
-// surface cannot drift from the other two about what a rejected phrase is or
-// how many chances the model gets to fix one.
-func writeChecked(ctx context.Context, lane Completer, in Input, voice draftvoice.Context) (Draft, error) {
-	draft, err := draftcore.CorrectOnce(ctx, in.Envelope.Lang(), in.Envelope.Band(),
-		func(ctx context.Context, correction string) (Draft, error) {
-			return writeWithModel(ctx, lane, in, voice, correction)
-		},
-		draftText, draftSubject(in),
-		// No observer: this package holds no logger, and a retry that does not
-		// help still returns a real draft. The reply surface, which has one,
-		// reports it.
-		nil,
-	)
-	if err != nil {
-		return Draft{}, err
-	}
-	return applyVoiceFloor(ctx, lane, in, voice, draft)
-}
-
-// draftText and draftSubject say which parts of a draft the phrasing rules
-// read. Both passes that check a draft take them from here rather than each
-// spelling the accessors inline: the voice floor's whole job is comparing one
-// draft against another, and a comparison whose two sides read different fields
-// measures nothing.
-func draftText(d Draft) (string, []string) { return d.Body, reasonLabels(d.Reasoning) }
-
-func draftSubject(in Input) func(Draft) (string, bool) {
-	return func(d Draft) (string, bool) { return d.Subject, in.Threaded() }
-}
-
-// phrasingFindings is what the shared phrasing rules say is wrong with a draft.
-func phrasingFindings(in Input, draft Draft) []draftcheck.Finding {
-	return draftcore.Findings(draft, in.Envelope.Lang(), in.Envelope.Band(),
-		draftText, draftSubject(in))
-}
-
-func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, correction string) (Draft, error) {
-	req, err := buildRequest(in, voice)
-	if err != nil {
-		return Draft{}, err
-	}
-	if correction != "" {
-		// The correction rides the user turn, beside the fenced input, so a
-		// retry changes what the model is told about its LAST attempt and
-		// nothing about the request's shape.
-		req.Messages[len(req.Messages)-1].Content += correction
-	}
-	// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
-	// reply this site would refuse goes back to the model with the reason
-	// rather than degrading silently to the floor.
-	res, err := draftreply.Ask(ctx, lane, req, func(text string) error {
-		_, parseErr := ParseDraft(text, in)
-		return parseErr
-	})
-	if err != nil {
-		return Draft{}, err
-	}
-	return ParseDraft(res.Text, in)
-}
-
-// buildRequest builds the model call: the system prompt naming this call's
-// boundary, and the contact summary INSIDE it.
-//
-// The caller's intent is the one input outside the fence, and it is outside
-// because the caller typed it: fencing a person's own instruction would tell
-// the model to treat the reader as an attacker.
-//
-// The sender's voice profile, when they have one, rides the user turn under
-// this call's own fence — it is corpus text, so it is data and never
-// instruction.
-//
-//promptvoice:exempt this is an email the salesperson sends under their OWN name, so it carries THEIR voice (draftvoice) rather than Margince's personality — Margince's voice inside a customer-facing draft would be Margince signing somebody else's mail.
-func buildRequest(in Input, voice draftvoice.Context) (model.Request, error) {
-	fence := promptfence.New()
-	payload, err := json.Marshal(fencedInput(in))
-	if err != nil {
-		return model.Request{}, fmt.Errorf("marshal person draft input: %w", err)
-	}
-	content := fence.Wrap(string(payload))
-	if block := voice.Block(fence); block != "" {
-		content += "\n\n" + block
-	}
-	if in.Intent != "" {
-		content += "\n\nThe salesperson asks for: " + in.Intent
-	}
-	return model.Request{
-		System:   draftSystemFor(fence, voice.OK),
-		Messages: []model.Message{{Role: "user", Content: content}},
-		// Thinking headroom. A reasoning model spends output tokens on internal
-		// thinking BEFORE its answer, and that thinking counts against the cap —
-		// so a request with no cap takes the provider's default, and on a
-		// premium rung the answer is starved into a MAX_TOKENS stop with zero
-		// visible text. The reply site has always set this; these two never did,
-		// which is why raising the tier failed here and not there.
-		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: json.RawMessage(draftSchema),
-		SecretStripper: ai.NewSecretStripper(),
-	}, nil
-}
-
-// fencedInput is the payload minus the caller's own intent, which travels
-// outside the fence. Copying the struct rather than clearing the field keeps
-// the caller's Input untouched — it is read again by the deterministic floor.
-func fencedInput(in Input) Input {
-	in.Intent = ""
-	return in
-}
-
-// ParseDraft reads the lane's answer and grounds it.
-func ParseDraft(raw string, in Input) (Draft, error) {
-	var out modelDraft
-	// ai.Unfence, not the raw text: a model that wraps its JSON in a ```json
-	// fence answers correctly and would fail this parse. The reply surface
-	// already strips the fence, so without this the SAME model succeeds when it
-	// answers a reply and fails when it writes a draft — and ai.Unfence's own
-	// doc says callers must not each invent their own trim.
-	if err := json.Unmarshal([]byte(ai.Unfence(raw)), &out); err != nil {
-		return Draft{}, fmt.Errorf("person draft response: %w", err)
-	}
-	subject := strings.TrimSpace(out.Subject)
-	// Plain text, as the contract says a body is. A model asked for prose
-	// answers with `<br>` between paragraphs often enough that it is the
-	// shape of the answer; the reply surface reads it the same way, so the
-	// same model cannot format correctly on one surface and not the other.
-	// The greeting break is restored here rather than trusted to the prompt:
-	// the same request returns the run-on and the two-line form about equally
-	// often, and the composer renders exactly the breaks it is handed.
-	// Both names, because the register decides which one opens the message:
-	// the familiar greeting takes the first name and the formal one the
-	// surname, and the repair must recognise whichever the model wrote.
-	body := strings.TrimSpace(draftfloor.SplitGreetingLine(
-		ai.PlainText(out.Body), in.Recipient.FirstName, in.Recipient.LastName))
-	if subject == "" || body == "" {
-		return Draft{}, fmt.Errorf("person draft response: empty subject or body")
-	}
-	return Draft{
-		Subject:   subject,
-		Body:      body,
-		To:        toAddresses(in),
-		Reasoning: keepGroundedReasons(out.Reasoning, in),
-	}, nil
-}
-
-func toAddresses(in Input) []string {
-	if in.Recipient.Email == "" {
-		return nil
-	}
-	return []string{in.Recipient.Email}
-}
-
-// keepGroundedReasons drops a reason the reader could not check.
-//
-// A citation pointing at a record this caller's 360 did not carry is either a
-// hallucinated id or a record outside their row scope, and both render as a
-// chip that opens nothing. A reason with no citation at all is kept for the
-// caller's own intent, which cites nothing by design.
-func keepGroundedReasons(reasons []modelReason, in Input) []Reason {
-	known := knownRecords(in)
-	out := make([]Reason, 0, len(reasons))
-	for _, reason := range reasons {
-		kind, ok := parseKind(reason.Kind)
-		label := strings.TrimSpace(reason.Label)
-		if !ok || label == "" {
-			continue
-		}
-		keep := Reason{Kind: kind, Label: label}
-		if reason.EntityID != "" {
-			// The PAIR, not the id alone: an id checked without its type lets a
-			// deal id come back labelled as a person, and the chip then opens the
-			// wrong record's page rather than nothing at all — the worse of the
-			// two failures, because it looks like it worked.
-			if known[reason.EntityID] != reason.EntityType {
-				continue
-			}
-			keep.EntityType = reason.EntityType
-			keep.EntityID = reason.EntityID
-		} else if kind != crmcontracts.AccountDraftReasonKindIntent {
-			// A reason with no citation is only honest for the caller's own
-			// intent. An uncited "deal" or "conversation" reason is a claim about
-			// a record with no record behind it — exactly what the grounding
-			// filter exists to drop.
-			continue
-		}
-		out = append(out, keep)
-	}
-	return out
-}
-
 // parseKind narrows the model's string to the contract's closed vocabulary. An
 // unknown kind is dropped rather than passed through: the composer groups
 // reasons by kind, and one it does not know would render as an unlabelled chip.
@@ -383,21 +150,54 @@ func SystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fen
 // turns has two chances to drop the shared rules.
 func VoicedSystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence, true) }
 
-// reasonLabels is the provenance a draft shows the rep, for the checks that
-// judge it. The labels alone: an entity id is a citation the filter already
-// grounded, and reading it as prose would flag every uuid.
-func reasonLabels(reasons []Reason) []string {
-	out := make([]string, 0, len(reasons))
-	for _, reason := range reasons {
-		out = append(out, reason.Label)
-	}
-	return out
-}
-
 // GroundedRequest is the request this site sends, for the compose-level gates
 // that assert every drafting surface carries thinking headroom and that a
 // loaded voice profile reaches the model's user turn. Exported for those
 // assertions alone; the site itself calls buildRequest.
 func GroundedRequest(in Input, voice draftvoice.Context) (model.Request, error) {
-	return buildRequest(in, voice)
+	return draftcore.BuildRequest(surface(in), in, voice)
+}
+
+// surface is what this site decides for itself: its prompt, its schema, which
+// reason kinds it can serve, and which records a citation may point at.
+//
+// Everything else — the request, the fence, the parse, the correction loop, the
+// voice floor, the degrade-to-floor rule — is draftcore's, and is the same code
+// the account drafter runs. It was a second copy of all of it until this seam
+// existed, differing in error wording and one word of one comment.
+func surface(in Input) draftcore.Surface {
+	known := knownRecords(in)
+	return draftcore.Surface{
+		Name:   "person draft",
+		System: draftSystemFor,
+		Schema: draftSchema,
+		Kind:   parseKind,
+		// Only the caller's own intent is honest with nothing cited: they typed
+		// it. An uncited "deal" or "conversation" is a claim about a record with
+		// no record behind it.
+		KeepUncited: func(kind crmcontracts.AccountDraftReasonKind, _ string) bool {
+			return kind == crmcontracts.AccountDraftReasonKindIntent
+		},
+		Cites: func(entityID string) string { return known[entityID] },
+	}
+}
+
+// Write produces the draft. lane may be nil, which is not an error state: it is
+// the deployment saying this role runs no model, and the deterministic floor is
+// the answer.
+//
+// The error return is kept for its callers and is always nil — a lane that is
+// down, over budget or answering nonsense degrades to the floor rather than
+// failing, and `generated_by` says which writer produced the result.
+func Write(
+	ctx context.Context, lane Completer, in Input, voice draftvoice.Context,
+) (Draft, crmcontracts.WrittenBy, error) {
+	draft, by := draftcore.Write(ctx, lane, surface(in), in, voice, Deterministic(in))
+	return draft, by, nil
+}
+
+// ParseDraft reads the lane's answer and grounds it. Exported for the
+// certification case, which drives the same parse the runtime does.
+func ParseDraft(raw string, in Input) (Draft, error) {
+	return draftcore.ParseDraft(surface(in), raw, in)
 }

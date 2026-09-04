@@ -38,26 +38,33 @@ async function openRecord(page: Page, route: string) {
   await mockApi(page);
   await page.goto(route);
   await expect(page.locator(".recordtabs-tab").first()).toBeVisible();
-  // The column is the shell's, and it is what the strip must not reach under.
-  // A test that ran before it filled would measure a page with no neighbour and
-  // pass on every record.
-  await expect(page.locator(".pageaside")).toBeVisible();
+  // The pane is what the strip must stand clear of, and it starts closed. A
+  // test that measured before opening it would measure a page with no
+  // neighbour and pass on every record. The switch stands with the record's
+  // verbs on the pages that keep it there, and at the end of the tab row on
+  // the pages that have taken the design's glance.
+  await page
+    .locator(".record-actions, .recordtabs-trailing")
+    .locator("button[aria-pressed]")
+    .first()
+    .click();
+  await expect(page.locator(".record-aside")).toBeVisible();
 }
 
 test.describe("the record tab strip", () => {
   for (const record of RECORDS) {
     for (const width of RAILED_WIDTHS) {
-      test(`is clear of the context column on a ${record.name} at ${width}px`, async ({
+      test(`is clear of the details pane on a ${record.name} at ${width}px`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 900 });
         await openRecord(page, record.route);
 
-        const aside = await page.locator(".pageaside").boundingBox();
+        const aside = await page.locator(".record-aside").boundingBox();
         const tabs = await page.locator(".recordtabs-tab").all();
         expect(tabs.length).toBeGreaterThan(0);
         if (!aside) {
-          throw new Error("the context column is visible but has no box");
+          throw new Error("the details pane is visible but has no box");
         }
 
         for (const tab of tabs) {

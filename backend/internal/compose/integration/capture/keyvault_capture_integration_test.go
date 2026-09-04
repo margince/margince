@@ -18,11 +18,14 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -187,6 +190,89 @@ func TestLocalVaultIsolationAndWrongKeyOnRealPostgres(t *testing.T) {
 	}
 }
 
+// systemLogDetails reads the detail payloads this pass filed under one action.
+//
+// Straight from the table rather than through a reader, because there is no
+// reader: system_log is an operator's ledger with no API surface, which is
+// exactly why nothing would have noticed the rows being absent.
+func systemLogDetails(t *testing.T, e *integration.SearchEnv, action string) []map[string]any {
+	t.Helper()
+	rows, err := e.Owner.Query(context.Background(),
+		`SELECT detail FROM system_log WHERE action = $1 ORDER BY id`, action)
+	if err != nil {
+		t.Fatalf("reading the %s ledger: %v", action, err)
+	}
+	defer rows.Close()
+	var out []map[string]any
+	for rows.Next() {
+		var detail map[string]any
+		if err := rows.Scan(&detail); err != nil {
+			t.Fatalf("decoding a %s detail: %v", action, err)
+		}
+		out = append(out, detail)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("reading the %s ledger: %v", action, err)
+	}
+	return out
+}
+
+// Two workers booting at once relocate one credential once, and record it once.
+//
+// The pass reads its work list in one transaction and claims each row in
+// another, so between the two a second boot can take the row — its UPDATE
+// carries `AND credential_ref IS NULL` and simply matches nothing. That loser
+// must file no ledger row: the relocation is the fact, and a row per boot that
+// tried would make an operator scanning for when a credential moved read one
+// entry per worker.
+//
+// The assertion does not depend on WHICH boot wins, which is what keeps this
+// from being a coin flip: exactly one relocation is possible, so exactly one
+// ledger row is the answer either way.
+func TestTwoBootsRelocateOneCredentialOnce(t *testing.T) {
+	e := integration.SetupSearch(t)
+	vault := newTestKeyvault(t, e)
+	first := newTestCaptureRegistry(e, vault)
+	first.Register(&authAssertingFake{})
+	second := newTestCaptureRegistry(e, vault)
+	second.Register(&authAssertingFake{})
+
+	connID := ids.NewV7()
+	if _, err := e.Owner.Exec(context.Background(), `
+		INSERT INTO capture_connection (id, provider, user_id, scopes, status, auth)
+		VALUES ($1, 'graph', $2, $3, 'connected', $4)`,
+		connID, e.Rep1, []string{string(principal.ScopeRead)}, []byte("granted-token")); err != nil {
+		t.Fatalf("seeding the legacy connection: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	counts := make([]int, 2)
+	errs := make([]error, 2)
+	for i, registry := range []*capturemod.Registry{first, second} {
+		wg.Add(1)
+		go func(slot int, r *capturemod.Registry) {
+			defer wg.Done()
+			counts[slot], errs[slot] = r.BackfillCredentials(context.Background())
+		}(i, registry)
+	}
+	wg.Wait()
+
+	for slot, err := range errs {
+		if err != nil {
+			t.Fatalf("boot %d: %v", slot, err)
+		}
+	}
+	// One row, one relocation, however the two interleaved.
+	if total := counts[0] + counts[1]; total != 1 {
+		t.Errorf("the two boots between them migrated %d rows, want 1 — the claim is "+
+			"conditional on credential_ref still being null", total)
+	}
+	if rows := systemLogDetails(t, e, "capture_credential_relocated"); len(rows) != 1 {
+		t.Errorf("the two boots filed %d ledger row(s), want 1 — the boot that lost the "+
+			"row moved nothing and has nothing to record", len(rows))
+	}
+}
+
 func TestBackfillMigratesLegacyAuthRowOntoTheVault(t *testing.T) {
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
@@ -236,6 +322,32 @@ func TestBackfillMigratesLegacyAuthRowOntoTheVault(t *testing.T) {
 		t.Fatalf("vault does not hold the migrated credential: got %q err %v", got, err)
 	}
 
+	// The relocation is in the ledger, and it is the only ledger that can hold
+	// it: the row is not pending so no decision lane sees it, and the pass files
+	// no audit row on purpose — the credential VALUE did not change, so "who set
+	// this credential" is still the connect row's answer. What was missing was
+	// WHEN the bytes moved, which is what an operator debugging a connection
+	// that broke across a deploy needs (#2552).
+	relocations := systemLogDetails(t, e, "capture_credential_relocated")
+	if len(relocations) != 1 {
+		t.Fatalf("the relocation filed %d system_log row(s), want 1 — the one writer that "+
+			"repoints a live connection at new ciphertext left no trace of when", len(relocations))
+	}
+	if got := relocations[0]["connection_id"]; got != connID.String() {
+		t.Errorf("the ledger names connection %v, want %s", got, connID)
+	}
+	if got := relocations[0]["credential_ref"]; got != *credentialRef {
+		t.Errorf("the ledger names ref %v, want the one on the row (%s) — an operator "+
+			"correlates the two", got, *credentialRef)
+	}
+	// And never the material. The bytes are the whole reason this moved into a
+	// vault, so a ledger anybody can read must not carry them.
+	for key, value := range relocations[0] {
+		if text, ok := value.(string); ok && strings.Contains(text, "granted-token") {
+			t.Errorf("the ledger's %s carries the credential itself: %q", key, text)
+		}
+	}
+
 	// A second backfill is a no-op: the row already carries a ref.
 	migrated, err = registry.BackfillCredentials(context.Background())
 	if err != nil {
@@ -243,6 +355,14 @@ func TestBackfillMigratesLegacyAuthRowOntoTheVault(t *testing.T) {
 	}
 	if migrated != 0 {
 		t.Fatalf("idempotent backfill migrated %d rows on the second run, want 0", migrated)
+	}
+	// And it files nothing either. The pass runs on EVERY boot, so a ledger
+	// that recorded each run would count restarts rather than relocations —
+	// and an operator scanning for when a credential moved would find one
+	// entry per deploy since.
+	if again := systemLogDetails(t, e, "capture_credential_relocated"); len(again) != 1 {
+		t.Errorf("after a second boot the ledger holds %d row(s), want the one relocation — "+
+			"the pass runs every boot and only the move is a fact", len(again))
 	}
 
 	// Sync now resolves the migrated credential through the vault.

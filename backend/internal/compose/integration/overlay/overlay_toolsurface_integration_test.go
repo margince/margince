@@ -81,6 +81,11 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// by the executor. One refusal, not a working description of an
 		// unavailable capability.
 		"describe_query_vocabulary": `{}`,
+		// The report vocabulary, for the reason above and not because its names
+		// are workspace-specific — they are the engine's own. What decides it is
+		// that run_report is refused here, so a caller taught the filter and
+		// grouping names would write a correct plan and be refused for the verb.
+		"describe_report_vocabulary": `{}`,
 		// The ranked sweep: the lexical and vector indexes hold no mirrored
 		// content, so an unguarded call answers an empty page — a believable
 		// "there is nothing like that here" for a workspace full of records.

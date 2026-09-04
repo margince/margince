@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -360,7 +359,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 		commsResolver{registry: registry, channels: registry},
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),
-		consent.NewGate(consent.NewStore(InstallationDB(pool))),
+		consentGateFor(pool),
 		[]comms.SendPolicy{comms.NewMailboxRatePolicy(p.Limit, p.Window, time.Now)},
 		time.Now,
 		p.MaxAge,

@@ -220,22 +220,21 @@ func (s *MirrorStore) revokeEmailMappingsForOwners(ctx context.Context, incumben
 // off app_user, so the installation's users ARE the candidate set, and
 // uq_app_user_email makes an address name at most one of them.
 //
-// Agent and archived seats are excluded for the same reason the admin
-// surface refuses them: an agent seat is a passport identity with no
-// incumbent counterpart to match, and an archived seat no longer logs in, so
-// a mapping either way grants mirror visibility to something that should not
-// carry it. This is ONE invariant with the eligibility predicate
-// selectUserMapTargetSQL (usermapadmin.go) applies to ListUserMap and
-// SetManualUserMap — spelled twice because a scalar check and a set query
-// read better apart, so a change to either belongs in both.
+// The seats it matches are the mappable ones, and it READS that predicate from
+// mappableSeatSQL rather than spelling it: an agent seat is a passport identity
+// with no incumbent counterpart to match, and a seat that no longer logs in —
+// archived or deactivated — must not be handed mirror visibility. It used to be
+// spelled here, on the ground that "a scalar check and a set query read better
+// apart"; what that bought in readability it lost in agreement, since this site
+// and its two siblings all excluded an archived seat and none excluded a
+// deactivated one (#2592).
 func (s *MirrorStore) usersMatchingEmail(ctx context.Context, email, incumbent string) ([]ids.UserID, error) {
 	var users []ids.UserID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT u.id FROM app_user u
 			WHERE lower(trim(u.email)) = lower(trim($1))
-			  AND NOT u.is_agent
-			  AND u.archived_at IS NULL
+			  AND `+mappableSeatSQL("u")+`
 			  AND NOT EXISTS (
 			      SELECT 1 FROM mirror_user_map m
 			      WHERE m.app_user_id = u.id AND m.incumbent = $2 AND m.match_source = 'manual'

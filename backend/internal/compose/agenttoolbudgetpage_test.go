@@ -36,6 +36,11 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 		b.PromptCeiling, b.AgentBudget, listingBudgetNumerator, listingBudgetDenominator)
 	fmt.Fprintf(&p, "served catalog is held to %d — a floor for the certification lane, not a budget any\n", b.CatalogFloor)
 	p.WriteString("feature is expected to argue with.\n\n")
+	fmt.Fprintf(&p, "Before any tool is listed the frame itself costs **%d tokens** — the output contract,\n", b.Catalog.Frame)
+	p.WriteString("the rules and the prompt fence. It is published here because a rule moved OUT of the\n")
+	p.WriteString("per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence,\n")
+	p.WriteString("and only the first half is held by a bound: the floor above measures the LISTING\n")
+	p.WriteString("alone. A frame that grows a paragraph spends it on every run of every agent.\n\n")
 
 	p.WriteString("## The declared agents\n\n")
 	p.WriteString("| Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |\n")

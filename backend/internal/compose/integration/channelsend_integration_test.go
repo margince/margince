@@ -187,6 +187,15 @@ func (c *channelSendEnv) connectBot(t *testing.T) {
 // where the "what do I do about it" has to live.
 func (c *channelSendEnv) sendReply(t *testing.T, purpose, body string, headers map[string]string) (status int, code, message string) {
 	t.Helper()
+	return c.sendReplyClaiming(t, purpose, body, "", headers)
+}
+
+// sendReplyClaiming is sendReply plus a claimed communication category, which
+// is the only way to reach the channel door's own copy of the category
+// refusal. Empty context omits the field entirely, so the ordinary caller
+// above sends exactly the body it used to.
+func (c *channelSendEnv) sendReplyClaiming(t *testing.T, purpose, body, context string, headers map[string]string) (status int, code, message string) {
+	t.Helper()
 	var answer struct {
 		Code    string `json:"code"`
 		Detail  string `json:"detail"`
@@ -197,9 +206,11 @@ func (c *channelSendEnv) sendReply(t *testing.T, purpose, body string, headers m
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	status = c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", AnyMap{
-		"body": body, "consent_purpose": purpose,
-	}, headers, &answer)
+	payload := AnyMap{"body": body, "consent_purpose": purpose}
+	if context != "" {
+		payload["communication_context"] = context
+	}
+	status = c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", payload, headers, &answer)
 	if errs := answer.Details.Errors; len(errs) > 0 {
 		return status, errs[0].Code, errs[0].Message
 	}

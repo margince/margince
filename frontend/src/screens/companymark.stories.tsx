@@ -14,7 +14,7 @@ import { installFetchStub, StoryProviders } from "./story-utils";
 // edit the company sees.
 
 const meta: Meta<typeof CompanyMark> = {
-  title: "Settings/Company mark",
+  title: "Settings/Company logo",
   component: CompanyMark,
   parameters: { layout: "padded" },
 };
@@ -30,11 +30,10 @@ const WITHOUT_MARK: CompanyProfile = {
   display_name: "Brandt Automotive GmbH",
 };
 
-// A one-pixel PNG stands in for the stored mark. Storybook serves no object
-// store, and what a broken image would draw here is the monogram — which is
-// the story below, so this one has to actually paint something.
-const PIXEL =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+// A wide data-URI wordmark stands in for the stored PNG. Storybook serves no
+// object store, and the wide shape is the case this preview exists to prove.
+const WORDMARK =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 700 200'%3E%3Crect width='700' height='200' fill='white'/%3E%3Ctext x='350' y='125' text-anchor='middle' font-family='sans-serif' font-size='92' font-weight='700' fill='%23ff6500'%3EGRADION%3C/text%3E%3C/svg%3E";
 
 export const NoMarkYet: Story = {
   args: { profile: WITHOUT_MARK, canEdit: true },
@@ -46,7 +45,7 @@ export const NoMarkYet: Story = {
 };
 
 export const WearingItsOwnMark: Story = {
-  args: { profile: { ...WITHOUT_MARK, logo_url: PIXEL }, canEdit: true },
+  args: { profile: { ...WITHOUT_MARK, logo_url: WORDMARK }, canEdit: true },
   render: (args) => (
     <StoryProviders>
       <CompanyMark {...args} />
@@ -66,7 +65,7 @@ export const WearingItsOwnMarkDark: Story = {
 // goes is the pair of verbs, rather than being drawn disabled — a control whose
 // only possible answer is a refusal is worse than no control.
 export const NotYoursToChange: Story = {
-  args: { profile: { ...WITHOUT_MARK, logo_url: PIXEL }, canEdit: false },
+  args: { profile: { ...WITHOUT_MARK, logo_url: WORDMARK }, canEdit: false },
   render: (args) => (
     <StoryProviders>
       <CompanyMark {...args} />
@@ -104,15 +103,15 @@ export const TheServerRefusesTheImage: Story = {
     );
   },
   // Driven to the refusal rather than posed at it: the callout appears only
-  // after a file is offered and judged, so a frame that stopped at "Add a mark"
+  // after a file is offered and judged, so a frame that stopped at "Add a logo"
   // would be the NoMarkYet story under a different name.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Add a mark" }),
+      await canvas.findByRole("button", { name: "Add a logo" }),
     );
     await userEvent.upload(
-      canvas.getByLabelText("Company mark"),
+      canvas.getByLabelText("Company logo"),
       new File(["not an image"], "mark.png", { type: "image/png" }),
     );
     await canvas.findByRole("alert");

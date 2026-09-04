@@ -76,9 +76,14 @@ type TeamReview struct {
 
 // TeamCounts are the team's totals over its member weeks.
 type TeamCounts struct {
-	RepsCounted           int
-	DealsWon              int
-	DealsLost             int
+	RepsCounted int
+	DealsWon    int
+	DealsLost   int
+	// DealsMoved counts deals that changed stage without closing — the week's
+	// advancement. Every member's review has carried it since the review
+	// shipped; the team total dropped it, so a team that moved eleven deals and
+	// closed none read as a team that did nothing.
+	DealsMoved            int
 	LeadsRouted           int
 	LeadsAnsweredInTarget int
 	LeadsBreached         int
@@ -194,6 +199,7 @@ func gatherTeamWeek(
 func addTeamCounts(team *TeamCounts, member Counts) {
 	team.DealsWon += member.DealsWon
 	team.DealsLost += member.DealsLost
+	team.DealsMoved += member.DealsMoved
 	team.LeadsRouted += member.LeadsRouted
 	team.LeadsAnsweredInTarget += member.LeadsAnsweredInTarget
 	team.LeadsBreached += member.LeadsBreached

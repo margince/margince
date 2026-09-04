@@ -322,7 +322,21 @@ export function IdentityRail({
                         product has always had the words for it, one screen
                         over on the account this deal belongs to. */}
                     <Badge tone="accent">{dealRoleLabel(r.role, t)}</Badge>
-                    {r.deal_title && <> · {r.deal_title}</>}
+                    {/* The deal, as a link. `deal_id` has always been on this
+                        payload and the title was printed as text beside it,
+                        which left the one row on this card naming a record the
+                        reader could not open — while the employment row above
+                        links the company through the same component. */}
+                    {r.deal_title && (
+                      <>
+                        {" · "}
+                        <EntityRef
+                          kind="deal"
+                          id={r.deal_id}
+                          name={r.deal_title}
+                        />
+                      </>
+                    )}
                   </>
                 ),
               })),
@@ -341,7 +355,15 @@ export function IdentityRail({
                   key={e.relationship_id}
                   style={{ marginTop: "var(--space-1)" }}
                 >
-                  {e.organization_name ?? "—"}
+                  {/* A former employer is a company the reader can open, and
+                      `organization_id` was on the row already. EntityRef draws
+                      the em dash itself when there is no id, which is what this
+                      was falling back to by hand. */}
+                  <EntityRef
+                    kind="organization"
+                    id={e.organization_id}
+                    name={e.organization_name}
+                  />
                   {e.role && <> · {e.role}</>}
                 </li>
               ))}

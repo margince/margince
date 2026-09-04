@@ -24,10 +24,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// draftInputActivities bounds how much of the conversation the draft reads. A
+// DraftInputActivities bounds how much of the conversation the draft reads. A
 // follow-up is about the last exchange, not the relationship's history; a
 // longer window costs prefill and buys older news.
-const draftInputActivities = 6
+//
+// Exported because a caller that has to FETCH the conversation reads the bound
+// from here rather than choosing its own. The lead seam does: a page size
+// larger than this carries history across the seam for FoldRecent to discard,
+// and one smaller silently shortens the window this constant defines.
+const DraftInputActivities = 6
 
 // draftInputClaims bounds what the draft may reach for. Past a handful the
 // prompt is choosing between claims rather than writing from them, and the one

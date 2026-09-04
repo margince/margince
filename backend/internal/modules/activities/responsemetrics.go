@@ -40,7 +40,8 @@ type ResponseMetrics struct {
 	// a genuine zero-minute median.
 	MedianMinutes int
 	// Disposed is how many rows a reader put DOWN in the window — snoozed,
-	// marked not theirs, or judged not sales.
+	// marked not theirs, or judged not sales. Over the conversations the CALLER
+	// may open, like every figure beside it.
 	Disposed int
 	// DisposedNotSales is how many of those were the workspace-wide judgement.
 	// Its own figure because it is the one that costs everybody: the other two
@@ -131,14 +132,64 @@ const firstResponseSQL = `
 // snooze that lifted and a not_mine somebody withdrew have left no trace in it.
 // The audit row is the only record that the judgement was ever made, which is
 // what a rate over a window needs.
+//
+// The states are NAMED, and the earlier `IS NOT NULL` is the reason. Four verbs
+// write this column and two of them are UNDO — `picked_up` takes back a
+// not_mine, `sales_again` takes back a not_sales — so counting every non-null
+// value scored a rep who set a row aside and then thought better of it at TWO
+// dispositions rather than none. The figure ran backwards for exactly the
+// behaviour it should reward, and read as more judgement the more of it was
+// withdrawn.
+//
+// Counted under the CALLER's own visibility, like the median beside it. The
+// audit row names the activity it judged, so the count joins to that activity
+// and applies the same content clause: a judgement made on a conversation this
+// reader may not open contributes to no figure here. Without the join the two
+// halves of one response disagreed about whose workspace they described — the
+// median spoke for what the caller can see and these two for everybody — while
+// the endpoint's own prose promised caller visibility for all four.
+//
+// An INNER join, so an audit row whose activity is gone counts for nobody. A
+// deleted conversation is not a judgement anyone can still check, and admitting
+// it would be the one direction this figure must not fail in: reporting work
+// under a reader who cannot reach it. Production does not delete activity rows
+// — erasure anonymizes them in place — so this drops nothing a live workspace
+// holds; it is the honest answer for the case where a row IS gone.
+//
+// ARCHIVED activities are kept, and that is the one place this query and the
+// median deliberately differ. The median excludes them because an archived
+// thread is not a wait anybody is still serving. A judgement is a different
+// kind of fact: the reader made it, in the window, and archiving the thread
+// afterwards does not unmake it. Counting only unarchived ones would make the
+// figure fall as a workspace tidied up — the same defect reading from
+// activity_reader_state had, taking a different route.
+// Every placeholder is derived from the argument slice rather than typed, which
+// the rulebook asks of any statement whose arguments are built beside it.
+// Nothing checks that a hand-typed $N still names the value a caller appends,
+// and the content clause below numbers itself from wherever this query's own
+// arguments end — so a literal here would be a second place to keep in step.
 const dispositionsSQL = `
-	SELECT count(*) FILTER (WHERE a.after->>'disposition' IS NOT NULL),
-	       count(*) FILTER (WHERE a.after->>'disposition' = 'not_sales')
+	SELECT count(*) FILTER (WHERE a.after->>'disposition' = ANY($%[3]d)),
+	       count(*) FILTER (WHERE a.after->>'disposition' = $%[4]d)
 	  FROM audit_log a
+	  JOIN activity act ON act.id = a.entity_id
 	 WHERE a.entity_type = 'activity'
 	   AND a.action = 'update'
-	   AND a.occurred_at >= $1
-	   AND a.occurred_at < $2`
+	   AND a.occurred_at >= $%[1]d
+	   AND a.occurred_at < $%[2]d
+	   AND %[5]s`
+
+// puttingDown is the set of verbs that PUT a row down, as against the two that
+// pick one back up.
+//
+// A function rather than a package var so no caller can append to the answer
+// another caller is about to read — the shape every enumerated set in this tree
+// takes. `stateNotSales` is spelled beside its siblings here rather than only
+// inside the writer, because a figure counting a state nothing writes is a
+// silent zero and reads exactly like a quiet fortnight.
+func puttingDown() []string {
+	return []string{stateSnoozed, stateNotMine, stateNotSales}
+}
 
 // ResponseWindow reads both figures over one window.
 //
@@ -182,11 +233,23 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}
-		// The audit read carries no content clause, and that is deliberate: an
-		// audit row records that a JUDGEMENT was made, not what the message
-		// said, and the count is over the workspace's own bookkeeping. The
-		// workspace binding is the transaction's.
-		if err := tx.QueryRow(ctx, dispositionsSQL, from, to).
+		// A second statement, so a second argument list. Each value takes the
+		// position `putArg` gives it and the statement is rendered against those
+		// positions, so nothing here depends on how many arguments the median
+		// above happened to take.
+		var putArgs []any
+		putArg := func(v any) int { putArgs = append(putArgs, v); return len(putArgs) }
+		windowFrom, windowTo := putArg(from), putArg(to)
+		down, wholeWorkspace := putArg(puttingDown()), putArg(stateNotSales)
+		// The same gate the median above carries, on the activity the audit row
+		// names. A judgement made on a conversation this reader may not open
+		// counts for nobody here.
+		putContent, err := auth.ActivityContentClause(ctx, "act", putArg)
+		if err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, fmt.Sprintf(dispositionsSQL,
+			windowFrom, windowTo, down, wholeWorkspace, putContent), putArgs...).
 			Scan(&out.Disposed, &out.DisposedNotSales); err != nil {
 			return fmt.Errorf("activities: reading disposition counts: %w", err)
 		}

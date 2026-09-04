@@ -39,6 +39,29 @@ import (
 // personCreator is a principal that may CREATE a contact. The shared capture
 // helper grants person:read only — deliberately, because a capture connector
 // does not create people through that path — so seeding a contact needs its own.
+// connectorCreator mints a person the way the capture sink does: under a
+// CONNECTOR principal, so captured_by records a connector rather than a
+// colleague.
+//
+// The difference is load-bearing rather than cosmetic. completePersonName takes
+// `captured_by LIKE 'human:%'` as evidence that a human set the display name,
+// and refuses to move it — so a fixture that seeds a capture-shaped person
+// under personCreator is asserting a human typed the name it then expects to be
+// replaced.
+func connectorCreator(e *integration.SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:gcal",
+		SeatType: principal.SeatFull,
+		Scopes:   principal.NewScopeSet(),
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
 func personCreator(e *integration.SearchEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -164,9 +187,10 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 }
 
 // Nobody has a record for the attendee, so there is nothing to file the meeting
-// under, and the limiter's hold still applies. An invite is not correspondence:
-// this path must not create a person to have something to link.
-func TestACapturedMeetingWithNoKnownAttendeeStaysHeld(t *testing.T) {
+// under — and it is STILL workspace business, because a connected calendar is a
+// work calendar. An invite is not correspondence, though: this path must not
+// create a person to have something to link.
+func TestACapturedMeetingWithNoKnownAttendeeIsStillWorkspaceBusiness(t *testing.T) {
 	e := integration.SetupSearch(t)
 
 	activity := syncOneGcalMeeting(t, e)
@@ -175,9 +199,10 @@ func TestACapturedMeetingWithNoKnownAttendeeStaysHeld(t *testing.T) {
 	if len(linked) != 0 {
 		t.Fatalf("meeting filed under %v, want nothing — no attendee has a record, and an invite does not create one", linked)
 	}
-	if audience != "participants" || reason == nil || *reason != activities.ReasonNoCounterparty {
-		t.Errorf("meeting born audience=%q reason=%v, want participants/%s — a meeting filed under nothing is still held to the people on it",
-			audience, reason, activities.ReasonNoCounterparty)
+	if audience != "workspace" || reason != nil {
+		t.Errorf("meeting born audience=%q reason=%v, want workspace/nil — every event on a connected work calendar is workspace business, "+
+			"and holding one to its attendees hid it from colleagues while the invitation MAIL beside it stayed readable",
+			audience, reason)
 	}
 	var persons int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -203,40 +228,76 @@ func systemRepairCtx(e *integration.SearchEnv) context.Context {
 	})
 }
 
-// The other half of the hold: once the meeting IS filed, the reason it was held
-// has stopped being true.
+// A meeting captured BEFORE the limiter stopped holding calendar records still
+// wears the hold, and the release is what opens it.
 //
-// This is the ordering Chris's meeting was in — captured while nobody had a
-// record for the attendee, filed under them by the cohort repair a day later,
-// and held to its participants ever since. The invitation EMAILS beside it on
-// the same page were workspace-readable the whole time, so the meeting was the
-// one row a colleague could not see.
-func TestAMeetingFiledLaterStopsBeingHeld(t *testing.T) {
+// This is the state Chris's meeting was found in: every meeting already in the
+// database carried the hold, so shipping the rule for new captures alone left
+// the whole existing calendar invisible to everyone but the invitees, while the
+// invitation EMAILS beside them stayed workspace-readable.
+//
+// The hold is stamped by hand here because production can no longer produce one
+// — which is the point. The row is the shape the old writer left behind, and
+// what is under test is that the release recognises it.
+func TestAMeetingHeldByTheOldRuleIsReleased(t *testing.T) {
 	e := integration.SetupSearch(t)
 
 	activity := syncOneGcalMeeting(t, e)
-	if _, _, audience, reason := meetingFiling(t, e, activity); audience != "participants" ||
-		reason == nil || *reason != activities.ReasonNoCounterparty {
-		t.Fatalf("the meeting was not born held: audience=%q reason=%v", audience, reason)
+	for _, held := range []string{activities.ReasonNoRecord, activities.ReasonNoCounterparty} {
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			_, err := tx.Exec(context.Background(),
+				`UPDATE activity SET audience = 'participants', audience_reason = $2 WHERE id = $1`,
+				activity, held)
+			return err
+		}); err != nil {
+			t.Fatalf("stamping the old hold %s: %v", held, err)
+		}
+
+		repair := systemRepairCtx(e)
+		if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+			return activities.ReleaseCalendarMeetingHoldTx(repair, tx, activity)
+		}); err != nil {
+			t.Fatalf("releasing the hold %s: %v", held, err)
+		}
+
+		_, _, audience, reason := meetingFiling(t, e, activity)
+		if audience != "workspace" || reason != nil {
+			t.Errorf("after releasing %s: meeting audience=%q reason=%v, want workspace/nil — "+
+				"the rule that held it no longer exists, and nothing else asks for it to be held",
+				held, audience, reason)
+		}
+	}
+}
+
+// The release removes ONE contributor and asks the rest. A human who narrowed
+// the meeting by hand is not a contributor it may overrule: opening the row
+// would publish what a person deliberately closed.
+func TestTheReleaseLeavesAHumansOwnNarrowingAlone(t *testing.T) {
+	e := integration.SetupSearch(t)
+
+	activity := syncOneGcalMeeting(t, e)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET audience = 'participants', audience_reason = $2 WHERE id = $1`,
+			activity, activities.ReasonManual)
+		return err
+	}); err != nil {
+		t.Fatalf("recording the human's narrowing: %v", err)
 	}
 
-	// The contact arrives, and the repair files the meeting under them. Through
-	// the real store, so the seam compose wires is the one under test.
-	store := people.NewStore(e.DB()).WithAudienceRecompute(activities.RecomputeAudienceTx)
-	buyer, err := store.EnsurePersonByEmail(personCreator(e), "Buyer Example", "buyer@acme.com", "manual")
-	if err != nil {
-		t.Fatalf("seeding the attendee: %v", err)
-	}
-	if _, err := store.RepairPersonCohort(systemRepairCtx(e), ids.From[ids.PersonKind](buyer)); err != nil {
-		t.Fatalf("repairing the cohort: %v", err)
+	// A context that COULD write, so the refusal under test is the guard's and
+	// not a missing actor's: with the manual check removed this opens the row.
+	repair := systemRepairCtx(e)
+	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+		return activities.ReleaseCalendarMeetingHoldTx(repair, tx, activity)
+	}); err != nil {
+		t.Fatalf("releasing: %v", err)
 	}
 
-	linked, _, audience, reason := meetingFiling(t, e, activity)
-	if len(linked) != 1 || linked[0] != buyer {
-		t.Fatalf("the repair filed the meeting under %v, want the attendee %s", linked, buyer)
-	}
-	if audience != "workspace" || reason != nil {
-		t.Errorf("meeting audience=%q reason=%v, want workspace/nil — it is filed under a record now, "+
-			"so the hold that said it was filed under none is no longer true", audience, reason)
+	_, _, audience, reason := meetingFiling(t, e, activity)
+	if audience != "participants" || reason == nil || *reason != activities.ReasonManual {
+		t.Errorf("meeting audience=%q reason=%v, want participants/%s — a person closed this row by hand, "+
+			"and a repair that opens it publishes what they closed",
+			audience, reason, activities.ReasonManual)
 	}
 }

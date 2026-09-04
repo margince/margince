@@ -32,6 +32,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -64,13 +65,19 @@ func (LinkReconcileArgs) Kind() string { return "link_reconcile" }
 func (LinkReconcileArgs) FleetWide() {}
 
 type linkReconcileWorker struct {
-	pool  *pgxpool.Pool
-	store *people.Store
-	log   *slog.Logger
+	pool    *pgxpool.Pool
+	store   *people.Store
+	pending *capture.PendingStore
+	log     *slog.Logger
 }
 
 func newLinkReconcileWorker(pool *pgxpool.Pool, store *people.Store, log *slog.Logger) *linkReconcileWorker {
-	return &linkReconcileWorker{pool: pool, store: store, log: log}
+	return &linkReconcileWorker{
+		pool:    pool,
+		store:   store,
+		pending: capture.NewPendingStore(InstallationDB(pool)),
+		log:     log,
+	}
 }
 
 // Work enqueues one pass per workspace, so a failure in one leaves the rest
@@ -140,13 +147,148 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 		w.log.InfoContext(ctx, "link reconcile: filed meetings are no longer held to their attendees",
 			"workspace", job.Args.Workspace.String(), "meetings", lifted)
 	}
+	released, err := w.releaseCalendarMeetingHolds(sweepCtx)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if released > 0 {
+		w.log.InfoContext(ctx, "link reconcile: work-calendar meetings are workspace business again",
+			"workspace", job.Args.Workspace.String(), "meetings", released)
+	}
+	asked, err := w.askAboutStrandedContacts(sweepCtx)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if asked > 0 {
+		w.log.InfoContext(ctx, "link reconcile: captured contacts nobody had been asked about are queued",
+			"workspace", job.Args.Workspace.String(), "contacts", asked)
+	}
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, job.Args.Workspace)))
+}
+
+// askAboutStrandedContactsPerTick bounds the drain, on the same reasoning as
+// the meeting holds above: the population is finite and shrinks as it is
+// worked, so a small bound costs one probe a tick once it is empty.
+const askAboutStrandedContactsPerTick = 200
+
+// askAboutStrandedContacts opens the questions the capture could not.
+//
+// The ceiling on open questions is per workspace and per domain, and a refusal
+// writes nothing. That is deliberate — the question is delayed, not cancelled —
+// but the retry rides the next message from that address, and a correspondence
+// that has gone quiet never sends one. The contact then stays the mailbox
+// owner's for good: invisible to every colleague, their manager and an admin,
+// with nothing left to put it back in the queue.
+//
+// A contact whose question the ceiling refuses again is simply offered again
+// next tick. That is the bound doing its job rather than a failure: the queue
+// drains, and the room appears.
+func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (int, error) {
+	stranded, err := w.pending.StrandedContacts(ctx, askAboutStrandedContactsPerTick)
+	if err != nil {
+		return 0, err
+	}
+	asked := 0
+	var failed error
+	for _, c := range stranded {
+		opened, err := w.pending.AskWhoseRecord(ctx, c)
+		if err != nil {
+			// One contact's failure is not the sweep's: the rest of the page is
+			// still worth asking about, and a joined error still fails the job.
+			failed = errors.Join(failed, fmt.Errorf("asking about %s: %w", c.PersonID, err))
+			continue
+		}
+		if opened {
+			asked++
+		}
+	}
+	return asked, failed
 }
 
 // liftFiledMeetingHoldsPerTick bounds the drain. The population is finite and
 // shrinks as it is worked, so a small bound costs one probe a tick once it is
 // empty and never delays the repair above it.
 const liftFiledMeetingHoldsPerTick = 200
+
+// releaseCalendarMeetingHolds opens the meetings captured before the limiter
+// stopped holding them.
+//
+// A connected calendar is a WORK calendar, so an event on it is workspace
+// business and capture no longer holds one at all. Rows captured before that
+// still carry the hold, and no later event re-asks the question: the ones with
+// no link are not even offered to the drain above, so a recurring internal
+// meeting would stay invisible to the workspace for the rest of its life.
+//
+// Both spellings, because the reason was split at the writer AFTER these rows
+// were written: a meeting held before the split carries ReasonNoRecord and one
+// held after it carries ReasonNoCounterparty.
+//
+// ReasonNoRecord is otherwise the JUDGED hold — a suppressed sender, a thread
+// judged the owner's private life — and opening one of those would publish a
+// mailbox owner's private correspondence to the workspace. Two conditions make
+// reading it safe here, and both are required:
+//
+//   - kind = 'meeting'. A necessary condition, never a sufficient one: the
+//     extension ingress copies Kind straight off a third-party unit's record
+//     with no vocabulary check in front of it, so the word is not the calendar's
+//     to claim.
+//   - counterparty_email IS NULL, which is WHY a meeting reached the limiter at
+//     all. Attendance is a list, so the mapper names no counterparty, and the
+//     ladder concluded "captured, named nobody" without judging anyone. Every
+//     judged hold is about a sender, so its row names one, and this is the
+//     condition no writer can forge by choosing a string.
+//
+// The null counterparty alone would admit the address-less mail that reaches the
+// same branch. Together they are the shape only a record that named nobody has.
+//
+// It drains permanently: the release rewrites audience and reason on every row
+// it selects, so a row worked once cannot match again.
+func (w *linkReconcileWorker) releaseCalendarMeetingHolds(ctx context.Context) (int, error) {
+	var held []ids.ActivityID
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT a.id
+			  FROM activity a
+			 WHERE a.kind = 'meeting'
+			   AND a.counterparty_email IS NULL
+			   AND a.audience = 'participants'
+			   AND a.audience_reason IN ($1, $2)
+			   AND a.restricted_at IS NULL
+			   AND a.archived_at IS NULL
+			   -- Captured, not booked in the app: the in-app meeting writes its
+			   -- own audience and leaves no import row, and the recompute
+			   -- declines it. Selecting one would return it every tick.
+			   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)
+			 ORDER BY a.occurred_at DESC, a.id
+			 LIMIT $3`,
+			activities.ReasonNoRecord, activities.ReasonNoCounterparty,
+			liftFiledMeetingHoldsPerTick)
+		if err != nil {
+			return fmt.Errorf("selecting the calendar meetings still held: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.ActivityID
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("reading a calendar meeting still held: %w", err)
+			}
+			held = append(held, id)
+		}
+		return rows.Err()
+	}); err != nil {
+		return 0, err
+	}
+	released := 0
+	for _, id := range held {
+		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+			return activities.ReleaseCalendarMeetingHoldTx(ctx, tx, id)
+		}); err != nil {
+			return released, fmt.Errorf("releasing the hold on %s: %w", id, err)
+		}
+		released++
+	}
+	return released, nil
+}
 
 // liftFiledMeetingHolds re-derives the audience of records that are filed under
 // something and still carry the limiter's "named nobody" hold.

@@ -38,7 +38,7 @@ function day(readings: Partial<WorklistReadingsData> = {}): Worklist {
 function draw(readings: Partial<WorklistReadingsData> = {}) {
   return render(
     <LocaleProvider initial="en">
-      <WorklistReadings day={day(readings)} />
+      <WorklistReadings day={day(readings)} onLane={() => {}} />
     </LocaleProvider>,
   );
 }

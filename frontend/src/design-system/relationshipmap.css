@@ -72,6 +72,10 @@
   font-weight: var(--fw-medium);
 }
 
+.rmap-pill-waiting {
+  fill: var(--warn);
+}
+
 .rmap-pill-answered {
   fill: var(--success);
 }

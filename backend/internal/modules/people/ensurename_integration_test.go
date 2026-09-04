@@ -116,6 +116,78 @@ func TestEnsureCounterpartyFillsASplitNameItLearnsLater(t *testing.T) {
 	}
 }
 
+// The display name a calendar organizer typed into their own address book is
+// replaced by the person's real name once we learn it.
+//
+// "Bw" for Björn Welter, "Juan" for Judith Andresen, "Chris" for Christoph
+// Erler — all real, all captured that way, and none of them shares a character
+// with the name that arrived later. So no test on the SHAPE of the stored string
+// finds them: the old rule moved full_name only where it still equalled one of
+// the two parts exactly, and left every one of these on screen.
+func TestALearnedNameReplacesAnAddressBookLabel(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	const addr = "bjoern@label.test"
+
+	// How the organizer had him saved. Nothing about it says "Björn Welter".
+	first, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, addr, "Bw", "label.test"))
+	if err != nil {
+		t.Fatalf("first ensure: %v", err)
+	}
+	if full, _, _ := e.storedName(ctx, t, first.PersonID); full != "Bw" {
+		t.Fatalf("full_name = %q on first contact, want the label the invitation carried", full)
+	}
+
+	// A signature names him.
+	if _, err := e.store.EnsureCounterparty(ctx,
+		e.ensureInput(ctx, t, addr, "Björn Welter", "label.test")); err != nil {
+		t.Fatalf("second ensure: %v", err)
+	}
+	full, f, l := e.storedName(ctx, t, first.PersonID)
+	if full != "Björn Welter" || nameOrNull(f) != "Björn" || nameOrNull(l) != "Welter" {
+		t.Fatalf("stored %q / %q / %q, want the learned name on the page too — "+
+			"a record that knows someone's name and shows a label is the defect",
+			full, nameOrNull(f), nameOrNull(l))
+	}
+}
+
+// And the one thing that outranks it: a person who edited the name by hand.
+//
+// Driven through the real UpdatePerson door rather than a raw UPDATE, because
+// the guard reads the audit row that door writes. A test that edited the row
+// directly would leave no audit trail and pass whatever the guard did.
+func TestALearnedNameLeavesAHandEditedDisplayNameAlone(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	const addr = "edited@label.test"
+
+	res, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, addr, "Bw", "label.test"))
+	if err != nil {
+		t.Fatalf("first ensure: %v", err)
+	}
+	// The rep writes what they want to see on the page.
+	chosen := "BW (Frankfurt)"
+	if _, err := e.store.UpdatePerson(ctx, res.PersonID, UpdatePersonInput{FullName: &chosen}); err != nil {
+		t.Fatalf("the human edit: %v", err)
+	}
+
+	if _, err := e.store.EnsureCounterparty(ctx,
+		e.ensureInput(ctx, t, addr, "Björn Welter", "label.test")); err != nil {
+		t.Fatalf("second ensure: %v", err)
+	}
+	full, f, l := e.storedName(ctx, t, res.PersonID)
+	if full != chosen {
+		t.Fatalf("full_name = %q after later mail, want the human's %q — they typed it, and no header outranks that",
+			full, chosen)
+	}
+	// The split columns still fill: learning the name is additive, and only the
+	// display is the person's to keep.
+	if nameOrNull(f) != "Björn" || nameOrNull(l) != "Welter" {
+		t.Errorf("split names %q / %q, want the learned pair — the human kept the display, not the record",
+			nameOrNull(f), nameOrNull(l))
+	}
+}
+
 // The guard: an automatic fill may only ever ADD. A name a human typed is the
 // authority on that person, and no later header may rewrite it.
 func TestEnsureCounterpartyNeverOverwritesANameAHumanSet(t *testing.T) {

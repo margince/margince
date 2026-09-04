@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (67)
+## Parity (69)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -47,11 +47,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendautonomykinds_test.go` | H1 | Every kind a rep may put on automatic must have words on the settings screen that offers it, and the screen must offer no kind the product cannot automate. |
+| `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the SAME rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice: the server builds it in SQL (internal/compose/reportperiod.go) because that is what a report is actually cut by, and the browser builds it in TypeScript (frontend/src/format/fiscalyear.ts) to show an admin what the setting they are about to save will produce. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the SAME timestamp, or a card ages differently from the list that filed the deal stalled. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
+| `frontendprimaryemail_test.go` | H3 | The browser and the server pick the SAME address to write to, or the address a composer prefills and the address a draft is written to differ on a record where the reader can see both. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one LIST ROW carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve exactly what it offered. |
@@ -87,7 +89,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (89)
+## Census (93)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -126,6 +128,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
+| `fliponehandle_test.go` | H2 | The overlay flip runs on ONE workspace binding, and this is what keeps it so. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
@@ -135,6 +138,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `leadpersonlockorder_test.go` | H2 | ONE lock order over the lead and the person it was promoted into. |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
+| `machineryapplied_test.go` | H2 | Every setting read through settings.ApplyTx is declared MachineryApplied. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
@@ -172,6 +176,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
+| `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has ONE reader, and it answers one question. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
@@ -179,6 +184,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
+| `validatedreplypath_test.go` | H2 | A model reply this tree can REFUSE must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 
 ## Reachability (16)
@@ -228,7 +234,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 
-## Prohibition (41)
+## Prohibition (42)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -266,6 +272,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rlsclaims_test.go` | H1 | Fitness function over a guarantee this codebase no longer has. |
 | `rulebookdirection_test.go` | H1 | The reference direction is one-way: AGENTS.md links down into docs/, and nothing under docs/ links back up to a rulebook. |
 | `rulebooktally_test.go` | H1 | A rulebook must not spell out a tally of anything the tree can be asked for. |
+| `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the RECORD holds, and nothing else. |
 | `transactionopeners_test.go` | H2 | One function in the database package turns a pool into a transaction, and every seam the package publishes routes through it. |
 | `triggerwrittencolumns_test.go` | H2 | A statement may not write a column its table's trigger already writes. |
@@ -274,7 +281,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (6)
+## Claim (7)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -282,6 +289,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. |
+| `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 

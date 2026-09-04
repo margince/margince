@@ -1,0 +1,23 @@
+/* THE VERDICT ON ONE FACT, and whatever it takes to change it: a sentence
+   saying a person already vouched for the value, or the field and the two
+   verbs that let a reader vouch for it now.
+
+   The class was asked for by the component and declared by NO sheet, so the
+   cluster had no gap at all — Save and Cancel touched, and a refusal ran into
+   Cancel as a red tail on the same line. Its own file, imported by the
+   component, is what makes that impossible to reintroduce: put the rule in a
+   screen's stylesheet and it holds only where that screen happens to be the
+   one that loaded it, which is exactly how this went unstyled everywhere
+   including its own story.
+
+   The refusal takes the whole line under the row: it is a sentence about what
+   just failed, not a third control in the row. */
+.evidence-verdict {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.evidence-verdict .form-error {
+  flex-basis: 100%;
+}

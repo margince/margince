@@ -62,10 +62,22 @@ type HiddenBacklog struct {
 	// one shape that produces no failing assertion anywhere.
 	Truncated bool
 
-	// Shown is what the queue would carry — the same rows, counted. It is here
+	// Shown is what this query FOUND under the rules as they stand. It is here
 	// so the others are readable as a proportion rather than as bare volumes:
-	// three hidden against four shown is a broken queue, and three against three
+	// three hidden against four found is a broken queue, and three against three
 	// hundred is a rep tidying up.
+	//
+	// A near neighbour of what the page draws rather than equal to it. Machine
+	// senders are filtered twice on purpose: this query removes the obvious ones
+	// before its cap, because a scan filled with notification threads would push
+	// a real customer past it, and the seam then applies capture's fuller
+	// address rule over the survivors. So a mail relayed by a transactional
+	// domain is counted here and dropped there, as is a repeat thread from one
+	// sender. Measuring either here would put a second copy of that baseline in
+	// the database.
+	//
+	// The four figures below are differences between runs of this same query, so
+	// they are counted the same way and the proportions hold.
 	Shown int
 	// SetAside is work this reader has snoozed or marked not_mine. Their own
 	// choice, and the least alarming of the three — a snooze lifts on its own
@@ -121,7 +133,8 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 	var out HiddenBacklog
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		reader := readerOrNobody(ctx)
-		// What the queue itself would answer, under the rules as they stand.
+		// What the eligibility query finds under the rules as they stand — a
+		// near neighbour of the page's own count, for the reason Shown states.
 		shown, err := s.countWaiting(ctx, tx, asOf, waitingRelaxation{reader: reader})
 		if err != nil {
 			return err

@@ -14,7 +14,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -118,7 +117,7 @@ func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob
 		pool:      pool,
 		store:     sendStore(pool, SendPath{}).WithBlobstore(blob),
 		authority: identity.NewService(pool),
-		consent:   consent.NewGate(consent.NewStore(InstallationDB(pool))),
+		consent:   consentGateFor(pool),
 		// The SAME machinery every other send stages with, handed in rather
 		// than built here: firing enqueues a delivery job, and a second
 		// construction site would be a second way for the two to disagree.

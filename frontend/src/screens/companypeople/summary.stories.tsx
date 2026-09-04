@@ -23,7 +23,13 @@ type Coverage = components["schemas"]["OrganizationCoverage"];
 function coverage(over: Partial<Coverage>): Coverage {
   return {
     as_of: "2026-08-31T09:00:00Z",
-    summary: { contacts_total: 26, answered: 2, no_reply: 1, untried: 23 },
+    summary: {
+      contacts_total: 26,
+      waiting: 0,
+      answered: 2,
+      no_reply: 1,
+      untried: 23,
+    },
     deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
     selected_deal_id: "d-1",
     completeness: { committee_read: true },
@@ -98,7 +104,13 @@ export const NobodyHasAnswered: Story = {
   args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
-      summary: { contacts_total: 12, answered: 0, no_reply: 12, untried: 0 },
+      summary: {
+        contacts_total: 12,
+        waiting: 0,
+        answered: 0,
+        no_reply: 12,
+        untried: 0,
+      },
       committee: {
         seats: [],
         gaps: ["champion", "economic_buyer"],

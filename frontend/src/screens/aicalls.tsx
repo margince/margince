@@ -225,11 +225,7 @@ export function AiCallsCard() {
         <PanelBody>
           <p className="settings-panel-sub">{t("aicalls.sub")}</p>
           <QueryGate query={me}>
-            {() => (
-              <EmptyState>
-                <p className="t-small">{t("aicalls.withheld")}</p>
-              </EmptyState>
-            )}
+            {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
       </Panel>

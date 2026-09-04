@@ -29,6 +29,14 @@ type ActivityFields struct {
 	Body       string
 	OccurredAt time.Time
 	Direction  string // connector.DirectionInbound | DirectionOutbound | "" (not directional)
+
+	// HasCalendarPart says the message carried a text/calendar payload.
+	//
+	// What the PARSER can vouch for, and no more. It is not "this is an
+	// invitation": ordinary mail attaches an .ics, and groupware can announce an
+	// event without one. Deciding what a message asks of its reader is a
+	// judgement made later, from this fact among others.
+	HasCalendarPart bool
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
