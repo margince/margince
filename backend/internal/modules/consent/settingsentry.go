@@ -40,24 +40,44 @@ const authorizationModesObject = "installation_settings"
 // AuthorizationModes maps a communication category to the authority the
 // engine's answer carries for it.
 //
-// A category absent from the map is `observe`, so the default below can name
-// nothing and still be complete — and so a category added to the vocabulary
-// tomorrow arrives in the safest position rather than in whatever the map
-// happened to say.
+// A category absent from the map is `observe`, so a category added to the
+// vocabulary tomorrow arrives in the position where it is recorded and not yet
+// binding, whatever the stored map says. That default is what makes the map a
+// set of EXCEPTIONS rather than a table that must be complete to be correct.
+//
+// The shipped default names every category that exists today, at `enforce`.
+// Observe was the rollout, not the destination: it ran so the disagreement
+// between the engine and the old purpose gate could be read before it bound
+// anything, and the reading came back empty — where the engine has no evidence
+// of its own it adopts the old gate's answer rather than refusing, so enforcing
+// stops nothing that was being sent. What it ENDS is the old gate overruling
+// the engine on a message the engine can evidence and it cannot.
 var AuthorizationModes = settings.Define[map[string]string](
 	"consent.authorization_modes",
 	authorizationModesObject,
 	"update",
-	// Every category observes. The engine records what it would have done and
-	// the old gate decides, which is what makes the disagreement measurable
-	// before it is binding.
-	map[string]string{},
+	enforceEveryCategory(),
 	validateAuthorizationModes,
 	// MachineryApplied: the transmit gate reads this inside the transaction
 	// that binds its own decision, and the posture must apply whoever the
 	// acting principal is — a worker dispatching a delivery holds the system
 	// principal and has no settings read gate to pass.
 ).MachineryApplied()
+
+// enforceEveryCategory is the shipped posture: every category the vocabulary
+// holds, at enforce.
+//
+// DERIVED from the vocabulary rather than typed out, because a hand-written map
+// is a second list that drifts. A category added to commsauthz and forgotten
+// here would silently ship observing — recorded, not binding — which is exactly
+// the state this default exists to leave behind, and nothing would say so.
+func enforceEveryCategory() map[string]string {
+	out := make(map[string]string, len(commsauthz.Categories()))
+	for _, c := range commsauthz.Categories() {
+		out[string(c)] = string(commsauthz.ModeEnforce)
+	}
+	return out
+}
 
 // validateAuthorizationModes refuses a map that names something that is not a
 // category, or a mode that is not a mode.
