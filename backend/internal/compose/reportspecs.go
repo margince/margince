@@ -275,9 +275,28 @@ var prebuiltReports = map[string]reportSpec{
 			// never forwards.
 			fieldPartnerOrgID: colPartnerOrgID,
 		},
+		// Both denominations, and both earn their place.
+		//
+		// The NATIVE pair stays because this spec's default grouping INCLUDES
+		// currency: a sum of amount_minor under one currency row is a
+		// well-defined figure. pipeline-current drops the native pair precisely
+		// because its default grouping does not, and offering it there would
+		// let a caller sum minor units across currencies.
+		//
+		// The BASE pair is what lets the forecast be read as ONE answer instead
+		// of one answer per currency. A screen drawing the five categories had
+		// to band by currency — a slot carries a single figure, and adding
+		// euros to dong is the unit-less total data-semantics §1 r4 forbids —
+		// so a manager comparing commit against best case compared them inside
+		// each currency and never across the business.
+		//
+		// Priced through the SAME expressions pipeline-current uses, so the two
+		// reports cannot value one deal differently.
 		measures: map[string]string{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
+			fieldAmountBaseMinor:     pipelineBaseValueExpr,
+			fieldWeightedBaseMinor:   pipelineWeightedBaseExpr,
 		},
 		filters: map[string]string{
 			fieldOwnerID:        colOwnerID,
