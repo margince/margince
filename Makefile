@@ -717,6 +717,10 @@ e2e-company:
 ## Runs on the LIVE stack (make dev, then make seed-dev) and skips loudly
 ## without one. Its screenshot lands OUTSIDE the repo, for a human to compare.
 E2E_BRIEF_SHOT_DIR ?= /tmp/e2e-brief
+# The spec is named by PATH, not by basename: playwright's filter is a
+# substring match, and `brief.spec.ts` also selects e2e/meeting-brief.spec.ts —
+# a mocked spec that has no business on a live stack and fails eighteen cases
+# there. The `e2e/` in front is what tells the two apart.
 e2e-brief: SHELL := /bin/bash
 e2e-brief:
 	@mkdir -p "$(E2E_BRIEF_SHOT_DIR)"
@@ -724,7 +728,7 @@ e2e-brief:
 	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
 	cd frontend && BASE_URL="$$app" \
 		E2E_BRIEF_SHOT_DIR="$(E2E_BRIEF_SHOT_DIR)" \
-		pnpm exec playwright test brief.spec.ts
+		pnpm exec playwright test e2e/brief.spec.ts
 	@echo "screenshots: $(E2E_BRIEF_SHOT_DIR)"
 
 ## storybook — the component workbench on :6006 (the design-system catalog +
