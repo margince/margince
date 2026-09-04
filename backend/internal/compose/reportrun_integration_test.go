@@ -318,3 +318,117 @@ func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
 		}
 	}
 }
+
+// A cited cell opens to the records behind it.
+//
+// The drawer's whole job: a report block names a run and a cell, and this turns
+// that citation into rows somebody can read.
+func TestACitedCellOpensToItsRecords(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	out, err := e.explainRunCell(ctx, t, runID, nil)
+	if err != nil {
+		t.Fatalf("opening a cited cell: %v", err)
+	}
+	if out.Withheld {
+		t.Fatal("six deals were withheld from a floor of five")
+	}
+	if len(out.Rows) != 6 {
+		t.Errorf("the cell opened to %d records and six deals were seeded", len(out.Rows))
+	}
+}
+
+// A cell naming the wrong number of groupings is refused.
+//
+// The refusal comes from CompileExplain rather than from this path, and the
+// test asserts the MESSAGE for that reason: it is the existing rule being
+// reached through a new door, not a second copy of it, and a change that
+// stopped the door reaching it would leave a citation explainable as a broader
+// cell than the one cited.
+func TestACitedCellIsRefusedWhenItNamesTheWrongNumberOfGroups(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	// Ungrouped: the saved question has zero groupings, so one group key is
+	// one too many. Matched positionally it would explain the whole population
+	// while claiming to explain a narrower cell.
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	_, err := e.explainRunCell(ctx, t, runID, []any{"anything"})
+	if err == nil {
+		t.Fatal("a cell naming a grouping the saved question does not have was explained " +
+			"anyway, so a citation can be widened into one covering more records")
+	}
+	var refusal *analyticsquery.RefusalError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("the refusal is %v and should be a typed refusal naming the mismatch", err)
+	}
+	// Both counts, so a reader knows which end is wrong.
+	if !strings.Contains(refusal.Message, "1 group") || !strings.Contains(refusal.Message, "by 0") {
+		t.Errorf("the refusal does not name both counts: %s", refusal.Message)
+	}
+}
+
+// An unknown run explains to not-found, not to a server error.
+func TestAnUnknownRunHasNoCellToExplain(t *testing.T) {
+	e := setupForecast(t)
+	if _, err := e.explainRunCell(e.askerCtx(), t, ids.NewV7(), nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("explaining a cell of an unknown run answered %v", err)
+	}
+}
+
+// A reader who may not read the population is refused the records too.
+//
+// The drawer must not be a way around the gate the number itself passes: if the
+// answer refuses, the evidence behind it refuses identically.
+//
+// TWO independent guards hold this, and the test does not distinguish them:
+// ExplainAnalyticsCell asks auth.Require on the population, and the schema
+// derivation drops an entity this caller cannot read so the compile fails with
+// its own denial (deal.read: permission denied). Mutating either alone leaves
+// this green — defence in depth rather than a redundant check to delete.
+func TestACitedCellIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	runID := e.saveRun(e.askerCtx(), t, countAllDeals())
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:outsider", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"forecast": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if _, err := e.explainRunCell(ctx, t, runID, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a seat with no grant on the population opened the evidence drawer: %v", err)
+	}
+}
+
+func (e *forecastEnv) explainRunCell(
+	ctx context.Context, t *testing.T, id ids.UUID, group []any,
+) (AnalyticsExplanation, error) {
+	t.Helper()
+	var out AnalyticsExplanation
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			out, err = ExplainReportRunCell(ctx, tx, id, group, analyticsquery.DefaultFloor)
+			return err
+		})
+	return out, err
+}

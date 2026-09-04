@@ -11201,6 +11201,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/runs/{run_id}/cells/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records behind one cell of a saved run.
+         * @description The evidence a report block's drawer opens. A block cites a run and a cell; this
+         *     turns that citation into the records the number was computed from.
+         *
+         *     THE QUESTION COMES FROM THE SAVED RUN, not from the request. That is the whole
+         *     difference between this and `/analytics/explain`, which carries the question whole
+         *     because a caller-supplied handle they could edit would let an explanation describe a
+         *     DIFFERENT query than the number came from. A saved run is immutable, so its id names
+         *     one question and cannot be edited into another.
+         *
+         *     The records are read under the CALLER's authority and re-judged against the current
+         *     floor, exactly as the run's own answer is. A cell the floor withholds explains to
+         *     `withheld` with no rows: handing those records over one at a time is the same
+         *     disclosure at a slower pace.
+         *
+         *     The cell is named by its group key values, in the saved question's own `group_by`
+         *     order. A wrong-length group is refused rather than matched positionally against what
+         *     happens to line up.
+         */
+        post: operations["explainReportRunCell"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/explain": {
         parameters: {
             query?: never;
@@ -23340,6 +23376,11 @@ export interface components {
             asked_by: string;
             /** @description The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing. */
             stored_floor: number;
+        };
+        /** @description One cell of a saved run, named by its group keys. */
+        ReportRunCell: {
+            /** @description The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none. */
+            group?: unknown[];
         };
         /** @description One cell of an answer, named by the question and its group keys. */
         AnalyticsExplainRequest: {
@@ -47158,6 +47199,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainReportRunCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRunCell"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this caller may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The cell names a different number of group keys than the saved question grouped by. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             401: components["responses"]["Unauthorized"];

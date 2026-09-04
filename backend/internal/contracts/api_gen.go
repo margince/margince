@@ -29063,6 +29063,12 @@ type ReportRun struct {
 	StoredFloor int `json:"stored_floor"`
 }
 
+// ReportRunCell One cell of a saved run, named by its group keys.
+type ReportRunCell struct {
+	// Group The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
+}
+
 // RequestAccessResponse defines model for RequestAccessResponse.
 type RequestAccessResponse struct {
 	Requested bool `json:"requested"`
@@ -37481,6 +37487,9 @@ type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
+
+// ExplainReportRunCellJSONRequestBody defines body for ExplainReportRunCell for application/json ContentType.
+type ExplainReportRunCellJSONRequestBody = ReportRunCell
 
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
@@ -45956,6 +45965,9 @@ type ServerInterface interface {
 	// The answer a report sentence points at.
 	// (GET /analytics/runs/{run_id})
 	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// The records behind one cell of a saved run.
+	// (POST /analytics/runs/{run_id}/cells/explain)
+	ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
@@ -47813,6 +47825,12 @@ func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
 // The answer a report sentence points at.
 // (GET /analytics/runs/{run_id})
 func (_ Unimplemented) GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records behind one cell of a saved run.
+// (POST /analytics/runs/{run_id}/cells/explain)
+func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52878,6 +52896,40 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetReportRun(w, r, runId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainReportRunCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "run_id" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "run_id", chi.URLParam(r, "run_id"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "run_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainReportRunCell(w, r, runId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75944,6 +75996,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/runs/{run_id}/cells/explain", wrapper.ExplainReportRunCell)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
