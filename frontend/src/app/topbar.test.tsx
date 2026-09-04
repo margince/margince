@@ -221,8 +221,8 @@ describe("Top bar trail", () => {
       />,
     );
 
-    expect(stopTexts()).toEqual(["Contacts", "Anna Weber"]);
-    const back = within(trail()).getByRole("link", { name: "Contacts" });
+    expect(stopTexts()).toEqual(["People", "Anna Weber"]);
+    const back = within(trail()).getByRole("link", { name: "People" });
     expect(back.getAttribute("href")).toBe("#/contacts");
     // The record itself is the page: not a link, and the one current claim.
     const stops = within(trail()).getAllByRole("listitem");
@@ -245,7 +245,7 @@ describe("Top bar trail", () => {
       { screen: "contacts", id: "p-anna" },
       { onToggle: ignoreToggle },
     );
-    expect(stopTexts()).toEqual(["Contacts", "p-anna"]);
+    expect(stopTexts()).toEqual(["People", "p-anna"]);
   });
 
   it("leads a section entry back to the section it belongs to", () => {

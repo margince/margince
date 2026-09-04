@@ -92,7 +92,7 @@ afterEach(() => {
 // names the board this row opens.
 const CANONICAL_ORDER = [
   "Brief",
-  "Contacts",
+  "People",
   "Companies",
   "Leads",
   "Filters & views",
@@ -331,7 +331,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
           ? "agent"
           : "more",
     );
-    expect(cells).toEqual(["Brief", "Contacts", "agent", "Pipeline", "more"]);
+    expect(cells).toEqual(["Brief", "People", "agent", "Pipeline", "more"]);
   });
 
   // The Worklist is the destination the bar gave up for that cell. Off the bar

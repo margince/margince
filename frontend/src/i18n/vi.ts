@@ -165,7 +165,7 @@ export const vi = {
   "autonomy.confirm": "xác nhận trước",
 
   "nav.home": "Bản tóm tắt",
-  "nav.contacts": "Contact",
+  "nav.contacts": "Người",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
   "nav.deals": "Pipeline",
@@ -569,7 +569,7 @@ export const vi = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "{first}–{last} trong {count} {unit} đã tải",
-  "unit.contacts": "liên hệ",
+  "unit.contacts": "người",
   "unit.companies": "công ty",
   "unit.deals": "thương vụ",
   "unit.leads": "khách hàng tiềm năng",
@@ -781,7 +781,7 @@ export const vi = {
   "org.name": "Công ty",
   "org.description": "Họ làm gì",
   "org.website": "Trang web",
-  "org.contactCount": "Liên hệ",
+  "org.contactCount": "Người",
   "org.openDealCount": "Deal đang mở",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -3554,7 +3554,7 @@ export const vi = {
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.organization": "Công ty",
-  "import.object.person": "Liên hệ",
+  "import.object.person": "Người",
   "import.objectHint.lead":
     "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là liên hệ.",
   "import.objectHint.organization":
@@ -6214,7 +6214,7 @@ export const vi = {
   "users.createTeam": "Tạo nhóm",
   "users.access.title": "Người dùng này thấy gì",
   "users.access.identity":
-    "Đọc mọi liên hệ, công ty, lead và deal của tổ chức.",
+    "Đọc mọi công ty, lead, deal và người trong tổ chức.",
   "users.access.writesAll": "Sửa mọi bản ghi.",
   "users.access.writesTeam": "Sửa bản ghi của mình và của các nhóm {teams}.",
   "users.access.writesTeamNone":
@@ -6224,7 +6224,7 @@ export const vi = {
   "users.access.read": "đọc",
   "users.access.write": "ghi",
   "users.access.delete": "xóa",
-  "users.access.object.person": "Liên hệ",
+  "users.access.object.person": "Người",
   "users.access.object.organization": "Công ty",
   "users.access.object.lead": "Lead",
   "users.access.object.deal": "Deal",
@@ -7583,7 +7583,7 @@ export const vi = {
   "filters.subtitle":
     "T\u1ea1o b\u1ed9 l\u1ecdc, xem n\u00f3 ch\u1ecdn nh\u1eefng g\u00ec, r\u1ed3i l\u01b0u th\u00e0nh ch\u1ee7 \u0111\u1ec1.",
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
-  "filters.tab.contacts": "Li\u00ean h\u1ec7",
+  "filters.tab.contacts": "Ng\u01b0\u1eddi",
   "filters.tab.companies": "C\u00f4ng ty",
   "filters.tab.deals": "Th\u01b0\u01a1ng v\u1ee5",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",

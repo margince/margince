@@ -161,7 +161,7 @@ export const en = {
   "autonomy.confirm": "confirm-first",
 
   "nav.home": "Brief",
-  "nav.contacts": "Contacts",
+  "nav.contacts": "People",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
@@ -622,7 +622,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first}–{last} of {count} {unit} loaded so far",
-  "unit.contacts": "contacts",
+  "unit.contacts": "people",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
@@ -837,7 +837,7 @@ export const en = {
   "org.name": "Company",
   "org.description": "What they do",
   "org.website": "Website",
-  "org.contactCount": "Contacts",
+  "org.contactCount": "People",
   "org.openDealCount": "Open deals",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -3646,7 +3646,7 @@ export const en = {
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
   "import.object.organization": "Companies",
-  "import.object.person": "Contacts",
+  "import.object.person": "People",
   "import.objectHint.lead":
     "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
   "import.objectHint.organization":
@@ -6346,7 +6346,7 @@ export const en = {
   "users.createTeam": "Create team",
   "users.access.title": "What this user sees",
   "users.access.identity":
-    "Reads every contact, company, lead and deal in the organization.",
+    "Reads every person, company, lead and deal in the organization.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",
@@ -6357,7 +6357,7 @@ export const en = {
   "users.access.read": "read",
   "users.access.write": "write",
   "users.access.delete": "delete",
-  "users.access.object.person": "Contacts",
+  "users.access.object.person": "People",
   "users.access.object.organization": "Companies",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",
@@ -7751,7 +7751,7 @@ export const en = {
   "filters.subtitle":
     "Build a filter, watch what it selects, and save it as a view.",
   "filters.objectLabel": "Which records to filter",
-  "filters.tab.contacts": "Contacts",
+  "filters.tab.contacts": "People",
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",

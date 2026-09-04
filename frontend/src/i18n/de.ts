@@ -159,7 +159,7 @@ export const de = {
   "autonomy.confirm": "erst bestätigen",
 
   "nav.home": "Briefing",
-  "nav.contacts": "Kontakte",
+  "nav.contacts": "Personen",
   "nav.companies": "Firmen",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
@@ -574,7 +574,7 @@ export const de = {
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "{first}–{last} von bisher {count} geladenen {unit}",
-  "unit.contacts": "Kontakte",
+  "unit.contacts": "Personen",
   "unit.companies": "Firmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
@@ -792,7 +792,7 @@ export const de = {
   "org.name": "Firma",
   "org.description": "Was sie tun",
   "org.website": "Website",
-  "org.contactCount": "Kontakte",
+  "org.contactCount": "Personen",
   "org.openDealCount": "Offene Deals",
   // Nur dort angeboten, wo es noch kein Partnerprogramm gibt: der Tab mit dem
   // Formular erscheint erst, wenn eines besteht — so entsteht das erste.
@@ -3592,7 +3592,7 @@ export const de = {
   "import.objectLabel": "Was die Zeilen sind",
   "import.object.lead": "Interessenten",
   "import.object.organization": "Firmen",
-  "import.object.person": "Kontakte",
+  "import.object.person": "Personen",
   "import.objectHint.lead":
     "Eine unbearbeitete Liste landet als Leads zur Qualifizierung, bevor sie jemand als Kontakte behandelt.",
   "import.objectHint.organization":
@@ -6278,7 +6278,7 @@ export const de = {
   "users.createTeam": "Team anlegen",
   "users.access.title": "Das sieht dieser Benutzer",
   "users.access.identity":
-    "Liest alle Kontakte, Firmen, Leads und Deals der Organisation.",
+    "Liest alle Personen, Firmen, Leads und Deals der Organisation.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -6289,7 +6289,7 @@ export const de = {
   "users.access.read": "lesen",
   "users.access.write": "schreiben",
   "users.access.delete": "löschen",
-  "users.access.object.person": "Kontakte",
+  "users.access.object.person": "Personen",
   "users.access.object.organization": "Firmen",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",
@@ -7677,7 +7677,7 @@ export const de = {
   "filters.subtitle":
     "Filter erstellen, Treffer beobachten und als Ansicht speichern.",
   "filters.objectLabel": "Welche Datens\u00e4tze gefiltert werden",
-  "filters.tab.contacts": "Kontakte",
+  "filters.tab.contacts": "Personen",
   "filters.tab.companies": "Firmen",
   "filters.tab.deals": "Gesch\u00e4fte",
   "filters.builderTitle": "Filter",

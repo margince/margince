@@ -265,7 +265,7 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
     );
   expect(labels).toEqual([
     "Briefing",
-    "Kontakte",
+    "Personen",
     "Firmen",
     "Leads",
     "Filter & Ansichten",
@@ -303,7 +303,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   page,
 }) => {
   await page.goto("/#/contacts");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kontakte");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Personen");
 
   await page.goto("/#/contacts/p-anna");
   const heading = page.getByRole("heading", { level: 1 });
@@ -312,7 +312,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
-  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
+  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Personen");
   await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
     "Anna Weber",
   );
@@ -404,7 +404,7 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
   await page.goto("/#/home");
-  await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
+  await expect(page.locator('nav.rail a[aria-label="Personen"]')).toBeVisible();
   // The language is a preference of this person rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
   // the three places it can take you and nothing that changes a setting. Three
@@ -2453,6 +2453,9 @@ test.describe("filters and views", () => {
       objects.getByRole("button", { name: "Geschäfte", pressed: true }),
     ).toBeVisible();
 
+    // "Kontakte", not "Personen": these tabs read `filters.tab.contacts`,
+    // which is a different key from the nav's and is not one the People ruling
+    // moved. Noted on the ticket as a surface its inventory did not reach.
     await objects.getByRole("button", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
