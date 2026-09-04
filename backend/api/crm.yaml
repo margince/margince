@@ -20301,7 +20301,7 @@ components:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
-        name: { type: string, description: Rename the organization. }
+        name: { type: string, maxLength: 200, description: Rename the organization. }
         timezone: { type: string, description: The IANA reporting zone. }
         base_currency:
           type: string

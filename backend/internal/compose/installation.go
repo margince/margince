@@ -409,14 +409,9 @@ func routingSeedFrom(declared yaml.Node) (ai.RoutingConfig, bool, error) {
 
 // seedBookingPage provisions the admin's public booking page.
 //
-// The is_agent predicate is DEFENSIVE now rather than load-bearing, and it
-// stays. Bootstrap used to write a second row in the same transaction — an agent
-// seat — so `now()` gave both the same created_at and "first by created_at"
-// decided nothing between them; without the predicate the page a stranger books
-// through could be provisioned against the agent, on heap order. That seed is
-// retired, so a fresh installation holds one user here. The predicate stays
-// because the rule it states is about what a booking page may name, not about
-// how many rows happen to exist.
+// The is_agent predicate says what this lookup wants: a PERSON. A booking page
+// a stranger reaches must name someone who can answer it, and "first by
+// created_at" is heap order between two rows written in one transaction.
 func seedBookingPage(ctx context.Context, tx pgx.Tx) error {
 	var adminID ids.UserID
 	if err := tx.QueryRow(ctx,

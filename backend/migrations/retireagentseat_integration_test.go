@@ -7,13 +7,13 @@ package migrations_test
 
 // Retiring the seeded agent seat must not need the row to go away.
 //
-// app_user(id) is referenced 92 times across the head schema, 16 of them ON
-// DELETE RESTRICT — `connected_by` on channel_connection among them — so a
-// migration that DELETED the seat would fail the deploy on the first
-// installation holding one of those rows. Every such column is actor-derived and
-// the seat can never be an actor, so the product cannot write one; an operator
-// or a repair script can, and a future runner seeded at this address certainly
-// could. The migration therefore deactivates and archives.
+// Dozens of columns reference app_user(id) and many refuse a delete outright,
+// `connected_by` on channel_connection among them — so a migration that DELETED
+// the seat would fail the deploy on the first installation holding such a row.
+// Every such column is actor-derived and the seat can never be an actor, so the
+// product cannot write one; an operator or a repair script can, and a future
+// runner seeded at this address certainly could. The migration therefore
+// deactivates and archives.
 //
 // This runs the ACTUAL migration file rather than a statement retyped here. A
 // test that restated the SQL would pass for a migration that no longer says it,

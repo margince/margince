@@ -303,11 +303,9 @@ func TestPasswordLinkHandlerRefusesTheAgentSeat(t *testing.T) {
 	e := setupRevocationEnv(t, "link-http-agent")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 
-	// Seeded, through the same helper the service-level agent refusals use: no
-	// writer in the product makes one. The refusal has to hold for any agent
-	// identity, because the roster lists them and this endpoint serves every
-	// member action an admin can reach from there.
-	seat := agentSeatOf(t, e)
+	// The refusal has to hold for ANY agent identity: the roster lists them, and
+	// this endpoint serves every member action an admin can reach from there.
+	seat, _ := seedAgentSeatIn(t, e)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/users/"+seat.String()+"/password-link", nil)

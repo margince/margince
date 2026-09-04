@@ -9,12 +9,13 @@
 --
 -- DEACTIVATE AND ARCHIVE; NEVER DELETE, for two independent reasons.
 --
--- A DELETE can fail the deploy. `app_user(id)` is referenced 92 times, 16 of
--- them ON DELETE RESTRICT — `channel_connection.connected_by`,
--- `passport.granted_by`, `scheduled_send.scheduled_by` among them. Those columns
--- are actor-derived and this row can never be an actor, so the product cannot
--- write one; an operator or a repair script can, and a runner seeded at this
--- address later certainly could.
+-- A DELETE can fail the deploy. Dozens of columns reference `app_user(id)` and
+-- many of them refuse the delete outright — RESTRICT explicitly, or NO ACTION by
+-- omission, which blocks it just the same. `channel_connection.connected_by`,
+-- `passport.granted_by` and `scheduled_send.scheduled_by` are among them. Those
+-- columns are actor-derived and this row can never be an actor, so the product
+-- cannot write one; an operator or a repair script can, and a runner seeded at
+-- this address later certainly could.
 --
 -- And a DELETE destroys evidence, which holds even with no referencing row
 -- anywhere: `audit_log.actor_id` is plain text with no FK, so deleting the row

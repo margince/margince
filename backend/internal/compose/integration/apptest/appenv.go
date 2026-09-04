@@ -169,10 +169,6 @@ func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
 // reaches it through the human it acts for instead. Sweeping one in would abort
 // on the constraint, which a caller reads as a broken fixture rather than as the
 // rule it is.
-//
-// Bootstrap seeds no such row any more, so the predicate is defensive rather
-// than load-bearing here — it stays because the rule it encodes did not go with
-// the seed, and a suite that seeds its own agent row still needs it.
 func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 	t.Helper()
 	ctx := context.Background()

@@ -36,17 +36,14 @@ import (
 
 const agentSeatAdminPassword = "a bootstrap password!"
 
-// agentSeatRow is an agent identity as the schema holds it. The password is
-// asked about rather than read out because absence is the assertion — a hash
-// must not be selected into a test's memory to be tested for.
+// agentSeatRow is what these suites actually ask of an agent identity. The
+// password is asked ABOUT rather than read out, because absence is the
+// assertion and a hash must not be selected into a test's memory to be tested
+// for.
 type agentSeatRow struct {
 	id          ids.UUID
 	email       string
-	displayName string
-	status      string
-	seatType    string
 	hasPassword bool
-	archived    bool
 }
 
 // bootstrapForAgentSeat creates one installation through the real writer and
@@ -54,8 +51,9 @@ type agentSeatRow struct {
 func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, string) {
 	t.Helper()
 	ctx := context.Background()
-	// The test database persists across binary runs, so the label carries the
-	// id's random tail to keep every address in this suite unique.
+	// Unique within the run: setupIdentityDB resets the database per test, so
+	// this guards against two installations in ONE test rather than against
+	// anything left behind by a previous one.
 	slug := "agentseat-" + ids.NewV7().String()[24:]
 	var wsID ids.WorkspaceID
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
@@ -82,16 +80,13 @@ func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, s
 func readAgentSeats(t *testing.T, owner *pgx.Conn) []agentSeatRow {
 	t.Helper()
 	rows, err := owner.Query(context.Background(),
-		`SELECT id, email, display_name, status, seat_type,
-		        password_hash IS NOT NULL, archived_at IS NOT NULL
-		   FROM app_user WHERE is_agent`)
+		`SELECT id, email, password_hash IS NOT NULL FROM app_user WHERE is_agent`)
 	if err != nil {
 		t.Fatalf("reading the agent seats: %v", err)
 	}
 	seats, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (agentSeatRow, error) {
 		var s agentSeatRow
-		return s, r.Scan(&s.id, &s.email, &s.displayName, &s.status,
-			&s.seatType, &s.hasPassword, &s.archived)
+		return s, r.Scan(&s.id, &s.email, &s.hasPassword)
 	})
 	if err != nil {
 		t.Fatalf("collecting the agent seats: %v", err)
@@ -99,15 +94,13 @@ func readAgentSeats(t *testing.T, owner *pgx.Conn) []agentSeatRow {
 	return seats
 }
 
-// seedAgentIdentity writes one agent identity at email and answers its id. It
-// is THE fixture for an agent row in this package — every suite whose subject is
-// what such a row may not do goes through it.
+// seedAgentIdentity writes one agent identity at email and answers its id — the
+// one fixture for an agent row in this package.
 //
-// A direct insert rather than a seam, and that is not a shortcut: no writer in
-// the product creates an agent row any more, which is itself what
-// TestBootstrapMintsNoAgentSeat asserts. The rules under test are the schema's
-// and the service's rules about a row SHAPE, so the fixture's job is to produce
-// that shape.
+// A direct insert rather than a seam, because no writer in the product creates
+// an agent row, which is itself what TestBootstrapMintsNoAgentSeat asserts. What
+// these suites test are the schema's and the service's rules about a row SHAPE,
+// so the fixture's job is to produce that shape.
 //
 // 'full' and 'active' are spelled out because app_user_agent_is_full admits no
 // other seat type for an agent, so the row states the constraint it is subject

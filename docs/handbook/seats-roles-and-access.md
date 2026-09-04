@@ -40,10 +40,13 @@ Agents get seats too. An agent seat is always a full seat and always counted,
 because an agent acts on your data exactly as a person does — excluding them
 would let an installation work without limit through agents.
 
-**Your installation does not come with one.** Every seat it is billed for
-belongs to a person. An agent identity has no role and no password: it is an
-identity, not an authority, and what it may do comes entirely from the passports
-people mint and the connections they approve for it.
+**Your installation does not come with one.** A new installation seeds no agent
+identity, so every seat it is billed for belongs to a person.
+
+Any agent identity that does exist is a **full seat and counted**, like any
+other. What it may do comes from the passports people mint for it and the
+connections they approve — never from a role of its own, which is why no agent
+identity is ever granted one.
 
 ### The licence
 

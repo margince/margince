@@ -28,12 +28,9 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// is_agent = false, not merely the earliest row. Bootstrap used to write a
-	// second row in the same transaction — an agent seat — so now() gave both the
-	// same created_at and "first by created_at" was a coin flip between them.
-	// That seed is retired; the predicate stays because what this lookup wants is
-	// a PERSON, and saying so is cheaper than depending on there being only one
-	// kind of row.
+	// is_agent = false, not merely the earliest row: what this lookup wants is a
+	// PERSON, and saying so is cheaper than depending on how many kinds of row
+	// the installation happens to hold.
 	var userID, repRoleID string
 	if err := tx.QueryRow(ctx,
 		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`).Scan(&userID); err != nil {

@@ -318,20 +318,22 @@ func TestConcurrentLastAdminDeactivationsKeepOneAdmin(t *testing.T) {
 	}
 }
 
-// agentSeatOf writes an agent identity into this env and answers it.
+// seedAgentSeatIn writes an agent identity into this env and answers it.
 //
-// No writer in the product creates one, so a suite whose subject is what such a
-// row may NOT do has to seed it. The refusals below are live rules all the same:
-// `is_agent` is a supported column, filtered on by overlay and
-// federatedidentity, and a resident runner will land under it.
-func agentSeatOf(t *testing.T, e *revocationEnv) ids.UserID {
+// The refusals below are live rules: `is_agent` is a supported column, filtered
+// on by overlay and federatedidentity, and a resident runner will land under it.
+// Nothing in the product writes such a row, so the fixture does.
+func seedAgentSeatIn(t *testing.T, e *revocationEnv) (ids.UserID, string) {
 	t.Helper()
-	return seedAgentIdentity(t, e.owner, "agent@"+ids.NewV7().String()+".gradion.local")
+	// The env's own label, so the address names the installation it belongs to
+	// rather than carrying a bare uuid.
+	email := "agent@" + e.slug + ".gradion.local"
+	return seedAgentIdentity(t, e.owner, email), email
 }
 
 func TestTheAgentSeatCannotBeGivenARole(t *testing.T) {
 	e := setupRevocationEnv(t, "agent-role")
-	seat := agentSeatOf(t, e)
+	seat, _ := seedAgentSeatIn(t, e)
 
 	err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, seat, "admin")
 	if !errors.Is(err, errAgentSeatHoldsNoRole) {
@@ -358,7 +360,7 @@ func TestTheAgentSeatCannotBeGivenARole(t *testing.T) {
 // refusal added afterwards reaches no grant that has already happened.
 func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheOrganization(t *testing.T) {
 	e := setupRevocationEnv(t, "agent-lockout")
-	seat := agentSeatOf(t, e)
+	seat, _ := seedAgentSeatIn(t, e)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO role_assignment (role_id, user_id)
 		 SELECT r.id, $1 FROM role r WHERE r.key = 'admin'`,
@@ -561,7 +563,7 @@ func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
 func TestReactivatingTheAgentSeatRestoresItToActive(t *testing.T) {
 	e := setupRevocationEnv(t, "reactivate-agent-seat")
 
-	agentID := agentSeatOf(t, e)
+	agentID, _ := seedAgentSeatIn(t, e)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, agentID); err != nil {
 		t.Fatal(err)

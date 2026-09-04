@@ -105,17 +105,10 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	// (a) The roster lists the installation's members: the bootstrap admin and
 	// the two seeded reps, and nothing else.
 	//
-	// THREE, not four. Bootstrap used to write a fourth row — an agent identity
-	// for the extension-job dispatcher to name — and the roster listed it,
-	// marked `is_agent`, so a client resolving an owner id could find it. That
-	// seed is retired: the tick answers as the job it is, and the row was a full
-	// licence seat for something nothing read.
-	//
-	// `is_agent` on User stays on the wire, and the roster would still list such
-	// a row if one existed — a resident runner will land under that flag, and it
-	// is what tells a picker of humans to leave it out. What is asserted here is
-	// that no PRODUCT PATH creates one, which is why this counts rather than
-	// filtering.
+	// THREE, and every one of them a person. `is_agent` stays on the wire and the
+	// roster lists such a row where one exists — that flag is what tells a picker
+	// of humans to leave it out. What is asserted here is that no PRODUCT PATH
+	// creates one, which is why this counts rather than filtering.
 	var users struct {
 		Data []rosterUser `json:"data"`
 	}

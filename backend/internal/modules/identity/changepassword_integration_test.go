@@ -520,24 +520,22 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 	}
 }
 
-func TestAnOperatorResetRefusesTheAgentSeat(t *testing.T) {
+func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {
 	// An agent identity carries an address, so it is reachable by the email
 	// lookup, but it holds no password. Refused by name — letting the write
 	// reach the database would answer a reasonable question with a constraint
 	// violation.
 	//
-	// The row is SEEDED here. It used to be read back from bootstrap, which no
-	// longer writes one; the refusal is not retired with the seed, because
-	// `is_agent` remains a supported column and a resident runner will land
-	// under it.
+	// The row is seeded: nothing in the product writes one, and the refusal still
+	// has to hold, because `is_agent` remains a supported column and a resident
+	// runner will land under it.
 	e := setupRevocationEnv(t, "operator-reset-agent")
-	agentEmail := "agent@operator-reset-agent.gradion.local"
-	seedAgentIdentity(t, e.owner, agentEmail)
+	_, agentEmail := seedAgentSeatIn(t, e)
 	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
 		return OperatorResetPassword(context.Background(), tx, e.ws, agentEmail, "a password it cannot use")
 	})
 	if err == nil {
-		t.Fatal("the agent seat accepted a password reset; it is an identity, not an authority")
+		t.Fatal("an agent identity accepted a password reset; it is an identity, not an authority")
 	}
 	if !strings.Contains(err.Error(), "agent identity") {
 		t.Errorf("err = %v; an operator needs to be told WHICH account this is, not that a constraint fired", err)
