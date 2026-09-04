@@ -29,13 +29,23 @@ import (
 func pageFrom(
 	rows []ranked, limit int, cursor worklistCursor,
 ) (shown []ranked, more bool, reached int) {
-	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
+	sortByRank(rows)
 	from := resumeAt(rows, cursor)
 	rows = rows[from:]
 	if len(rows) > limit {
 		return rows[:limit], true, from + limit
 	}
 	return rows, false, from + len(rows)
+}
+
+// sortByRank puts the day in the order the comparator decides.
+//
+// Its own function because two pagers now need it and neither may skip it: a
+// fresh page cuts this order, and a frozen walk's stored sequence IS a previous
+// run of it, so the identities it holds were minted from a ranking rather than
+// from whatever the lanes returned.
+func sortByRank(rows []ranked) {
+	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
 }
 
 func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {

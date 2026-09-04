@@ -53,6 +53,17 @@ type worklistCursor struct {
 	// question the caller did not ask: page two of "my tasks" continuing into
 	// "the team's deals", with nothing in the response saying so.
 	Params string `json:"p"`
+	// Snapshot names the frozen walk this token resumes, and is what turns the
+	// offset above from a position in a REBUILT ranking into a position in one
+	// the reader has already been shown.
+	//
+	// ZERO IS A LEGITIMATE TOKEN, not a fault: one minted before this field
+	// existed, or by an installation that wires no snapshot store. It resumes
+	// the old way — an offset into a freshly ranked day — which is the
+	// behaviour the paragraphs above describe and the cost resumeAt states.
+	// Refusing it would break every walk in flight at the moment this shipped,
+	// to no reader's benefit.
+	Snapshot ids.UUID `json:"s,omitempty"`
 }
 
 // fingerprint renders the request parameters that decide WHICH rows exist.
@@ -117,10 +128,11 @@ func normalizedFilter(filter string) string {
 // the backlog ended early) is worse than the case it guards against.
 //
 // Held by: TestACursorRoundTripsThePositionItWasMintedAt.
-func encodeCursor(at int, scope, filter string, owner ids.UUID) string {
+func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID) string {
 	token, err := storekit.EncodeOpaque(worklistCursor{
-		At:     at,
-		Params: fingerprint(scope, filter, owner),
+		At:       at,
+		Params:   fingerprint(scope, filter, owner),
+		Snapshot: snapshot,
 	})
 	if err != nil {
 		// Unreachable for an int and a string. An empty token is refused by

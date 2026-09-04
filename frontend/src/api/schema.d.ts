@@ -28804,6 +28804,7 @@ export interface components {
             queue: components["schemas"]["WorklistItem"][];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+            walk?: components["schemas"]["WorklistWalk"];
             /**
              * @description Send this back as `cursor` to continue past the last row of this page. See that
              *     parameter for what a walk does and does not guarantee.
@@ -29083,6 +29084,54 @@ export interface components {
              *     label as an absent owner: `kind` is what says whether anybody answers.
              */
             label?: string;
+        };
+        /**
+         * @description What has happened to this walk since it started.
+         *
+         *     A walk is frozen at its first page: the rows it covers and the order they sit in
+         *     are fixed, so a reader paging their morning is not overtaken by their own queue.
+         *     The two figures here are what that freezing cannot hide, and both are reported
+         *     rather than silently absorbed.
+         *
+         *     MEMBERSHIP MOVES ONE WAY. New work does NOT join a walk in progress — it waits
+         *     for the reader to refresh, which is what keeps the headline still while they page.
+         *     Work that was resolved, deleted, or is no longer visible LEAVES immediately, so
+         *     the remaining count can fall. A frozen figure over work somebody can no longer see
+         *     or act on would be steadier and false.
+         *
+         *     A client draws these as two different offers: `new_available` invites a refresh,
+         *     `changed_since_snapshot` explains why the count moved. Neither is an error.
+         */
+        WorklistWalk: {
+            /**
+             * Format: date-time
+             * @description When this walk was assembled — the instant its order was decided.
+             *
+             *     On a first page it equals the response's own `as_of`. On later pages it is
+             *     OLDER, and deliberately so: it is what lets a client say how stale the walk
+             *     being paged has become, rather than presenting a resumed page as freshly read.
+             */
+            as_of: string;
+            /**
+             * @description How many rows this walk started with that are no longer here — resolved,
+             *     deleted, or no longer visible to this reader.
+             *
+             *     Counted so the reader is told WHY the total fell rather than watching it move.
+             *     It is cumulative over the walk, not per page: the question a reader has is how
+             *     much of their morning has already been dealt with, not how much went between
+             *     two clicks.
+             */
+            changed_since_snapshot: number;
+            /**
+             * @description How much work has arrived since this walk started, and is deliberately not in
+             *     it.
+             *
+             *     Absent on a first page, where the question has no meaning — the walk was just
+             *     assembled, so nothing can have arrived behind it yet. A client draws this as
+             *     an offer to refresh, never as a count of rows the reader can reach right now:
+             *     reaching them means starting a new walk.
+             */
+            new_available?: number;
         };
         /**
          * @description The day cut into four parts that SUM TO `total`. Every candidate the read weighed
@@ -41013,11 +41062,16 @@ export interface operations {
                  *     bounded, so no arrangement of arrivals, answers and reprioritisations makes a
                  *     client paging to exhaustion loop.
                  *
-                 *     Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
-                 *     read cannot offer. One consequence, and it is the whole cost of this design: A ROW
-                 *     THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
-                 *     THIS WALK. A deal that turns urgent moves up past where you have got to; one that
-                 *     is answered lets everything below it move up by one.
+                 *     A walk is FROZEN at its first page: the rows it covers and the order they sit in
+                 *     are fixed, so paging does not race the day. `walk` on the response says what has
+                 *     happened since — how many of those rows have gone, and how much has arrived that is
+                 *     deliberately not in this walk. Membership moves one way: new work waits for a fresh
+                 *     read, work that was resolved or is no longer visible leaves at once.
+                 *
+                 *     An installation that does not hold walks pages the older way instead, and there the
+                 *     cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
+                 *     READS IS SERVED TWICE OR NOT AT ALL. A deal that turns urgent moves up past where
+                 *     you have got to; one that is answered lets everything below it move up by one.
                  *
                  *     Such a row is not lost from the product — the next read of the queue ranks it
                  *     afresh and shows it — so treat a walk as a way to reach a backlog you already know
