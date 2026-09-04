@@ -8093,6 +8093,8 @@ export const de = {
   "worklist.because.pinned": "Von dir angeheftet",
   "worklist.because.buyer_wrote_last": "Sie haben zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
+  "worklist.because.more_one": "+{count} weiterer Grund",
+  "worklist.because.more_other": "+{count} weitere Gründe",
   "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
   "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
   "worklist.because.overdue": "überfällig",

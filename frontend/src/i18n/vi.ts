@@ -8007,6 +8007,8 @@ export const vi = {
   "worklist.because.pinned": "Bạn đã ghim mục này",
   "worklist.because.buyer_wrote_last": "Họ viết sau cùng",
   "worklist.because.waiting_days": "đang chờ",
+  "worklist.because.more_one": "+{count} lý do khác",
+  "worklist.because.more_other": "+{count} lý do khác",
   "worklist.because.waiting_days.value_one": "đã chờ {value} ngày",
   "worklist.because.waiting_days.value_other": "đã chờ {value} ngày",
   "worklist.because.overdue": "quá hạn",
