@@ -30,19 +30,42 @@ export function ForecastReview() {
   const assurance = useQuery({
     queryKey: ["forecast-assurance"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/forecast/assurance", {});
+      const { data, error, response } = await api.GET(
+        "/forecast/assurance",
+        {},
+      );
+      // 404 is this endpoint's ANSWER, not its failure: the contract says "no
+      // run has completed yet. A fresh installation has not been checked."
+      // Thrown as a problem it reached the error gate and the panel read
+      // "Couldn't load this view. not found" — which tells a reader the screen
+      // is broken when what happened is that nothing has looked yet, and those
+      // are opposite instructions about whether to trust the numbers above.
+      if (response.status === 404) {
+        return null;
+      }
       if (error) {
         throwProblem(error);
       }
-      return data;
+      return data ?? null;
     },
   });
 
   return (
     <QueryGate query={assurance}>
-      {(run) => (
-        <ReviewPanel run={run} locale={locale} title={t("review.title")} />
-      )}
+      {(run) =>
+        run === null ? (
+          <Panel title={t("review.title")}>
+            <PanelBody>
+              {/* Said plainly, because the alternative reading is dangerous: a
+                  reader who takes an unchecked pipeline for a clean one has
+                  been told the opposite of what happened. */}
+              <p>{t("review.notCheckedYet")}</p>
+            </PanelBody>
+          </Panel>
+        ) : (
+          <ReviewPanel run={run} locale={locale} title={t("review.title")} />
+        )
+      }
     </QueryGate>
   );
 }

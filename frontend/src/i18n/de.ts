@@ -3237,6 +3237,8 @@ export const de = {
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
+  "review.notCheckedYet":
+    "Es wurde noch nichts geprüft — für diese Installation ist noch kein nächtlicher Lauf abgeschlossen. Die Werte oben beruhen auf den Daten, wie sie sind.",
   "review.nothingToCheck": "Nichts zu prüfen.",
   "review.answer": "Prüfen",
   "review.closePast": "Abschlussdatum ist verstrichen",

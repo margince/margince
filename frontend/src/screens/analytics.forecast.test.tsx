@@ -61,6 +61,10 @@ function readings(over: Record<string, unknown> = {}) {
 type StubOpts = {
   readings?: Record<string, unknown>;
   onCall?: (body: Record<string, unknown>) => void;
+  // assuranceStatus lets a test ask for the answer a FRESH installation gets,
+  // where no nightly run has completed. Every other test here stubs a finished
+  // run, which is why that case went unrendered until somebody opened the page.
+  assuranceStatus?: number;
 };
 
 function forecastStub(opts: StubOpts = {}) {
@@ -79,6 +83,14 @@ function forecastStub(opts: StubOpts = {}) {
       return jsonResponse({ data: [] });
     }
     if (url.includes("/forecast/assurance")) {
+      if (opts.assuranceStatus === 404) {
+        // What the contract says a fresh installation gets: "no run has
+        // completed yet".
+        return jsonResponse(
+          { type: "about:blank", title: "Not Found", status: 404 },
+          404,
+        );
+      }
       // The run the review panel reads. Its own endpoint, so a test about the
       // call editor does not depend on what the check happened to find.
       return jsonResponse({
@@ -198,5 +210,24 @@ describe("ForecastView", () => {
     expect(await screen.findByText("Eligible deals")).toBeTruthy();
     expect(screen.getByText("Exchange rate missing")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
+  });
+
+  // A fresh installation has been checked by nobody, and the panel must say so.
+  //
+  // 404 is this endpoint's ANSWER — the contract spells it "no run has
+  // completed yet" — so rendering it through the error gate told a reader the
+  // screen was broken when nothing had looked yet. Those are opposite
+  // instructions about whether to trust the readings above, which is why the
+  // wrong one is worth a test rather than a glance.
+  it("says nothing has been checked when no run has completed", async () => {
+    vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
+    render(<ForecastView />);
+
+    expect(
+      await screen.findByText(/Nothing has been checked yet/),
+    ).toBeTruthy();
+    // And NOT the broken-view state, which is what shipped.
+    expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
+    expect(screen.queryByText(/not found/)).toBeNull();
   });
 });
