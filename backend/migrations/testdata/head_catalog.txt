@@ -2661,6 +2661,7 @@ public.idx_rel_traverse_person CREATE INDEX idx_rel_traverse_person ON public.re
 public.idx_rel_traverse_project CREATE INDEX idx_rel_traverse_project ON public.relationship USING btree (project_id) WHERE (archived_at IS NULL)
 public.idx_rel_works_with_counterparty CREATE INDEX idx_rel_works_with_counterparty ON public.relationship USING btree (counterparty_person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
 public.idx_rel_works_with_person CREATE INDEX idx_rel_works_with_person ON public.relationship USING btree (person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
+public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC)
 public.idx_role_assignment_user CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id)
 public.idx_runner_job_due CREATE INDEX idx_runner_job_due ON public.runner_job USING btree (status, due_at)
 public.idx_saved_view_owner CREATE INDEX idx_saved_view_owner ON public.saved_view USING btree (owner_id, resource) WHERE (archived_at IS NULL)
@@ -4419,6 +4420,24 @@ public.relationship.trg_relationship_updated CREATE TRIGGER trg_relationship_upd
 public.relationship.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.version bigint NOT NULL gen=- def=1
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
+public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_run.asked_by uuid NOT NULL gen=- def=-
+public.report_run.captured_by text NOT NULL gen=- def=-
+public.report_run.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.report_run.group_floor integer NOT NULL gen=- def=-
+public.report_run.id uuid NOT NULL gen=- def=uuidv7()
+public.report_run.query jsonb NOT NULL gen=- def=-
+public.report_run.report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES app_user(id) ON DELETE CASCADE
+public.report_run.report_run_floor_is_not_negative CHECK ((group_floor >= 0))
+public.report_run.report_run_pkey PRIMARY KEY (id)
+public.report_run.report_run_result_columns_is_a_list CHECK ((jsonb_typeof(result_columns) = 'array'::text))
+public.report_run.report_run_result_rows_is_a_list CHECK ((jsonb_typeof(result_rows) = 'array'::text))
+public.report_run.result_columns jsonb NOT NULL gen=- def=-
+public.report_run.result_rows jsonb NOT NULL gen=- def=-
+public.report_run.schema_version text NOT NULL gen=- def=-
+public.report_run.total_safe boolean NOT NULL gen=- def=-
+public.report_run.withheld boolean NOT NULL gen=- def=-
+public.report_run_pkey CREATE UNIQUE INDEX report_run_pkey ON public.report_run USING btree (id)
 public.retention_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.retention_policy.action text NOT NULL gen=- def=-
 public.retention_policy.category text gen=- def=-
