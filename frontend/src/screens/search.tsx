@@ -46,10 +46,13 @@ function typeFilterFrom(value: string | undefined): TypeFilter {
   return SEARCH_HIT_ORDER.find((kind) => kind === value) ?? ALL_TYPES;
 }
 
-export function SearchScreen({ q }: Readonly<{ q: string }>) {
+export function SearchScreen({
+  q,
+  openActivityId,
+}: Readonly<{ q: string; openActivityId?: string }>) {
   const t = useT();
   const [draft, setDraft] = useState(q);
-  const [openEmail, setOpenEmail] = useOpenEmail();
+  const [openEmail, setOpenEmail] = useOpenEmail(openActivityId);
   const zone = useRecordZone();
   const [params, setParams] = useUrlParams();
   const filter = typeFilterFrom(params.get(SEARCH_TYPE_PARAM));
