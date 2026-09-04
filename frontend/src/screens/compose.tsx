@@ -3255,7 +3255,17 @@ export function ChannelReplyAction({
           entityType={entityType}
           entityId={entityId}
           personId={personId}
-          kind={kind}
+          // `email`, not the withheld row's own kind. ComposeModal reads
+          // `message` as a CHANNEL reply and posts to send-message, which
+          // needs the conversation it answers — and the anchor is exactly
+          // what is withheld here. Passing the original kind left the
+          // button's own Send throwing "a channel reply needs the
+          // conversation it answers": the dialog opened and could not send.
+          //
+          // Email is not a fallback, it is what the button says. `Write
+          // email` is an account-started send, the same shape the composer
+          // uses when there is no prior message at all.
+          kind={contentWithheld ? "email" : kind}
           open={reply}
           onClose={() => setReply(false)}
         />
