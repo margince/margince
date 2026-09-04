@@ -29,9 +29,23 @@ import (
 // feed through classifyDay, the waiting seam through classifyWaiting — and
 // ranks the union.
 func aWholeDay(waits []WaitingCustomer, day crmcontracts.Attention) []crmcontracts.WorklistItem {
+	return aWholeDayWithLeads(waits, nil, day)
+}
+
+// aWholeDayWithLeads is the same day plus the owed-leads lane.
+//
+// Leads are read BESIDE the assembled day, the way waits are — the lane takes
+// the scope as a query argument — so classifyDay never produces one and a
+// fixture built from it alone cannot order a lead against anything.
+func aWholeDayWithLeads(
+	waits []WaitingCustomer, leads []OwedLead, day crmcontracts.Attention,
+) []crmcontracts.WorklistItem {
 	rows := classifyDay(day, rankInstant, dayMoney{})
 	for _, wait := range waits {
 		rows = append(rows, classifyWaiting(wait, rankInstant))
+	}
+	for _, lead := range leads {
+		rows = append(rows, classifyLead(lead, rankInstant))
 	}
 	return rankAll(stampAsOf(rows, rankInstant))
 }
@@ -68,8 +82,19 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 			AsOf:        rankInstant,
 			Commitments: lane(item("promise", "conversation_claim", withDue(soon))),
 			Meetings:    lane(item("meeting", "meeting", withDue(soon))),
-			AtRisk:      lane(item("risk", "deal_at_risk", withDeal(900_000_00))),
-			Notices:     lane(item("notice", "notice")),
+			// TWO deals, and the second is what makes the first material. The
+			// bar is the pipeline's own median and the test is `expected >
+			// bar`, so a lane holding one deal has that deal AS the median and
+			// it never clears itself — the row lands at the agreed level and
+			// this fixture would order five kinds of work while claiming six.
+			// The small one also proves the bar CUTS: it is a deal at risk that
+			// does not interrupt the day, drawn below the material one and above
+			// the hygiene.
+			AtRisk: lane(
+				item("risk", "deal_at_risk", withDeal(900_000_00)),
+				item("small-risk", "deal_at_risk", withDeal(1_000_00)),
+			),
+			Notices: lane(item("notice", "notice")),
 		},
 	)
 
@@ -77,7 +102,8 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 		"meeting",             // somebody else's clock, at a stated minute
 		waitActivity.String(), // somebody else's clock, all day
 		"promise",             // a promise the rep made
-		"risk",                // revenue at risk
+		"risk",                // revenue at risk, past the pipeline's median
+		"small-risk",          // a deal below that bar: agreed work, not urgent
 		"notice",              // hygiene
 	)
 }
@@ -172,4 +198,74 @@ func TestAStaleWaitWithAnOpenDealKeepsItsPlace(t *testing.T) {
 var (
 	waitActivity = ids.MustParse("00000000-0000-7000-8000-00000000a001")
 	waitPerson   = ids.MustParse("00000000-0000-7000-8000-00000000b001")
+	leadOwed     = ids.MustParse("00000000-0000-7000-8000-00000000c001")
 )
+
+// The whole fixture the campaign's plan names: six kinds at once.
+//
+// The test above orders five, and two of the six it does not reach are the two
+// a rep would most likely dispute. A LEAD whose first-reply target has already
+// been missed sits at the waiting level beside a customer, and is read from a
+// lane BESIDE the assembled day — so a fixture built from classifyDay alone
+// could not have ordered one at all. A routine DECISION is the hygiene the
+// queue exists to keep out of the way, and `notice` stood in for it: system
+// news rather than a judgement somebody owes.
+//
+// What it holds to: every one of the four seller obligations leads the two
+// housekeeping rows, and the two clocks that have already run out lead the
+// promise that has not.
+func TestSixKindsOfWorkAreOrderedAgainstEachOther(t *testing.T) {
+	t.Parallel()
+
+	soon := rankInstant.Add(90 * time.Minute)
+	got := aWholeDayWithLeads(
+		[]WaitingCustomer{{
+			ActivityID: waitActivity,
+			Subject:    "Can you confirm the retrofit price?",
+			Since:      rankInstant.Add(-72 * time.Hour),
+			PersonID:   waitPerson,
+			Engaged:    true,
+		}},
+		[]OwedLead{{
+			ID:   leadOwed,
+			Name: "Kirsten at LOXXESS",
+			// Already missed, which is why it ranks with the customer rather
+			// than with the promise: the clock did not merely start, it ran out.
+			DeadlineAt: rankInstant.Add(-2 * time.Hour),
+			State:      "breached",
+		}},
+		crmcontracts.Attention{
+			AsOf:        rankInstant,
+			Commitments: lane(item("promise", "conversation_claim", withDue(soon))),
+			Meetings:    lane(item("meeting", "meeting", withDue(soon))),
+			// TWO deals, and the second is what makes the first material. The bar
+			// is the pipeline's own median and the test is `expected > bar`, so a
+			// lane holding ONE deal has that deal as the median and it never clears
+			// itself — the row lands at the agreed level, and this fixture would
+			// order five kinds of work while its name claims six.
+			AtRisk: lane(
+				item("risk", "deal_at_risk", withDeal(900_000_00)),
+				item("small-risk", "deal_at_risk", withDeal(1_000_00)),
+			),
+			NeedsYou: []crmcontracts.AttentionItem{
+				item("pair", "dedupe_candidate"),
+			},
+		},
+	)
+
+	// The lead LEADS, and that surprised this test before it taught it. The
+	// lead, the meeting and the wait all sit at the waiting level, so the
+	// deadline step decides between them — and the lead's target ran out two
+	// hours ago while the meeting's is ninety minutes off. An overdue clock
+	// precedes a running one, which is the same rule that puts the meeting
+	// above the wait that carries no deadline at all.
+	assertOrder(t, got,
+		leadOwed.String(),     // a first reply already late
+		"meeting",             // a clock at a stated minute, still to come
+		waitActivity.String(), // a customer waiting, with no stated minute
+		"promise",             // a promise the rep made
+		"risk",                // revenue at risk, past the pipeline's median
+		"small-risk",          // a deal below that bar: agreed work, not urgent
+		"pair",                // a judgement that blocks nobody
+	)
+}
