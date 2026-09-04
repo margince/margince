@@ -68,9 +68,10 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   const current = phase.locator('[aria-current="step"]');
   await expect(current).toHaveText("Initiative");
   // The phase history lives in the details column, which starts closed: the
-  // reader opens it from the tab row's Details switch before the birth row is
-  // on screen.
-  await page.locator(".recordtabs-trailing button[aria-pressed]").click();
+  // reader opens it from the Details switch before the birth row is on screen.
+  // A project record carries no tab row, so its switch stands with the head's
+  // verbs rather than at the end of the tabs.
+  await page.getByRole("button", { name: "Details" }).click();
   await expect(page.getByText("Gestartet in Initiative")).toBeVisible();
   await expect(
     page.getByText("Unter diesem Projekt ist noch nichts abgelegt", {

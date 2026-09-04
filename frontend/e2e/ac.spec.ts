@@ -1145,6 +1145,10 @@ test.describe("B-EP09.23: overlay mode", () => {
         exact: true,
       }),
     ).toBeVisible();
+    // The context panel is one of the five and it lives in the details column,
+    // which starts folded — a closed pane is intentionally absent from the
+    // accessibility tree, so it is opened before the five are counted.
+    await page.getByRole("button", { name: "Details" }).click();
     await expect(page.getByText(unavailable)).toHaveCount(5);
     await expect(page.getByText(errorBox)).toHaveCount(0);
   });
