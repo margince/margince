@@ -141,8 +141,8 @@ export function ReviewDeck({
   const t = useT();
   const { locale } = useLocale();
   const [at, setAt] = useState(0);
-  // The order the deck asks in, fixed the first time each field appears and
-  // never shortened.
+  // The order the deck asks in: a field's place is fixed the first time it
+  // appears, and the queue is only ever shortened AHEAD of the cursor.
   //
   // `cards` is derived from what is still outstanding, so a field drops out of
   // it the moment its first character lands. A cursor that indexed THAT array
@@ -151,6 +151,23 @@ export function ReviewDeck({
   // under the caret. The place in the queue is a field, and the field's
   // content is read live so what is typed still shows.
   const order = useRef<CompanyFieldName[]>([]);
+  // AHEAD of the cursor, and only there, a settled field leaves.
+  //
+  // The deck opens on the proposal, and the site read prefills the draft on a
+  // query of its own that lands afterwards — so for one commit almost every
+  // field is outstanding, and a queue that never shortened kept all of them.
+  // The reader was then walked through nineteen cards to answer two, seventeen
+  // of them already filled in by a read they were never asked about. That is
+  // the wall this deck exists to replace, arrived at one card at a time.
+  //
+  // Behind the cursor and under it, nothing leaves. Those are cards the reader
+  // has already been shown, and dropping one would renumber the card in front
+  // of them mid-answer — which is the same defect the field-keyed cursor above
+  // exists to prevent, one level up.
+  const outstanding = new Set(cards.map((entry) => entry.field));
+  order.current = order.current.filter(
+    (field, index) => index <= at || outstanding.has(field),
+  );
   for (const entry of cards) {
     if (!order.current.includes(entry.field)) {
       order.current.push(entry.field);
@@ -244,7 +261,7 @@ export function ReviewDeck({
       </div>
       <DeckFoot
         left={cards.length}
-        total={cards.length}
+        total={order.current.length}
         settled={settled}
         locale={locale}
       />
