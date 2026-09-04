@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -42,7 +43,7 @@ import (
 // recordWorthy still binds. A meeting names people, and `noreply@` on the
 // invitation is not one of them.
 func (s *Sink) dealtWithEnoughToRecord(
-	ctx context.Context, tx pgx.Tx, cp connector.Counterparty,
+	ctx context.Context, tx pgx.Tx, cp connector.Counterparty, capturing ids.UUID,
 ) (dealtWith, error) {
 	var out dealtWith
 	var err error
@@ -58,7 +59,7 @@ func (s *Sink) dealtWithEnoughToRecord(
 	// the answer is already yes — so the ordinary case pays nothing, and the
 	// query runs only for the addresses the mail evidence left short.
 	if !out.corresponded || !out.exchanged {
-		if out.met, err = metInPersonTx(ctx, tx, cp.Email); err != nil {
+		if out.met, out.metElsewhere, err = metInPersonTx(ctx, tx, cp.Email, capturing); err != nil {
 			return dealtWith{}, err
 		}
 	}
@@ -72,8 +73,13 @@ func (s *Sink) dealtWithEnoughToRecord(
 type dealtWith struct {
 	// create: the tier's answer — a record here is honest.
 	create bool
-	// met: a captured meeting connects the workspace to this address.
+	// met: a captured meeting connects the workspace to this address. The row
+	// being captured counts, which is how a calendar record's guest becomes a
+	// contact.
 	met bool
+	// metElsewhere: the same, minus the row being decided about. It is what may
+	// outrank a settled judgement — see positive() and metInPersonTx.
+	metElsewhere bool
 
 	// corresponded: the workspace has provably written to this address.
 	corresponded bool
@@ -94,4 +100,11 @@ type dealtWith struct {
 // registry, and a prior `noise` verdict still stopped them, while the comments
 // beside both said T1 outranks them. Meeting somebody is the same claim those
 // arms defer to, so it belongs in the same answer.
-func (d dealtWith) positive() bool { return d.corresponded || d.met }
+//
+// It reads metElsewhere and NOT met, and the difference is the whole guard.
+// `kind` is caller-supplied, so a message that calls itself a meeting would
+// otherwise be its own authority to lift the suppression standing against its
+// own sender — one word in a request body, and a judged sender's mail is
+// published to the workspace. A meeting captured on some OTHER row is evidence;
+// the row under judgement is not evidence about itself.
+func (d dealtWith) positive() bool { return d.corresponded || d.metElsewhere }
