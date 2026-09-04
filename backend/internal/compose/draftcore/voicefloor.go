@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package persondraft
+package draftcore
+
+// phrasingFindings is what the phrasing checks say about one draft, in the
+// envelope it was written into.
 
 // The deterministic anti-AI floor a VOICED draft passes through, after the
 // shared correct-and-retry loop has already cleared the phrasing rules.
@@ -38,7 +41,7 @@ import (
 // alternative is the deterministic floor — a two-line opener — and a rep who
 // asked for a draft is better served by an imperfect real message than by a
 // stub, which is the same trade Write makes when the model is down.
-func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, draft Draft) (Draft, error) {
+func applyVoiceFloor(ctx context.Context, lane Completer, surface Surface, in Input, voice draftvoice.Context, draft Draft) (Draft, error) {
 	if !voice.OK {
 		return draft, nil
 	}
@@ -47,7 +50,7 @@ func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftv
 	// where the sanitizer only deletes the punctuation.
 	violations := draftvoice.Violations(draft.Subject, draft.Body)
 	if len(violations) > 0 {
-		retried, retryErr := writeWithModel(ctx, lane, in, voice, draftvoice.Feedback(violations))
+		retried, retryErr := writeWithModel(ctx, lane, surface, in, voice, draftvoice.Feedback(violations))
 		if retryErr == nil && improves(in, draft, retried, violations) {
 			draft = retried
 		}
@@ -121,4 +124,14 @@ func identity(finding draftcheck.Finding) draftcheck.Finding {
 // back empty — and an empty subject or body is not a message.
 func servable(draft Draft) bool {
 	return strings.TrimSpace(draft.Subject) != "" && strings.TrimSpace(draft.Body) != ""
+}
+
+// phrasingFindings is what the phrasing checks say about one draft, in the
+// envelope it was written into.
+//
+// Shared rather than per surface: both copies of this file called an identical
+// helper, and it reads nothing a surface owns.
+func phrasingFindings(in Input, draft Draft) []draftcheck.Finding {
+	envelope := in.WrittenInto()
+	return Findings(draft, envelope.Lang(), envelope.Band(), DraftText, DraftSubject(in))
 }
