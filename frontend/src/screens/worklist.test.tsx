@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment jsdom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { WorklistScreen } from "./worklist";
 import {
   day,
   renderWorklist,
@@ -980,7 +984,7 @@ describe("finishing a task from the row", () => {
       }),
     );
     const user = userEvent.setup();
-    renderWorklist();
+    renderUnderAToastRegion();
 
     await user.click(
       await screen.findByRole("button", { name: en["tasks.complete"] }),
@@ -1033,4 +1037,31 @@ async function patchedTask(): Promise<
     }
   }
   return undefined;
+}
+
+// renderUnderAToastRegion draws the screen the way the shell draws it.
+//
+// The confirmation this test presses lives in a toast, and `renderWorklist`
+// mounts no region — deliberately: the testkit is production-shaped for the
+// conformance gate, which allows exactly one ToastProvider and one ToastRegion
+// in the tree and names main.tsx as their home. So the region is mounted HERE,
+// in a test file the gate does not scan, the same way archive.test.tsx does it.
+//
+// Without it `toast.show` renders nothing, the Undo button never appears, and a
+// test that asserted only the completion would pass over a verb offering no way
+// back.
+function renderUnderAToastRegion() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <WorklistScreen />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
 }
