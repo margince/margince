@@ -70,12 +70,15 @@ describe("the day is one panel", () => {
     renderWorklist();
 
     // Three panels each claimed to say what to do next — "Do this next", "And
-    // then", "What to do next". One panel, one name.
+    // then", "What to do next". ONE list now, and this counts the LISTS rather
+    // than naming the strings those panels used: their words are gone from
+    // every catalog, so asserting their absence tests nothing a regression
+    // could fail. A focus card returning would draw its row outside this list.
     await waitFor(() => {
       expect(screen.getByText("Today")).toBeTruthy();
     });
-    expect(screen.queryByText("Do this next")).toBeNull();
-    expect(screen.queryByText("And then")).toBeNull();
+    const lists = document.querySelectorAll("ol.worklist-list");
+    expect(lists.length).toBe(1);
   });
 });
 
