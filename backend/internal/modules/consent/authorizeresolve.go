@@ -97,7 +97,7 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 			Supported: true,
 		}, nil
 	}
-	return resolveFromClaimAndPurpose(ctx, tx, req)
+	return g.resolveFromClaimAndPurpose(ctx, tx, req, subject)
 }
 
 // resolveFromClaimAndPurpose is the fallback when no thread and no live deal
@@ -108,17 +108,26 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 // rep who says "this is an invoice" and has no invoice should be told so; being
 // silently re-labelled as marketing and refused for want of consent would send
 // them looking in entirely the wrong place.
-func resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (resolution, error) {
+func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Context != "" {
-		return resolution{
-			Category: req.Context,
-			// Unsupported until a validator says otherwise. The validators land
-			// beside this and each one names the evidence its category needs;
-			// until then a claim with no thread and no deal behind it is
-			// exactly what a human should look at.
-			Supported: false,
-			Reason:    commsauthz.ReasonNoEvidence,
-		}, nil
+		if !req.Context.Valid() {
+			// A category outside the closed vocabulary. The send doors already
+			// refuse one (activities/sendcontext.go), so reaching here means a
+			// caller got past them or a stored claim predates a vocabulary
+			// change — either way the engine knows nothing about it and says
+			// so, rather than treating an unreadable claim as an ordinary
+			// unevidenced one.
+			return resolution{
+				Category:  commsauthz.CategoryMarketing,
+				Supported: false,
+				Reason:    commsauthz.ReasonUnknownPurpose,
+			}, nil
+		}
+		w, err := g.windowsFor(ctx, tx)
+		if err != nil {
+			return resolution{}, err
+		}
+		return g.validate(ctx, tx, req, subject, req.Context, w)
 	}
 	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
 	if err != nil {

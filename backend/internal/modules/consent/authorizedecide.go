@@ -33,6 +33,17 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		return commsauthz.Decision{}, err
 	}
 	if res.Supported {
+		// The ground goes on the record BEFORE the message is permitted on it.
+		// A basis written afterwards would be describing a send that already
+		// happened, and one never written at all is the gap that made the
+		// subject-access export answer "we relied on nothing".
+		w, err := g.windowsFor(ctx, tx)
+		if err != nil {
+			return commsauthz.Decision{}, err
+		}
+		if err := recordBasis(ctx, tx, subject, res, req, w); err != nil {
+			return commsauthz.Decision{}, err
+		}
 		// The record bears the category out on its own evidence, so the engine
 		// allows on that ground and names it. This is the arm the old model had
 		// no way to reach: a reply to a thread the subject started needed no

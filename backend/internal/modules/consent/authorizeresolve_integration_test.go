@@ -224,7 +224,7 @@ func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Dec
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = e.gate.decideOne(context.Background(), tx,
+		out, err = e.gate.decideOne(e.ctx, tx,
 			connector.Recipient{Email: e.address}, req)
 		return err
 	}); err != nil {
@@ -239,7 +239,7 @@ func (e *resolveEnv) resolve(t *testing.T, req commsauthz.Request) resolution {
 	var out resolution
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = e.gate.resolveCategory(context.Background(), tx, req, subjectRef{
+		out, err = e.gate.resolveCategory(e.ctx, tx, req, subjectRef{
 			Kind: entityPerson, ID: e.person.String(), Address: e.address,
 		})
 		return err
@@ -490,7 +490,7 @@ func TestTwoRecipientsOnOneMessageGetTheirOwnAnswers(t *testing.T) {
 	var stranger resolution
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		stranger, err = e.gate.resolveCategory(context.Background(), tx,
+		stranger, err = e.gate.resolveCategory(e.ctx, tx,
 			commsauthz.Request{AnchorActivityID: anchor}, subjectRef{
 				Kind: entityPerson, ID: ids.New[ids.PersonKind]().String(),
 				Address: "stranger@elsewhere.test",
