@@ -46932,6 +46932,15 @@ export interface operations {
                     "application/json": components["schemas"]["IssuedForecastShare"];
                 };
             };
+            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
@@ -46958,6 +46967,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     openForecastShare: {
@@ -47056,6 +47066,15 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsAnswer"];
                 };
             };
+            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
@@ -47081,6 +47100,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             401: components["responses"]["Unauthorized"];

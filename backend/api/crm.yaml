@@ -16230,6 +16230,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/IssuedForecastShare' }
+        '400':
+          description: >-
+            The request is unanswerable as written: an expiry past the ceiling, a field
+            this caller cannot name, a measure that means nothing over that column, or a
+            filter separating out too few records to answer about. The body names what
+            would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -16253,6 +16262,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/shared/{token}:
     parameters:
       - name: token
@@ -16394,6 +16404,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
+        '400':
+          description: >-
+            The request is unanswerable as written: an expiry past the ceiling, a field
+            this caller cannot name, a measure that means nothing over that column, or a
+            filter separating out too few records to answer about. The body names what
+            would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -16428,6 +16447,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '400':
+          description: >-
+            The request is unanswerable as written: an expiry past the ceiling, a field
+            this caller cannot name, a measure that means nothing over that column, or a
+            filter separating out too few records to answer about. The body names what
+            would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
