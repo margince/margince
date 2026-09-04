@@ -8183,6 +8183,8 @@ export const en = {
   "worklist.because.pinned": "You pinned this",
   "worklist.because.buyer_wrote_last": "They wrote last",
   "worklist.because.waiting_days": "waiting",
+  "worklist.because.more_one": "+{count} more reason",
+  "worklist.because.more_other": "+{count} more reasons",
   "worklist.because.waiting_days.value_one": "waiting {value} day",
   "worklist.because.waiting_days.value_other": "waiting {value} days",
   "worklist.because.overdue": "overdue",

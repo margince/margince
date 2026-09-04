@@ -13,7 +13,7 @@ import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { translatePlural, useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
@@ -114,10 +114,9 @@ export function WorklistRow({
       : item.detail;
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
-  const because = phrasedReasons(item)
+  const reasons = phrasedReasons(item)
     .map((reason) => reasonText(reason, t, locale, zone))
-    .filter((phrase): phrase is string => phrase !== null)
-    .join(" · ");
+    .filter((phrase): phrase is string => phrase !== null);
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
   const emailRow = item.email_summary != null;
@@ -185,7 +184,7 @@ export function WorklistRow({
         <RowCaptions
           when={when}
           facts={facts}
-          because={because}
+          reasons={reasons}
           consequence={consequence}
           above={above}
         />
@@ -324,6 +323,66 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
 }
 
 /**
+ * How many reasons a row says before the rest go behind a tap.
+ *
+ * A COUNT, because the ceiling has to survive the vocabulary growing. Saying
+ * only what a row contains today puts it back over the limit the next time
+ * somebody adds a reason, and that person has no way to know they did.
+ *
+ * Three because three still fit on ONE line at 390px. Measured 2026-09-05:
+ * two reasons and three are both 19px; the fourth wraps to 37px and the sixth
+ * to 56px. So the fold costs a reader nothing until the line would have taken
+ * a second line anyway.
+ */
+const REASONS_BEFORE_THE_FOLD = 3;
+
+/**
+ * Why this row is here — the first few said outright, the rest a tap away.
+ *
+ * NOTHING IS DISCARDED, which is the whole shape of this. A cap that dropped
+ * the overflow was tried and abandoned (it dropped the wrong ones: `pinned`,
+ * `expected_revenue` and an absorbed deal's grounds are all appended LAST
+ * because they are applied late, so a head-of-list cut takes exactly the facts
+ * that decided where the row sits). The reasons arrive "in the order they were
+ * weighed", so the first ones are the strongest and the fold falls in the
+ * right place by construction — but the rest stay reachable rather than being
+ * silenced.
+ *
+ * The same shape the deal status card uses: first line out, remainder behind a
+ * disclosure. One answer to "too many reasons", not a second one written here.
+ *
+ * The summary NAMES THE COUNT rather than saying "more". A reader deciding
+ * whether to spend a tap wants to know if it is one more fact or four.
+ */
+function RowReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) {
+  const { locale } = useLocale();
+  if (reasons.length === 0) {
+    return null;
+  }
+  const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
+  const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
+  if (folded.length === 0) {
+    return <p className="t-caption worklist-row-because">{said.join(" · ")}</p>;
+  }
+  return (
+    <details className="worklist-row-because-fold">
+      <summary className="t-caption worklist-row-because">
+        {said.join(" · ")}{" "}
+        <span className="worklist-row-because-more">
+          {translatePlural(locale, "worklist.because.more", folded.length, {
+            // The reader's own notation, not String(): a count drawn for a
+            // person goes through the formatter like every other magnitude,
+            // and jsx-magnitude.test.ts holds that for the whole tree.
+            count: formatNumber(folded.length, locale),
+          })}
+        </span>
+      </summary>
+      <p className="t-caption worklist-row-because">{folded.join(" · ")}</p>
+    </details>
+  );
+}
+
+/**
  * Everything the row says about itself under the title, in the order a reader
  * needs it.
  *
@@ -339,13 +398,13 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
 function RowCaptions({
   when,
   facts,
-  because,
+  reasons,
   consequence,
   above,
 }: Readonly<{
   when: string | null;
   facts: string | null;
-  because: string;
+  reasons: readonly string[];
   consequence: string | null;
   above: string | null;
 }>) {
@@ -356,7 +415,7 @@ function RowCaptions({
           this says what time. */}
       {when && <p className="t-caption worklist-row-when">{when}</p>}
       {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-      {because && <p className="t-caption worklist-row-because">{because}</p>}
+      <RowReasons reasons={reasons} />
       {/* What it costs to do nothing. The question a queue exists to answer,
           and the one the lane feed had no field for. */}
       {consequence && (
