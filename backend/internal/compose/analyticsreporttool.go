@@ -54,15 +54,20 @@ func analyticsReportComposer(pool *pgxpool.Pool, floor analyticsquery.Floor) age
 			return nil, err
 		}
 
+		// Encoded one block at a time rather than as one array, because the
+		// result carries them as a slice — see ComposeAnalyticsReportResult
+		// for why the advertised schema depends on which of the two it is.
+		//
 		// Empty, never nil: a document that rendered no blocks cannot happen —
 		// Validate refuses one — but a nil here would marshal to null, which a
 		// model reads as "unknown" rather than as "none".
-		if blocks == nil {
-			blocks = []RenderedBlock{}
-		}
-		encoded, err := json.Marshal(blocks)
-		if err != nil {
-			return nil, fmt.Errorf("compose: rendering a composed report: %w", err)
+		encoded := make([]json.RawMessage, 0, len(blocks))
+		for _, block := range blocks {
+			raw, err := json.Marshal(block)
+			if err != nil {
+				return nil, fmt.Errorf("compose: rendering a composed report: %w", err)
+			}
+			encoded = append(encoded, raw)
 		}
 		return json.Marshal(agents.ComposeAnalyticsReportResult{Blocks: encoded})
 	}

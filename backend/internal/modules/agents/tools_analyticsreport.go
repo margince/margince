@@ -94,7 +94,14 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 type ComposeAnalyticsReportResult struct {
 	// Blocks carries each composed block with its figures resolved, in the
 	// order the document composed them.
-	Blocks json.RawMessage `json:"blocks"`
+	//
+	// A slice of raw blocks rather than one raw array, because the two say
+	// different things in the DERIVED schema: schemaFor describes a
+	// json.RawMessage as an object with nothing said about its members, which
+	// is honest for a document and a lie for a list. Held as a slice, the
+	// advertised shape is an array of opaque blocks — which is exactly what a
+	// caller gets, and what the block kinds are still free to vary inside.
+	Blocks []json.RawMessage `json:"blocks"`
 }
 
 func (t composeAnalyticsReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
