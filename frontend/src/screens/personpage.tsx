@@ -476,6 +476,7 @@ export function PersonPageV2({
                 view={view.data}
                 onAction={runAction}
                 onOpenTasks={() => navigate({ screen: "worklist" })}
+                onOpenEmail={setOpenEmail}
               />
               <RecordReadingPair>
                 <PersonMemory view={view.data} onOpenEmail={setOpenEmail} />
