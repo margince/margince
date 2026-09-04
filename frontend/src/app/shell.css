@@ -1128,6 +1128,9 @@
   padding: 12px 14px; /* ds:ignore 14 is 2 shy of the list's inset, because this glyph is 2px wider: the query sits on the results' own text column */
   border-bottom: 1px solid var(--borderSubtle);
 }
+/* The magnifier belongs to the field now (SearchField `flush`), which places it
+   on the bar's own left inset. This keeps its size and tone; the position is
+   the field's. */
 .palette-input svg {
   width: 16px;
   height: 16px;

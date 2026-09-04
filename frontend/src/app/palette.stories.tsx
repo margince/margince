@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -64,6 +65,16 @@ function palette(hits: () => Response | Promise<Response>) {
 const noHits = () =>
   jsonResponse({ data: [], page: { next_cursor: null, has_more: false } });
 
+// The palette clears its box on open, so a story cannot pre-fill it — the live
+// arm only runs for a query somebody typed, which is the state worth a picture.
+// Two characters is the floor the search arm waits for.
+const type =
+  (query: string) =>
+  async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("searchbox"), query);
+  };
+
 // Opened, nothing typed: the whole command list, which is what ⌘K shows first.
 export const Default: Story = {
   render: () => palette(noHits),
@@ -85,19 +96,7 @@ export const WithRecordHits: Story = {
         page: { next_cursor: null, has_more: false },
       }),
     ),
-  play: async ({ canvasElement }) => {
-    const input = canvasElement.querySelector("input");
-    if (input) {
-      // Set through the native setter so React's onChange fires: assigning
-      // `.value` alone updates the DOM and leaves the component's state behind.
-      const setter = Object.getOwnPropertyDescriptor(
-        globalThis.HTMLInputElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(input, "acme");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-  },
+  play: type("acme"),
 };
 
 // The wait, which is held back 300ms before it draws: a placeholder that
@@ -120,15 +119,5 @@ export const SearchFailed: Story = {
 // is none.
 export const NoMatches: Story = {
   render: () => palette(noHits),
-  play: async ({ canvasElement }) => {
-    const input = canvasElement.querySelector("input");
-    if (input) {
-      const setter = Object.getOwnPropertyDescriptor(
-        globalThis.HTMLInputElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(input, "zzzzz");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-  },
+  play: type("zzzzz"),
 };

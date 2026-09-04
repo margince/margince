@@ -1249,6 +1249,32 @@
 .input-icon .input {
   padding-left: 30px;
 }
+/* The field whose container draws the chrome (SearchField `flush`): the ⌘K
+   palette's bar has its own ground, inset and bottom rule, so a bordered field
+   nested inside it reads as a box in a box. The magnifier stays — it is the
+   affordance, not the chrome — and moves to the bar's own left inset. */
+.input-icon-flush {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.input-icon-flush svg {
+  left: 0;
+}
+.input-icon-flush .input {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  height: auto;
+  padding: 0 0 0 24px;
+  font-size: 14px;
+}
+.input-icon-flush .input:focus,
+.input-icon-flush .input:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border: 0;
+}
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
    other in the same form, so type size, padding and focus transition are the

@@ -507,9 +507,25 @@ export function TextInput(props: ComponentPropsWithRef<"input">) {
   );
 }
 
-export function SearchField(props: InputHTMLAttributes<HTMLInputElement>) {
+/**
+ * The one search field: a text input that announces itself as a search box and
+ * carries the magnifier.
+ *
+ * `flush` is for a field whose CONTAINER already draws the chrome — the ⌘K
+ * palette's own bar, which has its own ground, its own inset and its own
+ * bottom rule. Nested, the ordinary field's border and radius read as a box
+ * inside a box, and the field's own padding pushes the caret off the text
+ * column the results below it stand on. It is a variant rather than a caller
+ * overriding `.input` from outside, because a call site that reaches in to
+ * cancel a primitive's chrome is how the next surface grows a second search
+ * field nobody can find.
+ */
+export function SearchField({
+  flush,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & Readonly<{ flush?: boolean }>) {
   return (
-    <span className="input-icon">
+    <span className={flush ? "input-icon input-icon-flush" : "input-icon"}>
       <Search aria-hidden />
       <input
         type="search"

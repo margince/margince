@@ -464,6 +464,7 @@ export function CommandPalette({
       >
         <div className="palette-input">
           <SearchField
+            flush
             value={query}
             placeholder={t("palette.placeholder")}
             aria-label={t("palette.aria")}
