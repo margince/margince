@@ -66,9 +66,12 @@ type dayMoney struct {
 	// which is why ran is what the readers below ask.
 	base string
 	// byItem is each priced lane item's expected revenue in the base currency,
-	// keyed by the item's id — an at-risk row's own id, or a brief row's own
-	// entry id, never the deal id the two can share. A deals_at_risk item
-	// absent here, on a day that ran, is one the estate could not price.
+	// keyed by the ROW's id — for an at-risk row that happens to equal the
+	// deal id (riskItem sets Id to the deal's own), for a brief row it is the
+	// brief entry's own id instead. Never a key the two lanes share, which is
+	// why readingsOf dedupes by Subject.Id rather than by this map's own key.
+	// A deals_at_risk item absent here, on a day that ran, is one the estate
+	// could not price.
 	byItem map[string]int64
 }
 

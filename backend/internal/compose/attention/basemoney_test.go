@@ -372,12 +372,10 @@ func TestAnUnboundSeamCarriesNoExpectedMinorBase(t *testing.T) {
 	}
 }
 
-// margince#3653: the overnight brief's own lane (classifyBriefItem) never ran
-// its item through the same pricing classifyRisk gives the identical fact for
-// a "deals_at_risk" row in the sibling lane — the SAME category, since a brief
-// item is a drifting deal too. A client reading the brief row found
-// ExpectedMinorBase always null, and had no way to state or total what the
-// morning's suggested-first deal was worth.
+// The overnight brief's own lane (classifyBriefItem) runs its item through
+// the same pricing classifyRisk gives the identical fact for a
+// "deals_at_risk" row in the sibling lane — the SAME category, since a brief
+// item is a drifting deal too.
 func TestTheBriefItemLaneAlsoCarriesTheConvertedExpectedRevenue(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
@@ -446,15 +444,13 @@ func TestASharedDealCountsOnceTowardRevenueAtRiskAcrossBothLanes(t *testing.T) {
 	}
 }
 
-// Pricing the brief lane is not free of ranking consequences, and this is the
-// one the fix genuinely changes: a brief item and a plain task both classify
-// at levelAgreed with no deadline, so before this fix they always tied
-// through to id order — the brief item's ExpectedMinorBase was always unset.
-// Now a priced brief item's money tiebreak (byExpected, rank.go) beats a
-// task with none, the same way a material deal already beats an unpriced one.
-// Named here rather than left as a side effect an unrelated test would need
-// to notice breaking.
-func TestAPricedBriefItemNowWinsTheMoneyTiebreakOverAPlainTask(t *testing.T) {
+// A brief item and a plain task both classify at levelAgreed with no
+// deadline, so a priced brief item's money tiebreak (byExpected, rank.go)
+// decides between them — the same way a material at-risk deal already beats
+// an unpriced one. Pricing the brief lane is not free of ranking
+// consequences, and this test names the one it has rather than leaving it
+// for an unrelated test to notice breaking.
+func TestAPricedBriefItemWinsTheMoneyTiebreakOverAPlainTask(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:        rankInstant,
 		ThisMorning: []crmcontracts.AttentionItem{item("brief", "brief_item", withPricedDeal(fiveMillionYen))},

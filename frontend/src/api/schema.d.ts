@@ -28796,9 +28796,10 @@ export interface components {
              *     is left out, whichever lane surfaced it. A deal reaching the page from both
              *     the overnight brief and the at-risk lane at once is counted only ONCE — it
              *     is one deal's value, not one value per card it happens to appear on. This is
-             *     why `more_available` matters: read this figure as "at least this much", and
-             *     read the `deals_at_risk` entry in `counts` for how many deals stand behind
-             *     it.
+             *     why `more_available` matters: read this figure as "at least this much". The
+             *     `deals_at_risk` entry in `counts` is a CARD count, not a deal count — the same
+             *     deal reaching the page from both lanes is two cards there, so it can exceed
+             *     the number of distinct deals this figure priced.
              */
             revenue_at_risk_minor: number | null;
             /**

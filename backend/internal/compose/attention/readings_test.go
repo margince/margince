@@ -165,10 +165,9 @@ func TestAConvertedSumNamesTheBaseCurrency(t *testing.T) {
 }
 
 // A deal reaching the page from the overnight brief lands in the same
-// `deals_at_risk` category an at-risk row for it would (margince#3653):
-// `classifyBriefItem` prices it exactly the way `classifyRisk` prices the
-// identical fact for its own lane, so the strip's sum covers both rather than
-// silently excluding whichever deal the brief happened to surface first.
+// `deals_at_risk` category an at-risk row for it would: `classifyBriefItem`
+// prices it exactly the way `classifyRisk` prices the identical fact for its
+// own lane, so the strip's sum covers both.
 func TestTheSumCoversBothDealsAtRiskLanes(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:   rankInstant,

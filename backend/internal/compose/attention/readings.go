@@ -62,9 +62,9 @@ func readingsOf(
 	// labels_test.go: two brief entries and one at-risk row for one deal),
 	// each with its OWN row id, priced independently by priceTheDay. Summing
 	// every row would count that one deal's value once per card it happens to
-	// surface on. countedDeals holds the deal ids already summed, keyed by the
-	// one field every deals_at_risk row names it by regardless of which lane
-	// produced the row (riskItem/briefItem both set Subject to the deal).
+	// surface on. countedDeals holds the deal ids already summed, keyed by
+	// Subject.Id — both current producers (riskItem, briefItem) set it to
+	// the deal, and it is the only field the two lanes' rows share.
 	countedDeals := map[openapi_types.UUID]bool{}
 	for _, row := range considered {
 		switch row.item.Category {
@@ -82,6 +82,13 @@ func readingsOf(
 			if !row.hasExpected {
 				continue
 			}
+			// Both current producers (riskItem, briefItem — rendersilence.go,
+			// render.go) always set Subject to the deal, so this dedupe always
+			// applies to a deals_at_risk row in practice. A row that somehow
+			// carried none could not be told apart from any other deal and
+			// would fall back to being summed unconditionally, exactly as it
+			// was before the dedupe existed — a nil Subject is not a shape
+			// either producer emits, not a case this switch chooses to trust.
 			if row.item.Subject != nil {
 				if countedDeals[row.item.Subject.Id] {
 					continue

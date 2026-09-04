@@ -37,16 +37,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		level = levelMaterialRisk
 	}
 	row := base(item, level, "deals_at_risk", consequence)
-	// The contract's own per-row figure, sent rather than left for a client to
-	// re-derive from `because`/`above_next` — set only once conversion actually
-	// ran and priced this item (money.converted() below is the raw-amount
-	// guard). expectedRevenue already answers known=false for a deal with no
-	// amount, an unpriced converted item, or a converted figure with no base
-	// currency named, so this is the one place that answer is spent rather
-	// than a second copy of any of its three reasons.
-	if row.Deal != nil && money.converted() && known {
-		row.Deal.ExpectedMinorBase = &expected
-	}
+	priceDealsAtRiskRow(&row, expected, known, money)
 	// The reason carries the figure the verdict actually weighed, in the units
 	// it was weighed in — the base currency once conversion ran — so a reader
 	// comparing it against the summary's threshold compares like with like.
@@ -133,6 +124,22 @@ func expectedRevenue(item crmcontracts.AttentionItem, money dayMoney) (int64, bo
 	}
 	converted, priced := money.byItem[item.Id]
 	return converted, priced
+}
+
+// priceDealsAtRiskRow writes the contract's per-row ExpectedMinorBase, the
+// one place this guard is spelled: classifyRisk and classifyBriefItem both
+// produce a "deals_at_risk" row for a deal, and a second copy of the guard is
+// a second answer to "is this row priced" that the two could drift apart on.
+//
+// Set only once conversion actually ran (money.converted() is the raw-amount
+// guard) and the deal WAS priced — expected/known already answer false for a
+// deal with no amount, an unpriced converted item, or a converted figure with
+// no base currency named, so this is the one place that answer is spent
+// rather than a second copy of any of its three reasons.
+func priceDealsAtRiskRow(row *crmcontracts.WorklistItem, expected int64, known bool, money dayMoney) {
+	if row.Deal != nil && money.converted() && known {
+		row.Deal.ExpectedMinorBase = &expected
+	}
 }
 
 // moneyOf carries the deal's own currency beside the amount. An amount without
