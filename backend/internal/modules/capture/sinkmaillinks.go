@@ -49,6 +49,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// postCommitLinkReservation is how many link seats this arm leaves for the
+// writers that run after the capture transaction: the counterparty ensure and
+// the project ladder, one each (sink.go). Neither reads this budget, so the
+// room has to be kept for them here or the activity's 25-link ceiling is
+// breached by exactly the messages that filled it.
+const postCommitLinkReservation = 2
+
 // linkResolvedMailParticipants files a captured message under every participant
 // the workspace already has a live person for.
 //
@@ -71,9 +78,18 @@ func (s *Sink) linkResolvedMailParticipants(
 		return err
 	}
 	// The budget is what the row can still take rather than a fresh 25: the
-	// ceiling is on the activity, and the counterparty's own link is already on
-	// it by the time this runs.
-	budget := maxDerivedMeetingLinks - existing
+	// ceiling is on the ACTIVITY, whatever wrote the links.
+	//
+	// Two seats are reserved on top of what the row already carries, because two
+	// writers still run AFTER this transaction commits and neither consults this
+	// budget: ensureCounterparty files the party the ladder judged, and the
+	// project ladder files the project it belongs to (sink.go). Spending the
+	// whole ceiling here would let a message with 25 resolved participants end
+	// up at 27, quietly breaking the invariant this constant exists to state.
+	budget := maxDerivedMeetingLinks - existing - postCommitLinkReservation
+	if budget < 0 {
+		budget = 0
+	}
 	written := 0
 	for _, person := range people {
 		if written >= budget {
