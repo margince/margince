@@ -16453,6 +16453,58 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/runs/{run_id}/cells/explain:
+    post:
+      tags: [Reports]
+      operationId: explainReportRunCell
+      summary: The records behind one cell of a saved run.
+      description: |
+        The evidence a report block's drawer opens. A block cites a run and a cell; this
+        turns that citation into the records the number was computed from.
+
+        THE QUESTION COMES FROM THE SAVED RUN, not from the request. That is the whole
+        difference between this and `/analytics/explain`, which carries the question whole
+        because a caller-supplied handle they could edit would let an explanation describe a
+        DIFFERENT query than the number came from. A saved run is immutable, so its id names
+        one question and cannot be edited into another.
+
+        The records are read under the CALLER's authority and re-judged against the current
+        floor, exactly as the run's own answer is. A cell the floor withholds explains to
+        `withheld` with no rows: handing those records over one at a time is the same
+        disclosure at a slower pace.
+
+        The cell is named by its group key values, in the saved question's own `group_by`
+        order. A wrong-length group is refused rather than matched positionally against what
+        happens to line up.
+      x-agent-access: human-only
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportRunCell' }
+      responses:
+        '200':
+          description: The records behind the cell, as this caller may read them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '400':
+          description: >-
+            The cell names a different number of group keys than the saved question grouped
+            by. A typed refusal rather than a validation error: the request is well-formed
+            and the mismatch is only knowable against the stored question.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/explain:
     post:
       tags: [Reports]
@@ -31918,6 +31970,19 @@ components:
             The group floor that judged the ORIGINAL answer. Reported, never applied — this
             read is floored by the installation's current setting. Two runs served under
             different floors make different promises about what is missing.
+      additionalProperties: false
+    ReportRunCell:
+      type: object
+      description: One cell of a saved run, named by its group keys.
+      properties:
+        group:
+          type: array
+          items: {}
+          description: >-
+            The cell's group key values, one per grouping in the SAVED question and in that
+            question's own order. Omitted for an ungrouped run, which has one cell. A null
+            entry means the group whose value is unset, which resolves to the records that
+            have nothing there rather than to none.
       additionalProperties: false
     AnalyticsExplainRequest:
       type: object

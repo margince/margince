@@ -159,6 +159,35 @@ func queryFromWire(in crmcontracts.AnalyticsQuery) analyticsquery.Query {
 	return out
 }
 
+// ExplainReportRunCell implements POST /analytics/runs/{run_id}/cells/explain.
+func (h analyticsQueryHandlers) ExplainReportRunCell(
+	w http.ResponseWriter, r *http.Request, runID openapi_types.UUID,
+) {
+	var body crmcontracts.ReportRunCell
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	var group []any
+	if body.Group != nil {
+		group = *body.Group
+	}
+
+	ctx := r.Context()
+	var out AnalyticsExplanation
+	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = ExplainReportRunCell(ctx, tx, ids.UUID(runID), group, h.floor)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
+		Columns: out.Columns, Rows: out.Rows,
+		Withheld: out.Withheld, Truncated: out.Truncated,
+	})
+}
+
 // wireFromQuery converts a stored question back to the wire.
 //
 // The inverse of queryFromWire, and it exists because a saved run answers with

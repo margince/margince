@@ -178,3 +178,39 @@ func ReadReportRun(
 	out.Answer = answer
 	return out, nil
 }
+
+// ExplainReportRunCell resolves one cell of a saved run to its records.
+//
+// The question comes from the RUN, never from the request. That is what makes a
+// citable evidence handle safe at all: /analytics/explain carries the question
+// whole precisely because a handle a caller could edit would let an explanation
+// describe a different query than the number came from, and nothing downstream
+// could tell. A saved run is immutable, so its id names one question and cannot
+// be edited into another.
+//
+// Everything else is the drill-through's own rules, unchanged: the caller's
+// authority narrows the population, and the cell is re-judged against the
+// CURRENT floor before any record is returned.
+func ExplainReportRunCell(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, group []any, floor analyticsquery.Floor,
+) (AnalyticsExplanation, error) {
+	var queryJSON []byte
+	if err := tx.QueryRow(ctx, `
+		SELECT query FROM report_run WHERE id = $1`, id,
+	).Scan(&queryJSON); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return AnalyticsExplanation{}, apperrors.ErrNotFound
+		}
+		return AnalyticsExplanation{}, fmt.Errorf("compose: reading a report run to explain: %w", err)
+	}
+	var q analyticsquery.Query
+	if err := json.Unmarshal(queryJSON, &q); err != nil {
+		return AnalyticsExplanation{}, fmt.Errorf("compose: decoding a report run's question: %w", err)
+	}
+
+	// A group of the wrong length is refused by CompileExplain, which already
+	// counts the cell's keys against the question's groupings and names both
+	// numbers in its message. Re-checking it here would be a second answer to one
+	// question, and the two would drift the first time the rule moved.
+	return ExplainAnalyticsCell(ctx, tx, analyticsquery.Explain{Query: q, Group: group}, floor)
+}
