@@ -7898,6 +7898,7 @@ export const de = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Dein Tag wird gelesen…",
   "worklist.queue": "Heute",
+  "worklist.review": "Zu prüfen",
   "worklist.more": "Mehr anzeigen",
   "worklist.more.failed": "Konnte nicht mehr laden. Bitte erneut versuchen.",
   "worklist.summary":

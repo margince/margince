@@ -7810,6 +7810,7 @@ export const vi = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Hôm nay",
+  "worklist.review": "Cần xem xét",
   "worklist.more": "Xem thêm",
   "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
