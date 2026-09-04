@@ -215,7 +215,9 @@ describe("deciding a duplicate pair on the row", () => {
     expect(screen.getByText("Acme GmbH")).toBeTruthy();
     expect(screen.getByText("ACME Gmbh")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText(/Only somebody who can change both records/)).toBeTruthy();
+    expect(
+      screen.getByText(/Only somebody who can change both records/),
+    ).toBeTruthy();
   });
 
   // The steward still gets the verbs. Without this the case above would pass

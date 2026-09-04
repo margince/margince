@@ -101,6 +101,9 @@ func (s *Store) DescribeForMerge(
 // exactly as it is from DescribeForMerge, and the two absences mean the same
 // thing.
 //
+// Held by: TestTheMergeCardAsksTheSameAuthorityTheWriteAsks
+// (backend/gates/mergedecidableauthority_test.go)
+//
 // The OBJECT grant is deliberately NOT required here. A reader whose role lacks
 // the update verb is a legitimate caller asking a question whose answer is "no
 // verb for you", and WritableSubset already answers it that way — refusing the
