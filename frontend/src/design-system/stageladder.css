@@ -1,0 +1,78 @@
+/* StageLadder — the stages a record climbs, and the move to any of them.
+
+   One sheet for what `composed.css`'s `.stepper` and `leads.css`'s
+   `.lead-ladder` each spelled. The deal and the project drew a row of equal
+   pills; the lead drew chevrons and a filled trail. This is the lead's shape,
+   because that is the one that says which stages are behind. */
+
+/* A fieldset, so the browser's own border, padding and margin are cleared —
+   none of them is wanted around a row of stages. */
+.stage-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.stage-ladder-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Each step is its own flex item and carries the chevron that introduces it,
+   so the mark and its step wrap together and no row ends on a separator. */
+.stage-ladder-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.stage-ladder-sep {
+  color: var(--textMeta);
+}
+
+/* Where the record IS: a marker, not a control, so it takes the accent fill
+   the row's one settled fact deserves and none of a button's affordances. Its
+   height matches the small controls beside it — a marker set to its own text
+   height makes the row look like two rungs. */
+.stage-ladder-here {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-h-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+
+/* The trail behind the current step. Weight rather than another fill: the row
+   already has one filled thing and it is where the record stands, so a second
+   fill would make the reader find the current step twice. */
+.stage-ladder-step.is-done > .btn:not(:disabled) {
+  color: var(--textPrimary);
+  font-weight: var(--fw-semibold);
+}
+
+/* A way OUT stands off from the run of open stages: won and lost are
+   alternatives to each other rather than two more rungs of one ladder. */
+.stage-ladder-step.is-terminal {
+  margin-left: var(--space-2);
+}
+
+/* The line under the ladder: how the record got here, or what a step will ask
+   for first. */
+.stage-ladder-hint {
+  margin: 0;
+}

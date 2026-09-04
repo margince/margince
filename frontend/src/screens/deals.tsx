@@ -62,6 +62,7 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
+import { StageLadder, type StageStep } from "../design-system/stageladder";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
@@ -3595,6 +3596,39 @@ export function OffersPanel({
 const DEAL_TABS = ["overview", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
+// The pipeline's stages as ladder rungs: what is behind the deal, where it
+// stands, and the ways out.
+//
+// `position` orders the pipeline and is what the trail is read from — a stage
+// earlier in the pipeline than the deal's own has been passed. A deal whose
+// stage the pipeline cannot name (an overlay mirror carrying the incumbent's
+// id, a stage archived out from under it) leaves every rung unpassed rather
+// than guessing a position, because a trail drawn from a guess says the deal
+// went through stages it may never have seen.
+function dealStageSteps({
+  deal,
+  stages,
+  refused,
+  onAdvance,
+}: Readonly<{
+  deal: Deal;
+  stages: readonly Stage[];
+  refused: boolean;
+  onAdvance: (toStage: Stage) => void;
+}>): StageStep[] {
+  const here = stages.find((stage) => stage.id === deal.stage_id);
+  return stages.map((stage) => ({
+    key: stage.id,
+    label: stage.name,
+    done: here !== undefined && stage.position < here.position,
+    current: stage.id === deal.stage_id,
+    // Won and lost are the two ways out rather than two more rungs.
+    terminal: stage.semantic !== "open",
+    disabled: refused,
+    onPick: () => onAdvance(stage),
+  }));
+}
+
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
@@ -3864,33 +3898,20 @@ function DealOverviewPane({
       {/* A won deal with no project, on a company with exactly one open
           project, is offered that project once. Nothing else here asks. */}
       {!overlay && <StartDeliveryPrompt deal={deal} />}
-      {/* A group, not a nav: these buttons move the deal, they do not take the
-          reader anywhere, and a landmark in the navigation list that writes
-          when you press it misdescribes what it does. */}
+      {/* Where the deal is now is a fact, not a choice, so the current stage
+          stays a marker. Every other stage is the move to it — which is what
+          makes a deal closable from its own page rather than only by dragging
+          its card on the board. */}
       {stages.length > 0 && (
-        <fieldset className="stepper" aria-label={t("deals.stage")}>
-          {stages.map((stage) =>
-            stage.id === deal.stage_id ? (
-              <span key={stage.id} className="step current" aria-current="step">
-                {stage.name}
-              </span>
-            ) : (
-              // Where the deal is now is a fact, not a choice, so the current
-              // stage stays a marker. Every other stage is the move to it —
-              // which is what makes a deal closable from its own page rather
-              // than only by dragging its card on the board.
-              <button
-                key={stage.id}
-                type="button"
-                className="step"
-                disabled={advancing || advanceRefused}
-                onClick={() => onAdvance(stage)}
-              >
-                {stage.name}
-              </button>
-            ),
-          )}
-        </fieldset>
+        <StageLadder
+          label={t("deals.stage")}
+          steps={dealStageSteps({
+            deal,
+            stages,
+            refused: advancing || advanceRefused,
+            onAdvance,
+          })}
+        />
       )}
       {/* ONE READING, IN PARTS, below the stage bar on purpose: a reader
           takes in WHERE the deal is before they read the account of how it got

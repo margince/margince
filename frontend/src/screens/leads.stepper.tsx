@@ -1,5 +1,5 @@
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { StageLadder } from "../design-system/stageladder";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -91,48 +91,25 @@ export function LeadStepper({
     },
   ];
   return (
-    <nav aria-label={t("lead.ladder")} className="lead-ladder">
-      <ol className="lead-ladder-steps">
-        {steps.map((step, index) => (
-          <li
-            key={step.key}
-            // `is-current` was here too and nothing ever styled it: the step
-            // the lead is on is carried by `aria-current` and by the button's
-            // primary variant, which is one claim in two places rather than
-            // three.
-            className={[
-              "lead-ladder-step",
-              step.filled ? "is-filled" : "",
-              step.rung === 3 ? "is-terminal" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            aria-current={step.current ? "step" : undefined}
-          >
-            {index > 0 && (
-              <span aria-hidden="true" className="lead-ladder-sep">
-                ›
-              </span>
-            )}
-            <Button
-              small
-              variant={step.current ? "primary" : "ghost"}
-              data-testid={`lead-step-${step.key}`}
-              // The current step is a fact, not an action; a lead that takes
-              // no step — terminal, or a mirror — says why on every other one.
-              disabled={step.current || pending}
-              reason={!step.current ? readOnlyReason : undefined}
-              onClick={step.onPick}
-            >
-              {t(STEP_LABEL[step.key])}
-            </Button>
-          </li>
-        ))}
-      </ol>
-      <p className="t-caption lead-ladder-how">
-        {ladderExplanation(lead, t, locale, zone)}
-      </p>
-    </nav>
+    <StageLadder
+      label={t("lead.ladder")}
+      steps={steps.map((step) => ({
+        key: step.key,
+        label: t(STEP_LABEL[step.key]),
+        done: step.filled && !step.current,
+        current: step.current,
+        // Qualified and disqualified are the two ways out of the ladder, not
+        // its last two rungs — they share a rung and only one is ever taken.
+        terminal: step.rung === 3,
+        disabled: pending,
+        // A lead that takes no step — terminal, or a mirror — says why on
+        // every step it refuses.
+        reason: readOnlyReason,
+        testId: `lead-step-${step.key}`,
+        onPick: step.onPick,
+      }))}
+      hint={ladderExplanation(lead, t, locale, zone)}
+    />
   );
 }
 

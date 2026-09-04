@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { Field, Textarea } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { StageLadder } from "../design-system/stageladder";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import {
@@ -26,9 +27,11 @@ import {
 
 /**
  * PhaseStepper draws the four phases in order. The current one is a fact and
- * stays a marker; every other one is the move to it. The same `.stepper`
- * chrome the deal page's stage ladder uses, because a reader who has moved a
- * deal has already learned what this row does.
+ * stays a marker; every other one is the move to it. It is the design
+ * system's `StageLadder`, the same one the deal's stages and the lead's
+ * ladder draw, because a reader who has moved a deal has already learned what
+ * this row does — and until that component existed, "the same chrome" was a
+ * claim this comment made and nothing held.
  */
 export function PhaseStepper({
   phase,
@@ -44,31 +47,21 @@ export function PhaseStepper({
   onMove: (to: ProjectPhase) => void;
 }>) {
   const t = useT();
+  const here = PROJECT_PHASES.indexOf(phase);
   return (
-    <fieldset
-      className="stepper project-stepper"
-      aria-label={t("project.phaseLabel")}
-    >
-      {PROJECT_PHASES.map((step) =>
-        step === phase ? (
-          <span key={step} className="step current" aria-current="step">
-            {t(PHASE_LABEL[step])}
-          </span>
-        ) : (
-          <button
-            key={step}
-            type="button"
-            className="step"
-            data-testid={`project-step-${step}`}
-            disabled={pending || refusedReasonId !== undefined}
-            aria-describedby={refusedReasonId}
-            onClick={() => onMove(step)}
-          >
-            {t(PHASE_LABEL[step])}
-          </button>
-        ),
-      )}
-    </fieldset>
+    <StageLadder
+      label={t("project.phaseLabel")}
+      steps={PROJECT_PHASES.map((step, rung) => ({
+        key: step,
+        label: t(PHASE_LABEL[step]),
+        done: rung < here,
+        current: step === phase,
+        disabled: pending,
+        reasonId: refusedReasonId,
+        testId: `project-step-${step}`,
+        onPick: () => onMove(step),
+      }))}
+    />
   );
 }
 
