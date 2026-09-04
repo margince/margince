@@ -363,9 +363,12 @@ func (e *ConfidentialityVerdictEngine) RetireExhausted(ctx context.Context) (int
 		"no confidentiality answer was reached before the attempts ran out")
 }
 
-// confidentialityStragglerBatch bounds one sweep pass. What a pass leaves
-// behind the next one picks up: the backlog is a query, so the bound limits the
-// work per tick rather than the coverage.
+// confidentialityStragglerBatch bounds one sweep pass, and capture's own
+// threadSiblingBatch bounds each thread within it — the two together are what
+// keep a tick's cost proportional to the bound rather than to the largest
+// thread in the workspace. What a pass leaves behind the next one picks up: the
+// backlog is a query, and a thread stays in it while any of its messages is
+// undecided, so the bound limits the work per tick rather than the coverage.
 const confidentialityStragglerBatch = 200
 
 // FinishSettledThreads applies each settled question's answer to the messages

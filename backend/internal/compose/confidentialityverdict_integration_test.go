@@ -951,3 +951,48 @@ func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
 		t.Fatalf("the repairable thread is %q, want workspace", got)
 	}
 }
+
+// TestAnOwnersSharedThreadIsNotReopenedByTheRepair holds the owner's decision
+// against the repair.
+//
+// A person clicking "share this thread" ends the question: no later pass
+// re-asks, because a classifier that could overturn them would make the click
+// advisory. The repair applies the OWNER's answer to the messages that never
+// took it — and must not, on finding a party the owner's decision predates,
+// hand their thread back to the classifier.
+func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	const lawyer = "anwalt@kanzlei.example"
+
+	judged := seedHeldThreadMail(t, e, "thread-owner-shared", customer, "Nachbestellung")
+	fromLawyer := seedHeldThreadMail(t, e, "thread-owner-shared", lawyer, "Aufhebungsvertrag")
+	threadID := seedThreadQuestion(t, e, "thread-owner-shared", judged)
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'shared_by_owner', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE id = $1`, threadID, customer)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the owner's decision: %v", err)
+	}
+
+	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
+	if _, err := engine.FinishSettledThreads(
+		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("finishing: %v", err)
+	}
+
+	if got := threadStatus(t, e, threadID); got != capture.VerdictSharedByOwner {
+		t.Fatalf("thread status = %q, want shared_by_owner: the repair handed a person's "+
+			"decision back to the classifier, which makes the click advisory", got)
+	}
+	// And the message the owner never spoke for stays held rather than being
+	// published on their decision about somebody else's mail.
+	if got := activityAudience(t, e, fromLawyer); got != "participants" {
+		t.Fatalf("a message from a party the owner's decision predates is %q, want participants", got)
+	}
+}
