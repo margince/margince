@@ -252,7 +252,7 @@ type TagUpdate struct {
 // admits. A mismatch is version skew, not a missing row — the difference
 // matters to a client deciding whether to re-read or give up.
 func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expectedVersion int64) (tagRow, error) {
-	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
+	if err := requireVocabularyAuthority(ctx, principal.ActionUpdate); err != nil {
 		return tagRow{}, err
 	}
 	var name *string
@@ -325,7 +325,7 @@ func derefOrNil(v **string) *string {
 // "conflict" alone does not tell them they have to rename one of two words
 // they can both see.
 func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
-	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
+	if err := requireVocabularyAuthority(ctx, principal.ActionUpdate); err != nil {
 		return tagRow{}, err
 	}
 	var out tagRow
