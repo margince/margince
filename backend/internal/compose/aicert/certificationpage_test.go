@@ -195,7 +195,12 @@ func assertAICertCoverageMatchesTheLibrary(t *testing.T, doc aiCertDoc, rows []a
 			continue
 		}
 		key := row.SiteKey() + " " + row.Binding()
-		if got, shown := rendered[key]; shown && got != row.Coverage() {
+		got, shown := rendered[key]
+		if !shown {
+			t.Errorf("%s is certified in the census and carries no record in the document", key)
+			continue
+		}
+		if got != row.Coverage() {
 			t.Errorf("%s renders coverage %s where the report command prints %s", key, got, row.Coverage())
 		}
 	}
