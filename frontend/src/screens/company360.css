@@ -534,6 +534,7 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 /* Facts read from the site. The rhythm is tighter than the profile card above
@@ -1316,6 +1317,7 @@
   height: 8px;
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--textTertiary);
 }
 .co-dot-warn {
@@ -1373,6 +1375,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: currentColor;
   flex: none;
 }
@@ -1880,6 +1883,7 @@
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-radius: 50%;
+  corner-shape: round;
   border: 2px solid var(--borderStrong);
   flex: none;
 }

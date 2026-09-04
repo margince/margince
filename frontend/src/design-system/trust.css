@@ -11,6 +11,7 @@
   width: 9px;
   height: 9px;
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 .dot-auto {
   background: var(--online);
@@ -113,6 +114,7 @@ button.evidence-chip:hover {
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 .provenance-agent {
   background: var(--aiLight);
@@ -304,6 +306,7 @@ button.evidence-chip:hover {
   color: var(--aiText);
   background: var(--aiLight);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: 1px 8px;
 }
 

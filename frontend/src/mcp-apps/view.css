@@ -64,7 +64,7 @@ h1 {
 
 .row {
   border: 1px solid var(--borderSubtle);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: var(--space-3);
 }
 
@@ -197,7 +197,7 @@ h1 {
    between an answered question and a view that looks broken. */
 .empty {
   border: 1px dashed var(--borderSubtle);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: var(--space-4);
   color: var(--textSecondary);
   text-align: center;
@@ -219,7 +219,7 @@ h1 {
   width: 100%;
   margin-bottom: var(--space-4);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: var(--space-3) var(--space-4);
   background: var(--accent);
   color: var(--textOnAccent);

@@ -187,6 +187,7 @@
      hairline joining them are one drawing, and two greys made it two. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
@@ -284,6 +285,7 @@
   height: 6px;
   flex: none;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiText);
 }
 
@@ -319,6 +321,7 @@
   padding: 5px var(--space-2);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiLight);
   cursor: pointer;
   transition:
@@ -351,6 +354,7 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiText);
 }
 
@@ -570,6 +574,7 @@
   height: 3px;
   flex: 1;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderStrong);
   transition: background var(--dur-move) var(--ease-in-out);
 }
@@ -602,6 +607,7 @@
   inset: -4px;
   z-index: -1;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--accentLight);
   animation: mw-step-breathe 3.4s var(--ease-in-out) infinite;
 }

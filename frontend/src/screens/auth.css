@@ -452,6 +452,7 @@
   width: 3px;
   height: 3px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderStrong);
 }
 
@@ -735,6 +736,7 @@
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--borderControl);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textContent);
 }

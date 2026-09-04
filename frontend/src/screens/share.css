@@ -114,6 +114,7 @@
   color: var(--warn);
   background: var(--warnBg);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: 2px 8px; /* ds:ignore the Badge atom's own box, which it stands beside */
 }
 

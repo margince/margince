@@ -27,6 +27,31 @@ If what you need is genuinely not here, add it **here**, with a story and a
 spec, and it becomes the one spelling. Copy never lives in a primitive: words
 arrive through props, translated by the caller with `t()`.
 
+## Corners come from the ladder, and they are smooth
+
+Every radius in the tree reads one of six tokens — `--r-xs` 4, `--r-sm` 8,
+`--r-control` 12, `--r-md` 16, `--r-lg` 20, `--r-full` the pill. A raw px corner
+is a seventh value nobody chose, and the tree already ran 3, 5, 6, 9, 10, 11 and
+28px side by side before this was one ladder.
+
+`tokens.css` also declares `corner-shape: squircle` on `:where(*)` inside an
+`@supports` query, and doubles the ladder inside it: a superellipse of radius R
+reads about as round as a circular corner of R/2, so a corner keeps its apparent
+size and gives up its two points. Nothing at a call site opts in.
+
+**A genuinely round thing opts OUT**, beside its own radius:
+
+```css
+.badge {
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+```
+
+`:where(*)` carries zero specificity, so that one line always wins. Write it
+wherever you write `--r-full` or `50%` — a superellipse at full radius is a
+lozenge, and on an avatar it is a squircle tile.
+
 ## Indigo says a machine did it
 
 **`--ai` is the AI hue, and it is not decoration.** An indigo tint on a surface

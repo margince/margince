@@ -69,6 +69,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  corner-shape: round;
   flex: 0 0 auto;
 }
 
