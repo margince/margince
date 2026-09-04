@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -67,76 +66,6 @@ func (a attentionApprovals) CountPending(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return len(rows), nil
-}
-
-// attentionDuplicates reads the dedupe queue through the people store, which
-// applies the both-sides-visible rule to the page and the count alike.
-type attentionDuplicates struct{ store *people.Store }
-
-func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]attention.DuplicatePair, error) {
-	rows, _, err := d.store.ListDedupeCandidates(ctx, people.DedupeQueueInput{Limit: limit})
-	if err != nil {
-		return nil, err
-	}
-	pairs := make([]attention.DuplicatePair, 0, len(rows))
-	for _, row := range rows {
-		pairs = append(pairs, attention.DuplicatePair{
-			ID:         row.ID,
-			EntityType: row.EntityType,
-			Confidence: row.Confidence,
-			LeftID:     row.LeftID,
-			RightID:    row.RightID,
-			Evidence:   comparisons(ctx, row.ID, row.Evidence),
-		})
-	}
-	return pairs, nil
-}
-
-// DescribeMany names records of one entity type, under the reader's own scope.
-//
-// The store read carries the same object grant and the same row scope the
-// ordinary get applies — the pair's own row is not permission to read what it
-// points at — and asks the scope of the whole set at once, which is what turns
-// a page of ten pairs from twenty transactions into three.
-func (d attentionDuplicates) DescribeMany(
-	ctx context.Context, entityType string, rowIDs []ids.UUID,
-) (map[ids.UUID]attention.RecordFace, error) {
-	if entityType != flipObjectPerson && entityType != flipObjectOrganization && entityType != flipObjectLead {
-		return nil, apperrors.ErrNotFound
-	}
-	described, err := d.store.DescribeForMerge(ctx, entityType, rowIDs)
-	if err != nil {
-		return nil, err
-	}
-	faces := make(map[ids.UUID]attention.RecordFace, len(described))
-	for id, row := range described {
-		faces[id] = attention.RecordFace{
-			Label:        row.Label,
-			Detail:       row.Detail,
-			CreatedAt:    &row.CreatedAt,
-			RelatedCount: row.RelatedCount,
-		}
-	}
-	return faces, nil
-}
-
-// DecidableSubset answers which of these records the reader could change, which
-// is what decides whether the card offers a verb at all.
-//
-// It goes through the same store as the naming read, so the card's offer and
-// the disposition endpoint's refusal are two readings of one authority rather
-// than two rules that can drift.
-func (d attentionDuplicates) DecidableSubset(
-	ctx context.Context, entityType string, rowIDs []ids.UUID,
-) (map[ids.UUID]bool, error) {
-	if entityType != flipObjectPerson && entityType != flipObjectOrganization && entityType != flipObjectLead {
-		return nil, apperrors.ErrNotFound
-	}
-	return d.store.DecidableForMerge(ctx, entityType, rowIDs)
-}
-
-func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
-	return d.store.CountOpenDedupeCandidates(ctx)
 }
 
 // subjectOfActivity is the line a task shows. An activity always carries one
