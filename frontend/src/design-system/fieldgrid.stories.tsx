@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Building2, Globe, Landmark, MapPin, User, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
 import { FieldGrid, FieldRow } from "./fieldgrid";
 import { InlineChoice, InlineText } from "./inlinechoice";
@@ -90,6 +91,38 @@ export const LongValueWraps: Story = {
         Building 4, Industriestraße 118, 51063 Köln, Germany
       </FieldRow>
       <FieldRow label="Industry">Automotive</FieldRow>
+    </FieldGrid>
+  ),
+};
+
+// The record's own attributes, with a glyph naming the kind of each fact. The
+// glyphs take a column of their own rather than room from the label rung, so
+// a name that already filled the rung still gets it all — and every glyph in
+// the column lines up, which is what makes them scannable rather than eleven
+// small pictures at eleven different x positions. A row with no glyph of its
+// own leaves the cell empty and keeps the column.
+export const WithIcons: Story = {
+  render: () => (
+    <FieldGrid icons>
+      <FieldRow label="Legal name" icon={<Landmark />}>
+        Nordwind Logistik GmbH
+      </FieldRow>
+      <FieldRow label="Address" icon={<MapPin />}>
+        Am Sandtorkai 41, 20457 Hamburg, DE
+      </FieldRow>
+      <FieldRow label="Domain" icon={<Globe />}>
+        nordwind-logistik.de
+      </FieldRow>
+      <FieldRow label="Industry" icon={<Building2 />}>
+        Freight forwarding
+      </FieldRow>
+      <FieldRow label="Size" icon={<Users />}>
+        200–500
+      </FieldRow>
+      <FieldRow label="Owner" icon={<User />}>
+        Tim Rasche
+      </FieldRow>
+      <FieldRow label="Reference">No glyph, and the column holds</FieldRow>
     </FieldGrid>
   ),
 };

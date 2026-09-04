@@ -5326,6 +5326,10 @@ export interface paths {
          *     source ends up carrying the target, the source is archived, and its NAME IS RELEASED
          *     — a later create may reuse it, and links to the old tag stop working.
          *
+         *     Send `into_tag_version` to pin the surviving word. This is a two-row act and the id
+         *     in the path pins only the row it destroys, so a caller that decided to fold into a
+         *     named tag should say which version of it they read.
+         *
          *     The answer separates `moved` from `collapsed` because they are different facts: a
          *     record that carried only the source is moved, and one that already carried both
          *     collapses into a single tagging. An admin reading "12 moved, 3 collapsed" knows the
@@ -16390,6 +16394,8 @@ export interface components {
             full_name: string;
             /** @description Denormalized current title; authoritative title is on the employment relationship. */
             title?: string | null;
+            /** @description Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `person_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the person does not cover) or when the employer sits outside their organization row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for. */
+            readonly employer?: components["schemas"]["PersonEmployer"];
             /** Format: uuid */
             owner_id?: string | null;
             /**
@@ -16453,6 +16459,12 @@ export interface components {
             archived_at?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per person, so a contact has at most one. */
+        PersonEmployer: {
+            /** Format: uuid */
+            organization_id: string;
+            organization_name: string;
         };
         CreatePersonRequest: {
             full_name: string;
@@ -22938,6 +22950,20 @@ export interface components {
              * @description The tag that survives. Must be live, and must not be this tag.
              */
             into_tag_id: string;
+            /**
+             * Format: int64
+             * @description The version the surviving tag was read at, refusing the merge with 409 if it has
+             *     moved since. A merge is a TWO-row operation and the routed id pins only one of
+             *     them, so without this the word a caller decided to fold INTO can be renamed
+             *     between the decision and the act, and the merge still runs as though it had not
+             *     been.
+             *
+             *     Optional, and absent means unpinned — the same reading `If-Match` has everywhere
+             *     else here. It belongs in the body rather than in `If-Match` because it qualifies
+             *     the id beside it, not the resource in the path: `If-Match` on this route would
+             *     pin the tag being retired, which is a different precondition.
+             */
+            into_tag_version?: number;
         };
         /** @description What the merge did, in the two numbers that differ. */
         MergeTagsResult: {

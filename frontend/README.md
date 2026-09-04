@@ -29,13 +29,11 @@ in `src/app/ui-preview.ts`; the naming prefix is the contract with the reader.
 |---|---|
 | `VITE_UI_PREVIEW_OIDC=1` | The federated sign-in buttons on the login screen, with the second provider marked *not yet available*. |
 | `VITE_UI_PREVIEW_RESET=1` | The "Forgot password?" link and the request card it opens. |
-| `VITE_UI_PREVIEW_TASKBAR=1` | Review scaffolding inside the agent panel at the foot of the workspace rail: a switcher that holds the Core in any one of its five states, and a scripted run that plays the motion BETWEEN them. Everything the section itself reports is READ from the API and needs no switch; these two are here because three of the states describe an overnight run no read can reach, and because a state a reviewer can only hold still is a state nobody can judge the motion of. |
 
 ```sh
 pnpm dev:preview                    # every switch on — the demo entry point
 pnpm build:preview                  # the same, built
 VITE_UI_PREVIEW_OIDC=1 pnpm dev     # login screen, with the SSO block drawn
-VITE_UI_PREVIEW_TASKBAR=1 pnpm dev  # every screen, with the agent state switcher in the rail panel
 ```
 
 **A preview build draws controls this installation cannot honour, so it must never

@@ -4,7 +4,9 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
+import { Popover } from "../design-system/popover";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -18,6 +20,7 @@ import {
 } from "./company360";
 import {
   HEALTH_DIMENSION_LABEL,
+  HEALTH_DIMENSION_MEANS,
   HEALTH_RATING_LABEL,
   HEALTH_STANDING_TONE,
   useAccountStanding,
@@ -37,6 +40,7 @@ import {
   TodoRow,
   WithheldNotice,
 } from "./record360";
+import "./company360.css";
 
 type Organization360 = components["schemas"]["Organization360"];
 type HealthRating = components["schemas"]["HealthDimension"]["rating"];
@@ -58,8 +62,21 @@ type TodayLead = {
 /** One of the three rated dimensions under the verdict. */
 export type TodayDimension = {
   key: "relationship" | "commercial" | "payment";
+  // What is rated.
   label: string;
-  rating?: HealthRating;
+  // The rating in words — or, where there is none, why: nothing read yet, or
+  // nothing shown to this reader. Never absent, because the chip states a
+  // dimension's standing and a blank one would read as a rating of zero.
+  reading: string;
+  // How loud the rating is. Absent where there is no rating to be loud about.
+  tone?: "calm" | "warn" | "danger";
+  // What this dimension WEIGHS. Three words on a card cannot say what went
+  // into "Commercial · Good", and a reader who cannot interpret a rating has
+  // to take it on trust.
+  means: string;
+  // The reading the rating was made from, in the rule's own words. Absent
+  // where nothing was rated — there is then no working to show.
+  because?: string;
 };
 
 /**
@@ -80,9 +97,6 @@ export type TodayReading =
       because?: ReactNode;
       restsOn: readonly Grounding[];
       dimensions: readonly TodayDimension[];
-      // The health section was withheld from this reader, so an unrated
-      // dimension reads "not shown" rather than "not assessed".
-      healthWithheld: boolean;
       rows: ReactNode[];
       footer?: ReactNode;
       notice?: ReactNode;
@@ -165,8 +179,16 @@ export function useTodayReading({
   ];
   const dimensions: TodayDimension[] = rated.map(([key, rating]) => ({
     key,
-    rating,
     label: t(HEALTH_DIMENSION_LABEL[key]),
+    reading: rating
+      ? t(HEALTH_RATING_LABEL[rating])
+      : t(healthWithheld ? "record.notShown" : "co.strip.notAssessed"),
+    tone: rating ? HEALTH_STANDING_TONE[rating] : undefined,
+    means: t(HEALTH_DIMENSION_MEANS[key]),
+    // The working, from the same place the call's own grounding is built, so
+    // a dimension's chip and the verdict's "what this rests on" cannot come
+    // to quote two different readings of one dimension.
+    because: verdict.restsOn.find((reading) => reading.key === key)?.quote,
   }));
   // WHAT WE OWE leads the list. A promise past its date outranks a reading of
   // the account: one is a thing to do today and the other is context for it.
@@ -189,7 +211,6 @@ export function useTodayReading({
     because: lead ? leadSentence(lead) : undefined,
     restsOn: verdict.restsOn,
     dimensions,
-    healthWithheld,
     rows,
     footer: briefFooter(commitment, suggestions.footer),
     notice:
@@ -197,6 +218,43 @@ export function useTodayReading({
         <TodayWithheld view={view} />
       ) : undefined,
   };
+}
+
+/**
+ * One rated dimension, and what stands behind it.
+ *
+ * The chip is a TRIGGER, because three words cannot carry a rating a reader
+ * can check: "Commercial · Good" says neither what was weighed nor what it was
+ * read from, so a reader either takes it on trust or goes looking for the
+ * working somewhere else on the page. Resting on the chip answers both, in
+ * that order — what the dimension is, then the reading the rating was made
+ * from.
+ *
+ * `onHover` and not a click alone: this is an aside taken in on the way past,
+ * where a click is a step a reader should not have to take to check a claim.
+ * The click stays for the touch screen and the keyboard, which have no hover.
+ */
+function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
+  const t = useT();
+  return (
+    <Popover
+      onHover
+      className={dimension.tone ? `co-dim co-dim-${dimension.tone}` : "co-dim"}
+      label={`${dimension.label} · ${dimension.reading}`}
+    >
+      <p className="co-dim-means">{dimension.means}</p>
+      {dimension.because ? (
+        <>
+          {/* The same words the verdict's own grounding uses, over the same
+              quote: two names for one working would read as two readings. A
+              label beside a value, not a heading: the panel is already named
+              by the chip that opened it. */}
+          <Eyebrow className="co-dim-restson">{t("record.restsOn")}</Eyebrow>
+          <p className="co-dim-quote">{dimension.because}</p>
+        </>
+      ) : null}
+    </Popover>
+  );
 }
 
 /**
@@ -248,23 +306,7 @@ export function Company360Call({
     >
       <PanelBody className="co-360-dims">
         {reading.dimensions.map((dimension) => (
-          <span
-            key={dimension.key}
-            className={
-              dimension.rating
-                ? `co-dim co-dim-${HEALTH_STANDING_TONE[dimension.rating]}`
-                : "co-dim"
-            }
-          >
-            {dimension.label} ·{" "}
-            {dimension.rating
-              ? t(HEALTH_RATING_LABEL[dimension.rating])
-              : t(
-                  reading.healthWithheld
-                    ? "record.notShown"
-                    : "co.strip.notAssessed",
-                )}
-          </span>
+          <DimensionChip key={dimension.key} dimension={dimension} />
         ))}
       </PanelBody>
       {children}
@@ -549,8 +591,13 @@ function MomentRow({
         {target && onOpenRecord && (
           <span className="co-move-do">
             <span className="co-move-actions">
+              {/* Indigo, because pressing it hands the work to Margince: the
+                  hue is the product's one claim about who is acting, and a
+                  verb the agent performs drawn in the accent would read as
+                  the reader's own move. */}
               <Button
                 small
+                variant="ai"
                 onClick={() => onOpenRecord(target.type, target.id)}
               >
                 {moment.recommended_action.label}

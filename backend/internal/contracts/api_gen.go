@@ -24286,6 +24286,18 @@ type MeetingPlanUnknownKind string
 type MergeTagsRequest struct {
 	// IntoTagId The tag that survives. Must be live, and must not be this tag.
 	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+
+	// IntoTagVersion The version the surviving tag was read at, refusing the merge with 409 if it has
+	// moved since. A merge is a TWO-row operation and the routed id pins only one of
+	// them, so without this the word a caller decided to fold INTO can be renamed
+	// between the decision and the act, and the merge still runs as though it had not
+	// been.
+	//
+	// Optional, and absent means unpinned — the same reading `If-Match` has everywhere
+	// else here. It belongs in the body rather than in `If-Match` because it qualifies
+	// the id beside it, not the resource in the path: `If-Match` on this route would
+	// pin the tag being retired, which is a different precondition.
+	IntoTagVersion *int64 `json:"into_tag_version,omitempty"`
 }
 
 // MergeTagsResult What the merge did, in the two numbers that differ.
@@ -27066,7 +27078,10 @@ type Person struct {
 	ConvertedFromLeadId *openapi_types.UUID `json:"converted_from_lead_id,omitempty"`
 	CreatedAt           time.Time           `json:"created_at"`
 	Emails              *[]PersonEmail      `json:"emails,omitempty"`
-	FirstName           *string             `json:"first_name,omitempty"`
+
+	// Employer Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `person_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the person does not cover) or when the employer sits outside their organization row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for.
+	Employer  *PersonEmployer `json:"employer,omitempty"`
+	FirstName *string         `json:"first_name,omitempty"`
 
 	// FullName Always present (display name).
 	FullName string             `json:"full_name"`
@@ -27429,6 +27444,12 @@ type PersonEmailInput struct {
 
 // PersonEmailInputEmailType defines model for PersonEmailInput.EmailType.
 type PersonEmailInputEmailType string
+
+// PersonEmployer The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per person, so a contact has at most one.
+type PersonEmployer struct {
+	OrganizationId   openapi_types.UUID `json:"organization_id"`
+	OrganizationName string             `json:"organization_name"`
+}
 
 // PersonGraph The local graph around one contact — nodes, the edges between them, and the route worth taking.
 type PersonGraph struct {
@@ -43608,6 +43629,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "emails")
 	}
 
+	if raw, found := object["employer"]; found {
+		err = json.Unmarshal(raw, &a.Employer)
+		if err != nil {
+			return fmt.Errorf("error reading 'employer': %w", err)
+		}
+		delete(object, "employer")
+	}
+
 	if raw, found := object["first_name"]; found {
 		err = json.Unmarshal(raw, &a.FirstName)
 		if err != nil {
@@ -43821,6 +43850,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["emails"], err = json.Marshal(a.Emails)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'emails': %w", err)
+		}
+	}
+
+	if a.Employer != nil {
+		object["employer"], err = json.Marshal(a.Employer)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'employer': %w", err)
 		}
 	}
 

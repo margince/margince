@@ -188,6 +188,10 @@ var personBindings = EntityBinding{
 			Reason: "Read-only, derived from this installation's own channel identities.",
 		},
 		{
+			WireSlot: "employer", Disposition: DispositionNativeOnly,
+			Reason: "Resolved from this installation's own employment edges. `relationship` is not a mirrored entity, so a mirrored person carries no edge for the read to resolve an employer from — and the incumbent's own association would name an incumbent company, not the account this field's uuid slot points at.",
+		},
+		{
 			WireSlot: "converted_from_lead_id", Disposition: DispositionNativeOnly,
 			Reason: "Lead conversion is a native operation; a mirrored person has no native lead to point back to.",
 		},

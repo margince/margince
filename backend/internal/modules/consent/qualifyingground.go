@@ -139,11 +139,23 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (Q
 }
 
 // inboundQualifyingEvent derives the event from the captured timeline: they
-// wrote to us, and the message itself is the proof.
+// WROTE to us, and the message itself is the proof.
 //
-// The activity is reached through activity_link, the same table every
-// person-scoped timeline read walks, so this cannot count a message the record
-// does not show.
+// Authorship, not filing. The activity is reached through activity_link — the
+// same table every person-scoped timeline read walks, so this cannot count a
+// message the record does not show — but a link is a FILING and says only that
+// the message belongs on this person's record. Being copied on a message
+// somebody else wrote is not the subject initiating correspondence, and
+// counting it would let anyone manufacture a lawful basis for writing to a
+// third party by putting them in Cc. So the participant row has to name them as
+// the author too, which is the same test authorizeevidence.go applies for the
+// same reason (authorIsTheSubject).
+//
+// Both halves are load-bearing. Without the link this would count a message
+// nobody filed under the person; without the authorship test it counts one they
+// merely received. Capture files a message under every participant it resolves
+// (capture/sinkmaillinks.go), so the link alone stopped meaning authorship the
+// moment a cc'd contact could be filed under.
 func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
@@ -151,6 +163,8 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string) (Qu
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
+		JOIN activity_participant p ON p.activity_id = a.id
+		     AND p.role = 'from' AND p.person_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, personID).Scan(&activityID, &event.OccurredAt)

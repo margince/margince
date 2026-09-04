@@ -18,8 +18,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -270,14 +268,6 @@ type reportOutcome struct {
 	Timezone             string
 	BaseCurrency         string
 	FiscalYearStartMonth int
-}
-
-type reportEngine struct {
-	pool *pgxpool.Pool
-}
-
-func newReportEngine(pool *pgxpool.Pool) *reportEngine {
-	return &reportEngine{pool: pool}
 }
 
 // runSpec executes one validated vocabulary; Run (prebuilt catalog) and

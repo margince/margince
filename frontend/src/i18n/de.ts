@@ -905,6 +905,12 @@ export const de = {
   "co.health.dim.relationship": "Beziehung",
   "co.health.dim.commercial": "Geschäftlich",
   "co.health.dim.payment": "Zahlung",
+  "co.health.means.relationship":
+    "Ob hier noch Kontakt besteht — wer geschrieben hat, wie lange das her ist und von welcher Seite es ausging.",
+  "co.health.means.commercial":
+    "Ob die laufende Arbeit vorankommt — die offenen Deals, ihre Phase und wie lange sie schon stillstehen.",
+  "co.health.means.payment":
+    "Ob Rechnungen pünktlich beglichen werden — was gerade überfällig ist und wie spät dieses Konto üblicherweise zahlt.",
   "co.health.rating.atRisk": "Gefährdet",
   "co.health.rating.good": "Gut",
   "co.health.rating.strong": "Stark",
@@ -938,8 +944,7 @@ export const de = {
   "record.restsOn.source_one": "Quelle",
   "record.restsOn.source_other": "Quellen",
   "record.tabs": "Bereiche dieses Datensatzes",
-  "record.panel.show": "Panel zeigen",
-  "record.panel.hide": "Panel ausblenden",
+  "record.panel.details": "Details",
   "room.editorial":
     "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
   "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
@@ -3341,6 +3346,10 @@ export const de = {
   "analytics.noCompany": "Kein Unternehmen",
   "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
+  "explain.col.record": "Deal",
+  "explain.col.stage": "Phase",
+  "explain.col.owner": "Zuständig",
+  "explain.col.pipeline": "Pipeline",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
   "ai.tiers": "Was ein Agent darf",
@@ -7887,7 +7896,7 @@ export const de = {
   "worklist.pair.failed":
     "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
   "worklist.pair.refused":
-    "Sie können dieses Paar nicht entscheiden. Beide Datensätze müssten Ihnen gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
+    "Du kannst dieses Paar nicht entscheiden. Beide Datensätze müssten dir gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
   "worklist.pair.alreadySettled":
     "Das Paar konnte so nicht entschieden werden — vielleicht war jemand schneller, vielleicht haben sich die Datensätze geändert. Bitte die Liste neu laden.",
   "worklist.pair.stewardOnly":
@@ -8004,9 +8013,9 @@ export const de = {
   "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
   "worklist.hidden.notSales.detail":
     "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
-  "worklist.hidden.setAside": "Von Ihnen zurückgestellt",
+  "worklist.hidden.setAside": "Von dir zurückgestellt",
   "worklist.hidden.setAside.detail":
-    "Zurückgestellt oder als nicht Ihre markiert. Eine Zurückstellung kommt von selbst zurück.",
+    "Zurückgestellt oder als nicht deine markiert. Eine Zurückstellung kommt von selbst zurück.",
   "worklist.hidden.shown": "Die Liste selbst führt {count}.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",

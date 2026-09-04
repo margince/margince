@@ -71,9 +71,9 @@ export function TodayPanel({
         {footer}
       </div>
       {onOpenTasks && (
-        <Button small variant="ghost" onClick={onOpenTasks}>
+        <button type="button" className="link-button" onClick={onOpenTasks}>
           {t("co.suggest.viewTasks")}
-        </Button>
+        </button>
       )}
     </PanelBody>
   );

@@ -326,3 +326,101 @@ func resolveAsNoise(t *testing.T, e *integration.Env, id ids.UUID) {
 		t.Fatalf("resolving as noise: %v", err)
 	}
 }
+
+// A contact merely COPIED on a newsletter does not exempt it from the sweep.
+//
+// The sweep's scope refuses mail "linked to a person" because a linked message
+// belongs to somebody's record. That read the link as evidence of who the
+// message is WITH, which held only while a message was filed under the party
+// the ladder judged. Capture now files a message under every participant it
+// resolves (capture/sinkmaillinks.go), so a blast naming one contact in Cc
+// carries a person link — and without the role test the predicate is never true
+// again for it: the message can never be hidden, and never redacted, however
+// plainly its sender is judged noise.
+//
+// Mutation: drop the role arm from noiseMailScope and this fails at the first
+// assertion, the blast still visible.
+func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
+	e := integration.Setup(t)
+
+	blast := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer one")
+	// The contact the blast copied, filed under it exactly as capture files a
+	// resolved participant — a link plus a participant row that is NOT the author.
+	copied := seedPerson(t, e, "cc@partner.example")
+	fileUnderAs(t, e, blast, copied, "cc")
+
+	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", blast)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NOT NULL`, blast); n != 1 {
+		t.Fatal("a blast stayed visible because it copied a contact — being in the Cc line of a " +
+			"newsletter is not a record the newsletter belongs to, and the sweep can never reach it again")
+	}
+}
+
+// The sender's OWN link still calls the sweep off, which is the rule the arm
+// above narrows and must not repeal. Without this the narrowing could refuse
+// everybody's link and look correct.
+func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
+	e := integration.Setup(t)
+
+	mail := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer one")
+	sender := seedPerson(t, e, "bulk@flood.example")
+	fileUnderAs(t, e, mail, sender, "from")
+
+	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", mail)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, mail); n != 1 {
+		t.Fatal("a message filed under the person who WROTE it was hidden — that message belongs " +
+			"to their record, and a stale disposition has no authority over it")
+	}
+}
+
+// seedPerson mints a contact at one address, for the link fixtures above.
+func seedPerson(t *testing.T, e *integration.Env, email string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO person (id, full_name, source, captured_by)
+			VALUES ($1, 'Someone', 'manual', 'human:x')`, id); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO person_email (person_id, email, source, captured_by)
+			VALUES ($1, $2, 'manual', 'human:x')`, id, email)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the contact %s: %v", email, err)
+	}
+	return id
+}
+
+// fileUnderAs files a message under a person in the shape capture leaves: the
+// activity_link row, and the activity_participant row naming the role they were
+// on the message in. Both, because it is the PAIR the sweep now reads.
+func fileUnderAs(t *testing.T, e *integration.Env, activity, person ids.UUID, role string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_link (activity_id, entity_type, person_id)
+			VALUES ($1, 'person', $2)`, activity, person); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, person_id, role)
+			VALUES ($1, $2, $3)`, activity, person, role)
+		return err
+	}); err != nil {
+		t.Fatalf("filing the message under the person as %q: %v", role, err)
+	}
+}

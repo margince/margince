@@ -9,7 +9,10 @@ import {
   PanelGroupHead,
   PanelPlate,
   PanelRow,
+  RailPanel,
+  type RailPanelState,
 } from "./panel";
+import type { SectionDetail } from "./surfacestate";
 
 // The titled-card shape: a fixed-height header, an optional footer band, and
 // two ways to fill the middle — padded prose in PanelBody, or full-bleed rows
@@ -327,4 +330,94 @@ export const TitleInsideADialog: Story = {
       </PanelBody>
     ),
   },
+};
+
+// The states RailPanel accepts. `stale` and `partial` are absent from RailPanel
+// itself — SurfaceState renders each of them as a caveat BESIDE the rows, and a
+// RailPanel shows rows on `ready` alone, so a stale one was a caveat over an
+// empty card. They are catalogued on SurfaceState, which is the component that
+// can render them.
+const RAIL_PANEL_STATES: readonly RailPanelState[] = [
+  "ready",
+  "empty",
+  "withheld",
+  "unavailable",
+  "loading",
+  "unsupported",
+  "failed",
+];
+
+// Every field at once, and each state reads exactly one of them: `failed` the
+// retry, `stale` the as-of, `partial` the count still missing, `unsupported`
+// and `withheld` their sentence. A state whose field is absent falls back to
+// the generic line, which is the floor rather than the target.
+const DETAIL: SectionDetail = {
+  onRetry: () => undefined,
+  staleAsOf: "9:15 this morning",
+  remaining: 4,
+  unsupportedReason:
+    "This workspace reads deals from HubSpot, and a composite section cannot be assembled from a mirror.",
+  withheldReason:
+    "Deal amounts on this account are readable by its owner and by finance.",
+};
+
+// RailPanel on `ready`: the children are handed to Panel undecorated, so rows
+// run edge to edge under the header band instead of sitting inside a padded
+// body. That full-bleed shape is the reason RailPanel exists rather than being
+// a Panel the caller wraps by hand.
+export const RailPanelReady: StoryObj = {
+  render: () => (
+    <RailPanel
+      title="Who is on this deal"
+      state="ready"
+      emptyLabel="Nobody is named on this deal yet."
+      footer={<p className="t-caption">3 named, 1 unreachable</p>}
+    >
+      <PanelRow>Lena Fischer — decision maker</PanelRow>
+      <PanelRow>Frédéric de Gombert — economic buyer</PanelRow>
+      <PanelRow>Bernd Kral — technical evaluator</PanelRow>
+    </RailPanel>
+  ),
+};
+
+// Everything that is not `ready`: the message is padded inside a PanelBody,
+// and the card-level figure is shown only where there is one to report. A
+// withheld or unavailable section has no figure — printing the last one it had
+// would attach a count to rows the reader is not seeing.
+//
+// Drawn together on purpose. "There is nothing here" and "you may not read
+// this" make the SAME shape on screen and mean opposite things, and the only
+// way to judge them is side by side. The footer is passed to every one of
+// them, which is what makes this story able to fail: a panel that stopped
+// withholding it would look perfectly reasonable in isolation.
+export const RailPanelMessageStates: StoryObj = {
+  decorators: [
+    (Story) => (
+      <div
+        style={{
+          display: "grid",
+          gap: "var(--space-4)",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        }}
+      >
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => (
+    <>
+      {RAIL_PANEL_STATES.filter((state) => state !== "ready").map((state) => (
+        <RailPanel
+          key={state}
+          title={`Who is on this deal — ${state}`}
+          state={state}
+          emptyLabel="Nobody is named on this deal yet."
+          detail={DETAIL}
+          footer={<p className="t-caption">3 named, 1 unreachable</p>}
+        >
+          <PanelRow>Lena Fischer — decision maker</PanelRow>
+        </RailPanel>
+      ))}
+    </>
+  ),
 };

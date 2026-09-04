@@ -45,9 +45,15 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	rows := make([]map[string]interface{}, len(outcome.Rows))
 	copy(rows, outcome.Rows)
 	for _, row := range rows {
-		row[reservedDerivationColumn] = derivationURL(outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row)
+		// The handle carries the instant this answer converted at, so opening it
+		// tomorrow still reconciles to the figure printed today.
+		row[reservedDerivationColumn] = derivationURL(
+			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt)
 	}
-	resultURL := derivationURL(outcome.Report, outcome.Filters, nil, outcome.Aggregates, nil)
+	// The whole-result handle pins the same instant its rows do: it explains the
+	// same answer, over every row rather than one group's.
+	resultURL := derivationURL(
+		outcome.Report, outcome.Filters, nil, outcome.Aggregates, nil, outcome.GeneratedAt)
 	totalRows := len(rows)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportResult{
 		Report:               outcome.Report,
