@@ -168,8 +168,12 @@ func idPtr(user ids.UUID) *openapi_types.UUID {
 //
 // Tasks, leads and waiting customers all work this way: the query returns the
 // owner it found, and finding none means nobody has taken the row rather than
-// meaning the lane declined to say. Spelled once so the three cannot disagree
-// about what a zero means.
+// meaning the lane declined to say. Spelled once so the three answer a zero
+// alike.
+//
+// Held by: TestEveryProducerStatesAnOwner (owner_test.go), which reads every
+// lane's answer, and TestATasksOwnerAgreesWithItsOwnReason, which holds one of
+// the three to the same fact spelled in its own reasons.
 func ownerFrom(user ids.UUID) ownerRef {
 	if user.IsZero() {
 		return unassigned()
