@@ -4260,6 +4260,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     <TimelineThread
                       thread={threadQuery}
                       commercial={{ next_close_on: deal.expected_close_date }}
+                      onOpenEmail={setOpenEmail}
                     />
                   }
                   coverage={coverageRead}
