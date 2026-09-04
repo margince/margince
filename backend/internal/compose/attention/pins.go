@@ -120,3 +120,21 @@ func (s *Service) readingPins(ctx context.Context) (*Service, error) {
 	reading.pinned = pinned
 	return &reading, nil
 }
+
+// foldAndRepin folds the routine decisions and pins what the fold minted.
+//
+// A pile of alike routine decisions is one row, not a hundred — but ONLY on the
+// unnarrowed page. A reader who asked for decisions asked to see them, and
+// answering that with the same group they were trying to open is a door that
+// leads back to itself. Narrowing IS opening the group.
+//
+// The second pin pass lives here rather than beside the first because it is the
+// same rule: a group's id is SYNTHETIC and did not exist when the first pass
+// ran, so a pin on a group matched nothing while the contract promises those
+// rows are pinnable. Both passes are needed and neither replaces the other —
+// the first is what lets a pinned MEMBER escape being folded at all.
+func (s *Service) foldAndRepin(rows []ranked, bounded bool) []ranked {
+	// The decision read stops at its own scan bound, so a group that filled it
+	// reports a floor rather than a total.
+	return applyPins(foldRoutineDecisionsBounded(rows, bounded), s.pinned)
+}
