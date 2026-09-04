@@ -200,9 +200,9 @@ export function useTodayReading({
 }
 
 /**
- * The 360's call: the head that says a machine read this record, the standing
- * word with the sentence it rests on, the three rated dimensions, and under
- * them whatever the call was read from — the spine, the folded thread.
+ * The 360's call: the head whose mark says a machine read this record, the
+ * standing word with the sentence it rests on, the three rated dimensions, and
+ * under them whatever the call was read from — the spine, the folded thread.
  *
  * While the read is in flight the card holds its shape and no verdict: a head
  * holding a spinner where the call goes is the reading claiming to have
