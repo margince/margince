@@ -62,7 +62,12 @@ type StageRequest struct {
 	TargetType     string
 	TargetID       ids.UUID
 	TargetVersion  *int64
-	Summary        string
+	// CoTarget* name a SECOND row the staged call's meaning rests on. The
+	// approvals engine pins it the way it pins the primary target, and
+	// redemption refuses if it has moved. Zero for a call that rests on one row.
+	CoTargetType string
+	CoTargetID   ids.UUID
+	Summary      string
 }
 
 // StageInfo is what a 🟡-capable tool contributes to its own staging: the
@@ -80,7 +85,14 @@ type StageInfo struct {
 	TargetType    string
 	TargetID      ids.UUID
 	TargetVersion *int64
-	Summary       string
+	// CoTarget* name the SECOND row this call's meaning rests on, where it has
+	// one. A tag merge is the case: it retires one word into another and the
+	// card names both, so both have to still be what they were when the human
+	// read it. Unlike TargetVersion above, these DO reach the staged row — the
+	// engine resolves the version from them inside the staging transaction.
+	CoTargetType string
+	CoTargetID   ids.UUID
+	Summary      string
 }
 
 // stageableTool is implemented by tools whose refused 🟡 calls should

@@ -30,7 +30,20 @@ type StageInput struct {
 	TargetType    string
 	TargetID      ids.UUID
 	TargetVersion *int64
-	Summary       string
+	// CoTargetType + CoTargetID name a SECOND row this proposal's meaning
+	// rests on, pinned the same way the primary target is.
+	//
+	// A tag merge is the case: it retires one word and folds it into another,
+	// and the card a human reads names both. Pinning only the retired side let
+	// the survivor be renamed while the card was pending, so the human
+	// approved folding into one word and the merge folded into another.
+	//
+	// Zero for the ordinary operation, which rests on one row. The version is
+	// resolved server-side at staging, never taken from the caller — a version
+	// the gate never read is a version nothing proved.
+	CoTargetType string
+	CoTargetID   ids.UUID
+	Summary      string
 	// JoinPending collapses an identical live proposal under an atomic
 	// transaction lock. It is for at-least-once worker paths whose retries
 	// must return the existing approval instead of multiplying inbox rows.

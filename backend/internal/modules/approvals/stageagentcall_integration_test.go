@@ -91,6 +91,10 @@ func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 			Objects: map[string]principal.ObjectGrant{
 				"organization": {Create: true, Read: true, Update: true, Delete: true},
 				"approval":     {Create: true, Read: true, Update: true, Delete: true},
+				// A merge staging targets tags, and a decider who cannot see
+				// the target is answered not-found — existence-hiding working
+				// correctly, and not what any case here is about.
+				"tag": {Create: true, Read: true, Update: true, Delete: true},
 			},
 		},
 	})
