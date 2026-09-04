@@ -577,7 +577,7 @@ func TestATeamManagerCannotIssueAWorkspaceShare(t *testing.T) {
 	manager := e.forecastReader(e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam))
 	manager = withForecastCreate(manager)
 
-	_, _, err := e.issueShare(manager, NewShare{
+	err := e.issueShare(manager, NewShare{
 		Kind: "snapshot", Target: "someone@example.test",
 		Scope:      forecasting.Scope{Kind: forecasting.ScopeWorkspace},
 		SnapshotID: &id,
@@ -607,7 +607,7 @@ func TestASnapshotShareCannotClaimADifferentPopulation(t *testing.T) {
 			e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))),
 		ids.NewV7())
 	team := e.Team1
-	_, _, err := e.issueShare(issuer, NewShare{
+	err := e.issueShare(issuer, NewShare{
 		Kind: "snapshot", Target: "someone@example.test",
 		Scope:      forecasting.Scope{Kind: forecasting.ScopeTeam, ID: &team},
 		SnapshotID: &id,
@@ -636,21 +636,17 @@ func withForecastCreate(ctx context.Context) context.Context {
 	return principal.WithActor(ctx, p)
 }
 
-func (e *forecastEnv) issueShare(
-	ctx context.Context, in NewShare,
-) (Share, string, error) {
-	var (
-		out Share
-		raw string
-	)
-	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+// issueShare answers only whether the issue was ALLOWED, which is what these
+// cases ask. The share and its token are dropped rather than returned unused —
+// a test helper handing back values nobody reads invites the next reader to
+// assume something checks them.
+func (e *forecastEnv) issueShare(ctx context.Context, in NewShare) error {
+	return forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
 		func(ctx context.Context, tx pgx.Tx) error {
-			var issueErr error
-			out, raw, issueErr = NewAnalyticsShareStore(
+			_, _, issueErr := NewAnalyticsShareStore(
 				func() time.Time { return time.Now().UTC() }).Issue(ctx, tx, in)
 			return issueErr
 		})
-	return out, raw, err
 }
 
 // A team manager cannot assert the WHOLE installation's forecast.
