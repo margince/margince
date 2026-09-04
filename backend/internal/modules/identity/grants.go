@@ -350,7 +350,11 @@ func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant 
 	if err := auth.Require(ctx, grant.RecordType, principal.ActionUpdate); err != nil {
 		return err
 	}
-	return auth.EnsureWritableLive(ctx, tx, grant.RecordType, grant.RecordID)
+	// Retractable, not live. A share standing on an archived record is stale
+	// state nobody can tidy if this probe requires liveness — and retiring the
+	// record is precisely when somebody reaches to clear the shares hanging off
+	// it. auth.EnsureRetractable holds the rule.
+	return auth.EnsureRetractable(ctx, tx, grant.RecordType, grant.RecordID)
 }
 
 func (s *Service) RevokeRecordGrant(ctx context.Context, id ids.UUID) error {
