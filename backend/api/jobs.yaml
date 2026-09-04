@@ -246,14 +246,12 @@ kinds:
       rest due for tomorrow.
 
   finance_sync_sweep:
-    role: dispatcher
+    role: worker
     go_type: FinanceSyncSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 6h
-    fans_out_to: finance_sync
-    fan_out_unit: workspace
     reason: >-
       Four times a day, and at boot like every pass here. An accounting source
       is not a stream: invoices are issued and settled on a human timetable, so
@@ -262,22 +260,15 @@ kinds:
       staleness threshold is set against — a mirror that has missed four passes
       is what it calls stale.
 
-  finance_sync:
-    role: worker
-    go_type: FinanceSyncArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One workspace's mirror pass: read the source's customers and the ledger of
-      each linked one, and write only what changed. The hash covers the source's
-      own values, so a pass over an unchanged ledger writes nothing and the
-      retries below are free. Five minutes bounds a first backfill of eighteen
-      months across every linked customer; a pass that runs out simply resumes
-      on the next sweep.
+      ONE declaration (ADR-0103). It walks the live workspaces itself where it
+      used to enqueue a finance_sync child per workspace, and the five minutes
+      is that child's deadline: it bounds a first backfill of eighteen months
+      across every linked customer, where the dispatcher's two only ever
+      bounded an enumeration and an insert.
+
+      Each workspace's pass reads the source's customers and the ledger of each
+      linked one, and writes only what changed. The hash covers the source's own
+      values, so a pass over an unchanged ledger writes nothing.
 
   capture_backfill:
     role: worker
@@ -762,15 +753,22 @@ kinds:
       rep cannot see.
 
   embed_drift_sweep:
-    role: dispatcher
+    role: worker
     go_type: EmbedDriftSweepArgs
     queue: default
-    timeout: 2m
+    timeout:
+      none: true
+      reason: >-
+        The pass is bounded by the pending backlog, not a wall clock, and each
+        embed is bounded by the model lane's per-call timeout. It was the
+        CHILD's posture and it survives the collapse (ADR-0103): the dispatcher
+        carried a real two-minute deadline because it only enumerated and
+        enqueued, and a deadline on the walk itself would put the corpus pass
+        back inside River's rescuer — which is the one thing this declaration
+        exists to keep it out of.
     opts_owner: caller
     cadence: 15m
     registration: {when: [Embedder], absent: registers_nothing}
-    fans_out_to: embed_drift_workspace
-    fan_out_unit: workspace
     reason: >-
       An empty pass is six indexed NOT-EXISTS probes per workspace, so a short
       cadence is cheap; fifteen minutes is how long a lost embed event may keep
@@ -780,28 +778,11 @@ kinds:
       runtime method rather than a JobRunnerConfig field and so cannot be
       declared here. A configured-but-unbound lane — what --ai-fake leaves —
       seeds no binding marker for the sweep to compare a row against, and
-      registers neither embed_drift kind.
+      registers this kind not at all.
 
-  embed_drift_workspace:
-    role: worker
-    go_type: EmbedDriftWorkspaceArgs
-    queue: default
-    timeout:
-      none: true
-      reason: >-
-        The pass is bounded by the pending backlog, not a wall clock, and each
-        embed is bounded by the model lane's per-call timeout.
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [Embedder], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      Registered by addEmbedDriftSweepJob beside its dispatcher, under the same
-      second condition the when: above cannot express: the embed lane must also
-      be BOUND (a non-empty EmbedIdentity, a runtime method rather than a
-      JobRunnerConfig field), because an unbound lane seeds no binding marker
-      and there is nothing to heal a row against.
+      ONE declaration (ADR-0103). It walks the live workspaces itself where it
+      used to enqueue an embed_drift_workspace child per workspace, and takes
+      that child's unbounded deadline with it — see timeout above.
 
   knowledge_ingest:
     role: worker

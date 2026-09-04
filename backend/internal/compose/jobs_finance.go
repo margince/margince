@@ -43,32 +43,17 @@ func (FinanceSyncSweepArgs) Kind() string { return "finance_sync_sweep" }
 // tenant work of its own (jobs.FleetWide).
 func (FinanceSyncSweepArgs) FleetWide() {}
 
-// FinanceSyncArgs is one workspace's mirror pass.
-type FinanceSyncArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (FinanceSyncArgs) Kind() string { return "finance_sync" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a FinanceSyncArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// financeSyncSweepWorker is the dispatcher.
+// financeSyncSweepWorker mirrors every live workspace's accounting source.
+//
+// One worker where there were two (ADR-0103): the dispatcher that enqueued a
+// finance_sync child per workspace is gone, and this walks them itself.
 type financeSyncSweepWorker struct {
 	pool *pgxpool.Pool
+	log  *slog.Logger
 }
 
 func (w *financeSyncSweepWorker) Work(ctx context.Context, _ *river.Job[FinanceSyncSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(FinanceSyncArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return FinanceSyncArgs{Workspace: ws} }))
-}
-
-// financeSyncWorker mirrors one workspace's accounting source.
-type financeSyncWorker struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.syncWorkspace))
 }
 
 // financeSweepPrincipal is who the scheduled mirror pass acts as.
@@ -119,15 +104,15 @@ func financeSweepPrincipal() principal.Principal {
 	}
 }
 
-func (w *financeSyncWorker) Work(ctx context.Context, job *river.Job[FinanceSyncArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+// syncWorkspace mirrors ONE workspace's source. It was the child job's Work,
+// and it still binds the workspace itself — the pass walks tenants, so the
+// binding belongs to the tenant's turn rather than to the row.
+func (w *financeSyncSweepWorker) syncWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.WithActor(wsCtx, financeSweepPrincipal())
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 
-	provider, configured, err := w.providerFor(wsCtx, job.Args.Workspace)
+	provider, configured, err := w.providerFor(wsCtx, workspace)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -167,7 +152,7 @@ func (w *financeSyncWorker) Work(ctx context.Context, job *river.Job[FinanceSync
 // would make the choice uninteresting and the second provider a rewrite.
 //
 //nolint:ireturn // the seam IS an interface: this resolves WHICH reader a
-func (w *financeSyncWorker) providerFor(
+func (w *financeSyncSweepWorker) providerFor(
 	ctx context.Context, workspace ids.UUID,
 ) (finance.Provider, bool, error) {
 	var (
@@ -237,7 +222,6 @@ func linkedCustomers(ctx context.Context, tx pgx.Tx) ([]finance.SourceCustomer, 
 func addFinanceJobs(
 	reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger,
 ) []*river.PeriodicJob {
-	addDeclaredWorker[FinanceSyncSweepArgs](reg, &financeSyncSweepWorker{pool: pool})
-	addDeclaredWorker[FinanceSyncArgs](reg, &financeSyncWorker{pool: pool, log: log})
+	addDeclaredWorker[FinanceSyncSweepArgs](reg, &financeSyncSweepWorker{pool: pool, log: log})
 	return periodicFor(cfg, FinanceSyncSweepArgs{})
 }

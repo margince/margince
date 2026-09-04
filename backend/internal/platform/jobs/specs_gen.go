@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "5f5c8efdb21834e2f48eb64b52d037dd8bad08e94f6733999b2669d44a0e9c84"
+const JobContractHash = "07684b458ea1541bd4f2d3978402a90cb8a73009c324b509e5c7da24c17ce654"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -378,25 +378,12 @@ var specs = map[string]Spec{
 	"embed_drift_sweep": {
 		Kind:         "embed_drift_sweep",
 		GoType:       "EmbedDriftSweepArgs",
-		Role:         Dispatcher,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit:   FanOutWorkspace,
-		FanOutTo:     "embed_drift_workspace",
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{Fixed: 15 * time.Minute},
-		Registration: Registration{When: []string{"Embedder"}},
-	},
-	"embed_drift_workspace": {
-		Kind:         "embed_drift_workspace",
-		GoType:       "EmbedDriftWorkspaceArgs",
 		Role:         Worker,
 		Queue:        "default",
 		Timeout:      TimeoutPolicy{None: true},
-		MaxAttempts:  3,
-		OptsOwner:    OptsFanOut,
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 15 * time.Minute},
 		Registration: Registration{When: []string{"Embedder"}},
-		Args:         []ArgField{{Name: "Workspace"}},
 	},
 	"embed_reindex": {
 		Kind:         "embed_reindex",
@@ -409,26 +396,14 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"Embedder"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "Identity", Scalar: true, Reason: "the embed binding in force when the confirm claimed the run -- model, dimension and revision folded into one string. Carried so a mid-flight configuration change is detectable as drift (search.ErrIdentityDrift) instead of the fleet silently re- embedding under whatever it now reports; that comparison is against the value AT CLAIM TIME, which no row still holds by the time the job runs."}, {Name: "Run"}},
 	},
-	"finance_sync": {
-		Kind:        "finance_sync",
-		GoType:      "FinanceSyncArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
-		MaxAttempts: 3,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
-	},
 	"finance_sync_sweep": {
-		Kind:       "finance_sync_sweep",
-		GoType:     "FinanceSyncSweepArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "finance_sync",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{Fixed: 6 * time.Hour},
+		Kind:      "finance_sync_sweep",
+		GoType:    "FinanceSyncSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 6 * time.Hour},
 	},
 	"follow_up_reconcile": {
 		Kind:       "follow_up_reconcile",
