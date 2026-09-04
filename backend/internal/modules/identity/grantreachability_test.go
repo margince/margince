@@ -77,6 +77,16 @@ var grantedToNobody = gatekit.Waive(map[string]string{
 // number is growing the blind spot this gate exists to bound.
 const dynamicObjectCeiling = 106
 
+// dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
+// call site naming a known object and an action computed at runtime, as
+// `auth.Require(ctx, "person", action)` does.
+//
+// It was missing, and its absence was invisible in the way this gate's header
+// warns about. A new dynamic-action call site adds no resolved pair, so no pair
+// assertion fires; it removes none either, so `requireSitesFloor` does not
+// fall. The blind spot grew and everything reported PASS.
+const dynamicActionCeiling = 6
+
 // requireSitesFloor is the fail-short guard. The scan walking a smaller tree
 // than it thinks — a moved directory, a parser error swallowed — would report
 // PASS while checking nothing, so the census asserts it found roughly what the
@@ -87,7 +97,8 @@ func TestEveryGrantAHandlerRequiresIsHeldBySomeSeededRole(t *testing.T) {
 	defer grantedToNobody.AssertAllMatched(t)
 
 	held := grantsHeldBySomeRole(t)
-	required, dynamic := grantsHandlersRequire(t)
+	census := grantsHandlersRequire(t)
+	required := census.sites
 
 	if len(required) < requireSitesFloor {
 		t.Fatalf("the scan resolved only %d auth.Require call sites, below the %d floor — "+
@@ -95,11 +106,17 @@ func TestEveryGrantAHandlerRequiresIsHeldBySomeSeededRole(t *testing.T) {
 			"can fail short reports PASS while checking nothing",
 			len(required), requireSitesFloor)
 	}
-	if dynamic > dynamicObjectCeiling {
+	if census.dynamicObject > dynamicObjectCeiling {
 		t.Errorf("%d auth.Require call sites name an object this scan cannot resolve, above the "+
 			"ceiling of %d — each is a door no static check covers. Resolve the new one to a "+
 			"literal or a package-level constant, or raise the ceiling here with the reason it "+
-			"has to be computed", dynamic, dynamicObjectCeiling)
+			"has to be computed", census.dynamicObject, dynamicObjectCeiling)
+	}
+	if census.dynamicAction > dynamicActionCeiling {
+		t.Errorf("%d auth.Require call sites name an action this scan cannot resolve, above the "+
+			"ceiling of %d — the door is known and the verb is not, so no pair below is checked "+
+			"for it. Resolve the new one to a literal, or raise the ceiling here with the reason "+
+			"the verb has to be computed", census.dynamicAction, dynamicActionCeiling)
 	}
 
 	for _, site := range required {
@@ -152,16 +169,30 @@ type requireSite struct {
 	where  string
 }
 
+// requireCensus is everything the walk saw: the pairs it resolved, and the call
+// sites it could not, split by WHICH argument defeated it.
+//
+// Both unresolved kinds are carried, because either one dropped silently would
+// be the under-recognition this gate's header says it must not have. They are
+// counted apart because they are different blind spots — an unresolved object
+// hides which door was opened, an unresolved action hides which verb of a known
+// door — and one ceiling over the sum would let a new one of either hide behind
+// a refactor that removed one of the other.
+type requireCensus struct {
+	sites         []requireSite
+	dynamicObject int
+	dynamicAction int
+}
+
 // grantsHandlersRequire walks the server for auth.Require calls, answering the
-// resolved ones and how many named an object it could not resolve.
-func grantsHandlersRequire(t *testing.T) ([]requireSite, int) {
+// resolved pairs and the call sites it could not resolve.
+func grantsHandlersRequire(t *testing.T) requireCensus {
 	t.Helper()
 	root := repoArtifact("internal")
 	files := goSourceFiles(t, root)
 	constants := packageStringConstants(t, files)
 
-	var sites []requireSite
-	dynamic := 0
+	var census requireCensus
 	for _, path := range files {
 		fset := token.NewFileSet()
 		file, err := parser.ParseFile(fset, path, nil, 0)
@@ -175,24 +206,28 @@ func grantsHandlersRequire(t *testing.T) ([]requireSite, int) {
 			}
 			object, resolved := objectName(call.Args[1], constants[filepath.Dir(path)])
 			if !resolved {
-				dynamic++
+				census.dynamicObject++
 				return true
 			}
 			action, ok := actionName(call.Args[2])
 			if !ok {
 				// The action is a parameter (`auth.Require(ctx, "person", action)`),
 				// so the pair is not decided here. The object is still known and
-				// every verb of it is checked at the call sites that name one.
+				// every verb of it is checked at the call sites that name one —
+				// but the site is COUNTED, not dropped. A new one of these adds
+				// no resolved pair and removes none, so nothing else in this
+				// gate would move when the blind spot grew.
+				census.dynamicAction++
 				return true
 			}
-			sites = append(sites, requireSite{
+			census.sites = append(census.sites, requireSite{
 				object: object, action: action,
 				where: filepath.ToSlash(path) + ":" + strconv.Itoa(fset.Position(call.Pos()).Line),
 			})
 			return true
 		})
 	}
-	return sites, dynamic
+	return census
 }
 
 // requireCall answers whether a node is an `auth.Require(ctx, object, action)`
@@ -306,7 +341,26 @@ func goSourceFiles(t *testing.T, root string) []string {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+		if entry.IsDir() {
+			// The directories the Go toolchain itself excludes from a build.
+			// Three `testdata/` directories already sit under this root; they
+			// hold no Go today, and a fixture dropped into one — a file that
+			// deliberately does not parse is an ordinary fixture — would take
+			// this gate red through `parser.ParseFile` for a file that ships
+			// nowhere.
+			//
+			// This narrows the corpus, which is the one direction a census must
+			// not be narrowed carelessly. It is safe because these directories
+			// cannot hold a reachable call site: the toolchain never compiles
+			// them, so an `auth.Require` written there opens no door. The floor
+			// below still holds the rest of the walk.
+			if name := entry.Name(); name == "testdata" ||
+				strings.HasPrefix(name, "_") || strings.HasPrefix(name, ".") {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
 		files = append(files, path)
