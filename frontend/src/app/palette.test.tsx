@@ -108,7 +108,7 @@ describe("paletteHotkeyCaps", () => {
 describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    expect(document.activeElement).toBe(screen.getByRole("textbox"));
+    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
     expect(screen.getByText("Pipeline")).toBeTruthy();
     expect(screen.getByText("Record")).toBeTruthy(); // type tag rendered
   });
@@ -118,7 +118,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // from the palette for everyone who knows it by its older name.
   it("matches a keyword the row does not display, without showing it", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("textbox"), "deals");
+    await userEvent.type(screen.getByRole("searchbox"), "deals");
     const rows = screen.getAllByRole("button");
     expect(rows[0].textContent).toContain("Pipeline");
     expect(rows[0].textContent).not.toContain("deals");
@@ -128,7 +128,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("filters by label+subtitle case-insensitively and appends the see-all + Ask-AI rows last", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("textbox"), "COMPANY");
+    await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
     const rows = screen.getAllByRole("button");
     expect(rows).toHaveLength(3);
     expect(rows[0].textContent).toContain("Brandt Automotive");
@@ -138,7 +138,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("Enter runs the selection; arrows move and clamp (AC-shell-5)", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("searchbox");
     await userEvent.keyboard("{ArrowUp}"); // clamps at 0
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}"); // clamps at end
     await userEvent.keyboard("{ArrowUp}{ArrowUp}"); // back to index 0
@@ -149,7 +149,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("the Ask-AI row stores the query and lands on the AI surface (AC-shell-4)", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("textbox"), "zzz nothing matches");
+    await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
     // rows are [see-all, ask-ai] here (no builtin/record matches): step past
     // the see-all row to reach Ask-AI.
     await userEvent.keyboard("{ArrowDown}");
@@ -163,7 +163,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const view = render(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("textbox"), "deal");
+    await userEvent.type(screen.getByRole("searchbox"), "deal");
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
     view.rerender(
@@ -172,7 +172,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     view.rerender(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("");
+    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("");
   });
 
   // The palette is a dialog and had none of a dialog's keyboard behaviour: it
@@ -202,7 +202,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       render(<CommandPalette open onClose={() => {}} commands={commands} />);
       const user = userEvent.setup();
       const dialog = screen.getByRole("dialog");
-      screen.getByRole("textbox").focus();
+      screen.getByRole("searchbox").focus();
 
       // Backwards off the first stop was the reported failure: one Shift+Tab
       // and focus was on the page behind.
@@ -250,7 +250,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("textbox"), "acme");
+    await userEvent.type(screen.getByRole("searchbox"), "acme");
     await waitFor(() =>
       expect(screen.getByText("Dana Buyer at Acme")).toBeTruthy(),
     );
@@ -258,6 +258,80 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
     await userEvent.click(screen.getByText("Dana Buyer at Acme"));
     expect(window.location.hash).toBe("#/contacts/p1");
+  });
+
+  // A failed record search used to answer with an empty list, which is the
+  // same shape as "no matches" — so a reader whose search 500'd was told the
+  // workspace holds nothing. It says what happened now, and the builtin
+  // commands stay usable beside it, which is the degradation that was wanted.
+  it("says the record search failed rather than reporting an empty workspace", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("nope", { status: 500 })),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "acme");
+
+    expect(
+      await screen.findByText(/Records could not be searched/),
+    ).toBeTruthy();
+    // Not the empty state: the list is not empty, and saying so would be the
+    // false claim this replaces.
+    expect(screen.queryByText("No matches.")).toBeNull();
+    // The builtin half still answers. Retyped, because the failing query was
+    // "acme" and no builtin command carries that word — the claim is that a
+    // failed RECORD search leaves the command list working, not that it leaves
+    // the previous query matching something it never matched.
+    await userEvent.clear(screen.getByRole("searchbox"));
+    await userEvent.type(screen.getByRole("searchbox"), "Pipeline");
+    expect(
+      screen
+        .getAllByRole("button")
+        .some((row) => row.textContent?.includes("Pipeline")),
+    ).toBe(true);
+  });
+
+  // A row's second line names the kind, and it used to name it in the WIRE's
+  // words — the untranslated enum member, straight onto the row.
+  it("names a hit's kind in the reader's language, not the wire's", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "organization", id: "o1", title: "Brandt GmbH" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "brandt");
+    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    // The row's OWN second line, read exactly: asserting on page text would
+    // pass off the fixture command list's subtitle, and asserting `contains`
+    // would pass on the wire word itself once the label is capitalised.
+    expect(row.querySelector(".sub")?.textContent).toBe("Organization");
+  });
+
+  // A catalog row has no page of its own — it lives on the data-model settings
+  // page — so that is where the hit goes. Being findable at all is the change;
+  // an address of its own is worth having and is not this one.
+  it("opens the catalog page from a product hit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "product", id: "pr1", title: "Floor scrubber" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "scrub");
+    await waitFor(() =>
+      expect(screen.getByText("Floor scrubber")).toBeTruthy(),
+    );
+    await userEvent.click(screen.getByText("Floor scrubber"));
+    expect(window.location.hash).toContain("data-model");
   });
 
   // A project hit carries no snippet, and "project" under two projects both
@@ -296,7 +370,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("textbox"), "roll");
+    await userEvent.type(screen.getByRole("searchbox"), "roll");
     expect(await screen.findByText("ACME-CRM")).toBeTruthy();
     expect(await screen.findByText("Brandt Automotive")).toBeTruthy();
     expect(screen.queryByText("project")).toBeNull();
@@ -320,7 +394,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("textbox"), "key");
+    await userEvent.type(screen.getByRole("searchbox"), "key");
     await waitFor(() => expect(screen.getByText("Key Account")).toBeTruthy());
 
     await userEvent.click(screen.getByText("Key Account"));
@@ -355,7 +429,7 @@ describe("useBuiltinCommands", () => {
     renderProbe();
     // Its own title, not a fourth spelling of it: "views" appears in no other
     // command, so matching on it proves the row carries the screen's own words.
-    await user.type(screen.getByRole("textbox"), "views");
+    await user.type(screen.getByRole("searchbox"), "views");
     const rows = screen.getAllByRole("button");
     expect(rows[0].textContent).toContain("Filters & views");
     await user.keyboard("{Enter}");
@@ -365,7 +439,7 @@ describe("useBuiltinCommands", () => {
   it("reaches it by its route id too, so the domain word finds it", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("textbox"), "filters");
+    await user.type(screen.getByRole("searchbox"), "filters");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
   });
@@ -376,7 +450,7 @@ describe("useBuiltinCommands", () => {
   it("reaches the scheduled queue, which no rail row names", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("textbox"), "scheduled");
+    await user.type(screen.getByRole("searchbox"), "scheduled");
     const rows = screen.getAllByRole("button");
     expect(rows[0].textContent).toContain("Scheduled messages");
     await user.keyboard("{Enter}");
@@ -390,7 +464,7 @@ describe("useBuiltinCommands", () => {
   it("finds it under the words the composer's control uses", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("textbox"), "Schedule send");
+    await user.type(screen.getByRole("searchbox"), "Schedule send");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/scheduled");
   });

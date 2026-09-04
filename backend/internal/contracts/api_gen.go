@@ -3714,13 +3714,15 @@ func (e ContactEngagement) Valid() bool {
 
 // Defines values for ContextEntityRefType.
 const (
-	ContextEntityRefTypeActivity     ContextEntityRefType = "activity"
-	ContextEntityRefTypeDeal         ContextEntityRefType = "deal"
-	ContextEntityRefTypeLead         ContextEntityRefType = "lead"
-	ContextEntityRefTypeOrganization ContextEntityRefType = "organization"
-	ContextEntityRefTypePerson       ContextEntityRefType = "person"
-	ContextEntityRefTypeProject      ContextEntityRefType = "project"
-	ContextEntityRefTypeUser         ContextEntityRefType = "user"
+	ContextEntityRefTypeActivity      ContextEntityRefType = "activity"
+	ContextEntityRefTypeDeal          ContextEntityRefType = "deal"
+	ContextEntityRefTypeLead          ContextEntityRefType = "lead"
+	ContextEntityRefTypeOfferTemplate ContextEntityRefType = "offer_template"
+	ContextEntityRefTypeOrganization  ContextEntityRefType = "organization"
+	ContextEntityRefTypePerson        ContextEntityRefType = "person"
+	ContextEntityRefTypeProduct       ContextEntityRefType = "product"
+	ContextEntityRefTypeProject       ContextEntityRefType = "project"
+	ContextEntityRefTypeUser          ContextEntityRefType = "user"
 )
 
 // Valid indicates whether the value is a known member of the ContextEntityRefType enum.
@@ -3732,9 +3734,13 @@ func (e ContextEntityRefType) Valid() bool {
 		return true
 	case ContextEntityRefTypeLead:
 		return true
+	case ContextEntityRefTypeOfferTemplate:
+		return true
 	case ContextEntityRefTypeOrganization:
 		return true
 	case ContextEntityRefTypePerson:
+		return true
+	case ContextEntityRefTypeProduct:
 		return true
 	case ContextEntityRefTypeProject:
 		return true
@@ -7818,19 +7824,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	Assessment     OrganizationBriefSentenceNature = "assessment"
-	Fact           OrganizationBriefSentenceNature = "fact"
-	Recommendation OrganizationBriefSentenceNature = "recommendation"
+	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
+	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
+	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case Assessment:
+	case OrganizationBriefSentenceNatureAssessment:
 		return true
-	case Fact:
+	case OrganizationBriefSentenceNatureFact:
 		return true
-	case Recommendation:
+	case OrganizationBriefSentenceNatureRecommendation:
 		return true
 	default:
 		return false
@@ -10635,13 +10641,15 @@ func (e SearchResultTrustTier) Valid() bool {
 
 // Defines values for SearchResultType.
 const (
-	SearchResultTypeActivity     SearchResultType = "activity"
-	SearchResultTypeDeal         SearchResultType = "deal"
-	SearchResultTypeLead         SearchResultType = "lead"
-	SearchResultTypeOrganization SearchResultType = "organization"
-	SearchResultTypePerson       SearchResultType = "person"
-	SearchResultTypeProject      SearchResultType = "project"
-	SearchResultTypeTag          SearchResultType = "tag"
+	SearchResultTypeActivity      SearchResultType = "activity"
+	SearchResultTypeDeal          SearchResultType = "deal"
+	SearchResultTypeLead          SearchResultType = "lead"
+	SearchResultTypeOfferTemplate SearchResultType = "offer_template"
+	SearchResultTypeOrganization  SearchResultType = "organization"
+	SearchResultTypePerson        SearchResultType = "person"
+	SearchResultTypeProduct       SearchResultType = "product"
+	SearchResultTypeProject       SearchResultType = "project"
+	SearchResultTypeTag           SearchResultType = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchResultType enum.
@@ -10653,9 +10661,13 @@ func (e SearchResultType) Valid() bool {
 		return true
 	case SearchResultTypeLead:
 		return true
+	case SearchResultTypeOfferTemplate:
+		return true
 	case SearchResultTypeOrganization:
 		return true
 	case SearchResultTypePerson:
+		return true
+	case SearchResultTypeProduct:
 		return true
 	case SearchResultTypeProject:
 		return true
@@ -14778,31 +14790,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
-	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
-	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
-	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
+	Customer       ListOrganizationsParamsLifecycle = "customer"
+	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	Prospect       ListOrganizationsParamsLifecycle = "prospect"
+	Target         ListOrganizationsParamsLifecycle = "target"
+	Unknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case ListOrganizationsParamsLifecycleCustomer:
+	case Customer:
 		return true
-	case ListOrganizationsParamsLifecycleDisqualified:
+	case Disqualified:
 		return true
-	case ListOrganizationsParamsLifecycleFormerCustomer:
+	case FormerCustomer:
 		return true
-	case ListOrganizationsParamsLifecycleOpportunity:
+	case Opportunity:
 		return true
-	case ListOrganizationsParamsLifecycleProspect:
+	case Prospect:
 		return true
-	case ListOrganizationsParamsLifecycleTarget:
+	case Target:
 		return true
-	case ListOrganizationsParamsLifecycleUnknown:
+	case Unknown:
 		return true
 	default:
 		return false
@@ -15324,13 +15336,15 @@ func (e ListScheduledSendsParamsStatus) Valid() bool {
 
 // Defines values for SearchParamsTypes.
 const (
-	SearchParamsTypesActivity     SearchParamsTypes = "activity"
-	SearchParamsTypesDeal         SearchParamsTypes = "deal"
-	SearchParamsTypesLead         SearchParamsTypes = "lead"
-	SearchParamsTypesOrganization SearchParamsTypes = "organization"
-	SearchParamsTypesPerson       SearchParamsTypes = "person"
-	SearchParamsTypesProject      SearchParamsTypes = "project"
-	SearchParamsTypesTag          SearchParamsTypes = "tag"
+	SearchParamsTypesActivity      SearchParamsTypes = "activity"
+	SearchParamsTypesDeal          SearchParamsTypes = "deal"
+	SearchParamsTypesLead          SearchParamsTypes = "lead"
+	SearchParamsTypesOfferTemplate SearchParamsTypes = "offer_template"
+	SearchParamsTypesOrganization  SearchParamsTypes = "organization"
+	SearchParamsTypesPerson        SearchParamsTypes = "person"
+	SearchParamsTypesProduct       SearchParamsTypes = "product"
+	SearchParamsTypesProject       SearchParamsTypes = "project"
+	SearchParamsTypesTag           SearchParamsTypes = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchParamsTypes enum.
@@ -15342,9 +15356,13 @@ func (e SearchParamsTypes) Valid() bool {
 		return true
 	case SearchParamsTypesLead:
 		return true
+	case SearchParamsTypesOfferTemplate:
+		return true
 	case SearchParamsTypesOrganization:
 		return true
 	case SearchParamsTypesPerson:
+		return true
+	case SearchParamsTypesProduct:
 		return true
 	case SearchParamsTypesProject:
 		return true

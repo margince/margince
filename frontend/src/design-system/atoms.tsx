@@ -507,9 +507,25 @@ export function TextInput(props: ComponentPropsWithRef<"input">) {
   );
 }
 
-export function SearchField(props: InputHTMLAttributes<HTMLInputElement>) {
+/**
+ * The one search field: a text input that announces itself as a search box and
+ * carries the magnifier.
+ *
+ * `flush` is for a field whose CONTAINER already draws the chrome — the ⌘K
+ * palette's own bar, which has its own ground, its own inset and its own
+ * bottom rule. Nested, the ordinary field's border and radius read as a box
+ * inside a box, and the field's own padding pushes the caret off the text
+ * column the results below it stand on. It is a variant rather than a caller
+ * overriding `.input` from outside, because a call site that reaches in to
+ * cancel a primitive's chrome is how the next surface grows a second search
+ * field nobody can find.
+ */
+export function SearchField({
+  flush,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & Readonly<{ flush?: boolean }>) {
   return (
-    <span className="input-icon">
+    <span className={flush ? "input-icon input-icon-flush" : "input-icon"}>
       <Search aria-hidden />
       <input
         type="search"
@@ -1135,12 +1151,48 @@ const PENDING_LINES = [
  * seconds cold. It is a flag rather than a second string because the sentence is
  * the same sentence: two of them is how a screen reader ends up hearing the wait
  * announced twice.
+ *
+ * `delayMs` holds the whole thing back until the wait has actually been long
+ * enough to be worth reporting. It is for a surface that re-reads as a reader
+ * types, where the usual answer arrives faster than a person can perceive: a
+ * placeholder that flashes on every keystroke is noise, and it reports work
+ * that was already done. Nothing renders before the delay elapses — the spoken
+ * line included, deliberately, because announcing a wait that is about to end
+ * is the same interruption in the accessibility tree that the flash is on
+ * screen. Unset, the pending state shows immediately, which is right for a
+ * surface a reader opened rather than one they are typing into.
  */
 export function PendingBody({
   label,
   lines = 3,
   visible,
-}: Readonly<{ label: string; lines?: number; visible?: boolean }>) {
+  delayMs,
+}: Readonly<{
+  label: string;
+  lines?: number;
+  visible?: boolean;
+  delayMs?: number;
+}>) {
+  const [waited, setWaited] = useState(delayMs === undefined);
+  useEffect(() => {
+    if (delayMs === undefined) {
+      // A caller that drops the delay wants the pending state NOW, and the
+      // effect has to say so: leaving `waited` where the previous delay left it
+      // hides the body for good, since nothing re-runs to release it.
+      setWaited(true);
+      return;
+    }
+    // The clock is per MOUNT and per delay, not per read. A pending body that
+    // stays mounted while one query replaces another keeps the time it has
+    // already served — a reader typing through a slow search watches one bar
+    // rather than a bar that blinks out on every keystroke.
+    setWaited(false);
+    const timer = setTimeout(() => setWaited(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs]);
+  if (!waited) {
+    return null;
+  }
   return (
     <div className="pending" role="status" aria-busy="true">
       {/* The label lands EITHER on the page or in the accessibility tree alone,
