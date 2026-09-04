@@ -227,7 +227,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// address. Asked of EVERY sender, not only those a suppression rule matched,
 	// since T4 defers the ambiguous class and this answer decides
 	// create-versus-defer for ordinary senders too.
-	dealt, err := s.dealtWithEnoughToRecord(ctx, tx, cp)
+	dealt, err := s.dealtWithEnoughToRecord(ctx, tx, cp, activityID)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
