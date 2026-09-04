@@ -76,9 +76,14 @@ func Validate(doc Document) ([]ids.UUID, error) {
 		if !b.Kind.known() {
 			return nil, &InvalidError{
 				Where: where,
-				Reason: "no such block kind — a renderer meeting one either draws something " +
+				// The whole set, so a caller that guessed pays one refusal
+				// rather than a lookup — which is what lets the tool
+				// description name the vocabulary document without ordering a
+				// read of it.
+				Reason: "no such block kind. A renderer meeting one either draws something " +
 					"nobody specified or drops it silently, and a report missing a block it " +
-					"was composed with says something different from the one composed",
+					"was composed with says something different from the one composed. The " +
+					"kinds are: " + strings.Join(KindNames(), ", "),
 			}
 		}
 		if err := checkNoLiteral(b, where); err != nil {

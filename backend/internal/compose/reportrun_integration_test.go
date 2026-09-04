@@ -19,6 +19,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -548,4 +549,121 @@ func (e *forecastEnv) render(
 			return err
 		})
 	return out, err
+}
+
+// The tool surface and the web surface answer with one engine.
+//
+// Not a style point. A model composing a report and a person composing the same
+// one must get the same figures and the same refusals — two renderers would
+// drift, and the first sign of it would be a model reporting a number the
+// screen does not show.
+func TestTheReportToolAndTheRouteRenderTheSameDocument(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	doc := reportdoc.Document{Blocks: []reportdoc.Block{
+		{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{
+			{RunID: runID.String(), Column: measureAlias},
+		}},
+	}}
+
+	viaRoute, err := e.render(ctx, t, doc)
+	if err != nil {
+		t.Fatalf("rendering through the route: %v", err)
+	}
+	viaTool, err := e.composeTool(ctx, t, doc)
+	if err != nil {
+		t.Fatalf("rendering through the tool: %v", err)
+	}
+
+	// Compared against the CONTRACT's own field names, not against
+	// json.Marshal of the route's struct. Marshalling both sides would move
+	// them together: renaming a json tag would change the expectation and the
+	// answer at once, and the test would pass through the exact divergence it
+	// exists to catch. These strings come from crm.yaml's RenderedBlock.
+	var toolDoc struct {
+		Blocks []struct {
+			Kind   string `json:"kind"`
+			Values []struct {
+				Value    any  `json:"value"`
+				Withheld bool `json:"withheld"`
+			} `json:"values"`
+		} `json:"blocks"`
+	}
+	if err := json.Unmarshal(viaTool, &toolDoc); err != nil {
+		t.Fatalf("the tool's answer is not the contract's shape: %v (%s)", err, viaTool)
+	}
+	if len(toolDoc.Blocks) != len(viaRoute) {
+		t.Fatalf("the route rendered %d blocks and the tool %d",
+			len(viaRoute), len(toolDoc.Blocks))
+	}
+	for i, want := range viaRoute {
+		got := toolDoc.Blocks[i]
+		if got.Kind != want.Kind {
+			t.Errorf("block %d: the route calls it %q and the tool %q", i, want.Kind, got.Kind)
+		}
+		if len(got.Values) != len(want.Values) {
+			t.Fatalf("block %d: the route rendered %d figures and the tool %d",
+				i, len(want.Values), len(got.Values))
+		}
+		for j, wantValue := range want.Values {
+			gotValue := got.Values[j]
+			if fmt.Sprint(gotValue.Value) != fmt.Sprint(wantValue.Value) {
+				t.Errorf("block %d figure %d: the route says %v and the tool %v",
+					i, j, wantValue.Value, gotValue.Value)
+			}
+			if gotValue.Withheld != wantValue.Withheld {
+				t.Errorf("block %d figure %d: the route says withheld=%v and the tool %v",
+					i, j, wantValue.Withheld, gotValue.Withheld)
+			}
+		}
+	}
+}
+
+// The literal rule holds on the tool surface too.
+//
+// This is the one a model is most likely to break: it has a number in hand from
+// its own reasoning and a handle beside it, and writing both looks like being
+// helpful. The refusal must reach it with the reason.
+func TestTheReportToolRefusesALiteralBesideAHandle(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	ctx := e.askerCtx()
+	runID := e.saveRun(ctx, t, countAllDeals())
+
+	plausible := 6.0
+	_, err := e.composeTool(ctx, t, reportdoc.Document{Blocks: []reportdoc.Block{
+		{
+			Kind:  reportdoc.KindStatStrip,
+			Value: &plausible,
+			Cells: []reportdoc.Cell{{RunID: runID.String(), Column: measureAlias}},
+		},
+	}})
+	if err == nil {
+		t.Fatal("the tool accepted a literal beside a handle — and the literal was the " +
+			"CORRECT number, which is the case a reader could never catch")
+	}
+	if !strings.Contains(err.Error(), "BOTH") {
+		t.Errorf("the tool's refusal does not tell the model why carrying both is the "+
+			"problem: %v", err)
+	}
+}
+
+func (e *forecastEnv) composeTool(
+	ctx context.Context, t *testing.T, doc reportdoc.Document,
+) (json.RawMessage, error) {
+	t.Helper()
+	encoded, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatalf("encoding the document: %v", err)
+	}
+	return analyticsReportComposer(e.Pool, analyticsquery.DefaultFloor)(ctx, encoded)
 }

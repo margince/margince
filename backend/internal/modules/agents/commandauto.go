@@ -316,42 +316,6 @@ func requireLinkTarget(entityType string) error {
 	return &BadArgsError{Cause: fmt.Errorf("entity_type %q is not a link target", entityType)}
 }
 
-// RunReportCommand is one report run, whichever door asked for it. The report
-// KEY is the whole of it: the plan arguments narrow what is counted, and the
-// engine — not this seam — owns which of them a report accepts.
-type RunReportCommand struct {
-	Report string
-}
-
-// NewRunReportCall binds one report run to the resolver that answers for it.
-// It holds no dependency: a report names no record at all.
-//
-//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRunReportCall(cmd RunReportCommand) GovernedCall {
-	return bind[RunReportCommand](runReportResolver{}, cmd)
-}
-
-type runReportResolver struct{}
-
-// Subject names NO record, and that is the honest answer rather than a gap: a
-// report is an aggregate over rows the caller's own scope already bounds, so
-// there is no row an approval could bind to, pin, or be probed against. What
-// it does supply is the KEY — the one thing that says which aggregate is being
-// released — where the route walk it replaces could only offer an empty target
-// with no name attached.
-func (runReportResolver) Subject(_ context.Context, cmd RunReportCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf("Run report %s", cmd.Report)}, nil
-}
-
-// Guards stands down: the report key's vocabulary is the engine's catalog,
-// which this module is handed rather than owns (ReportRunner, tools_report.go),
-// and a key outside it is refused by the engine at execution with the catalog
-// in hand. Restating it here would be a second answer that drifts the moment an
-// installation's catalog does.
-func (runReportResolver) Guards(_ context.Context, _ RunReportCommand) error {
-	return nil
-}
-
 // DecideApprovalCommand is one person's answer to one staged proposal,
 // whichever door asked for it. Approve is the answer itself, and it belongs to
 // the command rather than to the route because the two routes that carry it are

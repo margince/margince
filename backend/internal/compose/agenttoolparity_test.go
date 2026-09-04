@@ -185,6 +185,14 @@ var composedIntents = map[string]bool{
 	// and the vocabulary it names is the engine's own compile-time table, so it
 	// names nothing about a workspace at all.
 	"describe_report_vocabulary": true,
+	// describe_report_blocks answers the document
+	// margince://schema/report-blocks publishes, for the same caller and the
+	// same reason: the Surface-B runner is offered no resource step. It backs
+	// no REST operation either — `renderAnalyticsReport` renders a document,
+	// and no operation answers what a document may CONTAIN. Read-only, it
+	// returns no records, and the grammar it names is the engine's own
+	// compile-time list, so it names nothing about a workspace at all.
+	"describe_report_blocks": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are

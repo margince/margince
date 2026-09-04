@@ -178,6 +178,8 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog)
+	RegisterAnalyticsReportTool(r, nil)
+	RegisterReportBlocksTool(r, NewReportBlocksResource(BlockGrammar{}))
 	RegisterForecastTool(r, nil)
 	RegisterMovementTool(r, nil)
 	RegisterAssuranceTool(r, nil)
