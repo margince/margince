@@ -245,7 +245,7 @@ export const de = {
 
   "explain.open": "Diese Zahl erklären",
   "explain.mayHaveMoved":
-    "Dieser Link nennt nicht, wann die Zahl ermittelt wurde — diese Werte wurden gerade neu berechnet. Hat sich zwischenzeitlich ein Wechselkurs geändert, ergeben sie nicht die angeklickte Zahl.",
+    "Dieser Link nennt nicht, wann die Zahl ermittelt wurde — diese Werte wurden gerade neu berechnet. Hat sich zwischenzeitlich ein Wechselkurs geändert, können sie von der angeklickten Zahl abweichen.",
   "explain.title": "So setzt sich die Zahl zusammen",
   "explain.rate": "Kurs {rate} am {date}",
 
