@@ -120,6 +120,21 @@ func (d attentionDuplicates) DescribeMany(
 	return faces, nil
 }
 
+// DecidableSubset answers which of these records the reader could change, which
+// is what decides whether the card offers a verb at all.
+//
+// It goes through the same store as the naming read, so the card's offer and
+// the disposition endpoint's refusal are two readings of one authority rather
+// than two rules that can drift.
+func (d attentionDuplicates) DecidableSubset(
+	ctx context.Context, entityType string, rowIDs []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	if entityType != flipObjectPerson && entityType != flipObjectOrganization && entityType != flipObjectLead {
+		return nil, apperrors.ErrNotFound
+	}
+	return d.store.DecidableForMerge(ctx, entityType, rowIDs)
+}
+
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 	return d.store.CountOpenDedupeCandidates(ctx)
 }

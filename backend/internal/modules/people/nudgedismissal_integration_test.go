@@ -233,6 +233,31 @@ func TestARedismissalNamesTheDeadlineItReplaced(t *testing.T) {
 	if after["dismissed_until"] == before["dismissed_until"] {
 		t.Error("the images agree, so the row records a replacement of nothing")
 	}
+	// And the image is one the COLUMN could hold. The assertion above binds only
+	// where time.Now() carries nanoseconds — Linux, and so CI — while on Darwin
+	// it is microseconds already and a nanosecond image would pass here and fail
+	// there. This asks the question directly, so the answer does not depend on
+	// whose machine is asking.
+	stamped, isText := after["dismissed_until"].(string)
+	if !isText {
+		t.Fatalf("the image holds %T, want the instant as a string", after["dismissed_until"])
+	}
+	assertMicrosecondAligned(t, stamped)
+}
+
+// assertMicrosecondAligned refuses an audit image carrying precision timestamptz
+// cannot store. An instant the row never held is one no later before-image can
+// be compared against, which is the whole use of the trail here.
+func assertMicrosecondAligned(t *testing.T, stamped string) {
+	t.Helper()
+	moment, err := time.Parse(time.RFC3339Nano, stamped)
+	if err != nil {
+		t.Fatalf("the image holds %q, which is not an instant: %v", stamped, err)
+	}
+	if sub := moment.Nanosecond() % int(time.Microsecond); sub != 0 {
+		t.Errorf("the image says %s, %dns finer than the column can hold — "+
+			"the next dismissal reads the column back and would image a different instant", stamped, sub)
+	}
 }
 
 // latestPersonAuditPair reads BOTH images of the newest update on one person.

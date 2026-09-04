@@ -711,7 +711,16 @@
 .arsect + .arsect {
   margin-top: var(--space-3);
 }
-.arsect h4 {
+/* The panel is a labelled region with no heading of its own, so its sections
+   sit directly under the PAGE's h1. They were h4, which skipped two levels and
+   made every route carrying an open panel fail `heading-order` — invisibly,
+   because axe tags that rule best-practice and the sweep ran WCAG tags only.
+
+   h2 rather than a new panel title: the head already restates what the panel is
+   about in `.arptitle`, and promoting a sentence that changes with the agent's
+   state to a heading would name the region differently every time it opened.
+   The size below is unchanged, so nothing moves on screen. */
+.arsect h2 {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);

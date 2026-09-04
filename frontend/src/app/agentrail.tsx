@@ -505,7 +505,7 @@ function RunSection({
   }
   return (
     <div className="arsect">
-      <h4>{t(heading)}</h4>
+      <h2>{t(heading)}</h2>
       <ul className="arruns">
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
@@ -610,7 +610,7 @@ function AgentPanel({
           the agent looked, and there is nothing waiting. */}
       {signals.waiting !== undefined && (
         <div className="arsect">
-          <h4>{LABELS.acrossWorkspace}</h4>
+          <h2>{LABELS.acrossWorkspace}</h2>
           {signals.waiting === 0 ? (
             <p className="arnone">{LABELS.allClear}</p>
           ) : (
@@ -632,12 +632,12 @@ function AgentPanel({
       )}
 
       <div className="arsect">
-        <h4>
+        <h2>
           {LABELS.recap}
           <a className="arplain" href={AI_SETTINGS_HREF}>
             {LABELS.fullLog}
           </a>
-        </h4>
+        </h2>
         <Recap recent={model} />
       </div>
 
@@ -660,7 +660,7 @@ function AgentPanel({
           place in an installation. */}
       {uiPreviewAgentStatesEnabled() && (
         <div className="arsect arstates">
-          <h4>{LABELS.states}</h4>
+          <h2>{LABELS.states}</h2>
           <div className="archips">
             {/* The chips hold one state still; this plays the whole run. A state
                 a reviewer can only hold is a state nobody can judge the motion

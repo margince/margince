@@ -645,9 +645,9 @@ describe("sectionFromAddress", () => {
 const SECTION_REPORT_COUNT_PIPELINE = 3;
 
 describe("the report frame", () => {
-  // A total with no zone and no currency beside it is a number the reader
-  // places by assumption, and the assumption is their own zone.
-  it("names the instant, the zone and the currency the figures were cut in", async () => {
+  // A total with no zone beside it is a number the reader places by
+  // assumption, and the assumption is their own zone.
+  it("names the instant and the zone the figures were cut in", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
     await openPipeline();
@@ -657,11 +657,31 @@ describe("the report frame", () => {
     // instant they do not.
     const captions = await screen.findAllByText(/Europe\/Berlin/);
     expect(captions).toHaveLength(SECTION_REPORT_COUNT_PIPELINE);
-    expect(captions[0].textContent).toContain("EUR");
   });
 
-  // A server mid-upgrade sends a partial frame. Naming two of the three would
-  // be worse than naming none, so the caption is drawn or it is not.
+  // And it names NO currency. Every report on this tab is denominated per
+  // currency — the stage table prints a row per stage per currency — so a
+  // code in the frame reads as the denomination of numbers that were never
+  // converted into it. The figures on screen here are EUR and USD at once,
+  // and a reader taking the old caption at its word read the USD total as
+  // euros.
+  it("claims no currency for figures that are in several", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await openPipeline();
+
+    const captions = await screen.findAllByText(/Europe\/Berlin/);
+    for (const caption of captions) {
+      expect(caption.textContent).not.toMatch(/\b(EUR|USD|VND)\b/);
+    }
+    // The currency is not LOST, it moved to where it is true: the forecast
+    // strip labels each band with its own code. Asserted here so this cannot
+    // pass by the screen having stopped saying which currency anything is in.
+    expect(screen.getAllByText("EUR").length).toBeGreaterThan(0);
+  });
+
+  // A server mid-upgrade sends a partial frame. Naming one of the two would be
+  // worse than naming none, so the caption is drawn or it is not.
   it("draws no caption at all when the server sent only part of the frame", async () => {
     vi.stubGlobal("fetch", reportsStub({ partialFrame: true }));
     render(<AnalyticsScreen />);
