@@ -30,10 +30,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -422,5 +425,60 @@ func TestAnEditedHeldDraftCannotBeReAimedAtAnotherRecipient(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
 		WHERE id = $1 AND status = 'pending'`, f.approval); n != 1 {
 		t.Error("the retargeting attempt decided the approval — a refused edit must leave the honest draft releasable")
+	}
+}
+
+// TestThePreflightRecordsNothing is Preview's whole contract, checked rather
+// than promised.
+//
+// A precheck runs on every approval decision, including the ones a human then
+// rejects. If it recorded a decision row or stamped a derived basis, an inbox
+// full of drafts nobody released would leave a trail of authorizations for
+// messages that were never sent — and the subject-access export would show a
+// basis this installation relied on to send nothing.
+//
+// decideOne reaches stampDerivedBasis on an allow, which WRITES. So this is not
+// a theoretical guarantee: Preview rolls its transaction back, and this test is
+// what makes that true of the code rather than of the comment above it.
+//
+// Mutation: return nil instead of errPreviewComplete from Preview's
+// transaction, so it commits, and the qualifying-event count goes up.
+func TestThePreflightRecordsNothing(t *testing.T) {
+	e := integration.Setup(t)
+	svc := releaseService(t, e)
+	f := seedHeldDraft(t, e, svc)
+
+	var staged json.RawMessage
+	if err := database.WithWorkspaceTx(decider(e), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(decider(e),
+			`SELECT proposed_change FROM approval WHERE id = $1`, f.approval).Scan(&staged)
+	}); err != nil {
+		t.Fatalf("reading the staged draft: %v", err)
+	}
+
+	before := e.WsCount(t, `SELECT count(*) FROM communication_decision`)
+	beforeBasis := e.WsCount(t, `SELECT count(*) FROM consent_qualifying_event`)
+
+	// The precheck ALONE, with no decision behind it — the shape of an approval
+	// a human opens and does not act on.
+	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	send := SendPath{
+		Delivery:      NewDeliveryStager(e.Pool, inserter),
+		PublicBaseURL: "https://crm.example.test",
+	}
+	precheck := heldDraftPrecheck(sendStore(e.Pool, send), consentGateFor(e.Pool), send.Delivery)
+	if err := precheck(decider(e), staged, nil); err != nil {
+		t.Fatalf("precheck on a releasable draft → %v, want no refusal", err)
+	}
+
+	if n := e.WsCount(t, `SELECT count(*) FROM communication_decision`); n != before {
+		t.Errorf("the preflight wrote %d decision rows, want 0 — a preview authorizes nothing", n-before)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM consent_qualifying_event`); n != beforeBasis {
+		t.Errorf("the preflight stamped %d qualifying events, want 0 — a basis is the ground a SEND relies on, and nothing has been sent",
+			n-beforeBasis)
 	}
 }

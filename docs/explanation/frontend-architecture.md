@@ -81,8 +81,7 @@ it, so a `?utm=…` never leaks into a screen name.
   routing), `palette.tsx` (⌘K), `agentrail.tsx` (the agent, at the foot of the
   rail), `theme.ts`, `capability.ts`, and the
   shell-level
-  advisories (`economybanner.tsx`, `embedreindexbanner.tsx`,
-  `resumeconnectbanner.tsx`).
+  advisories (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/screens/`** — **one file per surface.** A surface earns a *directory*
   only when it is a state machine rather than a page, and exactly one has:
   `screens/onboarding-conversation/`, where the conversation machine, its acts,
@@ -261,7 +260,8 @@ The older primitives survive in two places, both deliberate:
 - **Inside the mark.** `EvidenceMark`'s panel renders `ProvenanceTag` itself,
   and states confidence as a word rather than a meter.
 - **On the staging surfaces**, where the whole point of the screen is to compare
-  a proposal against what is held: the approvals inbox (`screens/inbox.tsx`),
+  a proposal against what is held: the approvals inbox, which is now a lane of
+  the worklist (`screens/worklist.tsx`, `screens/approvalrow.tsx`),
   the onboarding confirm card
   (`screens/onboarding-conversation/confirm-card.tsx`,
   `screens/onboarding-company-form.tsx`), the Company-context settings screen,
@@ -346,7 +346,7 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | a derived colour role | `src/design-system/brand.css` — a `color-mix()`, never a new hex |
 | light/dark behaviour | `src/app/theme.ts` + `tokens.css`, which carries all three states: the light palette on bare `:root`, the `prefers-color-scheme` arm for a surface whose host states nothing, and the `[data-theme]` arms an explicit choice stamps |
 | how a derived value shows its receipts | `src/design-system/evidencemark.tsx` |
-| a staging/approval surface | `src/design-system/trust.tsx` + `src/screens/inbox.tsx` |
+| a staging/approval surface | `src/design-system/trust.tsx` + `src/screens/worklist.tsx` |
 | copy | `src/i18n/en.ts` **and** `src/i18n/de.ts` — key parity is compile-time |
 | money, dates, durations, zones | `src/format/format.ts` — except which calendar day an instant falls on, and the instant a picked day ends, which are `src/format/calendarday.ts` |
 | an API call | `src/api/client.ts` is the seam; regenerate types with `pnpm gen:api` |

@@ -2085,7 +2085,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       "View tasks",
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
-      "How it stands",
+      "Evidence",
       // The status reading's own door: it opens the LEADS LIST narrowed to this
       // status. Another screen, a read, and nothing on this record — the same
       // species as "View tasks" above. A terminal lead is read-only rather than
@@ -2304,7 +2304,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     render(<LeadScreen id="l-1" />);
 
     // Said wherever the score is. The score card states it in the open; the
-    // reading beside it keeps its receipt behind its "How it stands" door, so
+    // reading beside it keeps its receipt behind its "Evidence" door, so
     // the sentence is counted once before that door opens and twice after —
     // exactly, so neither surface can drop it unnoticed.
     const notStored =
@@ -2320,7 +2320,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }
     const user = userEvent.setup();
     await user.click(
-      within(scoreCard).getByRole("button", { name: "How it stands" }),
+      within(scoreCard).getByRole("button", { name: "Evidence" }),
     );
     await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(2));
     expect(screen.queryByText("What this score has to work with:")).toBeNull();

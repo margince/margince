@@ -118,7 +118,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	if err != nil {
 		return err
 	}
-	if err := refuseAbsoluteDenial(set); err != nil {
+	if err := refuseAtStaging(set); err != nil {
 		return err
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
@@ -159,7 +159,7 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 	if err != nil {
 		return err
 	}
-	if err := refuseAbsoluteDenial(set); err != nil {
+	if err := refuseAtStaging(set); err != nil {
 		return err
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
@@ -167,25 +167,46 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 	}, sendInsertOpts())
 }
 
-// refuseAbsoluteDenial stops a send at STAGING for the four refusals no
-// rollout mode may soften: an Art. 21 objection, a processing restriction, a
-// hard bounce, and marketing consent whose round trip never completed.
+// refuseAtStaging stops a send while the rep is still at the keyboard, for the
+// two refusals that will not change between now and dispatch.
 //
-// Observe mode is why every other disagreement is recorded and let through: the
-// engine is being measured against the old gate, and blocking on a difference
-// nobody has reviewed would refuse legitimate mail. An absolute denial is not a
-// difference of opinion — the transmit phase already refuses it, so letting it
-// stage buys nothing and costs two things. The rep learns minutes or days
-// later, from a parked row in an operator lane rather than at the moment they
-// pressed send. And the activity commits first, carrying the outbound
-// attestation that makes an address correspondence-positive — so a message to
-// somebody who objected would mint evidence of correspondence with them that
-// never happened.
-func refuseAbsoluteDenial(set commsauthz.DecisionSet) error {
-	if !set.HasAbsoluteDenial() {
+// The FIRST is an absolute denial — an Art. 21 objection, a processing
+// restriction, a hard bounce, marketing whose round trip never completed — which
+// no rollout mode may soften.
+//
+// The SECOND is a refusal under a category this installation ENFORCES. That arm
+// exists because the engine now decides those: the transmit phase would refuse
+// the same send anyway, so letting it stage buys nothing and costs two things.
+// The rep learns minutes or days later, from a parked row in an operator lane
+// rather than at the moment they pressed send. And the activity commits first,
+// carrying the outbound attestation that makes an address
+// correspondence-positive — so a message to somebody who may not receive it
+// would mint evidence of correspondence that never happened.
+//
+// A category still OBSERVING is let through, and that is not an oversight: the
+// engine's answer carries no authority there, the old gate decides, and blocking
+// on a difference nobody has reviewed would refuse legitimate mail. The mode
+// travels on each decision, so this asks the row rather than re-reading the
+// setting the engine has already applied.
+func refuseAtStaging(set commsauthz.DecisionSet) error {
+	denied := set.Denied()
+	if len(denied) == 0 {
 		return nil
 	}
-	denied := set.Denied()
+	if !set.HasAbsoluteDenial() && !anyEnforcedDenial(denied) {
+		return nil
+	}
 	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
 		len(denied), len(set.Decisions), denied[0].ReasonCode, apperrors.ErrConsentNotGranted)
+}
+
+// anyEnforcedDenial reports whether a refusal was taken under a category this
+// installation enforces, which is the one the engine's answer binds.
+func anyEnforcedDenial(denied []commsauthz.Decision) bool {
+	for _, d := range denied {
+		if d.Mode == commsauthz.ModeEnforce {
+			return true
+		}
+	}
+	return false
 }

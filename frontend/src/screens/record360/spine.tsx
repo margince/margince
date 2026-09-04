@@ -229,15 +229,29 @@ export function RecordSpine({
   );
 }
 
+// The narrowest a stop may be drawn. A date is set on one line — broken across
+// two it reads as two moments — so under any less than this the dates run into
+// each other and the row becomes one smear of digits. At the floor the track
+// outgrows its card and the thread scrolls, which is what this axis already
+// does with more history than fits; crushing the stops is what it may not do.
+const STOP_FLOOR = "6.5rem";
+
 // How much of the axis a stop takes. The gap takes half again the stops either
 // side of it — on a horizontal axis the width IS the waiting — and today's
 // marker takes only its own label, because it is a line and not a span of
 // time.
 function todayColumn(stop: Stop): string {
   if (stop.tone === "now") {
-    return "auto";
+    // Its label's width and not a share of the axis. `auto` reads the stop's
+    // MINIMUM contribution, which every stop declares as zero so a long
+    // subject cannot widen the thread — so once the track outgrew its card the
+    // marker was the one column that collapsed, and today vanished off an axis
+    // whose whole reading is what falls either side of it.
+    return "max-content";
   }
-  return stop.tone === "gap" ? "minmax(0, 1.5fr)" : "minmax(0, 1fr)";
+  return stop.tone === "gap"
+    ? `minmax(${STOP_FLOOR}, 1.5fr)`
+    : `minmax(${STOP_FLOOR}, 1fr)`;
 }
 
 type Ctx = {

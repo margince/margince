@@ -79,6 +79,18 @@ func (s *Service) Worklist(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// And the WALK it names, resolved here for the same reason and refused the
+	// same way. An expired or stolen walk cannot be answered with a page: an
+	// empty queue on this surface means the day is clear, so serving one would
+	// tell a rep their morning was done — and serving a fresh page under a
+	// resumed token hands them rows they have already seen in a new order.
+	//
+	// The caller re-issues without the cursor, which is the remedy a token
+	// minted under a different question already carries.
+	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, filter, namedOwner)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// The producers that CAN be narrowed are narrowed in their own queries,
 	// not filtered afterwards: each store bounds what it returns, so a page
 	// full of colleagues' rows would hide the reader's own work behind a cut
@@ -146,6 +158,7 @@ func (s *Service) Worklist(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	withPins = withPins.readingWalk(walk, walking)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
@@ -156,6 +169,12 @@ func (s *Service) Worklist(
 	// this caller will not receive spends a query on nothing. dealmoves.go
 	// states why this reads a cache and never assembles.
 	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// And the name beside each owner id, over the same cut page and for the same
+	// reason: a label is drawn and never ranked, so resolving one for a row this
+	// caller will not receive spends a read on nothing.
+	if err := reader.nameTheOwners(ctx, out.Queue); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	return out, nil
@@ -306,9 +325,6 @@ func (s *Service) worklistFrom(
 	// candidate order does not depend on `limit` — crowding is marked above, over
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
-	shown, more, reached := pageFrom(rows, limit, cursor)
-	ordered := rankAll(stampAsOf(shown, day.AsOf))
-	bands := bandsOf(ordered)
 	// What never answered, assembled ONCE and used twice: the page names these
 	// lanes to the reader, and the readings below refuse to state exact figures
 	// over them. Two derivations of one list could disagree about whether the
@@ -327,6 +343,24 @@ func (s *Service) worklistFrom(
 			missing = append(missing, *refusal)
 		}
 	}
+	// Ranked ONCE, here, whichever way this page is served. A frozen walk takes
+	// its sequence from the snapshot and a fresh read takes it from this sort,
+	// but both need the comparator to have run: the snapshot's order IS a
+	// previous run of it, and the identities it stores were minted from one.
+	sortByRank(rows)
+	shown, more, reached, walk := s.pageOf(
+		ctx, rows, limit, cursor, scope, filter, unreadSources(missing), day.AsOf)
+	// A walk this reader named and cannot continue — expired, somebody else's,
+	// or minted under another question. It cannot be answered with a page: an
+	// empty queue on this surface means the day is clear, so an expired walk
+	// would tell a rep their morning was done. The projection answers no error,
+	// so the refusal rides on the value and Worklist raises it.
+	// RENDERED IN THE ORDER THE PAGER CHOSE, never re-sorted. A fresh page was
+	// cut from the ranking above; a frozen walk's sequence is a previous run of
+	// that same comparator, and running it again here would return the reader's
+	// own rows in today's order rather than the one they were shown.
+	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
+	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
@@ -340,7 +374,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            summarize(considered, materialBarOf(day, s.money)),
+		Summary:            walk.statedOver(summarize(considered, materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure
@@ -380,109 +414,14 @@ func (s *Service) worklistFrom(
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
 	if more && len(shown) > 0 {
-		token := encodeCursor(reached, scope, filter, s.taskOwner)
+		token := encodeCursor(reached, scope, filter, s.taskOwner, walk.id)
 		out.NextCursor = &token
 	}
-	return out
-}
-
-// boundedSources names the lanes that came back exactly at their own work
-// bound, and therefore may have had more behind them.
-//
-// A lane read to its limit cannot tell a reader how many it did not see: the
-// bound is a limit on work, not a count. So the source is marked as having more
-// rather than reporting a total it does not know.
-//
-// Under-reporting is the one way this must not fail. A source silently marked
-// complete tells a rep there is no more work of that kind, and there is no
-// failing row to notice — which is why every lane with a bound appears here and
-// `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
-// The bounds of the lanes whose limit lives behind their seam, where this
-// package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
-// `compose.decayCandidateCap` are the real numbers, and
-// `backend/gates/worklistbounds_test.go` fails in both directions when either
-// side moves, because a mirror nobody checks is a wrong number waiting.
-//
-// The waiting source held a third mirror and no longer does. A mirror exists to
-// be compared against a ROW COUNT, and for that source the row count is the
-// wrong evidence: its seam filters after the scan, so the survivors are fewer
-// than what was read and a short answer is what truncation looks like. The lane
-// reports its own scan depth instead, which is the shape any source that
-// filters after it scans needs.
-const (
-	quietDealBound = 50
-	decayBound     = 40
-)
-
-func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
-	bounded := map[crmcontracts.WorklistItemSource]bool{}
-	// A lane the read never asked for is absent; a lane it asked and found
-	// empty is present and false. That distinction is the difference between
-	// "nothing today" and "this source was not read", and a reader cannot
-	// recover it from an absence.
-	atCap := func(source crmcontracts.WorklistItemSource, lane *[]crmcontracts.AttentionItem, bound int) {
-		if lane == nil {
-			return
-		}
-		bounded[source] = len(*lane) >= bound
-	}
-	// The health and receipt lanes share one bound.
-	atCap("failed_approval", day.DidNotRun, doneCap)
-	atCap("dsr", day.Dsr, doneCap)
-	atCap("ai_work_health", day.AiWorkHealth, doneCap)
-	atCap("notice", day.Notices, doneCap)
-	atCap("automation_run", day.AutomationHealth, doneCap)
-	atCap("bounce", day.Bounces, doneCap)
-	atCap("introduction_request", day.Introductions, doneCap)
-	// Each of these carries its own, declared where the lane is read.
-	atCap("task", &day.Planned, plannedCap)
-	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
-	atCap("relationship_decay", day.RelationshipDecay, decayBound)
-	atCap("conversation_claim", day.Commitments, doneCap)
-	// The decision lane is read deeper than the rest, because a batch row
-	// counts a pile and a count taken from a page of ten would report ten over
-	// a hundred and fifty. Approvals and duplicate pairs share that ONE bound,
-	// so filling it says the LANE was truncated and neither source can claim to
-	// be complete — the conservative reading, since the alternative is telling a
-	// rep there are no more of a kind when there are.
-	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
-	bounded["dedupe_candidate"] = bounded["approval"]
-	return bounded
-}
-
-// unavailable turns the assembled day's withheld lanes into the queue's own
-// vocabulary.
-//
-// The lane feed already names what a caller may not read; this widens the same
-// promise to say WHY. A day cannot read as clear while something that would
-// have filled it never answered, which is the one lie a worklist must not tell.
-func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavailable {
-	out := []crmcontracts.WorklistSourceUnavailable{}
-	if day.LanesOmitted == nil {
-		return out
-	}
-	for _, lane := range *day.LanesOmitted {
-		// The DSR lane is withheld BY ROLE for every reader who is not a
-		// privacy admin, permanently and by design. Naming it would put "part
-		// of your day is hidden" on every rep's page forever, which drowns the
-		// warning this list exists to give.
-		//
-		// This suppression is WIDER than it should be, and the difference is
-		// worth stating rather than hiding: the DSR read also refuses a reader
-		// who has the admin role but lost `person:read`, and that refusal is
-		// real news this list swallows. Telling the two apart needs a reason on
-		// the refusal, which the lane contract does not carry — issue filed.
-		if lane == laneDSR {
-			continue
-		}
-		out = append(out, crmcontracts.WorklistSourceUnavailable{
-			Source: string(lane),
-			Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
-		})
+	// What has happened to this walk since it started, where there is a walk to
+	// say it about. A first page that froze nothing states nothing: the fields
+	// would be a claim about a walk that does not exist.
+	if state := walk.state(); state != nil {
+		out.Walk = state
 	}
 	return out
 }
-
-// laneDSR is the one lane whose withholding is a permanent role fact rather
-// than news about this reader's day.
-const laneDSR = crmcontracts.AttentionLanesOmitted("dsr")

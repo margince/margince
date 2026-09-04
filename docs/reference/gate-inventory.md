@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (75)
+## Parity (77)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -71,11 +71,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly PANEL's labels. |
+| `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has ONE answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
+| `onesendauthority_test.go` | H2 | The composer's preview and the send's door are one authority. |
 | `openchannelinboundschema_test.go` | H3 | The published OpenAPI body schema and the `arrival` struct it documents are ONE invariant spelled on both sides of a wire. |
 | `openchannellocaleparity_test.go` | H3 | The openchannel connector's failure vocabulary and its locale copy must name the SAME set of classes, or a member sees a raw translation key in place of a sentence for whichever class was renamed on one side and not the other. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
@@ -95,7 +97,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (98)
+## Census (102)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -124,7 +126,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
+| `docscodepaths_test.go` | H3 | Every source file a prose page names in backticks still exists. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
+| `docsreachability_test.go` | H3 | Every page under docs/ is reachable by following links from docs/README.md. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has ONE reader. |
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
@@ -193,10 +197,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
+| `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can REFUSE must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
+| `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 
 ## Reachability (16)
 
@@ -246,7 +252,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (43)
+## Prohibition (44)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -257,6 +263,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
 | `dealforecastmovement_test.go` | H2 | A deal row changes through one door, and that door records the forecast. |
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE/constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text: an error-string substring match silently breaks on a locale change, a driver upgrade, or an unrelated error that happens to mention the same identifier — and it misclassifies infrastructure faults as client faults. |
+| `evidencedeletes_test.go` | H2 | No domain code deletes an evidence row. |
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0069 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |

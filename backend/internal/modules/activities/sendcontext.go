@@ -156,7 +156,7 @@ func replySendInput(req crmcontracts.SendEmailRequest) (SendEmailInput, error) {
 	}
 	return claimed.applyTo(sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
-		req.ConsentPurpose, req.DraftRef,
+		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
 	)), nil
 }
 
@@ -171,7 +171,7 @@ func accountSendInput(req crmcontracts.SendAccountEmailRequest) (SendEmailInput,
 	}
 	return claimed.applyTo(sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
-		req.ConsentPurpose, req.DraftRef,
+		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
 	)), nil
 }
 
@@ -231,4 +231,18 @@ func decodeSendContext(claim SendContextInput) (sendContext, error) {
 	// each named record and asks whether it supports the category.
 	decoded.evidence = claim.Evidence
 	return decoded, nil
+}
+
+// legacyPurposeOf reads the deprecated purpose key a caller may still send.
+//
+// Omitted becomes the empty key, which claims nothing: the engine resolves the
+// category from the record, and consults a purpose row only where the record
+// supports no category on its own. An empty key reaching that fallback resolves
+// no row and authorizes nothing, which is the same default-deny an unknown key
+// has always produced. Omitting the claim is not a way past the gate.
+func legacyPurposeOf(key *string) string {
+	if key == nil {
+		return ""
+	}
+	return *key
 }

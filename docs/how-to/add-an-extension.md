@@ -195,14 +195,18 @@ what the operator manifest, the generated client types, the mounted routes and t
 Copy `extensions/openchannel/api/crm.yaml`. The rules that will otherwise bite:
 
 - **Paths are relative to the document's own `servers` url**, which already ends in `/v1`. Write
-  `/ext/<name>/notes/list`, never `/v1/ext/...` — the server puts the base path back when it mounts the
+  `/ext/<name>/inbound`, never `/v1/ext/...` — the server puts the base path back when it mounts the
   route, and spelling it twice publishes `/v1/v1/ext/...` to every generated client (the composer refuses
   it).
 - **Every path must sit under `/ext/<your-unit>/`.** Another unit's namespace, a core path, or a path
   template (`{id}`) are all refused.
-- **POST/PUT/PATCH only.** A served extension operation *is* a governed tool invocation and its arguments
-  are the request body, so GET and DELETE — which carry none — are refused. "list", "add" and "remove"
-  are three POSTs on three paths.
+- **Arguments live where the method says they live, and only there.** A served extension operation *is*
+  a governed tool invocation, so the seam reads its arguments from ONE place: the request body for
+  POST/PUT/PATCH, the query for GET. Declaring them on the other side is a named generation failure,
+  because the seam would publish that shape to every client and then drop it on every call
+  (`gen-composition/extverbschemas.go`). A read-only GET taking no arguments is fine and shipped —
+  `openchannelReadEndpoint` is one. GET was refused outright once; that blanket refusal was itself the
+  defect, in mirror image.
 - **`x-mcp-tool` is where governance lives**: `verb`, `version`, `title`, `tier`, `scope`, `description`.
   The `verb` must equal the `Name` of one of your unit's `Tools` entries for the operation to be served;
   `description` is required (it is the text a model selects the tool by) and so is `version`.
@@ -218,7 +222,7 @@ Copy `extensions/openchannel/api/crm.yaml`. The rules that will otherwise bite:
     scope: write
     subject:
       arg: note_id            # the argument carrying the row's id, as a uuid string
-      table: ext_notes_note   # the unit table that row lives in
+      table: ext_openchannel_inbound   # the unit table that row lives in
   ```
 
   A confirm-first call is refused and **parked** as an approval, and an approval is a judgment about a
@@ -431,7 +435,7 @@ lane composes first. Declare `vitest`, `@testing-library/react` and friends in y
 `devDependencies`: the import gate lets a test file reach them and shipped code not.
 
 **Ship your copy with your screen.** Put one flat JSON object per locale in
-`frontend/i18n/<locale>.json`, keyed `ext<CamelUnit>.` — `extNotes.notes.add`. `<CamelUnit>` title-cases
+`frontend/i18n/<locale>.json`, keyed `ext<CamelUnit>.` — `extOpenchannel.endpoint.enabled`. `<CamelUnit>` title-cases
 each hyphen-separated segment, and marks a segment that starts with a DIGIT with a leading underscore
 (`crm-2-x` → `extCrm_2X.`) so that two distinct unit names can never derive one prefix — `foo-1` and
 `foo1` would otherwise both claim `extFoo1.`. The composer merges
@@ -668,8 +672,8 @@ tracked `composition/` stub unchanged unless you are deliberately changing the v
 off every commit (`git commit -s`), then the usual PR loop ([CONTRIBUTING.md](../../CONTRIBUTING.md));
 merge only when the gates are green.
 
-**Removal is the unit's directory and nothing else**, and this is the whole recipe — run end to end
-against `notes`, with the gate green afterwards:
+**Removal is the unit's directory and nothing else**, and this is the whole recipe — it has been run
+end to end against a real unit, with the gate green afterwards:
 
 ```bash
 git rm -r extensions/<name>

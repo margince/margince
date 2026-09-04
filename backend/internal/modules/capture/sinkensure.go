@@ -227,24 +227,13 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// address. Asked of EVERY sender, not only those a suppression rule matched,
 	// since T4 defers the ambiguous class and this answer decides
 	// create-versus-defer for ordinary senders too.
-	corresponded, err := correspondencePositiveTx(ctx, tx, cp.Email)
+	dealt, err := s.dealtWithEnoughToRecord(ctx, tx, cp)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	exchanged, replied, err := s.exchangedHow(ctx, tx, cp.Email)
-	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	// Three questions, and T1 used to ask only the first. Whether the workspace
-	// wrote here (corresponded); whether that amounts to an exchange rather than
-	// unreturned intent (exchangedWith); and whether a person is reachable at
-	// the address at all (recordWorthy) — a mailbox owner books flights and
-	// answers their own robots, so writing somewhere is not evidence a human is
-	// behind it. A single send is deferred rather than refused, so a real
-	// prospect written to once still becomes a contact, for a reason.
-	decision.create = corresponded && exchanged && s.recordWorthy(cp)
-	decision.replied = replied
-	roleMailbox := refusesToNameAPerson(cp.Email, exchanged)
+	corresponded := dealt.positive()
+	decision.create, decision.replied = dealt.create, dealt.replied
+	roleMailbox := refusesToNameAPerson(cp.Email, dealt.exchanged)
 	if roleMailbox {
 		decision.create = false
 	}

@@ -241,6 +241,10 @@ function MomentMove({
   const secondary = moment.secondary_actions ?? [];
   return (
     <FoundMove
+      // Rung 10 is the answer that nothing needs doing. It carries a verb like
+      // every other rung, but not a byline: an agent that suggests "nothing"
+      // has suggested nothing.
+      suggested={moment.rule !== "nothing_needed"}
       title={moment.headline}
       basis={
         <ul className="pe-today-evidence">
@@ -383,6 +387,7 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
+  const state = readiness(action, t);
   return (
     <span className="pe-today-verb">
       {/* Readiness is stated rather than left to a disabled button, because
@@ -395,13 +400,13 @@ function ActionVerb({
         variant={primary ? "primary" : "ghost"}
         small
         onClick={() => onAction(action)}
-        reason={blocked ? readiness(action, t) : undefined}
+        reason={blocked ? state : undefined}
       >
         {actionIcon(action.kind)}
         {action.label}
       </Button>
-      {!blocked && (
-        <span className="pe-today-verb-state">{readiness(action, t)}</span>
+      {!blocked && state && (
+        <span className="pe-today-verb-state">{state}</span>
       )}
     </span>
   );
@@ -428,23 +433,28 @@ function actionIcon(kind: string): ReactNode {
   }
 }
 
-// What pressing it will do, in the three states the server distinguishes. A
-// blocked action says so in words, not only by being unpressable: a disabled
+// What pressing it will do, when that is not already obvious from the control.
+// A blocked action says so in words, not only by being unpressable: a disabled
 // button carries no title a keyboard or touch reader ever sees, so the
 // server's own reason (WHY this one is blocked) renders here when it sent
 // one, and the generic word is the fallback for the rare blocked action that
 // carries none.
+//
+// An available verb says nothing. A pressable button IS the whole of "ready",
+// and the word under it read as a status the record had reached — one more
+// machine noun on a card that already carries three, under the one control a
+// reader came to press.
 function readiness(
   action: PersonMomentAction,
   t: ReturnType<typeof useT>,
-): string {
+): string | undefined {
   if (action.state === "will_confirm") {
     return t("person.rail.reviewFirst");
   }
   if (action.state === "blocked") {
     return action.blocked_reason ?? t("person.rail.blocked");
   }
-  return t("person.rail.ready");
+  return undefined;
 }
 
 // A moment's evidence names a record TYPE and nothing about the transport, so

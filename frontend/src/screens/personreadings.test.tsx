@@ -76,9 +76,7 @@ describe("whose move it is", () => {
     );
     const user = userEvent.setup();
     const move = card(grid, "Whose move");
-    await user.click(
-      within(move).getByRole("button", { name: "How it stands" }),
-    );
+    await user.click(within(move).getByRole("button", { name: "Evidence" }));
     expect(screen.getByText("Reciprocity")).toBeTruthy();
     expect(screen.getByText("2 in · 1 out")).toBeTruthy();
   });

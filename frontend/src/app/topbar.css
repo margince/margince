@@ -143,11 +143,11 @@
   height: 18px;
   padding: 0 4px; /* ds:ignore optical inset on a key cap, not rhythm */
   border: 1px solid var(--borderSubtle);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--bgPage);
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: var(--fw-medium);
   line-height: 1;
 }

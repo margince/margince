@@ -176,7 +176,7 @@
 
 .vdna-thinking p {
   line-height: 1.55;
-  font-size: 1.05em;
+  font-size: var(--fs-body);
 }
 
 .vdna-identity {
@@ -238,9 +238,10 @@
 
 .vdna-pill {
   border: 1px solid currentColor;
-  border-radius: 999px;
+  border-radius: var(--r-full);
+  corner-shape: round;
   padding: 0 var(--space-2);
-  font-size: 0.78em;
+  font-size: var(--fs-eyebrow);
   white-space: nowrap;
 }
 
@@ -260,7 +261,7 @@
 
 .vdna-register {
   margin-left: var(--space-1);
-  font-size: 0.8em;
+  font-size: var(--fs-eyebrow);
   opacity: 0.75;
 }
 

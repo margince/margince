@@ -128,8 +128,20 @@ type WaitingCustomer struct {
 	// the queue a second place to spell it.
 	AsksNothing bool
 	// OwnerID is who owes this reply, resolved by the module from the record
-	// the thread is filed under. Zero when nothing on it names an owner, which
-	// is an unowned customer rather than a missing answer.
+	// the thread is filed under.
+	//
+	// ZERO IS AMBIGUOUS HERE, unlike the task and lead lanes beside it, and the
+	// SQL is where the difference lives: eligibility is qualified through an
+	// UNGATED sales-link lookup — deliberately, so the same message is not work
+	// for one colleague and personal mail for another — while the owner is read
+	// through the visibility-gated link join, so an owner off a record this
+	// reader may not open is correctly withheld. A row can therefore qualify
+	// while its owner cannot be read.
+	//
+	// So zero means "this lane cannot say", not "nobody owns it". The scope
+	// filters can live with that: a row they cannot judge simply stays. The
+	// wire cannot, which is why classifyWaiting states nothing rather than
+	// reporting a withheld owner as an unassigned customer.
 	OwnerID ids.UUID
 }
 

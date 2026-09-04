@@ -53,7 +53,7 @@ const capLockNamespace = int64(0x636d7361) << 32 // "cmsa"
 // held, sorted, before the first count, and a per-recipient lock taken inside
 // the decide loop would order them by the caller's To list.
 func (g *Gate) lockCapAddresses(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient) error {
-	rules, applicable, err := g.applicableRules(ctx, tx)
+	rules, applicable, err := g.store.applicableRules(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (g *Gate) applyFrequencyCap(ctx context.Context, tx pgx.Tx, d commsauthz.De
 		// rule — stated here because silence would read as an oversight.
 		return d, nil
 	}
-	rules, applicable, err := g.applicableRules(ctx, tx)
+	rules, applicable, err := g.store.applicableRules(ctx, tx)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -246,8 +246,8 @@ func advertisingMessagesReceived(ctx context.Context, tx pgx.Tx, address string,
 // a jurisdiction's own number and there is no universal one to fall back to.
 // The consent requirement that DOES bind everywhere is enforced by the marketing
 // verdict itself, which runs before this and does not depend on a pack.
-func (g *Gate) applicableRules(ctx context.Context, tx pgx.Tx) (messagingrules.Rules, bool, error) {
-	code, err := g.installationCountry(ctx, tx)
+func (s *Store) applicableRules(ctx context.Context, tx pgx.Tx) (messagingrules.Rules, bool, error) {
+	code, err := s.installationCountry(ctx, tx)
 	if err != nil {
 		return messagingrules.Rules{}, false, err
 	}

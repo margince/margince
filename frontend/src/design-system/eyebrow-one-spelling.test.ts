@@ -151,11 +151,9 @@ function rulesIn(source: string): Rule[] {
 const restated: Record<string, number> = {
   "src/app/agentrail.css": 2,
   "src/app/shell.css": 1,
-  "src/design-system/atoms.css": 1,
   "src/design-system/composed.css": 4,
   "src/design-system/listtable.css": 2,
   "src/design-system/margince-workbench.css": 3,
-  "src/mcp-apps/view.css": 1,
   "src/screens/auth.css": 2,
   "src/screens/backfill.css": 1,
   "src/screens/company360.css": 1,

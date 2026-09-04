@@ -1,481 +1,358 @@
 # Margince
 
-**A CRM your AI agents can actually work in. And it's yours: you get
-the source.**
+**A CRM that fills itself. A forecast that shows its evidence.**
 
-CRMs got stuck. You pay per seat, per contact, per feature. You can't
+Product site: **[margince.com](https://margince.com)** · AI-native CRM ·
+coming autumn 2026. This repository is where it is built, and you get the
+source code.
+
+CRMs got stuck. You pay per seat, per contact, per feature. You cannot
 change anything without consultants. And the "AI" is a sidebar that
-summarizes what you typed in yourself.
+summarises what you typed in yourself.
 
-We hit that wall ourselves, so we're building Margince: a fast,
-opinionated core for the 80% every sales team needs, plus a governed
-agent surface so the AI you already pay for (Claude, Copilot, your own)
-works inside your customer data, not next to it.
+Worse, the records are only as good as what a rep remembered to log. So
+Margince fills them from real activity: mail, meetings and calendar
+entries from the sources you connect become contacts, companies and deals
+on their own. Every AI update links back to the source it came from, so a
+forecast number is something you can open and read the deals behind.
+
+We hit that wall ourselves. So we are building Margince: a fast core for
+the 80% every sales team needs, plus a governed agent surface. The AI you
+already pay for (Claude, Copilot, your own) works inside your customer
+data, not next to it.
 
 Three things matter:
 
 **Your agents do the real work.** An agent connects over MCP or plain
-REST and gets audited tools. Every action has a risk tier. 🟢 actions
-(reading, drafting, normal updates) just run and get logged. 🟡 actions
-(sending mail, archiving, merging, closing a deal) stop and wait for a
-human to approve them. An agent never gets more rights than the human
-behind it, and it can never approve its own actions. Punkt.
+REST. It gets tools, and every action it takes is logged.
+
+An agent never has more rights than the person who lent it a passport. We
+check that person's seat and permissions on *every* call, not once at the
+start. So if you remove someone at 09:00, their agent stops at 09:00.
+
+An agent can never approve its own work. Approvals, consent, data-subject
+requests and pipeline settings are closed to agent credentials. There is
+no way in.
+
+Every action is written to an append-only log naming the passport, the
+person behind it, and the rule that allowed it. A database trigger refuses
+any update or delete, and the role the application runs as holds only
+SELECT and INSERT. Be precise about what that buys: it stops the running
+software, not an operator holding the schema owner's credentials.
+
+There is also a cap on how much one passport can send in a day. An
+operator sets the number, and no approval lifts it — a person can hand
+back some budgets mid-window, but sending is not one of them.
+
+Each action has an autonomy tier. Most are 🟢: they run, and they are
+logged. We tried asking a person to confirm work they had already allowed.
+It made the agent weaker than the person behind it, not safer. A smaller
+🟡 set still stops and waits for a person. Which action is which comes
+from the contract, so nobody keeps that list by hand:
+[docs/reference/agent-tools.md](docs/reference/agent-tools.md). The full
+reasoning is in
+[docs/explanation/agent-surface.md](docs/explanation/agent-surface.md).
 
 **You change it by changing the code.** No config screens, no metadata
-engine, no ceiling. Need a custom field or a workflow? That's a normal
-code change in your own copy, protected by types, tests, and extension
-seams upstream never touches. Made by you, by a partner, or by us.
+engine, no ceiling. Need a custom field or a workflow? That is a normal
+code change in your own copy. Types, tests and extension seams protect
+it, and upstream never touches those seams. You can do it, a partner can
+do it, or we can.
 
-**It runs where you want.** SaaS, your own servers, or fully local
-including the LLM, for teams whose data can't leave the building.
-Sub-100ms interactions is the budget, not the marketing line.
+**It runs in your own boundary.** On your own infrastructure, in a
+private cloud, or with an EU host. On your own servers with Docker, or in
+one folder on a laptop with no Docker at all. There is no Gradion-run SaaS
+in this repository.
 
-Built by [Gradion](https://gradion.com), licensed BUSL-1.1. We replace
-our own HubSpot with it first. If it can't carry our pipeline, it
-doesn't ship
+Whether your data stays inside that boundary is a configuration you
+choose, not a property of the product. Bind the AI tasks to a local model
+(Ollama or vLLM) and nothing leaves; bind one to a cloud provider and the
+text that task reads goes there. The `sovereign` profile refuses every
+cloud provider outright, and
+[docs/reference/ai-egress.md](docs/reference/ai-egress.md) lists, per task,
+whether its text can leave the installation. Read that before promising
+anyone this runs air-gapped.
+
+Sub-100ms interactions is the budget, not a marketing line. Every budget
+is published with its last measurement. The ones nobody has measured yet
+say so, instead of being left out:
+[docs/reference/performance-budgets.md](docs/reference/performance-budgets.md).
+
+Built by [Gradion](https://gradion.com) — around 250 engineers,
+independent, ISO 27001, with systems running behind €9bn of revenue.
+Licensed BUSL-1.1. We are replacing our own HubSpot with it first. If it
+cannot carry our pipeline, it does not ship.
 
 ---
 
 ## This repository
 
-This is where Margince is built: the running Go code, the OpenAPI
-contract it is generated from, the tests that prove its behaviour, and
-the documentation for building and operating it. There is no separate
-specification that outranks what is here — `backend/api/crm.yaml` is the
-contract and the tests are the record of behaviour.
+This is where Margince is built: the Go code, the OpenAPI contract it is
+generated from, the tests that prove how it behaves, and the docs for
+building and running it. No separate specification outranks what is here.
+`backend/api/crm.yaml` is the contract, and the tests are the record of
+behaviour.
 
 **Start here:**
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — the gates, DCO sign-off, and AI-disclosure rules.
-- **[docs/explanation/backend-onboarding.md](docs/explanation/backend-onboarding.md)** — the backend
-  contributor hub: the codebase map, reading order, and how to add a feature.
-- **[docs/README.md](docs/README.md)** — the full documentation index (tutorials, how-to, reference,
-  explanation).
+- **[docs/handbook/README.md](docs/handbook/README.md)** — how to *use*
+  the product. No code, no API. Just the app.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — the gates, DCO sign-off, and
+  the AI-disclosure rules.
+- **[docs/explanation/backend-onboarding.md](docs/explanation/backend-onboarding.md)** —
+  the backend contributor hub: the map of the codebase, a reading order,
+  and how to add a feature.
+- **[docs/README.md](docs/README.md)** — the full documentation index.
 
-Also: open work lives in [GitHub issues](https://github.com/margince/margince/issues) ·
-[AGENTS.md](AGENTS.md) — binding engineering rules ·
-[SECURITY.md](SECURITY.md) — vulnerability reporting (private, via GitHub Security Advisories) ·
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — how we behave here, including about
-unexplainable contributions ·
+Also: open work lives in
+[GitHub issues](https://github.com/margince/margince/issues) ·
+[AGENTS.md](AGENTS.md) — the engineering rules ·
+[SECURITY.md](SECURITY.md) — how to report a vulnerability (privately) ·
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) ·
 [CHANGELOG.md](CHANGELOG.md).
 
 Everything below this line is for people (and agents) working on the code.
 
 ## Quick start
 
-**Boot it.** `make dev` brings up the whole local stack — the Docker
-Compose infra (Postgres 16 + Redis 7), migrations, the api, and the Vite SPA
-— then prints the URLs and returns (the servers run in the background; stop
-them with `make dev-stop`):
+**Boot it.** `make dev` starts the whole local stack: the Docker Compose
+infra (Postgres 16 + Redis 7), the migrations, the api, and the Vite SPA.
+It prints the URLs and returns. The servers keep running in the
+background; `make dev-stop` stops them.
 
 ```sh
 make dev
 ```
 
-It boots **cold**: the organization and admin seat the api bootstraps from
-`config/margince.yaml`, and no other data. That is the state a real first
-customer sees, so onboarding and empty states are what you develop against
-by default.
+It boots **cold**. You get the organisation and the admin seat that the
+api creates from `config/margince.yaml`, and no other data. That is what a
+real first customer sees, so you develop against onboarding and empty
+states by default.
 
-**Log in.** Open **http://localhost:8080** — that is the app, always. The
-dev server proxies `/v1` (and the probes) to the api behind it on :18080, so
-the one port serves both the UI and the contract. Sign in as
-`admin@demo.test`. Which password depends on whether you have seeded:
+**Log in.** Open **http://localhost:8080**. That is the app, always. The
+dev server passes `/v1` (and the health probes) through to the api behind
+it on :18080, so one port serves both the UI and the contract. Sign in as
+`admin@demo.test`. The password depends on whether you have seeded:
 
-- **After `make seed-dev`** — `demo-password-123`. That is the password the
-  seed **chose**, not one from a config file.
-- **Straight after `make dev`, unseeded** — `operator-supplied-first-password`,
-  from `config/margince-admin-password`. The app will immediately ask you to
-  replace it, and nothing else is reachable until you do.
+- **After `make seed-dev`** — `demo-password-123`. The seed **chose** that
+  password. It is not in any config file.
+- **Straight after `make dev`, not seeded** —
+  `operator-supplied-first-password`, from
+  `config/margince-admin-password`. The app asks you to replace it at
+  once, and nothing else works until you do.
 
-The difference is the product working as intended: a configured bootstrap has
-the *operator* pick the first admin's password, and that account reaches
-nothing but the change-password screen until the person using it picks their
-own. `make seed-dev` completes that first login the way you would, which is why
-the seeded path lands on a password no config file ever held.
+That difference is the product working as intended. On a configured
+install, the *operator* picks the first admin password, and that account
+can reach nothing but the change-password screen until the person using it
+picks their own. `make seed-dev` finishes that first login the way you
+would. That is why the seeded path ends on a password no config file ever
+held.
 
-`make dev-fresh` is `make dev` onto a rebuilt database — use it when a
-previous session left data behind and you want the first-run experience
+`make dev-fresh` is `make dev` on a rebuilt database. Use it when an
+earlier session left data behind and you want the first-run experience
 again. Plain `make dev` keeps what is there.
 
-**Skip the cold start** with `make seed-dev` against a running stack: demo
-people, organizations, and deals plus the two rep seats and FX rates. The
-seed goes through the public API — same audit trail, same events as real
-traffic — and is idempotent; `make seed-reset` wipes the demo workspace for
-a clean re-seed.
+**Skip the cold start** with `make seed-dev` against a running stack. It
+adds demo people, organisations and deals, plus two rep seats and FX
+rates. The seed goes through the public API, so it produces the same audit
+trail and the same events as real traffic. You can run it twice safely.
+`make seed-reset` wipes the demo workspace for a clean re-seed.
 
-`make dev` is always safe to re-run: it sweeps first — every margince
-api/worker/vite on the machine is killed (including one another checkout left
-behind), anything holding `:8080` is evicted, and leftover
-`margince_dev_*` databases are dropped. One stack, always the same ports, and
-no chance the browser is talking to an api from an older branch. `make dev-stop`
-is the mirror: bare, it stops every stack.
+`make dev` starts **this worktree's** stack and touches nobody else's. A
+linked worktree claims its own database, Redis logical database, port pair
+and object bucket. There is no flag to remember, so a second checkout runs
+at the same time without a clash. If a port is already taken, the boot
+stops and says so, instead of letting you talk to a server from an older
+branch. `make dev-stop` is the mirror, for this worktree only.
+`make dev-sweep` is the machine-wide clear, and the only thing that
+touches another session's stack.
 
-**Isolate a second stack.** `make dev DEV_SLUG=<slug>` gives a private
-`margince_dev_<slug>` database on slug-derived ports so a second worktree
-runs concurrently without colliding; `make dev-stop DEV_SLUG=<slug> [DROP=1]`
-tears it down (`DROP=1` also drops the database). The sweep spares a running
-slugged stack — but the next bare `make dev` will not.
+What every target does, in one place:
+[docs/reference/make-targets.md](docs/reference/make-targets.md).
 
-**Verify** the whole thing end to end (admin login over `/v1`, seeded people
-visible, frontend production build — fails loudly on the first broken step).
-It reads the demo records, so seed first:
+**Verify** the whole thing end to end: admin login over `/v1`, seeded
+people visible, frontend production build. It stops loudly at the first
+broken step. It reads the demo records, so seed first:
 
 ```sh
 make seed-dev && make verify-boot
 ```
 
-Toolchain: Go ≥ 1.26, Docker (Compose), `jq`, `golangci-lint`, and
-node+pnpm for the frontend lane. On a fresh worktree, `make install`
-does the one-shot setup (frontend deps + the Go gate binaries + the git
-hooks); after it, `make check` runs immediately. `make help` lists the
-root commands and `make -C backend help` every backend target.
+You need Go ≥ 1.26, Docker (Compose), `jq`, `golangci-lint`, and
+node+pnpm for the frontend lane. On a fresh worktree, `make install` does
+the one-time setup: frontend deps, the Go gate binaries, and the git
+hooks. After that, `make check` runs straight away. `make help` lists the
+root commands, and `make -C backend help` lists every backend target.
 
-The merge gate is `make check` = `check-backend` (build, vet, lint,
-arch-lint, unit + fitness tests, contract drift, and the deterministic
-script gates) + `check-fe` (the frontend lane). The real-Postgres lane
-is `make test-integration` (parallel, per-package clone DBs; needs
-`make db-up`). Full target table:
-[docs/reference/make-targets.md](docs/reference/make-targets.md); the CI
-pipeline that runs these as required checks:
-[infra/ci-pipeline.md](infra/ci-pipeline.md). A step-by-step walkthrough
-and the full flag/env reference live in [docs/](docs/) (tutorials,
-how-to, reference, explanation — see below).
+The merge gate is `make check`. It is `check-backend` (build, vet, lint,
+arch-lint, unit and fitness tests, contract drift, and the script gates)
+plus `check-fe` (the frontend lane). The real-Postgres lane is
+`make test-integration` — it runs in parallel on per-package clone
+databases and needs `make db-up`. The CI pipeline that runs these as
+required checks is [infra/ci-pipeline.md](infra/ci-pipeline.md).
 
-The web UI is the Vite/React app in `frontend/` — a standalone static
-build served separately from the API binary, and a plain client of the
-same `/v1` contract as everything else — no backdoors (ADR-0013).
+The web UI is the Vite/React app in `frontend/`. It is a standalone static
+build, served separately from the API binary, and a plain client of the
+same `/v1` contract as everything else. It has no back doors.
 
-Connect an agent (Surface A2): the api serves the governed tool surface
-at `/mcp`, on the same origin as `/oauth/*` and the discovery documents.
-A client needs only the URL:
+**Connect an agent.** The api serves the governed tool surface at `/mcp`,
+on the same origin as `/oauth/*` and the discovery documents — but only
+when the deployment turns the connector on (`mcp.connector_enabled`),
+which also requires `--public-base-url`, because the OAuth handshake has
+to name a canonical external origin. Without it none of those routes are
+mounted and the command below reaches nothing. Then a client needs only
+the URL:
 
 ```bash
 claude mcp add --transport http margince <base>/mcp
 ```
 
-It walks discovery, dynamic client registration, the consent screen and
-the token exchange itself; on that screen a human lends one of their own
-passports and the connection receives exactly that passport's scopes. A
-passport can also be minted directly (`POST /v1/passports`,
-session-authed), and the same token is a REST bearer credential,
-governed identically (see below).
+It walks discovery, client registration, the consent screen and the token
+exchange by itself. On that screen a person lends one of their own
+passports, and the connection gets exactly that passport's scopes. You can
+also mint a passport directly (`POST /v1/passports`, session-authed). The
+same token works as a REST bearer credential, and it is governed the same
+way.
 
-Deployment note: the login and bootstrap rate limiters key on the direct
-peer address (they refuse `X-Forwarded-For` — it is attacker-controlled);
-behind a reverse proxy that collapses to one bucket, so enforce
-per-client throttling at the proxy.
+**Deployment note.** The login and bootstrap rate limiters key on the
+direct peer address. They refuse `X-Forwarded-For`, because an attacker
+controls it. Behind a reverse proxy, that collapses to one bucket, so
+enforce per-client throttling at the proxy.
 
 ## How it's built
 
 - **Contract-first.** `backend/api/crm.yaml` (OpenAPI 3.1) is the
-  authoritative surface: 3.0-overlay → oapi-codegen types + chi server;
-  every operation is mounted (unimplemented ones answer an explicit
-  501); regeneration drift is merge-blocking.
-- **One governed agent surface, every transport (ADR-0055).** The 🟢/🟡
-  autonomy tier of an action is declared once (on the tool spec / the
-  contract's `x-mcp-tool` annotation) and enforced below the transport:
-  an agent mutation over MCP *or* REST resolves the same tier, stages
-  the same approval when 🟡, and **default-denies** any mutating
-  operation that carries no tier — fail-closed, drift-linted at build
-  time. The same annotation declares the passport **scope** the act
-  spends (`read|draft|write|send|enrich`), so a cap the granting human
-  withheld cannot be reached by picking a different transport, or by
-  reaching a verb that happens to have no registered tool.
-  Governance actions (approving, consent, DSR, pipeline/stage
-  config) are human-only at the contract, the gate, and the service.
-  Admission re-derives the granting human's seat + RBAC live per call,
-  so revocation binds mid-session.
-- **The write shape.** Every mutation commits domain row + append-only
-  `audit_log` row + `event_outbox` row in one transaction (spelled once
-  in `platform/database/storekit`); provenance (`captured_by`) is
-  stamped from the authenticated principal, never accepted from a
-  request body; publishing is always through the outbox to Redis
-  Streams, and consumers dedupe because the bus is at-least-once.
-- **Tenancy as structure.** Every tenant table carries `ENABLE`+`FORCE`
-  row-level security with deny-on-unset policies, reached only through
-  the one workspace-transaction helper; every tenant-local foreign key
-  is composite `(workspace_id, col)`, so a cross-workspace reference is
-  rejected by the database, not merely hidden. Both invariants are
-  fitness functions derived from the live schema, not maintained lists.
-- **Layout** (spec ADR-0054/A69):
-  one Go module under `backend/` (`github.com/margince/margince/backend`)
-  as the `internal/{modules,platform,shared}` triad —
-  `shared/{kernel,apperrors,ports}` (stdlib-only leaves), `platform/*`
-  (plumbing, owns no domain), twenty `modules/` (identity, people,
-  deals, activities, approvals, agents, automation, ai, search, capture,
-  comms, consent, privacy, collections, signals, customfields,
-  webhooks, overlay, migration — no sibling imports; the `de`
-  jurisdiction pack is an extension, not a module),
-  `internal/compose` (the one composition seam), and three process-role
-  binaries
-  `cmd/{api,worker,migrate}`. The DAG is enforced three ways
-  (depguard, go-arch-lint, and architecture fitness tests that derive
-  their package lists from the tree).
+  authoritative surface. It generates the types and the chi server. Every
+  operation is mounted; the ones not built yet answer an explicit 501. If
+  the generated code drifts from the contract, the merge is blocked.
+- **One governed agent surface, on every transport.** The 🟢/🟡 tier of an
+  action is declared once, on the contract's `x-mcp-tool` annotation, and
+  enforced below the transport. An agent write over MCP *or* REST resolves
+  the same tier and stages the same approval when it is 🟡. Any write
+  operation with no tier is **denied by default**, and a build-time lint
+  catches it. The same annotation declares the passport **scope** the
+  action spends (`read|draft|write|send|enrich`). So an agent cannot reach
+  a capability its human withheld by switching transport, or by finding a
+  verb with no registered tool. Governance actions are human-only in three
+  places: the contract, the gate, and the service.
+- **The write shape.** Every write commits three rows in one transaction:
+  the domain row, an append-only `audit_log` row, and an `event_outbox`
+  row. It is spelled once, in `platform/database/storekit`. The
+  `captured_by` field comes from the authenticated caller and is never
+  read from a request body. Publishing always goes through the outbox to
+  Redis Streams, and consumers de-duplicate, because the bus delivers at
+  least once.
+- **One installation, one organisation.** This is not multi-tenant
+  software, and it does not pretend to be. Boot refuses a second
+  workspace. No table has row-level security. Isolation is SQL predicates
+  in the application, reached only through the one workspace-transaction
+  helper — and `scripts/check-rls-store-path.sh` refuses to let a module
+  leave that path. A row outside your scope answers 404, not 403, so
+  nobody can learn that a record exists. The reasoning:
+  [docs/explanation/authorization.md](docs/explanation/authorization.md).
+- **Layout.** One Go module under `backend/`. `shared/*` holds
+  stdlib-only leaves, `platform/*` is plumbing that owns no domain,
+  `modules/*` are the domains (a module never imports a sibling),
+  `internal/compose` is the one place edges are wired, and `cmd/*` are the
+  binaries. Three separate tools enforce the layer order: depguard,
+  go-arch-lint, and architecture tests that read the package list from the
+  tree itself. What each module owns:
+  [docs/reference/modules.md](docs/reference/modules.md).
 
-## What works today
+## What is in it, and what is not
 
-- **Schema**: the full core data model (data-model.md §1–§11) as 19
-  reversible migrations — uuidv7 shim, updated_at+version triggers,
-  RLS `ENABLE`+`FORCE` with deny-on-unset policies on all 33 tenant
-  tables, composite same-workspace foreign keys (migration 0019),
-  append-only audit log, transactional event outbox, and the ADR-0017
-  core/custom migration namespaces.
-- **Contract pipeline**: OpenAPI 3.1 → 3.0 overlay → oapi-codegen types +
-  chi server interface; all operations mounted (unimplemented ones
-  answer explicit 501); drift is merge-blocking, and the agent-policy
-  generator refuses any mutating operation without an autonomy
-  annotation (the ADR-0055 drift-lint).
-- **Auth (ADR-0043)**: workspace bootstrap — atomic across identity and
-  cross-module defaults, Argon2id email/password
-  login, opaque server-side sessions (SHA-256-stored, idle+absolute
-  expiry, revoke-at-lookup), five seeded system roles, and the read/full
-  seat ceiling enforced before RBAC on both REST and MCP (C2).
-- **Core CRUD**: people (emails/phones, 409 dedupe with existing id),
-  organizations (domains), pipelines/stages (seeded default), deals
-  (advance with stage-semantic-derived won/lost, FX freeze at close,
-  stage history), leads (segregated per ADR-0008, natural-key
-  idempotent), activities (idempotent capture, polymorphic links, deal
-  last_activity_at). Every write commits audit + outbox atomically;
-  If-Match optimistic concurrency; keyset pagination.
-- **Lead→person promotion (features/01 §6.4)**: `POST /leads/{id}/promote`
-  on genuine engagement only; merges into an existing person via the
-  email dedupe path — never a duplicate — else creates one carrying
-  provenance/owner/email + `converted_from_lead_id`; one transaction,
-  one audit row, `lead.promoted` + the caused `person.*` event.
-- **Two-record merge (features/01 §1.3)**: `POST /people/{id}/merge` and
-  `/organizations/{id}/merge` fold A→B in one transaction —
-  collision-aware relink of emails/phones/domains/relationships/activity
-  links/consent with zero orphaned FKs, fill-only survivorship, one-hop
-  redirect chains, org hierarchy reparenting + the 1:1 partner
-  extension, restrictive consent merge, and `person.merged`/
-  `organization.merged` events. Reachable as the 🟡 `merge_records` tool
-  (pins the survivor's version).
-- **Event bus (EP04)**: the full events.md §2 envelope (actor incl.
-  passport/on-behalf-of, per-request `correlation_id`, `causation_id`,
-  `audit_log_id` linking event↔audit row) as the Tier-0
-  `shared/kernel/events` contract with the §5 catalog + §4.1 stream
-  routing; the outbox relay (in-process worker) shipping
-  committed rows to Redis Streams with `FOR UPDATE SKIP LOCKED` + MAXLEN
-  trimming; the §4.3 consumer-group subscriber (`XREADGROUP`/`XACK`,
-  `XAUTOCLAIM` reclaim, in-process workspace filtering); and the
-  `event_id` dedupe wrapper (96h TTL) that makes at-least-once safe.
-- **RBAC (EP03 remainder)**: object-level CRUD enforcement per role at
-  the store entry points (shared by REST and MCP — no agent bypass),
-  own/team/all row-scope predicates over `owner_id` (out-of-scope rows
-  answer 404, like cross-tenant), the five system roles seeded with real
-  permission-policy documents, and the governing rule
-  recorded in `audit_log.authorization_rule`.
-- **MCP/agent surface (EP06 WP4, Surface A2)**: Agent Seat Passports
-  (`POST /v1/passports` mints a scoped, expiring, revocable `mgp_` bearer
-  token bound to its issuer — "agent ≤ human" structurally, and live:
-  the granting human's seat + RBAC are re-derived at every admission
-  through the `shared/ports/authz` seam), the `platform/auth` gate
-  (scope ∧ seat ∧ tier BEFORE any handler; its own package so nothing
-  mints an admitted capability elsewhere), and the `agents` registry —
-  the 🟢 CRUD and read tool set plus the 🟡 confirm-first set, including
-  `advance_deal`'s `TierDynamic` resolver (🟢 open→open, 🟡 to won/lost —
-  the always-🟡 floor, resolved from the stage's semantic), all composed
-  over the frozen-v1 `datasource.SystemOfRecordProvider` seam → the same
-  store entry points as HTTP: same RBAC, row scope, audit, events. The
-  catalog, its scopes and its refusal shapes are tabled in
-  [docs/reference/agent-tools.md](docs/reference/agent-tools.md). Served
-  by `cmd/api` at `/mcp` over Streamable HTTP behind the OAuth 2.1 + DCR
-  handshake the discovery documents advertise; there is no separate MCP
-  binary (SCR-9), and the process binds the installation's singleton
-  organization itself (A107/ADR-0061).
-- **Transport-agnostic autonomy gate (ADR-0055)**: the
-  same passport rides the REST surface with the same governance — a 🟢
-  mutation executes (agent-stamped provenance), a 🟡 mutation stages an
-  approval and is redeemed by repeating the identical request with
-  `X-Approval-Token`, an un-tiered mutating route is refused
-  (default-deny), and the human-only governance surface (approvals,
-  consent, DSR, pipeline/stage config, passports) rejects agent
-  principals outright — the self-approval bypass is structurally closed.
-- **Approval engine (EP07 core, ADR-0036)**: a refused 🟡 action lands
-  in the `approval` inbox (`approval.requested`) with a one-line
-  summary, the exact proposed change, its content hash, and the target
-  row's version; humans decide over `/approvals` — the inbox shows only
-  approvals the caller could themselves decide;
-  deciding is human-only, and the approver must hold the RBAC the effect
-  itself needs; redemption is single-use, 15-minute window, bound to the
-  staging passport and the content hash, refused on target version skew
-  (the human's yes was about the world they saw).
-- **AI runtime + certification**: every model call rides one contract-first
-  path — tasks and tier ladders compiled from `backend/api/ai-tasks.yaml`,
-  runtime provider bindings in the `ai.routing` setting (BYOK:
-  Anthropic/OpenAI/Gemini/OpenAI-compatible cloud, Ollama/vLLM local, an
-  offline fake for dev/test), the one `ai.Router` gate (workspace budget with
-  typed deferral, secret stripping, per-attempt `ai_call` tracing), and a
-  certification lane (`make e2e-ai`) that scores a candidate model against a
-  task's scenario corpus before you trust it. Bounded company context —
-  confirmed in the cold start — is injected per declared
-  task policy, behind the `company_context.rollout` kill switch. See
-  [docs/explanation/ai-runtime.md](docs/explanation/ai-runtime.md) and
-  [docs/explanation/company-context.md](docs/explanation/company-context.md).
-- **Projects**: the body of work a deal is about — four phases (initiative → pursuing → delivering → closed, movable both ways, closing needs a reason), a key that files any email carrying `[KEY]` in its subject, a deal win that moves its project into delivery, a project 360 with coverage figures, and the composer's project scope for AI drafts; walkthrough in [user-guide/run-your-first-project.md](user-guide/run-your-first-project.md).
-- **Web UI**: the Vite/React app in `frontend/` — login, the scene-based
-  cold start (website read or manual entry, resumable, with a separate
-  three-stop path for an invited member), a collapsible labeled shell over
-  the canonical nav, people, leads (with the promote-on-engagement dialog),
-  the stage-column deal board with advance, the activity timeline, the
-  company record page (one gated read: state strip, health, the standing
-  account brief, Ask Margince, next-step suggestions, the one-hop
-  connections graph), Approvals, Automations, Reports, and the Company
-  Context settings screen — a standalone static build served separately
-  from the API, light and dark, design tokens from the product's design
-  language. Security headers (CSP, frame-denial, nosniff) are set on every
-  API response. See
-  [docs/explanation/frontend-architecture.md](docs/explanation/frontend-architecture.md).
-- **Gates**: golangci-lint (incl. depguard module DAG, default-deny for
-  the Tier-0 layer) clean; go-arch-lint as a hard gate; leaf-purity and
-  interface-freeze fitness tests; the ADR-0055 contract drift-lint; an
-  integration lane proving the RLS ∅-query, GUC-unset deny, pool-safety,
-  version-skew and audit-immutability invariants, the two schema fitness
-  functions, an HTTP end-to-end sales flow, the governed-agent-writes
-  loop (🟢 executes, 🟡 stages → human approves → token retry executes
-  once, agent self-approval refused), the read-seat ceiling, the
-  permission-filtered approval inbox, atomic-bootstrap rollback, the
-  person/org merge suites, and the bus lane (relay exactly-once /
-  crash-republish / commit order, subscriber ack+reclaim+tenant filter,
-  dedupe, envelope completeness over the wire).
+Every answer below is generated or comes from the contract. We do not keep
+a feature list in this file, because a hand-kept list goes stale and a
+stale list is worse than none.
 
-## Deliberately not here yet
+- **What each module owns** — its tables, its shape, its HTTP surface:
+  [docs/reference/modules.md](docs/reference/modules.md).
+- **The whole HTTP surface** — `backend/api/crm.yaml`. Every operation is
+  mounted. The ones not built yet answer 501, not 404, so the gap is
+  visible from outside.
+- **The agent tools** — every tool, its tier, and the scope it spends:
+  [docs/reference/agent-tools.md](docs/reference/agent-tools.md).
+  [docs/reference/mcp-info.md](docs/reference/mcp-info.md) is the same
+  surface exactly as a client receives it.
+- **Who may do what** —
+  [docs/reference/rbac-matrix.md](docs/reference/rbac-matrix.md),
+  generated from the seeded policy.
+- **What changed** — [CHANGELOG.md](CHANGELOG.md).
 
-The approval edit-then-approve re-gating path (`edited_payload` answers
-422 until it re-enters the gate properly), the `disqualify_lead` and
-`enrich` tools (their REST routes are governed and carry a declared cap,
-but no MCP tool is registered for them yet), the RLS row-scope backstop (B-EP03.3b), field-level
-masking (B-EP03.4), record grants (A52), the Idempotency-Key replay
-store, and event versioning/replay/dead-letter (B-EP04.12/.14/.15). The
-contract routes for these exist and answer 501.
+Three things are missing on purpose. We name them because anyone judging
+this product will look for them.
+
+- **Outbound cadences.** Deferred in the contract:
+  `/sequences, /sequences/{id}/steps, /enrollments (outbound cadences;
+  sends gated)`. The automation catalog can write a draft and put it in
+  front of a person — it has `draft_email`, not `send_email`. So a team
+  whose daily work is unattended outbound sequences is not served yet.
+- **Telephony and click-to-call.** Deferred in the contract.
+- **Hosted SaaS and multi-tenancy.** Not in this repository. One
+  installation serves one organisation, and boot refuses a second.
 
 ## Working conventions (where findings go)
 
 Findings are routed, not lost:
 
-- **Implementation decisions** are explained in the commit message and PR
-  that makes the change; git history is the record.
+- **Implementation decisions** go in the commit message and the PR that
+  makes the change. Git history is the record.
 - **Decisions that bind future work** — a security posture, a contract
-  shape, a persistence choice — are raised with the maintainers, who keep
-  the decision records. What binds a change here is enforced by a gate, and
-  a gate that refuses names what to do instead.
-- **Anything found but not fixed** — a bug, a gap, a follow-up — becomes a
-  GitHub issue in this repo, labeled. With one exception that is not a
-  preference: an exploitable weakness goes to a private security advisory and
-  never to a public issue or pull request, because this repository is public and
-  a report that lands before the fix does puts every deployment at risk. See
-  [SECURITY.md](SECURITY.md).
-- **Open work** — in-flight work and where to pick up — lives in GitHub issues.
-  There is no status file: an issue is the only place a finding survives a
-  session, and the commit and PR are the record of what was done.
+  shape, a persistence choice — go to the maintainers, who keep the
+  decision records. What binds a change here is enforced by a gate, and a
+  gate that refuses tells you what to do instead.
+- **Anything you find but do not fix** — a bug, a gap, a follow-up —
+  becomes a labelled GitHub issue in this repo. One exception, and it is
+  not a preference: a weakness someone could exploit goes to a private
+  security advisory, never to a public issue or pull request. This
+  repository is public, and a report that lands before the fix puts every
+  deployment at risk. See [SECURITY.md](SECURITY.md).
+- **Open work** lives in GitHub issues. There is no status file. An issue
+  is the only place a finding survives the session, and the commit and PR
+  are the record of what was done.
 
-## Engineering rules learned from the review loop
+## Engineering rules
 
-The rules below are binding for all future work in this repo (mirrored
-in [AGENTS.md](AGENTS.md)). Each states an invariant this codebase holds
-because getting it wrong once was expensive:
+[AGENTS.md](AGENTS.md) is the rulebook, and the only copy of it. It covers
+what decides a question here, how a change is shipped, the layout rules
+that bind a diff, and the craftsmanship bar the pre-push gate applies. It
+also carries the rules this codebase learned the expensive way.
 
-1. **Fix the invariant, not the call site.** A fix applied only to the
-   case in front of you leaves the sibling copies broken (open vs. closed
-   deals; person/org but not lead; a direct read but not its idempotent
-   replay). Before closing a finding, grep for every mutation/read site
-   of the same column, constraint, or record and fix them as one change.
-2. **Prefer fitness functions over point fixes.** A hand-maintained list
-   (RLS table enrolment, a lint allow-list) rots silently; a test that
-   derives the obligation from the system itself (every `workspace_id`
-   table must have FORCE RLS; every CHECK violation must map to a 4xx)
-   enforces the *class*. When a fix defends an invariant, ask what gate
-   proves it stays fixed.
-3. **Anything that returns a record is a read** and carries the read
-   path's row-scope gate — including error paths, idempotent-replay
-   paths, and conflict disclosures. Error paths are disclosure paths.
-4. **Comments carry no build-process residue.** No review-ticket numbers,
-   no "fixed per finding #N", no changelog narration — a comment states
-   the invariant or trade-off so it reads true standing alone, years
-   later, to someone who never saw the review. The history lives in git,
-   not in the source. (Same for test names:
-   name the invariant pinned, not the review that demanded it.)
-5. **Don't rationalize a known gap — close it or gate it.** A comment
-   arguing that a race is safe is not a defense, and the argument is
-   usually wrong (a dedupe fallback prevents double effects, not dropped
-   ones). If a design carries a window, either restructure so it cannot
-   happen (run-then-mark) or add the failing test that documents it
-   honestly.
-
-6. **A test that supplies its own version of production proves nothing
-   about production.** Whatever a test substitutes for the real thing is
-   the part the real thing no longer has to get right. Two shapes, both
-   already shipped defects here: hand-inserted rows the real writer never
-   produces (a signal pass joined `activity_link` on an `entity_type`
-   capture never writes — every workspace found zero candidates, the job
-   reported success, the page rendered empty for a release), and a
-   hand-copied adapter mirroring what `compose` wires (a captured-file
-   suite built its own `FileKeeper`, so the production join could have
-   been deleted with nothing going red). Seed through the real writer, or
-   mirror its exact row shape; if a test needs the wiring, reach for the
-   wiring — integration tests live directly in `package compose` for
-   exactly this, so unexported adapters are in scope. The tell is writing
-   a struct in a test file whose fields mirror something `compose`
-   already builds, and an unexpectedly uncovered new file usually means a
-   test double stands where the real thing should.
-
-7. **One invariant spelled on both sides of a wire is one item, not
-   two.** Most topics are implemented once and merely rendered by the
-   other language; this rule is about the ones that are not. Where Go
-   and TypeScript each carry a spelling of the same rule, two errors can
-   CANCEL — which makes each half look correct in place, and makes
-   fixing one half a regression rather than half a fix. The frontend
-   wrote `Math.round(amount * 100)` for every currency and the backend
-   divided by 100 for every currency, so a zero-decimal price was stored
-   a hundredfold and displayed correctly: the screen agreed with itself
-   and only the record was wrong. Making the server currency-aware on
-   its own would have printed a hundred times the price on an outbound
-   offer. So check for the other side before you fix this one, and land
-   both in one change. Then declare which side is the MIRROR and gate it
-   in both directions — `values.MinorUnitExceptions()` against
-   `frontend/src/format/minorunits.ts`, in
-   `backend/gates/frontendminorunits_test.go`, which fails on a code present
-   on one side only and on a digit count that differs. Two tables that
-   happen to agree today is the state this replaces; note that the gate
-   covers the shared TABLE, not the two suites' cases, and reads the
-   TypeScript with hand-written regexes — so it carries the caveat in
-   the next rule rather than escaping it.
-
-8. **A census that can fail short has already failed.** Every failure
-   mode of a gate is loud except one: under-recognition. A gate that
-   reads a smaller tree reports the same word for it — PASS — and there
-   is no failing assertion to notice, so a hand-written census is short
-   until proven otherwise, and each miss hides behind whatever also hid
-   it from the detector. Three consequences, each of them paid for here.
-   No prefilter, skip-list or file shortcut in front of a scan unless
-   you have MEASURED that it buys something: one such shortcut survived
-   six rounds of being found narrower than the census behind it, two of
-   the misses introduced by the fix for the one before, and deleting it
-   turned out to be FASTER than keeping it. Match statements, not lines
-   — a per-line matcher missed an entire write direction a formatter had
-   wrapped across three — and bound the join, or one statement swallows
-   a thirty-line `const (` block. And once the gate is green, ask what
-   shape of the defect it cannot see and plant that case; that is how
-   every hole found in review was found, and none by re-reading the
-   implementation.
+We deliberately do not repeat those rules here. A rule written in two
+places becomes two rules the moment somebody edits one of them, and the
+copy nobody maintains is the one a reader believes.
 
 ## License
 
-**Business Source License 1.1** (`BUSL-1.1`) — see [LICENSE](LICENSE). Licensor:
-Gradion Pte. Ltd. (Singapore). Source-available, **not** OSI open source: the full
-source is public and free to read, run, and modify.
+**Business Source License 1.1** (`BUSL-1.1`) — see [LICENSE](LICENSE).
+Licensor: Gradion Pte. Ltd. (Singapore). It is source-available, **not**
+OSI open source: the full source is public and free to read, run and
+modify.
 
-- **Free** for your own internal production use up to **10 Seats** (a Seat is an
-  identified person with credentials; AI agents, service accounts, and external
-  data subjects are **not** Seats). From the 11th Seat a commercial subscription
-  applies, self-host or partner-hosted alike.
-- Hosting or reselling it as a service to third parties requires an **Authorized
-  Hosting Partner** agreement.
-- **Every release converts to Apache 2.0 on its Change Date — two years after it
-  ships** (BUSL body caps this at four years; we hold ours to two, A37/ADR-0029).
+- **Free** for your own internal production use, up to **10 Seats**. A
+  Seat is an identified person with credentials. AI agents, service
+  accounts and external data subjects are **not** Seats. Above those ten,
+  the published price is a flat €25 per acting seat per month, with read
+  seats unlimited and free — no charge per contact, and no markup on AI
+  tokens. That applies whether you self-host or a partner hosts for you.
+  The commercial terms live at [margince.com](https://margince.com); this
+  file describes the licence, which is [LICENSE](LICENSE).
+- Hosting or reselling it as a service to other companies needs an
+  **Authorized Hosting Partner** agreement.
+- **Every release becomes Apache 2.0 two years after it ships.** The BUSL
+  text allows up to four years; we hold ours to two. This happens per
+  release, so each release converts on its own date. A current version is
+  never itself under Apache.
 
-The Additional Use Grant fills only BUSL's parameter fields; the license body is
-the verbatim canonical text, so SPDX/GitHub detect it as `BUSL-1.1`. Each tagged release restamps the Change Date to its publication date + 2 years —
-the rule is
+**One thing the licence text does not tell you.** If `MARGINCE_ENV` is
+anything other than `dev` or `test`, the binary needs a licence token from
+Gradion, and it refuses to start without one. That applies at the first
+Seat, not the eleventh. So the 10-Seat grant is a legal permission, not a
+self-serve path: today you have to ask us for a token. If that blocks you,
+please say so in an issue. It is a product decision, and knowing who it
+stops is what would change it.
+
+The Additional Use Grant fills only BUSL's parameter fields. The body of
+the licence is the standard text, so SPDX and GitHub detect it as
+`BUSL-1.1`. The release-stamping rule is
 [docs/reference/license-release-rule.md](docs/reference/license-release-rule.md).

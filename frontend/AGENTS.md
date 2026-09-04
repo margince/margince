@@ -136,9 +136,9 @@ When writing or touching a screen test:
   is timer-driven.
 - If a test only passes because it got the machine to itself, it is not a test
   yet. Prove it: run the file alone and inside `make fe-unit`, and compare.
-- Test files split at 1000 lines, the same ceiling the Go test trees hold.
-  Eighteen are already past it and nothing enforces it yet (#3232). Do not grow
-  one that is over.
+- Test files split at 1000 lines, the same ceiling the Go test trees hold. Some
+  already are and nothing enforces it (#3232); `find src -name '*.test.tsx' |
+  xargs wc -l | sort -rn` lists them. Do not grow one that is over.
 
 ## Storybook is documentation, and it goes stale silently
 

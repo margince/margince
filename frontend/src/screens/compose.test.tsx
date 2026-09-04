@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { ComposeModal, RelinkModal } from "./compose";
+import { ChannelReplyAction, ComposeModal, RelinkModal } from "./compose";
 import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
@@ -1826,6 +1826,59 @@ describe("TimelineActions", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Reply" })).toBeNull(),
     );
+  });
+
+  // `Write email` has to be able to SEND.
+  //
+  // Withholding the anchor is what makes the dialog match the button — it is
+  // not a reply, so it must not claim to read the message it answers. But the
+  // modal reads `kind: "message"` as a CHANNEL reply and posts to
+  // send-message, which needs the very conversation that was withheld: the
+  // dialog opened and its own Send threw "a channel reply needs the
+  // conversation it answers".
+  //
+  // Asserted through the To and Subject fields, which a channel reply does not
+  // render and an account-started email does. They are the same two fields the
+  // modal's validation requires when it is not a channel reply, so a mode that
+  // showed them and still posted to send-message could not pass this.
+  it("opens a sendable email composer when the channel message is withheld", async () => {
+    // Reachable, or the action renders nothing and the case would pass over an
+    // empty tree — the button being absent is a different answer entirely.
+    stubRoutes({
+      "GET /people/p-1": () =>
+        jsonResponse({
+          id: "p-1",
+          full_name: "Jane Doe",
+          reachability: [
+            {
+              provider: "telegram",
+              reachable: true,
+              since: "2026-07-01T00:00:00Z",
+            },
+          ],
+          version: 1,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+    });
+    render(
+      <ChannelReplyAction
+        activityId="a9"
+        kind="message"
+        channelProvider="telegram"
+        entityType="person"
+        entityId="p-1"
+        personId="p-1"
+        contentWithheld
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Write email" }),
+    );
+
+    expect(await screen.findByLabelText("To")).toBeTruthy();
+    expect(screen.getByLabelText("Subject")).toBeTruthy();
   });
 
   // An EMAIL's audience is changed from the message, in the drawer, where the

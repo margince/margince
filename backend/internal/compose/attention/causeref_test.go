@@ -32,6 +32,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,8 +64,12 @@ func causeRefRenderers(t *testing.T) map[string]crmcontracts.AttentionItem {
 			AccountLabel: "lena.fischer@margince.test",
 		}),
 		"ai_work_health": aiWorkItem(TroubledRun{
-			ID:           ids.NewV7(),
-			Kind:         "meeting_recap",
+			ID: ids.NewV7(),
+			// A REAL task key, so the label this lane mints is the one
+			// production mints. "meeting_recap" stood here and names no task
+			// the contract declares, so DisplayName answered "" and the lane
+			// went unlabelled — this suite judged it and found nothing.
+			Kind:         string(ai.TaskSiteTriage),
 			State:        "failed",
 			Summary:      "A recap did not generate",
 			SubjectLabel: "Acme Renewal",

@@ -407,3 +407,73 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 	}
 	return threads >= 2, nil
 }
+
+// metInPersonTx reports whether this workspace and that address share a meeting
+// a connector captured.
+//
+// It is the third shape of "we have actually dealt with this person", beside a
+// reply and two outbound threads, and it is the strongest of them. Mail is
+// evidence about intent — a founder mails forty people and hears from six — and
+// a meeting is evidence about time: both sides put an hour in a calendar, which
+// nobody does by accident.
+//
+// The ladder could not see one, and the shape of the miss was worse than a gap.
+// A calendar invitation reaches the mailbox as machine-generated mail, so the
+// classifier read it as `transactional` and judged the INVITED PARTNER noise on
+// it — the record was created owner-scoped and invisible, on the strength of the
+// message that proves the relationship.
+//
+// The address is matched against the participant rows rather than
+// counterparty_email, because a meeting carries no counterparty: attendance is a
+// LIST and the calendar mapper leaves the field unset. Either the participant
+// row resolved to a person holding this address, or it is the bare address the
+// invitation named — a person the workspace does not have yet is exactly the
+// case this decides.
+//
+// THREE BOUNDS, the same three the consent arm applies (consent's
+// meetingQualifyingEvent), because they answer the same question about the same
+// row and two readings of one fact drift:
+//
+//   - a CONNECTOR captured it, so a hand-logged "meeting" cannot mint a contact;
+//   - it was not declined or abandoned (no_show, canceled);
+//   - it is not dated past the horizon, so a far-future date cannot stand in for
+//     a relationship.
+//
+// An ARCHIVED meeting is excluded too, which is not one of the three: a meeting
+// somebody removed is not evidence of anything, and the activity kind index is
+// partial on archived_at IS NULL, so naming it here is also what lets this
+// query use one — it runs per captured address.
+func metInPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	normalized := normalizeEmail(email)
+	if normalized == "" {
+		return false, nil
+	}
+	var met bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1
+		    FROM activity a
+		    JOIN activity_participant p ON p.activity_id = a.id
+		   WHERE a.kind = 'meeting'
+		     AND a.archived_at IS NULL
+		     AND a.captured_by LIKE 'connector:%'
+		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
+		     AND a.occurred_at <= now() + $2::interval
+		     AND (lower(p.address) = $1
+		          OR EXISTS (
+		            SELECT 1 FROM person_email pe
+		             WHERE pe.person_id = p.person_id
+		               AND lower(pe.email) = $1
+		               AND pe.archived_at IS NULL))
+		     AND `+auth.ActivityAvailableClause("a")+`)`,
+		normalized, meetingHorizonInterval).Scan(&met); err != nil {
+		return false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
+	}
+	return met, nil
+}
+
+// meetingHorizonInterval bounds how far into the diary a meeting still says a
+// relationship is live. Spelled again here rather than imported because a module
+// never imports a sibling; what must not drift is the WINDOW, and the consent
+// arm holds the same one against the same rows.
+const meetingHorizonInterval = "90 days"

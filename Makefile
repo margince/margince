@@ -228,13 +228,13 @@ infra-down:
 ## dev — the full local COLD-START stack in a real browser: Postgres + Redis, the api, the
 ## background worker (cmd/worker — outbox relay + Surface-B runner, always on),
 ## and the Vite dev server, so the SPA runs against a live api on http://localhost:8080
-## (the app on :8080, api behind it on :18080). Bare `make dev` uses the shared
-## `margince` database; `make dev
-## DEV_SLUG=<slug>` gives an isolated margince_dev_<slug> on slug-derived ports,
-## so two worktrees run concurrently without colliding. A bare `make dev` first
-## SWEEPS: every margince api/worker/vite on the machine is killed, whatever
-## holds :8080 is evicted, and stray margince_dev_* databases are dropped,
-## so exactly one stack runs and the app is ALWAYS on :8080. Boots COLD: the
+## (the app on :8080, api behind it on :18080). Starts THIS worktree's stack and
+## touches nobody else's: a linked worktree claims its own database, Redis
+## logical database, port pair and object bucket, while the primary worktree
+## keeps the shared `margince` database on :8080. `DEV_SLUG=<slug>` overrides
+## the derived slug for a second stack inside one worktree. A bound port stops
+## the boot loudly rather than letting you poll a server from an older branch;
+## `make dev-sweep` is the machine-wide clear. Boots COLD: the
 ## organization + admin the api bootstraps from config/margince.yaml and no
 ## other data, so onboarding and empty states are the default view — run
 ## `make seed-dev` on top when you want the demo records. Reads an optional
@@ -250,9 +250,10 @@ dev:
 dev-fresh:
 	@bash scripts/dev.sh up "$(DEV_SLUG)" --fresh
 
-## dev-stop — stop dev stacks and free their ports. Bare: stops EVERY stack on
-## the machine (the mirror of what `make dev` sweeps). With DEV_SLUG=<slug>:
-## just that one. DROP=1 also drops the per-slug databases (never `margince`).
+## dev-stop — stop THIS worktree's dev stack and free its ports, the mirror of
+## `make dev`. DEV_SLUG=<slug> names another stack in this worktree; DROP=1 also
+## drops its per-slug database (never the shared `margince`). To clear every
+## stack on the machine, including other worktrees', use `make dev-sweep`.
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
 
