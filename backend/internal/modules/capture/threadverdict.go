@@ -211,13 +211,24 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 //
 // Guarded by the claim, so a worker that outran its lease cannot overwrite the
 // answer its successor wrote.
+// seen_addresses ACCUMULATES rather than replacing.
+//
+// A thread re-opened for a sender the last answer did not read is classified
+// again, and a replace would drop the senders already cleared — so the next
+// message from one of them reads as unseen, re-opens the thread, and buys
+// another model call to reach the answer already on the row. The column means
+// "addresses some verdict on this thread has read", which is the question the
+// admission rule asks. The arrival-path re-open still empties it first, so its
+// behaviour is unchanged: a union over nothing is a replace.
 func (s *ThreadVerdictStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, t PendingThread, status, kind string, confidence float64, seen []string, reason string,
 ) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = $2, kind = NULLIF($3, ''), confidence = $4,
-		       seen_addresses = $5, disposition_reason = NULLIF($6, ''),
+		       seen_addresses = (SELECT coalesce(array_agg(DISTINCT x), '{}')
+		                           FROM unnest(seen_addresses || $5::text[]) AS x),
+		       disposition_reason = NULLIF($6, ''),
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE id = $1 AND status = 'pending' AND claimed_by = $7`,
@@ -319,13 +330,15 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 // It takes the caller's transaction, which is the one ResolveAs just wrote the
 // ledger row on: both land together or neither does.
 //
-// The MESSAGE the model actually read, not every message on the thread. The
-// claim hands the classifier the thread's first message only, so opening the
-// whole thread would clear correspondence nobody looked at: a routine opening
-// message can be followed by a termination agreement before the pass runs, or
-// while the model call is in flight, and an answer about the first message says
-// nothing about those. A later message inherits through inheritedVerdictTx
-// instead, which admits an opening verdict only for a sender the verdict saw.
+// The MESSAGE the model actually read. The thread's other messages are stamped
+// by RecordOutcomeOnThreadTx beside it, under the admission rule inheritance
+// already applies — a sender the verdict actually read.
+//
+// That rule is what makes the wider stamp safe. A routine opening message can
+// be followed by a termination agreement before the pass runs, or while the
+// model call is in flight, and an answer about the first message says nothing
+// about that one: it comes from a lawyer the verdict never saw, so it is not
+// stamped, and the thread re-opens pointing at it instead.
 //
 // Scoped to the seat whose verdict it is. A thread reaching two mailboxes is
 // two people's correspondence, each may conclude differently, and the
