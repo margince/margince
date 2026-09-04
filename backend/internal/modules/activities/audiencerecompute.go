@@ -26,55 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AudienceReason names why a derived audience is what it is. Closed
-// vocabulary, and the column it lands in is withheld from a reader who may not
-// read the content: "held because personnel" describes the content.
-const (
-	// ReasonPosture: a mailbox asked for it. A verdict on the thread can clear
-	// it, which is the whole point of a mailbox posture — it holds the message
-	// until something judges it.
-	ReasonPosture = "posture"
-	// ReasonWorkspaceFloor: the WORKSPACE turned mail sharing off. It is not a
-	// mailbox posture and no verdict clears it: an admin decided colleagues do
-	// not read captured mail, and a classifier concluding a thread is ordinary
-	// says nothing about that decision. Only the admin turning sharing back on
-	// opens these rows, and only for mail captured afterwards.
-	ReasonWorkspaceFloor = "workspace_floor"
-	// ReasonPendingVerdict: nothing has judged the message yet, and unjudged
-	// is held.
-	ReasonPendingVerdict = "pending_verdict"
-	// ReasonManual: a human said so. It is also a LOCK — the derivation refuses
-	// to move a row carrying it — so nothing but a human's own decision may
-	// write it.
-	ReasonManual = "manual"
-	// ReasonVerdict: a classifier judged the thread and held it, without saying
-	// which kind. The classifier's own kinds replace this word when it lands.
-	ReasonVerdict = "verdict"
-	// ReasonCounterparty: the importing seat holds mail with one of the parties,
-	// whatever this particular message is about. Their decision, and no verdict
-	// clears it — a classifier concluding a thread is ordinary says nothing
-	// about whether this seat wants their lawyer's mail in a shared CRM.
-	ReasonCounterparty = "counterparty"
-	// ReasonConfidentialMarker: the sender said so in the subject line. The one
-	// confidentiality signal that needs no model, and it outranks a later
-	// verdict for the same reason a counterparty hold does — a person marked
-	// this message, and a classifier disagreeing does not unmark it.
-	ReasonConfidentialMarker = "explicitly_confidential"
-	// ReasonNoRecord: the message is filed under no record because something
-	// JUDGED its sender — a suppression rule, a settled verdict, a thread the
-	// owner's own. Written by the capture ladder rather than derived here, and
-	// carried through every recompute: a link arriving later says nothing about
-	// a judgement that was never about the filing.
-	ReasonNoRecord = "no_record"
-	// ReasonNoCounterparty: the message named nobody a record could be created
-	// FOR. The calendar case — attendance is a list, so the mapper leaves the
-	// counterparty unset and the ladder concludes it named nobody. No judgement
-	// was made about anyone, so this hold means only "nothing has filed it
-	// yet", and it stops being true the moment something does. That is the one
-	// row-carried hold a link lifts, and noRecordHoldStands is where it does.
-	ReasonNoCounterparty = "no_counterparty"
-)
-
 // audienceRank orders the audiences from most open to most closed. The
 // recompute takes the maximum, which is what "strictest contributor wins"
 // means in one line.
