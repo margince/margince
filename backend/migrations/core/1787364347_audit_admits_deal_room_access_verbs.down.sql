@@ -19,10 +19,23 @@
 -- migration enables it. An earlier reading of this gap assumed FORCE RLS made
 -- the probe blind; it does not exist to be blind.
 
+-- The timeout FIRST, because everything below can block: this is a down
+-- migration on a live table, and a lock that waits forever is how a rollback
+-- becomes an outage.
+SET LOCAL lock_timeout = '3s';
+
 DO $$
 DECLARE
     written bigint;
 BEGIN
+    -- Locked BEFORE the count, and held for the rest of the transaction.
+    -- The count decides whether this migration refuses, and the constraint it
+    -- guards is validated later in the same transaction — so a row written
+    -- under the verb in between would make the refusal miss and the VALIDATE
+    -- fail instead, with the generic constraint error this exists to replace.
+    -- SHARE ROW EXCLUSIVE stops writers and admits readers, which is the
+    -- narrowest mode that closes the window.
+    LOCK TABLE audit_log IN SHARE ROW EXCLUSIVE MODE;
     SELECT count(*) INTO written FROM audit_log WHERE action IN ('invite', 'revoke');
     IF written > 0 THEN
         RAISE EXCEPTION
@@ -32,7 +45,6 @@ BEGIN
     END IF;
 END;
 $$;
-SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE audit_log ADD CONSTRAINT audit_log_action_check_v2
     CHECK (action IN ('create', 'update', 'archive', 'merge', 'promote', 'restore',
