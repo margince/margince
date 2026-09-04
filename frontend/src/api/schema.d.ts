@@ -16329,19 +16329,7 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
-            emails?: {
-                /** Format: email */
-                email: string;
-                /**
-                 * @default work
-                 * @enum {string}
-                 */
-                email_type: "work" | "personal" | "other";
-                /** @default false */
-                is_primary: boolean;
-                /** @default 0 */
-                position: number;
-            }[];
+            emails?: components["schemas"]["PersonEmailInput"][];
             phones?: {
                 phone: string;
                 /**
@@ -16421,6 +16409,25 @@ export interface components {
             /** @description Why a card was skipped, in words a reader can act on. */
             reason?: string | null;
         };
+        /**
+         * @description One address on a person, as a writer supplies it. Named rather than spelled inline
+         *     on each request, because create and update must not be able to describe an address
+         *     differently — the generator mints a separate Go struct per inline copy, and a
+         *     helper serving both is what stops the two drifting.
+         */
+        PersonEmailInput: {
+            /** Format: email */
+            email: string;
+            /**
+             * @default work
+             * @enum {string}
+             */
+            email_type: "work" | "personal" | "other";
+            /** @default false */
+            is_primary: boolean;
+            /** @default 0 */
+            position: number;
+        };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdatePersonRequest: {
             full_name?: string;
@@ -16433,6 +16440,20 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
+            /**
+             * @description REPLACES the person's addresses with exactly this list, which is what a
+             *     correction needs: a bounced address is fixed by sending the set that should
+             *     stand, and an append-only field could never remove the one that is dead.
+             *
+             *     Omitting the field leaves the addresses untouched, like every other field
+             *     here. Sending an empty array removes them all, which is a real answer — a
+             *     contact who no longer has a working address is a fact worth recording.
+             *
+             *     `Person360.dead_addresses` already names which address bounced; until now the
+             *     contract's own remedy for that was to visit the person page, because the write
+             *     existed on create and nowhere else.
+             */
+            emails?: components["schemas"]["PersonEmailInput"][];
         } & {
             [key: string]: unknown;
         };
@@ -20962,6 +20983,24 @@ export interface components {
             remind_at?: string | null;
             /** @description Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family). */
             is_done?: boolean;
+            /**
+             * @description How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+             *     `not_valid_for_kind` fault on the field otherwise — the same refusal create
+             *     gives, held against the kind the row already carries rather than one the
+             *     patch names, because a patch cannot change a kind.
+             *
+             *     Contracted on create since the field existed, and absent here, so the one
+             *     moment a human actually knows the answer — the meeting is over — was the one
+             *     moment the API could not be told.
+             *
+             *     An omitted field is unchanged, like every other field on this patch. Sending
+             *     an explicit `null` is also unchanged rather than a clear: this request maps
+             *     onto the same coalescing update `due_at` and `remind_at` take, which cannot
+             *     tell an absent field from a null one. Recording the wrong outcome is fixed by
+             *     sending the right one.
+             * @enum {string|null}
+             */
+            meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
         };
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];

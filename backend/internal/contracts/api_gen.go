@@ -4219,27 +4219,6 @@ func (e CreateOrganizationRequestSizeBand) Valid() bool {
 	}
 }
 
-// Defines values for CreatePersonRequestEmailsEmailType.
-const (
-	CreatePersonRequestEmailsEmailTypeOther    CreatePersonRequestEmailsEmailType = "other"
-	CreatePersonRequestEmailsEmailTypePersonal CreatePersonRequestEmailsEmailType = "personal"
-	CreatePersonRequestEmailsEmailTypeWork     CreatePersonRequestEmailsEmailType = "work"
-)
-
-// Valid indicates whether the value is a known member of the CreatePersonRequestEmailsEmailType enum.
-func (e CreatePersonRequestEmailsEmailType) Valid() bool {
-	switch e {
-	case CreatePersonRequestEmailsEmailTypeOther:
-		return true
-	case CreatePersonRequestEmailsEmailTypePersonal:
-		return true
-	case CreatePersonRequestEmailsEmailTypeWork:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreatePersonRequestPhonesPhoneType.
 const (
 	CreatePersonRequestPhonesPhoneTypeHome   CreatePersonRequestPhonesPhoneType = "home"
@@ -8734,6 +8713,27 @@ func (e PersonEmailEmailType) Valid() bool {
 	}
 }
 
+// Defines values for PersonEmailInputEmailType.
+const (
+	PersonEmailInputEmailTypeOther    PersonEmailInputEmailType = "other"
+	PersonEmailInputEmailTypePersonal PersonEmailInputEmailType = "personal"
+	PersonEmailInputEmailTypeWork     PersonEmailInputEmailType = "work"
+)
+
+// Valid indicates whether the value is a known member of the PersonEmailInputEmailType enum.
+func (e PersonEmailInputEmailType) Valid() bool {
+	switch e {
+	case PersonEmailInputEmailTypeOther:
+		return true
+	case PersonEmailInputEmailTypePersonal:
+		return true
+	case PersonEmailInputEmailTypeWork:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PersonGraphGroupsOmitted.
 const (
 	PersonGraphGroupsOmittedAccount PersonGraphGroupsOmitted = "account"
@@ -11662,6 +11662,30 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonSuperseded:
 		return true
 	case UndoabilityReasonUnsupportedRecordType:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateActivityRequestMeetingStatus.
+const (
+	UpdateActivityRequestMeetingStatusBooked   UpdateActivityRequestMeetingStatus = "booked"
+	UpdateActivityRequestMeetingStatusCanceled UpdateActivityRequestMeetingStatus = "canceled"
+	UpdateActivityRequestMeetingStatusHeld     UpdateActivityRequestMeetingStatus = "held"
+	UpdateActivityRequestMeetingStatusNoShow   UpdateActivityRequestMeetingStatus = "no_show"
+)
+
+// Valid indicates whether the value is a known member of the UpdateActivityRequestMeetingStatus enum.
+func (e UpdateActivityRequestMeetingStatus) Valid() bool {
+	switch e {
+	case UpdateActivityRequestMeetingStatusBooked:
+		return true
+	case UpdateActivityRequestMeetingStatusCanceled:
+		return true
+	case UpdateActivityRequestMeetingStatusHeld:
+		return true
+	case UpdateActivityRequestMeetingStatusNoShow:
 		return true
 	default:
 		return false
@@ -14616,31 +14640,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	Customer       ListOrganizationsParamsLifecycle = "customer"
-	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	Prospect       ListOrganizationsParamsLifecycle = "prospect"
-	Target         ListOrganizationsParamsLifecycle = "target"
-	Unknown        ListOrganizationsParamsLifecycle = "unknown"
+	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
+	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
+	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
+	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case Customer:
+	case ListOrganizationsParamsLifecycleCustomer:
 		return true
-	case Disqualified:
+	case ListOrganizationsParamsLifecycleDisqualified:
 		return true
-	case FormerCustomer:
+	case ListOrganizationsParamsLifecycleFormerCustomer:
 		return true
-	case Opportunity:
+	case ListOrganizationsParamsLifecycleOpportunity:
 		return true
-	case Prospect:
+	case ListOrganizationsParamsLifecycleProspect:
 		return true
-	case Target:
+	case ListOrganizationsParamsLifecycleTarget:
 		return true
-	case Unknown:
+	case ListOrganizationsParamsLifecycleUnknown:
 		return true
 	default:
 		return false
@@ -15135,25 +15159,25 @@ func (e ListRelationshipsParamsKind) Valid() bool {
 
 // Defines values for ListScheduledSendsParamsStatus.
 const (
-	ListScheduledSendsParamsStatusCancelled ListScheduledSendsParamsStatus = "cancelled"
-	ListScheduledSendsParamsStatusHeld      ListScheduledSendsParamsStatus = "held"
-	ListScheduledSendsParamsStatusReleased  ListScheduledSendsParamsStatus = "released"
-	ListScheduledSendsParamsStatusScheduled ListScheduledSendsParamsStatus = "scheduled"
-	ListScheduledSendsParamsStatusSent      ListScheduledSendsParamsStatus = "sent"
+	Cancelled ListScheduledSendsParamsStatus = "cancelled"
+	Held      ListScheduledSendsParamsStatus = "held"
+	Released  ListScheduledSendsParamsStatus = "released"
+	Scheduled ListScheduledSendsParamsStatus = "scheduled"
+	Sent      ListScheduledSendsParamsStatus = "sent"
 )
 
 // Valid indicates whether the value is a known member of the ListScheduledSendsParamsStatus enum.
 func (e ListScheduledSendsParamsStatus) Valid() bool {
 	switch e {
-	case ListScheduledSendsParamsStatusCancelled:
+	case Cancelled:
 		return true
-	case ListScheduledSendsParamsStatusHeld:
+	case Held:
 		return true
-	case ListScheduledSendsParamsStatusReleased:
+	case Released:
 		return true
-	case ListScheduledSendsParamsStatusScheduled:
+	case Scheduled:
 		return true
-	case ListScheduledSendsParamsStatusSent:
+	case Sent:
 		return true
 	default:
 		return false
@@ -20148,13 +20172,8 @@ type CreatePersonEnrichmentRunRequest struct {
 // CreatePersonRequest defines model for CreatePersonRequest.
 type CreatePersonRequest struct {
 	// Address Structured postal address.
-	Address *Address `json:"address,omitempty"`
-	Emails  *[]struct {
-		Email     openapi_types.Email                 `json:"email"`
-		EmailType *CreatePersonRequestEmailsEmailType `json:"email_type,omitempty"`
-		IsPrimary *bool                               `json:"is_primary,omitempty"`
-		Position  *int                                `json:"position,omitempty"`
-	} `json:"emails,omitempty"`
+	Address   *Address            `json:"address,omitempty"`
+	Emails    *[]PersonEmailInput `json:"emails,omitempty"`
 	FirstName *string             `json:"first_name,omitempty"`
 	FullName  string              `json:"full_name"`
 	LastName  *string             `json:"last_name,omitempty"`
@@ -20170,9 +20189,6 @@ type CreatePersonRequest struct {
 	Title                *string                 `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{}  `json:"-"`
 }
-
-// CreatePersonRequestEmailsEmailType defines model for CreatePersonRequest.Emails.EmailType.
-type CreatePersonRequestEmailsEmailType string
 
 // CreatePersonRequestPhonesPhoneType defines model for CreatePersonRequest.Phones.PhoneType.
 type CreatePersonRequestPhonesPhoneType string
@@ -27284,6 +27300,20 @@ type PersonEmail struct {
 // PersonEmailEmailType defines model for PersonEmail.EmailType.
 type PersonEmailEmailType string
 
+// PersonEmailInput One address on a person, as a writer supplies it. Named rather than spelled inline
+// on each request, because create and update must not be able to describe an address
+// differently — the generator mints a separate Go struct per inline copy, and a
+// helper serving both is what stops the two drifting.
+type PersonEmailInput struct {
+	Email     openapi_types.Email        `json:"email"`
+	EmailType *PersonEmailInputEmailType `json:"email_type,omitempty"`
+	IsPrimary *bool                      `json:"is_primary,omitempty"`
+	Position  *int                       `json:"position,omitempty"`
+}
+
+// PersonEmailInputEmailType defines model for PersonEmailInput.EmailType.
+type PersonEmailInputEmailType string
+
 // PersonGraph The local graph around one contact — nodes, the edges between them, and the route worth taking.
 type PersonGraph struct {
 	// DroppedCount How many nodes each group lost to its cap, stated rather than silently truncated. `account` is the true remainder. `direct` counts from a bounded fetch (100), so on a contact more than a hundred colleagues have corresponded with it understates — a shape far outside what this card is for, and making it exact would cost every ordinary read.
@@ -31039,13 +31069,45 @@ type UpdateActivityRequest struct {
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
-	IsDone     *bool      `json:"is_done,omitempty"`
-	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+	IsDone *bool `json:"is_done,omitempty"`
+
+	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+	// `not_valid_for_kind` fault on the field otherwise — the same refusal create
+	// gives, held against the kind the row already carries rather than one the
+	// patch names, because a patch cannot change a kind.
+	//
+	// Contracted on create since the field existed, and absent here, so the one
+	// moment a human actually knows the answer — the meeting is over — was the one
+	// moment the API could not be told.
+	//
+	// An omitted field is unchanged, like every other field on this patch. Sending
+	// an explicit `null` is also unchanged rather than a clear: this request maps
+	// onto the same coalescing update `due_at` and `remind_at` take, which cannot
+	// tell an absent field from a null one. Recording the wrong outcome is fixed by
+	// sending the right one.
+	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
+	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
 	// RemindAt Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Subject  *string    `json:"subject,omitempty"`
 }
+
+// UpdateActivityRequestMeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+// `not_valid_for_kind` fault on the field otherwise — the same refusal create
+// gives, held against the kind the row already carries rather than one the
+// patch names, because a patch cannot change a kind.
+//
+// Contracted on create since the field existed, and absent here, so the one
+// moment a human actually knows the answer — the meeting is over — was the one
+// moment the API could not be told.
+//
+// An omitted field is unchanged, like every other field on this patch. Sending
+// an explicit `null` is also unchanged rather than a clear: this request maps
+// onto the same coalescing update `due_at` and `remind_at` take, which cannot
+// tell an absent field from a null one. Recording the wrong outcome is fixed by
+// sending the right one.
+type UpdateActivityRequestMeetingStatus string
 
 // UpdateAttachmentMetadataRequest A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
 // null to clear, because clearing either is an edit a human makes deliberately.
@@ -31405,7 +31467,20 @@ type UpdateOrganizationRequestSizeBand string
 // UpdatePersonRequest Partial update. Omitted fields are unchanged.
 type UpdatePersonRequest struct {
 	// Address Structured postal address.
-	Address              *Address                `json:"address,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// Emails REPLACES the person's addresses with exactly this list, which is what a
+	// correction needs: a bounced address is fixed by sending the set that should
+	// stand, and an append-only field could never remove the one that is dead.
+	//
+	// Omitting the field leaves the addresses untouched, like every other field
+	// here. Sending an empty array removes them all, which is a real answer — a
+	// contact who no longer has a working address is a fact worth recording.
+	//
+	// `Person360.dead_addresses` already names which address bounced; until now the
+	// contract's own remedy for that was to visit the person page, because the write
+	// existed on create and nowhere else.
+	Emails               *[]PersonEmailInput     `json:"emails,omitempty"`
 	FirstName            *string                 `json:"first_name,omitempty"`
 	FullName             *string                 `json:"full_name,omitempty"`
 	LastName             *string                 `json:"last_name,omitempty"`
@@ -45548,6 +45623,14 @@ func (a *UpdatePersonRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["emails"]; found {
+		err = json.Unmarshal(raw, &a.Emails)
+		if err != nil {
+			return fmt.Errorf("error reading 'emails': %w", err)
+		}
+		delete(object, "emails")
+	}
+
 	if raw, found := object["first_name"]; found {
 		err = json.Unmarshal(raw, &a.FirstName)
 		if err != nil {
@@ -45619,6 +45702,13 @@ func (a UpdatePersonRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.Emails != nil {
+		object["emails"], err = json.Marshal(a.Emails)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'emails': %w", err)
 		}
 	}
 

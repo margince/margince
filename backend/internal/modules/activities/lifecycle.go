@@ -35,7 +35,12 @@ type UpdateActivityInput struct {
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	IsDone     *bool
-	IfVersion  *int64
+	// MeetingStatus is how the meeting went, and it is meaningful only on a
+	// meeting. The pairing is refused in the mapping against the kind the ROW
+	// carries — a patch cannot change a kind, so the stored one is the only
+	// honest thing to hold it against.
+	MeetingStatus *string
+	IfVersion     *int64
 }
 
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
@@ -72,6 +77,14 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		if err := renormalizeTranscriptPatch(current, &in); err != nil {
 			return err
 		}
+		// The kind the ROW carries, not one the patch names — a patch cannot
+		// change a kind. Without this a note could be given `held` and read back
+		// afterwards as a meeting-shaped fact about something that was not one,
+		// which is the pairing create already refuses; the database CHECK
+		// constrains the vocabulary and not this.
+		if in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
+			return &MeetingStatusKindError{Kind: string(current.Kind)}
+		}
 		if err := ensureAssigneeExists(ctx, tx, in.AssigneeID); err != nil {
 			return err
 		}
@@ -86,12 +99,14 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 			  remind_at = coalesce($6, remind_at),
 			  assignee_id = coalesce($7, assignee_id),
 			  is_done = coalesce($8, is_done),
+			  meeting_status = coalesce($9, meeting_status),
 			  done_at = CASE
 			    WHEN $8 IS TRUE AND NOT is_done THEN now()
 			    WHEN $8 IS FALSE THEN NULL
 			    ELSE done_at END
 			WHERE id = $1`,
-			id, in.Subject, in.Body, in.OccurredAt, in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone); err != nil {
+			id, in.Subject, in.Body, in.OccurredAt, in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone,
+			in.MeetingStatus); err != nil {
 			return err
 		}
 		// Read back BEFORE auditing: done_at is stamped by the statement above
@@ -442,6 +457,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEve
 	}
 	if in.IsDone != nil {
 		fields.IsDone = in.IsDone
+	}
+	if in.MeetingStatus != nil {
+		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
+		fields.MeetingStatus = &status
 	}
 	return fields
 }
