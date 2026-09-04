@@ -110,6 +110,8 @@ export const vi = {
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
+  "history.field.emails": "Địa chỉ email",
+  "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_org_key": "Công ty khớp",
   "history.field.company_name": "Tên công ty",
   "history.field.currency": "Tiền tệ",
