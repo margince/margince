@@ -62,6 +62,18 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sinc
 	if found {
 		return event, sourceDerived, nil
 	}
+	// And a MEETING, last of the three because it is the newest arm rather than
+	// the weakest — a meeting is stronger evidence than an inbound message. The
+	// order costs nothing: each arm answers about a different record, so at most
+	// one of them describes any given fact, and reaching this one means neither
+	// a human nor the mail timeline had already answered.
+	event, found, err = meetingQualifyingEvent(ctx, tx, personID, since)
+	if err != nil {
+		return QualifyingEvent{}, sourceNone, err
+	}
+	if found {
+		return event, sourceDerived, nil
+	}
 	return QualifyingEvent{}, sourceNone, nil
 }
 
@@ -192,3 +204,81 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
+
+// meetingQualifyingEvent derives the event from a meeting the subject was in.
+//
+// A meeting is stronger evidence than an inbound message, and the product could
+// not see one. An email can be unsolicited — anybody may write to us — while a
+// meeting means both sides put time in a calendar. So a partner we had invited,
+// and were meeting next week, was refused as somebody who "has never written to
+// you", and the invitation itself made it worse: the classifier read a machine
+// generated calendar mail as transactional and judged the person noise on it.
+//
+// ATTENDANCE, from the participant rows, not the counterparty. A meeting names
+// no counterparty at all — attendance is a LIST, so the calendar mapper leaves
+// the field unset — which is exactly why the mail-shaped derivation above could
+// never answer for one.
+//
+// THREE BOUNDS, and every one of them is what stops this being a way to write
+// your own permission slip. A qualifying event makes it LAWFUL to mail somebody,
+// and everything below is caller-supplied unless it is bounded.
+//
+// A CONNECTOR must have captured it. `POST /activities` takes kind, occurred_at
+// and links from the request body, and the log path stamps a participant row for
+// every linked person (activities/participantlog.go) — so any seat that can see
+// a contact could otherwise log a "meeting" naming them and mail them on the
+// strength of it. A connector-captured meeting came from a calendar the mailbox
+// owner actually holds. This is the same boundary capture's own noise sweep
+// draws, for the same reason.
+//
+// The meeting must not have been DECLINED or abandoned. meeting_status carries
+// `no_show` and `canceled`, and neither is a meeting that happened: an invitation
+// somebody declined is the opposite of evidence they welcome contact. NULL is
+// admitted — the calendar mappers record no acceptance state, so most captured
+// meetings carry none, and refusing those would refuse the whole feature.
+//
+// And it must not be dated beyond the horizon. A future meeting is the case this
+// arm exists for, but "future" has to mean the diary rather than the next
+// century: the derived row is stamped and later read back without revalidating
+// its source, so a meeting dated 2099 would authorize sending forever.
+//
+// No authorship test, unlike the inbound arm — that is a difference rather than
+// an omission. That arm needs role 'from' because a filing link says only that a
+// message belongs on somebody's record, and being copied on somebody else's mail
+// initiates nothing. Attendance carries no such ambiguity: every attendee of a
+// meeting a connector captured is a party to it.
+func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
+	var event QualifyingEvent
+	var activityID string
+	err := tx.QueryRow(ctx, `
+		SELECT a.id, a.occurred_at
+		FROM activity a
+		JOIN activity_participant p ON p.activity_id = a.id AND p.person_id = $1::uuid
+		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.captured_by LIKE 'connector:%'
+		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
+		  AND a.occurred_at >= $2
+		  AND a.occurred_at <= now() + $3::interval
+		ORDER BY a.occurred_at DESC
+		LIMIT 1`, personID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return QualifyingEvent{}, false, nil
+	}
+	if err != nil {
+		return QualifyingEvent{}, false, fmt.Errorf("read the qualifying meeting: %w", err)
+	}
+	event.Kind = KindMeeting
+	event.SourceEntityType = "activity"
+	event.SourceEntityID = activityID
+	return event, true, nil
+}
+
+// meetingHorizonInterval is how far into the diary a meeting still says a
+// relationship is live.
+//
+// A quarter, because that is the outer edge of a real booking — a demo, a
+// renewal review, a conference — and the derived row outlives its source: it is
+// stamped once and read back afterwards without revalidating the activity, so a
+// meeting dated far enough ahead would authorize sending indefinitely. The bound
+// is what keeps "a meeting in the diary" from meaning "a date somebody typed".
+const meetingHorizonInterval = "90 days"
