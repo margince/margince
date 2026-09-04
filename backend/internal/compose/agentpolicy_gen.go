@@ -329,6 +329,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/weekly-reviews/latest":                                      {Op: "getLatestWeeklyReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/weekly-reviews/team":                                        {Op: "getTeamWeeklyReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist":                                                   {Op: "getWorklist", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/worklist/exceptions":                                        {Op: "getTeamExceptions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/hidden":                                            {Op: "getHiddenBacklog", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/response":                                          {Op: "getResponseMetrics", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/team":                                              {Op: "getTeamBoard", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -11677,6 +11677,30 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TeamExceptionKind.
+const (
+	TeamExceptionRepeatedFailure  TeamExceptionKind = "repeated_failure"
+	TeamExceptionResponseBreached TeamExceptionKind = "response_breached"
+	TeamExceptionRevenueAtRisk    TeamExceptionKind = "revenue_at_risk"
+	TeamExceptionUnassigned       TeamExceptionKind = "unassigned"
+)
+
+// Valid indicates whether the value is a known member of the TeamExceptionKind enum.
+func (e TeamExceptionKind) Valid() bool {
+	switch e {
+	case TeamExceptionRepeatedFailure:
+		return true
+	case TeamExceptionResponseBreached:
+		return true
+	case TeamExceptionRevenueAtRisk:
+		return true
+	case TeamExceptionUnassigned:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamWeeklyRepFocusKind.
 const (
 	CommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
@@ -31476,6 +31500,102 @@ type TeamBoardMember struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// TeamException One condition on a lead's team that a person can act on, with the evidence that
+// raised it and the basis it was judged against.
+//
+// NOT A COUNT. The team board answers "who is carrying what" and routes a lead to a
+// person; this answers "what is going wrong", which is a different question and the
+// one a lead opens the page for. A board of three numbers per teammate cannot say
+// that one customer has been waiting past the target while another rep's queue is
+// merely long.
+//
+// EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
+// — the policy state that decided it, never a number invented for the reading — so a
+// lead disputing the row can see the rule rather than the verdict alone. A condition
+// with no stated basis is a claim the reader cannot check, and this surface exists to
+// be checked.
+type TeamException struct {
+	// Consequence What it costs if nobody acts, in the queue's own vocabulary.
+	Consequence string `json:"consequence"`
+
+	// Evidence One line of what raised it, where the producer has one. Absent rather than
+	// invented: a row that cannot say what it saw says nothing, and a lead reads the
+	// subject and the clock instead.
+	Evidence *string `json:"evidence,omitempty"`
+
+	// Kind Which condition this is. Four, and each is a thing a lead can DO something
+	// about: talk to the person, protect the revenue, give the work an owner, or fix
+	// what keeps failing.
+	//
+	// Capacity is deliberately absent. "This rep is overloaded" needs a configured
+	// capacity to be a fact rather than an opinion, and this installation has none —
+	// so the board's counts are offered as a reading and no exception claims it.
+	Kind TeamExceptionKind `json:"kind"`
+
+	// Owner Who this row answers to.
+	//
+	// RESPONSIBILITY, not visibility. The two are different facts and reading one
+	// for the other is how a rep's queue fills with a colleague's work: a notice
+	// addressed to somebody else may be unreadable, and a shared deal may be
+	// readable by a whole team while exactly one person owes the next move.
+	//
+	// Stated by the PRODUCER that raised the row, never inferred downstream. A
+	// reader who can see a row is not thereby its owner; a row surviving a `mine`
+	// filter is not evidence either, because several lanes take the scope as a
+	// query argument and answer it in SQL. Both of those inferences were available
+	// here and both are wrong in the same direction — they would make every row a
+	// reader can see look like a row a reader owes.
+	//
+	// `kind: unassigned` is a real answer and the honest one for work nobody has
+	// taken. It is what the `unassigned` scope surfaces, and a row that reached a
+	// rep's Mine queue while answering `unassigned` is a bug in the lane that
+	// produced it rather than a display choice here.
+	Owner WorklistOwner `json:"owner"`
+
+	// Since When the condition started — the moment the clock a lead is being asked about began running.
+	Since time.Time `json:"since"`
+
+	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
+	Subject AttentionSubject `json:"subject"`
+
+	// Threshold The basis this row was judged against, in words a lead can check: the policy
+	// state that decided it rather than a number chosen for this reading.
+	//
+	// A `response_breached` row names the lead-response policy's own state, which is
+	// the same vocabulary the rep's queue uses — so the manager and the rep are
+	// reading one rule rather than two that agree today.
+	Threshold string `json:"threshold"`
+}
+
+// TeamExceptionKind Which condition this is. Four, and each is a thing a lead can DO something
+// about: talk to the person, protect the revenue, give the work an owner, or fix
+// what keeps failing.
+//
+// Capacity is deliberately absent. "This rep is overloaded" needs a configured
+// capacity to be a fact rather than an opinion, and this installation has none —
+// so the board's counts are offered as a reading and no exception claims it.
+type TeamExceptionKind string
+
+// TeamExceptions What is going wrong on this lead's team, finite and caller-scoped.
+//
+// FINITE because a page a lead cannot finish is a page they stop opening. The rows
+// are bounded and `truncated` says when the bound was reached, the same admission
+// the team board makes about its own counts.
+//
+// Read under the CALLER's visibility like every figure on the manager surface, and
+// gated to the lead tier: a rep asking gets 403 rather than an empty list, so nobody
+// learns whether exceptions exist by the shape of a refusal.
+type TeamExceptions struct {
+	// AsOf The instant every condition below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Exceptions The conditions, worst first. Empty is the honest common case and means the team is clear of what this surface can see.
+	Exceptions []TeamException `json:"exceptions"`
+
+	// Truncated True when more conditions exist than were read. The list is a floor, not a total, and a lead must not read a bounded page as a clear team.
+	Truncated bool `json:"truncated"`
+}
+
 // TeamListResponse defines model for TeamListResponse.
 type TeamListResponse struct {
 	Data []Team   `json:"data"`
@@ -48937,6 +49057,9 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// What is going wrong on this lead's team, and what it was judged against.
+	// (GET /worklist/exceptions)
+	GetTeamExceptions(w http.ResponseWriter, r *http.Request)
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
@@ -52447,6 +52570,12 @@ func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Reques
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What is going wrong on this lead's team, and what it was judged against.
+// (GET /worklist/exceptions)
+func (_ Unimplemented) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77483,6 +77612,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetTeamExceptions operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamExceptions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHiddenBacklog operation middleware
 func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 
@@ -79498,6 +79649,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/exceptions", wrapper.GetTeamExceptions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)

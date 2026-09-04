@@ -2351,6 +2351,10 @@ func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 	httperr.NotImplemented(w, r, "GetWorklist")
 }
 
+func (stubs) GetTeamExceptions(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetTeamExceptions")
+}
+
 func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
 }
