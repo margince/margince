@@ -36,7 +36,7 @@ func WithProvider(reg *integrations.Registry, vault keyvault.Vault, inserter *jo
 			panic("compose: integrations store construction failed with live dependencies: " + err.Error())
 		}
 		store = bindProviderDomain(store).WithSubmitEnqueue(providerSubmitEnqueue(inserter))
-		s.integrationsHandlers = integrationsHandlers{store: store, runs: store}
+		s.integrationsHandlers = integrationsHandlers{store: store, runs: store, pool: pool}
 		// The person page reads the provider's category vocabulary to say
 		// what a run did NOT ask for. Bound here rather than at construction
 		// because the registry arrives with this option.
