@@ -40,6 +40,17 @@
   gap: var(--space-1) var(--space-4);
 }
 
+/* A dot and the fact it introduces, as ONE item of the line: the pair wraps
+   together or not at all, so no row ever ends on a separator. The gap here is
+   the dot-to-fact interval; the line's own column gap is what sits between the
+   previous fact and this dot. */
+.identity-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .identity-sep {
   color: var(--textMeta);
 }

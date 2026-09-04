@@ -58,22 +58,31 @@ export function IdentityLine({
           : "identity-line identity-line-spaced"
       }
     >
-      {facts.map((fact, i) => (
-        // The index is the identity: these are positional facts about one
-        // record, never reordered, and two of them can carry the same text
-        // (a company that sold to itself through a partner).
-        // biome-ignore lint/suspicious/noArrayIndexKey: positional facts, never reordered
-        <Fragment key={i}>
-          {/* The dot belongs to the fact that FOLLOWS it, so a line that
-              wraps never leaves a separator stranded at the end of a row. */}
-          {dotted && i > 0 && (
+      {facts.map((fact, i) =>
+        dotted && i > 0 ? (
+          // The dot belongs to the fact that FOLLOWS it, and travels with it:
+          // the two go in ONE flex item, so a wrapped row opens with the dot
+          // and its fact rather than the row above ENDING on a dot with
+          // nothing after it. A separator alone at the end of a line reads as
+          // text that got cut off; one leading its fact reads as the
+          // continuation it is. A Fragment will not do here — it draws no
+          // element, so the dot and the fact stay two items of the line's own
+          // flex and wrap apart, which is what this did before.
+          // The index is the identity: these are positional facts about one
+          // record, never reordered, and two of them can carry the same text
+          // (a company that sold to itself through a partner).
+          // biome-ignore lint/suspicious/noArrayIndexKey: positional facts, never reordered
+          <span className="identity-pair" key={i}>
             <span className="identity-sep" aria-hidden="true">
               ·
             </span>
-          )}
-          {fact}
-        </Fragment>
-      ))}
+            {fact}
+          </span>
+        ) : (
+          // biome-ignore lint/suspicious/noArrayIndexKey: positional facts, never reordered
+          <Fragment key={i}>{fact}</Fragment>
+        ),
+      )}
     </div>
   );
 }
