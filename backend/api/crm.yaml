@@ -33431,7 +33431,7 @@ components:
          cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, summarize, transcript, transcript_propose, voice_build,
-         corpus_ask, weekly_review, propose_roles]
+         corpus_ask, weekly_review, propose_roles, owed_verdict]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
