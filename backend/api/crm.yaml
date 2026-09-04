@@ -29940,7 +29940,7 @@ components:
           description: A recorded communication basis this send relies on.
     SendEmailRequest:
       type: object
-      required: [subject, body, to, consent_purpose]
+      required: [subject, body, to]
       properties:
         subject: { type: string }
         body: { type: string, description: The (possibly edited) final body that is sent. }
@@ -30038,9 +30038,14 @@ components:
         consent_purpose:
           type: string
           description: |
-            The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-            The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-            `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+            DEPRECATED, and no longer required. The engine resolves what a message is from
+            the record — the thread it answers, the deal or invoice it names, the evidence
+            supplied in `evidence` — and a purpose key is not that. Send
+            `communication_context` instead.
+
+            A key that is still supplied is recorded as the caller's claim and is consulted
+            only where the record supports no category on its own. An unknown or archived
+            key authorizes nothing.
         scheduled_at:
           type: [string, 'null']
           format: date-time
@@ -30166,7 +30171,7 @@ components:
 
     SendAccountEmailRequest:
       type: object
-      required: [subject, body, to, consent_purpose, links]
+      required: [subject, body, to, links]
       description: |
         One account-started send. It is SendEmailRequest plus the `links` an anchor would
         otherwise have supplied — the records this new conversation belongs to.
@@ -30270,9 +30275,14 @@ components:
         consent_purpose:
           type: string
           description: |
-            The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-            suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-            `person_consent` for THIS purpose.
+            DEPRECATED, and no longer required. The engine resolves what a message is from
+            the record — the thread it answers, the deal or invoice it names, the evidence
+            supplied in `evidence` — and a purpose key is not that. Send
+            `communication_context` instead.
+
+            A key that is still supplied is recorded as the caller's claim and is consulted
+            only where the record supports no category on its own. An unknown or archived
+            key authorizes nothing.
         scheduled_at:
           type: [string, 'null']
           format: date-time
@@ -30313,7 +30323,7 @@ components:
 
     SendMessageRequest:
       type: object
-      required: [body, consent_purpose]
+      required: [body]
       description: |
         One channel reply. It carries no subject and no addressee list, and that absence is the
         shape of the transport rather than an omission: a messaging channel has no subject line
@@ -30370,9 +30380,14 @@ components:
         consent_purpose:
           type: string
           description: |
-            The consent purpose this send falls under (e.g. `transactional`). The send is
-            suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-            `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+            DEPRECATED, and no longer required. The engine resolves what a message is from
+            the record — the thread it answers, the deal or invoice it names, the evidence
+            supplied in `evidence` — and a purpose key is not that. Send
+            `communication_context` instead.
+
+            A key that is still supplied is recorded as the caller's claim and is consulted
+            only where the record supports no category on its own. An unknown or archived
+            key authorizes nothing.
         attachment_ids:
           type: array
           maxItems: 10
