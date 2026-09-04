@@ -97,7 +97,7 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 			Supported: true,
 		}, nil
 	}
-	return resolveFromClaimAndPurpose(ctx, tx, req)
+	return g.resolveFromClaimAndPurpose(ctx, tx, req, subject)
 }
 
 // resolveFromClaimAndPurpose is the fallback when no thread and no live deal
@@ -108,17 +108,26 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 // rep who says "this is an invoice" and has no invoice should be told so; being
 // silently re-labelled as marketing and refused for want of consent would send
 // them looking in entirely the wrong place.
-func resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (resolution, error) {
+func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Context != "" {
-		return resolution{
-			Category: req.Context,
-			// Unsupported until a validator says otherwise. The validators land
-			// beside this and each one names the evidence its category needs;
-			// until then a claim with no thread and no deal behind it is
-			// exactly what a human should look at.
-			Supported: false,
-			Reason:    commsauthz.ReasonNoEvidence,
-		}, nil
+		if !req.Context.Valid() {
+			// A category outside the closed vocabulary. The send doors already
+			// refuse one (activities/sendcontext.go), so reaching here means a
+			// caller got past them or a stored claim predates a vocabulary
+			// change — either way the engine knows nothing about it and says
+			// so, rather than treating an unreadable claim as an ordinary
+			// unevidenced one.
+			return resolution{
+				Category:  commsauthz.CategoryMarketing,
+				Supported: false,
+				Reason:    commsauthz.ReasonUnknownPurpose,
+			}, nil
+		}
+		w, err := g.windowsFor(ctx, tx)
+		if err != nil {
+			return resolution{}, err
+		}
+		return g.validate(ctx, tx, req, subject, req.Context, w)
 	}
 	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
 	if err != nil {
@@ -186,7 +195,7 @@ func resolutionForClass(class Class) resolution {
 // longer supports — a thread can be archived and a deal can close while a
 // delivery waits in the queue — and it would carry one recipient's answer onto
 // another's.
-func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]commsauthz.Category, error) {
+func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category
 		  FROM communication_decision
@@ -200,16 +209,18 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 	}
 	defer rows.Close()
 
-	claims := map[string]commsauthz.Category{}
+	claims := map[string]stagedClaim{}
 	for rows.Next() {
 		var address string
 		var claimed *string
 		if err := rows.Scan(&address, &claimed); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
+		var out stagedClaim
 		if claimed != nil {
-			claims[address] = commsauthz.Category(*claimed)
+			out.category = commsauthz.Category(*claimed)
 		}
+		claims[address] = out
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
@@ -223,12 +234,23 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 // which is exactly what the engine had before resolution existed. That is the
 // right answer for a delivery staged before this code shipped, and it refuses
 // nothing that used to send.
-func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]commsauthz.Category) commsauthz.Request {
+func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim) commsauthz.Request {
+	staged := claims[decisionRecipientKey(r)]
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
-		Context:          claims[decisionRecipientKey(r)],
+		Context:          staged.category,
 		LegacyPurposeKey: req.PurposeKey,
 		Subject:          req.Subject,
 		Body:             req.Body,
 	}
+}
+
+// stagedClaim is what one recipient's staging decision said.
+//
+// The category only: communication_decision records no anchor, so the transmit
+// phase cannot recover which message this one answers. That is why the basis is
+// written at STAGING, where the anchor is still in hand — see recordBasis's
+// caller.
+type stagedClaim struct {
+	category commsauthz.Category
 }

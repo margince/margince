@@ -25,6 +25,7 @@ function backlog(over: Partial<HiddenBacklog> = {}): HiddenBacklog {
     not_sales: 0,
     past_horizon: 0,
     unlinked: 0,
+    colleagues: 0,
     truncated: false,
     clear: true,
     ...over,

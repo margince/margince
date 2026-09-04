@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -25,9 +26,12 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -748,4 +752,137 @@ func countOutboxFor(t *testing.T, e *integration.Env, id ids.PersonID) int {
 		t.Fatalf("counting outbox rows: %v", err)
 	}
 	return n
+}
+
+// TestAnOwnerPublishesTheirOwnCapturedContact is the door out of capture
+// privacy for a contact no classifier will ever settle.
+//
+// The ceiling refuses to ask and the correspondence goes quiet, or the answer
+// is `advisor` and the owner disagrees, or they simply know who this is. Until
+// this, the only route out of `owner` was a verdict, so those contacts had none.
+func TestAnOwnerPublishesTheirOwnCapturedContact(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "eigen@partner.example"
+
+	seedAttestedOutbound(t, e, "own-out-1", sender, "own-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "own-in-1", sender, "own-t1")
+	personID := personIDFor(t, e, sender)
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("a fresh capture is %q, want owner", got)
+	}
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	if err := store.PromoteOwnCapturedPerson(seatCtx(e, e.Rep1), personID); err != nil {
+		t.Fatalf("the owner publishing their own contact: %v", err)
+	}
+	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+		t.Fatalf("after the owner published it the contact is %q, want workspace", got)
+	}
+	// The trail, on the same terms as a verdict's promotion.
+	if n := countVisibilityAudits(t, e, personID); n != 1 {
+		t.Fatalf("publishing wrote %d audit row(s) naming visibility, want 1", n)
+	}
+}
+
+// TestOnlyTheOwnerPublishesACapturedContact is the security case.
+//
+// Capture privacy is the importing user's, and seniority does not override it:
+// an admin reading a colleague's unpromoted captured contacts is precisely the
+// disclosure the boundary exists to prevent. A promotion that matched on the
+// address rather than on the owner would have published a colleague's contact
+// to anybody who could reach this door.
+func TestOnlyTheOwnerPublishesACapturedContact(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "fremd@partner.example"
+
+	seedAttestedOutbound(t, e, "other-out-1", sender, "other-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "other-in-1", sender, "other-t1")
+	personID := personIDFor(t, e, sender)
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	for _, seat := range []struct {
+		name string
+		user ids.UUID
+	}{{"a colleague", e.Rep2}, {"an admin", e.AdminUser}} {
+		err := store.PromoteOwnCapturedPerson(seatCtx(e, seat.user), personID)
+		if !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("%s publishing somebody else's capture-private contact: err = %v, want ErrNotFound — "+
+				"a 403 would confirm the contact exists, which is what the boundary hides", seat.name, err)
+		}
+	}
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("the contact is %q after two refused attempts, want owner", got)
+	}
+}
+
+// seatCtx is one seat acting as themselves, which is the only principal the
+// capture-privacy door accepts.
+func seatCtx(e *integration.Env, user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(),
+		UserID: user, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// TestARecordSaysWhoItIsFor puts capture privacy on the wire.
+//
+// A client could see that it may not WRITE a row and not that the row it is
+// reading is private to the person reading it. Without the field a page cannot
+// tell "private to you" from "shared with everybody", which is the question the
+// owner of a captured contact is actually asking.
+//
+// It discloses nothing: a caller is only ever sent a row they may already read.
+func TestARecordSaysWhoItIsFor(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "sicht@partner.example"
+
+	seedAttestedOutbound(t, e, "vis-out-1", sender, "vis-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "vis-in-1", sender, "vis-t1")
+	personID := personIDFor(t, e, sender)
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	owner := seatCtx(e, e.Rep1)
+
+	got, err := store.GetPerson(owner, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("the owner reading their own captured contact: %v", err)
+	}
+	if got.Visibility == nil || *got.Visibility != crmcontracts.PersonVisibilityOwner {
+		t.Fatalf("a fresh capture reads %v, want owner — a page cannot say \"private to you\" "+
+			"about a field the server never sends", got.Visibility)
+	}
+
+	// And it follows the record when the owner publishes it.
+	if err := store.PromoteOwnCapturedPerson(owner, personID); err != nil {
+		t.Fatalf("publishing: %v", err)
+	}
+	after, err := store.GetPerson(owner, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading it back: %v", err)
+	}
+	if after.Visibility == nil || *after.Visibility != crmcontracts.PersonVisibilityWorkspace {
+		t.Fatalf("after publishing it reads %v, want workspace", after.Visibility)
+	}
+
+	// The list carries it too: the two paths share one scanner, and a field on
+	// only one of them is how a page shows a badge that vanishes on refresh.
+	listed, _, err := store.ListPeople(owner, people.ListPeopleInput{})
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	for _, p := range listed {
+		if ids.UUID(p.Id) == personID.UUID {
+			if p.Visibility == nil || *p.Visibility != crmcontracts.PersonVisibilityWorkspace {
+				t.Fatalf("the listed row reads %v, want workspace", p.Visibility)
+			}
+			return
+		}
+	}
+	t.Fatal("the published contact is missing from the owner's own list")
 }

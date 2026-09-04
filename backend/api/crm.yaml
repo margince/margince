@@ -12814,6 +12814,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [People]
+      operationId: publishCapturedPerson
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Share a contact your mailbox created with the rest of the organization.
+      description: |
+        A contact a connector created from a message nothing had judged yet is yours alone until
+        something judges it. Usually that is the sender classifier. This is the door for when it
+        never will: the ceiling on open questions refused to ask and the correspondence went quiet,
+        or the answer was `advisor` and you disagree, or you simply know who this is.
+
+        The OWNER is taken from your session, never from the request. That is what ties the
+        authority to the row: naming somebody else's capture-private contact answers 404, the same
+        as a contact that does not exist, because existence is what capture privacy hides. It is
+        also why an admin cannot do this on your behalf — the boundary is the importing user's, and
+        a seniority override would be the disclosure it exists to prevent.
+
+        The contact's own mail and meetings follow it, so a colleague opening the record finds the
+        history rather than a name nobody has ever spoken to. Individual messages keep their own
+        audience: publishing the CONTACT is not publishing the correspondence.
+
+        One direction only. A contact the organization can see is not narrowed back by this door or
+        any other, because a colleague may already have written to them on the strength of seeing
+        them.
+      responses:
+        '204': { description: The contact is the organization's. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /people/{id}/consent/confirm-request:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23315,6 +23349,20 @@ components:
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
         owner_id: { type: [string, 'null'], format: uuid }
+        visibility:
+          type: string
+          enum: [workspace, owner]
+          readOnly: true
+          description: >-
+            Who this record is for. `workspace` is every seat that holds the read grant.
+            `owner` is capture privacy: a connector made this record from a message nothing
+            had judged yet, and it belongs to the mailbox owner alone until something does —
+            not to their team, their manager, or an admin.
+            You are only ever sent a row you may already read, so this discloses nothing new;
+            it says WHY you can see it, which is what lets a page tell "private to you" from
+            "shared with everybody" instead of leaving the owner to guess. An `owner` row
+            reaches the workspace through a verdict or through the owner's own
+            `POST /people/{id}/publish`, and never travels back.
         writable:
           type: boolean
           readOnly: true
@@ -23626,6 +23674,20 @@ components:
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
+        visibility:
+          type: string
+          enum: [workspace, owner]
+          readOnly: true
+          description: >-
+            Who this record is for. `workspace` is every seat that holds the read grant.
+            `owner` is capture privacy: a connector made this record from a message nothing
+            had judged yet, and it belongs to the mailbox owner alone until something does —
+            not to their team, their manager, or an admin.
+            You are only ever sent a row you may already read, so this discloses nothing new;
+            it says WHY you can see it, which is what lets a page tell "private to you" from
+            "shared with everybody" instead of leaving the owner to guess. An `owner` row
+            reaches the workspace through a sender verdict, and never travels back. There is no
+            owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
         writable:
           type: boolean
           readOnly: true
@@ -38131,7 +38193,14 @@ components:
         How much waiting work each hiding rule is keeping off one reader's queue, at one
         instant. Every count is of THREADS, matching what the queue counts: a customer who
         wrote three times is waiting once.
-      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, truncated, clear]
+
+        THE FIGURES DO NOT ADD UP, and that is deliberate. Each is the difference made by
+        relaxing ONE rule with the others still in force, because a reader needs to know
+        which rule to look at rather than a total they cannot act on. A thread held back
+        by two rules therefore appears in NEITHER figure: relaxing either one alone still
+        leaves the other hiding it. Summing these to estimate the hidden total
+        under-reports it.
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, truncated, clear]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
         shown:
@@ -38195,6 +38264,18 @@ components:
             is right — a rep's dentist is not a customer — and it is also where a real
             customer lands when capture failed to link their thread. Its own figure for
             that reason rather than folded into a total.
+        colleagues:
+          type: integer
+          minimum: 0
+          description: |
+            Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+            watched because the rule is only as good as the domain list behind it: a
+            domain entered by mistake suppresses a real customer's correspondence for
+            everybody, and this is the figure that would show it.
+
+            The domains are the vouched-for ones — those the company claims and those an
+            administrator confirmed — never every domain a connected mailbox happened to
+            see. A contractor's genuine account at a customer must not read as internal.
         truncated:
           type: boolean
           description: |
@@ -38438,7 +38519,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

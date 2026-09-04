@@ -57,6 +57,12 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 			Subject:    "Can you confirm the retrofit price?",
 			Since:      rankInstant.Add(-72 * time.Hour),
 			PersonID:   waitPerson,
+			// A thread the workspace has written on before. Without it the row
+			// is an UNPROVEN wait, which classifyWaiting demotes to routine on
+			// purpose — a correct answer to a different question, and one that
+			// would leave this test asserting the cross-source order of rows
+			// that no longer span the levels it is about.
+			Engaged: true,
 		}},
 		crmcontracts.Attention{
 			AsOf:        rankInstant,
@@ -90,6 +96,10 @@ func TestSystemNewsNeverLeadsACustomerWaiting(t *testing.T) {
 			Subject:    "Still waiting on that quote",
 			Since:      rankInstant.Add(-2 * time.Hour),
 			PersonID:   waitPerson,
+			// See the sibling above: an unproven wait is routine by design, and
+			// the claim under test is that hygiene never outranks a customer we
+			// are actually in conversation with.
+			Engaged: true,
 		}},
 		crmcontracts.Attention{
 			AsOf:             rankInstant,

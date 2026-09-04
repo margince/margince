@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 11 |
 | Tool catalog | 199.5 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 52130 |
+| Approx. wire tokens | 52136 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -2507,7 +2507,10 @@ Render a report whose every figure comes from a saved analytics run. The documen
     "data": {
       "properties": {
         "blocks": {
-          "type": "object"
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
         }
       },
       "required": [
