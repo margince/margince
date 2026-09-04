@@ -360,11 +360,14 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// without this it is a row the filters cannot place: a named owner's
 		// queue dropped every one of them.
 		owner: waiting.OwnerID,
-		// The same fact for the CLIENT, which needs the difference between "this
-		// customer is nobody's" and "no lane answered" that the id above cannot
-		// carry. A zero owner here is a real unowned customer, which is what the
-		// unassigned scope surfaces.
-		ownerRef: ownerFrom(waiting.OwnerID),
+		// The same fact for the CLIENT — but NOT through ownerFrom, because a
+		// zero here does not mean what a zero means to the task and lead lanes.
+		// This lane qualifies a row through an ungated lookup and reads its
+		// owner through a gated one, so a customer whose owning record the
+		// reader may not open arrives with no owner id at all. Reporting that
+		// as `unassigned` would turn a withheld fact into a claim that nobody
+		// owes the reply, and the reader has no way to tell the two apart.
+		ownerRef: waitingOwner(waiting.OwnerID),
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.
@@ -446,5 +449,11 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// saying "unassigned" in its reasons while naming an owner beside them
 		// is a row a reader cannot make sense of.
 		ownerRef: ownerFromAssignee(item.AssigneeId),
+		// And the SAME id where the scope filters read it. Without this a task
+		// answers nobody to answersTo, so keepTeams keeps it as unowned work —
+		// which is the hole its own comment describes for link-less tasks, and
+		// which now also puts an outside-team colleague's user id on the wire
+		// through the owner field. One assignee, read by both.
+		owner: assigneeID(item.AssigneeId),
 	}
 }

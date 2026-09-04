@@ -161,7 +161,9 @@ func (s *Service) Worklist(
 	// And the name beside each owner id, over the same cut page and for the same
 	// reason: a label is drawn and never ranked, so resolving one for a row this
 	// caller will not receive spends a read on nothing.
-	reader.nameTheOwners(ctx, out.Queue)
+	if err := reader.nameTheOwners(ctx, out.Queue); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	return out, nil
 }
 

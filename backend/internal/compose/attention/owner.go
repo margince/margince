@@ -19,6 +19,7 @@ package attention
 
 import (
 	"context"
+	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -51,6 +52,16 @@ const (
 	// classification. A real answer — the lane knows WHERE the answer comes
 	// from — rather than the silence the census refuses.
 	ownerFromTheDeal
+	// ownerUnreadable: this lane HAS an owner and could not read it.
+	//
+	// A real answer, and a different one from every kind above. The waiting
+	// lane qualifies a row through an ungated lookup and reads its owner
+	// through a visibility-gated one, so a customer whose owning record the
+	// reader may not open arrives here owner-less while somebody plainly owes
+	// the reply. Saying `unassigned` would be a claim the workspace never made;
+	// saying nothing at all would be indistinguishable from a lane that was
+	// never wired, which is exactly what the census exists to catch.
+	ownerUnreadable
 )
 
 // ownerRef is the producer's answer, before the reader is known.
@@ -115,18 +126,32 @@ func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 		}
 	case ownerNobody:
 		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerUnassigned}
-	case ownerFromTheDeal:
-		// The facts pass has run by now, so the deal carries its owner. A deal
-		// the caller may not read arrives without figures — the same refusal
-		// shape the rest of the response uses — and a row whose owner could not
-		// be read says nothing rather than claiming nobody owns it.
-		if row.item.Deal != nil && row.item.Deal.OwnerId != nil {
-			return &crmcontracts.WorklistOwner{
-				Kind: crmcontracts.WorklistOwnerUser,
-				Id:   row.item.Deal.OwnerId,
-			}
-		}
+	case ownerUnreadable:
+		// Withheld, and the contract's own answer for a fact this caller may
+		// not resolve: the field is absent. A client draws the row without an
+		// owner rather than being told nobody owes it.
 		return nil
+	case ownerFromTheDeal:
+		// The facts pass has run by now. THREE states, and conflating the last
+		// two is what this spells out: the deal resolved and names an owner;
+		// the deal resolved and names none, which is a real unassigned deal;
+		// and the deal did not resolve at all, because the caller may not read
+		// it — the same refusal shape the rest of the response uses, where the
+		// honest answer is to say nothing rather than to report a withheld
+		// owner as an absent one.
+		//
+		// `Deal` is the discriminator: applyDealFigures attaches it whenever
+		// the figures came back, and leaves it nil when they did not.
+		if row.item.Deal == nil {
+			return nil
+		}
+		if row.item.Deal.OwnerId == nil {
+			return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerUnassigned}
+		}
+		return &crmcontracts.WorklistOwner{
+			Kind: crmcontracts.WorklistOwnerUser,
+			Id:   row.item.Deal.OwnerId,
+		}
 	case ownerTheReader:
 		// No human behind the call is not "unassigned": an agent reading the
 		// queue has no personal lane, and saying nobody owns these rows would
@@ -210,17 +235,21 @@ func ownerFromAssignee(assignee *openapi_types.UUID) ownerRef {
 // common case for this — a caller on no team has no roster — and a row that
 // says "you" by carrying the reader's own id needs no name to be legible.
 //
-// An UNBOUND seam names nobody, and an error is not fatal here: an owner id
-// with no name still tells a client who answers for the row, while failing the
-// whole page over a display name would take the queue away from a reader whose
-// work is on it.
-func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.WorklistItem) {
+// An UNBOUND seam names nobody, which is the same absence.
+//
+// A FAILURE travels. The contract says an absent label means the caller may not
+// resolve that name, so swallowing a database error here would publish a
+// refusal the workspace never made — and a reader comparing two pages would see
+// names appear and disappear with nothing to explain it. The row scope has
+// already decided what this caller may see; a roster that will not answer is a
+// fault, not a policy.
+func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.WorklistItem) error {
 	if s.teammates == nil || !anyOwnerNeedsAName(queue) {
-		return
+		return nil
 	}
 	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("attention: naming the owners on the queue: %w", err)
 	}
 	names := make(map[ids.UUID]string, len(roster))
 	for _, member := range roster {
@@ -235,6 +264,7 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 			owner.Label = &name
 		}
 	}
+	return nil
 }
 
 // anyOwnerNeedsAName reports whether the roster read is worth making.
@@ -248,4 +278,35 @@ func anyOwnerNeedsAName(queue []crmcontracts.WorklistItem) bool {
 		}
 	}
 	return false
+}
+
+// assigneeID is the assignee as the SCOPE filters read it.
+//
+// The same value ownerFromAssignee turns into the wire's answer, in the shape
+// answersTo wants: a zero id where nobody holds the row. Both readings come off
+// this one field so a task cannot be unowned to the filters and owned to the
+// client — which is how an outside-team assignee reached both the page and the
+// wire while `keepTeams` counted the row as nobody's.
+func assigneeID(assignee *openapi_types.UUID) ids.UUID {
+	if assignee == nil {
+		return ids.UUID{}
+	}
+	return ids.UUID(*assignee)
+}
+
+// waitingOwner is the waiting lane's answer, where a zero id is ambiguous.
+//
+// Every other owner-column lane can read a zero as "nobody has taken it". This
+// one cannot: its eligibility is qualified through an ungated lookup and its
+// owner through a visibility-gated one, so a row whose owning record the reader
+// may not open reaches here indistinguishable from an unowned customer.
+//
+// It says nothing in that case. A withheld owner reported as `unassigned` is a
+// claim the workspace never made — somebody does owe that reply — and the
+// reader has nothing on the row to tell them the difference.
+func waitingOwner(owner ids.UUID) ownerRef {
+	if owner.IsZero() {
+		return ownerRef{kind: ownerUnreadable}
+	}
+	return ownedBy(owner)
 }

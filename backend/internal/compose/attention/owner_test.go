@@ -4,6 +4,7 @@
 package attention
 
 import (
+	"fmt"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -36,6 +37,16 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	rows = append(rows,
 		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant),
 		classifyLead(OwedLead{}, rankInstant))
+	// And the FOLD, which mints rows of its own after everything above has run.
+	// A census that stopped at the classifiers never met the one producer that
+	// synthesises a row rather than classifying one, so a batch reached readers
+	// with nothing said about who owned it and this test reported PASS.
+	folded := foldRoutineDecisions(aPileOfAlikeDecisions())
+	if !holdsABatch(folded) {
+		t.Fatal("the fold fixture produced no batch row, so this census still does not " +
+			"reach the one producer that synthesises rows")
+	}
+	rows = append(rows, folded...)
 	if len(rows) == 0 {
 		t.Fatal("the fixture produced no rows, so this census would pass over nothing")
 	}
@@ -240,5 +251,103 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 				"reader carrying a colleague's work, and this would call it theirs",
 				row.item.Source)
 		}
+	}
+}
+
+// aPileOfAlikeDecisions is enough alike routine decisions to fold, so the
+// census meets a real batch row rather than a hand-built one.
+func aPileOfAlikeDecisions() []ranked {
+	rows := make([]ranked, 0, batchFloor+1)
+	for i := 0; i <= batchFloor; i++ {
+		rows = append(rows, classifyDecision(
+			item(fmt.Sprintf("pair-%d", i), "dedupe_candidate"), rankInstant))
+	}
+	return rows
+}
+
+// holdsABatch reports whether the fold actually folded. Without asking, the
+// census passes over a fixture that produced ordinary rows and never met the
+// producer it was extended to reach.
+func holdsABatch(rows []ranked) bool {
+	for _, row := range rows {
+		if row.item.Batch != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// TestATeamPageDropsAnOutsideTeamTask closes the hole publishing the owner
+// opened.
+//
+// keepTeams judges a row through answersTo, which reads `ranked.owner`. The
+// task lane never set it, so a task answered nobody and the filter kept it as
+// unowned work — the gap its own comment describes for link-less tasks, which
+// auth.ActivityDiscoverClause makes discoverable installation-wide. Putting the
+// assignee on the wire made that worse: the colleague's user id travelled with
+// the row.
+//
+// The two readings come off one field now, so a task cannot be unowned to the
+// filter and owned to the client.
+func TestATeamPageDropsAnOutsideTeamTask(t *testing.T) {
+	t.Parallel()
+	outsider := ids.MustParse("01a05500-0000-7000-8000-00000000d15e")
+	row := classifyTask(taskAssignedTo(outsider), rankInstant)
+
+	named, ok := answersTo(row)
+
+	if !ok {
+		t.Fatal("a task with an assignee answers to nobody, so keepTeams keeps it as unowned " +
+			"work and publishes an outside-team user id with it")
+	}
+	if named != outsider {
+		t.Errorf("the task answers to %v, want its assignee %v", named, outsider)
+	}
+	// And an unheld task still answers nobody, which is what keeps genuinely
+	// unowned work on a team page rather than hiding it.
+	if _, held := answersTo(classifyTask(item("nobody", "task"), rankInstant)); held {
+		t.Error("a task nobody has taken answers to somebody, so unowned work would " +
+			"disappear from the only wider scope most readers hold")
+	}
+}
+
+// taskAssignedTo is a task one named person holds.
+func taskAssignedTo(assignee ids.UUID) crmcontracts.AttentionItem {
+	at := item("assigned", "task")
+	held := openapi_types.UUID(assignee)
+	at.AssigneeId = &held
+	return at
+}
+
+// TestAWithheldOwnerIsNotAnUnassignedOne holds the three states apart.
+//
+// The waiting lane can produce a row whose owner it could not read: its
+// eligibility is qualified through an ungated lookup while its owner comes off
+// a visibility-gated join, so a customer on a record this reader may not open
+// arrives with no owner id. Reporting that as `unassigned` is a claim the
+// workspace never made — somebody does owe the reply — and the reader has
+// nothing on the row to tell them otherwise.
+//
+// It must also stay distinguishable from a lane that never answered, or the
+// census could not tell the two apart either.
+func TestAWithheldOwnerIsNotAnUnassignedOne(t *testing.T) {
+	t.Parallel()
+	withheld := classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant)
+
+	if withheld.ownerRef.kind == ownerUnstated {
+		t.Fatal("a waiting row with no readable owner states nothing, which the census " +
+			"cannot tell from a lane nobody wired")
+	}
+	if owner := ownerOnTheWire(withheld, ids.UUID{}); owner != nil {
+		t.Errorf("a withheld owner reached the wire as %+v, want the field absent — "+
+			"`unassigned` would say nobody owes a reply somebody does owe", *owner)
+	}
+	// And a readable one still names its person, so the case above is about
+	// the reading rather than about the lane.
+	owed := ids.MustParse("01a05500-0000-7000-8000-0000000000ed")
+	named := classifyWaiting(WaitingCustomer{Since: rankInstant, OwnerID: owed}, rankInstant)
+	owner := ownerOnTheWire(named, ids.UUID{})
+	if owner == nil || owner.Id == nil || ids.UUID(*owner.Id) != owed {
+		t.Errorf("a waiting row whose owner was read answered %v, want %v", owner, owed)
 	}
 }
