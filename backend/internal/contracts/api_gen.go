@@ -33029,6 +33029,20 @@ type WorklistMove struct {
 // client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
 
+// WorklistPinRequest defines model for WorklistPinRequest.
+type WorklistPinRequest struct {
+	// RowId The row's own id within that lane. A string rather than a uuid: most rows
+	// carry a record id, but a folded group carries a synthetic key its lane mints,
+	// and a uuid-only field would leave those rows unpinnable for a reason no reader
+	// could see.
+	RowId string `json:"row_id"`
+
+	// Source The lane the row came from. Paired with `row_id` because that pair is what
+	// identifies a row: the lanes mint ids independently, so an id alone can name a
+	// row in a lane the caller was not looking at.
+	Source string `json:"source"`
+}
+
 // WorklistReach What one source contributed, in numbers that say what they counted.
 //
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
@@ -37904,6 +37918,15 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// UnpinWorklistRowParams defines parameters for UnpinWorklistRow.
+type UnpinWorklistRowParams struct {
+	// Source The lane the row came from, paired with `row_id` to name it.
+	Source string `form:"source" json:"source"`
+
+	// RowId The row's own id within that lane.
+	RowId string `form:"row_id" json:"row_id"`
+}
+
 // GetResponseMetricsParams defines parameters for GetResponseMetrics.
 type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
@@ -38601,6 +38624,9 @@ type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBod
 
 // SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
 type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
+
+// PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
+type PinWorklistRowJSONRequestBody = WorklistPinRequest
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -48096,6 +48122,12 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// Let the ranking have the row back — the undo behind the pin.
+	// (DELETE /worklist/pins)
+	UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams)
+	// Put a row at the top of your own day, above what the ranking chose.
+	// (PUT /worklist/pins)
+	PinWorklistRow(w http.ResponseWriter, r *http.Request)
 	// How fast the workspace answers, and how much of the queue it puts down.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
@@ -51573,6 +51605,18 @@ func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, param
 // What the queue is not showing, and which rule is holding it back.
 // (GET /worklist/hidden)
 func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Let the ranking have the row back — the undo behind the pin.
+// (DELETE /worklist/pins)
+func (_ Unimplemented) UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a row at the top of your own day, above what the ranking chose.
+// (PUT /worklist/pins)
+func (_ Unimplemented) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -76416,6 +76460,78 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// UnpinWorklistRow operation middleware
+func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UnpinWorklistRowParams
+
+	// ------------- Required query parameter "source" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "source", r.URL.Query(), &params.Source, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "row_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "row_id", r.URL.Query(), &params.RowId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "row_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "row_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpinWorklistRow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PinWorklistRow operation middleware
+func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PinWorklistRow(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetResponseMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
 
@@ -78325,6 +78441,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/worklist/pins", wrapper.UnpinWorklistRow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/worklist/pins", wrapper.PinWorklistRow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)
