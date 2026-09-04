@@ -242,10 +242,29 @@ func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) (
 // excluded_by_permission — so it composes the three itself, and the gate
 // TestEveryPopulationsNarrowingsAreComposedInOnePlace ratifies it by name.
 // Every other path takes the whole set from here.
-func specNarrowings(ctx context.Context, spec reportSpec, arg func(any) int) ([]string, error) {
+func specNarrowings(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, arg func(any) int,
+) ([]string, error) {
 	out, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
 		return nil, err
+	}
+	// The POPULATION the caller asked to measure, resolved against their own
+	// lens. Record authorization is not it: deals are workspace-readable by
+	// design, so row scope alone answers an own-lens rep with the whole
+	// installation's numbers — the question they asked was about their work.
+	//
+	// Here rather than at the call site, so the one composer this gate holds
+	// carries every narrowing. A caller that resolved the population itself
+	// and appended it would be the second partial answer the gate exists to
+	// refuse, and it would pass, because the gate reads the clause builders
+	// and not what a caller does after them.
+	_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg)
+	if err != nil {
+		return nil, err
+	}
+	if population != "" {
+		out = append(out, population)
 	}
 	// An aggregate over a masked column would disclose it through the total,
 	// so the row leaves the population entirely.

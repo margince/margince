@@ -16687,6 +16687,22 @@ type AnalyticsQuery struct {
 	// Save Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
 	// A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
 	Save *bool `json:"save,omitempty"`
+
+	// ScopeId The team or seat to measure, for `scope_kind` `team` or `owner`.
+	ScopeId *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+	// minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+	// or names nothing and is given it). No enum here on purpose: the resolver is the
+	// authority on what this seat may measure, and a second list would be a second answer to
+	// that, refusing on shape what it should refuse on authority.
+	//
+	// Which population to measure, resolved against the caller's own lens. Omitted asks for
+	// their default — a rep's own records, a manager's teams — never the whole installation.
+	//
+	// A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+	// never quietly means something other than what was asked.
+	ScopeKind *string `json:"scope_kind,omitempty"`
 }
 
 // AnalyticsSchema The populations and fields one caller may ask about.

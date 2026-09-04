@@ -33,6 +33,16 @@ type Query struct {
 	Filters []Filter
 	// Limit bounds the answer. Zero takes the default.
 	Limit int
+	// ScopeKind and ScopeID are the population the caller ASKED for. Empty is
+	// "they named nothing", which resolves to their own lens default rather
+	// than to the workspace.
+	//
+	// The REQUEST, kept rather than the resolution. A saved question replayed
+	// later must answer under the replayer's authority, not the author's, so
+	// what is stored has to be the question — resolving it here and storing
+	// that would hand a manager's answer to whoever opens the link.
+	ScopeKind string
+	ScopeID   string
 }
 
 // Measure is one number to compute.

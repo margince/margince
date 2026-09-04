@@ -32678,6 +32678,24 @@ components:
       required: [entity, measures]
       properties:
         entity: { type: string, description: "The population, by name." }
+        scope_kind:
+          type: string
+          description: |
+            `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+            minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+            or names nothing and is given it). No enum here on purpose: the resolver is the
+            authority on what this seat may measure, and a second list would be a second answer to
+            that, refusing on shape what it should refuse on authority.
+
+            Which population to measure, resolved against the caller's own lens. Omitted asks for
+            their default — a rep's own records, a manager's teams — never the whole installation.
+
+            A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+            never quietly means something other than what was asked.
+        scope_id:
+          type: string
+          format: uuid
+          description: The team or seat to measure, for `scope_kind` `team` or `owner`.
         group_by:
           type: array
           items: { type: string }
