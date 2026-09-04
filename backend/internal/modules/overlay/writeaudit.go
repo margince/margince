@@ -28,6 +28,7 @@ package overlay
 // audit row rolled back.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -381,14 +382,32 @@ func settledImages(before map[string]any, rec Record) (settledBefore, settledAft
 }
 
 // sameFieldValue compares two canonical field values as the audit trail renders
-// them. fmt over reflect.DeepEqual because the bags are JSON-decoded: a number
-// that arrived as float64 and one the mirror holds as json.Number are the same
-// value to a reader and different values to DeepEqual.
+// them: by their JSON encoding.
+//
+// Not reflect.DeepEqual, and not fmt. DeepEqual reports a change that did not
+// happen — these bags are JSON-decoded from two different sources, so a number
+// the mirror holds as float64 and the same number arriving as json.Number are
+// one value in two representations. fmt has the opposite fault: "%v" renders
+// the string "1" and the number 1 identically, so a field that genuinely
+// changed TYPE would be dropped from the trail, which is the defect this
+// function exists to prevent, inverted.
+//
+// The encoding settles both: float64(1) and json.Number("1") both marshal to
+// `1`, while "1" marshals to `"1"`.
+//
+// A value that cannot be marshalled is treated as changed. Nothing in a
+// canonical bag should be unmarshalable, and if one ever is, recording the
+// field is the safe answer — an extra entry is noise, a missing one is silence.
 //
 //craft:ignore naked-any these are the JSON-decoded canonical bags; the any is inherent to the decoded shape
 func sameFieldValue(a, b any) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}
-	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+	encodedA, errA := json.Marshal(a)
+	encodedB, errB := json.Marshal(b)
+	if errA != nil || errB != nil {
+		return false
+	}
+	return bytes.Equal(encodedA, encodedB)
 }
