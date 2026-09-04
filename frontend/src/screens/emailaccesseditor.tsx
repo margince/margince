@@ -33,6 +33,7 @@ import {
   AUDIENCE_CHOICES,
   AUDIENCE_HINT,
   AUDIENCE_LABEL,
+  AUDIENCE_REASON_LABEL,
   AudienceMembers,
   memberKey,
   useAudienceCandidates,
@@ -71,6 +72,7 @@ export function EmailAccessEditor({
 }: Readonly<{ presentation: EmailPresentation }>) {
   const t = useT();
   const { access } = presentation;
+  const reasonKey = AUDIENCE_REASON_LABEL[access.explanation ?? ""];
   return (
     <div className="emailaccess">
       <div className="emailaccess__verdict">
@@ -84,8 +86,14 @@ export function EmailAccessEditor({
       {/* WHY, when the server gave a reason. A held message the reader can see
           the outline of is otherwise a limit with no author: the reason names
           what decided it, which is what a person disagreeing with the verdict
-          needs before they can argue with it. */}
-      {access.explanation && <p className="t-caption">{access.explanation}</p>}
+          needs before they can argue with it.
+
+          `explanation` is a TOKEN, not a sentence — `readEmailAccess` fills it
+          from the same `audience_reason` column the timeline row reads — so it
+          is translated through the shared map. Printing it raw would put
+          `pending_verdict` on the screen. A reason the server learned to give
+          and the map has not draws nothing rather than the token. */}
+      {reasonKey && <p className="t-caption">{t(reasonKey)}</p>}
       <NamedMembers access={access} />
       {/* The control only where the server says this caller's write would be
           taken. `can_change` and `change_mode` are decided by the authority
