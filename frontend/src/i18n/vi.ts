@@ -3202,6 +3202,8 @@ export const vi = {
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
+  "review.notCheckedYet":
+    "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
   "review.closePast": "Ngày chốt đã qua",
