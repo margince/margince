@@ -504,3 +504,71 @@ func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
 			"sender business, and that is the answer the ledger should carry", got)
 	}
 }
+
+// The lock, proved by making a concurrent writer WAIT for it.
+//
+// The re-read narrowed the window; it did not close it. A Set() committing
+// between the read and the effects is still a stale answer acted on, and under
+// READ COMMITTED no amount of re-reading fixes that — the two paths have to
+// serialize on one key.
+//
+// Deterministic rather than timed: the test holds the lock in a transaction of
+// its own and asserts the second attempt cannot take it while the first is
+// open, then that it succeeds the moment the first commits. No sleeps, no
+// goroutine racing a goroutine, and it fails when the lock is absent rather
+// than when a machine is slow.
+func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+
+	held := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan error, 1)
+
+	// One transaction takes the decision's lock and holds it open.
+	go func() {
+		done <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := capture.OverrideForTx(ctx, tx, e.Rep1, "dana.olsen@partner.example"); err != nil {
+				return err
+			}
+			close(held)
+			<-release
+			return nil
+		})
+	}()
+	<-held
+
+	// A second one cannot take it. try_advisory asks the same question the
+	// blocking lock does without waiting for the answer, so the assertion is
+	// "the key is held", not "this call was slow".
+	var free bool
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
+			"capture_sender_override_write", e.Rep1.String()+":dana.olsen@partner.example").Scan(&free)
+	}); err != nil {
+		t.Fatalf("probing the decision's lock: %v", err)
+	}
+	if free {
+		t.Error("a second transaction took the decision's key while a reader held it — " +
+			"the read and the act it drives are not serialized against a seat " +
+			"recording a decision between them")
+	}
+
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatalf("the holding transaction: %v", err)
+	}
+
+	// And it is released on commit, so this serializes writers rather than
+	// wedging them.
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
+			"capture_sender_override_write", e.Rep1.String()+":dana.olsen@partner.example").Scan(&free)
+	}); err != nil {
+		t.Fatalf("re-probing the decision's lock: %v", err)
+	}
+	if !free {
+		t.Error("the key stayed held after the transaction committed — an xact lock " +
+			"that outlives its transaction would stall every later booking of this seat")
+	}
+}
