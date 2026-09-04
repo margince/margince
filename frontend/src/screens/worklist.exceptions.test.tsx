@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
+import { day, renderWorklist } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -140,4 +141,81 @@ function renderPanel() {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// The ORDER the two panels sit in, on the page rather than in a component.
+//
+// The board answers "who is carrying what" and this panel answers "what is
+// going wrong". A lead opens the page for the second question, and answering
+// the first one first asks them to infer the trouble from three counts per
+// teammate — which is the page this one replaces.
+//
+// Held here because nothing else could hold it: both panels render correctly in
+// isolation whichever way round they are drawn, so the claim lives in the
+// screen and a future edit that swapped the two blocks would break no test.
+describe("the page answers what before who", () => {
+  it("draws the exceptions above the team board", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/worklist/team/exceptions")) {
+          return jsonOf({
+            as_of: "2026-09-05T09:00:00Z",
+            exceptions: [
+              {
+                kind: "response_breached",
+                subject: { type: "person", id: "p-1", label: "Kirsten Bauer" },
+                owner: { kind: "user", id: "u-1", label: "Lena Fischer" },
+                basis: "past the policy's own deadline",
+              },
+            ],
+            truncated: false,
+          });
+        }
+        if (url.includes("/worklist/team")) {
+          return jsonOf({
+            as_of: "2026-09-05T09:00:00Z",
+            members: [
+              {
+                user_id: "u-1",
+                display_name: "Lena Fischer",
+                counts: { waiting: 2, at_risk: 1, overdue: 0 },
+              },
+            ],
+            unassigned: { waiting: 0, at_risk: 0, overdue: 0 },
+            truncated: false,
+          });
+        }
+        if (url.includes("/worklist")) {
+          return jsonOf(
+            day({
+              scope_options: ["mine", "team"],
+              summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+            }),
+          );
+        }
+        return jsonOf({ data: [] });
+      }),
+    );
+    renderWorklist();
+
+    const exceptions = await screen.findByText(en["worklist.exceptions.title"]);
+    const board = await screen.findByText(en["worklist.board.title"]);
+    // DOCUMENT_POSITION_FOLLOWING: the board comes after the exceptions in the
+    // document. Comparing rendered order rather than asserting both are present
+    // — presence passes whichever way round they are drawn, which is exactly
+    // the regression this exists to catch.
+    expect(
+      exceptions.compareDocumentPosition(board) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});
+
+function jsonOf(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
 }
