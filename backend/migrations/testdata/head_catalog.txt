@@ -1459,7 +1459,7 @@ public.communication_basis.valid_until timestamp with time zone gen=- def=-
 public.communication_basis_live_lead CREATE INDEX communication_basis_live_lead ON public.communication_basis USING btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_live_person CREATE INDEX communication_basis_live_person ON public.communication_basis USING btree (person_id, kind) WHERE ((person_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_pkey CREATE UNIQUE INDEX communication_basis_pkey ON public.communication_basis USING btree (id)
-public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.communication_decision.actor text NOT NULL gen=- def=-
 public.communication_decision.attempt integer NOT NULL gen=- def=0
 public.communication_decision.basis text gen=- def=-
@@ -1546,7 +1546,7 @@ public.consent_doi_token.purpose_id uuid NOT NULL gen=- def=-
 public.consent_doi_token.token_hash text NOT NULL gen=- def=-
 public.consent_doi_token_hash_unique CREATE UNIQUE INDEX consent_doi_token_hash_unique ON public.consent_doi_token USING btree (token_hash)
 public.consent_doi_token_pkey CREATE UNIQUE INDEX consent_doi_token_pkey ON public.consent_doi_token USING btree (id)
-public.consent_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.consent_event acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.consent_event.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
