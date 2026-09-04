@@ -3691,6 +3691,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/send-email:preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Would this reply be allowed, and on what ground — asked before a word is typed.
+         * @description The message-level twin of `GET /people/{id}/consent/guard`. That one answers about a
+         *     PERSON per purpose; this one answers about the message a composer is about to write —
+         *     its recipients, the thread it answers and the records it names — because those are what
+         *     the engine actually reads.
+         *
+         *     **The same code answers twice.** It runs the per-recipient decision the staging gate
+         *     runs, from the same resolver, so a preview and the refusal that follows cannot disagree
+         *     about an unchanged record.
+         *
+         *     **It authorizes nothing and records nothing.** No decision rows, no lawful basis: a
+         *     basis is the ground a SEND relies on, and nothing has been sent. The send re-asks, and
+         *     state that changed in between refuses with the newer answer.
+         *
+         *     Answers only about recipients on records the caller may read, and never returns another
+         *     subject's consent history — the reason a message is refused, not the person's file.
+         */
+        post: operations["previewSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/emails:preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Would this account-started message be allowed, and on what ground.
+         * @description The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
+         *     with no anchor to derive a category from. It names its own `links`, exactly as the send
+         *     it previews does.
+         *
+         *     Everything the anchored preview says applies here: it runs the staging decision's own
+         *     code, authorizes nothing and records nothing.
+         */
+        post: operations["previewAccountSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/send-email": {
         parameters: {
             query?: never;
@@ -21774,6 +21836,124 @@ export interface components {
             scheduled_tz: string;
         };
         /**
+         * @description What kind of communication a message is — the closed vocabulary the engine resolves
+         *     to. A caller CLAIMS one and the engine checks it against the record.
+         *
+         *     NAMED rather than repeated inline, because an inline enum that collides with another
+         *     schema's silently renames that one's generated constants. The send requests still
+         *     spell theirs inline with a nullable variant; this is the non-null shape the preview
+         *     and its answer share.
+         *
+         *     The five controller-only categories (`security_notice`, `privacy_notice`,
+         *     `record_confirmation`, `consent_confirmation`, `optout_confirmation`) are absent by
+         *     design: they serve the recipient, are reserved for the installation's own mail behind
+         *     a registered template, and a caller that could claim one could dress marketing as a
+         *     security warning.
+         * @enum {string}
+         */
+        CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
+        /**
+         * @description What a composer is about to write, in the shape the engine judges. It carries no
+         *     `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
+         *     draft to the server to be told whether it may exist would be the wrong way round.
+         */
+        PreviewSendRequest: {
+            /**
+             * @description The addressees. Cc and Bcc join this list at send, and both are asked about
+             *     exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
+             *     engine — so a composer previewing a message with copies passes them all here.
+             */
+            to: string[];
+            /**
+             * @description What the sender says this message is. Checked against the record, never believed:
+             *     a claim the record does not bear out comes back as `review` naming what is
+             *     missing, rather than a quiet downgrade to something weaker that happens to be
+             *     allowed.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /** @description Which marketing purpose, when the context is `marketing`. */
+            marketing_purpose?: string;
+            /**
+             * @description The deprecated purpose key, when the composer still has one. It authorizes
+             *     nothing on its own, and it is accepted here for one reason: the SEND still
+             *     consults it where the record supports no category, so a preview that could not
+             *     pass it would answer a different question than the send and disagree with it.
+             *     Omit it and the answer is about the record alone.
+             */
+            consent_purpose?: string;
+            /** @description Records the caller names in support of this message. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+        };
+        /**
+         * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
+         *     records this new conversation would belong to.
+         */
+        PreviewAccountSendRequest: {
+            to: string[];
+            /**
+             * @description The records the message would be filed under. They are read through the caller's
+             *     own row scope before the engine sees them, so naming a record the caller cannot
+             *     open is refused here rather than answered about.
+             */
+            links: components["schemas"]["ActivityLinkInput"][];
+            communication_context?: components["schemas"]["CommunicationContext"];
+            marketing_purpose?: string;
+            /**
+             * @description The deprecated purpose key, when the composer still has one. It authorizes
+             *     nothing on its own, and it is accepted here for one reason: the SEND still
+             *     consults it where the record supports no category, so a preview that could not
+             *     pass it would answer a different question than the send and disagree with it.
+             *     Omit it and the answer is about the record alone.
+             */
+            consent_purpose?: string;
+            evidence?: components["schemas"]["CommunicationEvidence"];
+        };
+        /**
+         * @description What the engine would decide, per recipient, for a message nobody has sent.
+         *
+         *     ADVISORY AND NOT A PROMISE. The send re-asks at staging, and a withdrawal, an
+         *     objection or a bounce between the two refuses with the newer answer. Nothing here is
+         *     recorded: no decision rows, no lawful basis.
+         */
+        SendAuthorizationPreview: {
+            /**
+             * @description Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
+             *     the message, because a rep who wrote to four people and reached three without
+             *     being told which has been lied to about what happened.
+             */
+            allowed: boolean;
+            recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][];
+        };
+        /** @description One recipient's answer. It describes the MESSAGE, never the person's file. */
+        SendAuthorizationPreviewRecipient: {
+            /** Format: email */
+            address: string;
+            /**
+             * @description `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+             *     the record does not carry this message on its own and names what is missing.
+             * @enum {string}
+             */
+            verdict: "allow" | "deny" | "review";
+            /**
+             * @description Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
+             *     `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
+             *     the lawful next action it can offer; it is deliberately not a sentence about the
+             *     recipient.
+             */
+            reason_code: string;
+            /** @description What the engine worked out this message is, which may differ from the claim. */
+            resolved_category?: components["schemas"]["CommunicationContext"];
+            /** @description The lawful ground an allow would rest on. */
+            basis?: string;
+            /**
+             * @description How much authority the engine's answer carries for this category on this
+             *     installation. Under `observe` a `deny` here still sends, and a composer that
+             *     showed it as a refusal would be describing a rollout position as a rule.
+             * @enum {string}
+             */
+            mode?: "observe" | "warn" | "enforce";
+        };
+        /**
          * @description One account-started send. It is SendEmailRequest plus the `links` an anchor would
          *     otherwise have supplied — the records this new conversation belongs to.
          */
@@ -35916,6 +36096,65 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    previewSendAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewSendRequest"];
+            };
+        };
+        responses: {
+            /** @description What the engine would decide, per recipient. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendAuthorizationPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAccountSendAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewAccountSendRequest"];
+            };
+        };
+        responses: {
+            /** @description What the engine would decide, per recipient. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendAuthorizationPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     sendEmail: {

@@ -115,7 +115,6 @@ func TestTheRuntimeRoleCannotRewriteAFinding(t *testing.T) {
 		{"the verdict on a send", `UPDATE communication_decision SET verdict = 'deny' WHERE id = $1`},
 		{"the reason a send was allowed", `UPDATE communication_decision SET reason_code = 'invented' WHERE id = $1`},
 		{"the category a message was resolved as", `UPDATE communication_decision SET resolved_category = 'marketing' WHERE id = $1`},
-		{"a decision row outright", `DELETE FROM communication_decision WHERE id = $1`},
 	} {
 		if _, err := app.Exec(ctx, c.sql, e.decision); !permissionDenied(err) {
 			t.Errorf("the runtime role could change %s: %v — an evidence row it can edit is not evidence", c.what, err)
@@ -129,12 +128,40 @@ func TestTheRuntimeRoleCannotRewriteAFinding(t *testing.T) {
 		{"what a person answered", `UPDATE consent_event SET new_state = 'withdrawn' WHERE id = $1`},
 		{"the wording a person was shown", `UPDATE consent_event SET policy_text = 'something else' WHERE id = $1`},
 		{"who recorded a consent", `UPDATE consent_event SET captured_by = 'human:someone-else' WHERE id = $1`},
-		{"a proof row outright", `DELETE FROM consent_event WHERE id = $1`},
 	} {
 		if _, err := app.Exec(ctx, c.sql, e.event); !permissionDenied(err) {
 			t.Errorf("the runtime role could change %s: %v", c.what, err)
 		}
 	}
+}
+
+// TestTheAdminResetStillClearsTheEvidenceTables holds the reason DELETE is not
+// revoked.
+//
+// compose/datasweep.go clears a tenant by deleting from EVERY table the catalog
+// lists, in one transaction through the app role. It is a deliberate deployment
+// opt-in that purges tenant data on purpose, and a table it could not clear
+// would leave a reset that half-worked — which is what revoking DELETE did, and
+// what only the compose integration lane caught.
+//
+// The invariant that no DOMAIN code deletes an evidence row is held by
+// TestNoDomainCodeDeletesAnEvidenceRow (backend/gates/evidencedeletes_test.go)
+// instead. A permission cannot tell the sweep from a defect; a gate reading the
+// tree can.
+func TestTheAdminResetStillClearsTheEvidenceTables(t *testing.T) {
+	ownerDSN, appDSN := dsns(t)
+	owner := connect(t, ownerDSN)
+	headSchema(t, owner)
+	e := seedEvidence(t, owner)
+	app := connect(t, appDSN)
+	ctx := context.Background()
+
+	for _, table := range []string{"communication_decision", "consent_event"} {
+		if _, err := app.Exec(ctx, `DELETE FROM `+table); err != nil {
+			t.Errorf("the admin reset can no longer clear %s: %v — a reset that half-works leaves a tenant nobody can purge", table, err)
+		}
+	}
+	_ = e
 }
 
 // TestErasureAndTheLeadCarryStillReachTheirColumns is the other half, and the

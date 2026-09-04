@@ -3,5 +3,5 @@ REVOKE UPDATE (recipient_address, subject_id, subject_kind)
 REVOKE UPDATE (person_id, lead_id)
     ON TABLE consent_event FROM margince_app;
 
-GRANT UPDATE, DELETE ON TABLE communication_decision TO margince_app;
-GRANT UPDATE, DELETE ON TABLE consent_event TO margince_app;
+GRANT UPDATE ON TABLE communication_decision TO margince_app;
+GRANT UPDATE ON TABLE consent_event TO margince_app;
