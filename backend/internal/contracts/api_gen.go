@@ -21307,6 +21307,20 @@ type DismissPersonMomentRequest struct {
 	EvidenceFingerprint string `json:"evidence_fingerprint"`
 }
 
+// DismissRelationshipNudgeRequest defines model for DismissRelationshipNudgeRequest.
+type DismissRelationshipNudgeRequest struct {
+	// Days How long the contact stays off the lane, counted from now. A COUNT rather than
+	// a moment, because the server owns "now" — a client computing an instant from a
+	// clock that is minutes out writes a dismissal that expires early or late for a
+	// reason nobody can see.
+	//
+	// Capped at 90 days, and there is no value meaning forever. A quarter is the
+	// longest a rep can honestly say "not this one" about a relationship without
+	// that being a decision to drop the person, which is a different act with its
+	// own record.
+	Days int `json:"days"`
+}
+
 // DisqualifyLeadRequest Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.
 type DisqualifyLeadRequest struct {
 	Note *string `json:"note,omitempty"`
@@ -38281,6 +38295,9 @@ type MergePersonJSONRequestBody MergePersonJSONBody
 // DismissPersonMomentJSONRequestBody defines body for DismissPersonMoment for application/json ContentType.
 type DismissPersonMomentJSONRequestBody = DismissPersonMomentRequest
 
+// DismissRelationshipNudgeJSONRequestBody defines body for DismissRelationshipNudge for application/json ContentType.
+type DismissRelationshipNudgeJSONRequestBody = DismissRelationshipNudgeRequest
+
 // SavePersonResearchJSONRequestBody defines body for SavePersonResearch for application/json ContentType.
 type SavePersonResearchJSONRequestBody = SavePersonResearchRequest
 
@@ -47472,6 +47489,12 @@ type ServerInterface interface {
 	// Who on our team knows this contact, and how well.
 	// (GET /people/{id}/network)
 	GetPersonNetwork(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Put a set-aside contact back on the lane — the undo behind the dismiss verb.
+	// (DELETE /people/{id}/nudge-dismissal)
+	RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
+	// Set a lapsed contact aside, so the Worklist stops raising them for a while.
+	// (PUT /people/{id}/nudge-dismissal)
+	DismissRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
 	// The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
 	// (GET /people/{id}/profile-fields)
 	GetPersonProfileFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -50442,6 +50465,18 @@ func (_ Unimplemented) DismissPersonMoment(w http.ResponseWriter, r *http.Reques
 // Who on our team knows this contact, and how well.
 // (GET /people/{id}/network)
 func (_ Unimplemented) GetPersonNetwork(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a set-aside contact back on the lane — the undo behind the dismiss verb.
+// (DELETE /people/{id}/nudge-dismissal)
+func (_ Unimplemented) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set a lapsed contact aside, so the Worklist stops raising them for a while.
+// (PUT /people/{id}/nudge-dismissal)
+func (_ Unimplemented) DismissRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68674,6 +68709,70 @@ func (siw *ServerInterfaceWrapper) GetPersonNetwork(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRelationshipNudge operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRelationshipNudge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissRelationshipNudge operation middleware
+func (siw *ServerInterfaceWrapper) DismissRelationshipNudge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissRelationshipNudge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPersonProfileFields operation middleware
 func (siw *ServerInterfaceWrapper) GetPersonProfileFields(w http.ResponseWriter, r *http.Request) {
 
@@ -77575,6 +77674,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/network", wrapper.GetPersonNetwork)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/people/{id}/nudge-dismissal", wrapper.RestoreRelationshipNudge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/people/{id}/nudge-dismissal", wrapper.DismissRelationshipNudge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/profile-fields", wrapper.GetPersonProfileFields)

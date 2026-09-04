@@ -304,3 +304,32 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 	}
 	return info
 }
+
+// DismissRelationshipNudge sets a lapsed contact aside for the calling reader.
+//
+// No If-Match. The version guards a field edit against a concurrent one; this
+// writes a reader's own judgement about their own morning, and two dismissals
+// of the same contact by the same reader are one decision restated rather than
+// a conflict.
+func (h Handlers) DismissRelationshipNudge(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.DismissRelationshipNudgeRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.DismissRelationshipNudge(
+		r.Context(), pathID[ids.PersonKind](id), req.Days); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RestoreRelationshipNudge puts a set-aside contact back on the reader's lane.
+func (h Handlers) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := h.store.RestoreRelationshipNudge(
+		r.Context(), pathID[ids.PersonKind](id)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

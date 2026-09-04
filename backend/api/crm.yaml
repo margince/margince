@@ -1187,6 +1187,64 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/nudge-dismissal:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [People]
+      operationId: dismissRelationshipNudge
+      x-agent-access: human-only
+      # Session cookie only: deciding not to chase somebody this month is a
+      # person's judgement about their own morning, and an agent has no
+      # relationships of its own to put down.
+      security: [{ cookieAuth: [] }]
+      summary: Set a lapsed contact aside, so the Worklist stops raising them for a while.
+      description: |
+        The decay lane names contacts who have gone quiet. Nobody is waiting on the reader
+        for any of them, which is exactly why they go unnoticed — and also why a rep needs
+        a way to say "not this one, not now". Until this verb there was none: the row
+        offered `open` and nothing else, so a contact the rep had deliberately decided to
+        leave alone came back every morning.
+
+        PER READER. A rep setting a contact aside is judging their own day, and applying
+        that to a colleague would take somebody off a queue whose owner never made the
+        call. Contrast `not_sales` on a message, which is a fact about the thread and
+        holds for everybody.
+
+        NEVER PERMANENT. `days` is capped, and there is no value meaning forever: a
+        permanent dismissal would silently delete a person from a rep's attention and
+        leave nothing to notice it — the same failure the hidden-backlog guardrail exists
+        to catch, reached by a door that guardrail cannot see. A relationship worth
+        raising once is worth raising again.
+
+        Reading the person is the licence to set them aside: an id the caller cannot read
+        answers 404, the same as one that does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissRelationshipNudgeRequest' }
+      responses:
+        '204': { description: 'Set aside. Dismissing an already-dismissed contact replaces the moment.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [People]
+      operationId: restoreRelationshipNudge
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put a set-aside contact back on the lane — the undo behind the dismiss verb.
+      description: |
+        Clears what THIS reader set aside. Idempotent: restoring a contact nobody dismissed
+        is the same success, because the reader's goal state already holds.
+      responses:
+        '204': { description: 'Back on the lane, or was never off it.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /people/{id}/brief:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -29142,6 +29200,26 @@ components:
       type: string
       enum: [workspace, participants, selected]
       description: Who may read an activity's content — see Activity.audience.
+    DismissRelationshipNudgeRequest:
+      type: object
+      additionalProperties: false
+      required: [days]
+      properties:
+        days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: |
+            How long the contact stays off the lane, counted from now. A COUNT rather than
+            a moment, because the server owns "now" — a client computing an instant from a
+            clock that is minutes out writes a dismissal that expires early or late for a
+            reason nobody can see.
+
+            Capped at 90 days, and there is no value meaning forever. A quarter is the
+            longest a rep can honestly say "not this one" about a relationship without
+            that being a decision to drop the person, which is a different act with its
+            own record.
+
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false
