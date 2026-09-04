@@ -905,6 +905,12 @@ export const de = {
   "co.health.dim.relationship": "Beziehung",
   "co.health.dim.commercial": "Geschäftlich",
   "co.health.dim.payment": "Zahlung",
+  "co.health.means.relationship":
+    "Ob hier noch Kontakt besteht — wer geschrieben hat, wie lange das her ist und von welcher Seite es ausging.",
+  "co.health.means.commercial":
+    "Ob die laufende Arbeit vorankommt — die offenen Deals, ihre Phase und wie lange sie schon stillstehen.",
+  "co.health.means.payment":
+    "Ob Rechnungen pünktlich beglichen werden — was gerade überfällig ist und wie spät dieses Konto üblicherweise zahlt.",
   "co.health.rating.atRisk": "Gefährdet",
   "co.health.rating.good": "Gut",
   "co.health.rating.strong": "Stark",
@@ -938,8 +944,7 @@ export const de = {
   "record.restsOn.source_one": "Quelle",
   "record.restsOn.source_other": "Quellen",
   "record.tabs": "Bereiche dieses Datensatzes",
-  "record.panel.show": "Panel zeigen",
-  "record.panel.hide": "Panel ausblenden",
+  "record.panel.details": "Details",
   "room.editorial":
     "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
   "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
@@ -3230,7 +3235,8 @@ export const de = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
-  "analytics.sub": "nur offene Deals, jeder einzeln in {currency} umgerechnet — ungewichtet neben gewichtet",
+  "analytics.sub":
+    "nur offene Deals, jeder einzeln in {currency} umgerechnet — ungewichtet neben gewichtet",
   "analytics.currency": "Währung",
   "analytics.count": "Deals",
   "analytics.unweighted": "Ungewichtet",
