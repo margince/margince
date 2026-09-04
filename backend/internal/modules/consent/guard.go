@@ -67,8 +67,16 @@ func (s *Store) PersonConsentGuard(ctx context.Context, personID ids.PersonID) (
 		if err != nil {
 			return err
 		}
+		// The SAME window the send path binds a decision to. A preview that
+		// answered on a different span would tell a rep a send is allowed that
+		// the engine then refuses, which is worse than no preview at all.
+		w, err := s.windowsFor(ctx, tx)
+		if err != nil {
+			return err
+		}
+		since := s.now().Add(-w.reply)
 		for _, purpose := range purposes {
-			verdict, err := VerdictForPerson(ctx, tx, personID.String(), purpose)
+			verdict, err := VerdictForPerson(ctx, tx, personID.String(), purpose, since)
 			if err != nil {
 				return err
 			}
