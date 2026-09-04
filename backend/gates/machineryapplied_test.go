@@ -7,6 +7,9 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -35,6 +38,23 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 
 	fset, files := parseGoFilesUnder(t, "internal")
 
+	// Which package each import path actually declares, so an ALIAS cannot
+	// hide an entry. `identitymod "…/identity"` makes a call read
+	// identitymod.Country while the declaration is identity.Country, and a gate
+	// comparing the two strings finds no match — which used to mean the entry
+	// was logged and accepted, i.e. exactly the case this exists to catch
+	// slipping through under a rename.
+	//
+	// Read from the parsed files rather than assumed from the path's last
+	// segment, because those differ in this tree (contracts declares
+	// crmcontracts).
+	packageOfDir := map[string]string{}
+	for _, path := range goFilePaths(t, "internal") {
+		if file, ok := parsedByPath(files, fset, path); ok && file.Name != nil {
+			packageOfDir[filepath.ToSlash(filepath.Dir(path))] = file.Name.Name
+		}
+	}
+
 	// entry name -> declared MachineryApplied. Keyed by the VAR name because
 	// that is what a call site names; the key string lives on the entry and is
 	// not resolvable from the call.
@@ -43,23 +63,12 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	// rather than only the entry.
 	read := map[string]string{}
 
-	// The call sites whose entry expression this walk could not name at all.
-	// Kept rather than skipped: an entry the walk drops is one it agrees with,
-	// while ApplyTx refuses it at runtime — which is the defect this gate is
-	// for, one level up.
-	var unreadable []string
-
 	for _, file := range files {
 		pkg := ""
 		if file.Name != nil {
 			pkg = file.Name.Name
 		}
-		// The file's own import aliases, so a qualified entry resolves to the
-		// package that DECLARED it rather than to whatever this file happens to
-		// call that package. An alias is not exotic — the tree carries several —
-		// and an unresolved qualifier would land in the "declaration not found"
-		// arm below, which is precisely where a false negative could hide.
-		aliases := importAliases(file)
+		aliases := aliasesOf(file, packageOfDir)
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch node := n.(type) {
 			case *ast.ValueSpec:
@@ -72,12 +81,9 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
 					return true
 				}
-				entry := entryName(node.Args[2], pkg, aliases)
-				if entry == "" {
-					unreadable = append(unreadable, fset.Position(node.Pos()).String())
-					return true
+				if entry := entryName(node.Args[2], pkg, aliases); entry != "" {
+					read[entry] = fset.Position(node.Pos()).String()
 				}
-				read[entry] = fset.Position(node.Pos()).String()
 			}
 			return true
 		})
@@ -96,27 +102,18 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 		t.Fatal("found no settings.Define declarations at all, so nothing below could have been judged")
 	}
 
-	for _, where := range unreadable {
-		t.Errorf("%s: this gate cannot name the entry passed to settings.ApplyTx here, so it cannot "+
-			"check that entry's declaration — and an entry it cannot check is one it agrees with, "+
-			"while ApplyTx refuses an undeclared one at runtime. Pass the entry as a plain "+
-			"identifier or a qualified one.", where)
-	}
-
 	for entry, where := range read {
 		isDeclared, found := declared[entry]
 		switch {
 		case !found:
-			// A FAILURE, not a note. This walk covers all of internal/, which is
-			// where every settings.Define lives, so an entry whose declaration
-			// it cannot find is one it did not resolve rather than one declared
-			// out of reach — and an unresolved entry is exactly the shape a
-			// false negative takes here: reported as "not found" while its
-			// machineryApplied is false and the send lane dies.
-			t.Errorf("%s reads %s through settings.ApplyTx and this walk found no settings.Define "+
-				"for it. Either the entry is declared outside internal/ — in which case this gate's "+
-				"reach is wrong and should say so — or the name was not resolved, and an entry this "+
-				"gate cannot resolve is one it silently passes.", where, entry)
+			// A FAILURE, not a note. Aliases are resolved above, so an entry
+			// this walk cannot place is one the gate genuinely cannot see —
+			// and accepting it would mean the one shape that hides a missing
+			// declaration is the one shape that passes.
+			t.Errorf("%s reads %s through settings.ApplyTx and this gate cannot find its "+
+				"declaration. Either the entry is declared outside internal/, or the walk "+
+				"stopped recognising a declaration shape — both leave a MachineryApplied "+
+				"omission unable to fail here, which is what this gate is for.", where, entry)
 		case !isDeclared:
 			t.Errorf("%s reads %s through settings.ApplyTx, which refuses an entry not declared "+
 				"MachineryApplied — at runtime, inside the machinery. Declare it where it is defined, "+
@@ -169,43 +166,72 @@ func hasMachineryApplied(expr ast.Expr) bool {
 	}
 }
 
-// entryName renders the entry argument as package.Name, resolving a bare
-// identifier against the file's own package.
+// entryName renders the entry argument as declaringPackage.Name.
+//
+// A bare identifier resolves against the file's own package; a qualified one
+// resolves the QUALIFIER through the file's imports, so an alias names the
+// package that actually declares the entry rather than whatever the importer
+// chose to call it.
 func entryName(expr ast.Expr, pkg string, aliases map[string]string) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		return pkg + "." + e.Name
 	case *ast.SelectorExpr:
-		if qualifier, ok := e.X.(*ast.Ident); ok {
-			// Through the file's aliases, so `idp "…/identity"` names identity
-			// and not idp. An unaliased import maps to itself, so the ordinary
-			// case is unchanged.
-			if declaring, aliased := aliases[qualifier.Name]; aliased {
-				return declaring + "." + e.Sel.Name
-			}
-			return qualifier.Name + "." + e.Sel.Name
+		qualifier, ok := e.X.(*ast.Ident)
+		if !ok {
+			return ""
 		}
+		name := qualifier.Name
+		if declared, found := aliases[name]; found {
+			name = declared
+		}
+		return name + "." + e.Sel.Name
 	}
 	return ""
 }
 
-// importAliases maps the names a file refers to its imports BY onto the package
-// names those imports actually declare.
-//
-// The last path segment is the package name in this tree — the module layout
-// keeps the two the same, and a package whose name differed from its directory
-// would be caught by the "declaration not found" arm rather than passed.
-func importAliases(file *ast.File) map[string]string {
+// aliasesOf maps each import qualifier in this file to the package name that
+// import path actually declares.
+func aliasesOf(file *ast.File, packageOfDir map[string]string) map[string]string {
 	out := map[string]string{}
 	for _, spec := range file.Imports {
-		if spec.Name == nil || spec.Name.Name == "_" || spec.Name.Name == "." {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
 			continue
 		}
-		path := strings.Trim(spec.Path.Value, `"`)
-		if at := strings.LastIndex(path, "/"); at >= 0 {
-			path = path[at+1:]
+		// The tree's own packages only. A third-party import can never be the
+		// qualifier on a settings entry, and guessing its package name from a
+		// module path is how a resolver starts inventing answers.
+		declared, known := packageOfDir[strings.TrimPrefix(path, modulePath+"/")]
+		if !known {
+			continue
 		}
-		out[spec.Name.Name] = path
+		qualifier := declared
+		if spec.Name != nil {
+			qualifier = spec.Name.Name
+		}
+		out[qualifier] = declared
 	}
 	return out
+}
+
+// goFilePaths is goFilesUnder with the walk error turned into a test failure.
+func goFilePaths(t *testing.T, dir string) []string {
+	t.Helper()
+	paths, err := goFilesUnder(dir)
+	if err != nil {
+		t.Fatalf("walking %s: %v", dir, err)
+	}
+	return paths
+}
+
+// parsedByPath finds the already-parsed file for one path, so the walk is not
+// repeated just to learn package names.
+func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.File, bool) {
+	for _, file := range files {
+		if fset.Position(file.Pos()).Filename == path {
+			return file, true
+		}
+	}
+	return nil, false
 }

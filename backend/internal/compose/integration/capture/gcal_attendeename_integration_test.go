@@ -50,10 +50,19 @@ func personName(t *testing.T, e *integration.SearchEnv, id ids.UUID) (first, las
 func TestACalendarInvitationNamesAContactItsAddressCouldNot(t *testing.T) {
 	e := integration.SetupSearch(t)
 
-	// Through the real people store, and with only the local part for a name —
-	// exactly what capture writes for a person minted from a bare address.
+	// Through the real people store, with only the local part for a name AND
+	// under a CONNECTOR principal — which together are what capture writes for
+	// a person minted from a bare address.
+	//
+	// The principal is not incidental. captured_by records who minted the row,
+	// and completePersonName reads it: a person a human created is one whose
+	// name a human is taken to have set, so the invitation must not overwrite
+	// it (#3974). Seeding this under a human context said "a colleague typed
+	// Buyer" while the comment claimed the capture shape, and the fill then
+	// correctly refused — the test asserted the opposite of what its own setup
+	// described.
 	store := people.NewStore(e.DB())
-	buyer, err := store.EnsurePersonByEmail(personCreator(e), "Buyer", "buyer@acme.com", "manual")
+	buyer, err := store.EnsurePersonByEmail(connectorCreator(e), "Buyer", "buyer@acme.com", "manual")
 	if err != nil {
 		t.Fatalf("seeding the attendee: %v", err)
 	}

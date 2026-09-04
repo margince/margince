@@ -39,6 +39,29 @@ import (
 // personCreator is a principal that may CREATE a contact. The shared capture
 // helper grants person:read only — deliberately, because a capture connector
 // does not create people through that path — so seeding a contact needs its own.
+// connectorCreator mints a person the way the capture sink does: under a
+// CONNECTOR principal, so captured_by records a connector rather than a
+// colleague.
+//
+// The difference is load-bearing rather than cosmetic. completePersonName takes
+// `captured_by LIKE 'human:%'` as evidence that a human set the display name,
+// and refuses to move it — so a fixture that seeds a capture-shaped person
+// under personCreator is asserting a human typed the name it then expects to be
+// replaced.
+func connectorCreator(e *integration.SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:gcal",
+		SeatType: principal.SeatFull,
+		Scopes:   principal.NewScopeSet(),
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
 func personCreator(e *integration.SearchEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
