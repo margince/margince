@@ -677,3 +677,75 @@ func personIDFor(t *testing.T, e *integration.Env, email string) ids.PersonID {
 	}
 	return id
 }
+
+// TestPublishingACapturedContactLeavesATrace holds the trail on the write that
+// most needs one.
+//
+// A contact stops being one person's and becomes everybody's. "Which contacts
+// were published, when, and on whose authority" is answered from audit_log or
+// it is not answered at all — and until this, the visibility flip was a bare
+// UPDATE while every other write on the record audited and emitted.
+func TestPublishingACapturedContactLeavesATrace(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "trace@partner.example"
+
+	seedAttestedOutbound(t, e, "trace-out-1", sender, "trace-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "trace-in-1", sender, "trace-t1")
+	personID := personIDFor(t, e, sender)
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("a fresh capture is %q, want owner", got)
+	}
+	before := countVisibilityAudits(t, e, personID)
+
+	dispositionID, queued := openDisposition(t, e, sender)
+	if !queued {
+		t.Fatal("no question was opened for a corresponded sender")
+	}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	runVerdict(t, e, brain)
+	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+		t.Fatalf("after a person verdict the contact is %q, want workspace", got)
+	}
+
+	if after := countVisibilityAudits(t, e, personID); after != before+1 {
+		t.Fatalf("publishing the contact wrote %d audit row(s) naming visibility, want 1: "+
+			"nothing records that this contact became visible to the workspace", after-before)
+	}
+	if n := countOutboxFor(t, e, personID); n == 0 {
+		t.Fatal("publishing the contact emitted no event, so nothing downstream learns the " +
+			"record changed hands")
+	}
+}
+
+// countVisibilityAudits counts audit rows on a person naming the visibility
+// column, in either image.
+func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.PersonID) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'person' AND entity_id = $1
+			   AND (after ? 'visibility' OR before ? 'visibility')`, id.UUID).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting visibility audits: %v", err)
+	}
+	return n
+}
+
+// countOutboxFor counts the events published about a record.
+func countOutboxFor(t *testing.T, e *integration.Env, id ids.PersonID) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'person.updated'
+			   AND envelope->'entity'->>'id' = $1
+			   AND envelope->'payload'->'changed_fields' ? 'visibility'`,
+			id.UUID.String()).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting outbox rows: %v", err)
+	}
+	return n
+}
