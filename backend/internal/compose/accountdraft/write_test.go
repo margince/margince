@@ -226,6 +226,20 @@ func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 	}
 }
 
+// The account composer's wire mapping is a second spelling of persondraft.Wire,
+// so the degraded flag is pinned here too — in both states, because a client
+// reading an absent field as false must not see "fine" for a lost voice.
+func TestWireCarriesTheVoiceDegradedFlag(t *testing.T) {
+	degraded := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, true)
+	if degraded.VoiceDegraded == nil || !*degraded.VoiceDegraded {
+		t.Fatal("a degraded voice load must be stamped on the wire draft")
+	}
+	clean := wire(Deterministic(sampleInput()), crmcontracts.Deterministic, false)
+	if clean.VoiceDegraded == nil || *clean.VoiceDegraded {
+		t.Fatal("a clean load must stamp voice_degraded=false, not omit it")
+	}
+}
+
 // A model that wraps its JSON in a ```json fence has answered correctly, and
 // this surface used to fail it while the reply surface — same models, same
 // ladder — accepted it. The rule is ai.Unfence's own: one reduction defines
