@@ -201,6 +201,7 @@ func (idx funcIndex) reachesAcquirer(dir, name string, seen map[string]bool) ([]
 // because the next person to see it red deletes it. Resolving a receiver needs
 // full type information, so the honest line is the one Go draws itself.
 func (b txBorrowing) calledNames() []string {
+	bound := locallyBound(b.params, b.body)
 	var names []string
 	ast.Inspect(b.body, func(n ast.Node) bool {
 		if lit, ok := n.(*ast.FuncLit); ok {
@@ -212,12 +213,68 @@ func (b txBorrowing) calledNames() []string {
 		if !ok {
 			return true
 		}
-		if fn, ok := call.Fun.(*ast.Ident); ok {
+		if fn, ok := call.Fun.(*ast.Ident); ok && !bound[fn.Name] {
 			names = append(names, fn.Name)
 		}
 		return true
 	})
 	return names
+}
+
+// locallyBound collects the names this body binds itself: parameters, results,
+// and anything declared inside it.
+//
+// A call through one of them is a call to a VALUE, and the value is whatever the
+// caller passed — `func run(step func() error) { step() }` calls `step`, which
+// is not the package-level `step` the index would find. Following the name would
+// report a deadlock in a function that does not have one, and this gate's whole
+// case for existing is that it does not do that.
+//
+// Over-collecting is the safe direction here. A name bound anywhere in the body
+// is treated as bound throughout it, which can lose a real call whose name a
+// local shadows later — a miss, where the alternative is a confident false
+// accusation. Block scoping would need the type information the walk
+// deliberately does without.
+func locallyBound(params *ast.FieldList, body *ast.BlockStmt) map[string]bool {
+	bound := map[string]bool{}
+	add := func(exprs []ast.Expr) {
+		for _, e := range exprs {
+			if id, ok := e.(*ast.Ident); ok && id.Name != "_" {
+				bound[id.Name] = true
+			}
+		}
+	}
+	if params != nil {
+		for _, field := range params.List {
+			for _, name := range field.Names {
+				bound[name.Name] = true
+			}
+		}
+	}
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.AssignStmt:
+			if node.Tok == token.DEFINE {
+				add(node.Lhs)
+			}
+		case *ast.ValueSpec:
+			for _, name := range node.Names {
+				bound[name.Name] = true
+			}
+		case *ast.RangeStmt:
+			add([]ast.Expr{node.Key, node.Value})
+		case *ast.FuncLit:
+			if node.Type.Params != nil {
+				for _, field := range node.Type.Params.List {
+					for _, name := range field.Names {
+						bound[name.Name] = true
+					}
+				}
+			}
+		}
+		return true
+	})
+	return bound
 }
 
 // moduleRoot answers the directory holding go.mod, walking up from wherever the
@@ -378,4 +435,53 @@ func TestTheReachWalkStopsAtThePackageEdge(t *testing.T) {
 func decorateRows(ctx context.Context) { elsewhere.Label(ctx) }
 `
 	assertReaches(t, fixtureIndex(t, caller), "decorateRows")
+}
+
+// A call through a PARAMETER is a call to whatever the caller passed, not to a
+// package-level function that happens to share the name. Following the name
+// would accuse a function that does not have the defect — and a gate that does
+// that once gets deleted the next time it is red.
+func TestTheReachWalkDoesNotFollowACallThroughAParameter(t *testing.T) {
+	t.Parallel()
+	const shadowed = fixtureImports + `
+func run(ctx context.Context, step func(context.Context) error) error {
+	return step(ctx)
+}
+
+func step(ctx context.Context, s *Store) error { return s.db.Tx(ctx, nil) }
+`
+	assertReaches(t, fixtureIndex(t, shadowed), "run")
+}
+
+// The same for a local function value. `handler := func() {…}` then `handler()`
+// is the shape a dispatch table takes, and the name it binds is ordinary enough
+// to collide with something real.
+func TestTheReachWalkDoesNotFollowACallThroughALocalValue(t *testing.T) {
+	t.Parallel()
+	const shadowed = fixtureImports + `
+func dispatch(ctx context.Context) error {
+	notify := func() error { return nil }
+	return notify()
+}
+
+func notify(ctx context.Context, s *Store) error { return s.db.Tx(ctx, nil) }
+`
+	assertReaches(t, fixtureIndex(t, shadowed), "dispatch")
+}
+
+// And the exclusion must not swallow the real case: a package-level call whose
+// name nothing binds is still followed. Without this the two cases above are
+// satisfied by a walk that follows nothing at all.
+func TestTheReachWalkStillFollowsAnUnboundName(t *testing.T) {
+	t.Parallel()
+	const genuine = fixtureImports + `
+func outer(ctx context.Context, s *Store) error {
+	local := "not a function"
+	_ = local
+	return inner(ctx, s)
+}
+
+func inner(ctx context.Context, s *Store) error { return s.db.Tx(ctx, nil) }
+`
+	assertReaches(t, fixtureIndex(t, genuine), "outer", "outer", "inner", "Tx")
 }
