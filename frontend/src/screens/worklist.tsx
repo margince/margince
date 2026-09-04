@@ -277,12 +277,6 @@ function QueueRows({
   onFilter,
 }: RowContext & Readonly<{ items: readonly WorklistItem[] }>) {
   return (
-    <>
-    {items.slice(0, 1).map((item) => (
-      <div key={`focus-${rowIdentity(item)}`} className="worklist-focus">
-        <p className="worklist-row-title">{item.title}</p>
-      </div>
-    ))}
     <ol className="worklist-list">
       {items.map((item) => (
         <li key={rowIdentity(item)}>
@@ -311,7 +305,6 @@ function QueueRows({
         </li>
       ))}
     </ol>
-    </>
   );
 }
 
