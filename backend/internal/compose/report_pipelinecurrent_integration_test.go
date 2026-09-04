@@ -17,11 +17,7 @@ package compose
 // against a formula recomputed here, because a test that reproduces the
 // production expression proves only that it was copied correctly.
 
-import (
-	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-)
+import "testing"
 
 const pipelineCurrentPlan = `{"group_by":["stage_id"],"aggregates":[` +
 	`{"fn":"count","as":"deals"},` +
@@ -29,15 +25,17 @@ const pipelineCurrentPlan = `{"group_by":["stage_id"],"aggregates":[` +
 	`{"fn":"sum","field":"weighted_base_minor","as":"weighted_base"}]}`
 
 // seedPricedDeal writes one deal in a named currency and status.
-func seedPricedDeal(
-	t *testing.T, e *forecastEnv, name string, probability int, amountMinor int64, currency, status string,
-) ids.UUID {
+//
+// Every case here measures ONE stage, so the probability is fixed rather than a
+// parameter: a second stage would be a different question (which stage does a
+// deal belong to) and none of these tests asks it.
+func seedPricedDeal(t *testing.T, e *forecastEnv, name string, amountMinor int64, currency, status string) {
 	t.Helper()
 	// A closed deal must carry its frozen rate — deal_closed_fx refuses a
 	// priced one without, which is the schema half of "history is not
 	// re-converted". The base currency is no exception: the rate is 1 there,
 	// and the constraint asks for a rate rather than for a conversion.
-	return e.seedID(t, `INSERT INTO deal
+	e.seedID(t, `INSERT INTO deal
 		(id, name, pipeline_id, stage_id, amount_minor, currency, status, closed_at,
 		 fx_rate_to_base, fx_rate_date, lost_reason, expected_close_date, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6::text, $7::text,
@@ -49,26 +47,33 @@ func seedPricedDeal(
 		        -- deal_lost_reason_only_when_lost refuses one otherwise.
 		        CASE WHEN $7::text = 'lost' THEN 'went elsewhere' END,
 		        (now() + interval '30 days')::date, 'manual', 'human:x')`,
-		name, e.pipeline, e.stages[probability], amountMinor, currency, status)
+		name, e.pipeline, e.stages[pipelineTestStage], amountMinor, currency, status)
 }
 
-func seedRate(t *testing.T, e *forecastEnv, from string, rate string, daysAgo int) {
+// pipelineTestStage is the win probability naming the one stage these cases
+// seed into; forecastEnv keys its stages by it.
+const pipelineTestStage = 60
+
+// seedRate puts one USD→base rate on the sheet. USD because these cases only
+// need A foreign currency, and one name keeps the arithmetic in the assertions
+// readable.
+func seedRate(t *testing.T, e *forecastEnv, rate string, daysAgo int) {
 	t.Helper()
 	e.seedID(t, `INSERT INTO fx_rate (id, from_currency, to_currency, rate, rate_date)
-		VALUES ($1, $2::text, 'EUR', $3::numeric, (current_date - make_interval(days => $4::int))::date)`,
-		from, rate, daysAgo)
+		VALUES ($1, 'USD', 'EUR', $2::numeric, (current_date - make_interval(days => $3::int))::date)`,
+		rate, daysAgo)
 }
 
 // A won deal is money that arrived. It is not still in the pipeline, and a
 // composition that counts it reports work the team cannot act on.
 func TestPipelineCurrentHoldsOnlyOpenDeals(t *testing.T) {
 	e := setupForecast(t)
-	seedPricedDeal(t, e, "Still open", 60, 10_000, "EUR", "open")
-	seedPricedDeal(t, e, "Already won", 60, 90_000, "EUR", "won")
-	seedPricedDeal(t, e, "Lost", 60, 70_000, "EUR", "lost")
+	seedPricedDeal(t, e, "Still open", 10_000, "EUR", "open")
+	seedPricedDeal(t, e, "Already won", 90_000, "EUR", "won")
+	seedPricedDeal(t, e, "Lost", 70_000, "EUR", "lost")
 
 	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
-	row := dealsByStageRow(t, result, e.stages[60].String())
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 
 	if got := wireInt(t, row, "deals"); got != 1 {
 		t.Errorf("open stage counted %v deals, want the one still in play", got)
@@ -83,16 +88,16 @@ func TestPipelineCurrentHoldsOnlyOpenDeals(t *testing.T) {
 func TestPipelineCurrentConvertsEachDealAndDrawsOneRowPerStage(t *testing.T) {
 	e := setupForecast(t)
 	// 0.5 EUR per unit, in force since yesterday.
-	seedRate(t, e, "USD", "0.5", 1)
-	seedPricedDeal(t, e, "Home", 60, 10_000, "EUR", "open")
-	seedPricedDeal(t, e, "Abroad", 60, 10_000, "USD", "open")
+	seedRate(t, e, "0.5", 1)
+	seedPricedDeal(t, e, "Home", 10_000, "EUR", "open")
+	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
 
 	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
 
 	if len(result.Rows) != 1 {
 		t.Fatalf("a stage in two currencies drew %d rows, want one", len(result.Rows))
 	}
-	row := dealsByStageRow(t, result, e.stages[60].String())
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 	// 10000 EUR + (10000 USD × 0.5) = 15000, and never the 20000 that adding
 	// the two native amounts would produce.
 	if got := wireInt(t, row, "base"); got != 15_000 {
@@ -104,12 +109,12 @@ func TestPipelineCurrentConvertsEachDealAndDrawsOneRowPerStage(t *testing.T) {
 // re-price what was already read.
 func TestPipelineCurrentTakesTheLatestRateOnOrBeforeAsOf(t *testing.T) {
 	e := setupForecast(t)
-	seedRate(t, e, "USD", "0.5", 10)
-	seedRate(t, e, "USD", "0.9", 2)
-	seedPricedDeal(t, e, "Abroad", 60, 10_000, "USD", "open")
+	seedRate(t, e, "0.5", 10)
+	seedRate(t, e, "0.9", 2)
+	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
 
 	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
-	row := dealsByStageRow(t, result, e.stages[60].String())
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 
 	if got := wireInt(t, row, "base"); got != 9_000 {
 		t.Errorf("converted at %v, want the newest applicable rate's 9000", got)
@@ -120,12 +125,12 @@ func TestPipelineCurrentTakesTheLatestRateOnOrBeforeAsOf(t *testing.T) {
 // shrink the total and read as a smaller pipeline rather than a missing rate.
 func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing.T) {
 	e := setupForecast(t)
-	seedPricedDeal(t, e, "Priced", 60, 10_000, "EUR", "open")
+	seedPricedDeal(t, e, "Priced", 10_000, "EUR", "open")
 	// VND with no rate sheet entry at all.
-	seedPricedDeal(t, e, "No rate", 60, 5_000_000, "VND", "open")
+	seedPricedDeal(t, e, "No rate", 5_000_000, "VND", "open")
 
 	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
-	row := dealsByStageRow(t, result, e.stages[60].String())
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 
 	if got := wireInt(t, row, "deals"); got != 2 {
 		t.Errorf("counted %v deals, want both — an unconvertible deal is still pipeline", got)
@@ -143,13 +148,44 @@ func TestPipelineCurrentWeightsPerDealAndNotOnTheTotal(t *testing.T) {
 	// 12341 × 60% = 7404.6 → 7405 each, so two round to 14810 while their
 	// combined raw total rounds to 14809.
 	const amount = int64(12_341)
-	seedPricedDeal(t, e, "Alpha", 60, amount, "EUR", "open")
-	seedPricedDeal(t, e, "Beta", 60, amount, "EUR", "open")
+	seedPricedDeal(t, e, "Alpha", amount, "EUR", "open")
+	seedPricedDeal(t, e, "Beta", amount, "EUR", "open")
 
 	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
-	row := dealsByStageRow(t, result, e.stages[60].String())
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 
 	if got := wireInt(t, row, "weighted_base"); got != 14_810 {
 		t.Errorf("weighted base was %v, want 14810 — the sum of two per-deal roundings", got)
+	}
+}
+
+// A converted headline must open the deals it was summed from, and those deals
+// must add back up to it.
+//
+// The drill-through is where a reader checks a number they doubt, so a detail
+// set that reconciles to something else is worse than no detail at all: it
+// looks like proof.
+func TestPipelineCurrentDetailReconcilesToTheConvertedHeadline(t *testing.T) {
+	e := setupForecast(t)
+	seedRate(t, e, "0.5", 1)
+	seedPricedDeal(t, e, "Home", 10_000, "EUR", "open")
+	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
+	// Won, so it belongs to neither the headline nor the rows under it.
+	seedPricedDeal(t, e, "Already won", 90_000, "EUR", "won")
+
+	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
+	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
+	handle, ok := row["derivation_url"].(string)
+	if !ok || handle == "" {
+		t.Fatalf("the converted stage row minted no derivation handle: %+v", row)
+	}
+
+	derivation := e.explainReport(e.Admin(), t, "pipeline-current", handle)
+	if len(derivation.Rows) != 2 {
+		t.Fatalf("detail opened %d deals, want the two still in play: %+v",
+			len(derivation.Rows), derivation.Rows)
+	}
+	if got := wireInt(t, row, "base"); got != 15_000 {
+		t.Fatalf("headline was %d, want the converted 15000", got)
 	}
 }

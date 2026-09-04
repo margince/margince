@@ -60,7 +60,7 @@ var prebuiltReports = map[string]reportSpec{
 	"open-deals-per-company": {
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
-		baseWhere: "t.archived_at IS NULL AND t.status = 'open'",
+		baseWhere: whereOpenDeal,
 		basePlain: "live (unarchived) open deals",
 		// Currency is a dimension AND a filter because amount_minor is a
 		// measure here: a caller summing money on this key has to be able to
@@ -259,7 +259,7 @@ var prebuiltReports = map[string]reportSpec{
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
-		baseWhere: "t.archived_at IS NULL AND t.status = 'open'",
+		baseWhere: whereOpenDeal,
 		basePlain: "open, unarchived deals (win probability read live from the deal's current stage; a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11)",
 		dimensions: map[string]string{
 			fieldOwnerID:        colOwnerID,

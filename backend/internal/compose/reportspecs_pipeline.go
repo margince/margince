@@ -30,7 +30,7 @@ func pipelineCurrentSpec() reportSpec {
 		// OPEN only. A won deal is money that arrived and a lost one is money
 		// that did not; neither is still in the pipeline, and counting them
 		// here reports a composition the team cannot act on.
-		baseWhere: "t.archived_at IS NULL AND t.status = 'open'",
+		baseWhere: whereOpenDeal,
 		basePlain: "live (unarchived) deals still open, valued in the installation's base " +
 			"currency — each deal converted on its own at the answer's as-of date, a closed " +
 			"rate never re-converted, and a deal whose rate is missing counted but not priced",

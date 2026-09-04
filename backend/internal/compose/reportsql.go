@@ -54,6 +54,9 @@ type reportFrame struct {
 	// effective date, and the stage totals would then sum to a headline
 	// nobody can reproduce. It is also what the answer is LABELLED with, so
 	// the label and the arithmetic cannot disagree.
+	//
+	// Held by: TestAReportIsLabelledWithTheInstantItWasComputedAt
+	// (backend/gates/reportasof_test.go)
 	AsOf time.Time
 }
 
@@ -398,7 +401,7 @@ const (
 	reportActivityScopeToken = "<<activity-scope:a>>"
 	// reportAsOfToken stands in for the instant the answer is true at — the
 	// date an open deal's exchange rate is looked up on or before.
-	reportAsOfToken = "<<report-as-of>>"
+	reportAsOfToken = "<<report-as-of>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
 )
 
 // bindReportTokens substitutes every token the assembled statement carries
