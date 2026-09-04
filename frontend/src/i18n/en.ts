@@ -104,6 +104,8 @@ export const en = {
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
+  "history.field.emails": "Email addresses",
+  "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_org_key": "Matched company",
   "history.field.company_name": "Company name",
   "history.field.currency": "Currency",
@@ -186,6 +188,7 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
+  "shell.poweredByPrefix": "Powered by",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
@@ -342,7 +345,7 @@ export const en = {
   "share.downgradeConfirm": "Reduce to {to}",
   "share.seatCeiling":
     "This seat is read-only, so it cannot hold write access to a record. Raise the seat first, or grant read.",
-  "share.whoHasAccess": "Who has access",
+  "share.whoHasAccess": "Explicit shares",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
   "share.revokeConfirm":
@@ -1198,6 +1201,28 @@ export const en = {
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add a contract",
   "contracts.rowMenu": "Contract actions",
+  "contracts.renew.title": "Renew this agreement",
+  "contracts.renew.hint":
+    "Creates a new agreement and marks this one superseded. Its own terms — nothing carries over but the counterparty.",
+  "contracts.renew.submit": "Renew",
+  "contracts.statusChange.title": "Change status",
+  "contracts.statusChange.label": "New status",
+  "contracts.statusChange.submit": "Change status",
+  "contracts.statusChange.errSame": "Already at this status.",
+  "contracts.cancel.title": "Record cancellation",
+  "contracts.cancel.hint":
+    "The customer stays under contract until the effective date — this records notice, not a state change.",
+  "contracts.cancel.noticeOn": "Notice given",
+  "contracts.cancel.effectiveOn": "Takes effect",
+  "contracts.cancel.effectiveOnHint":
+    "Not after the term ends, and not before the notice date.",
+  "contracts.cancel.submit": "Record cancellation",
+  "contracts.cancel.menuLabel": "Cancel agreement",
+  "contracts.cancel.errIncomplete": "Both dates are needed.",
+  "contracts.cancel.errOrder":
+    "Cancellation cannot take effect before notice was given.",
+  "contracts.cancel.errTermEnd":
+    "Cancellation cannot take effect after the term already ends.",
   "contracts.value.perYear": "per year",
   "contracts.value.total": "for the whole term",
   "contracts.files": "Files",
@@ -1556,6 +1581,10 @@ export const en = {
   "compose.reason.noRecord": "Held, no record",
   "compose.reason.pendingVerdict": "Held until classified",
   "compose.reason.manual": "Kept private",
+  "compose.reason.verdict": "Held by a classification",
+  "compose.reason.counterparty": "Held, mail with this party",
+  "compose.reason.explicitlyConfidential": "Marked confidential",
+  "compose.reason.noCounterparty": "Held, nobody to file it under",
   "compose.audience": "Visibility",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Visibility of this one message",
@@ -1571,6 +1600,13 @@ export const en = {
   "email.access.participants": "Participants",
   "email.access.selected": "Selected",
   "email.access.withheld": "Withheld",
+  "email.access.sentence.team": "Everyone in the organization can read this.",
+  "email.access.sentence.participants":
+    "Only the people on this message can read it.",
+  "email.access.sentence.selected":
+    "Only the people named below can read this.",
+  "email.access.sentence.withheld": "This message is not shared with you.",
+  "email.access.unnamedMember": "Someone no longer here",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Waiting for them",
   "email.detail.loading": "Opening the message",
@@ -1583,6 +1619,7 @@ export const en = {
   "email.detail.from": "From",
   "email.detail.to": "To",
   "email.detail.cc": "Cc",
+  "email.detail.when": "Sent",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the organization",
@@ -1639,6 +1676,7 @@ export const en = {
   "co.people.band.noWayInWhy":
     "Everyone here was written to and nobody replied",
   "co.people.band.showAnswered": "Show who answered",
+  "co.people.band.showWaiting": "Show who is waiting",
   "co.people.band.committee": "Buying team",
   "co.people.band.missing": "No {role}",
   "co.people.band.committeeComplete": "Champion and economic buyer named",
@@ -1678,6 +1716,7 @@ export const en = {
   "co.people.map.account": "Account",
   "co.people.map.missing": "{role} missing",
   "co.people.map.awaiting": "awaiting reply",
+  "co.people.map.owed": "reply owed",
   "co.people.map.replied": "they replied",
   "co.people.map.never": "never written to",
   "co.people.map.onDeal": "on the deal",
@@ -1715,6 +1754,7 @@ export const en = {
   "co.people.board.confirm": "Confirm",
   "co.people.board.confirming": "Confirming",
   "co.people.board.change": "Change role",
+  "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",
@@ -3089,7 +3129,15 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
+  "personAccess.title": "Who can see this contact",
+  "personAccess.privateToYou":
+    "Private to you. Your mailbox created this contact, and nobody else in the organization can see it — not your team, and not an admin.",
+  "personAccess.organization":
+    "Everyone in the organization can see this contact.",
+  "personAccess.share": "Share with the organization",
+  "personAccess.published": "The organization can see this contact now.",
   "compose.reply": "Reply",
+  "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.draftWithAi": "Draft with AI",
   "compose.drafting": "Drafting…",
@@ -3100,6 +3148,8 @@ export const en = {
   "compose.aiDisclosureFallback":
     "This draft was produced by AI. Read it and edit it before you send.",
   "compose.voiceVersion": "Built from your corpus · v{n}",
+  "compose.voiceDegraded":
+    "Your voice profile couldn't be loaded, so this draft is not written in your voice. Draft again, or edit before sending.",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",
@@ -3271,6 +3321,8 @@ export const en = {
   "review.allSourcesRead": "Every source was read.",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",
+  "review.notCheckedYet":
+    "Nothing has been checked yet — no nightly run has completed for this installation. The readings above stand on the records as they are.",
   "review.nothingToCheck": "Nothing to check.",
   "review.answer": "Answer",
   "review.closePast": "Close date has passed",
@@ -6286,7 +6338,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the organization's agent identity. Deactivating it stops every job that runs with nobody behind it, extensions included, until you reactivate it. No person loses access — it signs in nowhere.",
+    "This is the organization's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
@@ -6328,18 +6380,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
-  "settings.companyMark": "Company mark",
+  "settings.companyMark": "Company logo",
   "settings.companyMarkPresent":
-    "Shown wherever this company appears, including the top of the sidebar.",
+    "Shown here and as the main brand at the top of the sidebar.",
   "settings.companyMarkNone":
-    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
-  "settings.companyMarkAdd": "Add a mark",
+    "No logo yet, so the initials stand in. A website read can fill this in, or add one here.",
+  "settings.companyMarkAdd": "Add a logo",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkPick": "Company logo",
   "settings.companyMarkHint":
-    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
-  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
+    "Best results: SVG or a transparent PNG around 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Your logo keeps its proportions.",
+  "settings.companyMarkEmpty": "Drop your logo here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -7939,6 +7991,13 @@ export const en = {
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
+  // A band holding nothing, said rather than left out. Each says what is
+  // absent, because "nothing here" four times over tells a reader less than
+  // one line naming what they are clear of.
+  "worklist.bandClear.now": "Nothing needs you today.",
+  "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
+  "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
+  "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Later",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",
@@ -8015,6 +8074,9 @@ export const en = {
   "worklist.hidden.unlinked": "Attached to no record",
   "worklist.hidden.unlinked.detail":
     "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.colleagues": "From one of our own domains",
+  "worklist.hidden.colleagues.detail":
+    "A colleague, not a customer. A mistyped domain hides a real one.",
   "worklist.hidden.notSales": "Judged not sales work",
   "worklist.hidden.notSales.detail":
     "Hidden from the whole organization, and it does not lift.",
@@ -8071,6 +8133,8 @@ export const en = {
   "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
+  "worklist.because.no_reply_history": "no reply history",
+  "worklist.because.asks_nothing": "asks nothing of us",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",
@@ -8118,6 +8182,31 @@ export const en = {
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.sync_health": "The CRM sync needs attention",
+  "worklist.sync.class.contacts": "contacts",
+  "worklist.sync.class.companies": "companies",
+  "worklist.sync.class.deals": "deals",
+  "worklist.sync.class.leads": "prospects",
+  "worklist.sync.class.calls": "calls",
+  "worklist.sync.class.meetings": "meetings",
+  "worklist.sync.class.emails": "emails",
+  "worklist.sync.class.notes": "notes",
+  "worklist.sync.class.tasks": "tasks",
+  "worklist.sync.error.rate_limited":
+    "the other system is limiting how often we may ask",
+  "worklist.sync.error.unreachable": "the other system cannot be reached",
+  "worklist.sync.error.auth": "the connection needs signing in again",
+  "worklist.sync.error.history_gone":
+    "the other system no longer holds that history",
+  "worklist.sync.error.internal": "something on our side went wrong",
+  "worklist.sync.band.warn":
+    "Close to the read budget, so some reads may be served from the copy.",
+  "worklist.sync.band.shed":
+    "Over the read budget: reads are being served from the copy rather than live.",
+  "worklist.sync.failing": "Not syncing — {reason}.",
+  "worklist.sync.objects_stale": "Out of date here: {classes}.",
+  "worklist.sync.backfill_incomplete": "Still importing: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Changed here and overwritten by the other system: {classes}.",
   "worklist.untitled.capture_health": "A mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs a look",
   "worklist.untitled.bounce": "An email did not arrive",

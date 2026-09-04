@@ -201,7 +201,7 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	wantURL := "/v1/organizations/" + company.OrganizationID.String() + "/logo"
+	wantURL := *people.LogoURL(company.OrganizationID.UUID, &boundKey)
 	if org.LogoUrl == nil || *org.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", org.LogoUrl, wantURL)
 	}

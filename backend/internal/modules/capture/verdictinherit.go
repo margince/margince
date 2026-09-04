@@ -47,6 +47,45 @@ const (
 // privately, whose parties are genuine contacts.
 const ThreadKindPersonal = "personal"
 
+// threadKindExplicitlyConfidential is the classifier's answer for a thread whose
+// own text asks for confidence. Spelled here only to be translated away — see
+// rowReasonForKind.
+const threadKindExplicitlyConfidential = "explicitly_confidential"
+
+// verdictReasonGeneric mirrors activities.ReasonVerdict, which this module may
+// not import.
+const verdictReasonGeneric = "verdict"
+
+// rowReasonForKind is the word a verdict's kind carries onto the message row.
+//
+// Every kind travels as itself, so a held message says what held it: `legal`,
+// `personnel` and `security_incident` all reach the reader that way. One does
+// not.
+//
+// `explicitly_confidential` is the classifier's name for "the text asks for
+// confidence", and it is ALSO the reason the sink writes when a SENDER marked
+// the subject line. Those look alike and behave nothing alike: the activities
+// derivation carries the sink's reason among the holds that survive an opening
+// verdict, because a person marked that message and no model overrules a
+// person. A model's own answer belongs in no such set — it is a judgement, and
+// the seat whose mail it is may disagree with it.
+//
+// Sharing one word made a model verdict unclearable. A rep whose ordinary deal
+// thread was judged confidential pressed Share; the ledger recorded
+// `shared_by_owner`, the derivation ran, read `explicitly_confidential` off the
+// row, treated it as the sender's own marking and left the message held. The
+// share worked and the hold ignored it, with nothing on screen to say why.
+//
+// So a classifier's version becomes the generic `verdict`, which holds exactly
+// as firmly and clears when its owner says so. The sink's marker keeps the word
+// and keeps its standing.
+func rowReasonForKind(kind string) string {
+	if kind == threadKindExplicitlyConfidential {
+		return verdictReasonGeneric
+	}
+	return kind
+}
+
 // inheritedVerdictTx answers the verdict status this message takes from its
 // thread, or "" when it takes none and the posture decides.
 //
@@ -97,11 +136,31 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 // senderWasSeen answers whether this message's author is one of the addresses
 // the thread's verdict was given.
 //
-// The FROM address alone, not every party on the message. A cleared thread that
+// The counterparty alone, not every party on the message. A cleared thread that
 // a new recipient is copied on is still the conversation the classifier read;
-// a message WRITTEN by somebody it never saw is not.
+// a message whose OTHER PARTY it never saw is not.
+//
+// counterparty_email is the party across the exchange, so it is the author of
+// an inbound message and the recipient of an outbound one — and the rule is
+// deliberately the same for both. A verdict is about a CORRESPONDENCE with
+// somebody: the seat's own reply to a customer whose mail was just called
+// ordinary belongs to that same exchange, and holding it while publishing what
+// it answers would show a conversation with half its turns missing. A message
+// to or from a party the verdict never read is a different correspondence
+// whatever direction it travelled in, and is not admitted.
 func senderWasSeen(rec connector.NormalizedRecord, seen []string) bool {
-	from := strings.ToLower(strings.TrimSpace(rec.Counterparty.Email))
+	return addressWasSeen(rec.Counterparty.Email, seen)
+}
+
+// addressWasSeen is that rule with the message taken away, so the arriving
+// message and an already-stored sibling are admitted on identical terms.
+//
+// Spelled once on purpose: two copies of "was this sender part of what the
+// verdict read" drift, and the direction they drift in publishes mail.
+//
+// Held by: TestTheSeenSenderRuleIsSpelledOnce (backend/gates/seenaddressrule_test.go)
+func addressWasSeen(address string, seen []string) bool {
+	from := strings.ToLower(strings.TrimSpace(address))
 	if from == "" {
 		return false
 	}

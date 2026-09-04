@@ -188,14 +188,15 @@ func TestARoleWithNoViewProviderComposesTheRestAndServesIt(t *testing.T) {
 	// the contract alone, so no deployment can lack it and a role that dropped
 	// it would leave both write tools pointing at nothing; capabilities is
 	// derived from the registry the transport already holds, so no role can
-	// serve tools and fail to describe them; and the report vocabulary comes
-	// from the engine's compile-time catalog, which run_report is registered
-	// against on every build.
+	// serve tools and fail to describe them; and the report vocabulary and the
+	// block grammar come from compile-time tables, which run_report and
+	// compose_analytics_report are registered against on every build.
 	want := []string{
 		"margince://schema/query",
 		agents.RecordFieldsURI,
 		agents.CapabilitiesURI,
 		agents.ReportVocabularyURI,
+		agents.ReportBlocksURI,
 	}
 	if len(published) != len(want) {
 		t.Fatalf("the composed surface published %v, want exactly %v", published, want)

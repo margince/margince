@@ -186,6 +186,8 @@ const KNOWN_REASONS = {
   response_due_soon: true,
   unassigned: true,
   stale: true,
+  no_reply_history: true,
+  asks_nothing: true,
 } as const;
 
 type KnownReason = keyof typeof KNOWN_REASONS;

@@ -22,6 +22,7 @@ package compose
 import (
 	"go/ast"
 	"go/token"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,6 +44,16 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 		t.Fatal("no file under internal/compose composes draftrules.Shared, so this gate is reading an " +
 			"empty tree rather than a governed one")
 	}
+	// Plus the packages a surface calls the MODEL through.
+	//
+	// The corpus above is "who composes the prompt", which was the same set as
+	// "who calls the model" right up until the two grounded surfaces moved
+	// their writer into draftcore. They still compose their own prompts — that
+	// part is per-surface by design — so they stayed in the corpus while the
+	// nine voice-carrying calls they now share dropped out of the sweep
+	// entirely. The census would have gone on reading a smaller tree and
+	// reporting PASS, which is the one way it must not break.
+	surfaces = append(surfaces, sharedWriterFiles(t)...)
 	// The package, not the one file: a surface splits its model call and its
 	// voice load across files (the reply drafter does), so a caller in a
 	// sibling file is still this surface's.
@@ -72,7 +83,11 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 	// stopped seeing calls it used to see: either look at why, or lower this
 	// number deliberately. A rise is ordinary — a new drafting call — and
 	// raising it is the whole of the response.
-	const governedCalls = 36
+	// Was 36 while the two grounded surfaces each carried their own copy of the
+	// writer: 22 in the reply lane, 7 in accountdraft, 7 in persondraft. The
+	// copies became one, so those fourteen are now 2 + 2 in the surfaces (their
+	// own prompt assembly) plus 5 in draftcore, which every surface runs.
+	const governedCalls = 31
 	if governed != governedCalls {
 		t.Errorf("the sweep reached %d voice-carrying calls and this gate pins %d. Fewer means it stopped "+
 			"recognising calls it used to read — most likely a voice parameter was renamed out of "+
@@ -243,4 +258,33 @@ func carriesNoVoice(expr ast.Expr) bool {
 	}
 	composite, ok := expr.(*ast.CompositeLit)
 	return ok && len(composite.Elts) == 0
+}
+
+// sharedWriterFiles are the files of the package the grounded surfaces call the
+// model through.
+//
+// Derived from the surfaces themselves rather than named here: a package that
+// composes the shared rules AND imports draftcore has handed its model call
+// over, so draftcore's own calls are that surface's calls and belong in the
+// same census.
+func sharedWriterFiles(t *testing.T) []string {
+	t.Helper()
+	const writer = "draftcore"
+	entries, err := os.ReadDir(filepath.Join(".", writer))
+	if err != nil {
+		t.Fatalf("reading the shared writer package: %v", err)
+	}
+	var out []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		out = append(out, filepath.Join(writer, name))
+	}
+	if len(out) == 0 {
+		t.Fatal("the shared writer package has no files, so the calls both grounded surfaces make " +
+			"through it are outside this census")
+	}
+	return out
 }

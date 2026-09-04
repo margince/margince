@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 70 |
-| Resources | 10 |
-| Tool catalog | 194.8 KB |
-| Resource catalog | 3.8 KB |
-| Approx. wire tokens | 50841 |
+| Tools | 72 |
+| Resources | 11 |
+| Tool catalog | 199.5 KB |
+| Resource catalog | 4.2 KB |
+| Approx. wire tokens | 52136 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 93.7 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 46.7 KB | 23% | Yes, every step |
-| Input schemas | 39.7 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 14.7 KB | 7% | Partly |
-| **Description + input schema** | **86.4 KB** | **44%** | **the recurring cost** |
+| Output schemas | 95.3 KB | 47% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 48.7 KB | 24% | Yes, every step |
+| Input schemas | 40.3 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 15.2 KB | 7% | Partly |
+| **Description + input schema** | **89.0 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -45,12 +45,13 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 ## Index
 
-### Resources (10)
+### Resources (11)
 
 - [`margince://capabilities`](#capabilities) — What this installation can do
 - [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
 - [`margince://schema/record-fields`](#record_fields) — Record write vocabulary
 - [`margince://schema/reports`](#report_vocabulary) — Report plan vocabulary
+- [`margince://schema/report-blocks`](#report_blocks) — Report block grammar
 - [`ui://margince/account-brief.html`](#account_brief_view) — Morning brief
 - [`ui://margince/relationship-map.html`](#relationship_map_view) — Who knows this contact
 - [`ui://margince/commitments.html`](#commitments_view) — Open commitments
@@ -58,7 +59,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (70)
+### Tools (72)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -74,6 +75,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.6 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.3 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
@@ -81,6 +83,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
+| [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 1.9 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
@@ -170,6 +173,14 @@ The fields create_record and update_record accept for each record_type: which ar
 **Report plan vocabulary**
 
 What each prebuilt report accepts in a run_report plan: the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a filter means when its name alone does not say. run_report names this document instead of carrying it.
+
+### report_blocks
+
+`margince://schema/report-blocks` · application/json
+
+**Report block grammar**
+
+The blocks a report may carry: each kind, whether it renders figures, words or both, and the severities a callout may state. compose_analytics_report names this document instead of carrying it.
 
 ### account_brief_view
 
@@ -2422,6 +2433,173 @@ Write a checked import into the workspace, once a person approves. Only from awa
 
 </details>
 
+### compose_analytics_report
+
+**Compose an analytics report**
+
+Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "blocks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cells": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "column": {
+                  "type": "string"
+                },
+                "group": {
+                  "type": "array"
+                },
+                "run_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "run_id",
+                "column"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "blocks"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "blocks"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### create_record
 
 **Create a record**
@@ -3569,6 +3747,122 @@ Answer what a query plan may SAY in this workspace: the record types that can be
       },
       "required": [
         "vocabulary"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### describe_report_blocks
+
+**Describe the report block grammar**
+
+Answer what a compose_analytics_report document may CONTAIN: every block kind, whether it renders figures or words, and the severities a callout may state. It describes the grammar; it composes nothing and returns no numbers. It is NOT a prerequisite — an unknown block kind is refused by name with the whole set, so a first attempt costs one refusal. The grammar is the same for every caller, because it is the engine's and not a workspace's. Compose directly when the blocks needed are the obvious ones, and read the refusal when a kind is wrong — it carries the accepted set. This tool answers the same document as the margince://schema/report-blocks resource, for a caller that reads tools rather than resources. A figure is never written into a block, only cited: every number names a saved run and a cell inside it. A block carrying a literal number is refused even beside a valid citation. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "blocks": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "blocks"
       ],
       "type": "object"
     },

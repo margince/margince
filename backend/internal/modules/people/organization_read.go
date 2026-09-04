@@ -145,9 +145,10 @@ func scanOrganization(row pgx.Row, active []fieldcatalog.Column, extra ...any) (
 	var logoObjectKey *string
 	var linkedinURL *string
 	var version int64
+	var visibility string
 
 	dests := []any{
-		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID,
+		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&classification, &lifecycle, &relevance, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
@@ -163,6 +164,9 @@ func scanOrganization(row pgx.Row, active []fieldcatalog.Column, extra ...any) (
 
 	o.Id = openapi_types.UUID(id)
 	o.OwnerId = uuidPtr(ownerID)
+	if v := crmcontracts.OrganizationVisibility(visibility); v != "" {
+		o.Visibility = &v
+	}
 	o.ParentOrgId = uuidPtr(parentID)
 	o.MergedIntoId = uuidPtr(mergedInto)
 	cls := crmcontracts.OrganizationClassification(classification)

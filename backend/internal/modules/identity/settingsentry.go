@@ -170,7 +170,22 @@ var Country = settings.Define[string](
 		}
 		return jurisdiction.Code(v).Validate()
 	},
-).AsInstallationIdentity()
+	// MachineryApplied because the outbound authorization engine reads it while
+	// applying the posture to its OWN write — the case that declaration exists
+	// for, and its doc's own words: "the posture must bind whoever the acting
+	// principal happens to be". A send runs under whatever credential asked for
+	// it, and which jurisdiction's rules bind that message is not a fact the
+	// asker's read grants may vary.
+	//
+	// Without it CountryOf's settings.ApplyTx refuses, and every send job fails
+	// with "installation.country is not declared MachineryApplied" — which is
+	// what it did: the entry landed with #3976 reading it through ApplyTx and
+	// not declaring it, so the send lane was dead on main.
+	//
+	// It discloses a jurisdiction code through behaviour, which is the weakest
+	// thing this flag can leak and is already public: an installation's country
+	// is inferable from the rules its own outbound mail obeys.
+).AsInstallationIdentity().MachineryApplied()
 
 // FiscalYearStartMonth is the month the installation's business year begins,
 // 1..12. January is the default, which is what every installation reported by

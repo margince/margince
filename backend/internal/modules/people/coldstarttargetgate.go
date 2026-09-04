@@ -32,9 +32,16 @@ import (
 // on an existing record is a write to somebody's record rather than merely a
 // fill of empty columns. ApplyDeepReadTx takes the same gate at the same point
 // in its own flow.
+//
+// LIVE, for the reason every staged apply is: the proposal is raised against a
+// URL and applied later, and an archive landing in that window is the ordinary
+// case rather than a race. Without the filter an accepted read-back writes a
+// legal name, an industry and an address onto a company somebody deliberately
+// retired, and ships an organization.updated event for a record the record's own
+// PATCH refuses.
 func gateResolvedColdStartTarget(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, created bool) error {
 	if created {
 		return nil
 	}
-	return auth.EnsureWritable(ctx, tx, entityOrganization, orgID.UUID)
+	return auth.EnsureWritableLive(ctx, tx, entityOrganization, orgID.UUID)
 }

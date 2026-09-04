@@ -43,7 +43,7 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// A company mark, and the only ceiling here an operator cannot move.
 		// The others bound what a workspace ACCUMULATES — attachments, imports,
 		// corpora — where an installation's appetite is its own business. This
-		// one bounds a single square image that is re-encoded to 256px before
+		// one bounds a single image that is re-encoded to at most 512px before
 		// anything is stored, so a larger upload buys the sender nothing but
 		// decode work: there is no deployment for which a different number is
 		// the right one, and a dial nobody can have a reason to turn is a

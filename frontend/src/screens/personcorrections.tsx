@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -43,7 +43,9 @@ export function EnrichedFields({
   view,
 }: Readonly<{ personId: string; view: Person360 }>) {
   const t = useT();
-  const mayCorrect = useCanWrite("person", "update");
+  // The row as well as the grant: a correction writes to this contact, and a
+  // reader who may not edit it is not offered a form the save refuses.
+  const mayCorrect = useCanWriteRecord("person", view.person);
   const fields = view.profile_fields ?? [];
   if (fields.length === 0) {
     return null;

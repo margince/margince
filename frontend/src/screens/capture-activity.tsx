@@ -13,6 +13,7 @@ import {
   SegmentedControl,
   StatCard,
 } from "../design-system/atoms";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
@@ -24,6 +25,7 @@ import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureExclusionsCard } from "./capture-exclusions";
 import { useProviderLabel } from "./channelproviders";
 import { QueryGate, throwProblem } from "./common";
+import { useOpenEmail } from "./openemail";
 
 // Settings → Capture activity: what the pipeline did with the reader's own
 // messages in the last 24 hours.
@@ -200,7 +202,12 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
   const t = useT();
   const { locale } = useLocale();
   const [filter, setFilter] = useState<Outcome | null>(null);
-  const [openTrace, setOpenTrace] = useState<string | null>(null);
+  // The ENTRY rather than its id, because the drawer names the message the
+  // trace is about and the row is what knows it. The pipeline read the drawer
+  // makes is keyed by trace and returns rungs, not correspondence — asking it
+  // for a subject would be a contract change to carry a fact already on screen.
+  const [openTrace, setOpenTrace] = useState<TraceEntry | null>(null);
+  const [openEmail, setOpenEmail] = useOpenEmail();
   // Paged, because the window is 24 hours and a busy mailbox fills more than
   // one page of it. Without this the funnel could honestly say 300 captured
   // while the list showed 50 and nothing said the rest existed.
@@ -301,7 +308,7 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                         key={entry.id}
                         entry={entry}
                         payloads={first.payload_capture_enabled}
-                        onOpen={() => setOpenTrace(entry.id)}
+                        onOpen={() => setOpenTrace(entry)}
                       />
                     ))}
                   </ul>
@@ -323,10 +330,24 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
             </Disclosure>
             {openTrace && (
               <CaptureActivityDrawer
-                traceId={openTrace}
+                traceId={openTrace.id}
+                message={openTrace}
+                onOpenEmail={(activityId) => {
+                  // The trace drawer closes as the message opens. Two
+                  // right-anchored sheets at once are two focus traps and two
+                  // Escape handlers stacked, and the reader is moving from the
+                  // trace to the message rather than reading both.
+                  setOpenTrace(null);
+                  setOpenEmail(activityId);
+                }}
                 onClose={() => setOpenTrace(null)}
               />
             )}
+            <OpenEmailDrawer
+              activityId={openEmail}
+              zone={viewerZone()}
+              onClose={() => setOpenEmail(null)}
+            />
           </>
         );
       }}

@@ -165,6 +165,12 @@ type JobRunnerConfig struct {
 	// modelPath.CaptureClassify). Nil = no AI configured — the label pass
 	// is absent by omission and mail simply stays unlabeled (honest no-op).
 	ClassifyBrain completer
+	// OwedBrain is the owed-verdict lane, which judges whether a waiting
+	// message actually asks its recipient side for anything. Nil = no AI
+	// configured, and the consequence is deliberately mild: every message stays
+	// unjudged, and the queue ranks an unjudged row exactly as it did before the
+	// pass existed.
+	OwedBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
 	// by omission and connector-created people keep their empty fields.
 	EnrichBrain completer
@@ -399,6 +405,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		// cadence, the configuration it needs, and what an absent dependency
 		// costs it — so every one of them is named here whether or not this
 		// boot ends up placing it.
+		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
@@ -412,6 +419,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),
 		periodicFor(cfg, CaptureClassifyArgs{}),
+		periodicFor(cfg, OwedVerdictArgs{}),
 		periodicFor(cfg, CaptureEnrichArgs{}),
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
 		periodicFor(cfg, ConfidentialityVerdictArgs{}),

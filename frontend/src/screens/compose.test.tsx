@@ -602,6 +602,67 @@ describe("ComposeModal", () => {
     expect(screen.getByText("Provisional voice")).toBeTruthy();
   });
 
+  it("warns when the sender's voice could not be loaded for the draft", async () => {
+    stubRoutes({
+      "POST /activities/act-1/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Q3 numbers",
+          body: "Thanks for the note.",
+          ai_generated: true,
+          ai_disclosure: "AI-assisted draft (Art. 50).",
+          voice_profile_version: null,
+          draft_ref: null,
+          voice_degraded: true,
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+
+    expect(await screen.findByText(/not written in your voice/)).toBeTruthy();
+  });
+
+  it("stays quiet about the voice when a draft simply has no profile behind it", async () => {
+    stubRoutes({
+      "POST /activities/act-1/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Q3 numbers",
+          body: "Thanks for the note.",
+          ai_generated: true,
+          ai_disclosure: "AI-assisted draft (Art. 50).",
+          voice_profile_version: null,
+          draft_ref: null,
+          voice_degraded: false,
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+
+    expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
+    expect(screen.queryByText(/not written in your voice/)).toBeNull();
+  });
+
   it("flags nothing provisional when the profile is past that band", async () => {
     stubRoutes({
       "GET /voice-profiles": () =>
@@ -1767,32 +1828,57 @@ describe("TimelineActions", () => {
     );
   });
 
-  // Which audience control a timeline row offers cannot be keyed off
-  // `audience_reason`: that field is null on an untouched CAPTURED row and
-  // non-null on a NARROWED hand-typed one — the opposite of what each case
-  // needs.
+  // An EMAIL's audience is changed from the message, in the drawer, where the
+  // server states which of the two writes it would accept as `change_mode`.
+  // The row used to decide that here by testing `captured_by` for a
+  // `connector:` prefix — a backend ownership rule spelled in display code.
   //
-  // thread_key alone is not the fix either: outboundmessage.go stamps a
-  // hand-typed REPLY with the RFC822 thread it answers too, so a rep's own
-  // threaded reply would carry one — and ThreadAudienceAction's own endpoint
-  // 404s on a thread_key with no capture_import row behind it
-  // (capture/threadverdict.go's inner join). captured_by's prefix is what
-  // actually says capture wrote the row — `connector:<name>:<uuid>`, never
-  // `human:<uuid>` or `agent:<id>` — in every direction.
-  it("offers the thread-level control on captured mail before it is ever narrowed", () => {
+  // Both shapes are asserted, because the deleted inference existed precisely
+  // to tell them apart: a captured row and a hand-typed one now get the same
+  // answer, which is no audience control on the row at all.
+  it("offers no audience control on an email row, whoever captured it", () => {
+    stubRoutes();
     const captured: Activity = {
       ...activity202,
       id: "a4",
       captured_by: "connector:gmail:u1",
       thread_key: "thread:abc",
-      audience_reason: undefined,
     };
-    stubRoutes();
-    render(
+    const { unmount } = render(
       <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
     );
-    expect(screen.getByRole("button", { name: "Share thread" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    // Relink still draws, so the two absences above are the gate rather than a
+    // component that never mounted at all.
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
+    unmount();
+
+    const handTyped: Activity = {
+      ...activity202,
+      id: "a5",
+      captured_by: "human:u1",
+      audience: "participants",
+    };
+    render(
+      <TimelineActions activity={handTyped} entityType="deal" entityId="d1" />,
+    );
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
+  });
+
+  // A note, a call or a meeting has no drawer to be sent to, and its audience
+  // is never derived — so the row keeps the control for every kind but email.
+  it("keeps the audience control on a row that is not an email", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{ ...activity202, id: "a7", kind: "note" }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
   });
 
   // `selected` is the API's third audience and the dialog offered two, because
@@ -1831,6 +1917,11 @@ describe("TimelineActions", () => {
         activity={{
           ...activity202,
           id: "a6",
+          // A NOTE, because this dialog is the row's and the row no longer
+          // draws it for an email. The claims below are about the picker and
+          // the write it sends, which are the same for every kind that still
+          // has one.
+          kind: "note",
           captured_by: "human:u1",
           version: 3,
         }}
@@ -1898,7 +1989,10 @@ describe("TimelineActions", () => {
       <TimelineActions
         activity={{
           ...activity202,
-          id: "a7",
+          id: "a8",
+          // A note, for the same reason as the test above: this dialog is the
+          // row's, and an email row no longer draws one.
+          kind: "note",
           captured_by: "human:u1",
           version: 3,
         }}
@@ -1918,49 +2012,25 @@ describe("TimelineActions", () => {
     ).toBe(true);
   });
 
-  it("keeps the per-message control on hand-typed mail once narrowed", () => {
-    const narrowedHandTyped: Activity = {
-      ...activity202,
-      id: "a5",
-      captured_by: "human:u1",
-      audience: "participants",
-      audience_reason: "manual",
-      thread_key: undefined,
-    };
+  // A withheld row offers nothing: somebody outside the audience has no
+  // standing to change who else is in it. The kind that still draws the
+  // control is the one that has to prove this.
+  it("offers no audience control on a withheld row", () => {
     stubRoutes();
     render(
       <TimelineActions
-        activity={narrowedHandTyped}
+        activity={{
+          ...activity202,
+          id: "a9",
+          kind: "note",
+          content_state: "withheld",
+        }}
         entityType="deal"
         entityId="d1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Keep private" })).toBeNull();
-  });
-
-  // The regression thread_key alone would have caused: a rep's own reply
-  // within an existing conversation is hand-typed, not captured, but it is
-  // threaded like everything else in that conversation.
-  it("keeps the per-message control on a hand-typed reply that carries a thread_key too", () => {
-    const threadedReply: Activity = {
-      ...activity202,
-      id: "a6",
-      captured_by: "human:u1",
-      thread_key: "thread:existing-conversation",
-      audience_reason: undefined,
-    };
-    stubRoutes();
-    render(
-      <TimelineActions
-        activity={threadedReply}
-        entityType="deal"
-        entityId="d1"
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 });
 

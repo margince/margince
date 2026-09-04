@@ -195,6 +195,18 @@ func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
 
+func (stubs) RenderAnalyticsReport(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RenderAnalyticsReport")
+}
+
+func (stubs) GetReportRun(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetReportRun")
+}
+
+func (stubs) ExplainReportRunCell(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ExplainReportRunCell")
+}
+
 func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
 }
@@ -1665,6 +1677,10 @@ func (stubs) GetPersonProfileFields(w nethttp.ResponseWriter, r *nethttp.Request
 
 func (stubs) RestorePersonProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.PersonProfileFieldKey) {
 	httperr.NotImplemented(w, r, "RestorePersonProfileField")
+}
+
+func (stubs) PublishCapturedPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PublishCapturedPerson")
 }
 
 func (stubs) RunPersonResearch(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

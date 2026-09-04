@@ -359,10 +359,13 @@ describe("UsersAdminCard", () => {
     ).toBeTruthy();
   });
 
-  // Deactivating the seat stays offered — an operator is entitled to that — but
-  // what it stops is invisible from this screen, and the body written for a
-  // person describes sessions and sign-ins that the seat has none of.
-  it("warns what stops before deactivating the agent seat", async () => {
+  // Deactivating the seat stays offered — an operator is entitled to that — and
+  // the body written for a person describes sessions and sign-ins that the seat
+  // has none of. What the agent body must NOT say is that scheduled extension
+  // jobs stop: a tick acts as the job it is and reads no identity, so that
+  // warning would talk an operator out of a safe action for a reason that is
+  // no longer true.
+  it("says what deactivating the agent seat does and does not stop", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
@@ -377,9 +380,11 @@ describe("UsersAdminCard", () => {
     );
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByText(/every job that runs with nobody/i),
+      within(dialog).getByText(/scheduled extension jobs keep running/i),
     ).toBeTruthy();
     expect(within(dialog).queryByText(/signed out everywhere/i)).toBeNull();
+    // The claim this screen used to make, and the one an operator would act on.
+    expect(within(dialog).queryByText(/stops every job/i)).toBeNull();
   });
 
   // The invite form is a dialog the row's verb opens — three inputs, a team

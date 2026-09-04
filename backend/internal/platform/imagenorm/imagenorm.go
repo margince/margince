@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package imagenorm turns an untrusted source image into ONE stored shape: a
-// square PNG, the source scaled to fit and centred, transparent where the
-// source did not paint. It is technical plumbing — it holds no opinion about
-// what the picture is FOR, so the dimension and aspect policy of any caller
-// (what counts as a usable company logo, say) stays with that caller, which
-// reads the decoded bounds and decides.
+// Package imagenorm turns an untrusted source image into pixels this server
+// owns. Callers choose the display shape: SquarePNG centres a mark on a square
+// canvas, while FitPNG keeps a wordmark's natural aspect. This package is
+// technical plumbing — it holds no opinion about what the picture is FOR, so
+// the dimension and aspect policy stays with the caller.
 //
 // Two properties make it safe to point at bytes a third-party website served:
 //   - Nothing passes through. Every output is this package's own PNG encoder's
@@ -25,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/draw"
 	// Registered for image.Decode's format sniffing: GIF and JPEG are the
 	// other two shapes a site's mark commonly arrives in.
 	_ "image/gif"
@@ -37,9 +37,9 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
-// ContentType is the media type of everything SquarePNG produces. Callers
-// store it beside the bytes rather than carrying the source's own type: the
-// source format is not what gets served.
+// ContentType is the media type of every normalized image this package
+// produces. Callers store it beside the bytes rather than carrying the
+// source's own type: the source format is not what gets served.
 const ContentType = "image/png"
 
 // maxSourcePixels bounds a decode. An image header is cheap to forge and
@@ -93,6 +93,79 @@ func Decode(src []byte) (image.Image, error) {
 		return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
 	}
 	return img, nil
+}
+
+// FitPNG re-encodes img as a PNG that keeps the source's aspect ratio. Its
+// longest side is capped at maxEdge and a smaller source is never enlarged.
+// This is the shape for a wordmark: unlike SquarePNG it adds no transparent
+// canvas around a wide logo, so a wide display can use the pixels it stored.
+func FitPNG(img image.Image, maxEdge int) ([]byte, error) {
+	if maxEdge <= 0 {
+		return nil, fmt.Errorf("imagenorm: a fitted image needs a positive edge, got %d", maxEdge)
+	}
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	if width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("%w: it decoded to a %dx%d canvas", ErrUnsupported, width, height)
+	}
+
+	long := max(width, height)
+	scale := min(1, float64(maxEdge)/float64(long))
+	fitWidth := max(1, int(float64(width)*scale+0.5))
+	fitHeight := max(1, int(float64(height)*scale+0.5))
+	fitted := image.NewNRGBA(image.Rect(0, 0, fitWidth, fitHeight))
+	xdraw.CatmullRom.Scale(fitted, fitted.Bounds(), img, bounds, xdraw.Src, nil)
+
+	var out bytes.Buffer
+	if err := (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(&out, fitted); err != nil {
+		return nil, fmt.Errorf("imagenorm: encoding the fitted PNG: %w", err)
+	}
+	return out.Bytes(), nil
+}
+
+// TrimTransparentPNG removes only fully transparent canvas around a PNG. It
+// exists for logos stored before FitPNG preserved their natural aspect: those
+// objects carry a wide wordmark centred in a square transparent canvas. A
+// painted square logo is returned byte-for-byte, while an old letterboxed
+// wordmark becomes the wide image the person originally supplied.
+func TrimTransparentPNG(src []byte) ([]byte, error) {
+	img, err := Decode(src)
+	if err != nil {
+		return nil, fmt.Errorf("imagenorm: decoding the stored PNG for display: %w", err)
+	}
+	canvas := img.Bounds()
+	visible, painted := paintedBounds(img)
+	if !painted || visible == canvas {
+		return src, nil
+	}
+
+	trimmed := image.NewNRGBA(image.Rect(0, 0, visible.Dx(), visible.Dy()))
+	draw.Draw(trimmed, trimmed.Bounds(), img, visible.Min, draw.Src)
+	var out bytes.Buffer
+	if err := (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(&out, trimmed); err != nil {
+		return nil, fmt.Errorf("imagenorm: encoding the trimmed PNG: %w", err)
+	}
+	return out.Bytes(), nil
+}
+
+func paintedBounds(img image.Image) (image.Rectangle, bool) {
+	canvas := img.Bounds()
+	minX, minY := canvas.Max.X, canvas.Max.Y
+	maxX, maxY := canvas.Min.X, canvas.Min.Y
+	for y := canvas.Min.Y; y < canvas.Max.Y; y++ {
+		for x := canvas.Min.X; x < canvas.Max.X; x++ {
+			_, _, _, alpha := img.At(x, y).RGBA()
+			if alpha == 0 {
+				continue
+			}
+			minX, minY = min(minX, x), min(minY, y)
+			maxX, maxY = max(maxX, x+1), max(maxY, y+1)
+		}
+	}
+	if minX == canvas.Max.X {
+		return image.Rectangle{}, false
+	}
+	return image.Rect(minX, minY, maxX, maxY), true
 }
 
 // SquarePNG re-encodes img as a transparent-background PNG square. The square's

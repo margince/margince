@@ -27,16 +27,26 @@ type Reader interface {
 // profile, and a draft written without one is the product working. OK is what
 // separates "this rep has a voice" from "this rep does not", and every caller
 // branches on it rather than on a nil check somewhere further down.
+//
+// Degraded is the third state, and it is not absence: the read FAILED, so
+// nobody knows whether this rep has a voice. A draft served under it may be
+// missing a voice its sender built, which the sender cannot see in the text —
+// their own writing is the one register they do not proofread for. Every
+// response that could have been voiced carries this flag so the surface can
+// say so instead of passing the draft off as the plain kind.
 type Context struct {
-	Profile ai.VoiceProfile
-	Version ai.VoiceProfileVersion
-	OK      bool
+	Profile  ai.VoiceProfile
+	Version  ai.VoiceProfileVersion
+	OK       bool
+	Degraded bool
 }
 
 // Load resolves the actor's active voice. A lookup failure degrades to no voice
-// with the reason logged: a broken voice read must never take drafting down,
-// because the draft is the thing the rep asked for and the voice is how it is
-// phrased. reader may be nil, which is a deployment that wired no voice lane.
+// with the reason logged and the Context marked Degraded: a broken voice read
+// must never take drafting down, because the draft is the thing the rep asked
+// for and the voice is how it is phrased — but the caller's response must be
+// able to say the voice was lost rather than absent. reader may be nil, which
+// is a deployment that wired no voice lane and degrades nothing.
 func Load(ctx context.Context, reader Reader, log *slog.Logger) Context {
 	if reader == nil {
 		return Context{}
@@ -47,7 +57,7 @@ func Load(ctx context.Context, reader Reader, log *slog.Logger) Context {
 			log = slog.Default()
 		}
 		log.WarnContext(ctx, "voice profile lookup failed; drafting without voice", "err", err)
-		return Context{}
+		return Context{Degraded: true}
 	}
 	return Context{Profile: profile, Version: version, OK: ok}
 }

@@ -36,24 +36,42 @@ type ContactSort =
   | undefined;
 
 /**
- * ENGAGEMENT_TONES gives each state its own weight, because the three are not
+ * ENGAGEMENT_TONES gives each state its own weight, because the four are not
  * degrees of one thing.
  *
- * Answered is the way in and reads as success. No-reply is the one that needs a
- * reason before acting, so it carries the warning tone. Untried is neutral on
+ * Waiting is the row that owes an action — their mail sits unanswered — so it
+ * carries the warning tone rather than success: showing an unanswered inbound
+ * as a win is exactly what this state exists to stop. (The accent tone is
+ * green here and would read as success at a glance.) Answered means we
+ * replied to their latest message and reads as success. No-reply also warns,
+ * because acting on it needs a reason; the two amber states are opposite
+ * directions of the same fact and the label says which. Untried is neutral on
  * purpose: nobody has done anything wrong, and colouring it like a problem is
  * what makes a rep skip the easiest opening on a stalled account.
  */
-const ENGAGEMENT_TONES: Record<Engagement, "success" | "warn" | undefined> = {
+export const ENGAGEMENT_TONES: Record<
+  Engagement,
+  "success" | "warn" | undefined
+> = {
+  waiting: "warn",
   answered: "success",
   no_reply: "warn",
   untried: undefined,
 };
 
-const ENGAGEMENT_LABELS: Record<
+/**
+ * One vocabulary for the state, shared with the committee seats and the way-in
+ * card: a contact must wear the same word in the list, on the board and in the
+ * band, or the page argues with itself about who is owed what.
+ */
+export const ENGAGEMENT_LABELS: Record<
   Engagement,
-  "co.reach.answered" | "co.reach.silent" | "co.reach.untried"
+  | "co.reach.waiting"
+  | "co.reach.answered"
+  | "co.reach.silent"
+  | "co.reach.untried"
 > = {
+  waiting: "co.reach.waiting",
   answered: "co.reach.answered",
   no_reply: "co.reach.silent",
   untried: "co.reach.untried",
@@ -151,6 +169,7 @@ export function CompanyPeopleList({
             label: "co.people.filter.status",
             allLabel: "co.people.filter.statusAll",
             options: [
+              { value: "waiting", label: "co.reach.waiting" },
               { value: "answered", label: "co.reach.answered" },
               { value: "no_reply", label: "co.reach.silent" },
               { value: "untried", label: "co.reach.untried" },

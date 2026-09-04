@@ -179,12 +179,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	//
 	// So the column is never a caller's way of naming a record: it is the
 	// subject the erasure, retention action or subject-access request is about.
-	// When a writer does land, the reference it takes from a request body is a
-	// read of that record and owes the usual EnsureLinkTarget — these reasons
-	// describe the tree as it is, not a permanent exemption.
-	"communication_basis.person_id":          "server-derived: only privacy's subject-addressed statements name it, keyed on the person being erased or retained; nothing inserts yet",
-	"communication_basis.lead_id":            "server-derived: same, keyed on the leads erasure_leadtwins just wiped",
-	"communication_basis.source_activity_id": "server-derived: the activity that evidenced a basis; no caller names it, and no writer sets it yet",
+	"communication_basis.person_id":          "server-derived: the subject the engine concluded a ground for (consent.recordBasis), resolved from the recipient address rather than named by a caller, plus privacy's subject-addressed erasure and retention statements",
+	"communication_basis.lead_id":            "server-derived: same, resolved by the engine's lead arm, plus the leads erasure_leadtwins wipes",
+	"communication_basis.source_activity_id": "server-derived: the anchor the send already carries, and the send path put it through auth.EnsureLinkTarget before the consent gate ever saw it (activities.SendOrigin.resolve) — no caller names it here",
 	"communication_suppression.person_id":    "server-derived: same subject-addressed privacy statements as communication_basis.person_id, plus the SAR read of the subject's own rows",
 	"communication_suppression.lead_id":      "server-derived: same, keyed on the subject's lead twins",
 	"person_acquisition_evidence.person_id": "child row: why one contact exists, written by recordAcquisition " +

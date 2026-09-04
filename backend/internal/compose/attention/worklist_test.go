@@ -288,6 +288,14 @@ func withOverdue(past bool) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.Overdue = &past }
 }
 
+// withDealSubject names the deal a row is ABOUT, the way riskItem and
+// briefItem both set it in production (render.go, rendersilence.go) — the one
+// field that identifies the same deal across two rows with different ids and
+// different sources.
+func withDealSubject(deal ids.UUID) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) { i.Subject = subjectOf(subjectDeal, deal) }
+}
+
 // The deal's own figures have to reach the row, or the client reads a second
 // endpoint per line to draw a card this one could have completed.
 func TestARiskRowCarriesTheDealsFigures(t *testing.T) {
@@ -508,6 +516,10 @@ func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
 		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000aaaa"),
 		Subject:    "Re: pricing",
 		Since:      rankInstant.Add(-2 * 24 * time.Hour),
+		// A conversation we are already in. Only such a wait leads the day —
+		// one where nothing proves we ever wrote is demoted, and a fixture
+		// leaving this false would be asserting the opposite claim.
+		Engaged: true,
 	}}
 
 	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
@@ -767,14 +779,17 @@ func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
 // longest-waiting few lead; the rest are demoted, never dropped.
 func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 	waiting := []WaitingCustomer{}
-	// Every wait is LIVE — hours apart, none old enough to go stale. Crowding
-	// and staleness both move a row down the page, and a fixture that aged past
-	// the stale line would pass this test while proving the other rule.
+	// Every wait is LIVE and ENGAGED — hours apart, none old enough to go
+	// stale, each on a thread we already wrote on. Three rules move a row down
+	// this page: crowding, staleness and unproven engagement. A fixture that
+	// left any of the other two firing would pass this test while proving one
+	// of them instead.
 	for i := 0; i < 30; i++ {
 		waiting = append(waiting, WaitingCustomer{
 			ActivityID: ids.NewV7(),
 			Subject:    "Thread " + string(rune('a'+i%26)) + string(rune('0'+i/26)),
 			Since:      rankInstant.Add(-time.Duration(30-i) * time.Hour),
+			Engaged:    true,
 		})
 	}
 	day := crmcontracts.Attention{

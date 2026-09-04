@@ -64,9 +64,10 @@ var ErrNoRows = errors.New("extension: the query matched no rows")
 // Runtime the core has released answers ErrRuntimeExpired.
 //
 // Like Extension, Runtime grows ADDITIVELY — a new capability kind is a new
-// method — so a handler written against today's surface keeps compiling.
-// Additive growth of an interface is only safe because extensions consume
-// Runtime and never implement it.
+// method — so a HANDLER written against today's surface keeps compiling. A new
+// method is still a breaking change for anything that IMPLEMENTS the interface,
+// and units' test fakes do; adding one is a downstream coordination, not a free
+// move.
 type Runtime interface {
 	// Secrets is the unit's own secret namespace in the calling workspace.
 	Secrets() Secrets

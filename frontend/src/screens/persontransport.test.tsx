@@ -6,6 +6,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -60,6 +61,25 @@ const aChatMessage = anActivity({
   subject: null,
   body: "họ đã nhắn tin",
   source: "ext:zalo-oa:zalo",
+});
+
+// A mail the reader may read, carrying the summary the server sets for every
+// kind=email row. Without it this row models a shape the API does not send,
+// and the citation would be judged against a message that is not one.
+const aReadableMail = anActivity({
+  id: "a-mail",
+  kind: "email",
+  subject: "Re: the pilot",
+  email_summary: {
+    activity_id: "a-mail",
+    occurred_at: AT,
+    display_status: "team",
+    attachment_count: 0,
+    move: "none",
+    version: 1,
+    subject: "Re: the pilot",
+    preview: "they wrote",
+  },
 });
 
 // A withheld mail that STILL carries its subject, its body and a summary. The
@@ -222,18 +242,63 @@ describe("the relationship brief's source chips", () => {
     expect(chip.querySelector(".lucide-mail")).toBeNull();
   });
 
-  it("names a cited mail thread as mail", () => {
+  // A cited EMAIL is named by its SUBJECT and opens, like every other citation
+  // of a message in the product. Naming the transport told a reader which pipe
+  // carried the sentence and nothing about which message — and the message is
+  // what they are reaching for when they press a source.
+  it("names a cited mail by its subject and opens it", async () => {
+    const onOpenEmail = vi.fn();
+    render(
+      <PersonBriefCard
+        brief={briefCiting("activity", "a-mail")}
+        loading={false}
+        view={viewWith({ activities: [aReadableMail] })}
+        onOpenEmail={onOpenEmail}
+      />,
+    );
+
+    const cite = screen.getByRole("button", { name: /Re: the pilot/ });
+    await userEvent.click(cite);
+    expect(onOpenEmail).toHaveBeenCalledWith("a-mail");
+  });
+
+  // The transport chip is still right for every kind that is NOT mail, which
+  // is the direction a one-sided change would break: a card that stopped
+  // naming transports altogether would pass an email-only assertion.
+  it("still names the transport of a cited call", () => {
     const { container } = render(
       <PersonBriefCard
-        brief={briefCiting("activity", "a-1")}
+        brief={briefCiting("activity", "a-call")}
         loading={false}
-        view={viewWith({ activities: [anActivity({})] })}
+        view={{
+          ...viewWith({
+            activities: [anActivity({ id: "a-call", kind: "call" })],
+          }),
+        }}
       />,
     );
 
     const chip = transportCell(container);
-    expect(chip.textContent).toBe("Email");
-    expect(chip.querySelector(".lucide-mail")).toBeTruthy();
+    expect(chip.textContent).toBe("Call");
+  });
+
+  // A message this reader is outside the audience of names no subject and
+  // opens nothing. The citation says a source exists without disclosing it.
+  it("neither names nor opens a cited mail that is withheld", () => {
+    const onOpenEmail = vi.fn();
+    render(
+      <PersonBriefCard
+        brief={briefCiting("activity", "a-withheld")}
+        loading={false}
+        view={viewWith({ activities: [aWithheldMail] })}
+        onOpenEmail={onOpenEmail}
+      />,
+    );
+
+    expect(screen.queryByText("Angebot Q4")).toBeNull();
+    expect(screen.getByText("Not shared with you")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Angebot Q4/ })).toBeNull();
+    expect(onOpenEmail).not.toHaveBeenCalled();
   });
 
   // The brief cites what the WRITER read, which is not bounded by the page of

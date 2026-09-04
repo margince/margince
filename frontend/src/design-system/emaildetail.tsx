@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Paperclip, X } from "lucide-react";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -42,11 +42,24 @@ export function EmailDetail({
   activityId,
   onClose,
   formatWhen,
+  renderAccess,
 }: Readonly<{
   activityId: string;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
+  /**
+   * Who reads this message, and the control to change it.
+   *
+   * Passed in rather than mounted here because the editor performs WRITES: it
+   * reaches the audience service and the roster reads, which live in `screens/`
+   * where the app's queries do. A design-system component importing those would
+   * turn the catalog into a layer that talks to the API.
+   *
+   * Optional, so a story or a preview can draw the message without wiring the
+   * writes — and absent means no region, never an empty one.
+   */
+  renderAccess?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   // Generated rather than fixed: two drawers mounted at once would otherwise
@@ -135,7 +148,11 @@ export function EmailDetail({
           {null}
         </SurfaceState>
       ) : (
-        <EmailBody presentation={read.data} formatWhen={formatWhen} />
+        <EmailBody
+          presentation={read.data}
+          formatWhen={formatWhen}
+          renderAccess={renderAccess}
+        />
       )}
     </Modal>
   );
@@ -144,9 +161,11 @@ export function EmailDetail({
 function EmailBody({
   presentation,
   formatWhen,
+  renderAccess,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
+  renderAccess?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -169,7 +188,7 @@ function EmailBody({
   const parts = splitEmailBody(presentation.body ?? "");
   return (
     <div className="emaildetail__body">
-      <Parties presentation={presentation} />
+      <Parties presentation={presentation} formatWhen={formatWhen} />
       <p className="emaildetail__main">{parts.main}</p>
       {/* A SIGN-OFF is the sender still speaking, and it is two lines. It is
           shown, quietly, under the message it belongs to.
@@ -192,9 +211,12 @@ function EmailBody({
         </details>
       )}
       <Attachments files={presentation.attachments} />
-      <p className="emaildetail__when">
-        {formatWhen(presentation.occurred_at)}
-      </p>
+      {/* Who reads this, last: a reader came for the message, and the limit on
+          it is what they check after reading rather than before. The withheld
+          branch above returns before here on purpose — that reader is told the
+          message is not shared with them, which is the whole of what the
+          access block would say, and `can_change` is false for them anyway. */}
+      {renderAccess?.(presentation)}
     </div>
   );
 }
@@ -250,30 +272,63 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   );
 }
 
+/**
+ * partyName is what one participant is called on a header line.
+ *
+ * The name, then the address, then nothing — and the LAST step is the one that
+ * matters. `display_name ?? address` renders an empty string as empty, because
+ * `??` only catches null: a party with neither produced a bare comma in the
+ * middle of the To line, which reads as a recipient whose name we lost rather
+ * than as a row the response never filled in.
+ */
+function partyName(party: EmailParty): string {
+  return party.display_name?.trim() || party.address.trim();
+}
+
 function PartyLine({
   label,
   parties,
 }: Readonly<{ label: string; parties: EmailParty[] }>) {
-  if (parties.length === 0) {
+  // Only the parties that can actually be named. A row carrying neither a name
+  // nor an address says nothing to a reader, and joining it in puts a gap in
+  // the list where a person should be — so it is dropped, and a line with
+  // nobody left to name does not draw at all.
+  const named = parties.map(partyName).filter(Boolean);
+  if (named.length === 0) {
     return null;
   }
   return (
     <p className="emaildetail__party">
       <span className="emaildetail__partyLabel">{label}</span>
-      {parties.map((p) => p.display_name ?? p.address).join(", ")}
+      {named.join(", ")}
     </p>
   );
 }
 
 function Parties({
   presentation,
-}: Readonly<{ presentation: EmailPresentation }>) {
+  formatWhen,
+}: Readonly<{
+  presentation: EmailPresentation;
+  formatWhen: (iso: string) => string;
+}>) {
   const t = useT();
   return (
     <div className="emaildetail__parties">
       <PartyLine label={t("email.detail.from")} parties={presentation.from} />
       <PartyLine label={t("email.detail.to")} parties={presentation.to} />
       <PartyLine label={t("email.detail.cc")} parties={presentation.cc} />
+      {/* WHEN it was sent, beside who it was sent to. It used to sit under the
+          message, below the attachments — so on anything longer than a screen
+          the reader had to scroll past the whole body to learn the date, which
+          is one of the first things they came for. It is an envelope fact and
+          it belongs with the others. */}
+      <p className="emaildetail__party">
+        <span className="emaildetail__partyLabel">
+          {t("email.detail.when")}
+        </span>
+        {formatWhen(presentation.occurred_at)}
+      </p>
       {/* Said rather than shown: an absent BCC list reads as "nobody was
           blind-copied", which is a different fact from "you may not see who
           was". Only the sending seat gets the names. */}

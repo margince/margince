@@ -44,7 +44,7 @@ func unboundService() *Service {
 func TestAnUnboundWaitingLaneHasNoHiddenBacklog(t *testing.T) {
 	t.Parallel()
 
-	got, err := unboundService().HiddenBacklog(context.Background())
+	got, err := unboundService().HiddenBacklog(aLead())
 	if err != nil {
 		t.Fatalf("an unbound lane should answer, not refuse: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestClearNeverDisagreesWithTheFiguresBesideIt(t *testing.T) {
 	svc := unboundService()
 	svc.waiting = hidingWork{Shown: 4, NotSales: 2}
 
-	got, err := svc.HiddenBacklog(context.Background())
+	got, err := svc.HiddenBacklog(aLead())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestATruncatedReadIsNeverReportedAsClear(t *testing.T) {
 	// Every figure zero, which on its own is the healthiest answer available.
 	svc.waiting = hidingWork{Shown: 200, Truncated: true}
 
-	got, err := svc.HiddenBacklog(context.Background())
+	got, err := svc.HiddenBacklog(aLead())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestEveryHiddenFigureReachesTheWire(t *testing.T) {
 	svc := unboundService()
 	svc.waiting = hidingWork{Shown: 9, SetAside: 1, NotSales: 2, PastHorizon: 3, Unlinked: 4}
 
-	got, err := svc.HiddenBacklog(context.Background())
+	got, err := svc.HiddenBacklog(aLead())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -86,6 +86,13 @@ type ModelPath struct {
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
 	// re-ask riding the same ladder.
 	CaptureClassify completer
+	// OwedVerdict judges whether an unanswered message asks its recipient side
+	// for anything: asks_us | informs_us, floor 0.7, below-floor leaves the
+	// message UNJUDGED rather than guessing. A separate task from
+	// CaptureClassify because it answers a different question about a different
+	// population — classify labels captured mail by what it is ABOUT, this reads
+	// only what survives the waiting queue and asks what the message wants.
+	OwedVerdict completer
 	// CaptureCounterpartyVerdict is the ADR-0072/A118 creation gate for the
 	// ambiguous first-time sender: real | noise, floor 0.7, below-floor
 	// abstains to unsure. A separate task from CaptureClassify on purpose —
@@ -281,6 +288,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		DraftReply:                    brain(ai.TaskDraftReply),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
+		OwedVerdict:                   brain(ai.TaskOwedVerdict),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),

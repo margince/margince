@@ -243,19 +243,7 @@ func (s *Store) FinishRun(
 		verdict := crmcontracts.PublicEventForecastAssuranceCreatedReadiness(readiness)
 		event.Readiness = &verdict
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, actorForEvent(ctx), event)
-}
-
-// actorForEvent is who a run is attributed to.
-//
-// A nightly pass has no human behind it, and the entity a stream is keyed by
-// cannot be absent — so the system's own runs carry the nil id rather than
-// borrowing a person who did not ask for them.
-func actorForEvent(ctx context.Context) ids.UUID {
-	if actor, ok := principal.Actor(ctx); ok {
-		return actor.UserID
-	}
-	return ids.Nil
+	return storekit.EmitEvent(ctx, tx, auditID, runID, event)
 }
 
 // LatestRun answers the most recent completed pass.

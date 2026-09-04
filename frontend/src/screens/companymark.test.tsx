@@ -55,7 +55,7 @@ it("stands the monogram in and offers to add a mark", () => {
   expect(container.querySelector(".company-mark .avatar")?.textContent).toBe(
     "AG",
   );
-  expect(screen.getByRole("button", { name: "Add a mark" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add a logo" })).toBeTruthy();
   // Nothing to remove, so the verb that removes it is not drawn. A control
   // whose only outcome is a refusal is worse than no control.
   expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
@@ -68,6 +68,7 @@ it("draws the mark the company wears, and offers to replace or remove it", () =>
   ).toBe(LOGO);
   expect(screen.getByRole("button", { name: "Replace" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
+  expect(screen.getByText(/transparent PNG around 800 × 240 px/)).toBeTruthy();
 });
 
 // The stub declares fetch's own parameters so the recorded calls are TYPED as
@@ -88,11 +89,11 @@ it("sends the chosen file as the multipart part the upload route names", async (
   const fetchStub = stubFetch(WITH_MARK);
   mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add a mark" }));
+  await user.click(screen.getByRole("button", { name: "Add a logo" }));
   const chosen = new File(["not really a png"], "acme-logo.png", {
     type: "image/png",
   });
-  await user.upload(screen.getByLabelText("Company mark"), chosen);
+  await user.upload(screen.getByLabelText("Company logo"), chosen);
 
   await waitFor(() => expect(fetchStub).toHaveBeenCalled());
   const [path, init] = fetchStub.mock.calls[0];
@@ -143,9 +144,9 @@ it("shows the server's refusal beside the control", async () => {
   );
   mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add a mark" }));
+  await user.click(screen.getByRole("button", { name: "Add a logo" }));
   await user.upload(
-    screen.getByLabelText("Company mark"),
+    screen.getByLabelText("Company logo"),
     new File(["truncated"], "half-a-logo.png", { type: "image/png" }),
   );
 

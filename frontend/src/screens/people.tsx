@@ -18,6 +18,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
+import { primaryEmail } from "../format/primaryemail";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -478,10 +479,12 @@ export function ContactsScreen() {
             key: "email",
             header: t("people.email"),
             cell: (person: Person) => (
+              // The shared rule, not a second spelling of it. This column
+              // used to take find(is_primary) ?? [0], which shows a RETIRED
+              // address whenever one sits first — the reader then writes to an
+              // address somebody deliberately took out of service.
               <span className="t-mono">
-                {person.emails?.find((email) => email.is_primary)?.email ??
-                  person.emails?.[0]?.email ??
-                  ""}
+                {primaryEmail(person.emails) ?? ""}
               </span>
             ),
           },
@@ -681,7 +684,9 @@ function PersonTabPanels({
       {/* Consent renders on a thin record too: it is not an absence
           but a guard — what you may send is a live fact whether or
           not anyone has written to them yet. */}
-      {tab === "overview" && <ConsentSection personId={person.id} />}
+      {tab === "overview" && (
+        <ConsentSection personId={person.id} person={person} />
+      )}
       {tab === "overview" && view && (
         <EnrichedFields personId={id} view={view} />
       )}

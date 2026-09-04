@@ -167,7 +167,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		// Drafting is an assistive read, not the authority to send. Preserve
 		// the deterministic floor and leave the routed ai_call failure visible.
 		d.logger().WarnContext(ctx, "model reply draft unavailable; using deterministic draft", "err", err)
-		return activities.DraftResult{Subject: fallbackSubject, Body: fallbackBody}, nil
+		return activities.DraftResult{Subject: fallbackSubject, Body: fallbackBody, VoiceDegraded: voice.Degraded}, nil
 	}
 	disclosure := signals.Art50Disclosure
 	return activities.DraftResult{
@@ -177,6 +177,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		AIDisclosure:        &disclosure,
 		VoiceProfileVersion: voiceVersion,
 		DraftRef:            draftRef,
+		VoiceDegraded:       voice.Degraded,
 	}, nil
 }
 

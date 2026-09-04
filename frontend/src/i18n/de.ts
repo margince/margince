@@ -104,6 +104,8 @@ export const de = {
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",
   "history.field.body": "Notizen",
+  "history.field.emails": "E-Mail-Adressen",
+  "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_org_key": "Zugeordnetes Unternehmen",
   "history.field.company_name": "Firmenname",
   "history.field.currency": "Währung",
@@ -179,6 +181,7 @@ export const de = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
   "shell.poweredBy": "Betrieben mit Margince",
+  "shell.poweredByPrefix": "Betrieben mit",
   "shell.searchEverything": "Alles durchsuchen…",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.license.none": "Keine Lizenz",
@@ -319,7 +322,7 @@ export const de = {
   "share.downgradeConfirm": "Auf {to} reduzieren",
   "share.seatCeiling":
     "Dieser Sitzplatz ist nur lesend und kann daher keinen Schreibzugriff auf einen Datensatz erhalten. Erhöhen Sie zuerst die Sitzplatzstufe, oder gewähren Sie Lesezugriff.",
-  "share.whoHasAccess": "Wer hat Zugriff",
+  "share.whoHasAccess": "Ausdrücklich geteilt",
   "share.grantedBy": "gewährt von",
   "share.revoke": "Widerrufen",
   "share.revokeConfirm":
@@ -1148,6 +1151,28 @@ export const de = {
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",
   "contracts.rowMenu": "Vertragsaktionen",
+  "contracts.renew.title": "Diese Vereinbarung verlängern",
+  "contracts.renew.hint":
+    "Erstellt eine neue Vereinbarung und markiert diese als abgelöst. Eigene Bedingungen — nichts wird übernommen außer der Vertragspartei.",
+  "contracts.renew.submit": "Verlängern",
+  "contracts.statusChange.title": "Status ändern",
+  "contracts.statusChange.label": "Neuer Status",
+  "contracts.statusChange.submit": "Status ändern",
+  "contracts.statusChange.errSame": "Bereits in diesem Status.",
+  "contracts.cancel.title": "Kündigung erfassen",
+  "contracts.cancel.hint":
+    "Der Kunde bleibt bis zum Wirksamkeitsdatum unter Vertrag — dies erfasst die Kündigung, keine Statusänderung.",
+  "contracts.cancel.noticeOn": "Kündigung erklärt am",
+  "contracts.cancel.effectiveOn": "Wirksam ab",
+  "contracts.cancel.effectiveOnHint":
+    "Nicht nach Vertragsende und nicht vor dem Kündigungsdatum.",
+  "contracts.cancel.submit": "Kündigung erfassen",
+  "contracts.cancel.menuLabel": "Kündigen",
+  "contracts.cancel.errIncomplete": "Beide Daten werden benötigt.",
+  "contracts.cancel.errOrder":
+    "Eine Kündigung kann nicht vor ihrer Erklärung wirksam werden.",
+  "contracts.cancel.errTermEnd":
+    "Eine Kündigung kann nicht nach Vertragsende wirksam werden.",
   "contracts.value.perYear": "pro Jahr",
   "contracts.value.total": "für die gesamte Laufzeit",
   "contracts.files": "Dateien",
@@ -1505,6 +1530,10 @@ export const de = {
   "compose.reason.noRecord": "Zurückgehalten, kein Datensatz",
   "compose.reason.pendingVerdict": "Bis zur Einstufung zurückgehalten",
   "compose.reason.manual": "Privat gehalten",
+  "compose.reason.verdict": "Durch eine Einstufung gehalten",
+  "compose.reason.counterparty": "Gehalten, Mail mit dieser Partei",
+  "compose.reason.explicitlyConfidential": "Als vertraulich markiert",
+  "compose.reason.noCounterparty": "Gehalten, niemand zum Zuordnen",
   "compose.audience": "Sichtbarkeit",
   "compose.audienceTitle": "Wer darf diese Nachricht lesen?",
   "compose.audienceLegend": "Sichtbarkeit dieser einen Nachricht",
@@ -1517,6 +1546,14 @@ export const de = {
   "email.access.participants": "Beteiligte",
   "email.access.selected": "Ausgewählte",
   "email.access.withheld": "Zurückgehalten",
+  "email.access.sentence.team": "Alle im Unternehmen können das lesen.",
+  "email.access.sentence.participants":
+    "Nur die Beteiligten dieser Nachricht können sie lesen.",
+  "email.access.sentence.selected":
+    "Nur die unten genannten Personen können das lesen.",
+  "email.access.sentence.withheld":
+    "Diese Nachricht ist nicht für Sie freigegeben.",
+  "email.access.unnamedMember": "Jemand, der nicht mehr hier ist",
   "email.move.needsReply": "Antwort offen",
   "email.move.waitingForThem": "Warten auf Antwort",
   "email.detail.loading": "Nachricht wird geöffnet",
@@ -1530,6 +1567,7 @@ export const de = {
   "email.detail.from": "Von",
   "email.detail.to": "An",
   "email.detail.cc": "Cc",
+  "email.detail.when": "Gesendet",
   "email.detail.bccWithheld":
     "Einige Empfänger stehen im Blindkopie-Feld und werden Ihnen nicht angezeigt",
   "compose.audienceWorkspace": "Alle in der Organisation",
@@ -1586,6 +1624,7 @@ export const de = {
   "co.people.band.noWayInWhy":
     "Alle wurden angeschrieben, niemand hat geantwortet",
   "co.people.band.showAnswered": "Wer geantwortet hat",
+  "co.people.band.showWaiting": "Wer auf Antwort wartet",
   "co.people.band.committee": "Buying-Team",
   "co.people.band.missing": "Kein {role}",
   "co.people.band.committeeComplete": "Champion und Economic Buyer benannt",
@@ -1625,6 +1664,7 @@ export const de = {
   "co.people.map.account": "Konto",
   "co.people.map.missing": "{role} fehlt",
   "co.people.map.awaiting": "wartet auf Antwort",
+  "co.people.map.owed": "Antwort fällig",
   "co.people.map.replied": "sie haben geantwortet",
   "co.people.map.never": "nie angeschrieben",
   "co.people.map.onDeal": "auf dem Deal",
@@ -1665,7 +1705,8 @@ export const de = {
   "co.people.board.confirm": "Bestätigen",
   "co.people.board.confirming": "Wird bestätigt",
   "co.people.board.change": "Rolle ändern",
-  "co.reach.answered": "Antwortet",
+  "co.reach.waiting": "Antwort fällig",
+  "co.reach.answered": "Beantwortet",
   "co.reach.silent": "Keine Antwort",
   "co.reach.untried": "Nie angesprochen",
   "co.role.champion": "Champion",
@@ -3045,7 +3086,14 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
+  "personAccess.title": "Wer diesen Kontakt sieht",
+  "personAccess.privateToYou":
+    "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
+  "personAccess.organization": "Alle im Unternehmen sehen diesen Kontakt.",
+  "personAccess.share": "Mit dem Unternehmen teilen",
+  "personAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
   "compose.reply": "Antworten",
+  "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.draftWithAi": "Mit KI entwerfen",
   "compose.drafting": "Wird entworfen…",
@@ -3056,6 +3104,8 @@ export const de = {
   "compose.aiDisclosureFallback":
     "Dieser Entwurf stammt von einer KI. Lesen und überarbeiten Sie ihn, bevor Sie senden.",
   "compose.voiceVersion": "Aus Ihrem Korpus gebaut · v{n}",
+  "compose.voiceDegraded":
+    "Ihr Stimmprofil konnte nicht geladen werden – dieser Entwurf ist nicht in Ihrer Stimme geschrieben. Erstellen Sie den Entwurf neu oder überarbeiten Sie ihn vor dem Senden.",
   "compose.provisional": "Vorläufige Stimme",
   "compose.provisionalHint":
     "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",
@@ -3222,6 +3272,8 @@ export const de = {
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
+  "review.notCheckedYet":
+    "Es wurde noch nichts geprüft — für diese Installation ist noch kein nächtlicher Lauf abgeschlossen. Die Werte oben beruhen auf den Daten, wie sie sind.",
   "review.nothingToCheck": "Nichts zu prüfen.",
   "review.answer": "Prüfen",
   "review.closePast": "Abschlussdatum ist verstrichen",
@@ -6226,7 +6278,7 @@ export const de = {
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet und ihre Agent-Pässe werden sofort widerrufen. Du kannst sie später reaktivieren, aber sie muss sich dann neu anmelden.",
   "users.deactivateAgentConfirmBody":
-    "Das ist die Agent-Identität dieser Organisation. Wird sie deaktiviert, laufen alle Jobs ohne Person dahinter nicht mehr — Erweiterungen eingeschlossen — bis du sie reaktivierst. Kein Mensch verliert Zugriff: Sie meldet sich nirgends an.",
+    "Das ist die Agent-Identität dieser Organisation. Sie meldet sich nirgends an, und kein Mensch verliert Zugriff. Geplante Erweiterungs-Jobs laufen weiter: Jeder handelt als der Job, der er ist, und erfasst unter der Berechtigung des Mitglieds, dessen Verbindung den Datensatz erzeugt hat.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Handelt mit einem Pass, nicht mit einer Rolle",
   "users.roleLabel": "Rolle für den neuen Benutzer",
@@ -6267,18 +6319,18 @@ export const de = {
   "settings.companyTrust":
     "Nur bestätigtes Wissen — Website-Texte werden nie zu Anweisungen.",
   "settings.companyConfirmed": "bestätigte Aussagen",
-  "settings.companyMark": "Firmenzeichen",
+  "settings.companyMark": "Firmenlogo",
   "settings.companyMarkPresent":
-    "Wird überall dort gezeigt, wo diese Firma auftaucht, auch oben in der Seitenleiste.",
+    "Wird hier und als Hauptmarke oben in der Seitenleiste gezeigt.",
   "settings.companyMarkNone":
-    "Noch kein Zeichen, deshalb stehen die Initialen dafür. Ein Website-Auslesen füllt das, oder Sie laden hier eines hoch.",
-  "settings.companyMarkAdd": "Zeichen hinzufügen",
+    "Noch kein Logo, deshalb stehen die Initialen dafür. Ein Website-Auslesen kann es ergänzen, oder Sie laden hier eines hoch.",
+  "settings.companyMarkAdd": "Logo hinzufügen",
   "settings.companyMarkReplace": "Ersetzen",
   "settings.companyMarkRemove": "Entfernen",
-  "settings.companyMarkPick": "Firmenzeichen",
+  "settings.companyMarkPick": "Firmenlogo",
   "settings.companyMarkHint":
-    "PNG, JPEG, GIF, WebP, ICO oder SVG. Beim Hochladen wird es quadratisch zugeschnitten und verkleinert; ein selbst gewähltes Zeichen bleibt, bis Sie es entfernen.",
-  "settings.companyMarkEmpty": "Bild hierher ziehen oder Datei auswählen",
+    "Am besten: SVG oder transparentes PNG mit etwa 800 × 240 px (bis 4:1), unter 5 MB. JPEG, GIF, WebP und ICO funktionieren ebenfalls. Die Proportionen bleiben erhalten.",
+  "settings.companyMarkEmpty": "Logo hierher ziehen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
   "settings.companyWebsiteHint":
     "Die öffentliche Website, von der jede Website-Lesung ausgeht.",
@@ -7854,6 +7906,10 @@ export const de = {
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
+  "worklist.bandClear.now": "Heute braucht Sie nichts.",
+  "worklist.bandClear.build_pipeline": "Keine neue Pipeline-Arbeit offen.",
+  "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
+  "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Später",
   "worklist.disposition.snoozeFor": "Für wie lange",
   "worklist.disposition.snoozeDays_one": "{value} Tag",
@@ -7933,6 +7989,9 @@ export const de = {
   "worklist.hidden.unlinked": "Keinem Datensatz zugeordnet",
   "worklist.hidden.unlinked.detail":
     "Meist kein Vertrieb. Manchmal ein Kunde, den niemand zuordnen konnte.",
+  "worklist.hidden.colleagues": "Von einer unserer eigenen Domains",
+  "worklist.hidden.colleagues.detail":
+    "Kolleginnen und Kollegen, keine Kundschaft. Eine falsch eingetragene Domain verbirgt echte Post.",
   "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
   "worklist.hidden.notSales.detail":
     "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
@@ -7990,6 +8049,8 @@ export const de = {
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
+  "worklist.because.no_reply_history": "kein Schriftwechsel bisher",
+  "worklist.because.asks_nothing": "verlangt nichts von uns",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
   "worklist.above.deadline": "Über dem Nächsten wegen des Datums.",
@@ -8040,6 +8101,31 @@ export const de = {
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
   "worklist.untitled.sync_health":
     "Die CRM-Synchronisierung braucht Aufmerksamkeit",
+  "worklist.sync.class.contacts": "Kontakte",
+  "worklist.sync.class.companies": "Firmen",
+  "worklist.sync.class.deals": "Deals",
+  "worklist.sync.class.leads": "Interessenten",
+  "worklist.sync.class.calls": "Anrufe",
+  "worklist.sync.class.meetings": "Termine",
+  "worklist.sync.class.emails": "E-Mails",
+  "worklist.sync.class.notes": "Notizen",
+  "worklist.sync.class.tasks": "Aufgaben",
+  "worklist.sync.error.rate_limited":
+    "das andere System begrenzt, wie oft wir fragen dürfen",
+  "worklist.sync.error.unreachable": "das andere System ist nicht erreichbar",
+  "worklist.sync.error.auth": "die Verbindung muss neu angemeldet werden",
+  "worklist.sync.error.history_gone":
+    "das andere System hat diesen Verlauf nicht mehr",
+  "worklist.sync.error.internal": "auf unserer Seite ist etwas schiefgelaufen",
+  "worklist.sync.band.warn":
+    "Nahe am Lesebudget – manche Abfragen kommen aus der Kopie.",
+  "worklist.sync.band.shed":
+    "Über dem Lesebudget: Abfragen kommen aus der Kopie statt live.",
+  "worklist.sync.failing": "Kein Abgleich – {reason}.",
+  "worklist.sync.objects_stale": "Hier nicht aktuell: {classes}.",
+  "worklist.sync.backfill_incomplete": "Wird noch importiert: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Hier geändert und vom anderen System überschrieben: {classes}.",
   "worklist.untitled.capture_health":
     "Eine Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",

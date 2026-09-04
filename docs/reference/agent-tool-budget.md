@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1621 | 6% | 15787 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2453 | 9% | 14955 | 15 | 8 |
-| _whole served catalog, for scale_ | 70 | 20230 | 82% | — | — | — |
+| _whole served catalog, for scale_ | 72 | 20865 | 84% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 262 tokens, mean 288, across 70 served tools.
+Median 262 tokens, mean 289, across 72 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -155,6 +155,7 @@ a term in an addition.
 | `create_record` | 398 | 1 scenario |
 | `book_meeting` | 393 | — |
 | `enrich` | 393 | — |
+| `compose_analytics_report` | 389 | — |
 | `search_records` | 385 | 6 scenarios |
 | `forecast_movement` | 351 | — |
 | `describe_report_vocabulary` | 349 | — |
@@ -176,6 +177,7 @@ a term in an addition.
 | `archive_record` | 261 | — |
 | `forecast_input_checks` | 252 | — |
 | `account_coverage` | 245 | 2 scenarios |
+| `describe_report_blocks` | 245 | — |
 | `decide_approval_bundle` | 235 | — |
 | `qualify_lead` | 230 | — |
 | `apply_tag` | 227 | — |

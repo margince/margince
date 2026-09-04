@@ -198,34 +198,78 @@ describe("the supporting line each source sends", () => {
     },
   );
 
-  // The one source still held back. Its renderer says in as many words that the
-  // field carries "that condition's facts in the producer's own vocabulary" —
-  // the affected object classes, the failure class, the budget band — and that
-  // the CLIENT writes the sentence. The client never wrote it, so drawing the
-  // field raw puts `shed` or `deal, person` in front of a rep.
-  //
-  // This is the case that keeps "render every source" honest: the rule is prose,
-  // not "whatever a source happens to send".
-  it("draws no supporting line for a source that sends its own vocabulary", async () => {
+  // The source that sends its facts in its own vocabulary, drawn now that the
+  // client writes the sentence. This is the case that keeps "render every
+  // source" honest: the rule is prose, not "whatever a source happens to send".
+  it.each([
+    {
+      what: "a degraded read budget",
+      kind: "budget_degraded",
+      detail: "shed",
+      says: "Over the read budget: reads are being served from the copy rather than live.",
+      never: "shed",
+    },
+    {
+      what: "a failing sweep",
+      kind: "sync_failing",
+      detail: "rate_limited",
+      says: "Not syncing — the other system is limiting how often we may ask.",
+      never: "rate_limited",
+    },
+    {
+      what: "stale object classes",
+      kind: "objects_stale",
+      detail: "deals, contacts",
+      says: "Out of date here: deals, contacts.",
+      never: "deals, contacts",
+    },
+  ])(
+    "says $what in the reader's own words",
+    async ({ kind, detail, says, never }) => {
+      draw([
+        {
+          id: "s1",
+          source: "sync_health",
+          category: "system",
+          level: 6,
+          consequence: "data_drifts",
+          kind,
+          detail,
+          because: [],
+          actions: [],
+        },
+      ]);
+
+      expect(await screen.findByText(says)).toBeTruthy();
+      // The producer's word never reaches the page. `deals, contacts` reads
+      // almost like the sentence, which is exactly why it is asserted: a
+      // renderer that fell back to the raw field would look right at a glance.
+      expect(screen.queryByText(never)).toBeNull();
+    },
+  );
+
+  // A value this build does not know draws NO line rather than its own key —
+  // which is what every sync row did before the sentence existed, so an
+  // unrecognised value is never worse than the old behaviour.
+  it("draws no line for a condition value it cannot put into words", async () => {
     draw([
       {
-        id: "s1",
+        id: "s2",
         source: "sync_health",
         category: "system",
         level: 6,
         consequence: "data_drifts",
         kind: "budget_degraded",
-        detail: "shed",
+        detail: "a_band_this_build_never_shipped",
         because: [],
         actions: [],
       },
     ]);
 
-    // The row is drawn — this is not passing because the page is empty.
     expect(
       await screen.findByText("The CRM sync needs attention"),
     ).toBeTruthy();
-    expect(screen.queryByText("shed")).toBeNull();
+    expect(screen.queryByText("a_band_this_build_never_shipped")).toBeNull();
   });
 });
 

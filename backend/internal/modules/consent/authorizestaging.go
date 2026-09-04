@@ -61,7 +61,7 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 	setID := ids.NewV7()
 	set := commsauthz.DecisionSet{}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, req.LegacyPurposeKey)
+		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}

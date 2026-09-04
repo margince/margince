@@ -115,6 +115,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	}
 	set := commsauthz.DecisionSet{}
 	now := g.store.now().UTC()
+	// What each recipient's message was staged as, so the transmit phase asks
+	// about the same message rather than about a purpose key. Per recipient,
+	// because one message can be several things at once.
+	claims, err := stagedClaims(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
@@ -122,7 +129,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, req.PurposeKey)
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims), commsauthz.PhaseTransmit)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -146,8 +153,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 }
 
 // decideOne answers about a single recipient: who they are, whether anything
-// suppresses them, and what the purpose class says.
-func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, purposeKey string) (commsauthz.Decision, error) {
+// suppresses them, and what the record says this message is.
+//
+// It takes the whole request rather than a purpose key, because the category is
+// now RESOLVED from the anchor and the links (authorizeresolve.go) instead of
+// read off the caller's label. The purpose key is still in there and still
+// consulted, as the weakest of the four grounds.
+func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
 	personID, found, err := resolvePerson(ctx, tx, r)
 	if err != nil {
@@ -167,7 +179,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// the sends the legacy gate allows — an inversion rather than a
 		// tightening, and it would have arrived the day somebody flipped a
 		// mode rather than the day this code was written.
-		return g.decideLead(ctx, tx, r, purposeKey, d)
+		return g.decideLead(ctx, tx, r, req, d)
 	}
 	parsed, err := ids.Parse(personID)
 	if err != nil {
@@ -185,46 +197,9 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		d.Suppression = kind
 		return d, nil
 	}
-	return classVerdict(ctx, tx, personID, purposeKey, d)
-}
-
-// classVerdict reads the purpose the delivery was staged under and answers in
-// the engine's vocabulary.
-//
-// It calls VerdictForPerson rather than reimplementing the class model, which
-// is what keeps the engine, the legacy transmit gate and the guard endpoint
-// answering with one body of code about one person. A second implementation
-// here would be a second answer, and the one that stopped matching would look
-// exactly like the one that still did.
-func classVerdict(ctx context.Context, tx pgx.Tx, personID, purposeKey string, d commsauthz.Decision) (commsauthz.Decision, error) {
-	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
-	if err != nil {
-		return commsauthz.Decision{}, err
-	}
-	if !defined {
-		d.Verdict = commsauthz.VerdictDeny
-		d.ReasonCode = commsauthz.ReasonUnknownPurpose
-		return d, nil
-	}
-	d.Resolved = categoryForClass(purpose.Class)
-
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose)
-	if err != nil {
-		return commsauthz.Decision{}, err
-	}
-	switch verdict.State {
-	case VerdictAllowed:
-		d.Verdict = commsauthz.VerdictAllow
-		d.ReasonCode = commsauthz.ReasonAllowed
-		d.Basis = basisForClass(purpose.Class)
-	case VerdictBlocked:
-		d.Verdict = commsauthz.VerdictDeny
-		d.ReasonCode = blockedReasonCode(verdict)
-	default:
-		d.Verdict = commsauthz.VerdictReview
-		d.ReasonCode = commsauthz.ReasonNoMarketingConsent
-	}
-	return d, nil
+	return g.decideResolved(ctx, tx, req, subjectRef{
+		Kind: entityPerson, ID: personID, Address: r.Email,
+	}, d, phase)
 }
 
 // blockedReasonCode translates the verdict's own code into the engine's

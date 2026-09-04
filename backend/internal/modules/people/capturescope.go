@@ -23,6 +23,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -37,6 +39,10 @@ import (
 // The guard is on the ROW's visibility rather than on what the caller believes:
 // the UPDATE matches nothing when the row is already workspace, so a second
 // ensure over the same person writes nothing whatever it thought it was doing.
+// fieldVisibility names the column in an audit image, so the word a reader
+// greps for is the word the table uses.
+const fieldVisibility = "visibility"
+
 func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.PersonID, ownerScoped bool) error {
 	if ownerScoped {
 		// Nothing to do, and saying so here saves a statement per captured
@@ -57,8 +63,25 @@ func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.PersonID, o
 		return fmt.Errorf("people: promoting a judged counterparty to the workspace: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		// Already the workspace's, or archived. Both are answers, not faults.
+		// Already the workspace's, or archived. Both are answers, not faults,
+		// and neither is a change to record: an audit row about a write that
+		// moved nothing puts a lie in the compliance trail.
 		return nil
 	}
-	return nil
+	// A contact stops being one person's and becomes everybody's, which is the
+	// most disclosure-relevant write this module makes and the one that was
+	// leaving no trace. "Which contacts were published, when, and on whose
+	// authority" is answered from audit_log or it is not answered at all.
+	//
+	// The before-image is what the guard above already proved: the row was
+	// owner-scoped, or the UPDATE would have matched nothing.
+	auditID, err := storekit.Audit(ctx, tx, "update", entityPerson, id.UUID,
+		map[string]any{fieldVisibility: visibilityOwner},
+		map[string]any{fieldVisibility: visibilityWorkspace})
+	if err != nil {
+		return fmt.Errorf("people: recording a captured contact's promotion: %w", err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventPersonUpdated{
+		ChangedFields: map[string]any{fieldVisibility: visibilityWorkspace},
+	})
 }

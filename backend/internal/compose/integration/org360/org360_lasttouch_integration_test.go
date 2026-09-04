@@ -57,7 +57,7 @@ func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
 			*got.LastInboundActivity, inbound)
 	}
 	if people.EngagementOf(got) != people.EngagementAnswered {
-		t.Fatalf("a contact who wrote in reads as %q", people.EngagementOf(got))
+		t.Fatalf("a contact we replied to reads as %q, want answered", people.EngagementOf(got))
 	}
 }
 

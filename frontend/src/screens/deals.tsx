@@ -103,6 +103,7 @@ import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
 import { DealStrip } from "./deal360/dealstrip";
 import { useDealCoverage } from "./deal360/usedealcoverage";
+import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
@@ -3162,6 +3163,12 @@ function DealEmailVerb({
   overlay,
   disabledReasonId,
 }: Readonly<{ deal: Deal; overlay: boolean; disabledReasonId?: string }>) {
+  // The same coverage read the readings band and the coverage card already
+  // make, served from one cache entry — so asking here costs no request. Off
+  // in overlay for the reason the hook documents: a mirrored deal's coverage
+  // cannot be assembled, and a doomed fetch reads as "nobody is on this deal".
+  const coverage = useDealCoverage(deal.id, !overlay);
+  const recordAddress = useDealRecipientAddress(coverage);
   if (overlay) {
     return null;
   }
@@ -3169,6 +3176,11 @@ function DealEmailVerb({
     <RecordEmailVerb
       entityType="deal"
       entityId={deal.id}
+      // Who a FIRST message on this deal goes to: the champion, else somebody
+      // the deal is actually in conversation with, else the first seat. Only
+      // ever an offer — the composer fills an empty To field once and never
+      // over what the reader typed.
+      recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
     />
   );

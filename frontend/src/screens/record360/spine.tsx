@@ -18,6 +18,7 @@
 import type { ReactNode } from "react";
 
 import { useRecordZone } from "../../app/recordzone";
+import { EmailReference } from "../../design-system/emailreference";
 import { PanelBody } from "../../design-system/panel";
 import {
   mergePeople,
@@ -67,9 +68,19 @@ export type SpineSource = {
   } | null;
   activities?: {
     data: readonly {
+      // The row's own id, which is what a stop opens when the conversation is
+      // mail. Required rather than optional: every activity has one, and a
+      // shape that admitted its absence would let a caller hand this thread
+      // rows it could name and never open.
+      id: string;
       kind: string;
       subject?: string | null;
       occurred_at?: string | null;
+      // Present exactly when the row is an email, which is how a stop tells a
+      // mail conversation from a call without reading the kind string. It also
+      // carries whether the words are this reader's: a withheld message names
+      // itself and opens nothing.
+      email_summary?: { display_status: string } | null;
       // Capture's own conversation id. What makes a thread a thread — a note
       // or a hand-logged call carries none, and those fall back to their
       // subject.
@@ -134,8 +145,12 @@ export function RecordSpine({
   source,
   commercial,
   nameOf,
+  onOpenEmail,
 }: Readonly<{
   source?: SpineSource;
+  // Opens a cited message. The record page owns its one drawer, so the thread
+  // asks rather than mounting a second one behind the first.
+  onOpenEmail?: (activityId: string) => void;
   // What a linked record is called. Handed in, because the names live in the
   // sections around this one and the thread holds no read of its own: a
   // conversation the thread cannot name a person for says the kind alone
@@ -158,6 +173,7 @@ export function RecordSpine({
     zone,
     commercial,
     nameOf,
+    onOpenEmail,
     asOf: source.as_of,
   });
   if (stops.length === 0) {
@@ -234,6 +250,10 @@ type Ctx = {
   zone: string;
   commercial?: SpineCommercial | null;
   nameOf?: (entityType: string, entityId: string) => string | undefined;
+  // Opens a cited message in the record page's own drawer. Optional, so a
+  // story or a host with no drawer draws the subject as plain text rather than
+  // a control that leads nowhere.
+  onOpenEmail?: (activityId: string) => void;
 };
 
 // The thread, oldest first: the conversations that have happened, the silence
@@ -438,6 +458,13 @@ type Exchange = {
   readonly subject: string;
   readonly kind: ExchangeKind;
   readonly count: number;
+  // The NEWEST message's id, when this conversation is mail the reader may
+  // read. That message is what the thread is dated and titled by, so it is the
+  // one a reader pressing the stop means. Undefined for a call or a meeting,
+  // and for a message whose content is not theirs — `email_summary` answers
+  // both questions, being absent for every kind but email and carrying the
+  // withheld status when the words are not the reader's.
+  readonly emailId?: string;
   // Who was on it, in the order the conversation introduced them. A mail or a
   // call with no name beside it is a subject line and nothing a reader can act
   // on: the whole question is who they have to go back to.
@@ -575,15 +602,38 @@ function earlierStop(
 // what happened, and repeating one label down the thread would say nothing.
 function pastStop(conversation: Exchange, newest: boolean, ctx: Ctx): Stop {
   const relation = relationLine(conversation, ctx);
+  // A mail conversation names its message the way every other citation of one
+  // does, and opens it. A call or a meeting keeps the plain subject: there is
+  // no message behind those to open, and drawing an envelope beside one would
+  // claim a transport nobody checked.
+  const subject =
+    conversation.emailId && ctx.onOpenEmail ? (
+      <EmailReference
+        subject={conversation.subject}
+        onOpen={openEmail(conversation.emailId, ctx.onOpenEmail)}
+      />
+    ) : (
+      conversation.subject
+    );
   return {
     key: `said-${conversation.key}`,
     tone: "past",
     when: on(conversation.at, ctx),
-    title: newest ? ctx.t("co.spine.lastSpoke") : conversation.subject,
+    title: newest ? ctx.t("co.spine.lastSpoke") : subject,
     // The newest stop's title is the label the gap below counts from, so its
     // subject moves into the second line and the relation joins it there.
-    detail: newest ? saidLines(conversation.subject, relation) : relation,
+    detail: newest ? saidLines(subject, relation) : relation,
   };
+}
+
+// Bound here rather than in the JSX so the narrowed id is what the closure
+// captures — `conversation.emailId` is optional, and a callback reading it
+// again would be reading a `string | undefined`.
+function openEmail(
+  activityId: string,
+  onOpenEmail: (activityId: string) => void,
+): () => void {
+  return () => onOpenEmail(activityId);
 }
 
 // The record's conversations, newest first, each folded to one entry.
@@ -646,6 +696,10 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
             count: 1,
             people,
             direction: entry.direction,
+            // Set from the FIRST row of a conversation, which this list orders
+            // newest-first — the same row the date and subject above come
+            // from, so the stop opens the message it is showing.
+            emailId: openableEmailId(entry),
             host: entry.host_user_id
               ? ctx.nameOf?.("user", entry.host_user_id)
               : undefined,
@@ -653,6 +707,26 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
     );
   }
   return [...conversations.values()];
+}
+
+/**
+ * The id of a message this stop can open, or nothing.
+ *
+ * Both conditions come off `email_summary` rather than off the kind string:
+ * the server sets it only for `kind=email`, and a message outside the reader's
+ * audience carries it with `display_status: withheld`. A stop that offered to
+ * open one of those would be a control that draws a placeholder — the reader
+ * learns citations do not work, which costs more than the press it saves.
+ */
+function openableEmailId(entry: {
+  id: string;
+  email_summary?: { display_status: string } | null;
+}): string | undefined {
+  const summary = entry.email_summary;
+  if (!summary || summary.display_status === "withheld") {
+    return undefined;
+  }
+  return entry.id;
 }
 
 // What the exchange WAS, and between whom: "Email to Frédéric de Gombert",
@@ -709,7 +783,9 @@ function preposition(conversation: Exchange): MessageKey {
 // recognises and the relation is the half that says whose move it is; run
 // together with a separator the subject stopped being findable, reading as one
 // long caption where a reader is scanning for a thread they remember.
-function saidLines(what: string | undefined, relation: string): ReactNode {
+// `what` is a node rather than a string because a mail conversation names its
+// message as a citation that opens, and a call names its subject as text.
+function saidLines(what: ReactNode, relation: string): ReactNode {
   if (!what) {
     return relation;
   }

@@ -63,9 +63,7 @@ gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePri
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
 gates/tableownership_test.go#var tableOwners
-internal/compose/accountdraft/deterministic.go#type Draft
 internal/compose/accountdraft/service.go#const aiDisclosure
-internal/compose/accountdraft/write.go#func writeChecked
 internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
@@ -125,8 +123,6 @@ internal/compose/extensions.go#var composedSubscriptions
 internal/compose/extensions.go#var composedVerbs
 internal/compose/extensiontools.go#method extensionTool.OwningUnit
 internal/compose/extjobs.go#var composedJobs
-internal/compose/extjobs_integration_test.go#func TestAHumanSeatIsNotAcceptedAsAJobPrincipal
-internal/compose/extjobseats.go#var seatlessWorkspaces
 internal/compose/extjobsrun.go#type extJobDispatcherArgs
 internal/compose/extledger.go#method extensionLedger.Record
 internal/compose/extparity_test.go#func declaredPatterns
@@ -228,7 +224,6 @@ internal/compose/personbrief/doc.go#package personbrief
 internal/compose/persondraft/deterministic.go#type Draft
 internal/compose/persondraft/fold.go#func ConversationState
 internal/compose/persondraft/service.go#const aiDisclosure
-internal/compose/persondraft/write.go#func writeChecked
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner

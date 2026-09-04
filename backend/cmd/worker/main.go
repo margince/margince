@@ -76,22 +76,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	// Registered before the lanes' join below, so LIFO closes the pool after it.
 	defer pool.Close()
-	// Before any lane runs: a pool connecting as a role row-level security
-	// does not bind serves every tenant's rows to every job, and nothing later
-	// in this boot would say so.
-	if err := compose.AssertRuntimeRole(ctx, pool); err != nil {
+	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
+		return err
+	}
+	if handled, err := runDatabaseSubcommand(ctx, pool, args, stdout); handled {
 		return err
 	}
 
-	// Before this role does ANY work: a worker from a different release than the
-	// one this installation records is half of a torn tag pull, and it stops
-	// rather than run the outbox relay, the retention evaluator and the agent
-	// runner against a schema and a contract that are not its own
-	// (compose/releaseversion.go carries why). Ahead of the composition record
-	// below, because a role that must not run must not write either.
-	if err := compose.AssertInstallationRelease(ctx, pool, logger, buildinfo.ReleaseVersion); err != nil {
-		return err
-	}
 	// And again on a tick, because the boot check answers once.
 	ctx, stopForReleaseSkew, releaseSkewErr := watchReleaseSkew(ctx, pool, logger)
 	defer stopForReleaseSkew()
@@ -431,4 +422,24 @@ func watchReleaseSkew(
 		stop()
 	}()
 	return ctx, stop, refused
+}
+
+// assertMayWorkAgainst refuses the two ways this binary could work against a
+// database it should not touch.
+//
+// The ROLE, because a pool connecting as a role row-level security does not
+// bind serves every tenant's rows to every job, and nothing later in this boot
+// would say so. The RELEASE, because a worker from a different release than the
+// one this installation records is half of a torn tag pull, and it stops rather
+// than run the outbox relay, the retention evaluator and the agent runner
+// against a schema and a contract that are not its own
+// (compose/releaseversion.go carries why).
+//
+// Both before this role does ANY work, and ahead of the composition record: a
+// role that must not run must not write either.
+func assertMayWorkAgainst(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) error {
+	if err := compose.AssertRuntimeRole(ctx, pool); err != nil {
+		return err
+	}
+	return compose.AssertInstallationRelease(ctx, pool, logger, buildinfo.ReleaseVersion)
 }

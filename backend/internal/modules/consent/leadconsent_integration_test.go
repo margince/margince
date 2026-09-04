@@ -245,7 +245,7 @@ func TestTheEngineAnswersAboutALeadRatherThanShrugging(t *testing.T) {
 	// Before the grant the engine denies, and names WHY: no consent, not "we
 	// could not find anybody". The distinction is the whole point — a
 	// no-subject verdict is absolute and would deny in every mode.
-	before, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+	before, err := gate.decideOne(e.ctx, tx, recipient, commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseTransmit)
 	if err != nil {
 		t.Fatalf("deciding about an ungranted lead: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestTheEngineAnswersAboutALeadRatherThanShrugging(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	after, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+	after, err := gate.decideOne(e.ctx, tx, recipient, commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseTransmit)
 	if err != nil {
 		t.Fatalf("deciding about a granted lead: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestTheEngineAndTheLegacyGateAgreeAboutALead(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		d, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+		d, err := gate.decideOne(e.ctx, tx, recipient, commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseTransmit)
 		if err != nil {
 			t.Fatalf("%s: deciding: %v", step.name, err)
 		}
@@ -353,7 +353,7 @@ func TestAWithdrawnLeadIsNotReportedAsNeverGranted(t *testing.T) {
 		}
 	}()
 
-	d, err := gate.decideOne(e.ctx, tx, recipient, "newsletter")
+	d, err := gate.decideOne(e.ctx, tx, recipient, commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseTransmit)
 	if err != nil {
 		t.Fatalf("deciding about a withdrawn lead: %v", err)
 	}
@@ -382,7 +382,7 @@ func TestALeadWhoNeverGrantedIsReportedAsAnAbsence(t *testing.T) {
 		}
 	}()
 
-	d, err := gate.decideOne(e.ctx, tx, connector.Recipient{Email: e.leadEmail}, "newsletter")
+	d, err := gate.decideOne(e.ctx, tx, connector.Recipient{Email: e.leadEmail}, commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseTransmit)
 	if err != nil {
 		t.Fatalf("deciding: %v", err)
 	}
