@@ -3290,7 +3290,7 @@ export const en = {
   "analytics.share.copyFailed":
     "The link could not be copied. Select it above and copy it by hand.",
   "analytics.share.done": "Done",
-  "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "What should be checked before the call?",
   "review.ready": "Ready",
   "review.readyWithExceptions": "Ready, with notes",

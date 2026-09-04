@@ -763,18 +763,34 @@ function ReportCard({
             {report === "deals-by-stage" && (
               <StageTable rows={run.rows} stages={stages} locale={locale} />
             )}
-            {/* The frame every figure above was cut in. A total with no zone
-                and no currency beside it is a number a reader places by
-                assumption, and the assumption is usually their own zone.
-                Drawn only when the server sent a whole frame: a caption
-                naming two of the three would be worse than none, and a
-                server mid-upgrade is exactly where a partial one arrives. */}
-            {run.as_of && run.timezone && run.base_currency && (
+            {/* The frame every figure above was cut in: the instant, and the
+                zone that instant is stated in. A total with no zone beside it
+                is a number a reader places by assumption, and the assumption
+                is usually their own.
+
+                It does NOT state a currency, and that is the point. Every
+                report on this tab is denominated PER CURRENCY — the stage
+                table prints a row per stage per currency, the forecast strip
+                bands its tiles by currency and labels each band with the code
+                — so the figures above are in several currencies at once and
+                none of them is the installation's base.
+
+                The frame used to end in `run.base_currency`, which read as the
+                denomination of numbers that were never converted into it: a
+                reader taking it at its word read ₫367,620,000,000 as a euro
+                figure. Whether this tab should convert instead is a product
+                question and is open; until it is answered, saying nothing
+                about currency here is the only honest option, because each
+                block already says its own.
+
+                Drawn only when the server sent both halves: a caption naming
+                one of the two would be worse than none, and a server
+                mid-upgrade is exactly where a partial one arrives. */}
+            {run.as_of && run.timezone && (
               <p className="sub analytics-frame">
                 {t("analytics.frame", {
                   asOf: formatDateTime(run.as_of, locale, run.timezone),
                   zone: run.timezone,
-                  currency: run.base_currency,
                 })}
               </p>
             )}

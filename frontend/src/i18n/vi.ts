@@ -3207,7 +3207,7 @@ export const vi = {
   "analytics.share.copyFailed":
     "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
   "analytics.share.done": "Xong",
-  "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
+  "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước cuộc gọi?",
   "review.ready": "Sẵn sàng",
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
