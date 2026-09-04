@@ -206,7 +206,10 @@ describe("the first-run setup gate", () => {
     });
   });
 
-  it("asks Microsoft for its directory too, and sends it only when given", async () => {
+  // The directory is REQUIRED here, unlike Settings: it is what puts Microsoft
+  // on the login page, and an admin who registered Microsoft and then found no
+  // Microsoft button would have nothing on either screen to tell them why.
+  it("asks Microsoft for its directory, and will not store an app without one", async () => {
     const { writes } = mount(setupReport(true, false));
     const user = userEvent.setup();
     await user.click(
@@ -218,9 +221,22 @@ describe("the first-run setup gate", () => {
     expect(
       screen.getByText("Register these redirect URIs on the app"),
     ).toBeTruthy();
-    expect(screen.getByText(/pinned to/)).toBeTruthy();
+    expect(
+      screen.getByText(/directory is what puts Microsoft on the login page/),
+    ).toBeTruthy();
     await user.type(screen.getByLabelText("Client ID"), "entra-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(
+      screen.getByText("Still needed: Directory (tenant) ID"),
+    ).toBeTruthy();
+    expect(writes.length).toBe(0);
+
+    await user.type(
+      screen.getByLabelText("Directory (tenant) ID"),
+      "00000000-0000-0000-0000-000000000000",
+    );
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(writes.length).toBe(1));
     expect(writes[0]?.url.endsWith("/installation/oauth-apps/microsoft")).toBe(
@@ -229,7 +245,21 @@ describe("the first-run setup gate", () => {
     expect(writes[0]?.body).toEqual({
       client_id: "entra-app",
       client_secret: "s3cret",
+      tenant: "00000000-0000-0000-0000-000000000000",
     });
+  });
+
+  // Google has no directory concept, so asking for one there would be a field
+  // that does nothing — and a blocker nobody could clear.
+  it("asks Google for no directory", async () => {
+    mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await screen.findByRole("radio", { name: /Google Workspace/ });
+    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+    await user.type(screen.getByLabelText("Client ID"), "google-app");
+    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.queryByText(/Still needed/)).toBeNull();
   });
 
   // The regression this screen was once built wrong for: an installation with

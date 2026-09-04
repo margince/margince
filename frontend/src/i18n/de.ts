@@ -4913,10 +4913,6 @@ export const de = {
   "ob.conv.connect.continue": "Weiter",
   "ob.conv.connect.mailboxNeeded":
     "Ein Postfach fehlt noch: Mail ist, was gelesen und entworfen wird. Verbinde oben eines, oder gehe vorerst ohne weiter.",
-  "ob.conv.connect.setupCta": "einrichten →",
-  "ob.conv.connect.dialogHeadlineApp": "{name}-App registrieren",
-  "ob.conv.connect.appDialogIntro":
-    "Postfächer verbinden sich über eine OAuth-App, die deiner Organisation gehört. Lege eine in der {name}-Konsole an, trage dort die Redirect-URIs unten ein und füge hier Client-ID und Secret ein.",
 
   // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
   // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
@@ -8241,7 +8237,9 @@ export const de = {
   "firstRun.microsoft.note":
     "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
   "firstRun.microsoft.helpSignIn":
-    "Die Anmeldung mit Microsoft läuft in dem Verzeichnis, an das die App gebunden ist. Ohne Bindung verbinden sich Postfächer weiterhin, aber niemand meldet sich an, bis wer den Server betreibt Ihre Verzeichnisse in MARGINCE_MICROSOFT_SIGNIN_TENANT benennt.",
+    "Das Verzeichnis ist es, was Microsoft auf die Anmeldeseite bringt — deshalb wird hier danach gefragt, statt es dem Zufall zu überlassen. Eine App ohne Verzeichnis — jede Organisation darf ein Postfach verbinden, und niemand meldet sich mit Microsoft an — richtest du stattdessen in den Einstellungen ein.",
+  "firstRun.microsoft.tenantHint":
+    "Das Entra-Verzeichnis, in dem eure Leute sind. Postfächer verbinden sich darüber, und darauf läuft die Microsoft-Anmeldung.",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",

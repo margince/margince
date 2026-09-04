@@ -22,7 +22,6 @@ export function ConnectDialog({
   providerMarkKey,
   headline,
   intro,
-  wide = false,
   children,
 }: Readonly<{
   open: boolean;
@@ -30,9 +29,6 @@ export function ConnectDialog({
   /** The key `ProviderMark` recognises — the badge above the headline. */
   providerMarkKey: string;
   headline: string;
-  /** The roomier frame, for a dialog that carries a form with a URL list
-   * rather than one ask: the app registration. */
-  wide?: boolean;
   /**
    * The plain-words explanation of what connecting reads. Omitted where the
    * dialog's own content (LinkedIn's existing scope list) already carries
@@ -44,12 +40,7 @@ export function ConnectDialog({
   const t = useT();
   const headingId = useId();
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      labelledBy={headingId}
-      size={wide ? "wide" : "default"}
-    >
+    <Modal open={open} onClose={onClose} labelledBy={headingId}>
       {/* Its own positioned frame, rather than `position: relative` on the
           shared `.modal` shell every dialog in the app uses — the close
           button's anchor is this dialog's business alone. */}

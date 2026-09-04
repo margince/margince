@@ -4945,10 +4945,6 @@ export const en = {
   "ob.conv.connect.continue": "Continue",
   "ob.conv.connect.mailboxNeeded":
     "A mailbox is still needed: mail is what gets read and drafted. Connect one above, or continue without one for now.",
-  "ob.conv.connect.setupCta": "set up →",
-  "ob.conv.connect.dialogHeadlineApp": "Register your {name} app",
-  "ob.conv.connect.appDialogIntro":
-    "Mailboxes connect through an OAuth app your organization owns. Create one in the {name} console, register the redirect URIs below on it, and paste its client id and secret here.",
   "ob.conv.linkedin.cardBody":
     "Turns your network into accounts and contacts, and flags it when a connection changes jobs.",
   "ob.conv.linkedin.limitsToggle": "What Margince can and cannot see",
@@ -8324,7 +8320,9 @@ export const en = {
   "firstRun.microsoft.note":
     "Register an app in Microsoft Entra with the redirect URIs above, then paste its client id and secret here. Pin it to your directory: that is whose mailboxes connect through it, and whose people sign in with it.",
   "firstRun.microsoft.helpSignIn":
-    "People sign in with Microsoft on the directory the app is pinned to. Left unpinned, mailboxes still connect, but nobody signs in until whoever runs the server names your directories in MARGINCE_MICROSOFT_SIGNIN_TENANT.",
+    "The directory is what puts Microsoft on the login page, so it is asked for here rather than left to chance. To register an app without one — any organization may connect a mailbox, and nobody signs in with Microsoft — use Settings instead.",
+  "firstRun.microsoft.tenantHint":
+    "The Entra directory your people are in. Mailboxes connect through it, and it is the directory Microsoft sign-in runs on.",
   "firstRun.ai.rankedHint":
     "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
   "firstRun.ai.rankedUnavailable":

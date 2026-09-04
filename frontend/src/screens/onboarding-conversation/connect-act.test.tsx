@@ -627,43 +627,6 @@ describe("the way onward", () => {
   });
 });
 
-// The missing app is registered where it is found missing: a reader who may
-// register apps gets the form in the card's own dialog, not a link to leave by.
-it("lets a reader who may register apps set the missing app up from the card", async () => {
-  installFetchStub({
-    "GET /me": meRoute({ capture_settings: ["update"] }),
-    "GET /connectors": () =>
-      jsonResponse({
-        data: [],
-        providers: [
-          { provider: "gmail", reason: "ready" },
-          { provider: "graph", reason: "app_missing" },
-          { provider: "imap", reason: "ready" },
-        ],
-      }),
-    "GET /installation/oauth-apps/microsoft": () =>
-      jsonResponse({
-        provider: "microsoft",
-        configured: false,
-        client_id: "",
-        source: "none",
-        redirect_uris: [],
-      }),
-  });
-  renderConnectAct();
-  const card = await screen.findByRole("button", { name: /Microsoft/ });
-  await waitFor(() => expect(card).not.toBeDisabled(), { timeout: 3000 });
-  await userEvent.click(card);
-  const dialog = await screen.findByRole("dialog");
-  expect(
-    within(dialog).getByText("Register your Microsoft app"),
-  ).toBeInTheDocument();
-  expect(within(dialog).getByLabelText(/Client ID/)).toBeInTheDocument();
-  expect(
-    within(dialog).getByRole("button", { name: "Store app" }),
-  ).toBeInTheDocument();
-});
-
 // The four step-level consent guarantees used to be a two-column table
 // squeezed into the rail's ~250px column, wrapping into broken-looking text.
 // They render on the artifact surface now, where the reader passes through them

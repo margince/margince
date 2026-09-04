@@ -4,13 +4,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useCanWrite } from "../../app/capability";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../common";
-import { OAuthAppForm, type Vendor } from "../oauth-app";
 import { OvernightGrantChoice } from "../overnight-grant";
 import { ConnectDialog } from "./connect-dialog";
 import { WayOnward } from "./way-onward";
@@ -126,9 +124,13 @@ type ConnectBlocker = Exclude<ProviderAvailability["reason"], "ready">;
 
 // What a blocked card says, and whether Settings is where it gets fixed. A
 // deployment that does not serve a provider at all is nobody's setting, so it
-// offers no link that would lead to an empty form. A missing app is the one
-// blocker a reader who may register apps fixes from the card itself
-// (`mailCardState`); the Settings link is for everyone else.
+// offers no link that would lead to an empty form.
+//
+// Registering the app is NOT offered here, on any of them. The installation's
+// OAuth app is asked for once, on the first-run platform step, so by the time
+// anybody reaches this screen that question is answered: a vendor still
+// missing one is a vendor this installation did not set up, which is an
+// admin's errand in Settings rather than a form to fill in mid-connect.
 const BLOCKER_COPY: Readonly<
   Record<ConnectBlocker, { body: MessageKey; settings: boolean }>
 > = {
@@ -239,18 +241,6 @@ export function ConnectScene({
   const anyMailConnected = MAIL_PROVIDERS.some((key) =>
     mailRoster.providers.has(ROSTER_PROVIDER[key]),
   );
-  // Whether this reader may register the organization's OAuth app. The same
-  // grant the Settings card checks, so a card that offers the form here can
-  // never offer one the server would refuse.
-  const canRegisterApp = useCanWrite("capture_settings", "update");
-  // The open provider's app is missing and this reader can supply it: the
-  // dialog asks for the app first. Once stored the roster re-reads, the
-  // blocker clears, and the same dialog becomes the provider's connect ask.
-  const openVendor = vendorOf(provider);
-  const openAppSetup =
-    openVendor !== null &&
-    canRegisterApp &&
-    mailRoster.blockers.get(ROSTER_PROVIDER[openVendor]) === "app_missing";
 
   return (
     <div className="ob-scene ob-connect">
@@ -275,12 +265,7 @@ export function ConnectScene({
 
       <div className="ob-connect-grid">
         {MAIL_PROVIDERS.map((key) => {
-          const card = mailCardState(
-            key,
-            mailRoster,
-            anyMailConnected,
-            canRegisterApp,
-          );
+          const card = mailCardState(key, mailRoster, anyMailConnected);
           return (
             <ConnectorCard
               key={key}
@@ -295,10 +280,7 @@ export function ConnectScene({
               // must not be clickable: opening it could connect a second
               // mailbox the still-loading (or failed) fetch just hasn't
               // reported yet.
-              disabled={
-                !(card.state === "idle" || card.state === "setup") ||
-                !mailRoster.verified
-              }
+              disabled={card.state !== "idle" || !mailRoster.verified}
               onOpen={() => onPick(key)}
             />
           );
@@ -344,7 +326,6 @@ export function ConnectScene({
       {provider && (
         <ProviderDialog
           provider={provider}
-          appSetup={openAppSetup}
           showsResult={dialogShowsResult}
           returnPanel={returnPanel}
           dialogPanel={dialogPanel}
@@ -362,29 +343,21 @@ export function ConnectScene({
   );
 }
 
-// The vendor whose OAuth app a mail card stands on; IMAP has none.
-function vendorOf(provider: MailProvider | null): Vendor | null {
-  return provider === "google" || provider === "microsoft" ? provider : null;
-}
-
 /**
- * The open provider's dialog: the app form when the app is what is missing
- * and this reader can supply it, otherwise the ask — or, once a proven trip
- * has returned, its result. The result dialog names the provider plainly:
- * `returnPanel` (OAuthReturnPanel) carries its own heading for what
- * happened, so a second "access needed" headline above it would be both
- * redundant and wrong, nothing being asked for any more.
+ * The open provider's dialog: the ask — or, once a proven trip has returned,
+ * its result. The result dialog names the provider plainly: `returnPanel`
+ * (OAuthReturnPanel) carries its own heading for what happened, so a second
+ * "access needed" headline above it would be both redundant and wrong,
+ * nothing being asked for any more.
  */
 function ProviderDialog({
   provider,
-  appSetup,
   showsResult,
   returnPanel,
   dialogPanel,
   onClose,
 }: Readonly<{
   provider: MailProvider;
-  appSetup: boolean;
   showsResult: boolean;
   returnPanel: ReactNode;
   dialogPanel: ReactNode;
@@ -392,35 +365,6 @@ function ProviderDialog({
 }>) {
   const t = useT();
   const copy = PROVIDER_COPY[provider];
-  // A store in flight holds the dialog open the same way a connect in flight
-  // does: a success landing after the reader backed out would register an app
-  // against a "not now" the dialog already promised.
-  const [appSaving, setAppSaving] = useState(false);
-  const vendor = vendorOf(provider);
-  if (appSetup && vendor !== null) {
-    return (
-      <ConnectDialog
-        open
-        wide
-        onClose={() => {
-          if (!appSaving) {
-            onClose();
-          }
-        }}
-        providerMarkKey={PROVIDER_MARKS[provider]}
-        headline={t("ob.conv.connect.dialogHeadlineApp", {
-          name: t(copy.name),
-        })}
-        intro={t("ob.conv.connect.appDialogIntro", { name: t(copy.name) })}
-      >
-        <AppSetupPanel
-          vendor={vendor}
-          onDismiss={onClose}
-          onBusy={setAppSaving}
-        />
-      </ConnectDialog>
-    );
-  }
   return (
     <ConnectDialog
       open
@@ -479,51 +423,6 @@ function ConnectWayOnward({
         </Button>
       )}
     </WayOnward>
-  );
-}
-
-/**
- * The missing app, registered from the card that found it missing rather than
- * from a Settings page the reader would have to come back from. The form is
- * the first run's own (`OAuthAppForm`); only the action row is this dialog's.
- * Nothing here closes the dialog on success on purpose: the stored app clears
- * the roster's blocker, and the open dialog turns into the connect ask.
- */
-function AppSetupPanel({
-  vendor,
-  onDismiss,
-  onBusy,
-}: Readonly<{
-  vendor: Vendor;
-  onDismiss: () => void;
-  onBusy: (busy: boolean) => void;
-}>) {
-  const t = useT();
-  return (
-    <div className="form-stack">
-      <OAuthAppForm
-        vendor={vendor}
-        onBusy={onBusy}
-        actions={({ needs, submit, pending }) => (
-          <>
-            {needs}
-            <div className="ob-connect-dialog-actions">
-              <Button variant="primary" pending={pending} onClick={submit}>
-                {t("oauthApp.store")}
-              </Button>
-              <button
-                type="button"
-                className="ob-connect-dialog-notnow"
-                disabled={pending}
-                onClick={onDismiss}
-              >
-                {t("ob.s4.notNow")}
-              </button>
-            </div>
-          </>
-        )}
-      />
-    </div>
   );
 }
 
@@ -600,14 +499,11 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
  * explain itself. Telling somebody to register a second vendor's OAuth app
  * when they have already connected their mail would be true and useless.
  *
- * A missing app is a fourth answer for the reader who can supply it: the card
- * stays a button, and opening it asks for the app where they stand.
  */
 function mailCardState(
   key: MailProvider,
   roster: ConnectedMailRoster,
   anyMailConnected: boolean,
-  canRegisterApp: boolean,
 ): { state: CardState; brings: MessageKey; settingsLink: boolean } {
   if (roster.providers.has(ROSTER_PROVIDER[key])) {
     return {
@@ -624,13 +520,6 @@ function mailCardState(
     };
   }
   const blocker = roster.blockers.get(ROSTER_PROVIDER[key]);
-  if (blocker === "app_missing" && canRegisterApp && key !== "imap") {
-    return {
-      state: "setup",
-      brings: BLOCKER_COPY[blocker].body,
-      settingsLink: false,
-    };
-  }
   if (blocker) {
     return {
       state: "unavailable",
@@ -645,7 +534,7 @@ function mailCardState(
   };
 }
 
-type CardState = "idle" | "connected" | "blocked" | "unavailable" | "setup";
+type CardState = "idle" | "connected" | "blocked" | "unavailable";
 
 /**
  * One provider tile: a mark, the name, one line of what it gives, and a
@@ -663,9 +552,7 @@ type CardState = "idle" | "connected" | "blocked" | "unavailable" | "setup";
  *
  * An "unavailable" tile is not a button at all. Nothing here can be operated
  * until somebody registers the organization's app, and the one thing a reader
- * can do about it is a link, which HTML does not allow inside a button. A
- * "setup" tile is that same missing app seen by a reader who can register it:
- * a button again, whose dialog asks for the app before it asks for consent.
+ * can do about it is a link, which HTML does not allow inside a button.
  */
 function ConnectorCard({
   markKey,
@@ -719,9 +606,7 @@ function ConnectorCard({
               <span className="ob-connect-card-cta">
                 {state === "connected"
                   ? t("ob.conv.connect.connectedCta")
-                  : state === "setup"
-                    ? t("ob.conv.connect.setupCta")
-                    : t("ob.conv.connect.connectCta")}
+                  : t("ob.conv.connect.connectCta")}
               </span>
             )}
       </span>

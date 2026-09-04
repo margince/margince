@@ -4831,10 +4831,6 @@ export const vi = {
   "ob.conv.connect.continue": "Tiếp tục",
   "ob.conv.connect.mailboxNeeded":
     "Vẫn cần một hộp thư: thư là thứ được đọc và soạn nháp. Kết nối một hộp thư ở trên, hoặc tạm tiếp tục mà không có.",
-  "ob.conv.connect.setupCta": "thiết lập →",
-  "ob.conv.connect.dialogHeadlineApp": "Đăng ký ứng dụng {name} của bạn",
-  "ob.conv.connect.appDialogIntro":
-    "Hộp thư kết nối qua một ứng dụng OAuth do tổ chức của bạn sở hữu. Tạo một ứng dụng trong bảng điều khiển {name}, đăng ký các redirect URI bên dưới cho nó, rồi dán client id và secret vào đây.",
   "ob.conv.linkedin.cardBody":
     "Biến mạng lưới quan hệ của bạn thành tài khoản và contact, và báo khi một người quen đổi việc.",
   "ob.conv.linkedin.limitsToggle": "Margince thấy được gì và không thấy gì",
@@ -8141,7 +8137,9 @@ export const vi = {
   "firstRun.microsoft.note":
     "Đăng ký một app trong Microsoft Entra với các redirect URI bên trên, rồi dán client id và secret vào đây. Ghim vào thư mục của bạn: hộp thư của thư mục đó kết nối qua app, và người của thư mục đó đăng nhập bằng app.",
   "firstRun.microsoft.helpSignIn":
-    "Mọi người đăng nhập bằng Microsoft trên thư mục app được ghim vào. Không ghim thì hộp thư vẫn kết nối được, nhưng không ai đăng nhập được cho đến khi người vận hành server nêu tên các thư mục của bạn trong MARGINCE_MICROSOFT_SIGNIN_TENANT.",
+    "Thư mục là thứ đưa Microsoft lên trang đăng nhập, nên nó được hỏi ngay ở đây thay vì phó mặc. Nếu muốn đăng ký ứng dụng mà không có thư mục — mọi tổ chức đều kết nối được hộp thư, và không ai đăng nhập bằng Microsoft — hãy dùng Cài đặt.",
+  "firstRun.microsoft.tenantHint":
+    "Thư mục Entra chứa người của bạn. Hộp thư kết nối qua nó, và đăng nhập Microsoft chạy trên nó.",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",

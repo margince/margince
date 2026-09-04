@@ -3,14 +3,14 @@ import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
+import { OffsiteLink } from "../design-system/offsitelink";
 import {
   OnboardingStage,
   StageActions,
-  StageNeeds,
 } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
@@ -28,7 +28,13 @@ import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
-import { OAuthAppForm, type Vendor } from "./oauth-app";
+import {
+  RedirectUris,
+  useOAuthApp,
+  useSetOAuthApp,
+  type Vendor,
+  vendorCopy,
+} from "./oauth-app";
 import { CORE_LABELS } from "./onboarding-core-label";
 import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
@@ -386,7 +392,7 @@ function AiStep({
           as one more field, and one at the end of a long board is one the
           reader has scrolled away from. */}
       <StageActions>
-        <StageNeeds attempted={attempted} missing={missing} />
+        <StepNeeds attempted={attempted} missing={missing} />
         <Button variant="primary" pending={busy} onClick={submit}>
           {t("firstRun.continue")}
         </Button>
@@ -542,10 +548,65 @@ const PLATFORM_COPY: Readonly<
   },
 };
 
+/** Google's own console, where the app is created and the two values are read. */
+const GOOGLE_CREDENTIALS_CONSOLE =
+  "https://console.cloud.google.com/apis/credentials";
+
 /**
- * The vendor's app on the first run: the shared form, with the stage's own
- * rail carrying its way onward. Its own component so the form's state resets
- * when the answer changes.
+ * The redirect URIs the app must carry, in the open and each with its copy
+ * button: the one thing on this step that is done in the vendor's console and
+ * not here, and the one a first run most often skips. The Sign-in row is what
+ * puts the button on the login page, so the hint says so before the list.
+ */
+function AppRedirectUris({
+  vendor,
+  uris,
+}: Readonly<{
+  vendor: Vendor;
+  uris: readonly { purpose: string; url: string }[] | undefined;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Callout tone="info" title={t("firstRun.platform.redirectTitle")}>
+        <p>{t("firstRun.platform.redirectHint")}</p>
+      </Callout>
+      <RedirectUris uris={uris} sub={t(vendorCopy[vendor].redirectSub)} />
+    </>
+  );
+}
+
+/**
+ * Where the client id and secret come from, folded away.
+ *
+ * A fold rather than four paragraphs above the fields: an operator who has done
+ * this before wants the two boxes, and one who has not needs every step. Open
+ * by default would push the actual form below the fold for everybody.
+ */
+function GoogleAppHelp() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("firstRun.google.helpToggle")}>
+      <ol className="ob-fr-help">
+        <li>{t("firstRun.google.helpStep1")}</li>
+        <li>{t("firstRun.google.helpStep2")}</li>
+        <li>{t("firstRun.google.helpStep3")}</li>
+        <li>{t("firstRun.google.helpStep4")}</li>
+      </ol>
+      <p className="ob-fr-help-note">
+        <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
+          {t("firstRun.google.helpConsole")}
+        </OffsiteLink>
+      </p>
+      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+    </Disclosure>
+  );
+}
+
+/**
+ * The vendor's app: the two values every OAuth client has, and Microsoft's
+ * optional directory pin. Its own component so the app query is asked only
+ * for the vendor on screen, and so the fields reset when the answer changes.
  */
 function VendorAppFields({
   vendor,
@@ -559,23 +620,159 @@ function VendorAppFields({
   onDecline: () => void;
 }>) {
   const t = useT();
+  const app = useOAuthApp(vendor);
+  const save = useSetOAuthApp(vendor);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [tenant, setTenant] = useState("");
+  // The directory is asked for HERE, unlike Settings, where it stays optional.
+  // It is what decides whether Microsoft appears on the login page at all
+  // (compose/microsoftsignin.go: an app on no directory names nobody and signs
+  // nobody in), and an installation that registered Microsoft one step earlier
+  // and then found no Microsoft button has no way to tell why. The server
+  // refuses anything but a directory id, so "not empty" is the whole client
+  // rule and the shape stays the server's.
+  const missing = [
+    [clientId.trim() === "", t("oauthApp.clientId")],
+    [clientSecret.trim() === "", t("oauthApp.clientSecret")],
+    [vendor === "microsoft" && tenant.trim() === "", t("oauthApp.tenant")],
+  ]
+    .filter((need): need is [true, string] => need[0] === true)
+    .map(([, label]) => label);
+  const ready = missing.length === 0;
+  const [attempted, setAttempted] = useState(false);
+  const needed = (absent: boolean) =>
+    attempted && absent ? t("firstRun.needed") : undefined;
+  useEffect(() => {
+    onBusy(save.isPending);
+    return () => onBusy(false);
+  }, [save.isPending, onBusy]);
   return (
-    <OAuthAppForm
-      vendor={vendor}
-      onBusy={onBusy}
-      // The invalidated setup report is what moves the screen on.
-      actions={({ needs, submit, pending }) => (
-        <StageActions>
-          {needs}
-          <Button variant="ghost" onClick={onDecline} disabled={pending}>
-            {t("firstRun.platform.skip")}
-          </Button>
-          <Button variant="primary" pending={pending} onClick={submit}>
-            {t("firstRun.continue")}
-          </Button>
-        </StageActions>
+    <>
+      <AppRedirectUris vendor={vendor} uris={app.data?.redirect_uris} />
+      {vendor === "google" ? (
+        <GoogleAppHelp />
+      ) : (
+        <>
+          <p className="ob-fr-help-note">{t("firstRun.microsoft.note")}</p>
+          {/* The pin below is also the directory sign-in runs on, which the
+              Google form has no equivalent of: said here, because an admin
+              who leaves it empty gets working mailboxes and no sign-in, and
+              nothing else on this screen would say why. */}
+          <p className="ob-fr-help-note">
+            {t("firstRun.microsoft.helpSignIn")}
+          </p>
+        </>
       )}
-    />
+      {save.error && (
+        <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
+      )}
+      <Field
+        label={t("oauthApp.clientId")}
+        error={needed(clientId.trim() === "")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            value={clientId}
+            disabled={save.isPending}
+            autoComplete="off"
+            placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
+            onChange={(e) => setClientId(e.target.value)}
+          />
+        )}
+      </Field>
+      <Field
+        label={t("oauthApp.clientSecret")}
+        error={needed(clientSecret.trim() === "")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            type="password"
+            autoComplete="off"
+            value={clientSecret}
+            disabled={save.isPending}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        )}
+      </Field>
+      {vendor === "microsoft" && (
+        <Field
+          label={t("oauthApp.tenant")}
+          hint={t("firstRun.microsoft.tenantHint")}
+          error={needed(tenant.trim() === "")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={tenant}
+              autoComplete="off"
+              disabled={save.isPending}
+              placeholder={t("oauthApp.tenantPlaceholder")}
+              onChange={(e) => setTenant(e.target.value)}
+            />
+          )}
+        </Field>
+      )}
+      <StageActions>
+        <StepNeeds attempted={attempted} missing={missing} />
+        <Button variant="ghost" onClick={onDecline} disabled={save.isPending}>
+          {t("firstRun.platform.skip")}
+        </Button>
+        <Button
+          variant="primary"
+          pending={save.isPending}
+          onClick={() => {
+            if (!ready) {
+              setAttempted(true);
+              return;
+            }
+            save.reset();
+            save.mutate(
+              {
+                clientId: clientId.trim(),
+                clientSecret: clientSecret.trim(),
+                tenant: tenant.trim(),
+              },
+              {
+                onSuccess: () => {
+                  // Cleared on the way out rather than left in state: the
+                  // field is the only copy this app holds, and it has done
+                  // its job. The invalidated setup report is what moves the
+                  // screen on.
+                  setClientSecret("");
+                  save.reset();
+                },
+              },
+            );
+          }}
+        >
+          {t("firstRun.continue")}
+        </Button>
+      </StageActions>
+    </>
+  );
+}
+
+/**
+ * What still stands between the reader and the next step, beside the button
+ * they pressed. Nothing until Continue has been pressed with something missing:
+ * a form that lists its own gaps before anyone has typed is a form scolding a
+ * reader for arriving.
+ */
+function StepNeeds({
+  attempted,
+  missing,
+}: Readonly<{ attempted: boolean; missing: readonly string[] }>) {
+  const t = useT();
+  if (!attempted || missing.length === 0) {
+    return null;
+  }
+  return (
+    <p className="ob-stage-note" role="alert">
+      {t("firstRun.stillNeeded", { fields: missing.join(", ") })}
+    </p>
   );
 }
 

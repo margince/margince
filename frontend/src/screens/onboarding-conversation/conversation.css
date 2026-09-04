@@ -1688,14 +1688,6 @@
   opacity: 0.55;
 }
 
-/* The same missing app, seen by the reader who can supply it: dashed for the
-   same honest reason, but a button again, because pressing it opens the form
-   that fixes it rather than a page that explains it. */
-.ob-connect-card[data-state="setup"] {
-  border-style: dashed;
-  background: var(--bgPage);
-}
-
 /* The way out of the state, in the CTA's slot and its voice: the reader who
    can fix this is one link away from where it is fixed. */
 .ob-connect-card-setup {
