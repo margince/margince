@@ -326,5 +326,39 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			occurred = member.occurredAt
 		}
 	}
-	return ranked{item: row, foldedFrom: from, occurredAt: occurred}
+	return ranked{
+		item:       row,
+		foldedFrom: from,
+		occurredAt: occurred,
+		// The group's own answer, from the members it stands for. A fold is one
+		// row in place of many, so it can only name an owner where the many
+		// AGREE — a pile of duplicate pairs nobody holds is unassigned, and a
+		// pile whose members answer differently names nobody rather than
+		// picking one member's owner and reporting it as the group's.
+		ownerRef: ownerOfTheGroup(members),
+	}
+}
+
+// ownerOfTheGroup is the one answer a folded row may give.
+//
+// A batch is not a record and has no owner of its own; it stands for members
+// that do. Where they agree the group says what they say. Where they disagree
+// it says nothing — not the first member's answer, which would report one
+// person as holding a pile most of which is somebody else's, and not
+// `unassigned`, which would claim nobody holds work several people do.
+//
+// Silence here is the honest answer AND a visible one: the row reaches the wire
+// with no owner, which the contract already means as "nothing is being said
+// about this", rather than as a claim a reader would act on.
+func ownerOfTheGroup(members []ranked) ownerRef {
+	if len(members) == 0 {
+		return ownerRef{}
+	}
+	first := members[0].ownerRef
+	for _, member := range members[1:] {
+		if member.ownerRef != first {
+			return ownerRef{}
+		}
+	}
+	return first
 }
