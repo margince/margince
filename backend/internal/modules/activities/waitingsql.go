@@ -119,6 +119,10 @@ const waitingRepliesSQL = `
 	       -- Ungated on purpose, like the sales-link arm it sits beside:
 	       -- eligibility that depended on the reader would make the same message
 	       -- engaged for one colleague and cold for another.
+	       -- The classifier's answer, or empty when nobody has judged this
+	       -- message. Absence is never evidence: an unjudged row ranks exactly
+	       -- as it did before the column existed.
+	       coalesce(a.owed_verdict, ''),
 	       EXISTS (
 	         SELECT 1 FROM activity ours
 	          WHERE ours.thread_key = a.thread_key

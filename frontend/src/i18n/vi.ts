@@ -7922,6 +7922,7 @@ export const vi = {
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
   "worklist.because.no_reply_history": "chưa từng trao đổi",
+  "worklist.because.asks_nothing": "không yêu cầu gì ở ta",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",

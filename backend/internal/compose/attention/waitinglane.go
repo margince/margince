@@ -118,6 +118,15 @@ type WaitingCustomer struct {
 	// headers gives each message its own thread, so this demotes rather than
 	// hides.
 	Engaged bool
+	// AsksNothing says a classifier judged this message to inform rather than
+	// to ask — a report, a receipt, a statement.
+	//
+	// A BOOLEAN, not the verdict word, and the difference is the point: an
+	// unjudged message and one judged to be asking must rank identically, so
+	// the two cases that leave the ranking alone collapse into one value here.
+	// A verdict string would put activities' vocabulary in this package and give
+	// the queue a second place to spell it.
+	AsksNothing bool
 	// OwnerID is who owes this reply, resolved by the module from the record
 	// the thread is filed under. Zero when nothing on it names an owner, which
 	// is an unowned customer rather than a missing answer.

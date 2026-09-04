@@ -262,6 +262,20 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if unproven {
 		level = levelRoutine
 	}
+	// A message that asks us nothing. A report, a receipt, a statement: the
+	// sender wrote and nobody replied, both true, and neither makes it work.
+	//
+	// DEMOTED, never dropped — the same floor capture_label sits under, and for
+	// a sharper reason here: this is one model call's opinion about a customer's
+	// mail. A wrong one costs a scroll. An UNJUDGED message is not demoted at
+	// all: a classifier that never ran, ran out of budget or answered below its
+	// confidence floor must leave the queue exactly as it found it.
+	//
+	// Money outranks it, like every other demotion here.
+	informational := waiting.AsksNothing && !waiting.HasOpenDeal
+	if informational {
+		level = levelRoutine
+	}
 	because := []crmcontracts.WorklistReason{
 		reason("buyer_wrote_last", nil),
 		reason("waiting_days", daysValue(days)),
@@ -271,6 +285,9 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	if unproven {
 		because = append(because, reason("no_reply_history", nil))
+	}
+	if informational {
+		because = append(because, reason("asks_nothing", nil))
 	}
 	row := crmcontracts.WorklistItem{
 		Id:          waiting.ActivityID.String(),
