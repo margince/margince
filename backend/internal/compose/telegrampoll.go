@@ -130,8 +130,14 @@ func (a TelegramPollArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // The state window excludes `completed` (activeSweepStates): a finished poll must
 // not stop the next tick enqueueing the following one, or ingress would run
 // exactly once per process.
+//
+// The attempt cap is the one api/jobs.yaml publishes, held equal to the
+// declaration by TestArgsOwnedAttemptCapsMatchTheirDeclaration.
 func (TelegramPollArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
+	return river.InsertOpts{
+		MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+	}
 }
 
 // telegramPollSweepWorker is the dispatcher: due-scan, then one insert per live
@@ -311,7 +317,12 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 				ConnectionID: target.ID.String(),
 				BotID:        target.ChannelID,
 				RawCaptureID: rawID.String(),
-			}, &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true}}); err != nil {
+			}, &river.InsertOpts{
+				// One-off: this raw payload arrived once and no scan re-ingests
+				// it, so the ladder carries the database blip alone.
+				MaxAttempts: oneOffJobMaxAttempts,
+				UniqueOpts:  river.UniqueOpts{ByArgs: true},
+			}); err != nil {
 				return err
 			}
 		}
