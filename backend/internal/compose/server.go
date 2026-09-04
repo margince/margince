@@ -168,7 +168,12 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// same edge dealsH wires above.
 		automationHandlers: automation.NewHandlers(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		voiceHandlers:      ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)),
-		reportHandlers:     reportHandlers{engine: newReportEngine(pool)},
+		// The names seam is the WEB surface's: a person reading "explain this
+		// number" meets the deals by name, while the MCP provider leaves it
+		// unwired because a tool answers in ids.
+		reportHandlers: reportHandlers{
+			engine: newReportEngine(pool).WithNames(newAttentionNames(InstallationDB(pool))),
+		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),

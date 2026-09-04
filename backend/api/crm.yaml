@@ -23646,6 +23646,18 @@ components:
         last_name: { type: [string, 'null'] }
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
+        employer:
+          readOnly: true
+          description: >-
+            Where this contact works TODAY: their current primary employment edge, resolved to
+            the account it names. History is not here — the full career ribbon is
+            `person_360.employments`, and a past employer never appears in this field.
+            Absent is not "works nowhere": the field is also absent when the caller may not
+            read relationship edges (an edge discloses its endpoints as a PAIR, which the
+            grant on the person does not cover) or when the employer sits outside their
+            organization row scope. A reader is told who somebody works for or nothing at all,
+            never a company they have no grant for.
+          allOf: [{ $ref: '#/components/schemas/PersonEmployer' }]
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string
@@ -23734,6 +23746,17 @@ components:
         request still succeeds. A picklist value outside the declared options is the one
         typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
         columns; a retired field's stored values are preserved but leave the payload.
+
+    PersonEmployer:
+      type: object
+      description: >-
+        The account a contact works at today, by their current primary employment edge —
+        the one `uq_rel_current_primary_employer` keeps unique per person, so a contact
+        has at most one.
+      required: [organization_id, organization_name]
+      properties:
+        organization_id: { type: string, format: uuid }
+        organization_name: { type: string }
 
     CreatePersonRequest:
       type: object

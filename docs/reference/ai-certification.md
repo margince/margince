@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 39 |
+| Shipped invocation sites | 40 |
 | … best state `current` | 34 |
 | … best state `partial` | 0 |
 | … best state `stale` | 4 |
-| … `absent` on every binding | 1 |
-| Scenarios in the corpus | 133 |
+| … `absent` on every binding | 2 |
+| Scenarios in the corpus | 135 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -74,7 +74,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (39)
+### Sites (40)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -114,6 +114,7 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/org_ask`](#summarizeorg_ask) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 2 | 1 |
 | [`summarize/org_brief`](#summarizeorg_brief) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.00 | `current` | 2 | 1 |
 | [`summarize/org_dossier`](#summarizeorg_dossier) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 1 |
+| [`summarize/person_brief`](#summarizeperson_brief) | - | - | - | `absent` | 2 | 0 |
 | [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `supported_degraded` | 0.89 | `current` | 3 | 1 |
 | [`voice_build/derive`](#voice_buildderive) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | - | - | - | `stale` | 1 | 3 |
@@ -939,6 +940,19 @@ Records (1):
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1270ms | 1950ms | 3 | 0 | 0 | 0 |
+
+#### `summarize/person_brief`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (2):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `person_brief_reads_what_was_said` | `accepted` | [person_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/person_brief_reads_what_was_said_01.yaml) |
+| `person_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | [person_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/person_brief_withheld_and_omitted_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `transcript_propose`
 

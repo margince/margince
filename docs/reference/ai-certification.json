@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 39,
+    "sites": 40,
     "sites_best_current": 34,
     "sites_best_partial": 0,
     "sites_best_stale": 4,
-    "sites_absent": 1,
-    "scenarios": 133,
+    "sites_absent": 2,
+    "scenarios": 135,
     "records": 59,
     "bindings": 10
   },
@@ -3502,6 +3502,28 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "summarize",
+      "site": "person_brief",
+      "key": "summarize/person_brief",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "person_brief_reads_what_was_said",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_reads_what_was_said_01.yaml"
+        },
+        {
+          "name": "person_brief_stays_silent_about_what_the_reader_may_not_see",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_withheld_and_omitted_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "transcript_propose",

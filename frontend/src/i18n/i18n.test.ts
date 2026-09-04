@@ -22,6 +22,14 @@ import { vi as viCatalog } from "./vi";
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface.
   "room.card.title",
+  // Two sales nouns Vietnamese borrows rather than translates, on the
+  // drill-through's column headers. The vi catalog already carries both
+  // untranslated where they appear as words in a sentence — "Thuộc deal" on
+  // the partner and commission columns, "Pipeline" on the deal's own field —
+  // so translating them only here would give one screen a vocabulary the
+  // rest of the product does not use.
+  "explain.col.record",
+  "explain.col.pipeline",
   // The area's name, which is the same word in all three catalogs by decision:
   // "Analytics" is what the product calls this surface, and both German and
   // Vietnamese borrow it as a term of art rather than translating it. The

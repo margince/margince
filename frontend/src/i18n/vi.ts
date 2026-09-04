@@ -3314,6 +3314,10 @@ export const vi = {
   "analytics.noCompany": "Không có công ty",
   "analytics.openDeals": "Deal đang mở",
   "explain.sources": "Các dòng nguồn",
+  "explain.col.record": "Deal",
+  "explain.col.stage": "Giai đoạn",
+  "explain.col.owner": "Phụ trách",
+  "explain.col.pipeline": "Pipeline",
 
   "ai.sub": "mang Agent của riêng bạn — được quản trị bằng hợp đồng hai bậc",
   "ai.tiers": "Một Agent được phép làm gì",

@@ -16466,6 +16466,8 @@ export interface components {
             full_name: string;
             /** @description Denormalized current title; authoritative title is on the employment relationship. */
             title?: string | null;
+            /** @description Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `person_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the person does not cover) or when the employer sits outside their organization row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for. */
+            readonly employer?: components["schemas"]["PersonEmployer"];
             /** Format: uuid */
             owner_id?: string | null;
             /**
@@ -16529,6 +16531,12 @@ export interface components {
             archived_at?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per person, so a contact has at most one. */
+        PersonEmployer: {
+            /** Format: uuid */
+            organization_id: string;
+            organization_name: string;
         };
         CreatePersonRequest: {
             full_name: string;
