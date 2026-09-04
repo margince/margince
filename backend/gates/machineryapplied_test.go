@@ -7,6 +7,9 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -35,6 +38,23 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 
 	fset, files := parseGoFilesUnder(t, "internal")
 
+	// Which package each import path actually declares, so an ALIAS cannot
+	// hide an entry. `identitymod "…/identity"` makes a call read
+	// identitymod.Country while the declaration is identity.Country, and a gate
+	// comparing the two strings finds no match — which used to mean the entry
+	// was logged and accepted, i.e. exactly the case this exists to catch
+	// slipping through under a rename.
+	//
+	// Read from the parsed files rather than assumed from the path's last
+	// segment, because those differ in this tree (contracts declares
+	// crmcontracts).
+	packageOfDir := map[string]string{}
+	for _, path := range goFilePaths(t, "internal") {
+		if file, ok := parsedByPath(files, fset, path); ok && file.Name != nil {
+			packageOfDir[filepath.ToSlash(filepath.Dir(path))] = file.Name.Name
+		}
+	}
+
 	// entry name -> declared MachineryApplied. Keyed by the VAR name because
 	// that is what a call site names; the key string lives on the entry and is
 	// not resolvable from the call.
@@ -48,6 +68,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 		if file.Name != nil {
 			pkg = file.Name.Name
 		}
+		aliases := aliasesOf(file, packageOfDir)
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch node := n.(type) {
 			case *ast.ValueSpec:
@@ -60,7 +81,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
 					return true
 				}
-				if entry := entryName(node.Args[2], pkg); entry != "" {
+				if entry := entryName(node.Args[2], pkg, aliases); entry != "" {
 					read[entry] = fset.Position(node.Pos()).String()
 				}
 			}
@@ -85,10 +106,14 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 		isDeclared, found := declared[entry]
 		switch {
 		case !found:
-			// Not a failure: the call names an entry this walk did not resolve
-			// — a different package's, most often. Reported so the gate's reach
-			// is visible rather than silently narrower than it looks.
-			t.Logf("%s: %s is read through ApplyTx and its declaration was not found in this walk", where, entry)
+			// A FAILURE, not a note. Aliases are resolved above, so an entry
+			// this walk cannot place is one the gate genuinely cannot see —
+			// and accepting it would mean the one shape that hides a missing
+			// declaration is the one shape that passes.
+			t.Errorf("%s reads %s through settings.ApplyTx and this gate cannot find its "+
+				"declaration. Either the entry is declared outside internal/, or the walk "+
+				"stopped recognising a declaration shape — both leave a MachineryApplied "+
+				"omission unable to fail here, which is what this gate is for.", where, entry)
 		case !isDeclared:
 			t.Errorf("%s reads %s through settings.ApplyTx, which refuses an entry not declared "+
 				"MachineryApplied — at runtime, inside the machinery. Declare it where it is defined, "+
@@ -141,16 +166,72 @@ func hasMachineryApplied(expr ast.Expr) bool {
 	}
 }
 
-// entryName renders the entry argument as package.Name, resolving a bare
-// identifier against the file's own package.
-func entryName(expr ast.Expr, pkg string) string {
+// entryName renders the entry argument as declaringPackage.Name.
+//
+// A bare identifier resolves against the file's own package; a qualified one
+// resolves the QUALIFIER through the file's imports, so an alias names the
+// package that actually declares the entry rather than whatever the importer
+// chose to call it.
+func entryName(expr ast.Expr, pkg string, aliases map[string]string) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		return pkg + "." + e.Name
 	case *ast.SelectorExpr:
-		if qualifier, ok := e.X.(*ast.Ident); ok {
-			return qualifier.Name + "." + e.Sel.Name
+		qualifier, ok := e.X.(*ast.Ident)
+		if !ok {
+			return ""
 		}
+		name := qualifier.Name
+		if declared, found := aliases[name]; found {
+			name = declared
+		}
+		return name + "." + e.Sel.Name
 	}
 	return ""
+}
+
+// aliasesOf maps each import qualifier in this file to the package name that
+// import path actually declares.
+func aliasesOf(file *ast.File, packageOfDir map[string]string) map[string]string {
+	out := map[string]string{}
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			continue
+		}
+		// The tree's own packages only. A third-party import can never be the
+		// qualifier on a settings entry, and guessing its package name from a
+		// module path is how a resolver starts inventing answers.
+		declared, known := packageOfDir[strings.TrimPrefix(path, modulePath+"/")]
+		if !known {
+			continue
+		}
+		qualifier := declared
+		if spec.Name != nil {
+			qualifier = spec.Name.Name
+		}
+		out[qualifier] = declared
+	}
+	return out
+}
+
+// goFilePaths is goFilesUnder with the walk error turned into a test failure.
+func goFilePaths(t *testing.T, dir string) []string {
+	t.Helper()
+	paths, err := goFilesUnder(dir)
+	if err != nil {
+		t.Fatalf("walking %s: %v", dir, err)
+	}
+	return paths
+}
+
+// parsedByPath finds the already-parsed file for one path, so the walk is not
+// repeated just to learn package names.
+func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.File, bool) {
+	for _, file := range files {
+		if fset.Position(file.Pos()).Filename == path {
+			return file, true
+		}
+	}
+	return nil, false
 }
