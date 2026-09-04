@@ -51,14 +51,15 @@ const (
 	// narrowing at all, which the native path treats as a no-op — refusing it
 	// would 422 a request that answers 200 natively, for a dial the caller
 	// effectively did not set.
-	paramUnassigned     = "unassigned"
-	paramPipelineID     = "pipeline_id"
-	paramStageID        = "stage_id"
-	paramOrganizationID = "organization_id"
-	paramStatus         = "status"
-	paramKind           = "kind"
-	paramTag            = "tag_id"
-	paramTagMode        = "tag_mode"
+	paramUnassigned       = "unassigned"
+	paramPipelineID       = "pipeline_id"
+	paramStageID          = "stage_id"
+	paramOrganizationID   = "organization_id"
+	paramStatus           = "status"
+	paramForecastCategory = "forecast_category"
+	paramKind             = "kind"
+	paramTag              = "tag_id"
+	paramTagMode          = "tag_mode"
 	// paramCapturedByKind is refused in overlay mode rather than ignored:
 	// captured_by is OUR provenance column, stamped from the principal that
 	// wrote the row. Mirror rows are the incumbent's records, created in the
@@ -310,6 +311,12 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 			// project would answer the whole mirror while reading as that
 			// project's deals.
 			{"project_id", params.ProjectId != nil},
+			// The forecast's buckets are OUR column too. A mirrored deal
+			// carries the incumbent's own forecast field, which this product
+			// neither writes nor maps, so there is nothing here to narrow by —
+			// and answering the whole mirror while reading as "the commit
+			// bucket" is the failure this list refuses rather than makes.
+			{paramForecastCategory, params.ForecastCategory != nil},
 		},
 		nil, params.Cursor, params.Limit, overlayWireDeal,
 		func(data []crmcontracts.Deal, page crmcontracts.PageInfo) any {

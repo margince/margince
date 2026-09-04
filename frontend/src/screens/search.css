@@ -31,7 +31,7 @@
 }
 .search-hit-snippet {
   color: var(--textSecondary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 /* An email hit is the canonical row, which owns its own padding, typography

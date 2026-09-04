@@ -85,7 +85,12 @@ type ListDealsInput struct {
 	// partner is named at all.
 	PartnerAttribution *string
 	Status             *string
-	Stalled            *bool
+	// ForecastCategory narrows to one of the forecast's named buckets —
+	// commit, best_case, pipeline, omitted. The column the FORECAST reads, so
+	// a tile's number and the list behind it are one answer rather than two
+	// derivations that can disagree.
+	ForecastCategory *string
+	Stalled          *bool
 	// QuietForDays narrows to open deals idle at least this long, which is the
 	// stalled rule at a caller-named window (QuietSQL). Separate from Stalled
 	// because they answer different questions: Stalled is the product-wide
@@ -274,6 +279,13 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
+	}
+	if in.ForecastCategory != nil {
+		// A deal with no category is in no bucket, which the NULL comparison
+		// gives for free: the five tiles partition the CATEGORISED pipeline,
+		// and an uncategorised deal belongs to none of them rather than
+		// quietly joining whichever one is asked for.
+		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
 	}
 	if in.Stalled != nil {
 		if *in.Stalled {

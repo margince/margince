@@ -260,13 +260,22 @@
    * collapses it, exactly as --successText and --textOnAccentControl do. */
   --dangerText: #b91c1c;
 
+  /* ===== Corners =====
+   * One ladder, in fours: 4 / 8 / 12 / 16 / 20, and the pill. Every corner in
+   * the tree reads one of these. A raw px radius is a sixth value nobody chose,
+   * which is how the tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once —
+   * seven corners that were each somebody's judgement of "about right" and
+   * together were a ladder with no rungs. The squircle block at the foot of
+   * this file doubles the ladder under `corner-shape`, so a value here is also
+   * the thing that decides what a smooth corner measures. */
+  --r-xs: 4px;
   --r-sm: 8px;
   /* The one radius for a control a hand operates — button, input, select
      trigger. Between the chip's --r-sm and the pane's --r-md, because a control
      as round as the pane it sits in reads as part of the pane. */
-  --r-control: 10px;
-  --r-md: 14px;
-  --r-lg: 18px; /* the pane */
+  --r-control: 12px;
+  --r-md: 16px;
+  --r-lg: 20px; /* the pane */
   --r-full: 9999px;
 
   /* The height of an interactive control, in its two sizes. A button, a text
@@ -283,6 +292,14 @@
      to whatever its padding produced. */
   --control-h: 36px;
   --control-h-sm: 32px;
+  /* One rung ABOVE the form control, for the verbs a page owns rather than the
+     ones inside a card: a record's own actions stand beside a name set at the
+     record rung, and at the form rung they read as chrome that happens to sit
+     near it. Under touch the pointer arm below takes every rung to 44, so this
+     one stops being a step up there — a bigger target is the right answer to a
+     finger, and a verb taller than 44 would be the only oversized thing on the
+     screen. */
+  --control-h-lg: 40px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
@@ -362,11 +379,19 @@
   --fs-h3: 17px; /* card title */
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
-  --fs-display: 32px; /* a record's name; the title of a full-viewport moment */
-  /* Two fluid rungs, for the two surfaces that own a whole viewport and
-     therefore have room to answer to it: the gate and the handoff scene. */
+  --fs-display: 32px; /* the title of a full-viewport moment */
+  /* Three fluid rungs, for the surfaces that own their width and therefore
+     have room to answer to it: the gate, the handoff scene, and a RECORD's
+     own name. A record's name is the largest thing on its page, so it is the
+     first thing to stop being a name and start being a banner when the header
+     narrows — which happens whenever a reader opens the nav rail.
+     Measured in `cqi` and not `vw` for that reason: the window does not
+     change when the rail does, and the header is what the name has to fit.
+     `.record-head-wide` declares the container; with none in the tree the
+     unit falls back to the viewport, which is the pre-container answer. */
   --fs-display-fluid: clamp(24px, 2.6vw, 32px);
   --fs-hero-fluid: clamp(30px, 6vw, 46px);
+  --fs-record-fluid: clamp(26px, 3.7cqi, 44px);
 
   /* Four weights. Outfit and DM Sans are both variable, so 550/560/580/600/620/
      650 rendered as six genuinely different weights for one "emphasis" role —
@@ -750,5 +775,50 @@
   :root {
     --control-h: 44px;
     --control-h-sm: 36px;
+    --control-h-lg: 44px;
+  }
+}
+
+/* ===== Smooth corners =====
+ *
+ * `corner-shape: squircle` draws a superellipse instead of a quarter-circle:
+ * the same corner without the two points where a circular arc meets the
+ * straight edge. Where an engine has it (CSS Borders and Box Decorations L4),
+ * every box in the tree takes it — declared once, here, rather than at each of
+ * the several hundred call sites that would each have to remember.
+ *
+ * The ladder DOUBLES inside the query. A superellipse of radius R reads about
+ * as round as a circular corner of R/2, so a corner that kept its number would
+ * visibly tighten the day a browser shipped the property. Doubling is what
+ * keeps the change to the corner's quality rather than its size.
+ *
+ * `:where(*)` carries zero specificity on purpose: a pill, a circle or any
+ * other genuinely round thing cancels it with a plain `corner-shape: round`
+ * beside its own `border-radius`, wherever that rule happens to sit. A
+ * superellipse at --r-full is a lozenge and at 50% a squircle tile, and neither
+ * is what an avatar or a status pill means. --r-full is therefore NOT doubled:
+ * it is already larger than any box it lands on.
+ *
+ * The generated boxes are listed BESIDE the universal selector, because `*`
+ * matches elements and not pseudo-elements — while the doubled tokens reach
+ * them anyway, since a custom property inherits and `corner-shape` does not.
+ * Left off the list, `::before` and `::after` would keep the initial round
+ * shape and draw a corner at twice the radius its author asked for: a dot, a
+ * notch or a drawn separator visibly rounder than the box it belongs to. The
+ * pseudo-elements a stylesheet in this tree gives a corner to are held against
+ * this list by `corners.test.ts`, so a new one cannot arrive unlisted. */
+@supports (corner-shape: squircle) {
+  :root {
+    --r-xs: 8px;
+    --r-sm: 16px;
+    --r-control: 24px;
+    --r-md: 32px;
+    --r-lg: 40px;
+  }
+  :where(*),
+  :where(*)::before,
+  :where(*)::after,
+  :where(*)::backdrop {
+    corner-shape: squircle;
   }
 }

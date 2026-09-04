@@ -17,6 +17,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -202,11 +203,24 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 	}
 }
 
-// TestColdStartOptionsRespectsResolvedPath proves coldStartOptions is a
-// pure consumer of the resolved path now: nil in, nil out (the 501
-// posture); a bound path in, the cold-start/scrape/brief/dossier/growth-fit/reply
-// set out, plus the account-started, person-side and lead-side drafts and the
-// buying-role reading.
+// coldStartSurfaces names every surface coldStartOptions lights up, in the
+// order it wires them.
+//
+// Written out rather than counted, because the count alone is what let this
+// list go two surfaces stale: a number that moves says an option was added, and
+// says nothing about which — so a failure reads as arithmetic rather than as
+// the one question worth asking, which surface just started or stopped
+// answering from a model.
+var coldStartSurfaces = []string{
+	"cold-start", "scrape", "morning brief", "account brief", "company dossier",
+	"growth fit", "reply draft", "account draft", "person draft", "lead draft",
+	"next move", "meeting brief", "relationship brief", "role proposals",
+	"intro request", "intro note",
+}
+
+// TestColdStartOptionsRespectsResolvedPath proves coldStartOptions is a pure
+// consumer of the resolved path now: nil in, nil out (the 501 posture); a bound
+// path in, every surface coldStartSurfaces names out.
 func TestColdStartOptionsRespectsResolvedPath(t *testing.T) {
 	if got := coldStartOptions(nil, ""); got != nil {
 		t.Fatalf("coldStartOptions(nil) = %d options, want 0", len(got))
@@ -215,12 +229,9 @@ func TestColdStartOptionsRespectsResolvedPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveModelPath: %v", err)
 	}
-	if got := coldStartOptions(modelPath, ""); len(got) != 15 {
-		t.Fatalf(
-			"coldStartOptions(bound path) = %d options, want 15 (cold-start, scrape, morning brief, "+
-				"account brief, company dossier, growth fit, reply draft, account draft, person draft, "+
-				"lead draft, next move, role proposals, intro request, intro note)",
-			len(got))
+	if got := coldStartOptions(modelPath, ""); len(got) != len(coldStartSurfaces) {
+		t.Fatalf("coldStartOptions(bound path) = %d options, want %d (%s)",
+			len(got), len(coldStartSurfaces), strings.Join(coldStartSurfaces, ", "))
 	}
 }
 

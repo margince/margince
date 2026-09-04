@@ -52,6 +52,19 @@ func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf ti
 
 // ensureAnchorWritable applies the write-authority probe to whichever record
 // the contract inherits from.
+//
+// It asks for authority and NOT for liveness, and that is deliberate rather
+// than the omission it looks like next to its siblings elsewhere. The liveness
+// is already spent: writableContract reads through readContract, which composes
+// VisibleClause, whose two anchor arms both carry archived_at IS NULL. A caller
+// who cannot read a contract on an archived anchor cannot reach this probe at
+// all, so repeating the filter here would guard nothing a human can do.
+//
+// The write therefore AGREES with the read rather than being stricter than it.
+// Making it stricter would separate the two for a caller unbounded on BOTH
+// anchors, which today is the system principal, and one question answered by
+// two gates is how the next reader ends up unable to tell which is
+// authoritative.
 func ensureAnchorWritable(ctx context.Context, tx pgx.Tx, contract crmcontracts.Contract) error {
 	if contract.DealId != nil {
 		return auth.EnsureWritable(ctx, tx, "deal", ids.UUID(*contract.DealId))

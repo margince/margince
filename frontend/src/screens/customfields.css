@@ -74,7 +74,7 @@
    Data model page joined the AA sweep. */
 .cf-hint,
 .cf-field > .t-caption {
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   line-height: 1.45;
   margin: var(--space-1) 0;
@@ -116,10 +116,10 @@
   display: inline-block;
   margin-top: var(--space-2);
   font-family: var(--f-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--textSecondary);
   background: var(--bgElevated);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: var(--space-1) var(--space-2);
 }
 
@@ -171,7 +171,7 @@
  * small-text role rather than the 3:1 mark role. */
 .cf-key {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 
@@ -180,11 +180,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   font-weight: 500;
   color: var(--textSecondary);
   background: var(--bgCard);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: var(--space-1) var(--space-3);
 }
 

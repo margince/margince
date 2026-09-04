@@ -40,7 +40,10 @@ func promotedPersonPayload(person crmcontracts.Person, merged bool, mergeFields 
 // its own verb (events.md §5.5), never a lead.updated. evidenceActivityID
 // is nil for a human_qualify with no linked activity; the wire field is
 // then omitted rather than marshaled as null.
-func leadPromotedPayload(personID ids.PersonID, outcome, trigger string, evidenceActivityID *ids.ActivityID) crmcontracts.PublicEventLeadPromoted {
+func leadPromotedPayload(
+	personID ids.PersonID, outcome, trigger string,
+	evidenceActivityID *ids.ActivityID, carried []ids.UUID,
+) crmcontracts.PublicEventLeadPromoted {
 	p := crmcontracts.PublicEventLeadPromoted{
 		PromotedPersonId: openapi_types.UUID(personID.UUID),
 		DedupeOutcome:    outcome,
@@ -48,6 +51,17 @@ func leadPromotedPayload(personID ids.PersonID, outcome, trigger string, evidenc
 	}
 	if evidenceActivityID != nil {
 		p.EvidenceRef = uuidPtr(&evidenceActivityID.UUID)
+	}
+	// Omitted when the promotion carried nothing, rather than sent as an empty
+	// array: a lead with no timeline and a build that does not report one are
+	// different facts, and a consumer that treats [] as "nothing to do" would
+	// read the second as the first.
+	if len(carried) > 0 {
+		ids := make([]openapi_types.UUID, 0, len(carried))
+		for _, activity := range carried {
+			ids = append(ids, openapi_types.UUID(activity))
+		}
+		p.CarriedActivityIds = &ids
 	}
 	return p
 }

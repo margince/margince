@@ -35,7 +35,7 @@ func TestStagingRefusesTheDenialsNoModeMaySoften(t *testing.T) {
 		set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
 			{Verdict: commsauthz.VerdictDeny, ReasonCode: reason},
 		}}
-		err := refuseAbsoluteDenial(set)
+		err := refuseAtStaging(set)
 		if !errors.Is(err, apperrors.ErrConsentNotGranted) {
 			t.Errorf("%s staged anyway: err = %v", reason, err)
 		}
@@ -43,14 +43,61 @@ func TestStagingRefusesTheDenialsNoModeMaySoften(t *testing.T) {
 }
 
 // And the converse, or the test above would pass with every send refused: an
-// ordinary disagreement is recorded and let through, which is what observe mode
-// is for.
+// ordinary disagreement under a category still being OBSERVED is recorded and
+// let through. The engine's answer carries no authority there, the old gate
+// decides, and blocking on a difference nobody has reviewed would refuse
+// legitimate mail.
 func TestStagingLetsAnObservedDisagreementThrough(t *testing.T) {
 	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
-		{Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence},
+		{
+			Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence,
+			Mode: commsauthz.ModeObserve,
+		},
 	}}
-	if err := refuseAbsoluteDenial(set); err != nil {
-		t.Errorf("refuseAbsoluteDenial = %v, want nil while the engine is only being observed", err)
+	if err := refuseAtStaging(set); err != nil {
+		t.Errorf("refuseAtStaging = %v, want nil for a category still being observed", err)
+	}
+}
+
+// AN ORDINARY REFUSAL UNDER AN ENFORCED CATEGORY IS REFUSED AT STAGING, and
+// that is the arm the flip added. The transmit phase would refuse the same send
+// anyway, so staging it buys nothing: the rep learns hours later from a parked
+// row, and the activity commits first, minting outbound correspondence evidence
+// for a message that never went.
+//
+// Mutation: drop the enforced arm from refuseAtStaging and this fails.
+func TestStagingRefusesAnOrdinaryDenialUnderEnforce(t *testing.T) {
+	for _, verdict := range []commsauthz.Verdict{commsauthz.VerdictDeny, commsauthz.VerdictReview} {
+		set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+			{Verdict: verdict, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce},
+		}}
+		if err := refuseAtStaging(set); !errors.Is(err, apperrors.ErrConsentNotGranted) {
+			t.Errorf("an enforced %s staged anyway: err = %v", verdict, err)
+		}
+	}
+}
+
+// ONE ENFORCED REFUSAL REFUSES THE MESSAGE, even beside a recipient whose own
+// category is still observed. Whole-message refusal is the shape both
+// authorities already had, and a per-recipient split here would send a message
+// to some of the people it names and quietly drop the rest.
+func TestOneEnforcedRefusalRefusesTheWholeMessage(t *testing.T) {
+	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		{
+			Verdict: commsauthz.VerdictAllow, ReasonCode: commsauthz.ReasonAllowed,
+			Mode: commsauthz.ModeEnforce,
+		},
+		{
+			Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence,
+			Mode: commsauthz.ModeObserve,
+		},
+		{
+			Verdict: commsauthz.VerdictDeny, ReasonCode: commsauthz.ReasonNoEvidence,
+			Mode: commsauthz.ModeEnforce,
+		},
+	}}
+	if err := refuseAtStaging(set); !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		t.Errorf("a message with one enforced refusal staged anyway: err = %v", err)
 	}
 }
 
@@ -59,8 +106,8 @@ func TestStagingAllowsAnOrdinarySend(t *testing.T) {
 	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
 		{Verdict: commsauthz.VerdictAllow, ReasonCode: commsauthz.ReasonAllowed},
 	}}
-	if err := refuseAbsoluteDenial(set); err != nil {
-		t.Errorf("refuseAbsoluteDenial = %v, want nil for an allowed send", err)
+	if err := refuseAtStaging(set); err != nil {
+		t.Errorf("refuseAtStaging = %v, want nil for an allowed send", err)
 	}
 }
 
@@ -75,7 +122,7 @@ func TestTheStagingRefusalNamesNobody(t *testing.T) {
 			Recipient:  connector.Recipient{Email: "objector@example.test"},
 		},
 	}}
-	err := refuseAbsoluteDenial(set)
+	err := refuseAtStaging(set)
 	if err == nil {
 		t.Fatal("want a refusal")
 	}

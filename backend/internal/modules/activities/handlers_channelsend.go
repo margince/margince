@@ -50,7 +50,7 @@ func (h Handlers) SendMessage(w http.ResponseWriter, r *http.Request, id crmcont
 	sent, err := h.store.SendMessage(r.Context(), pathID[ids.ActivityKind](id), SendMessageInput{
 		Body:             req.Body,
 		AttachmentIDs:    attachmentIDsFrom(req.AttachmentIds),
-		ConsentPurpose:   req.ConsentPurpose,
+		ConsentPurpose:   legacyPurposeOf(req.ConsentPurpose),
 		Context:          claimed.category,
 		MarketingPurpose: claimed.marketing,
 		OperatorReason:   claimed.reason,

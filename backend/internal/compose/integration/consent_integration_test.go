@@ -473,3 +473,223 @@ func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 		t.Fatalf("audit/event counts = %d/%d, want 1/1", audits, events)
 	}
 }
+
+// TestASendWithNoPurposeKeyReachesTheEngine is what makes the legacy purposes
+// retireable.
+//
+// consent_purpose was a required field for as long as it was the authority.
+// The engine decides now, from the record — so a caller that omits the key is
+// not withholding an answer, it is declining to make a claim the engine was
+// going to check against the tables anyway.
+//
+// The assertion is that the request is JUDGED rather than rejected as
+// malformed: a 409 naming a consent code is the engine answering, and it is a
+// different outcome from the 422 the contract used to produce before consent
+// was asked at all. The person here has nothing on file, so the answer is a
+// refusal — which is the correct one, and the point is who gave it.
+//
+// This is the case that has to work before `transactional` and
+// `business_correspondence` are archived. While the key was required,
+// archiving them left every caller with nothing valid to name.
+//
+// Mutation: put consent_purpose back on the schema's `required` list and this
+// fails with 422 validation_error.
+func TestASendWithNoPurposeKeyReachesTheEngine(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"},
+	}, nil, &problem)
+	if status == http.StatusUnprocessableEntity {
+		t.Fatalf("a send with no consent_purpose → 422 %q; the contract still demands a key the engine no longer needs",
+			problem.Code)
+	}
+	if status != http.StatusConflict || problem.Code != "consent_not_granted" {
+		t.Fatalf("a send with no consent_purpose → %d %q, want 409 consent_not_granted — the engine judged it on the record",
+			status, problem.Code)
+	}
+}
+
+// TestOmittingThePurposeKeyIsNotAWayPastTheGate holds the direction the
+// relaxation must not break.
+//
+// Making the key optional must not turn omitting it into an allow. A message
+// with no thread, no deal and no evidence has nothing supporting it, and
+// dropping the claim does not supply one.
+//
+// It differs from the test above in the recipient: that one asks whether the
+// engine ANSWERED, this one asks whether a stranger is still refused. Both
+// currently refuse, and they would diverge the moment an empty claim started
+// resolving to something supported — which is the regression this pins.
+//
+// Mutation: make resolveFromClaimAndPurpose treat an empty key as supported
+// and this fails with a 202.
+func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := c.Call(t, "POST", "/v1/emails", AnyMap{
+		"subject": "Something unrelated", "body": "out of the blue",
+		"to":    []string{"subject@consent.test"},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": c.personID}},
+	}, nil, &problem)
+	if status != http.StatusConflict {
+		t.Fatalf("an unevidenced account send with no consent_purpose → %d %q, want 409 — omitting the claim is not evidence",
+			status, problem.Code)
+	}
+}
+
+// TestThePreviewAgreesWithTheSendItPreviews is the whole point of the endpoint.
+//
+// A preview that could differ from the send would be worse than no preview: a
+// rep told "this will go" and then refused has been misled at the moment they
+// were trying to be careful. Both run the same decideOne over the same request,
+// and this holds that by asking BOTH and comparing.
+//
+// Mutation: point the preview at a different resolver and the two answers
+// diverge on the second case.
+func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
+	c := setupConsent(t)
+
+	// The fixture's person has an inbound on file, so correspondence is
+	// supported and marketing is not. Two cases with opposite answers, because
+	// a preview that always said "allowed" would pass a one-case test.
+	for _, tc := range []struct {
+		name    string
+		purpose string
+		want    bool
+	}{
+		{"correspondence, which the timeline supports", "business_correspondence", true},
+		{"marketing, which needs a grant nobody recorded", "marketing_email", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var preview struct {
+				Allowed    bool `json:"allowed"`
+				Recipients []struct {
+					Verdict    string `json:"verdict"`
+					ReasonCode string `json:"reason_code"`
+				} `json:"recipients"`
+			}
+			// The SAME inputs the send is about to make, purpose key included.
+			// Comparing a preview asked about one message with a send that made
+			// another would prove nothing about drift.
+			if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email:preview", AnyMap{
+				"to": []string{"subject@consent.test"}, "consent_purpose": tc.purpose,
+			}, nil, &preview); status != http.StatusOK {
+				t.Fatalf("preview → %d, want 200", status)
+			}
+			if len(preview.Recipients) != 1 {
+				t.Fatalf("preview answered about %d recipients, want 1", len(preview.Recipients))
+			}
+
+			status, code := c.send(t, tc.purpose)
+			sent := status == http.StatusAccepted
+
+			if preview.Allowed != sent {
+				t.Errorf("preview said allowed=%v and the send %s (%d %q) — the two must not disagree about an unchanged record",
+					preview.Allowed, map[bool]string{true: "went", false: "was refused"}[sent], status, code)
+			}
+			if sent != tc.want {
+				t.Errorf("the send %s, want %v — the fixture no longer sets up the case this row names",
+					map[bool]string{true: "went", false: "was refused"}[sent], tc.want)
+			}
+		})
+	}
+}
+
+// TestThePreviewRefusesARecordTheCallerCannotRead holds the order of the two
+// checks, which is a disclosure rule rather than a nicety.
+//
+// The origin resolves BEFORE anything is asked about consent. Without that, a
+// caller could name a stranger's deal and have the engine answer about it — an
+// unauthorized read wearing a preview, and an existence oracle for records they
+// may not open.
+//
+// Mutation: move origin.resolve after the previewer call in PreviewSend and
+// this returns 200 with an answer about a record the caller cannot see.
+func TestThePreviewRefusesARecordTheCallerCannotRead(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := c.Call(t, "POST", "/v1/emails:preview", AnyMap{
+		"to":    []string{"subject@consent.test"},
+		"links": []AnyMap{{"entity_type": "deal", "entity_id": "00000000-0000-4000-8000-000000000001"}},
+	}, nil, &problem)
+	if status != http.StatusNotFound {
+		t.Errorf("preview naming an unreadable deal → %d %q, want 404 — a record the caller cannot open must answer with the row-scope verdict, not with somebody's consent state",
+			status, problem.Code)
+	}
+}
+
+// TestThePreviewRecordsNothing is the contract the endpoint's description
+// makes, checked rather than promised.
+//
+// decideOne reaches stampDerivedBasis on an allow, which WRITES. Gate.Preview
+// rolls its transaction back, and this is what makes that true of the code: a
+// composer that previewed ten drafts and sent none would otherwise leave ten
+// authorizations for messages nobody sent, and a subject-access export would
+// show a basis this installation relied on to send nothing.
+//
+// Mutation: return nil instead of errPreviewComplete from Preview's
+// transaction, so it commits, and the qualifying-event count goes up.
+func TestThePreviewRecordsNothing(t *testing.T) {
+	c := setupConsent(t)
+	ctx := context.Background()
+
+	// BOTH tables a decision can write, because which one it reaches depends on
+	// whether the record supports the category on its own: a supported
+	// resolution writes communication_basis through recordBasis, and one that
+	// falls through to the legacy verdict writes consent_qualifying_event
+	// through stampDerivedBasis. Counting only the first passed against a
+	// committing Preview on this fixture, which is exactly the mutation this
+	// test exists to catch.
+	var beforeBasis, beforeDecisions int
+	if err := c.Owner.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM communication_basis)
+		     + (SELECT count(*) FROM consent_qualifying_event)`).Scan(&beforeBasis); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Owner.QueryRow(ctx, `SELECT count(*) FROM communication_decision`).Scan(&beforeDecisions); err != nil {
+		t.Fatal(err)
+	}
+
+	var preview struct {
+		Allowed bool `json:"allowed"`
+	}
+	// A preview the engine ALLOWS, because an allow is the only path that
+	// reaches a basis write — a refusal records nothing whatever the
+	// transaction does, so a denied preview would pass this test against a
+	// Preview that commits.
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email:preview", AnyMap{
+		"to": []string{"subject@consent.test"}, "consent_purpose": "business_correspondence",
+	}, nil, &preview); status != http.StatusOK {
+		t.Fatalf("preview → %d, want 200", status)
+	}
+	if !preview.Allowed {
+		t.Fatal("the preview was refused, so it would record nothing whatever the transaction did — this test needs the allow path")
+	}
+
+	var afterBasis, afterDecisions int
+	if err := c.Owner.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM communication_basis)
+		     + (SELECT count(*) FROM consent_qualifying_event)`).Scan(&afterBasis); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Owner.QueryRow(ctx, `SELECT count(*) FROM communication_decision`).Scan(&afterDecisions); err != nil {
+		t.Fatal(err)
+	}
+	if afterBasis != beforeBasis {
+		t.Errorf("the preview recorded %d lawful-basis row(s) — a basis is the ground a SEND relies on, and nothing was sent", afterBasis-beforeBasis)
+	}
+	if afterDecisions != beforeDecisions {
+		t.Errorf("the preview wrote %d decision row(s) — a preview authorizes nothing", afterDecisions-beforeDecisions)
+	}
+}

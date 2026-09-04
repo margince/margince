@@ -18,8 +18,26 @@ package compose
 //   - An OPEN deal is absent from win-loss, not a zero in it.
 
 import (
+	"encoding/json"
 	"testing"
 )
+
+// wireFloat reads a cell that is legitimately fractional. A percentile
+// interpolates between two rows, so its value is a decimal even where every
+// input is a whole number of days — read as an integer it would truncate, and
+// a median of 7.5 would assert equal to 7.
+func wireFloat(t *testing.T, row map[string]any, key string) float64 {
+	t.Helper()
+	num, ok := row[key].(json.Number)
+	if !ok {
+		t.Fatalf("cell %q = %v (%T), want a number", key, row[key], row[key])
+	}
+	v, err := num.Float64()
+	if err != nil {
+		t.Fatalf("cell %q = %v: %v", key, num, err)
+	}
+	return v
+}
 
 // seedClosedDeal writes one won/lost deal closed at a given instant. Closed
 // deals carry a frozen FX rate and a lost reason by CHECK constraint, so the
@@ -413,5 +431,189 @@ func TestTheWinLossDefaultNeverSumsAcrossCurrencies(t *testing.T) {
 	}
 	if len(result.Rows) != 2 {
 		t.Errorf("rows = %d, want one per currency: %+v", len(result.Rows), result.Rows)
+	}
+}
+
+// seedDealTaking writes a WON deal that took a stated number of days, so a
+// test can name the durations it expects a percentile over.
+//
+// created_at is set explicitly, which the other helpers leave to the column
+// default. The measure under test is the difference between two dates, and a
+// helper that fixed only one of them would let every deal take zero days.
+func (e *forecastEnv) seedDealTaking(t *testing.T, name string, days int, closedAt string, amountMinor int64) {
+	t.Helper()
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, status,
+			created_at, closed_at, fx_rate_to_base, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, 'EUR', 'won',
+			$6::timestamptz - make_interval(days => $7), $6::timestamptz, 1.0, 'manual', 'human:x')`,
+		name, e.pipeline, e.stages[60], amountMinor, closedAt, days)
+}
+
+// How long a deal took is the other half of how a team is doing. The report
+// knew how much closed and never how long it took, so a team getting slower at
+// the same revenue looked identical to one that was not.
+//
+// Six deals so the group clears the engine's sample floor: 2, 4, 6, 8, 10 and
+// 12 days. percentile_cont interpolates, so the median of six values is the
+// midpoint of the third and fourth — 7 — rather than either of them.
+func TestWinLossReportsHowLongDealsTookToClose(t *testing.T) {
+	e := setupForecast(t)
+	for i, days := range []int{2, 4, 6, 8, 10, 12} {
+		e.seedDealTaking(t, "Took "+string(rune('A'+i)), days, "2025-06-15T10:00:00Z", 10000)
+	}
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["status"],"aggregates":[{"fn":"count","as":"deals"},
+			{"fn":"median","field":"days_to_close","as":"median_days"},
+			{"fn":"p75","field":"days_to_close","as":"p75_days"}]}`)
+
+	row := bucketRow(t, result, map[string]string{"status": "won"})
+	if got := wireInt(t, row, "deals"); got != 6 {
+		t.Fatalf("deals = %d, want the 6 seeded", got)
+	}
+	// The midpoint of 6 and 8. A median that came back as 6 or 8 would mean
+	// the engine picked a row rather than interpolating, and the figure would
+	// jump as deals were added rather than moving.
+	if got := wireFloat(t, row, "median_days"); got != 7 {
+		t.Errorf("median days = %v, want 7 — the midpoint of 6 and 8", got)
+	}
+	// percentile_cont at 0.75 over six sorted values interpolates at index
+	// 3.75: 8 + 0.75 x (10 - 8).
+	if got := wireFloat(t, row, "p75_days"); got != 9.5 {
+		t.Errorf("p75 days = %v, want 9.5", got)
+	}
+}
+
+// A deal created and closed on the same day took zero days, which is a fact
+// about the sale rather than a missing figure.
+func TestASameDayCloseTakesZeroDaysRatherThanNothing(t *testing.T) {
+	e := setupForecast(t)
+	// Five so the group clears the sample floor and the percentile is a
+	// number rather than the NULL that would hide a wrong zero.
+	for i := range 5 {
+		e.seedDealTaking(t, "Same day "+string(rune('A'+i)), 0, "2025-06-15T10:00:00Z", 10000)
+	}
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["status"],"aggregates":[{"fn":"count","as":"deals"},
+			{"fn":"median","field":"days_to_close","as":"median_days"}]}`)
+
+	row := bucketRow(t, result, map[string]string{"status": "won"})
+	if got := wireFloat(t, row, "median_days"); got != 0 {
+		t.Errorf("median days = %v, want 0 — a same-day close took no days", got)
+	}
+}
+
+// A deal is aged in DAYS a person would count, not in elapsed clock time.
+//
+// Created at 23:50 and closed at 00:10 the next night, a deal has run over two
+// calendar days and for 24 hours and 20 minutes. Counting the clock calls that
+// one day; counting the calendar calls it two, and two is what a reader means
+// by "it took two days" — the same reckoning stage age and the slipped rule
+// already use.
+//
+// Six deals with the same span, so the group clears the sample floor and the
+// median is that span rather than a NULL that would agree with either answer.
+func TestADealIsAgedInCalendarDaysNotElapsedHours(t *testing.T) {
+	e := setupForecast(t)
+	for i := range 6 {
+		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency,
+				status, created_at, closed_at, fx_rate_to_base, source, captured_by)
+			VALUES ($1, $2, $3, $4, 10000, 'EUR', 'won',
+				'2025-06-14T23:50:00Z'::timestamptz, '2025-06-16T00:10:00Z'::timestamptz,
+				1.0, 'manual', 'human:x')`,
+			"Overnight "+string(rune('A'+i)), e.pipeline, e.stages[60])
+	}
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["status"],"aggregates":[{"fn":"count","as":"deals"},
+			{"fn":"median","field":"days_to_close","as":"median_days"}]}`)
+
+	row := bucketRow(t, result, map[string]string{"status": "won"})
+	if got := wireInt(t, row, "deals"); got != 6 {
+		t.Fatalf("deals = %d, want the 6 seeded", got)
+	}
+	// 14 June to 16 June is two calendar days. Elapsed hours would say one.
+	if got := wireFloat(t, row, "median_days"); got != 2 {
+		t.Errorf("median days = %v, want 2 — 14 June to 16 June is two calendar "+
+			"days, and 1 would mean the measure counts elapsed hours instead", got)
+	}
+}
+
+// How long a deal took is counted on the INSTALLATION's clock, like the period
+// bucket beside it.
+//
+// The same pair of instants spans a different number of local days in
+// different zones: 23:50 to 00:10 two nights later is two days in UTC and one
+// in Asia/Ho_Chi_Minh, where both fall inside a single local day. Read in the
+// session's zone, the duration would move with the deployment region while the
+// bucket on the very same row did not, and a row would disagree with itself.
+func TestDaysToCloseFollowsTheInstallationZone(t *testing.T) {
+	e := setupForecast(t)
+	// Six identical deals, so the group clears the sample floor and the median
+	// is the span itself rather than a NULL that would agree with any answer.
+	for i := range 6 {
+		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency,
+				status, created_at, closed_at, fx_rate_to_base, source, captured_by)
+			VALUES ($1, $2, $3, $4, 10000, 'EUR', 'won',
+				'2025-06-14T23:50:00Z'::timestamptz, '2025-06-16T00:10:00Z'::timestamptz,
+				1.0, 'manual', 'human:x')`,
+			"Zoned "+string(rune('A'+i)), e.pipeline, e.stages[60])
+	}
+	plan := `{"group_by":["status"],"aggregates":[{"fn":"median","field":"days_to_close","as":"median_days"}]}`
+
+	utc := e.runReport(e.Admin(), t, "win-loss", plan)
+	if got := wireFloat(t, bucketRow(t, utc, map[string]string{"status": "won"}), "median_days"); got != 2 {
+		t.Fatalf("under UTC the span is %v days, want 2 — the fixture cannot discriminate", got)
+	}
+
+	// +07: 23:50 UTC is 06:50 the NEXT morning locally, and 00:10 UTC two
+	// nights later is 07:10 that same local day. One local day, not two.
+	e.setInstallationZone(t, "Asia/Ho_Chi_Minh")
+	local := e.runReport(e.Admin(), t, "win-loss", plan)
+	if got := wireFloat(t, bucketRow(t, local, map[string]string{"status": "won"}), "median_days"); got != 1 {
+		t.Errorf("under Asia/Ho_Chi_Minh the span is %v days, want 1 — the duration "+
+			"ignored the installation zone while the period bucket beside it did not", got)
+	}
+}
+
+// A deal that closed before it was created has no duration to report.
+//
+// Nothing in the schema orders the two columns, and the product's own write
+// path cannot invert them — closed_at is set to now() and never taken from a
+// caller — so this arrives through an import or a hand-written UPDATE. Left
+// in, one backdated row drags a median toward a span nobody experienced, and
+// a reader has no way to see it happen.
+func TestABackdatedCloseHasNoDurationRatherThanANegativeOne(t *testing.T) {
+	e := setupForecast(t)
+	// Five honest deals of 10 days each, so the median is unambiguous, plus
+	// one inverted row that must not move it.
+	for i := range 5 {
+		e.seedDealTaking(t, "Honest "+string(rune('A'+i)), 10, "2025-06-15T10:00:00Z", 10000)
+	}
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency,
+			status, created_at, closed_at, fx_rate_to_base, source, captured_by)
+		VALUES ($1, $2, $3, $4, 10000, 'EUR', 'won',
+			'2025-06-15T10:00:00Z'::timestamptz, '2025-06-05T10:00:00Z'::timestamptz,
+			1.0, 'manual', 'human:x')`,
+		"Closed before it existed", e.pipeline, e.stages[60])
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["status"],"aggregates":[{"fn":"count","as":"deals"},
+			{"fn":"median","field":"days_to_close","as":"median_days"},
+			{"fn":"min","field":"days_to_close","as":"min_days"}]}`)
+
+	row := bucketRow(t, result, map[string]string{"status": "won"})
+	// The row is still counted: it is a won deal, and the count is about deals
+	// rather than about durations.
+	if got := wireInt(t, row, "deals"); got != 6 {
+		t.Errorf("deals = %d, want all 6 — the inverted row is still a won deal", got)
+	}
+	// No negative span reaches the figures.
+	if got := wireFloat(t, row, "min_days"); got != 10 {
+		t.Errorf("min days = %v, want 10 — a negative span reached the report", got)
+	}
+	if got := wireFloat(t, row, "median_days"); got != 10 {
+		t.Errorf("median days = %v, want 10 — the inverted row moved the median", got)
 	}
 }

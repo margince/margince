@@ -421,6 +421,7 @@
   height: 9px;
   flex: none;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiText);
   animation: ob-scan-pulse 2s ease-in-out infinite;
 }
@@ -478,7 +479,7 @@
 .ob-scan-strip:empty {
   inline-size: 8rem;
   block-size: 14px;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
   background: var(--bgHover);
 }
 
@@ -531,7 +532,7 @@
   flex: none;
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
   animation: ob-scan-tile-in 0.32s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 /* Shape as well as colour, because a tile is a colour to most people and a
@@ -548,6 +549,7 @@
   background: var(--dangerBg);
   border: 1px solid var(--danger);
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 /* The tile that just landed wears a ring, so the eye has somewhere to be while
@@ -586,6 +588,7 @@
   margin-right: var(--space-2);
   vertical-align: middle;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderStrong);
 }
 

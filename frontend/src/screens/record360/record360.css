@@ -4,10 +4,28 @@
    It is the only thing on the card allowed this much weight — a page where
    three things shout has no emphasis at all. */
 .r360-verdict {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  /* The word, the line that says why, and the working: three columns, the
+     middle one taking whatever the other two leave. A wrapping row put the
+     sentence under the word and the working under the sentence, and a head
+     that stacks is a headline with captions rather than one call. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-6);
+  align-items: start;
+}
+/* Under the fold each takes its own row: a 34px display word, a sentence and a
+   control cannot share a line the width of a phone. */
+@container work (max-width: 40rem) {
+  .r360-verdict {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    justify-items: start;
+  }
+  /* One column here, so the named third would open an implicit track beside
+     it and put the control off the card. */
+  .r360-rests-toggle {
+    grid-column: 1;
+  }
 }
 
 /* The call, as a WORD and not a colour alone: a reader who cannot tell the
@@ -19,7 +37,7 @@
      sentence that says why. A word rather than a pill, because a pill reads
      as a status somebody applied and this is the reading itself. */
   font-family: var(--f-display);
-  font-size: 34px;
+  font-size: var(--fs-display);
   font-weight: var(--fw-semibold);
   line-height: 1.05;
   letter-spacing: var(--tracking-display);
@@ -58,25 +76,27 @@
    either side of it are both fixed, so anything the head cannot fit comes out
    of the sentence, and a sentence that wraps still reads. */
 .r360-because {
-  flex: 1 1 22rem;
-  min-width: 0;
   margin: 0;
   /* The because-sentence is prose beside the word, not a second headline:
      at reading size the word stays the one loud thing and the sentence is
      what a reader goes on to. */
-  font-size: 15px;
+  font-size: var(--fs-lead);
   line-height: 1.5;
   color: var(--textContent);
   text-wrap: pretty;
 }
 
-/* The disclosure sits at the far end of the head, so the call and the
-   sentence stay one uninterrupted line to read left to right. */
+/* The disclosure sits at the far end of the head, where there is room for it:
+   the call and the sentence read left to right and the working waits past
+   them rather than taking a line under the claim it grounds. */
 .r360-rests-toggle {
+  /* Column three by name rather than by counting: `because` is optional, and
+     auto-placement put the working in the middle column whenever the sentence
+     was missing — the far end of the head is where it belongs either way. */
+  grid-column: 3;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
   /* A bordered control, not a link: it is the one thing in the head a reader
@@ -113,7 +133,9 @@
    quotes down a full-width card is mostly empty page, and the reader is
    comparing them against each other rather than reading them in order. */
 .r360-rests {
-  flex-basis: 100%;
+  /* The opened working spans the head: it is a list of quotes, not a third
+     column of it. */
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: var(--space-3) var(--space-6);
@@ -123,7 +145,7 @@
    wording, and a bordered card here would be a card inside a card. */
 .r360-rests-item {
   border-left: 2px solid var(--aiMed);
-  border-radius: 1px;
+  border-radius: var(--r-xs);
   padding-left: var(--space-2);
   min-width: 0;
 }

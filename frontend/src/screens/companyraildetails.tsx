@@ -2,7 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import {
+  Building2,
+  CircleDot,
+  Globe,
+  Hash,
+  Landmark,
+  Link as LinkIcon,
+  MapPin,
+  Text,
+  User,
+  Users,
+} from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -150,7 +162,7 @@ function LegalNameRow({
 }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.legalName")}>
+    <FieldRow label={t("create.legalName")} icon={<Landmark />}>
       <InlineText
         label={t("create.legalName")}
         value={organization.legal_name ?? ""}
@@ -174,7 +186,7 @@ function LifecycleRow({
   return (
     // The badge is a box, not a line of text, so it centres against its label
     // rather than sharing the row's top edge with it.
-    <FieldRow label={t("org.lifecycle")} align="middle">
+    <FieldRow label={t("org.lifecycle")} icon={<CircleDot />} align="middle">
       <CompanyLifecycleControl org={organization} />
     </FieldRow>
   );
@@ -183,7 +195,7 @@ function LifecycleRow({
 function OwnerRow({ organization }: Readonly<{ organization: Organization }>) {
   const t = useT();
   return (
-    <FieldRow label={t("co.pulse.owner")}>
+    <FieldRow label={t("co.pulse.owner")} icon={<User />}>
       <CompanyOwnerControl org={organization} hideLabel />
     </FieldRow>
   );
@@ -213,7 +225,7 @@ function DomainRow({
   const domains = organization.domains ?? [];
   const primary = primaryDomainOf(domains);
   return (
-    <FieldRow label={t("field.domain")}>
+    <FieldRow label={t("field.domain")} icon={<Globe />}>
       <InlineText
         label={t("field.domain")}
         value={primary?.domain ?? ""}
@@ -307,7 +319,7 @@ function AddressPartRow({
 }) {
   const t = useT();
   return (
-    <FieldRow label={t(labelKey)}>
+    <FieldRow label={t(labelKey)} icon={<MapPin />}>
       <InlineText
         label={t(labelKey)}
         value={organization.address?.[part] ?? ""}
@@ -335,7 +347,7 @@ function IndustryRow({
 }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.industry")}>
+    <FieldRow label={t("create.industry")} icon={<Building2 />}>
       <InlineText
         label={t("create.industry")}
         value={organization.industry ?? ""}
@@ -356,7 +368,7 @@ function SizeBandRow({
 }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.sizeBand")}>
+    <FieldRow label={t("create.sizeBand")} icon={<Users />}>
       <InlineChoice
         label={t("create.sizeBand")}
         hideLabel
@@ -390,7 +402,7 @@ function LinkedinRow({
 }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.linkedinUrl")}>
+    <FieldRow label={t("create.linkedinUrl")} icon={<LinkIcon />}>
       <InlineText
         label={t("create.linkedinUrl")}
         value={organization.linkedin_url ?? ""}
@@ -411,7 +423,7 @@ function DescriptionRow({
 }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("co.description.label")}>
+    <FieldRow label={t("co.description.label")} icon={<Text />}>
       <InlineText
         label={t("co.description.label")}
         value={organization.description ?? ""}
@@ -442,16 +454,19 @@ const SIDECAR_FIELDS = [
   {
     field: "register_vat",
     labelKey: "co.profileField.register_vat",
+    icon: <Hash />,
     placeholderKey: "field.addRegisterVat",
   },
   {
     field: "registered_address",
     labelKey: "co.profileField.registered_address",
+    icon: <MapPin />,
     placeholderKey: "field.addRegisteredAddress",
   },
 ] as const satisfies readonly {
   field: ProfileFieldKey;
   labelKey: MessageKey;
+  icon: ReactNode;
   placeholderKey: MessageKey;
 }[];
 
@@ -470,6 +485,7 @@ export function SidecarFieldRow({
   field,
   labelKey,
   label: labelText,
+  icon,
   placeholderKey,
   canEdit,
   readOnlyReason,
@@ -491,6 +507,10 @@ export function SidecarFieldRow({
   // holds. Exactly one is required, which the callers' own types enforce.
   labelKey?: MessageKey;
   label?: string;
+  // The kind-of-fact glyph, when the caller knows the kind. The Profile tab
+  // draws eleven fields out of one vocabulary map and names none of them
+  // individually, so it passes none and its rows read as they always have.
+  icon?: ReactNode;
   placeholderKey: MessageKey;
   canEdit: boolean;
   readOnlyReason: string | undefined;
@@ -539,7 +559,7 @@ export function SidecarFieldRow({
     ? derivedSource(current, locale, recordZone)
     : undefined;
   return (
-    <FieldRow label={label}>
+    <FieldRow label={label} icon={icon}>
       {/* Editing and provenance are two controls, not one: EvidenceMark makes
           its value the button that opens the receipt, and InlineText makes it
           the button that starts an edit. One element cannot be both, so the
@@ -622,7 +642,7 @@ function DetailsGridBody({
           third between them put two seams through a panel that reads best as
           one block. Both grids stand on the same 112px label rung, so the
           values still share one left edge down the whole panel. */}
-      <FieldGrid>
+      <FieldGrid icons>
         <LegalNameRow {...row} />
         {/* Beside the legal name, not with the postal address below: a VAT
             number and a registry address are identity facts about the legal
@@ -650,7 +670,7 @@ function DetailsGridBody({
         summary={t(anyAddressPartSet ? "co.address.summary" : "co.address.add")}
         open={anyAddressPartSet}
       >
-        <FieldGrid>
+        <FieldGrid icons>
           {ADDRESS_PARTS.map((field) => (
             <AddressPartRow key={field.part} {...row} {...field} />
           ))}

@@ -78,19 +78,20 @@ for the frontend half.
 make install    # FE deps, gate tools, and the git hooks — run once
 make db-up      # PG16 + Redis 7 containers, and the app role
 make migrate    # core + custom migrations
-make dev        # the whole stack: API on :8080, worker, Vite
+make dev        # the whole stack: the app on :8080, the api behind it, worker
 ```
 
-Two things about `make dev` that save an hour of confusion. It **sweeps
-first** — exactly one dev stack may run on the machine, so a bare
-`make dev` kills every other margince process before booting, and is
-therefore always safe to run. And the API is **compiled**: Vite
-hot-reloads the frontend, the binary does not, so every backend change
-needs `make dev` again. A stale binary on :8080 is indistinguishable from
-a broken feature.
+Two things about `make dev` that save an hour of confusion. It starts
+**this worktree's** stack and leaves every other one alone, so a second
+checkout can run at the same time. (`make dev-sweep` is the machine-wide
+clear, and the only thing that touches somebody else's stack.) And the API
+is **compiled**: Vite hot-reloads the frontend, the binary does not, so
+every backend change needs `make dev-stop && make dev`. Not `make dev`
+alone — this worktree's stack still holds the ports, and the boot refuses
+them rather than talking over a server from an older build. A stale binary
+is indistinguishable from a broken feature.
 
-Full target list, including `DEV_SLUG` for an isolated parallel stack:
-[docs/reference/make-targets.md](docs/reference/make-targets.md).
+Full target list: [docs/reference/make-targets.md](docs/reference/make-targets.md).
 
 ## Branch, commit, merge
 
@@ -122,9 +123,12 @@ loop your PR will run:
 1. **`make check`** is the merge gate: build, vet, lint (baseline +
    new-code strict), arch-lint, unit + fitness tests, generated-code
    drift, contract breaking-change, test-lane hygiene, image pins, and
-   the file-length ratchet. Add `make frontend-check` when `frontend/`
-   changed; `make test-integration` runs the real-Postgres RLS and
-   GDPR-erasure lanes (needs `make db-up`).
+   the file-length ratchet. It already includes the frontend lane
+   (`check-fe`), so there is nothing to add on top. `make test-integration`
+   is the separate real-Postgres lane — tenant isolation, GDPR erasure,
+   audit immutability (needs `make db-up`). It fails loudly without a
+   database rather than skipping, because a skipped security gate looks
+   exactly like a passing one.
 2. The **craftsmanship gate** (`craft static --strict`) runs
    diff-scoped on every push once hooks are installed (`make hooks`):
    new or touched backend code must be free of `BLOCKER` **and**
@@ -168,8 +172,11 @@ they are noise.
   the spec by chapter, ADR, or pin ID instead.
 
 Margince is built contract-first: `backend/api/crm.yaml` is the
-authoritative surface, and when this code and the specification
-disagree, the specification wins.
+authoritative surface. No separate specification outranks the running
+software, its contract, its tests and its docs — if an older document
+disagrees with the tree, name the conflict and keep going. Why it is
+arranged that way:
+[docs/principles/the-record-is-the-code.md](docs/principles/the-record-is-the-code.md).
 
 ## Before you open a PR
 

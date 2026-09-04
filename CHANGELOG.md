@@ -23,6 +23,26 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **The relationship brief is written by a model, and reads what people actually
+  wrote.** The person page's standing brief has always been a deterministic
+  composition; it now runs on the `summarize` lane as the invocation site
+  `person_brief`, alongside the account brief, the prepared questions, the
+  company dossier and the meeting plan. The change that matters is not the model
+  but what the model is shown: the brief now reads the claims extracted from
+  conversations with their verbatim quotes and open/overdue state, what CHANGED
+  about the relationship, the moment the page's own ladder selected, and — for
+  each recent message — the server's own one-line summary of what was written
+  rather than its subject alone. A brief assembled from subjects, kinds and
+  directions could say no more than that mail had been exchanged, which is true
+  of every contact in the system. Every sentence is still cited or dropped
+  whole, the brief is still assembled and cached per reader under that reader's
+  own gated read, and a message the reader may not open contributes its date and
+  nothing else. A deployment with no model lane, an exhausted AI budget or a
+  reply the grounding filter refuses gets the deterministic floor as before, and
+  `generated_by` says which of the two wrote what is on screen — that floor now
+  leads with what is due and quotes what the last message said, so it is a
+  plainer brief rather than a thinner one.
+
 - **The operational agent budgets stop being called quotas.** One word named two
   unrelated things until the sales quota was retired: the revenue target a
   manager typed, and the volume ceiling that stops an agent reading, writing or

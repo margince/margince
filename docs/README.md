@@ -7,8 +7,9 @@ is mostly for the person changing the code — with one deliberate exception:
 partner programs) beside the engineering ones, because a how-to is a thing you
 return to for one answer whichever audience you are in.
 
-Documentation for building and operating **Margince** — a governed, multi-tenant CRM (a Go `/v1` API
-backend; the Vite/React web UI ships separately). The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
+Documentation for building and operating **Margince** — a governed, single-tenant CRM (a Go `/v1` API
+backend; the Vite/React web UI ships separately). One installation serves one organisation, and boot
+refuses a second. The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
 **how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*, plus
 **[principles](principles/README.md)** — the handful of statements about this codebase's shape that
 settle a class of arguments before they start.
@@ -16,8 +17,10 @@ settle a class of arguments before they start.
 **Designing anything a person can see?** [`DESIGN.md`](../DESIGN.md) at the
 repository root is the visual language: the look every new surface is designed
 against, and the research behind it. The plan for landing it, one PR per
-step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md) with its
-two continuations for the record pages and the remaining surfaces. The
+step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md), continued in
+[adopt-the-design-records.md](how-to/adopt-the-design-records.md) for the record
+pages and [adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md)
+for the rest. The
 component catalog stays in
 [`frontend/src/design-system/README.md`](../frontend/src/design-system/README.md).
 
@@ -35,6 +38,18 @@ no code, no API, just the app.
 - [handbook/README.md](handbook/README.md) — eleven pages covering records, the
   pipeline, capture, what the AI does and does not do, approvals, documents,
   retention, seats and settings.
+
+### Compliance — the German pack a customer signs
+
+Four documents an installation needs before it may read employee mail in
+Germany. They are the customer's paperwork, not ours: Margince does not check
+them, and [handbook/compliance.md](handbook/compliance.md) says why that is a
+decision rather than an omission.
+
+- [compliance/en/README.md](compliance/en/README.md) — the index, in English,
+  with each German original beside its translation. The documents to **execute**
+  are the German ones in [compliance/de/](compliance/de/); a translation of a
+  legal document is not the document.
 
 ### Principles — how this codebase decides things
 
@@ -78,6 +93,8 @@ no code, no API, just the app.
 - [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline.
 - [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
 - [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
+- [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
+- [test-overlay-locally.md](how-to/test-overlay-locally.md) — validate the overlay end to end against the real HubSpot API, using an isolated developer test account and a committed fixture seed.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
 
 ### Reference — look it up
@@ -104,6 +121,9 @@ budget rather than keeping its own list of which pages are generated.
 - [configuration.md](reference/configuration.md) — every binary flag and environment variable.
 - [openrouter.md](reference/openrouter.md) — the broker's upstream selection: why a model id served by 21 hosts makes latency and answer quality a per-request lottery, the `routing:` default this product ships against that (reliability over price, the inverse of the broker's own), which preferences are hard filters and which only reorder, and the 2026-09-02 measurements behind each choice — including the one that was 17× faster and would have cost a fifth of the certification score.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
+- [system-requirements.md](reference/system-requirements.md) — what an installation needs, for both deployment shapes: one node, or the api / worker / web / database on separate nodes.
+- [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
+- [issue-labels.md](reference/issue-labels.md) — the full issue-label taxonomy. The binding short form is in `AGENTS.md`.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 
 ### Explanation — understand the why
@@ -140,7 +160,7 @@ budget rather than keeping its own list of which pages are generated.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md) — the lexical and hybrid lanes, row scope inside the query, embedding identity, and the two kinds of staleness with their two different answers.
 - [relationship-graph.md](explanation/relationship-graph.md) — who on our team knows this contact: participants, the interaction projection, warmth, deal coverage and its risk rules.
 - [company-context.md](explanation/company-context.md) — the cold start, the governed company profile (profile fields, facts, site reads), and how bounded company context reaches AI tasks. This is the *installation's own* company; for the company **record** page see below.
-- [automation.md](explanation/automation.md) — the closed 7×7 trigger/action catalog: the two vocabularies, the one firing path, the anchor occurrence key, and both permission gates.
+- [automation.md](explanation/automation.md) — the closed trigger/action catalog: the two vocabularies, the one firing path, the anchor occurrence key, and both permission gates.
 
 **The product surface**
 
@@ -154,6 +174,14 @@ budget rather than keeping its own list of which pages are generated.
 ### Operate — run it in production
 - [deployment.md](deployment.md) — self-hosting: the container materials, the two-role non-superuser database model the grant wall requires, env-only configuration, one-host routing for `/v1` + `/mcp` + the OAuth flow, health checks, and order of operations.
 - [desktop-distribution.md](explanation/desktop-distribution.md) — the other shape: one folder a non-technical user runs on macOS or Windows with no Docker. Why it must carry its own Postgres (pgvector is not in `contrib`), how relocatability is enforced and verified on each platform, the update contract the folder layout encodes, single-file configuration, the four places the two platforms are forced apart (socket vs. loopback auth, `pg_ctl` vs. a child process, Valkey vs. Redis, signing), and the limits — collation, signing, and the socket-path ceiling.
+
+### Evidence — kept records, not current behaviour
+
+- [evidence/extension-tier/README.md](evidence/extension-tier/README.md) — the
+  acceptance evidence for the extension tier, recorded 2026-08-28. The unit it
+  shows was removed afterwards, so read it as "how the tier was proved", never as
+  "what ships". It is kept because deleting a review's evidence destroys the
+  record of what was actually checked.
 
 ## Reading order for a new contributor
 

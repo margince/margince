@@ -30,15 +30,27 @@ import (
 // stating deals.CloseIsOverdue's own verdict, the identical rule the sibling
 // "deals_at_risk" row for the same deal is judged by. base() already carries
 // item.Overdue onto row.Overdue; there is nothing left to set here.
-func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+//
+// Priced the same way classifyRisk prices its own "deals_at_risk" row for the
+// identical deal, through the one shared priceDealsAtRiskRow — money is a
+// property of the DEAL, not of which lane put it on the queue today.
+func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time, money dayMoney) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
 	if item.DueAt != nil {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
+	expected, known := expectedRevenue(item, money)
+	priceDealsAtRiskRow(&row, expected, known, money)
 	return ranked{
-		item:       row,
-		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    item.Overdue != nil && *item.Overdue,
-		occurredAt: occurredOf(item, asOf),
+		item: row,
+		// Deferred to the deal for the reason the at-risk lane defers: the owner
+		// arrives with the facts pass, after this runs.
+		ownerRef:         deferredToTheDeal(),
+		deadlineAt:       deadlineOf(item.DueAt),
+		overdue:          item.Overdue != nil && *item.Overdue,
+		expectedBase:     expected,
+		hasExpected:      known,
+		expectedCurrency: money.base,
+		occurredAt:       occurredOf(item, asOf),
 	}
 }

@@ -1459,7 +1459,7 @@ public.communication_basis.valid_until timestamp with time zone gen=- def=-
 public.communication_basis_live_lead CREATE INDEX communication_basis_live_lead ON public.communication_basis USING btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_live_person CREATE INDEX communication_basis_live_person ON public.communication_basis USING btree (person_id, kind) WHERE ((person_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_pkey CREATE UNIQUE INDEX communication_basis_pkey ON public.communication_basis USING btree (id)
-public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=ard/margince_owner rls=false force=false
 public.communication_decision.actor text NOT NULL gen=- def=-
 public.communication_decision.attempt integer NOT NULL gen=- def=0
 public.communication_decision.basis text gen=- def=-
@@ -1546,7 +1546,7 @@ public.consent_doi_token.purpose_id uuid NOT NULL gen=- def=-
 public.consent_doi_token.token_hash text NOT NULL gen=- def=-
 public.consent_doi_token_hash_unique CREATE UNIQUE INDEX consent_doi_token_hash_unique ON public.consent_doi_token USING btree (token_hash)
 public.consent_doi_token_pkey CREATE UNIQUE INDEX consent_doi_token_pkey ON public.consent_doi_token USING btree (id)
-public.consent_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.consent_event acl=margince_owner=arwdDxt/margince_owner,margince_app=ard/margince_owner rls=false force=false
 public.consent_event.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
@@ -1600,7 +1600,7 @@ public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.c
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_evidence CHECK ((((kind = 'in_person'::text) AND (note IS NOT NULL)) OR ((kind <> 'in_person'::text) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))
-public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text])))
+public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text, 'meeting'::text])))
 public.consent_qualifying_event.consent_qualifying_event_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.consent_qualifying_event.consent_qualifying_event_pkey PRIMARY KEY (id)
 public.consent_qualifying_event.consent_qualifying_event_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))
@@ -2594,6 +2594,7 @@ public.idx_mirror_visibility_record CREATE INDEX idx_mirror_visibility_record ON
 public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL)
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
+public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
 public.idx_oli_offer CREATE INDEX idx_oli_offer ON public.offer_line_item USING btree (offer_id, "position")
 public.idx_org_class CREATE INDEX idx_org_class ON public.organization USING btree (classification) WHERE (archived_at IS NULL)
 public.idx_org_created_keyset CREATE INDEX idx_org_created_keyset ON public.organization USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -2637,6 +2638,7 @@ public.idx_person_social_person CREATE INDEX idx_person_social_person ON public.
 public.idx_person_updated_keyset CREATE INDEX idx_person_updated_keyset ON public.person USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_pph_project CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC)
 public.idx_product_active CREATE INDEX idx_product_active ON public.product USING btree (active) WHERE (archived_at IS NULL)
+public.idx_product_search CREATE INDEX idx_product_search ON public.product USING gin (search_tsv)
 public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)
 public.idx_project_org CREATE INDEX idx_project_org ON public.project USING btree (organization_id) WHERE (archived_at IS NULL)
@@ -3342,6 +3344,7 @@ public.offer_template.locale text NOT NULL gen=- def='de-DE'::text
 public.offer_template.name text NOT NULL gen=- def=-
 public.offer_template.offer_template_name_unique UNIQUE (name)
 public.offer_template.offer_template_pkey PRIMARY KEY (id)
+public.offer_template.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.offer_template.trg_offer_template_updated CREATE TRIGGER trg_offer_template_updated BEFORE UPDATE ON public.offer_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.offer_template.uq_offer_template_ws_id UNIQUE (id)
@@ -4160,6 +4163,7 @@ public.product.product_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)
 public.product.product_unit_price_minor_check CHECK ((unit_price_minor >= 0))
+public.product.search_tsv tsvector gen=s def=((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(sku, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(description, ''::text))), 'B'::"char"))
 public.product.sku text gen=- def=-
 public.product.source text NOT NULL gen=- def=-
 public.product.trg_product_updated CREATE TRIGGER trg_product_updated BEFORE UPDATE ON public.product FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -4425,6 +4429,18 @@ public.relationship.started_at date gen=- def=-
 public.relationship.trg_relationship_updated CREATE TRIGGER trg_relationship_updated BEFORE UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.relationship.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.version bigint NOT NULL gen=- def=1
+public.relationship_nudge_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.relationship_nudge_dismissal.dismissed_until timestamp with time zone NOT NULL gen=- def=-
+public.relationship_nudge_dismissal.person_id uuid NOT NULL gen=- def=-
+public.relationship_nudge_dismissal.reader_id uuid NOT NULL gen=- def=-
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_forward CHECK ((dismissed_until > set_at))
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_pkey PRIMARY KEY (person_id, reader_id)
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.relationship_nudge_dismissal.set_at timestamp with time zone NOT NULL gen=- def=now()
+public.relationship_nudge_dismissal.set_by text NOT NULL gen=- def=-
+public.relationship_nudge_dismissal_by_reader CREATE INDEX relationship_nudge_dismissal_by_reader ON public.relationship_nudge_dismissal USING btree (reader_id, person_id)
+public.relationship_nudge_dismissal_pkey CREATE UNIQUE INDEX relationship_nudge_dismissal_pkey ON public.relationship_nudge_dismissal USING btree (person_id, reader_id)
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_run.asked_by uuid NOT NULL gen=- def=-
@@ -5480,6 +5496,30 @@ public.workflow_run.workflow_run_unique UNIQUE (handler, idempotency_key)
 public.workflow_run_pkey CREATE UNIQUE INDEX workflow_run_pkey ON public.workflow_run USING btree (id)
 public.workflow_run_troubled CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]))
 public.workflow_run_unique CREATE UNIQUE INDEX workflow_run_unique ON public.workflow_run USING btree (handler, idempotency_key)
+public.worklist_pin acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.worklist_pin.pinned_at timestamp with time zone NOT NULL gen=- def=now()
+public.worklist_pin.reader_id uuid NOT NULL gen=- def=-
+public.worklist_pin.row_id text NOT NULL gen=- def=-
+public.worklist_pin.set_by text NOT NULL gen=- def=-
+public.worklist_pin.source text NOT NULL gen=- def=-
+public.worklist_pin.worklist_pin_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
+public.worklist_pin.worklist_pin_pkey PRIMARY KEY (reader_id, source, row_id)
+public.worklist_pin.worklist_pin_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_pin_pkey CREATE UNIQUE INDEX worklist_pin_pkey ON public.worklist_pin USING btree (reader_id, source, row_id)
+public.worklist_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.worklist_snapshot.as_of timestamp with time zone NOT NULL gen=- def=-
+public.worklist_snapshot.buckets jsonb NOT NULL gen=- def=-
+public.worklist_snapshot.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.worklist_snapshot.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.worklist_snapshot.id uuid NOT NULL gen=- def=uuidv7()
+public.worklist_snapshot.params_fingerprint text NOT NULL gen=- def=-
+public.worklist_snapshot.reader_id uuid NOT NULL gen=- def=-
+public.worklist_snapshot.rows jsonb NOT NULL gen=- def=-
+public.worklist_snapshot.worklist_snapshot_forward CHECK ((expires_at > created_at))
+public.worklist_snapshot.worklist_snapshot_pkey PRIMARY KEY (id)
+public.worklist_snapshot.worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_snapshot_by_reader CREATE INDEX worklist_snapshot_by_reader ON public.worklist_snapshot USING btree (reader_id, created_at DESC)
+public.worklist_snapshot_pkey CREATE UNIQUE INDEX worklist_snapshot_pkey ON public.worklist_snapshot USING btree (id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace.archived_at timestamp with time zone gen=- def=-
 public.workspace.created_at timestamp with time zone NOT NULL gen=- def=now()

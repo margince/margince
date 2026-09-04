@@ -9,6 +9,15 @@
   gap: 12px;
 }
 
+/* A pane in the margin pays the card's inset, not the work column's. The
+   panel's own --space-5 is sized for a body a reader reads across; in a
+   360px column it spends a tenth of the width on air and pushes every value
+   further from the label naming it. The readings row beside it is on
+   --space-4, and these read as the same kind of card. */
+.record-aside .panel-body {
+  padding: var(--space-4);
+}
+
 .co-card {
   padding: var(--space-3);
 }
@@ -29,6 +38,11 @@
    overview's column and the documents tab's agreements-then-library pair are
    the same shape, so the name is the shape rather than the overview. */
 .co-overview-stack {
+  /* What the glance's own fold measures. The `work` container is the record's
+     whole region, the details column included, so it does not narrow when that
+     column opens — which is exactly when the glance has least room. This stack
+     is inside the work column and narrows with it. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   /* The mock's rhythm between the readings, the 360 and the columns: one
@@ -111,40 +125,9 @@
    still need a name of their own take `.co-worth-split` or `.co-worth-row`
    below, for their LAYOUT rather than for their seam. */
 
-/* The dot between two readings on one line. Owned by the reading that FOLLOWS
-   it, so a line that wraps never leaves a separator stranded at its end. */
-.co-sep {
-  color: var(--textMeta);
-}
-
-/* CompanyIdentityLine's two meta lines: what the account is and who owns it,
-   then when it was created and last exchanged with — stacked, not run into
-   one row, so the two questions read as two answers rather than one long
-   sentence a reader has to re-parse. A single flex item inside record-pulse
-   (composed.css), so it stacks on its own without fighting that row's own
-   layout. */
-.co-identity-meta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.co-meta-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-}
-/* The second line: when, not who — quieter than the first so the eye lands
-   on identity before date. The SIZE carries that, not the colour: this is
-   meta text, and every 11-13px line reads --textMeta to clear AA.
-   --textTertiary is a 3:1 token for marks and rules, and small text set in
-   it fails the contrast law the axe gate holds this page to. */
-.co-meta-quiet {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
+/* The account's own web address, in the identity line: a link, and it reads as
+   one. The line around it is the design system's `IdentityLine`; only the link
+   ink is the company's. */
 .co-meta-link {
   color: var(--accentText);
   text-decoration: none;
@@ -344,10 +327,19 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
-  /* Indigo, because the agent wrote this row. The rule under it is the same
-     hue as the card's band above it, so a reader tracks one colour through
-     everything Margince produced rather than learning two. */
-  border-top-color: var(--aiMed);
+  /* Indigo, because the agent wrote this row — and a GROUND rather than a
+     rule, because the list mixes what Margince proposed with the account's own
+     open tasks and the two were told apart only by a hairline of a different
+     hue. The tint is the same claim the card's band above it makes: this part
+     was written for you, the rest was already yours.
+
+     Inset to the panel's own padding and given the pane's corner, so the tint
+     reads as a card inside the list rather than as a full-bleed band. */
+  margin: var(--space-2) var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--r-md);
+  border-top-color: transparent;
+  background: linear-gradient(160deg, var(--aiLight), transparent 80%);
   /* .panel-row already sets the padding and the hairline border (none on
      the first row); this only lays the row's own content out. No hover fill:
      the row is not one press target, its verbs are, and a fill behind them
@@ -438,9 +430,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  /* The verbs end the row, on the same margin down the whole list: a column of
+     asks each with its verb wherever its own evidence happened to stop is a
+     list a reader has to hunt through for the thing to press. */
+  justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-1);
+  margin-top: var(--space-3);
 }
 .co-move-actions {
   display: flex;
@@ -508,6 +503,7 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 /* Facts read from the site. The rhythm is tighter than the profile card above
@@ -1137,7 +1133,10 @@
   margin-bottom: 0;
 }
 .co-rail .co-sect > summary {
-  padding: var(--space-3) var(--space-5);
+  /* The slice's own name, on the pane's gutter and clear of the hairline over
+     it: at the row's tighter interval the label sat against the rule and the
+     five slices read as one crowded list rather than five sections. */
+  padding: var(--space-4) var(--space-5) var(--space-3);
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-eyebrow);
@@ -1287,6 +1286,7 @@
   height: 8px;
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--textTertiary);
 }
 .co-dot-warn {
@@ -1344,6 +1344,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: currentColor;
   flex: none;
 }
@@ -1373,7 +1374,7 @@
   font-weight: var(--fw-regular);
   font-size: var(--fs-sm);
   line-height: 1.45;
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
   color: var(--textMeta);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
@@ -1470,7 +1471,7 @@
 /* The account's identity and its readings are two different statements — who
    this is, then how it stands — so the row needs room to start rather than
    sitting directly under the name it describes. */
-.record-head:has(.co-identity-meta) {
+.record-head:has(.identity-meta) {
   margin-bottom: var(--space-5);
 }
 
@@ -1602,6 +1603,117 @@
   padding-top: var(--space-6);
   padding-bottom: var(--space-2);
 }
+
+/* No seam under a head, wherever one is drawn. The panel's rule divides one
+   section of a card from the next, and a head is not a section — it names the
+   block below it, and a rule between the two reads as a caption for the rule.
+   The boundary a section head does need is the seam ABOVE it, which is drawn
+   by the head's own ::before and stays. */
+.co-360-head + .panel-body::before,
+.co-360-head + .panel-row::before {
+  content: none;
+}
+
+/* The needs pane heads itself as a PANE rather than as a section of one: its
+   head is the panel's first line, so it takes its own room top and bottom
+   instead of the interval that separates two sections of a card. Same on
+   every record — the pane is the record-360 kit's, not the company's. */
+.co-reading-today .co-360-head {
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-3);
+}
+.co-reading-today .co-360-title-text {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+}
+/* The three rated dimensions under the verdict: a dot in the dimension's
+   tone, the dimension, its rating. Inline, because they qualify the word
+   above them rather than standing as readings of their own. */
+.co-360-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-3);
+}
+/* And no seam over them, which is the other half of the same point: the
+   panel's rule between two bodies divides one section of a card from the next,
+   and these are not a section — they qualify the call above them. Drawn, the
+   rule landed on the chips' own top edge (the row pays no padding above a
+   line it should not have had) and read as three readings crushed against a
+   divider. */
+.panel-body + .panel-body.co-360-dims::before {
+  content: none;
+}
+.co-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textSecondary);
+}
+/* A chip is the trigger for its own aside, so it restates the face that
+   `.popover-trigger` strips — that reset exists so a trigger inherits the line
+   it is seated in, and this one is seated in a row of its own. Specific enough
+   to out-weigh the reset wherever the two sheets land in the bundle. */
+.co-360-dims .popover-trigger.co-dim {
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textSecondary);
+  border-radius: var(--r-sm);
+}
+/* Pressable, and said so before it is pressed: a chip that answers a resting
+   pointer has to look like something worth resting on. The underline is the
+   product's one mark for "there is more behind this" (design-system §4's
+   evidence mark), dotted for the same reason — it offers rather than links. */
+.co-360-dims .popover-trigger.co-dim {
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 4px;
+}
+.co-360-dims .popover-trigger.co-dim:hover,
+.co-360-dims .popover-trigger.co-dim[aria-expanded="true"] {
+  color: var(--textPrimary);
+  text-decoration-color: var(--textMeta);
+}
+
+/* The aside behind a chip: what the dimension weighs, then the reading its
+   rating was made from. Two blocks and not one paragraph — the definition is
+   the product's and the quote is this account's, and a reader has to be able
+   to tell which is which. */
+.co-dim-means {
+  margin: 0;
+}
+/* Spacing only: the label's own face is `Eyebrow`'s, which is the product's
+   one spelling of uppercase micro-type (design-system/eyebrow.tsx). */
+.co-dim-restson {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1);
+}
+.co-dim-quote {
+  margin: 0;
+  color: var(--textPrimary);
+}
+.co-dim::before {
+  content: "";
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--textTertiary);
+}
+.co-dim-calm::before {
+  background: var(--success);
+}
+.co-dim-warn::before {
+  background: var(--warn);
+}
+.co-dim-danger::before {
+  background: var(--danger);
+}
+
 /* The head's name and the count beside it, on one baseline. */
 .co-360-headtext {
   display: inline-flex;
@@ -1638,17 +1750,10 @@
   gap: var(--space-2);
 }
 
-/* The 360 card's head: who produced this reading over what it is a reading of.
-   A column, because the two are different claims and the eyebrow must not read
-   as the first words of the record's name. */
-/* Who read the record, over what they read. A column, because the two are
-   different claims and the eyebrow must not read as the first words of the
-   record's name — and a hairline gap between them, because they are one
-   block and a full interval made them two. */
-/* THE CARD'S CLAIM OF AUTHORSHIP. It heads the reading a machine produced,
-   which is the one thing on this page no other CRM does — so it is set as a
-   statement rather than as a caption: the mark on its own indigo tile, the
-   claim above the subject, and the record's name at reading size. */
+/* THE CARD'S CLAIM OF AUTHORSHIP, and what it is a claim about: the mark on
+   its own indigo tile, then the record's name at reading size. The tile is the
+   whole claim — a sentence beside it saying the same thing in an eyebrow's
+   shout read as a caption typed onto the record's name. */
 .co-360-title {
   display: flex;
   flex-wrap: wrap;
@@ -1661,16 +1766,6 @@
   align-items: center;
   gap: var(--space-2);
   min-inline-size: 0;
-}
-
-/* The claim of authorship, after the name it is about. Indigo, because
-   `.t-eyebrow` sets the neutral meta tone for every other eyebrow in the
-   product and this one names the machine that wrote the card under it. */
-.co-360-title .t-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--aiText);
 }
 
 /* The mark, on a tile of its own, leading the line. */
@@ -1693,11 +1788,10 @@
    louder eyebrow, which said the authorship mattered more than the record it
    was claiming to have read. */
 .co-360-title .co-360-subject {
-  grid-column: 2;
   font-family: var(--f-display);
   font-size: var(--fs-lead);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 
@@ -1741,6 +1835,7 @@
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-radius: 50%;
+  corner-shape: round;
   border: 2px solid var(--borderStrong);
   flex: none;
 }

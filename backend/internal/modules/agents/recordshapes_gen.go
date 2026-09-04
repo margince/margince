@@ -63,6 +63,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"deal": {
+		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
 		{Name: "organization_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "partner_attribution", Type: "string", Enum: []string{"sourced", "influenced"}},

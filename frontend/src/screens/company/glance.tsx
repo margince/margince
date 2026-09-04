@@ -46,7 +46,11 @@ export function ThreadFold({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
+  // Open on arrival. The thread is what the call above it was read FROM, so a
+  // reader who has just been told the account is waiting on them wants the
+  // last few exchanges in the same look — not behind a control that says how
+  // many there are and shows none of them.
+  const [open, setOpen] = useState(true);
   const logged = view?.activities?.data ?? [];
   const state = sectionState(
     view,
@@ -142,9 +146,9 @@ export function MoneyPane({
       title={t("co.commercial.title")}
       titleAction={
         present ? (
-          <Button small variant="ghost" onClick={onAllDeals}>
+          <button type="button" className="link-button" onClick={onAllDeals}>
             {t("co.commercial.allDeals")}
-          </Button>
+          </button>
         ) : undefined
       }
     >
@@ -217,11 +221,15 @@ export function PeopleChips({
       title={t("co.rail.people.title")}
       titleAction={
         state === "ready" && onOpenTab ? (
-          <Button small variant="ghost" onClick={() => onOpenTab("people")}>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => onOpenTab("people")}
+          >
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}
-          </Button>
+          </button>
         ) : undefined
       }
     >
