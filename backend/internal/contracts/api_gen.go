@@ -15072,19 +15072,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	All  ListPeopleParamsTagMode = "all"
-	Any  ListPeopleParamsTagMode = "any"
-	None ListPeopleParamsTagMode = "none"
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case All:
+	case ListPeopleParamsTagModeAll:
 		return true
-	case Any:
+	case ListPeopleParamsTagModeAny:
 		return true
-	case None:
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
