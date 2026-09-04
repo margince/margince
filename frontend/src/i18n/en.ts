@@ -345,7 +345,7 @@ export const en = {
   "share.downgradeConfirm": "Reduce to {to}",
   "share.seatCeiling":
     "This seat is read-only, so it cannot hold write access to a record. Raise the seat first, or grant read.",
-  "share.whoHasAccess": "Who has access",
+  "share.whoHasAccess": "Explicit shares",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
   "share.revokeConfirm":
@@ -3103,7 +3103,15 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
+  "personAccess.title": "Who can see this contact",
+  "personAccess.privateToYou":
+    "Private to you. Your mailbox created this contact, and nobody else in the organization can see it — not your team, and not an admin.",
+  "personAccess.organization":
+    "Everyone in the organization can see this contact.",
+  "personAccess.share": "Share with the organization",
+  "personAccess.published": "The organization can see this contact now.",
   "compose.reply": "Reply",
+  "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.draftWithAi": "Draft with AI",
   "compose.drafting": "Drafting…",
