@@ -465,11 +465,12 @@ Jobs: []extension.Job{{Name: "heartbeat", Handle: heartbeat}},
 A job handler takes `(ctx, rt)` and no arguments — a tick has no caller. It cannot be confirm-first and
 it cannot request an outbound scope; both are refused at boot.
 
-> **Know before you ship a cadence:** a tick needs the workspace's agent seat to name its initiator.
-> Bootstrap writes one, so a fresh installation runs your job — but an operator who archives or
-> deactivates that seat silently stops every scheduled job at once. Such a workspace is **skipped**,
-> and the count is reported as `margince_extension_job_seatless_workspaces` on the worker's
-> `/metrics`. Do not treat a silent job as a broken one without reading that gauge first.
+> **Know before you ship a cadence:** a tick answers as the JOB, not as a person. Its principal
+> names your dispatcher kind, carries the one scope your manifest declared, and holds **no
+> permissions at all** — so every governed core write is refused to it, twice over. That is not a
+> gap to work around: land records through `rt.Ingest(ctx, member, …)`, which resolves that
+> member's own live grants for each record. There is no identity an operator has to keep alive for
+> your tick to run.
 
 ## React to events
 
@@ -642,10 +643,6 @@ have to regenerate the composition and run the gates:
    set that variable until Task 14's UAT found the gap: only the web image build did, so the SPA
    resolved the empty-tree registry and every unit route answered "no extension named …" while the
    api served it perfectly.)
-
-   A **scheduled job** needs the workspace's agent seat, which bootstrap writes. A database
-   bootstrapped before that landed gets it from the `0216_agent_seat_backfill` migration, so run
-   `make migrate` before wondering why a tick never fires.
 
 Push only once `make check` is **green** — not red, not still running. The vanilla stub check keeps
 passing because it's keyed on the *empty* `extensions/` tree; your unit only changes the composed

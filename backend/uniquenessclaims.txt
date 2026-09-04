@@ -123,8 +123,6 @@ internal/compose/extensions.go#var composedSubscriptions
 internal/compose/extensions.go#var composedVerbs
 internal/compose/extensiontools.go#method extensionTool.OwningUnit
 internal/compose/extjobs.go#var composedJobs
-internal/compose/extjobs_integration_test.go#func TestAHumanSeatIsNotAcceptedAsAJobPrincipal
-internal/compose/extjobseats.go#var seatlessWorkspaces
 internal/compose/extjobsrun.go#type extJobDispatcherArgs
 internal/compose/extledger.go#method extensionLedger.Record
 internal/compose/extparity_test.go#func declaredPatterns

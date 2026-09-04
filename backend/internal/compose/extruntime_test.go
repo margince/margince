@@ -286,16 +286,21 @@ func TestRuntimeCallerNeverRendersAZeroUserID(t *testing.T) {
 	}
 }
 
-// TestRuntimeCallerOfAJobTickIsTheSystem. A tick's context carries the
-// dispatcher's agent seat, because the tenant policies and the audit rows need
-// an actor — but there is no human behind it, and runtime.go promises a tick
-// answers the zero Caller. Without this the unit would be handed the synthetic
-// seat id as if it were the person accountable for the row.
+// TestRuntimeCallerOfAJobTickIsTheSystem. A tick's context carries an actor,
+// because the tenant policies and the audit rows need one — but there is no
+// human behind it, and runtime.go promises a tick answers the zero Caller.
+// Without this the unit would be handed a synthetic id as if it were the person
+// accountable for the row.
+//
+// The principal here carries a UserID that a real tick's does NOT: the mint is a
+// pure function of the declaration and sets no user. That is the point of the
+// fixture — jobRuntimeFor must answer the zero Caller from the SHAPE of the
+// call, not from the actor happening to have no user to hand over.
 func TestRuntimeCallerOfAJobTickIsTheSystem(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type:   principal.PrincipalAgent,
 		ID:     "agent:demo",
-		UserID: ids.NewV7(), // the dispatcher's is_agent seat, not a person
+		UserID: ids.NewV7(),
 	})
 	if got := jobRuntimeFor(ctx, "demo", "", "job/probe", extensionRuntimeBinding{}).Caller(); got != (extension.Caller{}) {
 		t.Fatalf("a job tick's Caller() = %+v, want the zero Caller", got)

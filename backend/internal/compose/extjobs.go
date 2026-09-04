@@ -199,7 +199,6 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 				Args: []jobs.ArgField{
 					{Name: "JobKind", Scalar: true, Reason: "see the dispatcher's"},
 					{Name: "Workspace"},
-					{Name: "Principal", Reason: "a reference to the app_user the dispatcher recorded; the authority it holds is re-derived at execution and never carried in the row"},
 				},
 			},
 		)

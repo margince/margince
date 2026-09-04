@@ -20,10 +20,11 @@ package compose
 //     the workspace, so a member holding down save gets one tick.
 //
 // And the invariant it leaves alone: what is enqueued is the SAME child kind
-// the clock enqueues, with the same workspace agent seat as its principal. The
-// tick runs unattended, exactly as it always did — what crosses this seam is a
-// request to schedule, never an authority to ingest, so ErrAttendedIngest keeps
-// meaning what it means.
+// the clock enqueues, and it acts as the same thing — the job, minted from the
+// declaration at execution and carrying no user. The caller's authority reaches
+// the row it asks for and stops there. The tick runs unattended, exactly as it
+// always did — what crosses this seam is a request to schedule, never an
+// authority to ingest, so ErrAttendedIngest keeps meaning what it means.
 
 import (
 	"context"
@@ -62,20 +63,6 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	if !ok {
 		return database.ErrNoWorkspace
 	}
-	// The SAME actor the clock's dispatch records: the workspace's agent seat,
-	// re-derived at execution rather than carried, so a seat deactivated while
-	// the row waits ends the tick the way it ends a scheduled one.
-	actor, err := extensionJobActor(ctx, pool, ws)
-	if err != nil {
-		return err
-	}
-	if actor.IsZero() {
-		// The same state the fleet dispatch skips a workspace for. Said out
-		// loud here because a caller asked: a screen that reported "checking
-		// now" over a tick that will never run is the failure this capability
-		// was added to end, in a new place.
-		return extension.ErrNoUnattendedSeat
-	}
 	inserter, err := extensionJobInserter(pool)
 	if err != nil {
 		return fmt.Errorf("compose: opening the queue to ask for %s: %w", job, err)
@@ -85,7 +72,7 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	if err != nil {
 		return err
 	}
-	return inserter.Enqueue(ctx, extJobWorkspaceArgs{JobKind: child, Workspace: ws, Principal: actor}, opts)
+	return inserter.Enqueue(ctx, extJobWorkspaceArgs{JobKind: child, Workspace: ws}, opts)
 }
 
 // declaredJobFor answers the declaration of one unit's job, and whether the

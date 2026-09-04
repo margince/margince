@@ -63,16 +63,6 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
 	}
-	// The agent seat the tick runs under. Without it SyncNow answers
-	// ErrNoUnattendedSeat, which is the other case this file could assert and
-	// the one the fleet dispatch already skips a workspace for.
-	seat := ids.NewV7()
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO app_user (id, email, display_name, is_agent)
-		 VALUES ($1, $2, 'Agent', true)`, seat, "agent-"+seat.String()+"@sync.test"); err != nil {
-		t.Fatal(err)
-	}
-
 	decl := extension.JobDeclaration{Unit: syncNowUnit, Job: syncNowJob}
 	set := []composedJob{{decl: decl}}
 	before := servedExtensionJobs()
