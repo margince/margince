@@ -237,3 +237,93 @@ func findEnumMembers(t *testing.T, n *yaml.Node) []*yaml.Node {
 	walkNode(n)
 	return found
 }
+
+// An EMPTY schema-level examples array is dropped, not carried through.
+//
+// The bug this pins: the rewrite only handled a non-empty sequence, so an empty
+// one fell through with its key untouched and a schema-level `examples`
+// survived into a 3.0.3 document — which does not define one. JSON Schema
+// allows `examples: []`, so a valid 3.1 input produced an invalid 3.0.3 output.
+// margince/margince#441.
+//
+// The sibling assertions are the point of the fixture rather than decoration:
+// dropping a key mid-walk shifts everything after it, so the schema that
+// follows and the one that follows THAT both have to survive. A drop that
+// stepped over its neighbour would leave this document looking downgraded and
+// missing a schema.
+func TestAnEmptySchemaLevelExamplesArrayIsDropped(t *testing.T) {
+	src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        empty:
+          type: string
+          examples: []
+          const: 7
+        alsoAfter:
+          type: [string, "null"]
+`
+	out, err := Bytes([]byte(src))
+	if err != nil {
+		t.Fatalf("Bytes: %v", err)
+	}
+	got := string(out)
+
+	if strings.Contains(got, "examples") {
+		t.Errorf("a schema-level examples survived the downgrade; 3.0.3 defines no such field:\n%s", got)
+	}
+	// And not turned into a 3.0 `example` either — there was no example to
+	// carry, and inventing an empty one asserts something the source did not.
+	if strings.Contains(got, "example:") {
+		t.Errorf("an empty examples array became an example; there was nothing to carry:\n%s", got)
+	}
+	// The SIBLING KEY that shifted into the dropped slot still downgraded.
+	// `const: 7` sits after `examples: []` in the SAME mapping, so a drop that
+	// removed the pair and then let the loop step forward would land past it
+	// and leave a 3.1-only `const` in a 3.0.3 document. Putting the sibling in
+	// another schema, as this fixture first did, cannot catch that: the drop
+	// leaves nothing after it in its own mapping and the skip is unobservable.
+	if strings.Contains(got, "const:") {
+		t.Errorf("the key that shifted into the dropped slot was stepped over — a 3.1-only const "+
+			"survived:\n%s", got)
+	}
+	if !strings.Contains(got, "enum:") || !strings.Contains(got, "7") {
+		t.Errorf("the sibling after the dropped key was not rewritten:\n%s", got)
+	}
+	// And a later schema entirely, so the walk resumed rather than stopping.
+	if !strings.Contains(got, "nullable: true") {
+		t.Errorf("the schema after the one holding the dropped key was not reached:\n%s", got)
+	}
+	if strings.Contains(got, "3.1.0") {
+		t.Errorf("openapi version must be downgraded, still 3.1.0:\n%s", got)
+	}
+}
+
+// A NON-empty examples array still becomes 3.0's singular example, which is the
+// behaviour the empty case is a hole in rather than a departure from.
+func TestANonEmptyExamplesArrayStillBecomesTheSingularExample(t *testing.T) {
+	src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: string
+      examples:
+        - first
+        - second
+`
+	out, err := Bytes([]byte(src))
+	if err != nil {
+		t.Fatalf("Bytes: %v", err)
+	}
+	got := string(out)
+	if !strings.Contains(got, "example: first") {
+		t.Errorf("the first example was not carried into 3.0's singular field:\n%s", got)
+	}
+	if strings.Contains(got, "second") {
+		t.Errorf("3.0 has one example; the rest must not survive:\n%s", got)
+	}
+}

@@ -66,6 +66,17 @@ export default defineConfig({
     : {
         command: "pnpm preview --port 4317 --strictPort",
         url: "http://localhost:4317",
-        reuseExistingServer: true,
+        // NOT reused. This lane's whole subject is whether the BUILT app
+        // renders, so a preview left listening on 4317 by an earlier run
+        // serves an older build and every assertion is then made about a tree
+        // nobody is testing. It fails loudly and wrongly: a run against a
+        // build from before two nav labels were renamed reported thirty-seven
+        // failures across six specs, led by "the rail renders the canonical 10
+        // items" — a red that reproduces perfectly and means nothing.
+        //
+        // `--strictPort` is what makes refusing safe rather than merely
+        // slower: a stray server does not get silently worked around, it stops
+        // the run and says the port is taken.
+        reuseExistingServer: false,
       },
 });

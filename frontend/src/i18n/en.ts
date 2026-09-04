@@ -958,6 +958,15 @@ export const en = {
   "co.health.dim.relationship": "Relationship",
   "co.health.dim.commercial": "Commercial",
   "co.health.dim.payment": "Payment",
+  // What each dimension weighs. Three words on a card cannot say what
+  // "Commercial · Good" was read from, and a rating a reader cannot interpret
+  // is one they have to take on trust.
+  "co.health.means.relationship":
+    "Whether the people here are still in touch — who wrote, how recently, and which side started it.",
+  "co.health.means.commercial":
+    "Whether the work in flight is moving — the open deals, the stage they sit at, and how long they have stood still.",
+  "co.health.means.payment":
+    "Whether invoices are settled on time — what is overdue now, and how late this account usually runs.",
   "co.health.rating.atRisk": "At risk",
   "co.health.rating.good": "Good",
   "co.health.rating.strong": "Strong",
@@ -991,8 +1000,7 @@ export const en = {
   "record.restsOn.source_one": "source",
   "record.restsOn.source_other": "sources",
   "record.tabs": "Parts of this record",
-  "record.panel.show": "Show panel",
-  "record.panel.hide": "Hide panel",
+  "record.panel.details": "Details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
@@ -3279,14 +3287,15 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "analytics.sub": "deals by stage — unweighted next to weighted",
+  "analytics.sub":
+    "open deals only, each converted into {currency} — unweighted next to weighted",
   "analytics.currency": "Currency",
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "analytics.reportDeals": "Deals by stage",
+  "analytics.reportDeals": "Open pipeline by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
@@ -3314,7 +3323,7 @@ export const en = {
   "analytics.share.copyFailed":
     "The link could not be copied. Select it above and copy it by hand.",
   "analytics.share.done": "Done",
-  "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "What should be checked before the call?",
   "review.ready": "Ready",
   "review.readyWithExceptions": "Ready, with notes",
@@ -3373,6 +3382,8 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save call",
+  "analytics.scopeLabel": "Which records these numbers cover",
+  "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -7968,6 +7979,12 @@ export const en = {
   "worklist.pair.notDuplicate": "Not the same",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
+  "worklist.pair.refused":
+    "You cannot settle this pair. Both records have to be yours to change, so an admin or a sales lead can settle it.",
+  "worklist.pair.alreadySettled":
+    "This pair could not be settled the way you asked — somebody may have decided it first, or the records changed under you. Reload the list to see where it stands.",
+  "worklist.pair.stewardOnly":
+    "Only somebody who can change both records can settle this — an admin or a sales lead.",
   "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "About this record",
   "worklist.pane.openRow": "Show what {position}, {title}, is about",

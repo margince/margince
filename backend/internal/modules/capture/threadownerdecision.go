@@ -119,3 +119,33 @@ func ThreadActivityIDsTx(ctx context.Context, tx pgx.Tx, threadKey string, user 
 	}
 	return out, nil
 }
+
+// ThreadJudgedByClassifierTx answers whether this seat's verdict on a thread
+// came from a CLASSIFIER rather than from the sender's own subject marking.
+//
+// The two are indistinguishable on the activity row, where both spell their
+// reason `explicitly_confidential`, and they are not the same fact: a marking
+// is the sender's and no recipient lifts it, while a verdict is a judgement its
+// owner may disagree with. The ledger is where they differ — a verdict records
+// the `kind` it concluded, and a marking records none — so the question is
+// asked here, of the table this module owns, and answered for the caller that
+// owns the column.
+//
+// False for a thread with no ledger row at all, which is the honest answer:
+// nothing judged it, so nothing of the classifier's is there to lift.
+func ThreadJudgedByClassifierTx(
+	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
+) (bool, error) {
+	if threadKey == "" || user == ids.Nil {
+		return false, nil
+	}
+	var judged bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM capture_thread_verdict
+		   WHERE thread_key = $1 AND user_id = $2 AND kind IS NOT NULL)`,
+		threadKey, user).Scan(&judged); err != nil {
+		return false, fmt.Errorf("capture: reading whether a classifier judged this thread: %w", err)
+	}
+	return judged, nil
+}

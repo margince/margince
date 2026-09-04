@@ -376,6 +376,16 @@ decline to answer, it publishes zeros. So the likely cause is an artifact a gree
 producer did not upload rather than anything about the scan itself, and the
 failing step names which download it was.
 
+READ THE RANGE BELOW MORE WEAKLY THAN THE OTHER ARMS' — this is the one lane
+that fails for reasons no commit caused. The scanner download's signature check
+fetches a public keyserver, and when that stopped answering the step sat silent
+until a timeout killed it (margince/margince#2543; the step now caps at eight
+minutes, so a hang is fast and legible rather than a 30-minute silent burn — but
+it still arrives here as a failure). A network outage attributed to somebody's
+commit is a false accusation generated automatically, which is worse than no
+report at all. Check whether the failing step is the scan itself or one of the
+three artifact downloads BEFORE reading these commits as suspects.
+
 ${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
 
 Until it is fixed, treat the quality gate's reading for \`main\` as stale rather

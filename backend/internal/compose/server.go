@@ -197,6 +197,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// plus a reader, which is its own change.
 		analyticsQueryHandlers: newAnalyticsQueryHandlers(
 			InstallationDB(pool), analyticsquery.DefaultFloor),
+		analyticsContextHandlers: newAnalyticsContextHandlers(
+			InstallationDB(pool), func() time.Time { return time.Now().UTC() }),
 		// The share routes run in the FORECAST store's transaction, whose InTx
 		// gates on forecast:read — so the whole surface, issuing included, is
 		// behind the grant that reads the thing being shared.
