@@ -791,3 +791,208 @@ func TestAThirdSenderCohortIsHeldRatherThanLeftUndecided(t *testing.T) {
 		t.Fatalf("the cohort nobody reached is %q, want participants", got)
 	}
 }
+
+// TestALegacyClearedThreadFinishesTheMessagesItLeftBehind is the repair for the
+// mail already in the database.
+//
+// A thread cleared before the verdict path applied its answer to the whole
+// conversation left its other messages undecided under a settled question. In
+// the demo database that is 230 rows. Nothing re-asks, because the question is
+// answered and the ledger row is unique.
+func TestALegacyClearedThreadFinishesTheMessagesItLeftBehind(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	const lawyer = "anwalt@kanzlei.example"
+
+	judged := seedHeldThreadMail(t, e, "thread-legacy", customer, "Nachbestellung")
+	stranded := seedHeldThreadMail(t, e, "thread-legacy", customer, "Nachtrag")
+	fromLawyer := seedHeldThreadMail(t, e, "thread-legacy", lawyer, "Aufhebungsvertrag")
+	threadID := seedThreadQuestion(t, e, "thread-legacy", judged)
+
+	// The state the old code left: the ledger settled, the judged message
+	// stamped, and the rest of the conversation never told.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE id = $1`, threadID, customer); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_import SET verdict_status = 'cleared' WHERE activity_id = $1`, judged)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the legacy state: %v", err)
+	}
+
+	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
+	if _, err := engine.FinishSettledThreads(
+		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("finishing settled threads: %v", err)
+	}
+
+	if got := activityAudience(t, e, stranded); got != "workspace" {
+		t.Fatalf("a message left behind by its own thread's answer is %q, want workspace", got)
+	}
+	// The admission rule holds in the sweep exactly as in the verdict path.
+	if got := activityAudience(t, e, fromLawyer); got != "participants" {
+		t.Fatalf("a message from a party the verdict never read is %q, want participants", got)
+	}
+	if got := threadStatus(t, e, threadID); got != capture.VerdictPending {
+		t.Fatalf("thread status = %q, want pending: the unread party must be asked about", got)
+	}
+}
+
+// TestFinishingSettledThreadsIsIdempotent proves a second pass writes nothing:
+// the rows it would select are exactly the rows its own write removes from the
+// selection.
+func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	judged := seedHeldThreadMail(t, e, "thread-twice", customer, "Nachbestellung")
+	stranded := seedHeldThreadMail(t, e, "thread-twice", customer, "Nachtrag")
+	threadID := seedThreadQuestion(t, e, "thread-twice", judged)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE id = $1`, threadID, customer)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	first, err := engine.FinishSettledThreads(wsCtx)
+	if err != nil {
+		t.Fatalf("first pass: %v", err)
+	}
+	if first != 1 {
+		t.Fatalf("first pass finished %d threads, want 1", first)
+	}
+	if got := activityAudience(t, e, stranded); got != "workspace" {
+		t.Fatalf("the stranded message is %q, want workspace", got)
+	}
+
+	second, err := engine.FinishSettledThreads(wsCtx)
+	if err != nil {
+		t.Fatalf("second pass: %v", err)
+	}
+	if second != 0 {
+		t.Fatalf("second pass finished %d threads, want 0: a repair that keeps finding work "+
+			"it already did writes an audit trail of changes that did not happen", second)
+	}
+}
+
+// TestArchivedMessagesDoNotStarveTheSweep is the selector-writer agreement.
+//
+// A selector that offered a thread whose only undecided messages its writer
+// refuses would return that same thread every tick, filling the page and
+// starving every repairable thread behind it. The failure is silent: the sweep
+// reports success having done nothing, forever.
+func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+
+	archivedJudged := seedHeldThreadMail(t, e, "thread-archived", customer, "Alt")
+	archivedSibling := seedHeldThreadMail(t, e, "thread-archived", customer, "Alt II")
+	archivedThread := seedThreadQuestion(t, e, "thread-archived", archivedJudged)
+
+	repairJudged := seedHeldThreadMail(t, e, "thread-repairable", customer, "Neu")
+	repairSibling := seedHeldThreadMail(t, e, "thread-repairable", customer, "Neu II")
+	repairThread := seedThreadQuestion(t, e, "thread-repairable", repairJudged)
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		for _, id := range []ids.UUID{archivedThread, repairThread} {
+			if _, err := tx.Exec(context.Background(), `
+				UPDATE capture_thread_verdict
+				   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+				       resolved_at = now(), next_attempt_at = NULL
+				 WHERE id = $1`, id, customer); err != nil {
+				return err
+			}
+		}
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET archived_at = now() WHERE id = ANY($1)`,
+			[]ids.UUID{archivedJudged, archivedSibling})
+		return err
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	// The selector must not OFFER the archived thread: its writer refuses those
+	// rows, so a pass would report it as work and change nothing, and a page
+	// full of them would starve every repairable thread behind it — silently,
+	// because the sweep reports success having done nothing.
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	offered, err := store.ThreadsWithUndecidedMessages(e.Admin(), 100)
+	if err != nil {
+		t.Fatalf("listing settled threads: %v", err)
+	}
+	for _, o := range offered {
+		if o.ThreadKey == "thread-archived" {
+			t.Fatal("the sweep offers a thread whose only undecided messages are archived — " +
+				"its writer refuses them, so the row is selected every tick and changes nothing")
+		}
+	}
+	if len(offered) != 1 || offered[0].ThreadKey != "thread-repairable" {
+		t.Fatalf("offered %d thread(s), want exactly the repairable one", len(offered))
+	}
+
+	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
+	if _, err := engine.FinishSettledThreads(
+		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("finishing: %v", err)
+	}
+	if got := activityAudience(t, e, repairSibling); got != "workspace" {
+		t.Fatalf("the repairable thread is %q, want workspace", got)
+	}
+}
+
+// TestAnOwnersSharedThreadIsNotReopenedByTheRepair holds the owner's decision
+// against the repair.
+//
+// A person clicking "share this thread" ends the question: no later pass
+// re-asks, because a classifier that could overturn them would make the click
+// advisory. The repair applies the OWNER's answer to the messages that never
+// took it — and must not, on finding a party the owner's decision predates,
+// hand their thread back to the classifier.
+func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
+	e := integration.Setup(t)
+	const customer = "einkauf@kunde.example"
+	const lawyer = "anwalt@kanzlei.example"
+
+	judged := seedHeldThreadMail(t, e, "thread-owner-shared", customer, "Nachbestellung")
+	fromLawyer := seedHeldThreadMail(t, e, "thread-owner-shared", lawyer, "Aufhebungsvertrag")
+	threadID := seedThreadQuestion(t, e, "thread-owner-shared", judged)
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'shared_by_owner', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE id = $1`, threadID, customer)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the owner's decision: %v", err)
+	}
+
+	engine := NewConfidentialityVerdictEngine(e.Pool, nil, slog.Default())
+	if _, err := engine.FinishSettledThreads(
+		principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("finishing: %v", err)
+	}
+
+	if got := threadStatus(t, e, threadID); got != capture.VerdictSharedByOwner {
+		t.Fatalf("thread status = %q, want shared_by_owner: the repair handed a person's "+
+			"decision back to the classifier, which makes the click advisory", got)
+	}
+	// And the message the owner never spoke for stays held rather than being
+	// published on their decision about somebody else's mail.
+	if got := activityAudience(t, e, fromLawyer); got != "participants" {
+		t.Fatalf("a message from a party the owner's decision predates is %q, want participants", got)
+	}
+}

@@ -86,6 +86,13 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 	return out, nil
 }
 
+// threadSiblingBatch bounds one thread's repair. A thread is a conversation
+// and a hundred messages is already a long one, but nothing in the schema caps
+// it, and an unbounded pass would hold a transaction open across every message
+// of the largest thread in the workspace. What a pass leaves the next takes:
+// the selector finds the thread again while any of its messages is undecided.
+const threadSiblingBatch = 500
+
 // sibling is one already-imported message of the thread and who wrote it.
 type sibling struct {
 	id   ids.UUID
@@ -112,7 +119,8 @@ func undecidedSiblingsTx(
 		 WHERE a.thread_key = $1
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND (i.verdict_status IS NULL OR i.verdict_status = $3)
-		 ORDER BY a.occurred_at, a.id`, threadKey, user, VerdictPending)
+		 ORDER BY a.occurred_at, a.id
+		 LIMIT $4`, threadKey, user, VerdictPending, threadSiblingBatch)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading a thread's undecided messages: %w", err)
 	}
@@ -175,6 +183,13 @@ func stampSiblingsTx(
 // on one thread, and every cohort of a long conversation is judged in a single
 // unbounded run. The delay is what keeps a pass's cost proportional to the
 // threads it claimed.
+//
+// A CLASSIFIER's answer only. An owner who shared their own thread ended the
+// question — no later pass re-asks, because a classifier that could overturn
+// them would make the click advisory, which is not what somebody pressing
+// "share this thread" is told they are doing. So their decision stands and the
+// message they never spoke for simply stays held: unstamped, because its party
+// is not one their decision covered.
 func reopenAtSiblingTx(
 	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID, at ids.UUID,
 ) error {
@@ -184,8 +199,8 @@ func reopenAtSiblingTx(
 		       resolved_at = NULL, next_attempt_at = now() + interval '1 minute',
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE thread_key = $1 AND user_id = $2
-		   AND status IN ($5, $6)`,
-		threadKey, user, at, VerdictPending, VerdictCleared, VerdictSharedByOwner)
+		   AND status = $5`,
+		threadKey, user, at, VerdictPending, VerdictCleared)
 	if err != nil {
 		return fmt.Errorf("capture: re-opening a thread for the message its verdict did not read: %w", err)
 	}
